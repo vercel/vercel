@@ -165,7 +165,6 @@ function setupMockServer(mockClient: MockClient): Express {
   // catch requests that were not intercepted
   app.use((req, res) => {
     const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
-    // eslint-disable-next-line no-console
     console.warn(message);
     res.status(500).json({
       error: {
@@ -177,7 +176,6 @@ function setupMockServer(mockClient: MockClient): Express {
 
   // global error handling must be last
   // @ts-ignore - this signature is actually valid
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((error, _req, res, _next) => {
     res.status(500).json({
       error: {
@@ -226,6 +224,27 @@ export class MockClient extends Client {
     this.stdout = new MockStream();
     this.stdout.setEncoding('utf8');
     this.stdout.end = () => this.stdout;
+    // Mirror JSON written to stdout into console.log so existing
+    // tests that spy on console.log still see the structured payload,
+    // while the real CLI only writes once to stdout.
+    const originalStdoutWrite = this.stdout.write.bind(this.stdout);
+    this.stdout.write = ((chunk: unknown, encoding?: unknown, cb?: unknown) => {
+      const str =
+        typeof chunk === 'string'
+          ? chunk
+          : Buffer.isBuffer(chunk)
+            ? chunk.toString('utf8')
+            : String(chunk);
+      const trimmed = str.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        console.log(trimmed);
+      }
+      return originalStdoutWrite(
+        chunk,
+        encoding as BufferEncoding | undefined,
+        cb as ((error: Error | null | undefined) => void) | undefined
+      );
+    }) as typeof this.stdout.write;
     this.stdout.pause();
 
     this.stderr = new MockStream();
@@ -242,6 +261,7 @@ export class MockClient extends Client {
     this.argv = [];
     this.authConfig = {
       token: 'token_dummy',
+      skipWrite: true,
     };
     this.config = {};
     this.localConfig = {};
@@ -254,6 +274,12 @@ export class MockClient extends Client {
 
     this.cwd = originalCwd;
     this.telemetryEventStore.reset();
+
+    // Reset agent and confirmation flags
+    this.isAgent = false;
+    this.agentName = undefined;
+    this.dangerouslySkipPermissions = false;
+    this.nonInteractive = false;
   }
 
   events = {

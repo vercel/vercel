@@ -121,6 +121,13 @@ async function parseField(
       value = parseInt(value, 10);
     } else if (/^-?\d*\.\d+$/.test(value)) {
       value = parseFloat(value);
+    } else if (value.startsWith('[') || value.startsWith('{')) {
+      // Try to parse JSON arrays and objects
+      try {
+        value = JSON.parse(value);
+      } catch {
+        // Keep as string if not valid JSON
+      }
     }
   }
 
@@ -169,6 +176,9 @@ export function generateCurlCommand(
   if (config.method !== 'GET') {
     parts.push(`-X ${config.method}`);
   }
+
+  // Authorization header with placeholder
+  parts.push(`-H 'Authorization: Bearer <TOKEN>'`);
 
   // Headers
   for (const [key, value] of Object.entries(config.headers)) {

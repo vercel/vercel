@@ -1,10 +1,12 @@
 {
   "probes": [
-    { "logMustContain": "Using Python 3.14 from pyproject.toml" },
     { "logMustContain": "Running build command..." },
     {
       "path": "/",
       "mustContain": "BUILD_COMMAND"
+    },
+    {
+      "logMustContain": "Using Python 3.12 from pyproject.toml"
     }
   ]
 }

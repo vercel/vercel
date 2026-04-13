@@ -1,6 +1,6 @@
 module.exports = {
   generateBuildId() {
-    return 'testing-build-id';
+    return 'build-TfctsWXpff2fKS';
   },
   trailingSlash: true,
 };

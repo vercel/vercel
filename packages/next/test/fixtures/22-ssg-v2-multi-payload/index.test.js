@@ -134,7 +134,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /_next/data pathname', async () => {
     const res = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/another.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/another.json`
     );
     expect(res.status).toBe(200);
 
@@ -147,7 +147,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     // wait for revalidation to occur
     await checkForChange(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/another.json`,
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/another.json`,
       initialRandom,
       async res => {
         const { pageProps: data } = await res.json();
@@ -156,7 +156,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
 
     const res2 = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/another.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/another.json`
     );
     expect(res2.status).toBe(200);
 
@@ -168,7 +168,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /_next/data dynamic pathname', async () => {
     const res = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/post-123.json`
     );
     expect(res.status).toBe(200);
 
@@ -181,7 +181,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     // wait for revalidation to occur
     await checkForChange(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123.json`,
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/post-123.json`,
       initialRandom,
       async res => {
         const { pageProps: data } = await res.json();
@@ -190,7 +190,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
 
     const res2 = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/post-123.json`
     );
     expect(res2.status).toBe(200);
 
@@ -202,7 +202,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /_next/data dynamic pathnames', async () => {
     const res = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123/comment-321.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/post-123/comment-321.json`
     );
     expect(res.status).toBe(200);
 
@@ -216,7 +216,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     // wait for revalidation to occur
     await checkForChange(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123/comment-321.json`,
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/post-123/comment-321.json`,
       initialRandom,
       async res => {
         const { pageProps: data } = await res.json();
@@ -225,7 +225,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
 
     const res2 = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123/comment-321.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/post-123/comment-321.json`
     );
     expect(res2.status).toBe(200);
 

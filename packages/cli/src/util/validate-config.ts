@@ -155,23 +155,29 @@ const cronsSchema = {
   },
 };
 
-const customErrorPageSchema = {
+const serviceMountSchema = {
   oneOf: [
-    { type: 'string', minLength: 1 },
+    {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
     {
       type: 'object',
       additionalProperties: false,
-      minProperties: 1,
       properties: {
-        default5xx: {
+        path: {
           type: 'string',
           minLength: 1,
+          maxLength: 512,
         },
-        default4xx: {
+        subdomain: {
           type: 'string',
           minLength: 1,
+          maxLength: 63,
         },
       },
+      anyOf: [{ required: ['path'] }, { required: ['subdomain'] }],
     },
   ],
 };
@@ -188,15 +194,16 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 512,
     },
-    workspace: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
+    mount: serviceMountSchema,
     routePrefix: {
       type: 'string',
       minLength: 1,
       maxLength: 512,
+    },
+    subdomain: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 63,
     },
     framework: {
       type: 'string',
@@ -229,9 +236,10 @@ const serviceConfigSchema = {
       maximum: 10240,
     },
     maxDuration: {
-      type: 'integer',
-      minimum: 1,
-      maximum: 900,
+      oneOf: [
+        { type: 'integer', minimum: 1, maximum: 900 },
+        { type: 'string', enum: ['max'] },
+      ],
     },
     includeFiles: {
       oneOf: [
@@ -258,10 +266,14 @@ const serviceConfigSchema = {
       maxLength: 256,
     },
     // Worker-specific
-    topic: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
+    topics: {
+      type: 'array',
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+      minItems: 1,
     },
     consumer: {
       type: 'string',
@@ -278,6 +290,10 @@ const serviceConfigSchema = {
  */
 const experimentalServicesSchema = {
   type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
   additionalProperties: serviceConfigSchema,
 };
 
@@ -289,6 +305,10 @@ const experimentalServicesSchema = {
  */
 const experimentalServiceGroupsSchema = {
   type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
   additionalProperties: {
     type: 'array',
     items: {
@@ -315,7 +335,6 @@ const vercelConfigSchema = {
     functions: functionsSchema,
     images: imagesSchema,
     crons: cronsSchema,
-    customErrorPage: customErrorPageSchema,
     bunVersion: { type: 'string' },
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,

@@ -2,10 +2,11 @@
   "name": "test-limit",
   "version": "1.0.0",
   "scripts": {
-    "build": "next build"
+    "build": "next build",
+    "_": "versions after 16.2.0-canary.16 don't include a 404 prerender in the lambda"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "v16.2.0-canary.16",
     "react": "latest",
     "react-dom": "latest"
   }

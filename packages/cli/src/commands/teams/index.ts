@@ -2,17 +2,24 @@ import list from './list';
 import add from './add';
 import change from './switch';
 import invite from './invite';
+import request from './request';
+import members from './members';
+import sso from './sso';
 import { parseArguments } from '../../util/get-args';
 import {
   addSubcommand,
   inviteSubcommand,
   listSubcommand,
+  requestSubcommand,
+  membersSubcommand,
+  ssoSubcommand,
   switchSubcommand,
   teamsCommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { outputAgentError } from '../../util/agent-output';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 import output from '../../output-manager';
 import getSubcommand from '../../util/get-subcommand';
@@ -23,6 +30,9 @@ const COMMAND_CONFIG = {
   switch: ['switch', 'change'],
   add: ['create', 'add'],
   invite: ['invite'],
+  request: ['request', 'access-request'],
+  sso: ['sso'],
+  members: ['members', 'member'],
 };
 
 export default async function teams(client: Client) {
@@ -39,6 +49,17 @@ export default async function teams(client: Client) {
       permissive: true,
     });
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -92,7 +113,7 @@ export default async function teams(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client);
+      return add(client, args);
     }
     case 'invite': {
       if (needHelp) {
@@ -103,9 +124,36 @@ export default async function teams(client: Client) {
       telemetry.trackCliSubcommandInvite(subcommandOriginal);
       return invite(client, args);
     }
+    case 'request': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(requestSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRequest(subcommandOriginal);
+      return request(client, args);
+    }
+    case 'sso': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(ssoSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSso(subcommandOriginal);
+      return sso(client, args);
+    }
+    case 'members': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(membersSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      return members(client, args);
+    }
     default: {
       output.error(
-        'Please specify a valid subcommand: add | ls | switch | invite'
+        'Please specify a valid subcommand: add | ls | switch | invite | request | sso | members'
       );
       output.print(help(teamsCommand, { columns: client.stderr.columns }));
       return 2;

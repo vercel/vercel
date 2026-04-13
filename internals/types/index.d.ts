@@ -26,12 +26,14 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-interface AuthConfig {
+export interface AuthConfig {
   '// Note'?: string;
   '// Docs'?: string;
   skipWrite?: boolean;
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
+  /** The ID of the currently authenticated user, cached from `/v2/user`. */
+  userId?: string;
   /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
   refreshToken?: string;
   /**
@@ -39,6 +41,11 @@ interface AuthConfig {
    * Used to optimistically check if the token is still valid.
    */
   expiresAt?: number;
+  /**
+   * Indicates where the token was provided from when using external tokens.
+   * Only set when token is provided via `--token` flag or `VERCEL_TOKEN` env var.
+   */
+  tokenSource?: 'flag' | 'env';
 }
 
 export interface GlobalConfig {
@@ -61,6 +68,7 @@ type Billing = {
   period: { start: number; end: number };
   plan: string;
   platform: string;
+  status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
   trial: { start: number; end: number };
 };
 
@@ -176,6 +184,14 @@ export type Deployment = {
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   checksState?: 'completed' | 'registered' | 'running';
   checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
   createdAt: number;

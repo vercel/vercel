@@ -1,24 +1,55 @@
 import { downloadInstallAndBundle } from './utils.js';
-import { introspectApp } from '@vercel/introspection';
-import { nodeFileTrace } from './node-file-trace.js';
-import { relative, join } from 'node:path';
-import { doBuild } from './build.js';
 import {
   defaultCachePathGlob,
   glob,
   NodejsLambda,
   debug,
+  getNodeVersion,
+  getLambdaOptionsFromFunction,
+  Span,
   type PrepareCache,
   type BuildV2,
-  getNodeVersion,
-  Span,
+  type Lambda,
+  type NodejsLambdaOptions,
+  isBunVersion,
 } from '@vercel/build-utils';
+import { findEntrypointOrThrow } from './cervel/index.js';
+import { applyServiceVcInit } from './service-vc-init.js';
+// Re-export cervel functions for use by other packages
+export {
+  build as cervelBuild,
+  serve as cervelServe,
+  findEntrypoint,
+  findEntrypointOrThrow,
+  nodeFileTrace,
+  getBuildSummary,
+  srvxOptions,
+} from './cervel/index.js';
+export type {
+  CervelBuildOptions,
+  CervelServeOptions,
+  PathOptions,
+} from './cervel/index.js';
+import { rolldown } from './rolldown/index.js';
+import { introspection } from './rolldown/introspection.js';
+import { nft } from './rolldown/nft.js';
+import { maybeDoBuildCommand } from './build.js';
+import { typescript } from './typescript.js';
+
+// Re-export introspection functions
+export { introspectApp } from './introspection/index.js';
 
 export const version = 2;
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
-  const nodeVersion = await getNodeVersion(args.workPath);
+  const nodeVersion = await getNodeVersion(
+    args.workPath,
+    undefined,
+    args.config,
+    args.meta
+  );
+  const isBun = isBunVersion(nodeVersion);
   const builderName = '@vercel/backends';
 
   const span =
@@ -31,91 +62,271 @@ export const build: BuildV2 = async args => {
     'builder.name': builderName,
   });
 
-  const doBuildSpan = span.child('vc.builder.backends.doBuild');
-  const outputConfig = await doBuildSpan.trace(async span => {
-    const result = await doBuild(args, downloadResult);
-    span.setAttributes({
-      'outputConfig.dir': result.dir,
-      'outputConfig.handler': result.handler,
-    });
-    return result;
-  });
+  const buildSpan = span.child('vc.builder.backends.build');
 
-  debug('Node file trace starting..');
-  const nftSpan = span.child('vc.builder.backends.nodeFileTrace');
-  const nftPromise = nftSpan.trace(() =>
-    nodeFileTrace(args, nodeVersion, outputConfig)
-  );
-  debug('Introspection starting..');
-  const introspectAppSpan = span.child('vc.builder.backends.introspectApp');
-  const { routes, framework } = await introspectAppSpan.trace(async span => {
-    const result = await introspectApp({
-      ...outputConfig,
-      framework: args.config.framework,
-      env: {
-        ...(args.meta?.env ?? {}),
-        ...(args.meta?.buildEnv ?? {}),
-      },
-    });
-    span.setAttributes({
-      'introspectApp.routes': String(result.routes.length),
-    });
-    return result;
-  });
+  return buildSpan.trace(async () => {
+    const entrypoint = await findEntrypointOrThrow(args.workPath);
+    debug('Entrypoint', entrypoint);
+    args.entrypoint = entrypoint;
 
-  if (routes.length > 2) {
-    debug(`Introspection completed successfully with ${routes.length} routes`);
-  } else {
-    debug(`Introspection failed to detect routes`);
-  }
+    const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
-  const handler = relative(
-    args.repoRootPath,
-    join(outputConfig.dir, outputConfig.handler)
-  );
-
-  const { files } = await nftPromise;
-  debug('Node file trace complete');
-
-  const lambda = new NodejsLambda({
-    runtime: nodeVersion.runtime,
-    handler,
-    files,
-    shouldAddHelpers: false,
-    shouldAddSourcemapSupport: true,
-    framework: {
-      slug: framework?.slug ?? '',
-      version: framework?.version ?? '',
-    },
-    awsLambdaHandler: '',
-    shouldDisableAutomaticFetchInstrumentation:
-      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
-      '1',
-  });
-
-  const output: Record<string, NodejsLambda> = { index: lambda };
-
-  for (const route of routes) {
-    if (route.dest) {
-      if (route.dest === '/') {
-        continue;
-      }
-      output[route.dest] = lambda;
+    const functionConfig = args.config.functions?.[entrypoint];
+    if (functionConfig) {
+      args.config.includeFiles = [
+        ...normalizeArray(args.config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      args.config.excludeFiles = [
+        ...normalizeArray(args.config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
     }
-  }
 
-  // Don't return until the TypeScript compilation is complete
-  if (outputConfig.tsPromise) {
-    const tsSpan = span.child('vc.builder.backends.tsCompile');
-    await tsSpan.trace(() => outputConfig.tsPromise);
-  }
+    // Always run rolldown, even if the user has provided a build command
+    // It's very fast and we use it for introspection.
+    const rolldownResult = await rolldown({
+      ...args,
+      span: buildSpan,
+    });
 
-  return {
-    routes,
-    output,
-  };
+    const introspectionPromise = introspection({
+      ...args,
+      span: buildSpan,
+      files: rolldownResult.files,
+      handler: rolldownResult.handler,
+    });
+
+    // This must come after the build command since turbo repo worksapce deps may need to be transpiled.
+    const typescriptPromise = typescript({
+      entrypoint,
+      workPath: args.workPath,
+      span: buildSpan,
+    });
+
+    const localBuildFiles =
+      userBuildResult?.localBuildFiles.size > 0
+        ? userBuildResult?.localBuildFiles
+        : rolldownResult.localBuildFiles;
+
+    const files = userBuildResult?.files || rolldownResult.files;
+    const handler = userBuildResult?.handler || rolldownResult.handler;
+    const nftWorkPath = userBuildResult?.outputDir || args.workPath;
+
+    await nft({
+      ...args,
+      workPath: nftWorkPath,
+      localBuildFiles,
+      files,
+      ignoreNodeModules: false,
+      ignore: args.config.excludeFiles,
+      conditions: isBun ? ['bun'] : undefined,
+      span: buildSpan,
+    });
+
+    const baseDir = args.repoRootPath || args.workPath;
+    const includeResults = await Promise.all(
+      normalizeArray(args.config.includeFiles).map(pattern =>
+        glob(pattern, baseDir)
+      )
+    );
+    for (const matched of includeResults) {
+      for (const [relPath, entry] of Object.entries(matched)) {
+        files[relPath] = entry;
+      }
+    }
+
+    const introspectionResult = await introspectionPromise;
+    await typescriptPromise;
+
+    const functionConfigOverrides = await getLambdaOptionsFromFunction({
+      sourceFile: entrypoint,
+      config: args.config,
+    });
+
+    const serviceRoutePrefix = normalizeServiceRoutePrefix(
+      args.config?.routePrefix ?? args.service?.routePrefix
+    );
+    const shouldStripServiceRoutePrefix =
+      !!serviceRoutePrefix &&
+      (typeof args.config?.serviceName === 'string' || !!args.service);
+
+    let lambdaFiles = files;
+    let lambdaHandler = handler;
+    if (shouldStripServiceRoutePrefix) {
+      const shimmedLambda = await applyServiceVcInit({
+        files,
+        handler,
+        workPath: nftWorkPath,
+      });
+      lambdaFiles = shimmedLambda.files;
+      lambdaHandler = shimmedLambda.handler;
+    }
+
+    const lambdaArgs: NodejsLambdaOptions = {
+      runtime: nodeVersion.runtime,
+      handler: lambdaHandler,
+      files: lambdaFiles,
+      framework: rolldownResult.framework,
+      shouldAddHelpers: false,
+      shouldAddSourcemapSupport: true,
+      awsLambdaHandler: '',
+      ...functionConfigOverrides,
+      shouldDisableAutomaticFetchInstrumentation:
+        process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+        '1',
+    };
+
+    const lambda = new NodejsLambda(lambdaArgs);
+    if (shouldStripServiceRoutePrefix && serviceRoutePrefix) {
+      lambda.environment = {
+        ...lambda.environment,
+        VERCEL_SERVICE_ROUTE_PREFIX: serviceRoutePrefix,
+        VERCEL_SERVICE_ROUTE_PREFIX_STRIP: '1',
+      };
+    }
+    const serviceName =
+      typeof args.config?.serviceName === 'string' &&
+      args.config.serviceName !== ''
+        ? args.config.serviceName
+        : undefined;
+    const internalServiceFunctionPath =
+      typeof serviceName === 'string' && serviceName !== ''
+        ? `/_svc/${serviceName}/index`
+        : undefined;
+    const internalServiceOutputPath = internalServiceFunctionPath?.slice(1);
+    const remapRouteDestination = <T extends { src?: string; dest?: string }>(
+      route: T
+    ): T => {
+      const prefixedRoute = maybePrefixServiceRouteSource(
+        route,
+        serviceRoutePrefix
+      );
+      if (!internalServiceFunctionPath || !route.dest) {
+        return prefixedRoute;
+      }
+      return {
+        ...prefixedRoute,
+        dest: internalServiceFunctionPath,
+      };
+    };
+
+    // Build routes: filesystem handler, then introspected routes, then catch-all
+    const routes = [
+      {
+        handle: 'filesystem',
+      },
+      ...introspectionResult.routes.map(remapRouteDestination),
+      {
+        src: getServiceCatchallSource(serviceRoutePrefix),
+        dest: internalServiceFunctionPath ?? '/',
+      },
+    ];
+
+    const output: Record<string, Lambda> = internalServiceOutputPath
+      ? { [internalServiceOutputPath]: lambda }
+      : { index: lambda };
+
+    for (const route of routes) {
+      if (route.dest) {
+        if (route.dest === '/') {
+          continue;
+        }
+        // Only the exact service alias needs the leading slash removed.
+        const outputPath =
+          route.dest === internalServiceFunctionPath &&
+          internalServiceOutputPath
+            ? internalServiceOutputPath
+            : route.dest;
+        output[outputPath] = lambda;
+      }
+    }
+
+    return {
+      routes,
+      output,
+    };
+  });
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
+
+const normalizeArray = (value: any) =>
+  Array.isArray(value) ? value : value ? [value] : [];
+
+const normalizeServiceRoutePrefix = (routePrefix: unknown) => {
+  if (
+    typeof routePrefix !== 'string' ||
+    routePrefix === '' ||
+    routePrefix === '.'
+  ) {
+    return undefined;
+  }
+
+  let normalized = routePrefix.startsWith('/')
+    ? routePrefix
+    : `/${routePrefix}`;
+  if (normalized !== '/' && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized === '/' ? undefined : normalized;
+};
+
+const maybePrefixServiceRouteSource = <
+  T extends { src?: string; dest?: string },
+>(
+  route: T,
+  routePrefix?: string
+): T => {
+  if (
+    !routePrefix ||
+    typeof route.dest !== 'string' ||
+    !route.dest.startsWith('/')
+  ) {
+    return route;
+  }
+
+  return {
+    ...route,
+    src: getPrefixedRouteSource(route.src, route.dest, routePrefix),
+  };
+};
+
+const getPrefixedRouteSource = (
+  routeSource: string | undefined,
+  routePath: string,
+  routePrefix: string
+) => {
+  if (!routeSource) {
+    return routeSource;
+  }
+
+  if (routePath === routePrefix || routePath.startsWith(`${routePrefix}/`)) {
+    return routeSource;
+  }
+
+  const escapedRoutePrefix = toRegexSource(routePrefix);
+  if (routeSource.startsWith('^(?:')) {
+    return `^(?:${escapedRoutePrefix}${routeSource.slice(4)}`;
+  }
+  if (routeSource.startsWith('^')) {
+    return `^${escapedRoutePrefix}${routeSource.slice(1)}`;
+  }
+  return `${escapedRoutePrefix}${routeSource}`;
+};
+
+const getServiceCatchallSource = (routePrefix?: string) => {
+  if (!routePrefix) {
+    return '/(.*)';
+  }
+
+  return `^${escapeForRegex(routePrefix)}(?:/(.*))?$`;
+};
+
+const escapeForRegex = (value: string) =>
+  value.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+
+const toRegexSource = (value: string) =>
+  escapeForRegex(value).replaceAll('/', '\\/');

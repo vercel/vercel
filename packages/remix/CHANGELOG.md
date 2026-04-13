@@ -1,5 +1,40 @@
 # @vercel/remix-builder
 
+## 5.7.2
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+## 5.7.1
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+## 5.7.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+
+## 5.6.0
+
+### Minor Changes
+
+- [remix] Support future.v8_middleware option ([#15189](https://github.com/vercel/vercel/pull/15189))
+
+## 5.5.10
+
+### Patch Changes
+
+- [remix] Prevent 404 responses from being cached with immutable headers ([#14828](https://github.com/vercel/vercel/pull/14828))
+
 ## 5.5.9
 
 ### Patch Changes

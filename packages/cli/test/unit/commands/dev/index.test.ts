@@ -10,7 +10,9 @@ vi.mock('../../../../src/util/dev/server', () => {
   class DevServer {
     devCommand = 'framework dev';
     feed() {}
-    stop() {}
+    stop() {
+      return Promise.resolve();
+    }
     start() {}
   }
   return { default: DevServer };
@@ -156,6 +158,45 @@ describe('dev', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:confirm',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('--local', () => {
+    it('shows warning message and starts dev server for unlinked project', async () => {
+      const unlinkedPath = '/user/name/code/unlinked-project';
+      vol.fromJSON({}, unlinkedPath);
+
+      client.setArgv('dev', '--local', unlinkedPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      await expect(client.stderr).toOutput('Running dev server in local mode');
+    });
+
+    it('does not show local mode warning for linked projects', async () => {
+      client.setArgv('dev', '--local', projectPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      await expect(client.stderr).not.toOutput(
+        'Running dev server in local mode',
+        100
+      );
+    });
+
+    it('tracks telemetry', async () => {
+      vi.spyOn(process, 'cwd').mockReturnValue(projectPath);
+
+      client.setArgv('dev', '--local');
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:local',
           value: 'TRUE',
         },
       ]);

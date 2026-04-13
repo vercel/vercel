@@ -1,9 +1,6 @@
 {
   "probes": [
     {
-      "logMustContain": "Using Python 3.14 from pyproject.toml"
-    },
-    {
       "path": "/api/version",
       "mustContain": "\"fastapi_version\":\"0.116.2\""
     },
@@ -14,6 +11,9 @@
     {
       "path": "/api/optional-dependencies",
       "mustContain": "\"ok\":true"
+    },
+    {
+      "logMustContain": "Using Python 3.12 from pyproject.toml"
     }
   ]
 }

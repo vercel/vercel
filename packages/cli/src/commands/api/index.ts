@@ -12,8 +12,15 @@ import {
   formatOutput,
   generateCurlCommand,
 } from './request-builder';
-import { OpenApiCache } from './openapi-cache';
+import { OpenApiCache } from '../../util/openapi';
 import { API_BASE_URL } from './constants';
+import {
+  colorizeMethod,
+  colorizeMethodPadded,
+  formatPathParam,
+  formatTypeHint,
+  formatDescription,
+} from './format-utils';
 import output from '../../output-manager';
 import type {
   ParsedFlags,
@@ -89,6 +96,11 @@ export default async function api(client: Client): Promise<number> {
     return 2;
   }
 
+  // Set dangerously-skip-permissions flag for DELETE confirmation handling
+  if (flags['--dangerously-skip-permissions']) {
+    client.dangerouslySkipPermissions = true;
+  }
+
   // Get endpoint from args (args[0] is 'api', args[1] is the endpoint)
   let endpoint = firstArg;
   let selectedMethod: string | undefined;
@@ -147,6 +159,8 @@ export default async function api(client: Client): Promise<number> {
   if (flags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
   if (flags['--generate'])
     telemetryClient.trackCliOptionGenerate(flags['--generate']);
+  if (flags['--dangerously-skip-permissions'])
+    telemetryClient.trackCliFlagDangerouslySkipPermissions(true);
 
   // Use method from interactive selection if not overridden by flag
   const finalFlags = { ...flags } as ParsedFlags;
@@ -169,7 +183,7 @@ export default async function api(client: Client): Promise<number> {
         'https://api.vercel.com'
       );
       output.log('');
-      output.log('Add your authorization header to the curl command below:');
+      output.log('Replace <TOKEN> with your auth token:');
       output.log('');
       client.stdout.write(curlCmd + '\n');
       return 0;
@@ -223,6 +237,15 @@ async function executeSingleRequest(
   flags: ParsedFlags
 ): Promise<number> {
   try {
+    // Check for confirmation before proceeding with DELETE operations
+    const confirmed = await client.confirmMutatingOperation(
+      config.url,
+      config.method
+    );
+    if (!confirmed) {
+      return 1;
+    }
+
     const response: Response = await client.fetch(config.url, {
       method: config.method,
       body: config.body,
@@ -245,6 +268,15 @@ async function executePaginatedRequest(
   const results: unknown[] = [];
 
   try {
+    // Check for confirmation before proceeding with DELETE operations
+    const confirmed = await client.confirmMutatingOperation(
+      config.url,
+      config.method
+    );
+    if (!confirmed) {
+      return 1;
+    }
+
     for await (const page of client.fetchPaginated<Record<string, unknown>>(
       config.url,
       {
@@ -388,7 +420,7 @@ async function promptForEndpoint(
   endpoints: EndpointInfo[]
 ): Promise<EndpointInfo> {
   const allChoices = endpoints.map(ep => ({
-    name: `${ep.method.padEnd(7)} ${ep.path}`,
+    name: `${colorizeMethodPadded(ep.method)} ${ep.path}`,
     value: ep,
     // Show full description if available, otherwise show summary
     description: ep.description || ep.summary || undefined,
@@ -463,26 +495,6 @@ function outputEndpointsAsJson(
 }
 
 /**
- * Colorize HTTP method for terminal output
- */
-function colorizeMethod(method: string): string {
-  switch (method) {
-    case 'GET':
-      return chalk.cyan(method);
-    case 'POST':
-      return chalk.green(method);
-    case 'PUT':
-      return chalk.yellow(method);
-    case 'PATCH':
-      return chalk.blue(method);
-    case 'DELETE':
-      return chalk.red(method);
-    default:
-      return method;
-  }
-}
-
-/**
  * Group endpoints by path
  */
 interface GroupedEndpoint {
@@ -553,13 +565,6 @@ function createRequiredValidator(fieldName: string) {
 }
 
 /**
- * Format description hint for prompt messages
- */
-function formatDescription(description?: string): string {
-  return description ? ` (${description})` : '';
-}
-
-/**
  * Build URL query string from params object
  */
 function buildQueryString(params: Record<string, string>): string {
@@ -594,7 +599,7 @@ async function promptForParameters(
   let finalPath = path;
   for (const param of pathParams) {
     const value = await client.input.text({
-      message: `Enter value for {${param.name}}${formatDescription(param.description)}:`,
+      message: `Enter value for ${formatPathParam(param.name)}${formatDescription(param.description)}:`,
       validate: createRequiredValidator(param.name),
     });
     finalPath = finalPath.replace(`{${param.name}}`, encodeURIComponent(value));
@@ -604,7 +609,7 @@ async function promptForParameters(
   const queryValues: Record<string, string> = {};
   for (const param of requiredQueryParams) {
     queryValues[param.name] = await client.input.text({
-      message: `Enter value for ${param.name}${formatDescription(param.description)}:`,
+      message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
       validate: createRequiredValidator(param.name),
     });
   }
@@ -615,7 +620,7 @@ async function promptForParameters(
       message: 'Select optional query parameters to include:',
       pageSize: 20,
       choices: optionalQueryParams.map(p => ({
-        name: `${p.name}${formatDescription(p.description)}`,
+        name: `${chalk.cyan(p.name)}${formatDescription(p.description)}`,
         value: p.name,
       })),
     });
@@ -624,7 +629,7 @@ async function promptForParameters(
     for (const paramName of selectedOptionalParams) {
       const param = optionalQueryParams.find(p => p.name === paramName)!;
       queryValues[param.name] = await client.input.text({
-        message: `Enter value for ${param.name}${formatDescription(param.description)}:`,
+        message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
         validate: createRequiredValidator(param.name),
       });
     }
@@ -643,7 +648,7 @@ async function promptForParameters(
       message: 'Select optional body fields to include:',
       pageSize: 20,
       choices: optionalBodyFields.map(f => ({
-        name: `${f.name}${f.type ? ` [${f.type}]` : ''}${formatDescription(f.description)}`,
+        name: `${chalk.cyan(f.name)}${f.type ? ` ${formatTypeHint(f.type)}` : ''}${formatDescription(f.description)}`,
         value: f.name,
       })),
     });
@@ -666,7 +671,7 @@ async function promptForParameters(
 }
 
 /**
- * Prompt for a single body field value (text input or enum select)
+ * Prompt for a single body field value (text input, enum select, or array multi-select)
  */
 async function promptForBodyField(
   client: Client,
@@ -674,9 +679,30 @@ async function promptForBodyField(
   required: boolean
 ): Promise<string> {
   const description = formatDescription(field.description);
-  const optionalHint = required ? '' : ' (optional)';
+  const optionalHint = required ? '' : chalk.dim(' (optional)');
 
-  // Use select for enum fields
+  // Use checkbox for array fields with enum values (multi-select)
+  if (
+    field.type === 'array' &&
+    field.enumValues &&
+    field.enumValues.length > 0
+  ) {
+    const choices = field.enumValues.map(v => ({
+      name: String(v),
+      value: String(v),
+    }));
+
+    const selected = await client.input.checkbox<string>({
+      message: `Select values for ${chalk.cyan(field.name)}${optionalHint}${description}:`,
+      choices,
+      required,
+    });
+
+    // Return as JSON array for the --field flag
+    return JSON.stringify(selected);
+  }
+
+  // Use select for non-array enum fields
   if (field.enumValues && field.enumValues.length > 0) {
     const choices = field.enumValues.map(v => ({
       name: String(v),
@@ -685,19 +711,19 @@ async function promptForBodyField(
 
     // Add empty option for optional enum fields
     if (!required) {
-      choices.unshift({ name: '(skip)', value: '' });
+      choices.unshift({ name: chalk.dim('(skip)'), value: '' });
     }
 
     return client.input.select({
-      message: `Select value for ${field.name}${optionalHint}${description}:`,
+      message: `Select value for ${chalk.cyan(field.name)}${optionalHint}${description}:`,
       choices,
     });
   }
 
   // Use text input for other fields
-  const typeHint = field.type ? ` [${field.type}]` : '';
+  const typeHint = field.type ? ` ${formatTypeHint(field.type)}` : '';
   return client.input.text({
-    message: `Enter value for ${field.name}${optionalHint}${typeHint}${description}:`,
+    message: `Enter value for ${chalk.cyan(field.name)}${optionalHint}${typeHint}${description}:`,
     validate: required ? createRequiredValidator(field.name) : undefined,
   });
 }

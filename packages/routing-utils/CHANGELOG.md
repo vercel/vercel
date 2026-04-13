@@ -1,5 +1,59 @@
 # @vercel/routing-utils
 
+## 6.1.1
+
+### Patch Changes
+
+- Redirect sources now support domains ([#15670](https://github.com/vercel/vercel/pull/15670))
+
+## 6.1.0
+
+### Minor Changes
+
+- Removed bulkRedirectsSchema ([#14340](https://github.com/vercel/vercel/pull/14340))
+
+## 6.0.2
+
+### Patch Changes
+
+- Fix typo in routes type ([#15318](https://github.com/vercel/vercel/pull/15318))
+
+## 6.0.1
+
+### Patch Changes
+
+- Fix type error caused by `source` normalization in Routes ([#15292](https://github.com/vercel/vercel/pull/15292))
+
+## 6.0.0
+
+### Major Changes
+
+- Allow `routes` to coexist with `rewrites`, `headers`, `redirects`, `cleanUrls`, and `trailingSlash`. ([#15020](https://github.com/vercel/vercel/pull/15020))
+
+  This is part of our efforts to undeprecate `routes`, which had previously been deprecated for a few years and replaced by the properties above. Now that we are undeprecating `routes` in favor of a more focused deprecation of properties within it, it is now allowed to coexist with the new properties.
+
+  When used together, `routes` are inserted after `cleanUrls` and `trailingSlash` but before `redirects`, `headers`, and `rewrites` in the routing order.
+
+- Deprecate `handle`, `important`, and `override` properties in `routes` schema ([#15015](https://github.com/vercel/vercel/pull/15015))
+
+## 5.4.0
+
+### Minor Changes
+
+- Undeprecate `routes` schema and add aliases for `src`, `dest`, and `status` ([#15010](https://github.com/vercel/vercel/pull/15010))
+
+## 5.3.3
+
+### Patch Changes
+
+- Services routing improvements: ([#15018](https://github.com/vercel/vercel/pull/15018))
+
+  - Fix route ownership scoping so parent service catch-alls (e.g. Vite SPA fallback) don't capture sibling service prefixes
+  - Move shared ownership-guard helpers (`getOwnershipGuard`, `scopeRouteSourceToOwnership`) to `@vercel/routing-utils`
+  - Place runtime service function outputs under internal `/_svc/<service>/index` namespace to prevent filesystem path leakage
+  - Block `/_svc` as a reserved routePrefix in service validation
+  - Scope all builder-emitted routes (not just route-owning builders) to their service ownership before merging
+
 ## 5.3.2
 
 ### Patch Changes

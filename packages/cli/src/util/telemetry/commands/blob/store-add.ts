@@ -6,6 +6,15 @@ export class BlobAddStoreTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof addStoreSubcommand>
 {
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
+
   trackCliArgumentName(value: string | undefined) {
     if (value) {
       this.trackCliArgument({
@@ -20,6 +29,21 @@ export class BlobAddStoreTelemetryClient
       this.trackCliOption({
         option: 'region',
         value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagYes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliOptionEnvironment(value: string[] | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'environment',
+        value: value.join(','),
       });
     }
   }

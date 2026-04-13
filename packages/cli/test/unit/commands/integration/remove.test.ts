@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
 import { useConfiguration, useResources } from '../../../mocks/integration';
@@ -7,13 +7,14 @@ import { useUser } from '../../../mocks/user';
 
 describe('integration', () => {
   describe('remove', () => {
-    beforeEach(() => {
-      useUser();
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
     describe('happy path', () => {
       let team: Team;
       beforeEach(() => {
+        useUser();
         const teams = useTeams('team_dummy');
         team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;
@@ -61,6 +62,25 @@ describe('integration', () => {
         await expect(exitCodePromise).resolves.toEqual(0);
       });
 
+      it('parses slug when global flags are before the integration subcommand', async () => {
+        useConfiguration();
+        mockDeleteIntegration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv(
+          '--cwd',
+          '/tmp/proj',
+          '--non-interactive',
+          'integration',
+          'remove',
+          integration,
+          '--yes'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toBe(0);
+        await expect(client.stderr).toOutput('Uninstalling integration…');
+      });
+
       it('exits gracefully when cancelling during confirmation for removing an integration', async () => {
         useConfiguration();
         const integration = 'acme-no-projects';
@@ -92,13 +112,161 @@ describe('integration', () => {
           `No integration ${integration} found.`
         );
 
+        await expect(exitCodePromise).resolves.toEqual(1);
+      });
+    });
+
+    describe('without currentTeam (defaultTeamId fallback)', () => {
+      it('finds integration when currentTeam is not set', async () => {
+        useUser({
+          version: 'northstar',
+          defaultTeamId: 'team_dummy',
+        });
+        useTeams('team_dummy');
+        // Explicitly do NOT set client.config.currentTeam
+        useResources();
+
+        // Mock that validates teamId is present in the request
+        client.scenario.get(
+          '/:version/integrations/configurations',
+          (req, res) => {
+            const { teamId, integrationIdOrSlug } = req.query;
+            if (!teamId) {
+              res.status(400).json({ error: 'teamId is required' });
+              return;
+            }
+            if (integrationIdOrSlug === 'acme') {
+              res.json([
+                {
+                  id: 'acme-1',
+                  integrationId: 'acme',
+                  ownerId: 'team_dummy',
+                  slug: 'acme',
+                  teamId: 'team_dummy',
+                  userId: 'user_dummy',
+                  scopes: ['read-write:integration-resource'],
+                  source: 'marketplace',
+                  installationType: 'marketplace',
+                  projects: [],
+                },
+              ]);
+            } else {
+              res.json([]);
+            }
+          }
+        );
+        mockDeleteIntegration();
+
+        client.setArgv('integration', 'remove', 'acme', '--yes');
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput('Retrieving integration…');
+        await expect(client.stderr).toOutput(
+          `> Success! acme successfully removed.`
+        );
+
         await expect(exitCodePromise).resolves.toEqual(0);
+      });
+    });
+
+    describe('--format=json', () => {
+      let team: Team;
+      beforeEach(() => {
+        useUser();
+        const teams = useTeams('team_dummy');
+        team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useResources();
+      });
+
+      it('returns JSON output when removing an integration with --yes', async () => {
+        useConfiguration();
+        mockDeleteIntegration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv(
+          'integration',
+          'remove',
+          integration,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(0);
+
+        const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+        expect(jsonOutput).toEqual({
+          integration,
+          removed: true,
+        });
+      });
+
+      it('should error when --format=json is used without --yes', async () => {
+        const integration = 'acme-no-projects';
+
+        client.setArgv('integration', 'remove', integration, '--format=json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: --format=json requires --yes to skip confirmation prompts'
+        );
+      });
+
+      it('should track --format option in telemetry', async () => {
+        useConfiguration();
+        mockDeleteIntegration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv(
+          'integration',
+          'remove',
+          integration,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:remove',
+            value: 'remove',
+          },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+          {
+            key: 'option:format',
+            value: 'json',
+          },
+          {
+            key: 'argument:integration',
+            value: integration,
+          },
+        ]);
+      });
+
+      it('should error with an invalid format value', async () => {
+        client.setArgv(
+          'integration',
+          'remove',
+          'acme',
+          '--yes',
+          '--format=xml'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Invalid output format: "xml"'
+        );
       });
     });
 
     describe('errors', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
+          useUser();
           client.setArgv('integration', 'remove', 'acme');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
@@ -109,6 +277,7 @@ describe('integration', () => {
       describe('with team', () => {
         let team: Team;
         beforeEach(() => {
+          useUser();
           const teams = useTeams('team_dummy');
           team = Array.isArray(teams) ? teams[0] : teams.teams[0];
           client.config.currentTeam = team.id;
@@ -122,6 +291,33 @@ describe('integration', () => {
             'Error: You must specify an integration. See `--help` for details.'
           );
           await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('writes structured JSON when non-interactive and integration slug is missing', async () => {
+          vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+            throw new Error(`exit:${code ?? 0}`);
+          }) as () => never);
+          client.nonInteractive = true;
+          client.setArgv(
+            'integration',
+            'remove',
+            '--non-interactive',
+            '--cwd',
+            '/tmp/example'
+          );
+          await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+          const payload = JSON.parse(client.stdout.getFullOutput().trim());
+          expect(payload).toMatchObject({
+            status: 'error',
+            reason: 'missing_arguments',
+          });
+          expect(payload.message).toMatch(/specify an integration/i);
+          expect(payload.next?.[0]?.command).toBe(
+            'vercel --non-interactive --cwd /tmp/example integration installations'
+          );
+          expect(payload.next?.[1]?.command).toBe(
+            'vercel --non-interactive --cwd /tmp/example integration remove <slug> --yes'
+          );
         });
 
         it('should error when more arguments than a single integration are passed', async () => {
@@ -155,7 +351,135 @@ describe('integration', () => {
           await expect(client.stderr).toOutput('Uninstalling integration…');
 
           await expect(client.stderr).toOutput(
-            `Error: Failed to remove ${integration}: ${errorOptions.errorMessage} (${errorOptions.errorStatus})`
+            `Cannot uninstall ${integration} because it still has resources.`
+          );
+          await expect(client.stderr).toOutput(
+            'Resources that must be removed first:'
+          );
+          await expect(client.stderr).toOutput('store-acme-other-project');
+          await expect(client.stderr).toOutput('store-acme-no-projects');
+          await expect(client.stderr).toOutput(
+            `integration remove ${integration}`
+          );
+
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('should return structured JSON when removing integration with resources and --format=json', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.setArgv(
+            'integration',
+            'remove',
+            integration,
+            '--yes',
+            '--format=json'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          expect(jsonOutput.status).toEqual('error');
+          expect(jsonOutput.reason).toEqual('has_resources');
+          expect(jsonOutput.integration).toEqual(integration);
+          expect(jsonOutput.removed).toEqual(false);
+          expect(jsonOutput.error).toEqual('has_resources');
+          expect(jsonOutput.hint).toMatch(/user approval|--disconnect-all/i);
+          expect(jsonOutput.resources).toEqual(
+            expect.arrayContaining([
+              'store-acme-other-project',
+              'store-acme-no-projects',
+            ])
+          );
+          expect(jsonOutput.next).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                command: expect.stringContaining(
+                  'integration-resource remove store-acme-other-project --disconnect-all --yes --format=json'
+                ),
+                when: expect.stringMatching(/store-acme-other-project/),
+              }),
+              expect.objectContaining({
+                command: expect.stringContaining(
+                  'integration-resource remove store-acme-no-projects --disconnect-all --yes --format=json'
+                ),
+                when: expect.stringMatching(/store-acme-no-projects/),
+              }),
+            ])
+          );
+          expect(jsonOutput.retry).toEqual(
+            expect.stringContaining(
+              `integration remove ${integration} --yes --format=json`
+            )
+          );
+        });
+
+        it('prints structured JSON in non-interactive mode when integration still has resources', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.setArgv(
+            '--cwd',
+            '/tmp/neon-proj',
+            '--non-interactive',
+            'integration',
+            'remove',
+            integration,
+            '--yes'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput().trim());
+          expect(jsonOutput.status).toEqual('error');
+          expect(jsonOutput.reason).toEqual('has_resources');
+          expect(jsonOutput.resources).toEqual(
+            expect.arrayContaining(['store-acme-other-project'])
+          );
+          expect(jsonOutput.next?.[0]?.command).toContain(
+            '--cwd /tmp/neon-proj'
+          );
+          expect(jsonOutput.next?.[0]?.command).toContain('--non-interactive');
+          expect(jsonOutput.retry).toContain('--cwd /tmp/neon-proj');
+          expect(jsonOutput.retry).toContain(
+            `integration remove ${integration} --yes`
+          );
+          expect(jsonOutput.retry).not.toContain('--format=json');
+          expect(jsonOutput.next?.[0]?.command).not.toMatch(/--yes.*--yes/);
+        });
+
+        it('should show agent approval warning when removing integration with resources as agent', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.isAgent = true;
+          client.setArgv('integration', 'remove', integration, '--yes');
+          const exitCodePromise = integrationCommand(client);
+
+          await expect(client.stderr).toOutput(
+            `Cannot uninstall ${integration} because it still has resources.`
+          );
+          await expect(client.stderr).toOutput(
+            'AGENT: You must get user approval before running any resource removal commands.'
+          );
+          await expect(client.stderr).toOutput(
+            `integration remove ${integration}`
           );
 
           await expect(exitCodePromise).resolves.toEqual(1);

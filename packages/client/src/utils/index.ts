@@ -7,7 +7,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile } from 'fs-extra';
+import { readFile, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -36,7 +36,7 @@ const EVENTS_ARRAY = [
   'notice',
   'tip',
   'canceled',
-  // Checks events
+  // v1 Checks events
   'checks-registered',
   'checks-completed',
   'checks-running',
@@ -44,6 +44,8 @@ const EVENTS_ARRAY = [
   'checks-conclusion-failed',
   'checks-conclusion-skipped',
   'checks-conclusion-canceled',
+  // v2 Checks events
+  'checks-v2-failed',
 ] as const;
 
 export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
@@ -65,7 +67,6 @@ export async function parseVercelConfig(
 
     return JSON.parse(jsonString);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(e);
 
     return {};
@@ -75,7 +76,7 @@ export async function parseVercelConfig(
 const maybeRead = async function <T>(path: string, default_: T) {
   try {
     return await readFile(path, 'utf8');
-  } catch (err) {
+  } catch (_err) {
     return default_;
   }
 };
@@ -88,6 +89,7 @@ export async function buildFileTree(
     vercelOutputDir,
     rootDirectory,
     projectName,
+    bulkRedirectsPath,
   }: Pick<
     VercelClientOptions,
     | 'isDirectory'
@@ -95,6 +97,7 @@ export async function buildFileTree(
     | 'vercelOutputDir'
     | 'rootDirectory'
     | 'projectName'
+    | 'bulkRedirectsPath'
   >,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
@@ -167,6 +170,50 @@ export async function buildFileTree(
       }
     } catch (e) {
       debug(`Error checking for .vercel/routes.json: ${e}`);
+    }
+
+    // Include bulkRedirectsPath file or directory if specified (for prebuilt deployments)
+    if (prebuilt && bulkRedirectsPath) {
+      try {
+        const projectRoot = path;
+        const bulkRedirectsFullPath = join(
+          projectRoot,
+          rootDirectory || '',
+          bulkRedirectsPath
+        );
+
+        // Validate that the resolved path stays within the project root
+        const relativeFromRoot = relative(projectRoot, bulkRedirectsFullPath);
+        if (relativeFromRoot.startsWith('..')) {
+          debug(
+            `Skipping bulk redirects path "${bulkRedirectsPath}" - path traversal detected (resolves outside project root)`
+          );
+        } else {
+          try {
+            const stats = await stat(bulkRedirectsFullPath);
+            if (stats.isDirectory()) {
+              // If it's a directory, recursively include all files
+              const dirFiles = await readdir(bulkRedirectsFullPath, []);
+              for (const file of dirFiles) {
+                refs.add(file);
+              }
+              debug(
+                `Including ${dirFiles.length} files from bulk redirects directory "${bulkRedirectsPath}" in deployment`
+              );
+            } else if (stats.isFile()) {
+              // If it's a file, include it directly
+              refs.add(bulkRedirectsFullPath);
+              debug(
+                `Including bulk redirects file "${bulkRedirectsPath}" in deployment`
+              );
+            }
+          } catch (_e) {
+            debug(`Bulk redirects path "${bulkRedirectsPath}" not found`);
+          }
+        }
+      } catch (e) {
+        debug(`Error checking for bulk redirects path: ${e}`);
+      }
     }
 
     if (refs.size > 0) {
@@ -287,7 +334,7 @@ interface FetchOpts extends RequestInit {
   userAgent?: string;
 }
 
-export const fetch = async (
+export const fetchApi = async (
   url: string,
   token: string,
   opts: FetchOpts = {},

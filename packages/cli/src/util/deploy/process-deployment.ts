@@ -50,6 +50,8 @@ export default async function processDeployment({
   noWait,
   withFullLogs,
   agent,
+  manual,
+  jsonOutput,
   ...args
 }: {
   now: Now;
@@ -71,6 +73,9 @@ export default async function processDeployment({
   noWait?: boolean;
   withFullLogs?: boolean;
   agent?: Agent;
+  bulkRedirectsPath?: string | null;
+  manual?: boolean;
+  jsonOutput?: boolean;
 }) {
   const {
     now,
@@ -83,6 +88,7 @@ export default async function processDeployment({
     prebuilt,
     vercelOutputDir,
     rootDirectory,
+    bulkRedirectsPath,
   } = args;
 
   const client = now._client;
@@ -109,6 +115,8 @@ export default async function processDeployment({
     archive,
     agent,
     projectName,
+    bulkRedirectsPath,
+    manual,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -210,7 +218,7 @@ export default async function processDeployment({
           ) + `\n`
         );
 
-        if (quiet || process.env.FORCE_TTY === '1') {
+        if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
@@ -279,15 +287,13 @@ export default async function processDeployment({
         return event.payload;
       }
 
-      // If `checksState` is present, we can only continue to "Completing" if the checks finished,
-      // otherwise we might show "Completing" before "Running Checks".
-      if (
-        event.type === 'ready' &&
-        (event.payload.checksState
-          ? event.payload.checksState === 'completed'
-          : true) &&
-        !withFullLogs
-      ) {
+      if (event.type === 'ready' && !withFullLogs) {
+        const v1ChecksPending =
+          event.payload.checksState &&
+          event.payload.checksState !== 'completed';
+        const v2ChecksPending =
+          event.payload.checks?.['deployment-alias']?.state === 'pending';
+
         stopSpinner();
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
@@ -300,14 +306,26 @@ export default async function processDeployment({
             emoji('success')
           ) + `\n`
         );
-        output.spinner('Completing...', 0);
+
+        if (v1ChecksPending || v2ChecksPending) {
+          output.spinner('Running Checks...', 0);
+        } else {
+          output.spinner('Completing...', 0);
+        }
       }
 
+      // v1 checks running
       if (event.type === 'checks-running' && !withFullLogs) {
         output.spinner('Running Checks...', 0);
       }
 
+      // v1 checks failed
       if (event.type === 'checks-conclusion-failed') {
+        stopSpinner();
+        return event.payload;
+      }
+
+      if (event.type === 'checks-v2-failed') {
         stopSpinner();
         return event.payload;
       }

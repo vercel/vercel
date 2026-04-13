@@ -249,4 +249,46 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(microfrontendsConfig)[0]
     );
   });
+
+  it('should include bulkRedirectsPath file when prebuilt=true', async () => {
+    const cwd = fixture('bulk-redirects-path');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+        bulkRedirectsPath: 'redirects.json',
+      },
+      noop
+    );
+
+    const bulkRedirectsFile = toAbsolutePaths(cwd, ['redirects.json']);
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths(bulkRedirectsFile)[0]
+    );
+  });
+
+  it('should include all files from bulkRedirectsPath directory when prebuilt=true', async () => {
+    const cwd = fixture('bulk-redirects-dir');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+        bulkRedirectsPath: 'redirects',
+      },
+      noop
+    );
+
+    const expectedFiles = toAbsolutePaths(cwd, [
+      'redirects/redirects1.json',
+      'redirects/redirects2.json',
+    ]);
+    const normalizedFileList = normalizeWindowsPaths(fileList);
+    for (const expectedFile of normalizeWindowsPaths(expectedFiles)) {
+      expect(normalizedFileList).toContain(expectedFile);
+    }
+  });
 });

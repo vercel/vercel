@@ -1,6 +1,12 @@
 import ms from 'ms';
 import type Client from './client';
 
+export interface RequestLogMessage {
+  level: string;
+  message: string;
+  messageTruncated?: boolean;
+}
+
 export interface RequestLogEntry {
   id: string;
   timestamp: number;
@@ -18,6 +24,7 @@ export interface RequestLogEntry {
   cache?: string;
   traceId?: string;
   messageTruncated?: boolean;
+  logs: RequestLogMessage[];
 }
 
 export interface RequestLogsResponse {
@@ -41,7 +48,46 @@ export interface FetchRequestLogsOptions {
   limit?: number;
   search?: string;
   requestId?: string;
+  branch?: string;
   page?: number;
+}
+
+type DisplayLogLevel = RequestLogEntry['level'];
+
+const LOG_LEVEL_SEVERITY: Record<
+  'info' | 'warning' | 'error' | 'fatal',
+  number
+> = {
+  info: 0,
+  warning: 1,
+  error: 2,
+  fatal: 3,
+};
+
+function getLogLevelSeverity(level: string): number {
+  return LOG_LEVEL_SEVERITY[level as keyof typeof LOG_LEVEL_SEVERITY] ?? -1;
+}
+
+function getDisplayLog(
+  logs: RequestLogMessage[],
+  requestedLevels?: string[]
+): RequestLogMessage | undefined {
+  if (logs.length === 0) {
+    return undefined;
+  }
+
+  const matchingLogs =
+    requestedLevels && requestedLevels.length > 0
+      ? logs.filter(log => requestedLevels.includes(log.level))
+      : logs;
+
+  const candidates = matchingLogs.length > 0 ? matchingLogs : logs;
+
+  return candidates.reduce((selected, current) =>
+    getLogLevelSeverity(current.level) > getLogLevelSeverity(selected.level)
+      ? current
+      : selected
+  );
 }
 
 function parseRelativeTime(input: string): number {
@@ -73,6 +119,7 @@ export async function fetchRequestLogs(
     until,
     search,
     requestId,
+    branch,
     page = 0,
   } = options;
 
@@ -118,6 +165,10 @@ export async function fetchRequestLogs(
     query.set('requestId', requestId);
   }
 
+  if (branch) {
+    query.set('branch', branch);
+  }
+
   // The request-logs API is on vercel.com, not api.vercel.com
   // In tests, client.apiUrl points to the mock server, so use that
   const baseUrl =
@@ -126,13 +177,63 @@ export async function fetchRequestLogs(
       : client.apiUrl;
   const url = `${baseUrl}/api/logs/request-logs?${query.toString()}`;
 
+  interface ApiLogEntry {
+    requestId?: string;
+    timestamp?: string;
+    deploymentId?: string;
+    requestMethod?: string;
+    requestPath?: string;
+    statusCode?: number;
+    environment?: string;
+    branch?: string;
+    cache?: string;
+    traceId?: string;
+    logs?: Array<{
+      level?: string;
+      message?: string;
+      messageTruncated?: boolean;
+    }>;
+    events?: Array<{ source?: string }>;
+    domain?: string;
+  }
+
   const data = await client.fetch<{
-    rows?: RequestLogEntry[];
+    rows?: ApiLogEntry[];
     hasMoreRows?: boolean;
   }>(url);
 
+  const logs: RequestLogEntry[] = (data.rows || []).map(row => {
+    const requestLogs: RequestLogMessage[] = (row.logs || []).map(log => ({
+      level: log.level || 'info',
+      message: log.message || '',
+      messageTruncated: log.messageTruncated,
+    }));
+    const displayLog = getDisplayLog(requestLogs, options.level);
+    const firstEvent = row.events?.[0];
+    return {
+      id: row.requestId || '',
+      timestamp: row.timestamp ? new Date(row.timestamp).getTime() : Date.now(),
+      deploymentId: row.deploymentId || '',
+      projectId: options.projectId,
+      level: (displayLog?.level as DisplayLogLevel) || 'info',
+      message: displayLog?.message || '',
+      messageTruncated: displayLog?.messageTruncated,
+      source: (firstEvent?.source as RequestLogEntry['source']) || 'static',
+      domain: row.domain || '',
+      requestMethod: row.requestMethod || '',
+      requestPath: row.requestPath || '',
+      responseStatusCode: row.statusCode || 0,
+      environment:
+        (row.environment as RequestLogEntry['environment']) || 'production',
+      branch: row.branch,
+      cache: row.cache,
+      traceId: row.traceId,
+      logs: requestLogs,
+    };
+  });
+
   return {
-    logs: data.rows || [],
+    logs,
     pagination: {
       hasMore: data.hasMoreRows ?? false,
     },

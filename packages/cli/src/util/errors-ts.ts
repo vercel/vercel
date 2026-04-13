@@ -92,12 +92,22 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
  * because the token is not valid anymore.
  */
 export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
-  constructor() {
+  constructor(tokenSource?: 'flag' | 'env') {
+    let message: string;
+    if (tokenSource === 'flag') {
+      message =
+        'The token provided via `--token` argument is not valid. Please provide a valid token.';
+    } else if (tokenSource === 'env') {
+      message =
+        'The token provided via VERCEL_TOKEN environment variable is not valid. Please provide a valid token.';
+    } else {
+      message = `The specified token is not valid. Use ${getCommandName(
+        'login'
+      )} to generate a new token.`;
+    }
     super({
-      code: `NOT_AUTHORIZED`,
-      message: `The specified token is not valid. Use ${getCommandName(
-        `login`
-      )} to generate a new token.`,
+      code: 'NOT_AUTHORIZED',
+      message,
       meta: {},
     });
   }
@@ -691,12 +701,12 @@ export class AliasInUse extends NowError<'ALIAS_IN_USE', { alias: string }> {
  * a certificate for a domain but the domain is missing. An example would
  * be alias.
  */
-export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
+export class CertMissing extends NowError<'CERT_MISSING', { domain: string }> {
   constructor(domain: string) {
     super({
-      code: 'ALIAS_IN_USE',
+      code: 'CERT_MISSING',
       meta: { domain },
-      message: `The alias is already in use`,
+      message: `The certificate for domain ${domain} is missing`,
     });
   }
 }
@@ -1054,6 +1064,19 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
       code: 'PROJECT_NOT_FOUND',
       meta: {},
       message: `There is no project for "${nameOrId}"`,
+    });
+  }
+}
+
+/** Thrown when a read-only command needs a linked project but none is configured (non-interactive). */
+export class LinkRequiredError extends NowError<'LINK_REQUIRED', {}> {
+  constructor(
+    message: string = 'No project is linked in this directory. Run `vercel link` or pass a project name.'
+  ) {
+    super({
+      code: 'LINK_REQUIRED',
+      meta: {},
+      message,
     });
   }
 }

@@ -1,0 +1,8 @@
+[project]
+name = "services-zc-frontend-services-services-flask"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "Flask==3.1.3",
+    "Werkzeug==3.1.6",
+]

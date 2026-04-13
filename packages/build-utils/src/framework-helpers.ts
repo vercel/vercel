@@ -16,11 +16,16 @@ export const BACKEND_FRAMEWORKS = [
 export const PYTHON_FRAMEWORKS = [
   'fastapi',
   'flask',
+  'django',
   'python', // Generic Python framework preset
 ] as const;
 
 export const RUNTIME_FRAMEWORKS = ['python'] as const;
 
+/**
+ * List of framework-specific backend builders that get replaced by UNIFIED_BACKEND_BUILDER
+ * when experimental backends is enabled
+ */
 export const BACKEND_BUILDERS = [
   '@vercel/express',
   '@vercel/hono',
@@ -31,13 +36,27 @@ export const BACKEND_BUILDERS = [
   '@vercel/elysia',
 ] as const;
 
+/**
+ * The unified backend builder that replaces framework-specific backend builders
+ */
+export const UNIFIED_BACKEND_BUILDER = '@vercel/backends' as const;
+
 export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
 export type PythonFramework = (typeof PYTHON_FRAMEWORKS)[number];
 
 /**
  * Checks if the given framework is a backend framework
+ * TODO: make this function generic to all runtimes' backend frameworks and
+ * update callers to use isNodeBackendFramework for Node-specific frameworks.
  */
 export function isBackendFramework(
+  framework: string | null | undefined
+): framework is BackendFramework {
+  if (!framework) return false;
+  return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
+}
+
+export function isNodeBackendFramework(
   framework: string | null | undefined
 ): framework is BackendFramework {
   if (!framework) return false;
@@ -68,6 +87,7 @@ export function isExperimentalBackendsEnabled(): boolean {
 
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {
   if (!builder) return false;
+  if (builder.use === UNIFIED_BACKEND_BUILDER) return true;
   const use = builder.use as (typeof BACKEND_BUILDERS)[number];
   return BACKEND_BUILDERS.includes(use);
 }
