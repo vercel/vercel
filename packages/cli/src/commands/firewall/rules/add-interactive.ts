@@ -1,13 +1,19 @@
-import { isIP } from 'node:net';
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
-import getScope from '../../../util/get-scope';
 import {
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
 } from '../shared';
+import {
+  fetchPlanInfo,
+  getAvailableConditionTypes,
+  getActionLabel as getActionDisplayName,
+  getOperatorDisplayName,
+  validateConditionValue,
+  type PlanInfo,
+} from '../../../util/firewall/interactive-helpers';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import {
   CONDITION_TYPES,
@@ -28,11 +34,6 @@ import type {
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
 
-interface PlanInfo {
-  isEnterprise: boolean;
-  hasSecurityPlus: boolean;
-}
-
 interface AddInteractiveOptions {
   skipPrompts?: boolean;
   prePopulated?: Partial<FirewallRule>;
@@ -47,20 +48,7 @@ export async function addInteractive(
   const pre = opts.prePopulated;
 
   // Fetch team plan info for condition type filtering
-  let planInfo: PlanInfo = { isEnterprise: false, hasSecurityPlus: false };
-  try {
-    const { team } = await getScope(client);
-    if (team) {
-      planInfo = {
-        isEnterprise: team.billing.plan === 'enterprise',
-        hasSecurityPlus:
-          (team as unknown as { securityPlus?: { enabled?: boolean } })
-            .securityPlus?.enabled === true,
-      };
-    }
-  } catch {
-    // If we can't fetch team info, default to hiding plan-gated types
-  }
+  const planInfo = await fetchPlanInfo(client);
 
   // 1. Name
   const name = await client.input.text({
@@ -234,16 +222,7 @@ export async function buildConditionInteractive(
   client: Client,
   planInfo?: PlanInfo
 ): Promise<FirewallCondition> {
-  // Filter condition types based on plan
-  // Enterprise types hidden for non-enterprise, Security Plus hidden for non-security-plus
-  const availableTypes = CONDITION_TYPES.filter(ct => {
-    if (ct.deprecated) return false;
-    if (ct.planRequirement === 'enterprise' && !planInfo.isEnterprise)
-      return false;
-    if (ct.planRequirement === 'security-plus' && !planInfo.hasSecurityPlus)
-      return false;
-    return true;
-  });
+  const availableTypes = getAvailableConditionTypes(planInfo);
 
   // Group by category
   const categories = new Map<string, ConditionTypeMeta[]>();
@@ -382,21 +361,6 @@ export async function buildConditionInteractive(
   if (value !== undefined) condition.value = value;
 
   return condition;
-}
-
-function getOperatorDisplayName(op: string, neg: boolean): string {
-  const labels: Record<string, [string, string]> = {
-    eq: ['equals', 'does not equal'],
-    inc: ['is any of', 'is not any of'],
-    sub: ['contains', 'does not contain'],
-    pre: ['starts with', 'does not start with'],
-    suf: ['ends with', 'does not end with'],
-    re: ['matches regex', 'does not match regex'],
-    ex: ['exists', 'does not exist'],
-  };
-  const pair = labels[op];
-  if (pair) return neg ? pair[1] : pair[0];
-  return neg ? `NOT ${op}` : op;
 }
 
 // --- Action builder ---
@@ -551,54 +515,4 @@ async function buildRateLimitInteractive(client: Client) {
     keys,
     action: subAction as string,
   };
-}
-
-function getActionDisplayName(action: string): string {
-  const labels: Record<string, string> = {
-    deny: 'Deny — Block traffic (403)',
-    challenge: 'Challenge — Verify at security checkpoint',
-    log: 'Log — Monitor without blocking',
-    bypass: 'Bypass — Skip other custom rules',
-    rate_limit: 'Rate Limit — Enforce request limits',
-    redirect: 'Redirect — Send to a different URL',
-  };
-  return labels[action] || action;
-}
-
-/**
- * Per-type value validation for the interactive builder.
- * Only enforces format constraints where the API strictly requires a specific format.
- * Most types accept any string — the API validates semantics.
- */
-function validateConditionValue(
-  val: string,
-  meta: ConditionTypeMeta | undefined
-): string | true {
-  if (!meta?.valueValidation) return true;
-
-  switch (meta.valueValidation) {
-    case 'path':
-      if (!val.startsWith('/')) return 'Path must start with /';
-      return true;
-    case 'ip': {
-      if (isIP(val)) return true;
-      // Check CIDR
-      const slashIdx = val.lastIndexOf('/');
-      if (slashIdx !== -1) {
-        const ip = val.slice(0, slashIdx);
-        const prefix = Number.parseInt(val.slice(slashIdx + 1), 10);
-        if (isIP(ip) && !Number.isNaN(prefix) && prefix >= 0) return true;
-      }
-      return 'Please enter a valid IP address or CIDR range.';
-    }
-    case 'hostname':
-      if (!/^[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*$/.test(val))
-        return 'Please enter a valid hostname.';
-      return true;
-    case 'digits':
-      if (!/^\d+$/.test(val)) return 'Please enter digits only.';
-      return true;
-    default:
-      return true;
-  }
 }

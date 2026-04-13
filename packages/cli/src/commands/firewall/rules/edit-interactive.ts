@@ -1,13 +1,20 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
-import getScope from '../../../util/get-scope';
 import { buildConditionInteractive } from './add-interactive';
 import {
   CONDITION_TYPES,
   VALID_ACTIONS,
   VALID_DURATIONS,
 } from '../../../util/firewall/condition-types';
+import {
+  fetchPlanInfo,
+  getAvailableConditionTypes,
+  getActionLabel,
+  getOperatorDisplayName,
+  validateConditionValue,
+  type PlanInfo,
+} from '../../../util/firewall/interactive-helpers';
 import {
   formatConditionCompact,
   formatActionDisplay,
@@ -18,11 +25,6 @@ import type {
   FirewallConditionGroup,
   FirewallRuleAction,
 } from '../../../util/firewall/types';
-
-interface PlanInfo {
-  isEnterprise: boolean;
-  hasSecurityPlus: boolean;
-}
 
 /**
  * Field-by-field interactive edit loop.
@@ -37,20 +39,7 @@ export async function runInteractiveEditLoop(
   const edited: FirewallRule = JSON.parse(JSON.stringify(rule));
 
   // Fetch plan info for condition type filtering
-  let planInfo: PlanInfo = { isEnterprise: false, hasSecurityPlus: false };
-  try {
-    const { team } = await getScope(client);
-    if (team) {
-      planInfo = {
-        isEnterprise: team.billing.plan === 'enterprise',
-        hasSecurityPlus:
-          (team as unknown as { securityPlus?: { enabled?: boolean } })
-            .securityPlus?.enabled === true,
-      };
-    }
-  } catch {
-    // Fall back to showing all types
-  }
+  const planInfo = await fetchPlanInfo(client);
 
   for (;;) {
     const condCount = edited.conditionGroup.reduce(
@@ -320,14 +309,7 @@ async function editSingleCondition(
   );
 
   // Condition type — pre-select current
-  const availableTypes = CONDITION_TYPES.filter(ct => {
-    if (ct.deprecated) return false;
-    if (ct.planRequirement === 'enterprise' && !planInfo.isEnterprise)
-      return false;
-    if (ct.planRequirement === 'security-plus' && !planInfo.hasSecurityPlus)
-      return false;
-    return true;
-  });
+  const availableTypes = getAvailableConditionTypes(planInfo);
 
   const type = await client.input.select({
     message: 'Condition type:',
@@ -423,7 +405,10 @@ async function editSingleCondition(
       const valStr = await client.input.text({
         message: 'Value:',
         default: defaultVal,
-        validate: (val: string) => (val.trim() ? true : 'Value is required.'),
+        validate: (val: string) => {
+          if (!val.trim()) return 'Value is required.';
+          return validateConditionValue(val, meta);
+        },
       });
       value = valStr;
     }
@@ -606,33 +591,4 @@ async function editAction(
   }
 
   return action;
-}
-
-// --- Helpers ---
-
-function getOperatorDisplayName(op: string, neg: boolean): string {
-  const labels: Record<string, [string, string]> = {
-    eq: ['equals', 'does not equal'],
-    inc: ['is any of', 'is not any of'],
-    sub: ['contains', 'does not contain'],
-    pre: ['starts with', 'does not start with'],
-    suf: ['ends with', 'does not end with'],
-    re: ['matches regex', 'does not match regex'],
-    ex: ['exists', 'does not exist'],
-  };
-  const pair = labels[op];
-  if (pair) return neg ? pair[1] : pair[0];
-  return neg ? `NOT ${op}` : op;
-}
-
-function getActionLabel(action: string): string {
-  const labels: Record<string, string> = {
-    deny: 'Deny — Block traffic (403)',
-    challenge: 'Challenge — Verify at security checkpoint',
-    log: 'Log — Monitor without blocking',
-    bypass: 'Bypass — Skip other custom rules',
-    rate_limit: 'Rate Limit — Enforce request limits',
-    redirect: 'Redirect — Send to a different URL',
-  };
-  return labels[action] || action;
 }

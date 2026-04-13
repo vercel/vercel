@@ -18,17 +18,14 @@ import { parseConditionFlags } from '../../../util/firewall/parse-conditions';
 import {
   VALID_ACTIONS,
   VALID_DURATIONS,
-  VALID_ALGORITHMS,
   type FirewallActionType,
 } from '../../../util/firewall/condition-types';
+import { buildActionFromFlags } from '../../../util/firewall/build-action';
 import {
   formatRuleExpanded,
   formatActionDisplay,
 } from '../../../util/firewall/format';
-import type {
-  FirewallRule,
-  FirewallRuleAction,
-} from '../../../util/firewall/types';
+import type { FirewallRule } from '../../../util/firewall/types';
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
@@ -264,19 +261,27 @@ export default async function edit(client: Client, argv: string[]) {
       status: 'error',
       reason: 'missing_flags',
       message:
-        'No edit flags provided. Use --ai, --json, --condition, --action, --name, etc.',
+        'No edit flags provided. Use --json, --condition, --action, --name, etc.',
       next: [
         {
           command: withGlobalFlags(
             client,
-            `firewall rules edit "${identifier}" --ai "Change action to challenge" --yes`
+            `firewall rules edit "${identifier}" --action challenge --yes`
           ),
+          when: 'edit with flags',
+        },
+        {
+          command: withGlobalFlags(
+            client,
+            `firewall rules edit "${identifier}" --json '{"name":"...","conditionGroup":[...],"action":{"mitigate":{"action":"deny"}}}' --yes`
+          ),
+          when: 'edit with JSON',
         },
       ],
     });
   }
   output.error(
-    'Interactive mode is not available. Use --ai, --json, or flag-based editing.'
+    'Interactive mode is not available. Use --json or flag-based editing.'
   );
   return 1;
 }
@@ -341,22 +346,6 @@ async function handleAIEdit(
           });
           continue;
         }
-        if (client.nonInteractive) {
-          outputAgentError(client, {
-            status: 'error',
-            reason: 'ai_generation_failed',
-            message: `AI could not update the rule: ${response.error}`,
-            next: [
-              {
-                command: withGlobalFlags(
-                  client,
-                  `firewall rules edit "${originalRule.name}" --ai "more specific description" --yes`
-                ),
-                when: 'try with a more specific description',
-              },
-            ],
-          });
-        }
         output.error(`AI could not update the rule: ${response.error}`);
         return 1;
       }
@@ -383,23 +372,6 @@ async function handleAIEdit(
               val.trim() ? true : 'Please describe the changes.',
           });
           continue;
-        }
-        if (client.nonInteractive) {
-          outputAgentError(client, {
-            status: 'error',
-            reason: 'ai_no_result',
-            message:
-              'AI did not return a rule. Try a more specific description.',
-            next: [
-              {
-                command: withGlobalFlags(
-                  client,
-                  `firewall rules edit "${originalRule.name}" --ai "more specific description" --yes`
-                ),
-                when: 'try again',
-              },
-            ],
-          });
         }
         output.error('AI did not return a rule.');
         return 1;
@@ -719,83 +691,6 @@ async function handleFlagEdit(
   }
 
   return saveEdit(client, project, teamId, originalRule, modified, parsed);
-}
-
-function buildActionFromFlags(
-  flags: Record<string, unknown>,
-  actionType: string
-): FirewallRuleAction | string {
-  const duration = flags['--duration'] as string | undefined;
-  if (
-    duration &&
-    !VALID_DURATIONS.includes(duration as (typeof VALID_DURATIONS)[number])
-  ) {
-    return `Invalid duration "${duration}". Valid durations: ${VALID_DURATIONS.join(', ')}`;
-  }
-
-  const action: FirewallRuleAction = {
-    mitigate: {
-      action: actionType,
-      rateLimit: null,
-      redirect: null,
-      actionDuration: duration || null,
-    },
-  };
-
-  if (actionType === 'rate_limit') {
-    const algo = (flags['--rate-limit-algo'] as string) || 'fixed_window';
-    const window = flags['--rate-limit-window'] as number | undefined;
-    const requests = flags['--rate-limit-requests'] as number | undefined;
-    const keys = (flags['--rate-limit-keys'] as string[]) || ['ip'];
-
-    if (!VALID_ALGORITHMS.includes(algo as (typeof VALID_ALGORITHMS)[number])) {
-      return `Invalid rate limit algorithm "${algo}".`;
-    }
-    if (!window || window < 10) {
-      return 'Rate limit --rate-limit-window is required (minimum 10 seconds).';
-    }
-    if (window > 3600) {
-      return 'Rate limit --rate-limit-window maximum is 3600 seconds.';
-    }
-    if (!requests || requests < 1) {
-      return 'Rate limit --rate-limit-requests is required (minimum 1).';
-    }
-    if (requests > 10_000_000) {
-      return 'Rate limit --rate-limit-requests maximum is 10,000,000.';
-    }
-
-    const rlAction = (flags['--rate-limit-action'] as string) || 'rate_limit';
-    const validRlActions = ['log', 'deny', 'challenge', 'rate_limit'];
-    if (!validRlActions.includes(rlAction)) {
-      return `Invalid rate limit action "${rlAction}". Valid: ${validRlActions.join(', ')}`;
-    }
-
-    action.mitigate!.rateLimit = {
-      algo: algo as 'fixed_window' | 'token_bucket',
-      window,
-      limit: requests,
-      keys,
-      action: rlAction,
-    };
-  }
-
-  if (actionType === 'redirect') {
-    const redirectUrl = flags['--redirect-url'] as string | undefined;
-    const permanent = !!flags['--redirect-permanent'];
-    if (!redirectUrl) {
-      return 'Redirect action requires --redirect-url.';
-    }
-    if (
-      !redirectUrl.startsWith('/') &&
-      !redirectUrl.startsWith('http://') &&
-      !redirectUrl.startsWith('https://')
-    ) {
-      return 'Redirect URL must start with /, http://, or https://';
-    }
-    action.mitigate!.redirect = { location: redirectUrl, permanent };
-  }
-
-  return action;
 }
 
 // --- Shared save logic ---
