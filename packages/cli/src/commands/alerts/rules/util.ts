@@ -77,3 +77,46 @@ export function handleRulesApiError(
 
   return outputError(client, jsonOutput, err.code || 'API_ERROR', message);
 }
+
+/**
+ * Non-interactive: JSON on stdout + exit. Interactive: no-op (caller prints to stderr).
+ */
+export function emitRulesArgParseError(
+  client: Client,
+  err: unknown,
+  recoverWithProjectFlag: string
+): void {
+  const msg = err instanceof Error ? err.message : String(err);
+  const projectFlagMissingArg =
+    msg.includes('--project') && msg.includes('requires argument');
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason: AGENT_REASON.INVALID_ARGUMENTS,
+      message: projectFlagMissingArg
+        ? '`--project` requires a project name or id (for example `--project my-app`).'
+        : msg,
+      next: projectFlagMissingArg
+        ? [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                recoverWithProjectFlag
+              ),
+              when: 'Re-run with a project name or id (replace placeholder)',
+            },
+          ]
+        : [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'alerts rules --help'
+              ),
+              when: 'See valid `alerts rules` subcommands',
+            },
+          ],
+    },
+    1
+  );
+}

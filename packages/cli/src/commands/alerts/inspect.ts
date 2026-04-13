@@ -44,6 +44,15 @@ async function resolveInspectScope(
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: mutual.message,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'alerts inspect <groupId> --help'
+            ),
+            when: 'Use either `--project` or `--all`, not both',
+          },
+        ],
       },
       1
     );
@@ -197,12 +206,36 @@ export default async function inspect(
   try {
     parsedArgs = parseArguments(argv, spec);
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const projectFlagMissingArg =
+      msg.includes('--project') && msg.includes('requires argument');
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: e instanceof Error ? e.message : String(e),
+        message: projectFlagMissingArg
+          ? '`--project` requires a project name or id (for example `--project my-app`).'
+          : msg,
+        next: projectFlagMissingArg
+          ? [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'alerts inspect <groupId> --project <name-or-id>'
+                ),
+                when: 'Re-run with placeholders replaced',
+              },
+            ]
+          : [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'alerts inspect --help'
+                ),
+                when: 'See valid `alerts inspect` usage',
+              },
+            ],
       },
       1
     );

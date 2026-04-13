@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import alerts from '../../../../src/commands/alerts';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -44,6 +44,10 @@ describe('alerts', () => {
     mockTeamScope();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('prints help output', async () => {
     client.setArgv('alerts', '--help');
 
@@ -86,10 +90,12 @@ describe('alerts', () => {
     expect(requestQuery.teamId).toBe('team_dummy');
     expect(requestQuery.projectId).toBe('prj_alerts');
     expect(client.stderr.getFullOutput()).toContain('Title');
+    expect(client.stderr.getFullOutput()).toContain('Group id');
     expect(client.stderr.getFullOutput()).toContain('Started At');
     expect(client.stderr.getFullOutput()).toContain('Status');
     expect(client.stderr.getFullOutput()).toContain('Alerts');
     expect(client.stderr.getFullOutput()).toContain('Spike in requests');
+    expect(client.stderr.getFullOutput()).toContain('ag_1');
     expect(client.stderr.getFullOutput()).toContain('Mar');
     expect(client.stderr.getFullOutput()).toContain('2026');
   });
@@ -215,6 +221,45 @@ describe('alerts', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'Cannot specify both --all and --project'
     );
+  });
+
+  it('emits agent JSON when --project is missing its value in non-interactive mode', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as () => never);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    client.setArgv('alerts', '--project', '--cwd', '/tmp', '--non-interactive');
+    client.nonInteractive = true;
+
+    await expect(alerts(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(
+      logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
+    );
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('invalid_arguments');
+    expect(payload.message).toMatch(/--project/i);
+    expect(payload.next[0].command).toContain('alerts --project <name-or-id>');
+    expect(payload.next[0].command).toContain('--cwd /tmp');
+  });
+
+  it('emits agent JSON for list validation errors in non-interactive mode', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as () => never);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    client.setArgv('alerts', '--all', '--project', 'x', '--non-interactive');
+    client.nonInteractive = true;
+
+    await expect(alerts(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(
+      logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
+    );
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('invalid_arguments');
+    expect(payload.message).toContain('Cannot specify both');
+    expect(payload.next[0].command).toContain('alerts --help');
   });
 
   it('returns error when --since is after --until', async () => {

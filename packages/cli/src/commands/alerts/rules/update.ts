@@ -15,7 +15,11 @@ import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
 import { rulesUpdateSubcommand } from './command';
 import { parseRulesFlagsAndScope } from './parse-scope';
-import { handleRulesApiError, rulesItemPath } from './util';
+import {
+  emitRulesArgParseError,
+  handleRulesApiError,
+  rulesItemPath,
+} from './util';
 
 export default async function update(
   client: Client,
@@ -28,14 +32,10 @@ export default async function update(
       getFlagsSpecification(rulesUpdateSubcommand.options)
     );
   } catch (e) {
-    outputAgentError(
+    emitRulesArgParseError(
       client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: e instanceof Error ? e.message : String(e),
-      },
-      1
+      e,
+      'alerts rules update <ruleId> --project <name-or-id> --body <path>'
     );
     printError(e);
     return 1;

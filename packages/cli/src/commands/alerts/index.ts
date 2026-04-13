@@ -7,6 +7,12 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+  shouldEmitNonInteractiveCommandError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 import { alertsCommand, inspectSubcommand, listSubcommand } from './command';
 import {
   rulesAddSubcommand,
@@ -37,6 +43,48 @@ export default async function alerts(client: Client): Promise<number> {
       permissive: true,
     });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const projectFlagMissingArg =
+      msg.includes('--project') && msg.includes('requires argument');
+    if (shouldEmitNonInteractiveCommandError(client)) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: projectFlagMissingArg
+            ? '`--project` requires a project name or id (for example `--project my-app`).'
+            : msg,
+          next: projectFlagMissingArg
+            ? [
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --project <name-or-id>'
+                  ),
+                  when: 'Re-run with a project name or id (replace placeholder)',
+                },
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --help'
+                  ),
+                  when: 'See all `alerts` flags and examples',
+                },
+              ]
+            : [
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --help'
+                  ),
+                  when: 'See valid flags and examples',
+                },
+              ],
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }

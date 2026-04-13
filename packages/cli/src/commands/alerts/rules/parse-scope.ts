@@ -3,7 +3,10 @@ import {
   handleValidationError,
   validateAllProjectMutualExclusivity,
 } from '../../../util/command-validation';
-import { outputAgentError } from '../../../util/agent-output';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { type AlertsScope, resolveAlertsScope } from '../resolve-alerts-scope';
 
@@ -23,6 +26,15 @@ export async function parseRulesFlagsAndScope(
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: mutual.message,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'alerts rules --help'
+            ),
+            when: 'Use either `--project` or `--all`, not both',
+          },
+        ],
       },
       1
     );

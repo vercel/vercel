@@ -19,10 +19,12 @@ import {
   validateOptionalIntegerRange,
   validateTimeBound,
   validateTimeOrder,
+  type ValidationError,
 } from '../../util/command-validation';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
+  shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 
@@ -236,20 +238,51 @@ function getAlertsCount(group: AlertGroup): string {
   return String(group.alerts?.length ?? 0);
 }
 
+function validationFailureForAgents(
+  client: Client,
+  result: ValidationError,
+  jsonOutput: boolean
+): number {
+  if (shouldEmitNonInteractiveCommandError(client)) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: result.message,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'alerts --help'),
+            when: 'See valid `alerts` list flags and examples',
+          },
+        ],
+      },
+      1
+    );
+  }
+  return handleValidationError(result, jsonOutput, client);
+}
+
 function printGroups(groups: AlertGroup[]) {
   if (groups.length === 0) {
     output.log('No alerts found.');
     return;
   }
 
-  const headers = ['Title', 'Started At', 'Type', 'Status', 'Alerts'].map(h =>
-    chalk.cyan(h)
-  );
+  const headers = [
+    'Title',
+    'Group id',
+    'Started At',
+    'Type',
+    'Status',
+    'Alerts',
+  ].map(h => chalk.cyan(h));
 
   const rows = [
     headers,
     ...groups.map(group => [
       chalk.bold(getGroupTitle(group)),
+      chalk.dim(group.id || '-'),
       getStartedAt(group),
       group.type || '-',
       getStatus(group),
@@ -316,6 +349,48 @@ function parseFlags(client: Client): ListFlags | number {
     const parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
     return parsedArgs.flags as ListFlags;
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const projectFlagMissingArg =
+      msg.includes('--project') && msg.includes('requires argument');
+    if (shouldEmitNonInteractiveCommandError(client)) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: projectFlagMissingArg
+            ? '`--project` requires a project name or id (for example `--project my-app`).'
+            : msg,
+          next: projectFlagMissingArg
+            ? [
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --project <name-or-id>'
+                  ),
+                  when: 'Re-run with a project name or id (replace placeholder)',
+                },
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --help'
+                  ),
+                  when: 'See all `alerts` flags and examples',
+                },
+              ]
+            : [
+                {
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
+                    'alerts --help'
+                  ),
+                  when: 'See valid flags and examples',
+                },
+              ],
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
@@ -334,7 +409,7 @@ function resolveValidatedInputs(
     max: 100,
   });
   if (!limitResult.valid) {
-    return handleValidationError(limitResult, jsonOutput, client);
+    return validationFailureForAgents(client, limitResult, jsonOutput);
   }
 
   const mutualResult = validateAllProjectMutualExclusivity(
@@ -342,17 +417,17 @@ function resolveValidatedInputs(
     flags['--project']
   );
   if (!mutualResult.valid) {
-    return handleValidationError(mutualResult, jsonOutput, client);
+    return validationFailureForAgents(client, mutualResult, jsonOutput);
   }
 
   const sinceResult = validateTimeBound(flags['--since']);
   if (!sinceResult.valid) {
-    return handleValidationError(sinceResult, jsonOutput, client);
+    return validationFailureForAgents(client, sinceResult, jsonOutput);
   }
 
   const untilResult = validateTimeBound(flags['--until']);
   if (!untilResult.valid) {
-    return handleValidationError(untilResult, jsonOutput, client);
+    return validationFailureForAgents(client, untilResult, jsonOutput);
   }
 
   const timeOrderResult = validateTimeOrder(
@@ -360,7 +435,7 @@ function resolveValidatedInputs(
     untilResult.value
   );
   if (!timeOrderResult.valid) {
-    return handleValidationError(timeOrderResult, jsonOutput, client);
+    return validationFailureForAgents(client, timeOrderResult, jsonOutput);
   }
 
   return {

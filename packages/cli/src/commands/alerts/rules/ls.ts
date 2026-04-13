@@ -9,7 +9,11 @@ import { outputAgentError } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { rulesLsSubcommand } from './command';
 import { parseRulesFlagsAndScope } from './parse-scope';
-import { handleRulesApiError, rulesCollectionPath } from './util';
+import {
+  emitRulesArgParseError,
+  handleRulesApiError,
+  rulesCollectionPath,
+} from './util';
 
 export default async function ls(
   client: Client,
@@ -22,15 +26,7 @@ export default async function ls(
       getFlagsSpecification(rulesLsSubcommand.options)
     );
   } catch (e) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: e instanceof Error ? e.message : String(e),
-      },
-      1
-    );
+    emitRulesArgParseError(client, e, 'alerts rules ls --project <name-or-id>');
     printError(e);
     return 1;
   }

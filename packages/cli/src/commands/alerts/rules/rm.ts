@@ -14,7 +14,11 @@ import { AGENT_REASON } from '../../../util/agent-output-constants';
 import { packageName } from '../../../util/pkg-name';
 import { rulesRmSubcommand } from './command';
 import { parseRulesFlagsAndScope } from './parse-scope';
-import { handleRulesApiError, rulesItemPath } from './util';
+import {
+  emitRulesArgParseError,
+  handleRulesApiError,
+  rulesItemPath,
+} from './util';
 
 export default async function rm(
   client: Client,
@@ -27,14 +31,10 @@ export default async function rm(
       getFlagsSpecification(rulesRmSubcommand.options)
     );
   } catch (e) {
-    outputAgentError(
+    emitRulesArgParseError(
       client,
-      {
-        status: 'error',
-        reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: e instanceof Error ? e.message : String(e),
-      },
-      1
+      e,
+      'alerts rules rm <ruleId> --project <name-or-id> --yes'
     );
     printError(e);
     return 1;
