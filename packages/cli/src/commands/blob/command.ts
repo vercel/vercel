@@ -30,6 +30,16 @@ const accessOption = {
 
 import { yesOption } from '../../util/arg-common';
 
+const environmentOption = {
+  name: 'environment',
+  shorthand: 'e',
+  type: [String],
+  deprecated: false,
+  argument: 'ENV',
+  description:
+    'Environment to connect (can be repeated: production, preview, development). Defaults to all when --yes is used.',
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -250,6 +260,8 @@ export const addStoreSubcommand = {
         'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
       argument: 'STRING',
     },
+    yesOption,
+    environmentOption,
   ],
   examples: [
     {
@@ -316,19 +328,22 @@ export const createStoreSubcommand = {
         'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
       argument: 'STRING',
     },
+    yesOption,
+    environmentOption,
   ],
   examples: [
     {
       name: 'Create a blob store (uses default region "iad1")',
-      value: 'vercel blob create-store my-store',
+      value: 'vercel blob create-store my-store --access private',
     },
     {
       name: 'Create a blob store in a specific region',
-      value: 'vercel blob create-store my-store --region cdg1',
+      value: 'vercel blob create-store my-store --access private --region cdg1',
     },
     {
-      name: 'Create a private blob store',
-      value: 'vercel blob create-store my-private-store --access private',
+      name: 'Create and connect to project in CI',
+      value:
+        'vercel blob create-store my-store --access private --yes --environment production --environment preview',
     },
   ],
 } as const;

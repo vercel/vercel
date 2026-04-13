@@ -10,6 +10,10 @@ import { addStoreSubcommand } from './command';
 import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
 import { printError } from '../../util/error';
 import { parseAccessFlag } from '../../util/blob/access';
+import {
+  VALID_ENVIRONMENTS,
+  validateEnvironments,
+} from '../../util/integration/post-provision-setup';
 
 export default async function addStore(
   client: Client,
@@ -35,6 +39,20 @@ export default async function addStore(
     args: [nameArg],
     flags,
   } = parsedArgs;
+
+  const yes = flags['--yes'] ?? false;
+  const environmentFlags = flags['--environment'];
+
+  // Validate --environment values early
+  if (environmentFlags?.length) {
+    const envValidation = validateEnvironments(environmentFlags);
+    if (!envValidation.valid) {
+      output.error(
+        `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
+      );
+      return 1;
+    }
+  }
 
   let accessFlag = flags['--access'];
   if (!accessFlag && client.stdin.isTTY) {
@@ -115,20 +133,30 @@ export default async function addStore(
   output.log(`Access: ${access}. Learn more: ${output.link(docsUrl, docsUrl)}`);
 
   if (link.status === 'linked') {
-    const res = await client.input.confirm(
-      `Would you like to link this blob store to ${link.project.name}?`,
-      true
-    );
+    let shouldLink = yes;
+    if (!shouldLink) {
+      shouldLink = await client.input.confirm(
+        `Would you like to link this blob store to ${link.project.name}?`,
+        true
+      );
+    }
 
-    if (res) {
-      const environments = await client.input.checkbox({
-        message: 'Select environments',
-        choices: [
-          { name: 'Production', value: 'production', checked: true },
-          { name: 'Preview', value: 'preview', checked: true },
-          { name: 'Development', value: 'development', checked: true },
-        ],
-      });
+    if (shouldLink) {
+      let environments: string[];
+      if (environmentFlags?.length) {
+        environments = environmentFlags;
+      } else if (yes) {
+        environments = [...VALID_ENVIRONMENTS];
+      } else {
+        environments = await client.input.checkbox({
+          message: 'Select environments',
+          choices: [
+            { name: 'Production', value: 'production', checked: true },
+            { name: 'Preview', value: 'preview', checked: true },
+            { name: 'Development', value: 'development', checked: true },
+          ],
+        });
+      }
 
       output.spinner(
         `Connecting ${chalk.bold(name)} to ${chalk.bold(link.project.name)}...`

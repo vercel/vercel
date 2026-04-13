@@ -388,6 +388,63 @@ describe('blob store add', () => {
       );
     });
 
+    it('should auto-link with all environments when --yes is passed', async () => {
+      const exitCode = await addStore(client, [
+        '--access',
+        'private',
+        'ci-store',
+        '--yes',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(client.input.checkbox).not.toHaveBeenCalled();
+      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
+        client,
+        'proj_123',
+        'store_test123',
+        ['production', 'preview', 'development'],
+        { accountId: 'org_123' }
+      );
+    });
+
+    it('should use --environment flags when provided with --yes', async () => {
+      const exitCode = await addStore(client, [
+        '--access',
+        'private',
+        'ci-store',
+        '--yes',
+        '--environment',
+        'production',
+        '--environment',
+        'preview',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
+        client,
+        'proj_123',
+        'store_test123',
+        ['production', 'preview'],
+        { accountId: 'org_123' }
+      );
+    });
+
+    it('should reject invalid --environment values', async () => {
+      const exitCode = await addStore(client, [
+        '--access',
+        'private',
+        'ci-store',
+        '--environment',
+        'staging',
+      ]);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid environment value')
+      );
+    });
+
     it('should skip linking when project is not linked', async () => {
       mockedGetLinkedProject.mockResolvedValue({
         org: null,
