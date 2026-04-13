@@ -1,5 +1,16 @@
 # vercel
 
+## 51.1.0
+
+### Minor Changes
+
+- feat(cli): CI-friendly flags for blob store commands ([#15925](https://github.com/vercel/vercel/pull/15925))
+
+  - `blob list-stores --all`: list all team stores regardless of project connection. Hints about `--all` when no stores are connected to the current project.
+  - `blob delete-store --yes`: skip confirmation prompt for CI/scripts.
+  - `blob create-store --yes`: auto-connect to linked project with all environments, skip prompts.
+  - `blob create-store --environment`: specify which environments to connect (repeatable, e.g. `--environment production --environment preview`).
+
 ## 51.0.0
 
 ### Major Changes
