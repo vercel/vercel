@@ -5,6 +5,7 @@ import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
+import { getScope } from '../../util/get-scope';
 import { getStoreSubcommand } from './command';
 import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-get';
 import {
@@ -65,15 +66,21 @@ export default async function getStore(
 
     output.spinner('Getting blob store');
 
+    const accountId = link.status === 'linked' ? link.org.id : undefined;
+
     const store = await client.fetch<{ store: StoreDetails }>(
       `/v1/storage/stores/${storeId}`,
       {
         method: 'GET',
-        accountId: link.status === 'linked' ? link.org.id : undefined,
+        accountId,
       }
     );
 
-    const teamSlug = link.status === 'linked' ? link.org.slug : undefined;
+    let teamSlug = link.status === 'linked' ? link.org.slug : undefined;
+    if (!teamSlug) {
+      const { team } = await getScope(client);
+      teamSlug = team?.slug;
+    }
     output.print(formatStoreDetails(store.store, teamSlug));
   } catch (err) {
     printError(err);

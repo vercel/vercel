@@ -2,17 +2,20 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import getStore from '../../../../src/commands/blob/store-get';
 import * as linkModule from '../../../../src/util/projects/link';
+import * as getScopeModule from '../../../../src/util/get-scope';
 import output from '../../../../src/output-manager';
 import dfns from 'date-fns';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
+vi.mock('../../../../src/util/get-scope');
 vi.mock('../../../../src/util/blob/token');
 vi.mock('../../../../src/output-manager');
 const formatSpy = vi.spyOn(dfns, 'format');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedGetScope = vi.mocked(getScopeModule.getScope);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store get', () => {
@@ -327,6 +330,44 @@ describe('blob store get', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(`Size: ${expected}`)
+      );
+    });
+
+    it('should show dashboard link when not linked but scope resolves a team', async () => {
+      mockedGetLinkedProject.mockResolvedValue({
+        status: 'not_linked',
+        org: null,
+        project: null,
+      });
+      mockedGetScope.mockResolvedValue({
+        team: { id: 'team_123', slug: 'my-team' },
+        user: { id: 'user_123' },
+      } as Awaited<ReturnType<typeof getScopeModule.getScope>>);
+
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_display_test_123',
+          name: 'Display Test Store',
+          createdAt: 1640995200000,
+          updatedAt: 1672531200000,
+          billingState: 'active',
+          size: 1024,
+          count: 10,
+        },
+      });
+
+      const exitCode = await getStore(
+        client,
+        ['store_display_test_123'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedGetScope).toHaveBeenCalledWith(client);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Dashboard: https://vercel.com/my-team/~/stores/blob/store_display_test_123'
+        )
       );
     });
   });
