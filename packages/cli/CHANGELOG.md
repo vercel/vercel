@@ -1,5 +1,41 @@
 # vercel
 
+## 51.1.0
+
+### Minor Changes
+
+- feat(cli): CI-friendly flags for blob store commands ([#15925](https://github.com/vercel/vercel/pull/15925))
+
+  - `blob list-stores --all`: list all team stores regardless of project connection. Hints about `--all` when no stores are connected to the current project.
+  - `blob delete-store --yes`: skip confirmation prompt for CI/scripts.
+  - `blob create-store --yes`: auto-connect to linked project with all environments, skip prompts.
+  - `blob create-store --environment`: specify which environments to connect (repeatable, e.g. `--environment production --environment preview`).
+
+## 51.0.0
+
+### Major Changes
+
+- feat(cli): blob command improvements and breaking changes ([#15375](https://github.com/vercel/vercel/pull/15375))
+
+  **Breaking Changes:**
+
+  - `--access` flag is now required for `put`, `copy`, `get`, and `create-store` (no longer defaults to `public`)
+  - `--force` flag removed from `blob put` (use `--allow-overwrite` instead)
+  - `blob store add|remove|get` subcommands removed (use `blob create-store`, `blob delete-store`, `blob get-store`)
+
+  **New Features:**
+
+  - `blob list-stores` (`ls-stores`): browse blob stores interactively or pipe as a table
+  - `blob empty-store`: delete all blobs in a store with confirmation
+  - `blob get-store` and `blob list-stores` now show a dashboard link
+  - `blob create-store` interactive prompt now shows Private first with doc links
+  - `blob delete-store` now shows connected projects in confirmation and auto-pulls `.env.local` after deletion
+
+### Patch Changes
+
+- Updated dependencies [[`6712eb87653784b99327f81ed3dbff44e30038c5`](https://github.com/vercel/vercel/commit/6712eb87653784b99327f81ed3dbff44e30038c5)]:
+  - @vercel/python@6.30.0
+
 ## 50.44.0
 
 ### Minor Changes
