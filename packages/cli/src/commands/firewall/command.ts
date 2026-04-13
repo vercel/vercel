@@ -384,13 +384,161 @@ export const rulesInspectSubcommand = {
   ],
 } as const;
 
+export const rulesAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description:
+    'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line flags',
+  arguments: [{ name: 'name', required: false }],
+  options: [
+    {
+      name: 'ai',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Generate rule from natural language (AI-powered)',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Create rule from JSON payload',
+    },
+    {
+      name: 'condition',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description:
+        'Condition as JSON (repeatable). Multiple conditions are AND\'d together. Fields: type (required), op (required), value, key (for header/cookie/query), neg (boolean). Example: \'{"type":"path","op":"pre","value":"/api"}\'.',
+    },
+    {
+      name: 'or',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "Start a new OR group. Conditions before --or are AND'd, conditions after form a separate group. Example: --condition A --condition B --or --condition C matches (A AND B) OR C.",
+    },
+    {
+      name: 'action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Action: deny, challenge, log, bypass, rate_limit, redirect',
+    },
+    {
+      name: 'duration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Action duration: 1m, 5m, 15m, 30m, 1h',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Rule description (max 256 chars)',
+    },
+    {
+      name: 'inactive',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Create as inactive (default: active)',
+    },
+    {
+      name: 'rate-limit-algo',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Rate limit algorithm: fixed_window, token_bucket (default: fixed_window)',
+    },
+    {
+      name: 'rate-limit-window',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Rate limit window in seconds (required for rate_limit)',
+    },
+    {
+      name: 'rate-limit-requests',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description:
+        'Rate limit max requests per window (required for rate_limit)',
+    },
+    {
+      name: 'rate-limit-keys',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description:
+        'Rate limit keys (repeatable): ip, ja4, header:name (default: ip)',
+    },
+    {
+      name: 'rate-limit-action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Action when rate limit is exceeded: log, deny, challenge, rate_limit (default: rate_limit)',
+    },
+    {
+      name: 'redirect-url',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Redirect URL or path',
+    },
+    {
+      name: 'redirect-permanent',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Permanent redirect (301). Default: temporary (307)',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Interactive mode',
+      value: `${packageName} firewall rules add`,
+    },
+    {
+      name: 'Create with AI',
+      value: `${packageName} firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"`,
+    },
+    {
+      name: 'Create from JSON',
+      value: `${packageName} firewall rules add --json '{"name":"Block bots","active":true,"conditionGroup":[{"conditions":[{"type":"user_agent","op":"sub","value":"crawler"}]}],"action":{"mitigate":{"action":"deny"}}}'`,
+    },
+    {
+      name: 'Create with flags',
+      value: `${packageName} firewall rules add "Block bots" --condition '{"type":"user_agent","op":"sub","value":"crawler"}' --action deny --yes`,
+    },
+    {
+      name: 'Create with OR groups',
+      value: `${packageName} firewall rules add "Block suspicious" --condition '{"type":"user_agent","op":"sub","value":"crawler"}' --or --condition '{"type":"ip_address","op":"eq","value":"1.2.3.4"}' --action deny --yes`,
+    },
+  ],
+} as const;
+
 export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
   description:
     'Manage custom firewall rules that control how traffic is handled based on conditions',
   arguments: [],
-  subcommands: [rulesListSubcommand, rulesInspectSubcommand],
+  subcommands: [
+    rulesListSubcommand,
+    rulesInspectSubcommand,
+    rulesAddSubcommand,
+  ],
   options: [],
   examples: [
     {
@@ -400,6 +548,10 @@ export const rulesSubcommand = {
     {
       name: 'Inspect a rule',
       value: `${packageName} firewall rules inspect "Block bots"`,
+    },
+    {
+      name: 'Create with AI',
+      value: `${packageName} firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"`,
     },
   ],
 } as const;

@@ -360,6 +360,25 @@ async function buildHandlerWithGoMod({
     }
   }
 
+  // Detect vendored dependencies by checking for vendor/modules.txt,
+  // the canonical marker created by `go mod vendor`
+  const vendorModulesPath = join(
+    goModDirname || entrypointDirname,
+    'vendor',
+    'modules.txt'
+  );
+  const isVendored = await pathExists(vendorModulesPath);
+  if (isVendored) {
+    debug('Detected vendor directory in project');
+
+    const vendorModulesBackup = vendorModulesPath + '.bak';
+    await copy(vendorModulesPath, vendorModulesBackup);
+    undo.fileActions.push({
+      to: vendorModulesPath,
+      from: vendorModulesBackup,
+    });
+  }
+
   const entrypointArr = entrypoint.split(posix.sep);
   let goPackageName = `${packageName}/${packageName}`;
   const goFuncName = `${packageName}.${handlerFunctionName}`;
@@ -442,10 +461,26 @@ async function buildHandlerWithGoMod({
   debug('Tidy `go.mod` file...');
   try {
     // ensure go.mod up-to-date
-    await go.mod();
+    // When vendored, use -e to tolerate errors from private modules that
+    // cannot be resolved from the network. The vendor directory will be
+    // regenerated afterward to maintain consistency.
+    await go.mod({ tolerateErrors: isVendored });
   } catch (err) {
     console.error('failed to `go mod tidy`');
     throw err;
+  }
+
+  // If the project uses vendored dependencies, regenerate the vendor
+  // directory after go.mod has been rewritten by writeGoMod() and tidied.
+  // This ensures vendor/modules.txt is consistent with the modified go.mod.
+  if (isVendored) {
+    debug('Regenerating vendor directory after go.mod rewrite...');
+    try {
+      await go.vendor();
+    } catch (err) {
+      console.error('failed to `go mod vendor`');
+      throw err;
+    }
   }
 
   debug('Running `go build`...');
@@ -454,7 +489,7 @@ async function buildHandlerWithGoMod({
   try {
     const src = [join(baseGoModPath, MAIN_GO_FILENAME)];
 
-    await go.build(src, destPath);
+    await go.build(src, destPath, { vendorMode: isVendored });
   } catch (err) {
     console.error('failed to `go build`');
     throw err;
@@ -696,7 +731,14 @@ async function writeGoMod({
         /^(replace .+=>\s*)(.+)$/gm,
         (orig, replaceStmt, replacePath) => {
           if (replacePath.startsWith('.')) {
-            return replaceStmt + join(goModRelPath, replacePath);
+            let newPath = join(goModRelPath, replacePath);
+            // path.join() strips the './' prefix when goModRelPath is
+            // empty.  Go requires replacement paths without a version to
+            // start with './' or '../', so restore the prefix when needed.
+            if (!newPath.startsWith('.') && !newPath.startsWith('/')) {
+              newPath = './' + newPath;
+            }
+            return replaceStmt + newPath;
           }
           return orig;
         }

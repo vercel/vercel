@@ -13,6 +13,7 @@ import type { Command } from '../help';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
+import stamp from '../../util/output/stamp';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -189,7 +190,6 @@ export async function offerAutoPublish(
     );
 
     if (shouldPublish) {
-      const { default: stamp } = await import('../../util/output/stamp');
       const publishStamp = stamp();
       output.spinner('Publishing to production');
 
