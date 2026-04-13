@@ -70,8 +70,8 @@ export interface FinalizeLambdaParams {
 export interface FinalizeLambdaResult {
   /** The zip as a Buffer, or null when a custom createZip returns a disk path. */
   buffer: Buffer | null;
-  /** Path to zip on disk (set by custom createZip), undefined for in-memory. */
-  zipPath?: string;
+  /** Path to zip on disk (set by custom createZip), null for in-memory. */
+  zipPath: string | null;
   /** SHA-256 hex digest. */
   digest: string;
   /** Compressed size in bytes. */
@@ -194,7 +194,7 @@ export async function finalizeLambda(
 
   return {
     buffer: zipResult.buffer,
-    zipPath: zipResult.zipPath,
+    zipPath: zipResult.zipPath ?? null,
     digest: zipResult.digest,
     size: zipResult.size,
     uncompressedBytes,

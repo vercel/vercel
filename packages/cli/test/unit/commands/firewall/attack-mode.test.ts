@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import firewall from '../../../../src/commands/firewall';
 import { useUser } from '../../../mocks/user';
-import { useUpdateAttackMode } from '../../../mocks/firewall';
+import { useUpdateAttackMode, capturedRequests } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -27,6 +27,7 @@ describe('firewall attack-mode', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Attack mode enabled for 1h');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.updateAttackMode?.attackModeEnabled).toBe(true);
     });
 
     it('should enable attack mode with custom duration', async () => {
@@ -42,6 +43,7 @@ describe('firewall attack-mode', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Attack mode enabled for 24h');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.updateAttackMode?.attackModeEnabled).toBe(true);
     });
 
     it('should reject invalid duration', async () => {
@@ -72,6 +74,7 @@ describe('firewall attack-mode', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Attack mode disabled');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.updateAttackMode?.attackModeEnabled).toBe(false);
     });
   });
 

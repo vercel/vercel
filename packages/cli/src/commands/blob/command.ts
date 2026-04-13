@@ -23,9 +23,21 @@ const accessOption = {
   shorthand: 'a',
   type: String,
   deprecated: false,
-  description: 'Access level for the blob: public or private (default: public)',
+  description: 'Access level for the blob: public or private (required)',
   argument: 'String',
   choices: ['public', 'private'],
+} as const;
+
+import { yesOption } from '../../util/arg-common';
+
+const environmentOption = {
+  name: 'environment',
+  shorthand: 'e',
+  type: [String],
+  deprecated: false,
+  argument: 'ENV',
+  description:
+    'Environment to connect (can be repeated: production, preview, development). Defaults to all when --yes is used.',
 } as const;
 
 export const listSubcommand = {
@@ -266,6 +278,8 @@ export const addStoreSubcommand = {
         'Project ID or name to link the blob store to (required in non-interactive mode)',
       argument: 'ID_OR_NAME',
     },
+    yesOption,
+    environmentOption,
   ],
   examples: [
     {
@@ -297,7 +311,7 @@ export const removeStoreSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [yesOption],
   examples: [],
 } as const;
 
@@ -336,19 +350,22 @@ export const createStoreSubcommand = {
         'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
       argument: 'STRING',
     },
+    yesOption,
+    environmentOption,
   ],
   examples: [
     {
       name: 'Create a blob store (uses default region "iad1")',
-      value: 'vercel blob create-store my-store',
+      value: 'vercel blob create-store my-store --access private',
     },
     {
       name: 'Create a blob store in a specific region',
-      value: 'vercel blob create-store my-store --region cdg1',
+      value: 'vercel blob create-store my-store --access private --region cdg1',
     },
     {
-      name: 'Create a private blob store',
-      value: 'vercel blob create-store my-private-store --access private',
+      name: 'Create and connect to project in CI',
+      value:
+        'vercel blob create-store my-store --access private --yes --environment production --environment preview',
     },
   ],
 } as const;
@@ -363,7 +380,16 @@ export const deleteStoreSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [yesOption],
+  examples: [],
+} as const;
+
+export const emptyStoreSubcommand = {
+  name: 'empty-store',
+  aliases: [],
+  description: 'Delete all blobs in a Blob store',
+  arguments: [],
+  options: [yesOption],
   examples: [],
 } as const;
 
@@ -378,6 +404,24 @@ export const getStoreInfoSubcommand = {
     },
   ],
   options: [],
+  examples: [],
+} as const;
+
+export const listStoresSubcommand = {
+  name: 'list-stores',
+  aliases: ['ls-stores'],
+  description: 'List all Blob stores',
+  arguments: [],
+  options: [
+    {
+      name: 'all',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+      description:
+        'List all blob stores for the team, not just the ones connected to the current project',
+    },
+  ],
   examples: [],
 } as const;
 
@@ -405,7 +449,8 @@ export const blobCommand = {
     createStoreSubcommand,
     deleteStoreSubcommand,
     getStoreInfoSubcommand,
-    storeSubcommand,
+    listStoresSubcommand,
+    emptyStoreSubcommand,
   ],
   options: [
     {

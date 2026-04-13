@@ -103,6 +103,21 @@ export interface FirewallConfigListResponse {
   versions: FirewallConfigResponse[];
 }
 
+export interface FirewallConfigPatch {
+  action: FirewallChangeAction;
+  id?: string | null;
+  value?: unknown;
+}
+
+export interface ProjectSecurityResponse {
+  security?: {
+    attackModeEnabled?: boolean;
+    /** Epoch milliseconds */
+    attackModeActiveUntil?: number | null;
+    attackModeUpdatedAt?: number;
+  };
+}
+
 export interface BypassRule {
   OwnerId: string;
   Id: string;

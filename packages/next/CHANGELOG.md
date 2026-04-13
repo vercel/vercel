@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.16.6
+
+### Patch Changes
+
+- Remove the `x-nextjs-data` request header for non-`/_next/data` routes before Next.js data route normalization. ([#15894](https://github.com/vercel/vercel/pull/15894))
+
 ## 4.16.5
 
 ### Patch Changes
