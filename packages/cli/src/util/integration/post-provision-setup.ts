@@ -44,7 +44,7 @@ export function validateEnvironments(
   return { valid: true };
 }
 
-export interface PostProvisionSetupResult {
+interface PostProvisionSetupResult {
   exitCode: number;
   dashboardUrl: string;
   project?: { id: string; name: string };

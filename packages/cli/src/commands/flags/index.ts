@@ -32,8 +32,10 @@ import {
   prepareSubcommand,
   enableSubcommand,
   sdkKeysSubcommand,
+  overrideSubcommand,
 } from './command';
 import emitDatafiles from './emit-datafiles';
+import override from './override';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
@@ -48,6 +50,7 @@ const COMMAND_CONFIG = {
   enable: getCommandAliases(enableSubcommand),
   'sdk-keys': getCommandAliases(sdkKeysSubcommand),
   prepare: getCommandAliases(prepareSubcommand),
+  override: getCommandAliases(overrideSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -180,6 +183,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPrepare(subcommandOriginal);
       return emitDatafiles(client);
+    case 'override':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(overrideSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandOverride(subcommandOriginal);
+      return override(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

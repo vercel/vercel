@@ -1,5 +1,19 @@
 # vercel-workers
 
+## 0.0.15
+
+### Patch Changes
+
+- [python-workers] fix UUID/Decimal/datetime serialization for dramatiq ([#15912](https://github.com/vercel/vercel/pull/15912))
+
+- [python-workers] handle middlewares for Dramatiq ([#15754](https://github.com/vercel/vercel/pull/15754))
+
+## 0.0.14
+
+### Patch Changes
+
+- [services] migrate python workers to Queues V3 API ([#15885](https://github.com/vercel/vercel/pull/15885))
+
 ## 0.0.13
 
 ### Patch Changes

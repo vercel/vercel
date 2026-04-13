@@ -21,7 +21,7 @@ import {
 } from '../../util/integration-resource/types';
 import { disconnectSubcommand } from './command';
 
-export async function disconnect(client: Client) {
+export async function disconnect(client: Client, argv: string[]) {
   const telemetry = new IntegrationResourceDisconnectTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -34,7 +34,7 @@ export async function disconnect(client: Client) {
   );
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+    parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
@@ -63,13 +63,13 @@ export async function disconnect(client: Client) {
   }
   client.config.currentTeam = team.id;
 
-  const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
-  if (isMissingResourceOrIntegration) {
+  const isMissingResource = parsedArguments.args.length < 1;
+  if (isMissingResource) {
     output.error('You must specify a resource. See `--help` for details.');
     return 1;
   }
 
-  const hasTooManyArguments = parsedArguments.args.length > 3;
+  const hasTooManyArguments = parsedArguments.args.length > 2;
   if (hasTooManyArguments) {
     output.error(
       'Cannot specify more than one project at a time. Use `--all` to disconnect the specified resource from all projects.'
@@ -78,18 +78,18 @@ export async function disconnect(client: Client) {
   }
 
   const shouldDisconnectAll = parsedArguments.flags['--all'];
-  const isProjectSpecified = parsedArguments.args.length === 3;
+  const isProjectSpecified = parsedArguments.args.length === 2;
 
   if (isProjectSpecified && shouldDisconnectAll) {
     output.error('Cannot specify a project while using the `--all` flag.');
     return 1;
   }
 
-  const resourceName = parsedArguments.args[1];
+  const resourceName = parsedArguments.args[0];
   let specifiedProject: string | undefined;
 
   if (isProjectSpecified) {
-    specifiedProject = parsedArguments.args[2];
+    specifiedProject = parsedArguments.args[1];
   }
 
   telemetry.trackCliArgumentResource(resourceName);

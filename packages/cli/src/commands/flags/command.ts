@@ -524,6 +524,55 @@ export const prepareSubcommand = {
   examples: [],
 } as const;
 
+export const overrideSubcommand = {
+  name: 'override',
+  aliases: [],
+  description:
+    'Encrypt flag overrides into a secure token for the vercel-flag-overrides cookie',
+  arguments: [
+    {
+      name: 'flag=value',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Expiration time for the encrypted token (default: 1y)',
+      argument: 'TIME',
+    },
+    {
+      name: 'decrypt',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Decrypt an encrypted override token and print the JSON',
+      argument: 'TOKEN',
+    },
+  ],
+  examples: [
+    {
+      name: 'Encrypt a single flag override',
+      value: `${packageName} flags override my-flag=true`,
+    },
+    {
+      name: 'Encrypt multiple flag overrides',
+      value: `${packageName} flags override flag-a=true flag-b=hello`,
+    },
+    {
+      name: 'Set a custom expiration',
+      value: `${packageName} flags override my-flag=42 --expiration 30d`,
+    },
+    {
+      name: 'Decrypt an override token',
+      value: `${packageName} flags override --decrypt <token>`,
+    },
+  ],
+} as const;
+
 export const flagsCommand = {
   name: 'flags',
   aliases: [],
@@ -545,6 +594,7 @@ export const flagsCommand = {
     enableSubcommand,
     sdkKeysSubcommand,
     prepareSubcommand,
+    overrideSubcommand,
   ],
   options: [],
   examples: [],

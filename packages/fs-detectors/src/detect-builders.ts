@@ -15,6 +15,7 @@ import type {
 import { isOfficialRuntime } from './is-official-runtime';
 import {
   isPythonEntrypoint,
+  isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
@@ -263,7 +264,8 @@ export async function detectBuilders(
       buildCommand &&
       !fileName.includes('/') &&
       fileName !== 'now.json' &&
-      fileName !== 'vercel.json'
+      fileName !== 'vercel.json' &&
+      fileName !== 'vercel.toml'
     ) {
       fallbackEntrypoint = fileName;
     }
@@ -462,6 +464,20 @@ async function maybeGetApiBuilder(
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
     const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    if (!isEntrypoint) {
+      return null;
+    }
+  }
+
+  // For Node.js files, verify they are valid entrypoints before creating a builder
+  const nodeExtensions = ['.js', '.mjs', '.ts', '.tsx'];
+  if (
+    process.env.VERCEL_NODE_FILTER_ENTRYPOINTS === '1' &&
+    nodeExtensions.some(ext => fileName.endsWith(ext)) &&
+    options.workPath
+  ) {
+    const fsPath = join(options.workPath, fileName);
+    const isEntrypoint = await isNodeEntrypoint({ fsPath });
     if (!isEntrypoint) {
       return null;
     }

@@ -18,9 +18,7 @@ import {
   runNpmInstall,
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
-  type Reporter,
   Span,
-  type TraceEvent,
   validateNpmrc,
   type Builder,
   type BuildOptions,
@@ -109,9 +107,9 @@ import {
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
+import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
-import { mkdir, writeFile } from 'fs/promises';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -167,14 +165,6 @@ export interface BuildsManifest {
   };
 }
 
-class InMemoryReporter implements Reporter {
-  public events: TraceEvent[] = [];
-
-  report(event: TraceEvent) {
-    this.events.push(event);
-  }
-}
-
 export default async function main(client: Client): Promise<number> {
   const telemetryClient = new BuildTelemetryClient({
     opts: {
@@ -182,9 +172,8 @@ export default async function main(client: Client): Promise<number> {
     },
   });
 
-  // Setup tracer to output into the build directory
-  const reporter = new InMemoryReporter();
-  const rootSpan = new Span({ name: 'vc', reporter });
+  // Create build trace span as a child of the CLI-wide root span
+  const rootSpan = client.rootSpan?.child('vc') ?? new Span({ name: 'vc' });
 
   let { cwd } = client;
   cwd = await resolveProjectCwd(cwd);
@@ -218,6 +207,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
+    telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
   } catch (error) {
     printError(error);
     return 1;
@@ -260,7 +250,9 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // If repo linked, update `cwd` to the repo root
-  const link = await getProjectLink(client, cwd);
+  const link = await rootSpan
+    .child('vc.getProjectLink')
+    .trace(() => getProjectLink(client, cwd));
   const projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
@@ -270,7 +262,9 @@ export default async function main(client: Client): Promise<number> {
 
   // Read project settings, and pull them from Vercel if necessary
   const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
-  let project = await readProjectSettings(vercelDir);
+  let project = await rootSpan
+    .child('vc.readProjectSettings')
+    .trace(() => readProjectSettings(vercelDir));
   const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
     let confirmed = yes;
@@ -354,6 +348,12 @@ export default async function main(client: Client): Promise<number> {
     ? resolve(parsedArgs.flags['--output'])
     : defaultOutputDir;
 
+  client.traceDiagnosticsPath = join(
+    outputDir,
+    'diagnostics',
+    'cli_traces.json'
+  );
+
   await Promise.all([
     fs.remove(outputDir),
     // Also delete `.vercel/output`, in case the script is targeting Build Output API directly
@@ -367,35 +367,72 @@ export default async function main(client: Client): Promise<number> {
     cliVersion: cliPkg.version,
   };
 
-  if (!process.env.VERCEL_BUILD_IMAGE && !client.nonInteractive) {
+  const deploymentId = parsedArgs.flags['--id'];
+
+  // When --id is provided, system env vars are fetched from the deployment,
+  // so the warning about missing system env vars does not apply.
+  if (
+    !process.env.VERCEL_BUILD_IMAGE &&
+    !deploymentId &&
+    !client.nonInteractive
+  ) {
     output.warn(
       'Build not running on Vercel. System environment variables will not be available.'
     );
   }
-
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
-    const envPath = join(
-      cwd,
-      projectRootDirectory,
-      VERCEL_DIR,
-      `.env.${target}.local`
-    );
-    // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
-    const dotenvResult = dotenv.config({
-      path: envPath,
-      debug: output.isDebugEnabled(),
-    });
-    if (dotenvResult.error) {
-      output.debug(
-        `Failed loading environment variables: ${dotenvResult.error}`
-      );
-    } else if (dotenvResult.parsed) {
-      for (const key of Object.keys(dotenvResult.parsed)) {
-        envToUnset.add(key);
+    const loadEnvSpan = rootSpan.child('vc.loadEnv');
+    try {
+      if (deploymentId) {
+        // Set the team context so API calls include the teamId query param.
+        // Without this, the API can't find the deployment.
+        if (link?.orgId?.startsWith('team_')) {
+          client.config.currentTeam = link.orgId;
+        }
+
+        // When --id is provided, fetch env vars from the deployment
+        // instead of loading from local .env files.
+        output.debug(
+          `Fetching environment variables for deployment ${deploymentId}`
+        );
+        const { buildEnv } = await fetchDeploymentBuildEnv(
+          client,
+          deploymentId
+        );
+        for (const [key, value] of Object.entries(buildEnv)) {
+          envToUnset.add(key);
+          process.env[key] = value;
+        }
+        output.debug(
+          `Loaded ${Object.keys(buildEnv).length} environment variables from deployment ${deploymentId}`
+        );
+      } else {
+        const envPath = join(
+          cwd,
+          projectRootDirectory,
+          VERCEL_DIR,
+          `.env.${target}.local`
+        );
+        // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
+        const dotenvResult = dotenv.config({
+          path: envPath,
+          debug: output.isDebugEnabled(),
+        });
+        if (dotenvResult.error) {
+          output.debug(
+            `Failed loading environment variables: ${dotenvResult.error}`
+          );
+        } else if (dotenvResult.parsed) {
+          for (const key of Object.keys(dotenvResult.parsed)) {
+            envToUnset.add(key);
+          }
+          output.debug(`Loaded environment variables from "${envPath}"`);
+        }
       }
-      output.debug(`Loaded environment variables from "${envPath}"`);
+    } finally {
+      loadEnvSpan.stop();
     }
 
     // For legacy Speed Insights
@@ -486,19 +523,6 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
-    try {
-      const diagnosticsOutputPath = join(outputDir, 'diagnostics');
-      await mkdir(diagnosticsOutputPath, { recursive: true });
-      // Ensure that all traces have flushed to disk before we exit
-      await writeFile(
-        join(diagnosticsOutputPath, 'cli_traces.json'),
-        JSON.stringify(reporter.events)
-      );
-    } catch (err) {
-      output.error('Failed to write diagnostics trace file');
-      output.prettyError(err);
-    }
-
     // Unset environment variables that were added by dotenv
     // (this is mostly for the unit tests)
     for (const key of envToUnset) {
@@ -538,33 +562,40 @@ async function doBuild(
   if (sourceConfigFile) {
     corepackShimDir = await initCorepack({ repoRootPath: cwd });
 
-    const installCommand = project.settings.installCommand;
-    if (typeof installCommand === 'string') {
-      if (installCommand.trim()) {
-        output.log(`Running install command before config compilation...`);
-        await runCustomInstallCommand({
-          destPath: workPath,
-          installCommand,
-          spawnOpts: { env: process.env },
-          projectCreatedAt: project.settings.createdAt,
-        });
+    const installDepsSpan = span.child('vc.installDeps');
+    try {
+      const installCommand = project.settings.installCommand;
+      if (typeof installCommand === 'string') {
+        if (installCommand.trim()) {
+          output.log(`Running install command before config compilation...`);
+          await runCustomInstallCommand({
+            destPath: workPath,
+            installCommand,
+            spawnOpts: { env: process.env },
+            projectCreatedAt: project.settings.createdAt,
+          });
+        } else {
+          output.debug('Skipping empty install command');
+        }
       } else {
-        output.debug('Skipping empty install command');
+        output.log(`Installing dependencies before config compilation...`);
+        await runNpmInstall(
+          workPath,
+          [],
+          { env: process.env },
+          undefined,
+          project.settings.createdAt
+        );
       }
-    } else {
-      output.log(`Installing dependencies before config compilation...`);
-      await runNpmInstall(
-        workPath,
-        [],
-        { env: process.env },
-        undefined,
-        project.settings.createdAt
-      );
+    } finally {
+      installDepsSpan.stop();
     }
     process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
-  const compileResult = await compileVercelConfig(workPath);
+  const compileResult = await span
+    .child('vc.compileVercelConfig')
+    .trace(() => compileVercelConfig(workPath));
 
   const vercelConfigPath =
     localConfigPath ||
@@ -672,13 +703,15 @@ async function doBuild(
     isZeroConfig = true;
 
     // Detect the Vercel Builders that will need to be invoked
-    const detectedBuilders = await detectBuilders(files, pkg, {
-      ...localConfig,
-      projectSettings,
-      ignoreBuildScript: true,
-      featHandleMiss: true,
-      workPath,
-    });
+    const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
+      detectBuilders(files, pkg, {
+        ...localConfig,
+        projectSettings,
+        ignoreBuildScript: true,
+        featHandleMiss: true,
+        workPath,
+      })
+    );
 
     if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
       throw detectedBuilders.errors[0];
@@ -743,7 +776,9 @@ async function doBuild(
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, span);
+  const buildersWithPkgs = await span
+    .child('vc.importBuilders')
+    .trace(() => importBuilders(builderSpecs, cwd, span));
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -1317,6 +1352,8 @@ async function doBuild(
     cleanupCorepack(corepackShimDir);
   }
 
+  const collectSpan = span.child('vc.finalizeBuildOutput');
+
   // Wait for filesystem operations to complete
   // TODO render progress bar?
   const errors = await Promise.all(ops);
@@ -1477,6 +1514,7 @@ async function doBuild(
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
   await writeFlagsJSON(buildResults.values(), outputDir);
+  collectSpan.stop();
 
   const relOutputDir = relative(cwd, outputDir);
   if (!client.nonInteractive) {
@@ -2051,4 +2089,50 @@ async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return Buffer.concat(chunks).toString('utf-8');
+}
+
+const INTEGRATIONS_POLL_INTERVAL_MS = 5000;
+const INTEGRATIONS_POLL_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes, matches API timeout
+
+/**
+ * Fetches build environment variables for a deployment from the API.
+ * If integrations are still provisioning, polls until they complete.
+ */
+async function fetchDeploymentBuildEnv(
+  client: Client,
+  deploymentId: string
+): Promise<{ env: Record<string, string>; buildEnv: Record<string, string> }> {
+  const deadline = Date.now() + INTEGRATIONS_POLL_TIMEOUT_MS;
+  let isPolling = false;
+
+  while (Date.now() < deadline) {
+    try {
+      return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
+    } catch (err: unknown) {
+      // If the API returns integrationsStatus: 'pending', poll until ready
+      if (
+        err &&
+        typeof err === 'object' &&
+        'integrationsStatus' in err &&
+        (err as { integrationsStatus?: string }).integrationsStatus ===
+          'pending'
+      ) {
+        if (!isPolling) {
+          output.spinner(
+            'Waiting for deployment integrations to finish provisioning...'
+          );
+          isPolling = true;
+        }
+        await new Promise(resolve =>
+          setTimeout(resolve, INTEGRATIONS_POLL_INTERVAL_MS)
+        );
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new Error(
+    'Timed out waiting for deployment integrations to complete provisioning.'
+  );
 }

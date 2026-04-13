@@ -1,5 +1,29 @@
 # @vercel/python
 
+## 6.30.0
+
+### Minor Changes
+
+- Enable caching for python builds using prepareCache ([#15634](https://github.com/vercel/vercel/pull/15634))
+
+## 6.29.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+- Fix django static file serving for manifest storage backends. ([#15709](https://github.com/vercel/vercel/pull/15709))
+
+- [django] Don't exclude the /static directory when using staticfiles ([#15705](https://github.com/vercel/vercel/pull/15705))
+
+- [django] Only look at STATICFILES_STORAGE value when on a django that supports it ([#15706](https://github.com/vercel/vercel/pull/15706))
+
+- Produce a better diagnostic when Django settings discovery fails ([#15770](https://github.com/vercel/vercel/pull/15770))
+
+### Patch Changes
+
+- Always make the path name for a python service be `/index` ([#15773](https://github.com/vercel/vercel/pull/15773))
+
 ## 6.28.0
 
 ### Minor Changes
