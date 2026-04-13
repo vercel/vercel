@@ -6,6 +6,7 @@ import {
   useListFirewallConfigs,
   useActivateConfig,
   usePatchDraft,
+  capturedRequests,
   createConfig,
   createRule,
   lastPatchBody,
@@ -25,6 +26,9 @@ describe('firewall rules disable', () => {
     });
     const cwd = setupUnitFixture('commands/firewall');
     client.cwd = cwd;
+    for (const key of Object.keys(capturedRequests)) {
+      delete (capturedRequests as Record<string, unknown>)[key];
+    }
   });
 
   it('should disable an enabled rule', async () => {

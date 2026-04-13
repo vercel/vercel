@@ -6,6 +6,7 @@ import {
   useListFirewallConfigs,
   useActivateConfig,
   usePatchDraft,
+  capturedRequests,
   createConfig,
   createRule,
   lastPatchBody,
@@ -25,6 +26,9 @@ describe('firewall rules remove', () => {
     });
     const cwd = setupUnitFixture('commands/firewall');
     client.cwd = cwd;
+    for (const key of Object.keys(capturedRequests)) {
+      delete (capturedRequests as Record<string, unknown>)[key];
+    }
   });
 
   it('should remove a rule with --yes', async () => {
@@ -40,6 +44,7 @@ describe('firewall rules remove', () => {
 
     expect(lastPatchBody.action).toBe('rules.remove');
     expect(lastPatchBody.id).toBe('rule_001');
+    expect(lastPatchBody.value).toBeNull();
   });
 
   it('should work with rm alias', async () => {

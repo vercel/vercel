@@ -112,6 +112,20 @@ export default async function reorder(client: Client, argv: string[]) {
   if (matches.length > 1) {
     output.stopSpinner();
     if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'ambiguous_match',
+          message: `Multiple rules match "${identifier}". Specify the full rule ID.`,
+          next: matches.map(r => ({
+            command: withGlobalFlags(
+              client,
+              `firewall rules reorder "${r.id}" --first --yes`
+            ),
+            when: `reorder "${r.name}"`,
+          })),
+        });
+      }
       output.error(
         `Multiple rules match "${identifier}". Specify the full rule ID to disambiguate.`
       );

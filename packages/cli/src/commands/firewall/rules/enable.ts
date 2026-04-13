@@ -133,6 +133,20 @@ export default async function enable(client: Client, argv: string[]) {
   if (matches.length > 1) {
     output.stopSpinner();
     if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'ambiguous_match',
+          message: `Multiple rules match "${identifier}". Specify the full rule ID.`,
+          next: matches.map(r => ({
+            command: withGlobalFlags(
+              client,
+              `firewall rules enable "${r.id}" --yes`
+            ),
+            when: `enable "${r.name}"`,
+          })),
+        });
+      }
       output.error(
         `Multiple rules match "${identifier}". Specify the full rule ID to disambiguate.`
       );
