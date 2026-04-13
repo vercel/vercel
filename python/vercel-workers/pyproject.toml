@@ -16,9 +16,6 @@ dependencies = [
     "vercel>=0.3.7",
 ]
 
-[project.scripts]
-test = "pytest:main"
-
 [project.optional-dependencies]
 dev = [
     "ruff~=0.15.1",
