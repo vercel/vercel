@@ -58,6 +58,13 @@ describe('blob store get', () => {
       org: { id: 'org_123', slug: 'my-org', type: 'user' },
     });
 
+    // Default getScope mock (used when project is not linked)
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-org',
+      team: { id: 'org_123', slug: 'my-org' },
+      user: { id: 'user_123', username: 'testuser', email: 'test@test.com' },
+    } as Awaited<ReturnType<typeof getScopeModule>>);
+
     formatSpy.mockImplementation(date => new Date(date).toISOString());
   });
 
