@@ -1,4 +1,5 @@
 import open from 'open';
+import ms from 'ms';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -15,11 +16,57 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { getCommandNamePlain } from '../../util/pkg-name';
+import { TokensAddTelemetryClient } from '../../util/telemetry/commands/tokens/add';
 
 interface CreateTokenResponse {
   token?: { id?: string; name?: string };
   bearerToken?: string;
 }
+
+interface Permission {
+  resource: string;
+  action: string;
+}
+
+interface AuthorizationDetail {
+  type: 'permissions';
+  permissions: Permission[];
+}
+
+const VALID_ACTIONS = ['create', 'delete', 'read', 'update', 'list'] as const;
+
+const MAX_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+const COMMON_PERMISSIONS: Array<{
+  name: string;
+  value: string;
+}> = [
+  { name: 'project:read (Read project details)', value: 'project:read' },
+  { name: 'project:list (List projects)', value: 'project:list' },
+  {
+    name: 'deployment:create (Create deployments)',
+    value: 'deployment:create',
+  },
+  {
+    name: 'deployment:read (Read deployment details)',
+    value: 'deployment:read',
+  },
+  { name: 'deployment:list (List deployments)', value: 'deployment:list' },
+  {
+    name: 'projectEnvVars:read (Read environment variables)',
+    value: 'projectEnvVars:read',
+  },
+  {
+    name: 'projectEnvVars:create (Create environment variables)',
+    value: 'projectEnvVars:create',
+  },
+  {
+    name: 'projectEnvVars:update (Update environment variables)',
+    value: 'projectEnvVars:update',
+  },
+  { name: 'domain:read (Read domain details)', value: 'domain:read' },
+  { name: 'domain:list (List domains)', value: 'domain:list' },
+];
 
 const VERCEL_ACCOUNT_TOKENS_URL = 'https://vercel.com/account/tokens';
 
@@ -103,6 +150,107 @@ async function openTokensDashboardInBrowser(client: Client): Promise<void> {
   }
 }
 
+function parsePermission(raw: string): Permission | string {
+  const colonIndex = raw.indexOf(':');
+  if (colonIndex === -1) {
+    return `Invalid permission format "${raw}". Expected resource:action (e.g. project:read).`;
+  }
+  const resource = raw.slice(0, colonIndex);
+  const action = raw.slice(colonIndex + 1);
+  if (!resource) {
+    return `Invalid permission format "${raw}". Resource cannot be empty.`;
+  }
+  if (!(VALID_ACTIONS as readonly string[]).includes(action)) {
+    return `Invalid action "${action}" in "${raw}". Valid actions: ${VALID_ACTIONS.join(', ')}.`;
+  }
+  return { resource, action };
+}
+
+function parseExpiry(raw: string): number | string {
+  const duration = ms(raw);
+  if (duration === undefined || duration <= 0) {
+    return `Invalid expiry duration "${raw}". Use a duration like "7d", "1h", or "30m".`;
+  }
+  return duration;
+}
+
+async function promptPermissionsInteractive(
+  client: Client
+): Promise<{ permissions: Permission[]; expiresAt: number } | null> {
+  const shouldScope = await client.input.confirm(
+    'Scope this token to specific permissions?',
+    false
+  );
+  if (!shouldScope) {
+    return null;
+  }
+
+  const selected = await client.input.checkbox({
+    message: 'Select permissions',
+    choices: COMMON_PERMISSIONS.map(p => ({
+      name: p.name,
+      value: p.value,
+      checked: false,
+    })),
+  });
+
+  const additional = await client.input.text({
+    message:
+      'Enter additional permissions (comma-separated resource:action), or press Enter to skip:',
+  });
+
+  const permissions: Permission[] = [];
+  for (const raw of selected) {
+    const parsed = parsePermission(raw);
+    if (typeof parsed === 'string') {
+      output.error(parsed);
+      return null;
+    }
+    permissions.push(parsed);
+  }
+
+  if (additional.trim()) {
+    for (const raw of additional.split(',').map(s => s.trim())) {
+      if (!raw) {
+        continue;
+      }
+      const parsed = parsePermission(raw);
+      if (typeof parsed === 'string') {
+        output.error(parsed);
+        return null;
+      }
+      permissions.push(parsed);
+    }
+  }
+
+  if (permissions.length === 0) {
+    output.error('No permissions selected. Cannot create a scoped token.');
+    return null;
+  }
+
+  const expiryInput = await client.input.text({
+    message: 'Token expiry (e.g. 7d, 1h, 30m):',
+    validate: (value: string) => {
+      const duration = ms(value);
+      if (duration === undefined || duration <= 0) {
+        return 'Invalid duration. Use a format like "7d", "1h", or "30m".';
+      }
+      if (duration > MAX_EXPIRY_MS) {
+        return 'Expiry cannot exceed 7 days for scoped tokens.';
+      }
+      return true;
+    },
+  });
+
+  const duration = ms(expiryInput);
+  if (duration === undefined || duration <= 0) {
+    output.error('Invalid expiry duration.');
+    return null;
+  }
+
+  return { permissions, expiresAt: Date.now() + duration };
+}
+
 export default async function add(
   client: Client,
   argv: string[]
@@ -115,6 +263,12 @@ export default async function add(
     printError(error);
     return 1;
   }
+
+  const telemetryClient = new TokensAddTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   const { args } = parsedArgs;
   const name = args[0]?.trim();
@@ -148,10 +302,79 @@ export default async function add(
   }
   const asJson = validation.jsonOutput;
 
+  const permissionFlags = parsedArgs.flags['--permission'];
+  const expiryFlag = parsedArgs.flags['--expiry'];
+
+  telemetryClient.trackCliOptionPermission(permissionFlags);
+  telemetryClient.trackCliOptionExpiry(expiryFlag);
+
+  let permissions: Permission[] = [];
+  let expiresAt: number | undefined;
+  let authorizationDetails: AuthorizationDetail[] | undefined;
+
+  if (permissionFlags && permissionFlags.length > 0) {
+    // Flag-based flow
+    for (const raw of permissionFlags) {
+      const parsed = parsePermission(raw);
+      if (typeof parsed === 'string') {
+        output.error(parsed);
+        return 1;
+      }
+      permissions.push(parsed);
+    }
+
+    if (!expiryFlag) {
+      output.error(
+        '--expiry is required when --permission is used. Scoped tokens must have an expiry (max 7 days).'
+      );
+      return 1;
+    }
+
+    const duration = parseExpiry(expiryFlag);
+    if (typeof duration === 'string') {
+      output.error(duration);
+      return 1;
+    }
+
+    if (duration > MAX_EXPIRY_MS) {
+      output.error(
+        'Expiry cannot exceed 7 days for scoped tokens. Use a duration of 7d or less.'
+      );
+      return 1;
+    }
+
+    expiresAt = Date.now() + duration;
+  } else if (expiryFlag) {
+    output.error(
+      '--expiry can only be used with --permission. To create a token without permissions, omit both flags.'
+    );
+    return 1;
+  } else if (client.stdin.isTTY) {
+    // Interactive flow
+    const interactive = await promptPermissionsInteractive(client);
+    if (interactive) {
+      permissions = interactive.permissions;
+      expiresAt = interactive.expiresAt;
+    }
+  }
+
+  if (permissions.length > 0 && expiresAt) {
+    authorizationDetails = [{ type: 'permissions', permissions }];
+  }
+
   const projectId = parsedArgs.flags['--project'];
-  const body: { name: string; projectId?: string } = { name };
+  const body: {
+    name: string;
+    projectId?: string;
+    authorizationDetails?: AuthorizationDetail[];
+    expiresAt?: number;
+  } = { name };
   if (typeof projectId === 'string' && projectId.length > 0) {
     body.projectId = projectId;
+  }
+  if (authorizationDetails) {
+    body.authorizationDetails = authorizationDetails;
+    body.expiresAt = expiresAt;
   }
 
   let result: CreateTokenResponse;
@@ -235,6 +458,14 @@ export default async function add(
   }
   if (result.token?.id) {
     output.log(`id: ${result.token.id}`);
+  }
+  if (permissions.length > 0) {
+    output.log(
+      `permissions: ${permissions.map(p => `${p.resource}:${p.action}`).join(', ')}`
+    );
+  }
+  if (expiresAt) {
+    output.log(`expires: ${new Date(expiresAt).toISOString()}`);
   }
   return 0;
 }

@@ -44,11 +44,32 @@ export const addSubcommand = {
       description: 'Optional project ID to scope the token to',
       deprecated: false,
     },
+    {
+      name: 'permission',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Permission in resource:action format (repeatable). Constrains the token to only these permissions. Valid actions: create, delete, read, update, list. Requires --expiry (max 7 days).',
+    },
+    {
+      name: 'expiry',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Token lifetime as a duration (e.g. "7d", "1h", "30m"). Required when --permission is used. Max 7 days.',
+      argument: 'DURATION',
+    },
   ],
   examples: [
     {
       name: 'Create a token',
       value: `${packageName} tokens add "CI deploy"`,
+    },
+    {
+      name: 'Create a scoped token',
+      value: `${packageName} tokens add "CI deploy" --permission deployment:create --permission project:read --expiry 7d`,
     },
   ],
 } as const;
