@@ -443,11 +443,11 @@ export const rulesAddSubcommand = {
       description: 'Rule description (max 256 chars)',
     },
     {
-      name: 'inactive',
+      name: 'disabled',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Create as inactive (default: active)',
+      description: 'Create as disabled (default: enabled)',
     },
     {
       name: 'rate-limit-algo',
@@ -462,7 +462,8 @@ export const rulesAddSubcommand = {
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Rate limit window in seconds (required for rate_limit)',
+      description:
+        'Rate limit window in seconds, 10-3600 (required for rate_limit)',
     },
     {
       name: 'rate-limit-requests',
@@ -470,7 +471,7 @@ export const rulesAddSubcommand = {
       type: Number,
       deprecated: false,
       description:
-        'Rate limit max requests per window (required for rate_limit)',
+        'Rate limit max requests per window, 1-10000000 (required for rate_limit)',
     },
     {
       name: 'rate-limit-keys',
@@ -528,6 +529,244 @@ export const rulesAddSubcommand = {
   ],
 } as const;
 
+export const rulesEditSubcommand = {
+  name: 'edit',
+  aliases: [],
+  description:
+    'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [
+    {
+      name: 'ai',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Describe changes using natural language (AI-powered)',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Replace rule with JSON payload',
+    },
+    {
+      name: 'condition',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description:
+        'Replace conditions as JSON (repeatable). Example: \'{"type":"path","op":"pre","value":"/api"}\'. Fields: type, op, value, key (for header/cookie/query), neg (boolean). Use --or between conditions for OR groups.',
+    },
+    {
+      name: 'or',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Start a new OR condition group',
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Rename the rule',
+    },
+    {
+      name: 'action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Change action: deny, challenge, log, bypass, rate_limit, redirect',
+    },
+    {
+      name: 'duration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Change action duration: 1m, 5m, 15m, 30m, 1h',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Change description (use "" to clear)',
+    },
+    {
+      name: 'enabled',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Set rule to enabled',
+    },
+    {
+      name: 'disabled',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Set rule to disabled',
+    },
+    {
+      name: 'rate-limit-algo',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Rate limit algorithm: fixed_window, token_bucket',
+    },
+    {
+      name: 'rate-limit-window',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Rate limit window in seconds (10-3600)',
+    },
+    {
+      name: 'rate-limit-requests',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Rate limit max requests per window (1-10000000)',
+    },
+    {
+      name: 'rate-limit-keys',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description: 'Rate limit keys (repeatable): ip, ja4, header:name',
+    },
+    {
+      name: 'rate-limit-action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Action when rate limit is exceeded: log, deny, challenge, rate_limit (default: rate_limit)',
+    },
+    {
+      name: 'redirect-url',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Redirect URL or path',
+    },
+    {
+      name: 'redirect-permanent',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Permanent redirect (301). Default: temporary (307)',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Interactive mode',
+      value: `${packageName} firewall rules edit "My Rule"`,
+    },
+    {
+      name: 'Edit with AI',
+      value: `${packageName} firewall rules edit "My Rule" --ai "Change action to challenge"`,
+    },
+    {
+      name: 'Change action via flags',
+      value: `${packageName} firewall rules edit "My Rule" --action challenge --duration 5m --yes`,
+    },
+    {
+      name: 'Replace conditions',
+      value: `${packageName} firewall rules edit "My Rule" --condition '{"type":"path","op":"pre","value":"/new"}' --yes`,
+    },
+    {
+      name: 'Rename a rule',
+      value: `${packageName} firewall rules edit "My Rule" --name "New Name" --yes`,
+    },
+  ],
+} as const;
+
+export const rulesEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Enable a disabled custom firewall rule',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Enable a rule',
+      value: `${packageName} firewall rules enable "My Rule"`,
+    },
+  ],
+} as const;
+
+export const rulesDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Disable a custom firewall rule without removing it',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Disable a rule',
+      value: `${packageName} firewall rules disable "My Rule"`,
+    },
+  ],
+} as const;
+
+export const rulesRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description: 'Remove a custom firewall rule',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove a rule',
+      value: `${packageName} firewall rules remove "My Rule" --yes`,
+    },
+  ],
+} as const;
+
+export const rulesReorderSubcommand = {
+  name: 'reorder',
+  aliases: ['move'],
+  description: 'Change the priority order of a custom firewall rule',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [
+    {
+      name: 'position',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Target position (1-based)',
+    },
+    {
+      name: 'first',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Move to first position',
+    },
+    {
+      name: 'last',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Move to last position',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Move to first position',
+      value: `${packageName} firewall rules reorder "My Rule" --first --yes`,
+    },
+    {
+      name: 'Move to position 3',
+      value: `${packageName} firewall rules reorder "My Rule" --position 3 --yes`,
+    },
+  ],
+} as const;
+
 export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
@@ -538,6 +777,11 @@ export const rulesSubcommand = {
     rulesListSubcommand,
     rulesInspectSubcommand,
     rulesAddSubcommand,
+    rulesEditSubcommand,
+    rulesEnableSubcommand,
+    rulesDisableSubcommand,
+    rulesRemoveSubcommand,
+    rulesReorderSubcommand,
   ],
   options: [],
   examples: [
@@ -552,6 +796,10 @@ export const rulesSubcommand = {
     {
       name: 'Create with AI',
       value: `${packageName} firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"`,
+    },
+    {
+      name: 'Edit with AI',
+      value: `${packageName} firewall rules edit "My Rule" --ai "Change action to challenge"`,
     },
   ],
 } as const;

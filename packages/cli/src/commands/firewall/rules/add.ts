@@ -9,19 +9,18 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   withGlobalFlags,
+  printActionImpactWarning,
 } from '../shared';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import { parseConditionFlags } from '../../../util/firewall/parse-conditions';
 import {
   VALID_ACTIONS,
-  VALID_DURATIONS,
-  VALID_ALGORITHMS,
   type FirewallActionType,
 } from '../../../util/firewall/condition-types';
+import { buildActionFromFlags } from '../../../util/firewall/build-action';
 import { formatRuleExpanded } from '../../../util/firewall/format';
 import type {
   FirewallRule,
-  FirewallRuleAction,
   FirewallConditionGroup,
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
@@ -380,7 +379,7 @@ async function handleFlagAdd(
     return 1;
   }
 
-  const active = !parsed.flags['--inactive'];
+  const active = !parsed.flags['--disabled'];
 
   const rule = {
     name,
@@ -391,89 +390,6 @@ async function handleFlagAdd(
   };
 
   return createRule(client, parsed, rule);
-}
-
-function buildActionFromFlags(
-  flags: Record<string, unknown>,
-  actionType: string
-): FirewallRuleAction | string {
-  const duration = flags['--duration'] as string | undefined;
-
-  if (
-    duration &&
-    !VALID_DURATIONS.includes(duration as (typeof VALID_DURATIONS)[number])
-  ) {
-    return `Invalid duration "${duration}". Valid durations: ${VALID_DURATIONS.join(', ')}`;
-  }
-
-  const action: FirewallRuleAction = {
-    mitigate: {
-      action: actionType,
-      rateLimit: null,
-      redirect: null,
-      actionDuration: duration || null,
-    },
-  };
-
-  if (actionType === 'rate_limit') {
-    const algo = (flags['--rate-limit-algo'] as string) || 'fixed_window';
-    const window = flags['--rate-limit-window'] as number | undefined;
-    const requests = flags['--rate-limit-requests'] as number | undefined;
-    const keys = (flags['--rate-limit-keys'] as string[]) || ['ip'];
-
-    if (!VALID_ALGORITHMS.includes(algo as (typeof VALID_ALGORITHMS)[number])) {
-      return `Invalid rate limit algorithm "${algo}". Valid: ${VALID_ALGORITHMS.join(', ')}`;
-    }
-    if (!window || window < 10) {
-      return 'Rate limit --rate-limit-window is required (minimum 10 seconds).';
-    }
-    if (window > 3600) {
-      return 'Rate limit --rate-limit-window maximum is 3600 seconds (1 hour).';
-    }
-    if (!requests || requests < 1) {
-      return 'Rate limit --rate-limit-requests is required (minimum 1).';
-    }
-    if (requests > 10_000_000) {
-      return 'Rate limit --rate-limit-requests maximum is 10,000,000.';
-    }
-
-    const rlAction = (flags['--rate-limit-action'] as string) || 'rate_limit';
-    const validRlActions = ['log', 'deny', 'challenge', 'rate_limit'];
-    if (!validRlActions.includes(rlAction)) {
-      return `Invalid rate limit action "${rlAction}". Valid: ${validRlActions.join(', ')}`;
-    }
-
-    action.mitigate!.rateLimit = {
-      algo: algo as 'fixed_window' | 'token_bucket',
-      window,
-      limit: requests,
-      keys,
-      action: rlAction,
-    };
-  }
-
-  if (actionType === 'redirect') {
-    const redirectUrl = flags['--redirect-url'] as string | undefined;
-    const permanent = !!flags['--redirect-permanent'];
-
-    if (!redirectUrl) {
-      return 'Redirect action requires --redirect-url.';
-    }
-    if (
-      !redirectUrl.startsWith('/') &&
-      !redirectUrl.startsWith('http://') &&
-      !redirectUrl.startsWith('https://')
-    ) {
-      return 'Redirect URL must start with /, http://, or https://';
-    }
-
-    action.mitigate!.redirect = {
-      location: redirectUrl,
-      permanent,
-    };
-  }
-
-  return action;
 }
 
 // --- Shared create logic ---
@@ -528,6 +444,7 @@ async function createRule(
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(rule.name)}" staged ${chalk.gray(createStamp())}`
     );
+    printActionImpactWarning(rule.action);
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
       teamId,

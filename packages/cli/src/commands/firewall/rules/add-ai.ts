@@ -5,14 +5,15 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   withGlobalFlags,
+  printActionImpactWarning,
 } from '../shared';
 import { outputAgentError } from '../../../util/agent-output';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import generateFirewallRule from '../../../util/firewall/generate-firewall-rule';
 import { formatRuleExpanded } from '../../../util/firewall/format';
 import type { FirewallRule } from '../../../util/firewall/types';
+import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../../util/output/stamp';
-import { addInteractive } from './add-interactive';
 
 interface HandleAIAddOptions {
   prompt?: string;
@@ -68,6 +69,30 @@ export async function handleAIAdd(
           output.warn(`AI generation failed: ${response.error}. Retrying...`);
           continue;
         }
+
+        if (client.stdin.isTTY && !client.nonInteractive && !opts.skipPrompts) {
+          const retryChoice = await client.input.select({
+            message: `AI could not generate a rule: ${response.error}`,
+            choices: [
+              {
+                value: 'retry',
+                name: 'Try again with a different description',
+              },
+              { value: 'cancel', name: 'Cancel' },
+            ],
+          });
+          if (retryChoice === 'cancel') {
+            output.log('Canceled');
+            return 0;
+          }
+          prompt = await client.input.text({
+            message: 'Describe the rule you want to create:',
+            validate: (val: string) =>
+              val.trim() ? true : 'Please provide a description.',
+          });
+          continue;
+        }
+
         if (client.nonInteractive) {
           outputAgentError(
             client,
@@ -95,12 +120,35 @@ export async function handleAIAdd(
             1
           );
         }
+
         output.error(`AI could not generate a rule: ${response.error}`);
         return 1;
       }
 
       if (!response.rule) {
         output.stopSpinner();
+        if (client.stdin.isTTY && !client.nonInteractive && !opts.skipPrompts) {
+          const retryChoice = await client.input.select({
+            message: 'AI did not return a rule.',
+            choices: [
+              {
+                value: 'retry',
+                name: 'Try again with a different description',
+              },
+              { value: 'cancel', name: 'Cancel' },
+            ],
+          });
+          if (retryChoice === 'cancel') {
+            output.log('Canceled');
+            return 0;
+          }
+          prompt = await client.input.text({
+            message: 'Describe the rule you want to create:',
+            validate: (val: string) =>
+              val.trim() ? true : 'Please provide a description.',
+          });
+          continue;
+        }
         if (client.nonInteractive) {
           outputAgentError(
             client,
@@ -263,10 +311,15 @@ export async function handleAIAdd(
     }
 
     if (choice === 'edit-manual') {
-      return addInteractive(client, project, teamId, {
-        prePopulated: currentRule,
-        skipPrompts: opts.skipPrompts,
-      });
+      const prePopulated = {
+        ...currentRule!,
+        id: '(new)',
+      } as FirewallRule;
+      const modified = await runInteractiveEditLoop(client, prePopulated);
+      if (!modified) {
+        continue;
+      }
+      return createFromGenerated(client, project, teamId, modified, opts);
     }
 
     if (choice === 'discard') {
@@ -313,6 +366,7 @@ async function createFromGenerated(
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(rule.name)}" staged ${chalk.gray(createStamp())}`
     );
+    printActionImpactWarning(rule.action);
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
       teamId,

@@ -1,4 +1,7 @@
+import bytes from 'bytes';
 import chalk from 'chalk';
+import ms from 'ms';
+import title from 'title';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
@@ -16,14 +19,37 @@ import {
 } from '../../util/blob/format-store';
 import table from '../../util/output/table';
 
-interface StoreListItem {
+interface ProjectMetadata {
+  projectId: string;
+  name: string;
+  environments?: string[];
+}
+
+interface BlobStoreListItem {
   id: string;
   name: string;
-  projectsMetadata?: {
-    projectId: string;
-    name: string;
-    environments: string[];
-  }[];
+  type?: string;
+  createdAt?: number;
+  updatedAt?: number | null;
+  billingState?: string;
+  status?: string | null;
+  size?: number;
+  count?: number;
+  region?: string;
+  projectsMetadata?: ProjectMetadata[];
+}
+
+interface StoreJson {
+  id: string;
+  name: string;
+  region: string | undefined;
+  size: number | undefined;
+  count: number | undefined;
+  billingState: string | undefined;
+  status: string | null | undefined;
+  createdAt: number | undefined;
+  updatedAt: number | null | undefined;
+  projects: Array<{ id: string; name: string }>;
 }
 
 export default async function listStores(
@@ -43,6 +69,8 @@ export default async function listStores(
   }
 
   const showAll = parsedArgs.flags['--all'] ?? false;
+  const jsonOutput = parsedArgs.flags['--json'] ?? false;
+  const noProjects = parsedArgs.flags['--no-projects'] ?? false;
 
   const telemetryClient = new BlobListStoresTelemetryClient({
     opts: {
@@ -50,11 +78,10 @@ export default async function listStores(
     },
   });
   telemetryClient.trackCliFlagAll(showAll || undefined);
+  telemetryClient.trackCliFlagJson(jsonOutput || undefined);
+  telemetryClient.trackCliFlagNoProjects(noProjects || undefined);
 
   try {
-    // Resolve team and optional project context without interactive prompts.
-    // Read the local project link file directly (non-interactive) instead of
-    // getLinkedProject which can prompt for project selection in monorepos.
     let accountId: string;
     let teamSlug: string | undefined;
     let linkedProject: { id: string; name: string } | undefined;
@@ -82,7 +109,7 @@ export default async function listStores(
 
     output.spinner('Fetching blob stores');
 
-    const response = await client.fetch<{ stores: StoreListItem[] }>(
+    const response = await client.fetch<{ stores: BlobStoreListItem[] }>(
       '/v1/storage/stores',
       {
         method: 'GET',
@@ -94,7 +121,6 @@ export default async function listStores(
 
     let stores = response.stores;
 
-    // Filter by linked project if applicable
     if (linkedProject) {
       const projectId = linkedProject.id;
       stores = stores.filter(store =>
@@ -104,7 +130,13 @@ export default async function listStores(
       );
     }
 
+    stores = stores.filter(store => !store.type || store.type === 'blob');
+
     if (stores.length === 0) {
+      if (jsonOutput) {
+        client.stdout.write(`${JSON.stringify({ stores: [] }, null, 2)}\n`);
+        return 0;
+      }
       if (linkedProject) {
         output.log(
           `No blob stores connected to ${chalk.bold(linkedProject.name)}. Use ${chalk.cyan('--all')} to list all team stores.`
@@ -115,26 +147,25 @@ export default async function listStores(
       return 0;
     }
 
+    if (jsonOutput) {
+      outputJson(client, stores);
+      return 0;
+    }
+
     const header = linkedProject
       ? `Blob stores for project ${chalk.bold(linkedProject.name)}:`
       : `Blob stores:`;
     output.log(header);
 
-    // Non-TTY (piped output or non-interactive input): print table and exit
     if (!client.stdin.isTTY || !client.stdout.isTTY) {
       output.print(
-        table(
-          [
-            ['Name', 'Store ID'].map(h => chalk.dim(h)),
-            ...stores.map(store => [store.name, store.id]),
-          ],
-          { hsep: 4 }
-        ) + '\n'
+        table(buildTableRows(stores, noProjects), { hsep: 3 }).replace(
+          /^/gm,
+          '  '
+        ) + '\n\n'
       );
       return 0;
     }
-
-    // TTY: interactive select then show details
 
     const choices = [
       ...stores.map(store => ({
@@ -172,4 +203,91 @@ export default async function listStores(
     printError(err);
     return 1;
   }
+}
+
+function outputJson(client: Client, stores: BlobStoreListItem[]) {
+  const json: { stores: StoreJson[] } = {
+    stores: stores.map(store => ({
+      id: store.id,
+      name: store.name,
+      region: store.region,
+      size: store.size,
+      count: store.count,
+      billingState: store.billingState,
+      status: store.status,
+      createdAt: store.createdAt,
+      updatedAt: store.updatedAt,
+      projects: (store.projectsMetadata ?? []).map(p => ({
+        id: p.projectId,
+        name: p.name,
+      })),
+    })),
+  };
+  client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
+}
+
+function buildTableRows(
+  stores: BlobStoreListItem[],
+  noProjects: boolean
+): string[][] {
+  const headers = noProjects
+    ? ['Name', 'ID', 'Status', 'Region', 'Size', 'Files', 'Age']
+    : ['Name', 'ID', 'Status', 'Region', 'Size', 'Files', 'Projects', 'Age'];
+
+  const rows = stores.map(store => {
+    const age =
+      store.createdAt !== undefined ? ms(Date.now() - store.createdAt) : '-';
+    const baseRow = [
+      store.name,
+      chalk.dim(store.id),
+      formatStatus(store.billingState),
+      store.region || '-',
+      store.size !== undefined ? bytes(store.size) || '0B' : '-',
+      formatCount(store.count),
+    ];
+
+    if (!noProjects) {
+      baseRow.push(formatProjects(store.projectsMetadata ?? []));
+    }
+    baseRow.push(age);
+    return baseRow;
+  });
+
+  return [headers.map(h => chalk.bold(chalk.cyan(h))), ...rows];
+}
+
+function formatStatus(billingState: string | undefined): string {
+  if (!billingState) {
+    return chalk.gray('–');
+  }
+  const CIRCLE = '● ';
+  const statusText = title(billingState);
+
+  if (billingState === 'active') {
+    return chalk.green(CIRCLE) + statusText;
+  }
+  return chalk.yellow(CIRCLE) + statusText;
+}
+
+function formatProjects(projects: ProjectMetadata[]): string {
+  if (projects.length === 0) {
+    return chalk.gray('–');
+  }
+  if (projects.length === 1) {
+    return projects[0].name;
+  }
+  if (projects.length === 2) {
+    return `${projects[0].name}, ${projects[1].name}`;
+  }
+  return `${projects[0].name}, ${projects[1].name} (+${projects.length - 2})`;
+}
+
+function formatCount(count: number | undefined): string {
+  if (count === undefined) {
+    return '-';
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}k`;
+  }
+  return String(count);
 }
