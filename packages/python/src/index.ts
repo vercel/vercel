@@ -19,9 +19,7 @@ import {
   Span,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
-  getInternalServiceCronPath,
   type BuildOptions,
-  type Cron,
   type GlobOptions,
   type BuildVX,
   type Files,
@@ -46,6 +44,7 @@ import {
 } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
+import { getServiceCrons } from './crons';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
@@ -796,20 +795,12 @@ from vercel_runtime.vc_init import vc_handler
     { src: '/(.*)', dest: `/${lambdaPath}` },
   ];
 
-  let crons: Cron[] | undefined;
-  if (
-    service?.type === 'cron' &&
-    service.name &&
-    typeof service.schedule === 'string'
-  ) {
-    const cronEntrypoint = entrypoint || rawEntrypoint || 'index';
-    const cronPath = getInternalServiceCronPath(
-      service.name,
-      cronEntrypoint,
-      handlerFunction || 'cron'
-    );
-    crons = [{ path: cronPath, schedule: service.schedule }];
-  }
+  const crons = getServiceCrons({
+    service,
+    entrypoint,
+    rawEntrypoint,
+    handlerFunction,
+  });
 
   return {
     resultVersion: 2,

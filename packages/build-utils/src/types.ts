@@ -247,6 +247,12 @@ export interface StartDevServerSuccess {
    * dev server will forcefully be killed.
    */
   shutdown?: () => Promise<void>;
+
+  /**
+   * Cron entries produced by the builder for this service.
+   * Used by the dev orchestrator to schedule cron triggers.
+   */
+  crons?: Cron[];
 }
 
 /**
