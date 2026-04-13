@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.30.0
+
+### Minor Changes
+
+- Enable caching for python builds using prepareCache ([#15634](https://github.com/vercel/vercel/pull/15634))
+
 ## 6.29.0
 
 ### Minor Changes
