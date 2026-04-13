@@ -55,6 +55,13 @@ export class FirewallTelemetryClient
     });
   }
 
+  trackCliSubcommandRulesAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:add',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandIpBlocks(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'ip-blocks',
