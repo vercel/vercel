@@ -552,7 +552,7 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
   );
   const statusWidth = Math.max(
     'Status'.length,
-    ...annotated.map(a => (a.rule.active ? 'Active' : 'Inactive').length)
+    ...annotated.map(a => (a.rule.active ? 'Enabled' : 'Disabled').length)
   );
   const actionTexts = annotated.map(a => formatActionDisplay(a.rule.action));
   const actionWidth = Math.max(
@@ -569,7 +569,7 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
     const { rule, status } = annotated[i];
     const num = String(i + 1).padEnd(numWidth + gap);
     const name = rule.name.padEnd(nameWidth + gap);
-    const activeStatus = (rule.active ? 'Active' : 'Inactive').padEnd(
+    const activeStatus = (rule.active ? 'Enabled' : 'Disabled').padEnd(
       statusWidth + gap
     );
     const actionText = actionTexts[i].padEnd(actionWidth + gap);
@@ -622,7 +622,7 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   const lines: string[] = [];
 
   const prefix = index !== undefined ? `${index + 1}. ` : '';
-  const status = rule.active ? 'Active' : chalk.dim('Inactive');
+  const status = rule.active ? 'Enabled' : chalk.dim('Disabled');
   const action = formatActionDisplay(rule.action);
 
   lines.push(`  ${prefix}${chalk.bold(rule.name)} [${status}]`);
@@ -654,9 +654,9 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   lines.push('');
   lines.push(`     ${chalk.dim('Action:')} ${action}`);
 
-  // Duration
+  // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
   const duration = rule.action.mitigate?.actionDuration;
-  if (duration) {
+  if (duration && rule.action.mitigate?.action !== 'rate_limit') {
     lines.push(`     ${chalk.dim('Duration:')} ${duration}`);
   }
 
@@ -668,7 +668,8 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
     );
     lines.push(`     ${chalk.dim('Keys:')} ${rl.keys.join(', ')}`);
     if (rl.action) {
-      lines.push(`     ${chalk.dim('Sub-action:')} ${rl.action}`);
+      const exceeded = duration ? `${rl.action} (${duration})` : rl.action;
+      lines.push(`     ${chalk.dim('If exceeded:')} ${exceeded}`);
     }
   }
 
@@ -693,7 +694,7 @@ export function formatRuleDetail(rule: FirewallRule): string {
   lines.push(`  ${chalk.bold('Rule:')}        ${rule.name}`);
   lines.push(`  ${chalk.bold('ID:')}          ${chalk.dim(rule.id)}`);
   lines.push(
-    `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Active') : chalk.dim('Inactive')}`
+    `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Enabled') : chalk.dim('Disabled')}`
   );
   if (rule.description) {
     lines.push(`  ${chalk.bold('Description:')} ${rule.description}`);
@@ -726,8 +727,9 @@ export function formatRuleDetail(rule: FirewallRule): string {
     `  ${chalk.bold('Action:')}      ${formatActionDisplay(rule.action)}`
   );
 
+  // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
   const duration = rule.action.mitigate?.actionDuration;
-  if (duration) {
+  if (duration && rule.action.mitigate?.action !== 'rate_limit') {
     lines.push(`  ${chalk.bold('Duration:')}    ${duration}`);
   }
 
@@ -735,12 +737,13 @@ export function formatRuleDetail(rule: FirewallRule): string {
   const rl = rule.action.mitigate?.rateLimit;
   if (rl) {
     lines.push(`  ${chalk.bold('Rate Limit:')}`);
-    lines.push(`    Algorithm:  ${rl.algo}`);
-    lines.push(`    Window:     ${rl.window}s`);
-    lines.push(`    Limit:      ${rl.limit} requests`);
-    lines.push(`    Keys:       ${rl.keys.join(', ')}`);
+    lines.push(`    Algorithm:    ${rl.algo}`);
+    lines.push(`    Window:       ${rl.window}s`);
+    lines.push(`    Limit:        ${rl.limit} requests`);
+    lines.push(`    Keys:         ${rl.keys.join(', ')}`);
     if (rl.action) {
-      lines.push(`    Sub-action: ${rl.action}`);
+      const exceeded = duration ? `${rl.action} (${duration})` : rl.action;
+      lines.push(`    If exceeded:  ${exceeded}`);
     }
   }
 

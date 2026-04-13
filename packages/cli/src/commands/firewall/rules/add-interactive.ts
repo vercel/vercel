@@ -1,4 +1,3 @@
-import { isIP } from 'node:net';
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
@@ -7,7 +6,14 @@ import {
   detectExistingDraft,
   offerAutoPublish,
 } from '../shared';
-import getScope from '../../../util/get-scope';
+import {
+  fetchPlanInfo,
+  getAvailableConditionTypes,
+  getActionLabel as getActionDisplayName,
+  getOperatorDisplayName,
+  validateConditionValue,
+  type PlanInfo,
+} from '../../../util/firewall/interactive-helpers';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import {
   CONDITION_TYPES,
@@ -28,11 +34,6 @@ import type {
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
 
-interface PlanInfo {
-  isEnterprise: boolean;
-  hasSecurityPlus: boolean;
-}
-
 interface AddInteractiveOptions {
   skipPrompts?: boolean;
   prePopulated?: Partial<FirewallRule>;
@@ -47,20 +48,7 @@ export async function addInteractive(
   const pre = opts.prePopulated;
 
   // Fetch team plan info for condition type filtering
-  let planInfo: PlanInfo = { isEnterprise: false, hasSecurityPlus: false };
-  try {
-    const { team } = await getScope(client);
-    if (team) {
-      planInfo = {
-        isEnterprise: team.billing.plan === 'enterprise',
-        hasSecurityPlus:
-          (team as unknown as { securityPlus?: { enabled?: boolean } })
-            .securityPlus?.enabled === true,
-      };
-    }
-  } catch {
-    // If we can't fetch team info, default to hiding plan-gated types
-  }
+  const planInfo = await fetchPlanInfo(client);
 
   // 1. Name
   const name = await client.input.text({
@@ -230,23 +218,15 @@ async function buildConditionGroupLoop(
 
 // --- Single condition builder ---
 
-async function buildConditionInteractive(
+export async function buildConditionInteractive(
   client: Client,
-  planInfo: PlanInfo
+  planInfo?: PlanInfo
 ): Promise<FirewallCondition> {
-  // Filter condition types based on plan
-  // Enterprise types hidden for non-enterprise, Security Plus hidden for non-security-plus
-  const visibleTypes = CONDITION_TYPES.filter(ct => {
-    if (ct.deprecated) return false;
-    if (ct.planRequirement === 'enterprise' && !planInfo.isEnterprise)
-      return false;
-    if (ct.planRequirement === 'security-plus' && !planInfo.hasSecurityPlus)
-      return false;
-    return true;
-  });
+  const availableTypes = getAvailableConditionTypes(planInfo);
 
+  // Group by category
   const categories = new Map<string, ConditionTypeMeta[]>();
-  for (const ct of visibleTypes) {
+  for (const ct of availableTypes) {
     const existing = categories.get(ct.category) || [];
     existing.push(ct);
     categories.set(ct.category, existing);
@@ -303,60 +283,76 @@ async function buildConditionInteractive(
   const neg = opChoice.startsWith('!');
   const op = neg ? opChoice.slice(1) : opChoice;
 
-  // Value — with per-type validation and multi-select for presets
+  // Value — context-dependent input based on operator and preset availability
   let value: string | string[] | number | undefined;
-  if (op !== 'ex') {
-    if (op === 'inc' && meta?.presetValues) {
-      // Multi-select from preset values
+  const baseOp = op; // neg is tracked separately
+  const hasPresets = meta?.presetValues && meta.presetValues.length > 0;
+
+  if (baseOp === 'ex') {
+    // Exists operator — no value needed
+  } else if (baseOp === 'inc' && hasPresets) {
+    // Multi-select from preset values (method, protocol, environment, continent)
+    for (;;) {
       const selected = await client.input.checkbox<string>({
-        message: `Select values (space to toggle, enter to confirm):`,
-        choices: meta.presetValues.map(v => ({ name: v, value: v })),
+        message: 'Select values (space to toggle, enter to confirm):',
+        choices: meta!.presetValues!.map(p => ({
+          name: p.label,
+          value: p.value,
+        })),
+        pageSize: meta!.presetValues!.length,
       });
       if (selected.length === 0) {
-        // Fallback to text if nothing selected
-        const valStr = await client.input.text({
-          message: 'Values (comma-separated):',
-          validate: (val: string) =>
-            val.trim() ? true : 'At least one value is required.',
-        });
-        value = valStr.split(',').map((v: string) => v.trim());
-      } else {
-        value = selected;
+        output.warn('Please select at least one value.');
+        continue;
       }
-    } else if (op === 'inc') {
-      // Free text comma-separated for types without presets
-      const valStr = await client.input.text({
-        message: 'Values (comma-separated):',
-        validate: (val: string) =>
-          val.trim() ? true : 'At least one value is required.',
-      });
-      value = valStr.split(',').map((v: string) => v.trim());
-    } else if (op === 're') {
-      // Regex — validate as valid RegExp
-      const valStr = await client.input.text({
-        message: 'Regex pattern:',
-        validate: (val: string) => {
-          if (!val.trim()) return 'Regex pattern is required.';
-          try {
-            new RegExp(val);
-            return true;
-          } catch {
-            return 'Invalid regex pattern. Please enter a valid regular expression.';
-          }
-        },
-      });
-      value = valStr;
-    } else {
-      // String value — with per-type validation
-      const valStr = await client.input.text({
-        message: 'Value:',
-        validate: (val: string) => {
-          if (!val.trim()) return 'Value is required.';
-          return validateConditionValue(val, meta);
-        },
-      });
-      value = valStr;
+      value = selected;
+      break;
     }
+  } else if (baseOp === 'inc') {
+    // Free text comma-separated for types without presets
+    const valStr = await client.input.text({
+      message: 'Values (comma-separated):',
+      validate: (val: string) =>
+        val.trim() ? true : 'At least one value is required.',
+    });
+    value = valStr.split(',').map((v: string) => v.trim());
+  } else if (baseOp === 'eq' && hasPresets) {
+    // Single select from preset values (method, protocol, environment, continent)
+    value = await client.input.select({
+      message: 'Value:',
+      choices: meta!.presetValues!.map(p => ({
+        name: p.label,
+        value: p.value,
+      })),
+      pageSize: meta!.presetValues!.length,
+    });
+  } else if (baseOp === 're') {
+    // Regex — validate as valid RegExp with length limit
+    const valStr = await client.input.text({
+      message: 'Regex pattern (max 512 chars):',
+      validate: (val: string) => {
+        if (!val.trim()) return 'Regex pattern is required.';
+        if (val.length > 512)
+          return 'Regex pattern must be 512 characters or less.';
+        try {
+          new RegExp(val);
+          return true;
+        } catch {
+          return 'Invalid regex pattern. Please enter a valid regular expression.';
+        }
+      },
+    });
+    value = valStr;
+  } else {
+    // String value — with per-type validation
+    const valStr = await client.input.text({
+      message: 'Value:',
+      validate: (val: string) => {
+        if (!val.trim()) return 'Value is required.';
+        return validateConditionValue(val, meta);
+      },
+    });
+    value = valStr;
   }
 
   const condition: FirewallCondition = { type, op };
@@ -365,21 +361,6 @@ async function buildConditionInteractive(
   if (value !== undefined) condition.value = value;
 
   return condition;
-}
-
-function getOperatorDisplayName(op: string, neg: boolean): string {
-  const labels: Record<string, [string, string]> = {
-    eq: ['equals', 'does not equal'],
-    inc: ['is any of', 'is not any of'],
-    sub: ['contains', 'does not contain'],
-    pre: ['starts with', 'does not start with'],
-    suf: ['ends with', 'does not end with'],
-    re: ['matches regex', 'does not match regex'],
-    ex: ['exists', 'does not exist'],
-  };
-  const pair = labels[op];
-  if (pair) return neg ? pair[1] : pair[0];
-  return neg ? `NOT ${op}` : op;
 }
 
 // --- Action builder ---
@@ -495,6 +476,7 @@ async function buildRateLimitInteractive(client: Client) {
       { name: 'JA4 Digest (ja4)', value: 'ja4' },
       { name: 'User Agent (header:user-agent)', value: 'header:user-agent' },
     ],
+    pageSize: 3,
   });
 
   // Optionally add custom header key
@@ -517,7 +499,7 @@ async function buildRateLimitInteractive(client: Client) {
   }
 
   const subAction = await client.input.select({
-    message: 'Sub-action when limit is exceeded:',
+    message: 'Action when limit is exceeded:',
     choices: [
       { value: 'deny', name: 'Deny (403)' },
       { value: 'challenge', name: 'Challenge' },
@@ -533,53 +515,4 @@ async function buildRateLimitInteractive(client: Client) {
     keys,
     action: subAction as string,
   };
-}
-
-function getActionDisplayName(action: string): string {
-  const labels: Record<string, string> = {
-    deny: 'Deny — Block traffic (403)',
-    challenge: 'Challenge — Verify at security checkpoint',
-    log: 'Log — Monitor without blocking',
-    bypass: 'Bypass — Skip other custom rules',
-    rate_limit: 'Rate Limit — Enforce request limits',
-    redirect: 'Redirect — Send to a different URL',
-  };
-  return labels[action] || action;
-}
-
-/**
- * Per-type value validation for the interactive builder.
- * Returns true if valid, or an error string if invalid.
- */
-function validateConditionValue(
-  val: string,
-  meta: ConditionTypeMeta | undefined
-): string | true {
-  if (!meta?.valueValidation) return true;
-
-  switch (meta.valueValidation) {
-    case 'path':
-      if (!val.startsWith('/')) return 'Path must start with /';
-      return true;
-    case 'ip': {
-      if (isIP(val)) return true;
-      // Check CIDR
-      const slashIdx = val.lastIndexOf('/');
-      if (slashIdx !== -1) {
-        const ip = val.slice(0, slashIdx);
-        const prefix = Number.parseInt(val.slice(slashIdx + 1), 10);
-        if (isIP(ip) && !Number.isNaN(prefix) && prefix >= 0) return true;
-      }
-      return 'Please enter a valid IP address or CIDR range.';
-    }
-    case 'hostname':
-      if (!/^[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*$/.test(val))
-        return 'Please enter a valid hostname.';
-      return true;
-    case 'digits':
-      if (!/^\d+$/.test(val)) return 'Please enter digits only.';
-      return true;
-    default:
-      return true;
-  }
 }

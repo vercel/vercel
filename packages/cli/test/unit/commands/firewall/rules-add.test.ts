@@ -454,7 +454,7 @@ describe('firewall rules add', () => {
         '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'log',
-        '--inactive',
+        '--disabled',
         '--description',
         'Test description',
         '--yes'
