@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../../../util/client';
 import { parseArguments } from '../../../util/get-args';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
@@ -133,9 +134,9 @@ export default async function update(
     return 1;
   }
 
-  let body: Record<string, unknown>;
+  let body: JSONObject;
   try {
-    body = JSON.parse(raw) as Record<string, unknown>;
+    body = JSON.parse(raw) as JSONObject;
   } catch {
     outputAgentError(
       client,
@@ -156,7 +157,7 @@ export default async function update(
   const path = rulesItemPath(scope, ruleId);
   output.spinner('Updating alert rule...');
   try {
-    const updated = await client.fetch<Record<string, unknown>>(path, {
+    const updated = await client.fetch<JSONObject>(path, {
       method: 'PATCH',
       body,
     });

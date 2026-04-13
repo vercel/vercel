@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../../../util/client';
 import { parseArguments } from '../../../util/get-args';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
@@ -112,9 +113,9 @@ export default async function add(
     return 1;
   }
 
-  let body: Record<string, unknown>;
+  let body: JSONObject;
   try {
-    body = JSON.parse(raw) as Record<string, unknown>;
+    body = JSON.parse(raw) as JSONObject;
   } catch {
     outputAgentError(
       client,
@@ -141,16 +142,15 @@ export default async function add(
   const path = rulesCollectionPath(scope);
   output.spinner('Creating alert rule...');
   try {
-    const created = await client.fetch<Record<string, unknown>>(path, {
+    const created = await client.fetch<JSONObject>(path, {
       method: 'POST',
       body,
     });
     if (fr.jsonOutput) {
       client.stdout.write(`${JSON.stringify({ rule: created }, null, 2)}\n`);
     } else {
-      output.success(
-        `Created alert rule ${typeof created.id === 'string' ? created.id : ''}`
-      );
+      const id = created?.id;
+      output.success(`Created alert rule ${typeof id === 'string' ? id : ''}`);
     }
     return 0;
   } catch (err) {
