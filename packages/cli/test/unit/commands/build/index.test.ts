@@ -1110,7 +1110,9 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should include cron services in build output crons without the services framework setting', async () => {
+  it('should not include crons for service builders that do not produce them', async () => {
+    // Node-based cron services don't produce crons — only builders with
+    // cron support (e.g. @vercel/python) include them in BuildResult.
     const cwd = fixture('with-services-cron');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
@@ -1118,17 +1120,7 @@ describe.skipIf(flakey)('build', () => {
     expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config).toHaveProperty('crons', [
-      {
-        path: '/_svc/cleanup/crons/index/cron',
-        schedule: '0 0 * * *',
-      },
-    ]);
-    expect(config.routes).toContainEqual({
-      src: '^/_svc/cleanup/crons/index/cron$',
-      dest: '/_svc/cleanup/index',
-      check: true,
-    });
+    expect(config.crons ?? []).toEqual([]);
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {

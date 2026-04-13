@@ -19,7 +19,9 @@ import {
   Span,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  getInternalServiceCronPath,
   type BuildOptions,
+  type Cron,
   type GlobOptions,
   type BuildVX,
   type Files,
@@ -777,7 +779,7 @@ from vercel_runtime.vc_init import vc_handler
     }
   }
 
-  if (!isPythonFramework(framework)) {
+  if (!isPythonFramework(framework) && !service?.name) {
     return { resultVersion: 3, result: { output } };
   }
 
@@ -789,6 +791,26 @@ from vercel_runtime.vc_init import vc_handler
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
 
+  const routes: any[] = [
+    { handle: 'filesystem' },
+    { src: '/(.*)', dest: `/${lambdaPath}` },
+  ];
+
+  let crons: Cron[] | undefined;
+  if (
+    service?.type === 'cron' &&
+    service.name &&
+    typeof service.schedule === 'string'
+  ) {
+    const cronEntrypoint = entrypoint || rawEntrypoint || 'index';
+    const cronPath = getInternalServiceCronPath(
+      service.name,
+      cronEntrypoint,
+      handlerFunction || 'cron'
+    );
+    crons = [{ path: cronPath, schedule: service.schedule }];
+  }
+
   return {
     resultVersion: 2,
     result: {
@@ -796,10 +818,8 @@ from vercel_runtime.vc_init import vc_handler
         [lambdaPath]: output,
         ...staticFiles,
       },
-      routes: [
-        { handle: 'filesystem' },
-        { src: '/(.*)', dest: `/${lambdaPath}` },
-      ],
+      routes,
+      crons,
     },
   };
 };

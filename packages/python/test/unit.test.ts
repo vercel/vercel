@@ -2060,6 +2060,132 @@ describe('handlerFunction validation', () => {
   });
 });
 
+describe('cron service build result', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-cron-result-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('returns crons with correct path and schedule', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+      },
+    ]);
+  });
+
+  it('does not emit per-path cron rewrite routes (handled by generateServicesRoutes)', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    const cronRoutes = (v2result.routes as any[]).filter(
+      (r: any) => r.check && r.src?.includes('crons')
+    );
+    expect(cronRoutes).toHaveLength(0);
+  });
+
+  it('uses default handler name "cron" when no handlerFunction', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def handler():\n    pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '*/5 * * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/cron',
+        schedule: '*/5 * * * *',
+      },
+    ]);
+  });
+
+  it('does not return crons for non-cron services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'app = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'web', name: 'api' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toBeUndefined();
+  });
+});
+
 describe('python version fallback logging', () => {
   let mockWorkPath: string;
   let consoleLogSpy: MockInstance;

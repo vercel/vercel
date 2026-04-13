@@ -48,7 +48,6 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
-  getInternalServiceCronPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -1021,6 +1020,7 @@ async function doBuild(
                   typeof serviceWorkspace === 'string'
                     ? serviceWorkspace
                     : undefined,
+                schedule: service.schedule,
               },
             }
           : undefined),
@@ -1461,9 +1461,8 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const serviceCrons = getServiceCrons(detectedServices);
   const mergedCrons = mergeCrons(
-    [...(localConfig.crons || []), ...serviceCrons],
+    localConfig.crons || [],
     buildResults.values()
   );
   const mergedWildcard = mergeWildcard(buildResults.values());
@@ -1858,26 +1857,6 @@ function mergeImages(
     }
   }
   return images;
-}
-
-function getServiceCrons(services?: Service[]): Cron[] {
-  if (!services || services.length === 0) {
-    return [];
-  }
-
-  const crons: Cron[] = [];
-  for (const service of services) {
-    if (service.type !== 'cron' || typeof service.schedule !== 'string') {
-      continue;
-    }
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    crons.push({
-      path: getInternalServiceCronPath(service.name, cronEntrypoint),
-      schedule: service.schedule,
-    });
-  }
-
-  return crons;
 }
 
 function mergeCrons(
