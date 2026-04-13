@@ -30,22 +30,26 @@ export default async function listStores(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  new BlobListStoresTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
-
   const flagsSpecification = getFlagsSpecification(
     listStoresSubcommand.options
   );
 
+  let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
-    parseArguments(argv, flagsSpecification);
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;
   }
+
+  const showAll = parsedArgs.flags['--all'] ?? false;
+
+  const telemetryClient = new BlobListStoresTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliFlagAll(showAll || undefined);
 
   try {
     // Resolve team and optional project context without interactive prompts.
@@ -63,7 +67,7 @@ export default async function listStores(
         dirLink.projectId,
         dirLink.orgId
       );
-      if (project && !(project instanceof ProjectNotFound)) {
+      if (project && !(project instanceof ProjectNotFound) && !showAll) {
         linkedProject = { id: project.id, name: project.name };
       }
     } else {
@@ -101,7 +105,13 @@ export default async function listStores(
     }
 
     if (stores.length === 0) {
-      output.log('No blob stores found');
+      if (linkedProject) {
+        output.log(
+          `No blob stores connected to ${chalk.bold(linkedProject.name)}. Use ${chalk.cyan('--all')} to list all team stores.`
+        );
+      } else {
+        output.log('No blob stores found');
+      }
       return 0;
     }
 

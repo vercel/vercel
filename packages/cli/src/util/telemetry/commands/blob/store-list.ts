@@ -4,4 +4,11 @@ import type { TelemetryMethods } from '../../types';
 
 export class BlobListStoresTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof listStoresSubcommand> {}
+  implements TelemetryMethods<typeof listStoresSubcommand>
+{
+  trackCliFlagAll(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('all');
+    }
+  }
+}

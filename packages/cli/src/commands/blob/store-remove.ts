@@ -29,9 +29,12 @@ export default async function removeStore(
     return 1;
   }
 
-  let {
-    args: [storeId],
+  const {
+    args: [storeIdArg],
+    flags: { '--yes': yes },
   } = parsedArgs;
+
+  let storeId = storeIdArg;
 
   if (!storeId && rwToken.success) {
     const [, , , id] = rwToken.token.split('_');
@@ -40,6 +43,10 @@ export default async function removeStore(
   }
 
   if (!storeId) {
+    if (!client.stdin.isTTY) {
+      output.error('Missing required argument: storeId');
+      return 1;
+    }
     storeId = await client.input.text({
       message: 'Enter the ID of the blob store you want to remove',
       validate: value => {
@@ -76,14 +83,23 @@ export default async function removeStore(
       connectionsResponse.connections
     );
 
-    const res = await client.input.confirm(
-      `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
-      false
-    );
+    if (!yes) {
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
+        );
+        return 1;
+      }
 
-    if (!res) {
-      output.success('Blob store not removed');
-      return 0;
+      const res = await client.input.confirm(
+        `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
+        false
+      );
+
+      if (!res) {
+        output.success('Blob store not removed');
+        return 0;
+      }
     }
 
     output.debug('Deleting blob store');

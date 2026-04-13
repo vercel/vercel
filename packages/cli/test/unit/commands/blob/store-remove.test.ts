@@ -500,6 +500,47 @@ describe('blob store remove', () => {
     });
   });
 
+  describe('--yes flag', () => {
+    it('should skip confirmation prompt when --yes is passed', async () => {
+      const exitCode = await removeStore(
+        client,
+        ['store_1234567890123456', '--yes'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(confirmInputMock).not.toHaveBeenCalled();
+      expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
+    });
+
+    it('should still prompt without --yes', async () => {
+      const exitCode = await removeStore(
+        client,
+        ['store_1234567890123456'],
+        noToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(confirmInputMock).toHaveBeenCalled();
+    });
+
+    it('should error in non-TTY without --yes', async () => {
+      (client.stdin as any).isTTY = false;
+
+      const exitCode = await removeStore(
+        client,
+        ['store_1234567890123456'],
+        noToken
+      );
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
+      );
+      expect(confirmInputMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('interactive prompt behavior', () => {
     it('should show correct prompt message', async () => {
       const exitCode = await removeStore(client, [], noToken);
