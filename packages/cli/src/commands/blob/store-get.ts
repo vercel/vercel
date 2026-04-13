@@ -46,6 +46,10 @@ export default async function getStore(
   }
 
   if (!storeId) {
+    if (!client.stdin.isTTY) {
+      output.error('Missing required argument: storeId');
+      return 1;
+    }
     storeId = await client.input.text({
       message: 'Enter the ID of the blob store you want to get info about',
       validate: value => {

@@ -81,6 +81,10 @@ export default async function addStore(
 
   let name = nameArg;
   if (!name) {
+    if (!client.stdin.isTTY) {
+      output.error('Missing required argument: name');
+      return 1;
+    }
     name = await client.input.text({
       message: 'Enter a name for your blob store',
       validate: value => {

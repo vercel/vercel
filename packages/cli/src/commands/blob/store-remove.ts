@@ -43,6 +43,10 @@ export default async function removeStore(
   }
 
   if (!storeId) {
+    if (!client.stdin.isTTY) {
+      output.error('Missing required argument: storeId');
+      return 1;
+    }
     storeId = await client.input.text({
       message: 'Enter the ID of the blob store you want to remove',
       validate: value => {
