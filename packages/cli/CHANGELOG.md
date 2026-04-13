@@ -1,5 +1,17 @@
 # vercel
 
+## 51.2.0
+
+### Minor Changes
+
+- Add `vercel domains price` to show registrar purchase, renewal, and transfer pricing for a domain. ([#15851](https://github.com/vercel/vercel/pull/15851))
+
+### Patch Changes
+
+- Updated dependencies [[`63a7bd6b8ce887f98bb6ee8c09e7196e7105e90d`](https://github.com/vercel/vercel/commit/63a7bd6b8ce887f98bb6ee8c09e7196e7105e90d), [`71e5dcc49d6b1eb3955ca7e18a52e76d18e8e8dc`](https://github.com/vercel/vercel/commit/71e5dcc49d6b1eb3955ca7e18a52e76d18e8e8dc)]:
+  - @vercel/go@3.5.0
+  - @vercel/python@6.30.1
+
 ## 51.1.0
 
 ### Minor Changes
