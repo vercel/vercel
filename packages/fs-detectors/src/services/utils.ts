@@ -67,6 +67,7 @@ export function getInternalServiceWorkerPath(
   const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
   return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {

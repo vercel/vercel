@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import { join, dirname, basename, parse } from 'path';
@@ -44,9 +45,14 @@ import {
 } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
-import { getServiceCrons } from './crons';
+import { buildCronRouteTable, getServiceCrons } from './crons';
 import { startDevServer } from './start-dev-server';
-import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
+import {
+  runPyprojectScript,
+  ensureVenv,
+  createVenvEnv,
+  getVenvPythonBin,
+} from './utils';
 import { runQuirks } from './quirks';
 import {
   getDjangoSettings,
@@ -606,9 +612,30 @@ export const build: BuildVX = async ({
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
 
-  const handlerFuncEnvLine = handlerFunction
-    ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
-    : '';
+  const crons = await getServiceCrons({
+    service,
+    entrypoint,
+    rawEntrypoint,
+    handlerFunction,
+    pythonBin: getVenvPythonBin(venvPath),
+    env: pythonEnv,
+    workPath,
+  });
+
+  // Build trampoline env line for cron routing.
+  // Injected into os.environ.update() in the Python trampoline source,
+  // not lambdaEnv, because the platform rejects env var names with
+  // leading underscores.
+  let cronEnvLine = '';
+  if (crons?.length) {
+    // Single-quote the JSON so embedded double quotes don't need escaping
+    // in the surrounding Python dict literal. Backslashes would be
+    // misinterpreted by Python's string parser, but cron paths/handlers
+    // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
+    const json = JSON.stringify(buildCronRouteTable(crons));
+    assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
+    cronEnvLine = `\n  "__VC_CRON_ROUTES": '${json}',`;
+  }
 
   const variableName = resolved?.variableName ?? '';
 
@@ -626,7 +653,7 @@ os.environ.update({
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
   "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${handlerFuncEnvLine}
+  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${cronEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'
@@ -794,13 +821,6 @@ from vercel_runtime.vc_init import vc_handler
     { handle: 'filesystem' },
     { src: '/(.*)', dest: `/${lambdaPath}` },
   ];
-
-  const crons = getServiceCrons({
-    service,
-    entrypoint,
-    rawEntrypoint,
-    handlerFunction,
-  });
 
   return {
     resultVersion: 2,

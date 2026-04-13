@@ -719,13 +719,14 @@ export class ServicesOrchestrator {
           `Scheduling cron service ${chalk.bold(name)} (${chalk.cyan(cron.schedule)})`
         );
 
-        this.scheduleCronTrigger(name, cron.schedule, managed);
+        this.scheduleCronTrigger(name, cron.path, cron.schedule, managed);
       }
     }
   }
 
   private scheduleCronTrigger(
     serviceName: string,
+    cronPath: string,
     schedule: string,
     managed: ServiceDevProcess
   ): void {
@@ -745,7 +746,7 @@ export class ServicesOrchestrator {
       );
 
       try {
-        const url = `http://${managed.host}:${managed.port}/`;
+        const url = `http://${managed.host}:${managed.port}${cronPath}`;
         const res = await fetch(url, { method: 'POST' });
         output.debug(
           `Cron trigger for "${serviceName}" responded with status ${res.status}`
@@ -756,7 +757,7 @@ export class ServicesOrchestrator {
         );
       }
 
-      this.scheduleCronTrigger(serviceName, schedule, managed);
+      this.scheduleCronTrigger(serviceName, cronPath, schedule, managed);
     }, delayMs);
 
     this.cronTimers.push(timer);
