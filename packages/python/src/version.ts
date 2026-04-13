@@ -1,8 +1,9 @@
 import { join, dirname } from 'path';
+import { existsSync } from 'fs';
 import { NowBuildError } from '@vercel/build-utils';
 import { selectPythonVersion, PythonConfigKind } from '@vercel/python-analysis';
 import type { PythonBuild, PythonPackage } from '@vercel/python-analysis';
-import { UvRunner, findUvInPath } from './uv';
+import { UvRunner, findUvInPath, UV_PYTHON_PATH_PREFIX } from './uv';
 import { detectPlatform } from './utils';
 
 export interface PythonVersion {
@@ -320,13 +321,37 @@ function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
   return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
 
-// Cache for installed Python versions to avoid repeated execSync calls
+// Cache for installed Python versions to avoid repeated calls
 let installedPythonsCache: Set<string> | null = null;
+
+/**
+ * Detect installed Python versions by probing for symlinks at
+ * {basePath}/bin/python{major}.{minor}.  On the Vercel build image this
+ * avoids spawning a `uv python list` subprocess.
+ */
+export function getInstalledPythonsFromFilesystem(
+  basePath: string = UV_PYTHON_PATH_PREFIX
+): Set<string> {
+  const result = new Set<string>();
+  for (const opt of allOptions) {
+    const binPath = join(basePath, 'bin', `python${opt.major}.${opt.minor}`);
+    if (existsSync(binPath)) {
+      result.add(pythonVersionString(opt));
+    }
+  }
+  return result;
+}
 
 function getInstalledPythons(): Set<string> {
   if (installedPythonsCache !== null) {
     return installedPythonsCache;
   }
+
+  if (process.env.VERCEL_BUILD_IMAGE) {
+    installedPythonsCache = getInstalledPythonsFromFilesystem();
+    return installedPythonsCache;
+  }
+
   const uvPath = findUvInPath();
   if (!uvPath) {
     throw new NowBuildError({
