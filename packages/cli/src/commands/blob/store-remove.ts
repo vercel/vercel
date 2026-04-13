@@ -80,6 +80,13 @@ export default async function removeStore(
     );
 
     if (!yes) {
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
+        );
+        return 1;
+      }
+
       const res = await client.input.confirm(
         `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
         false

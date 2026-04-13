@@ -523,6 +523,22 @@ describe('blob store remove', () => {
       expect(exitCode).toBe(0);
       expect(confirmInputMock).toHaveBeenCalled();
     });
+
+    it('should error in non-TTY without --yes', async () => {
+      (client.stdin as any).isTTY = false;
+
+      const exitCode = await removeStore(
+        client,
+        ['store_1234567890123456'],
+        noToken
+      );
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
+      );
+      expect(confirmInputMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('interactive prompt behavior', () => {
