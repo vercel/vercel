@@ -132,6 +132,12 @@ export default async function add(
   delete body.id;
   delete body.teamId;
 
+  // List with a linked project filters by `projectId`; the API POST only
+  // persisted the JSON body, so attach scope project when the body omits it.
+  if (scope.projectId !== undefined && body.projectId === undefined) {
+    body.projectId = scope.projectId;
+  }
+
   const path = rulesCollectionPath(scope);
   output.spinner('Creating alert rule...');
   try {

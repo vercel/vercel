@@ -85,10 +85,16 @@ describe('alerts rules', () => {
     client.scenario.post('/alerts/v2/alert-rules', (req, res) => {
       method = req.method;
       expect(req.query.teamId).toBe('team_dummy');
+      expect(req.query.projectId).toBe('prj_alerts');
+      expect(req.body).toMatchObject({
+        name: 'from-cli',
+        projectId: 'prj_alerts',
+      });
       res.status(201).json({
         id: 'ar_new',
         name: 'from-cli',
         teamId: 'team_dummy',
+        projectId: 'prj_alerts',
       });
     });
 
