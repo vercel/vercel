@@ -375,7 +375,16 @@ export const listStoresSubcommand = {
   aliases: ['ls-stores'],
   description: 'List all Blob stores',
   arguments: [],
-  options: [],
+  options: [
+    {
+      name: 'all',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+      description:
+        'List all blob stores for the team, not just the ones connected to the current project',
+    },
+  ],
   examples: [],
 } as const;
 

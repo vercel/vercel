@@ -230,7 +230,7 @@ describe('blob list-stores', () => {
       expect(selectInputMock).not.toHaveBeenCalled();
     });
 
-    it('should show message when no stores match linked project', async () => {
+    it('should hint about --all when no stores match linked project', async () => {
       client.fetch = vi.fn().mockResolvedValue({
         stores: [
           {
@@ -246,7 +246,41 @@ describe('blob list-stores', () => {
       const exitCode = await listStores(client, []);
 
       expect(exitCode).toBe(0);
-      expect(mockedOutput.log).toHaveBeenCalledWith('No blob stores found');
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining('No blob stores connected to')
+      );
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining('--all')
+      );
+    });
+  });
+
+  describe('--all flag', () => {
+    it('should show all team stores when --all is used in a linked project', async () => {
+      const exitCode = await listStores(client, ['--all']);
+
+      expect(exitCode).toBe(0);
+
+      // Should show all stores, not just those connected to proj_123
+      const choices = selectInputMock.mock.calls[0][0].choices;
+      const storeValues = choices.map((c: { value: string }) => c.value);
+      expect(storeValues).toContain('store_abc123def456ghij');
+      expect(storeValues).toContain('store_xyz789uvw012klmn');
+      expect(storeValues).toContain('store_shared123456789');
+    });
+
+    it('should show generic header with --all', async () => {
+      await listStores(client, ['--all']);
+
+      expect(mockedOutput.log).toHaveBeenCalledWith('Blob stores:');
+    });
+
+    it('should track --all flag in telemetry', async () => {
+      await listStores(client, ['--all']);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:all', value: 'TRUE' },
+      ]);
     });
   });
 
