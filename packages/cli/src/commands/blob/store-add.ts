@@ -107,6 +107,8 @@ export default async function addStore(
   telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliOptionRegion(flags['--region']);
   telemetryClient.trackCliOptionProject(projectFlag);
+  telemetryClient.trackCliFlagYes(yes);
+  telemetryClient.trackCliOptionEnvironment(environmentFlags);
 
   const link = await getLinkedProject(client);
   let accountId: string;
