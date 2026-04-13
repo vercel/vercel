@@ -2,6 +2,7 @@ import {
   getPrettyError,
   getSupportedNodeVersion,
   scanParentDirs,
+  PYTHON_FRAMEWORKS,
 } from '@vercel/build-utils';
 import {
   fileNameSymbol,
@@ -310,41 +311,14 @@ async function handleInitDeployment(
 
   // #region Functions Beta toggle
   if (functionsBeta || noFunctionsBeta) {
-    if (functionsBeta) {
-      const PYTHON_FRAMEWORKS = [
-        'django',
-        'flask',
-        'fastapi',
-        'python',
-        'fasthtml',
-      ];
-      if (project.framework && !PYTHON_FRAMEWORKS.includes(project.framework)) {
-        output.error(
-          'Extended function limits are only available for Python projects. ' +
-            `This project uses "${project.framework}".`
-        );
-        return 1;
-      }
-      if (!project.framework) {
-        output.warn(
-          'Project framework is not set. Extended function limits are designed for Python projects.'
-        );
-      }
-    }
-
-    await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
-      method: 'PATCH',
-      body: {
-        resourceConfig: {
-          enableFunctionsBeta: !!functionsBeta,
-        },
-      },
-    });
-
-    if (functionsBeta) {
-      output.log('Extended function limits (Beta) enabled for this project.');
-    } else {
-      output.log('Extended function limits (Beta) disabled for this project.');
+    const toggleResult = await applyFunctionsBetaToggle(
+      client,
+      project,
+      functionsBeta,
+      noFunctionsBeta
+    );
+    if (toggleResult.error) {
+      return toggleResult.exitCode;
     }
   }
   // #endregion
@@ -1176,41 +1150,14 @@ async function handleDefaultDeploy(
 
   // #region Functions Beta toggle
   if (functionsBeta || noFunctionsBeta) {
-    if (functionsBeta) {
-      const PYTHON_FRAMEWORKS = [
-        'django',
-        'flask',
-        'fastapi',
-        'python',
-        'fasthtml',
-      ];
-      if (project.framework && !PYTHON_FRAMEWORKS.includes(project.framework)) {
-        error(
-          'Extended function limits are only available for Python projects. ' +
-            `This project uses "${project.framework}".`
-        );
-        return 1;
-      }
-      if (!project.framework) {
-        output.warn(
-          'Project framework is not set. Extended function limits are designed for Python projects.'
-        );
-      }
-    }
-
-    await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
-      method: 'PATCH',
-      body: {
-        resourceConfig: {
-          enableFunctionsBeta: !!functionsBeta,
-        },
-      },
-    });
-
-    if (functionsBeta) {
-      log('Extended function limits (Beta) enabled for this project.');
-    } else {
-      log('Extended function limits (Beta) disabled for this project.');
+    const toggleResult = await applyFunctionsBetaToggle(
+      client,
+      project,
+      functionsBeta,
+      noFunctionsBeta
+    );
+    if (toggleResult.error) {
+      return toggleResult.exitCode;
     }
   }
   // #endregion
@@ -2346,4 +2293,53 @@ async function handleFailedCheckRuns(
   }
 
   return 1;
+}
+
+/**
+ * Validate the project framework and PATCH the project to toggle
+ * `enableFunctionsBeta`. Shared between `handleInitDeployment` and
+ * `handleDefaultDeploy` to avoid duplication.
+ */
+async function applyFunctionsBetaToggle(
+  client: Client,
+  project: { id: string; framework?: string | null },
+  functionsBeta: boolean | undefined,
+  noFunctionsBeta: boolean | undefined
+): Promise<{ error: false } | { error: true; exitCode: number }> {
+  if (functionsBeta) {
+    if (
+      project.framework &&
+      !PYTHON_FRAMEWORKS.includes(
+        project.framework as (typeof PYTHON_FRAMEWORKS)[number]
+      )
+    ) {
+      output.error(
+        'Extended function limits are only available for Python projects. ' +
+          `This project uses "${project.framework}".`
+      );
+      return { error: true, exitCode: 1 };
+    }
+    if (!project.framework) {
+      output.warn(
+        'Project framework is not set. Extended function limits are designed for Python projects.'
+      );
+    }
+  }
+
+  await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
+    method: 'PATCH',
+    body: {
+      resourceConfig: {
+        enableFunctionsBeta: !!functionsBeta,
+      },
+    },
+  });
+
+  if (functionsBeta) {
+    output.log('Extended function limits (Beta) enabled for this project.');
+  } else {
+    output.log('Extended function limits (Beta) disabled for this project.');
+  }
+
+  return { error: false };
 }
