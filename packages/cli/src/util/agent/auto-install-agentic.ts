@@ -1,4 +1,4 @@
-import { readFile, writeFile, readdir } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -6,9 +6,9 @@ import { spawn } from 'node:child_process';
 import chalk from 'chalk';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../client';
-import { buildCommandWithYes } from '../agent-output';
 import output from '../../output-manager';
 import getGlobalPathConfig from '../config/global-path';
+import { AGENT_ACTION } from '../agent-output-constants';
 
 const PREFS_FILE = 'agent-preferences.json';
 const CLAUDE_LEGACY_PLUGIN_ID = 'vercel-plugin@vercel';
@@ -19,8 +19,6 @@ const VERCEL_PLUGIN_VERSION_URL =
 const AGENT_TO_TARGET: Record<string, string> = {
   [KNOWN_AGENTS.CLAUDE]: 'claude-code',
   [KNOWN_AGENTS.COWORK]: 'claude-code',
-  [KNOWN_AGENTS.CURSOR]: 'cursor',
-  [KNOWN_AGENTS.CURSOR_CLI]: 'cursor',
 };
 
 interface AgentPreferences {
@@ -111,19 +109,7 @@ async function getPluginTargets(agentName?: string): Promise<string[]> {
   if (await fileExists(join(home, '.claude'))) {
     targets.push('claude-code');
   }
-  if (await fileExists(join(home, '.cursor'))) {
-    targets.push('cursor');
-  }
   return targets;
-}
-
-async function isPluginInClaudeRegistry(): Promise<boolean> {
-  const plugins = await getClaudeInstalledPlugins();
-  return plugins.some(
-    plugin =>
-      plugin.id === CLAUDE_LEGACY_PLUGIN_ID ||
-      plugin.id === CLAUDE_OFFICIAL_PLUGIN_ID
-  );
 }
 
 async function readClaudeInstalledPluginsFromRegistry(): Promise<
@@ -156,31 +142,10 @@ async function readClaudeInstalledPluginsFromRegistry(): Promise<
   }
 }
 
-async function isPluginInCursorPlugins(): Promise<boolean> {
-  const pluginsDir = join(homedir(), '.cursor', 'plugins');
-  try {
-    const entries = await readdir(pluginsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      if (entry.name.includes('vercel-plugin')) {
-        return true;
-      }
-    }
-  } catch {
-    return false;
-  }
-  return false;
-}
-
 async function isPluginInstalledForTarget(target: string): Promise<boolean> {
   if (target === 'claude-code') {
     const status = await getClaudePluginStatus();
     return status.state === 'official-only';
-  }
-  if (target === 'cursor') {
-    return (
-      (await isPluginInClaudeRegistry()) || (await isPluginInCursorPlugins())
-    );
   }
   return false;
 }
@@ -366,56 +331,13 @@ function hasClaudeMigrationActions(plan: ClaudePluginMigrationPlan): boolean {
   );
 }
 
-function formatClaudeStatus(status: ClaudePluginStatus): string {
-  return `state=${status.state}, legacy=${status.legacy?.version ?? 'none'}, official=${status.official?.version ?? 'none'}, latest=${status.latestVersion ?? 'unknown'}`;
-}
-
-function formatClaudePlan(plan: ClaudePluginMigrationPlan): string {
-  return `installOfficial=${plan.installOfficial}, updateOfficial=${plan.updateOfficial}, removeLegacy=${plan.removeLegacy}, removeLegacyMarketplace=${plan.removeLegacyMarketplace}`;
-}
-
-function getClaudeMigrationCommands(
-  plan: ClaudePluginMigrationPlan
-): Array<{ command: string; when: string }> {
-  const commands: Array<{ command: string; when: string }> = [];
-
-  if (plan.installOfficial) {
-    commands.push({
-      command: `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`,
-      when: 'Upgrade from the official Claude Plugin Marketplace',
-    });
-  } else if (plan.updateOfficial) {
-    commands.push({
-      command: `claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}`,
-      when: 'Upgrade from the official Claude Plugin Marketplace',
-    });
-  }
-
-  if (plan.removeLegacy) {
-    commands.push({
-      command: `claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}`,
-      when: 'Remove the old Vercel plugin install after the upgrade',
-    });
-  }
-
-  if (plan.removeLegacyMarketplace) {
-    commands.push({
-      command: 'claude plugins marketplace remove vercel',
-      when: 'Remove the old Vercel marketplace after the upgrade',
-    });
-  }
-
-  return commands;
-}
-
 export function buildClaudePromptCopy(
   status: ClaudePluginStatus,
   plan: ClaudePluginMigrationPlan
 ): { message: string; confirm: string } {
   if (plan.installOfficial && status.state === 'none') {
     return {
-      message:
-        'Claude Code does not have the Vercel plugin installed. Install it from the official Claude marketplace.',
+      message: '',
       confirm:
         'Install the Vercel plugin from the official Claude marketplace?',
     };
@@ -462,24 +384,69 @@ export function buildClaudeActionRequiredMessage(
     status.state === 'both' ||
     plan.removeLegacy
   ) {
-    return "The CLI detected that you're using an older version of the Vercel Plugin. Do you want to upgrade from the official Claude Plugin Marketplace?";
+    return `It's also suggesting updating the Vercel Plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\n2. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
   }
 
   if (plan.updateOfficial) {
-    const fromVersion = status.official?.version ?? 'your current version';
-    const toVersion = status.latestVersion ?? 'the latest version';
-    return `The CLI detected that a newer Vercel Plugin version is available. Do you want to update from ${fromVersion} to ${toVersion} from the official Claude Plugin Marketplace?`;
+    return `It's also suggesting updating the Vercel Plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to update it?`;
   }
 
-  return 'The CLI detected that Claude Code does not have the Vercel Plugin installed. Do you want to install it from the official Claude Plugin Marketplace?';
+  return `It's also suggesting installing a Vercel plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to install it?`;
 }
 
-function buildAgentRetryCommand(argv: string[]): string | undefined {
-  if (argv[2] === 'link') {
-    return buildCommandWithYes(argv);
+function buildClaudeActionRequiredLabel(
+  status: ClaudePluginStatus,
+  plan: ClaudePluginMigrationPlan
+): string {
+  if (
+    status.state === 'legacy-only' ||
+    status.state === 'both' ||
+    plan.removeLegacy ||
+    plan.updateOfficial
+  ) {
+    return 'Update it';
   }
 
-  return undefined;
+  return 'Install it';
+}
+
+function getClaudeActionRequiredCommand(
+  status: ClaudePluginStatus,
+  plan: ClaudePluginMigrationPlan
+): string {
+  if (plan.installOfficial && status.state === 'none') {
+    return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
+  }
+
+  if (plan.updateOfficial && status.state === 'official-only') {
+    return `claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
+  }
+
+  return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
+}
+
+function getClaudeActionRequiredNextSteps(
+  status: ClaudePluginStatus,
+  plan: ClaudePluginMigrationPlan
+): Array<{ command: string; when?: string }> {
+  const next: Array<{ command: string; when?: string }> = [
+    {
+      command: getClaudeActionRequiredCommand(status, plan),
+      when: buildClaudeActionRequiredLabel(status, plan),
+    },
+  ];
+
+  if (
+    (status.state === 'legacy-only' || status.state === 'both') &&
+    plan.removeLegacy
+  ) {
+    next.push({
+      command: `claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}`,
+      when: 'Remove the old plugin after the update',
+    });
+  }
+
+  return next;
 }
 
 async function runClaudeCommand(
@@ -510,8 +477,6 @@ async function runClaudeCommand(
 async function runClaudeMigration(
   plan: ClaudePluginMigrationPlan
 ): Promise<void> {
-  output.log(`[plugin-debug] Claude migration plan: ${formatClaudePlan(plan)}`);
-
   if (plan.installOfficial) {
     const installed = await runClaudeCommand(
       'Installing the official Vercel Claude plugin...',
@@ -587,44 +552,22 @@ async function applyPluginActions(
   for (const target of targets) {
     if (target === 'claude-code' && claudePlan) {
       await runClaudeMigration(claudePlan);
-      continue;
-    }
-
-    output.spinner(`Installing Vercel plugin for ${target}...`);
-    const result = await runCommand('npx', [
-      'plugins',
-      'add',
-      'vercel/vercel-plugin',
-      '--target',
-      target,
-      '-y',
-    ]);
-    output.stopSpinner();
-    if (result.exitCode === 0) {
-      output.success(`Installed Vercel plugin for ${target}`);
     } else {
-      output.debug(
-        `Failed to install Vercel plugin for ${target}: ${result.stderr || result.stdout}`
-      );
+      output.debug(`Skipping unsupported plugin target: ${target}`);
     }
   }
 }
 
-export async function autoInstallAgentTooling(
+export async function autoInstallVercelPlugin(
   client: Client,
-  options?: { autoConfirm?: boolean }
+  options?: { autoConfirm?: boolean; mode?: 'prompt' | 'apply' }
 ): Promise<void> {
   try {
     const prefs = await readPrefs();
-    output.log(
-      `[plugin-debug] autoInstallAgentTooling start: agentName=${client.agentName ?? 'unknown'}, isAgent=${String(client.isAgent)}, stdinTTY=${String(client.stdin.isTTY)}, pluginDeclined=${String(prefs.pluginDeclined)}, lastPromptedAt=${prefs.lastPromptedAt ?? 'none'}, legacyPluginDismissed=${String(prefs.pluginDismissed)}`
-    );
+    const applyMode = options?.mode === 'apply';
 
-    if (!prefs.pluginDeclined) {
+    if (!prefs.pluginDeclined || applyMode) {
       const targets = await getPluginTargets(client.agentName);
-      output.log(
-        `[plugin-debug] detected targets: ${targets.length > 0 ? targets.join(', ') : 'none'}`
-      );
       const uninstalledTargets: string[] = [];
       const claudeStatus = targets.includes('claude-code')
         ? await getClaudePluginStatus()
@@ -632,17 +575,6 @@ export async function autoInstallAgentTooling(
       const claudePlan = claudeStatus
         ? buildClaudePluginMigrationPlan(claudeStatus)
         : undefined;
-
-      if (claudeStatus) {
-        output.log(
-          `[plugin-debug] Claude status: ${formatClaudeStatus(claudeStatus)}`
-        );
-      }
-      if (claudePlan) {
-        output.log(
-          `[plugin-debug] Claude plan: ${formatClaudePlan(claudePlan)}`
-        );
-      }
 
       for (const target of targets) {
         if (target === 'claude-code') {
@@ -657,19 +589,20 @@ export async function autoInstallAgentTooling(
         }
       }
 
-      output.log(
-        `[plugin-debug] targets needing action: ${uninstalledTargets.length > 0 ? uninstalledTargets.join(', ') : 'none'}`
-      );
-
       if (uninstalledTargets.length > 0) {
-        if (wasPromptedToday(prefs)) {
-          output.log('[plugin-debug] prompt already shown today');
+        if (!applyMode && wasPromptedToday(prefs)) {
+          return;
+        }
+
+        if (applyMode) {
+          prefs.pluginDeclined = false;
+          await writePrefs(prefs);
+          await applyPluginActions(uninstalledTargets, claudePlan);
           return;
         }
 
         const promptMessages: string[] = [];
         let confirmMessage = 'Install the Vercel plugin?';
-
         if (
           uninstalledTargets.includes('claude-code') &&
           claudeStatus &&
@@ -680,23 +613,9 @@ export async function autoInstallAgentTooling(
           confirmMessage = claudePrompt.confirm;
         }
 
-        if (uninstalledTargets.includes('cursor')) {
-          promptMessages.push(
-            'Cursor does not have the Vercel plugin installed yet.'
-          );
-          if (!uninstalledTargets.includes('claude-code')) {
-            confirmMessage = 'Install the Vercel plugin for Cursor?';
-          } else {
-            confirmMessage = 'Apply these Vercel plugin changes?';
-          }
-        }
-
         // Agents in non-TTY: output structured JSON so agent prompts the user
         if (client.isAgent && !client.stdin.isTTY) {
           if (options?.autoConfirm) {
-            output.log(
-              '[plugin-debug] auto-confirming plugin changes in agent mode'
-            );
             await markPromptedToday(prefs);
             prefs.pluginDeclined = false;
             await writePrefs(prefs);
@@ -710,33 +629,25 @@ export async function autoInstallAgentTooling(
             claudePlan
               ? buildClaudeActionRequiredMessage(claudeStatus, claudePlan)
               : promptMessages.join(' ');
-          const retryCommand = buildAgentRetryCommand(client.argv);
-          const next = retryCommand
-            ? [
-                {
-                  command: retryCommand,
-                  when: 'Accept and apply the Vercel plugin changes',
-                },
-              ]
-            : uninstalledTargets.flatMap(target => {
-                if (target === 'claude-code' && claudePlan) {
-                  return getClaudeMigrationCommands(claudePlan).slice(0, 1);
-                }
-
-                return [
+          const next =
+            uninstalledTargets.includes('claude-code') &&
+            claudeStatus &&
+            claudePlan
+              ? getClaudeActionRequiredNextSteps(claudeStatus, claudePlan)
+              : [
                   {
-                    command: `npx plugins add vercel/vercel-plugin --target ${target} -y`,
-                    when: `Install Vercel plugin for ${target}`,
+                    command: `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`,
+                    when: 'Install it',
                   },
                 ];
-              });
           client.stdout.write(
             `${JSON.stringify(
               {
                 status: 'action_required',
                 reason: 'plugin_install',
+                action: AGENT_ACTION.CONFIRMATION_REQUIRED,
                 message: actionRequiredMessage,
-                hint: actionRequiredMessage,
+                userActionRequired: true,
                 next,
               },
               null,
@@ -747,14 +658,14 @@ export async function autoInstallAgentTooling(
           return;
         }
 
-        output.log(promptMessages.join(' '));
+        const promptMessage = promptMessages.join(' ').trim();
+        if (promptMessage) {
+          output.log(promptMessage);
+        }
         const accepted = await confirm(
           client,
           confirmMessage,
           options?.autoConfirm
-        );
-        output.log(
-          `[plugin-debug] install prompt accepted=${String(accepted)}`
         );
         await markPromptedToday(prefs);
         if (accepted) {
@@ -765,11 +676,7 @@ export async function autoInstallAgentTooling(
           prefs.pluginDeclined = true;
           await writePrefs(prefs);
         }
-      } else {
-        output.log('[plugin-debug] no plugin action required');
       }
-    } else {
-      output.log('[plugin-debug] plugin prompt previously declined');
     }
   } catch (err) {
     output.debug(`Auto-install agent tooling failed: ${err}`);

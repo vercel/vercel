@@ -22,6 +22,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 
 async function pullAllEnvFiles(
   environment: string,
@@ -104,6 +105,13 @@ export default async function main(client: Client) {
     environment,
     parsedArgs.flags
   );
+
+  if (returnCode === 0) {
+    await autoInstallVercelPlugin(client, {
+      autoConfirm,
+    });
+  }
+
   return returnCode;
 }
 

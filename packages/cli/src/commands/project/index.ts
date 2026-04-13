@@ -35,6 +35,7 @@ import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import getSubcommand from '../../util/get-subcommand';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
@@ -93,6 +94,8 @@ export default async function main(client: Client) {
     subcommand = 'list';
   }
 
+  let exitCode: number;
+
   switch (subcommand) {
     case 'inspect':
       if (needHelp) {
@@ -100,28 +103,32 @@ export default async function main(client: Client) {
         return printHelp(inspectSubcommand);
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
-      return inspect(client, args);
+      exitCode = await inspect(client, args);
+      break;
     case 'list':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(listSubcommand);
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return list(client, args);
+      exitCode = await list(client, args);
+      break;
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(addSubcommand);
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, args);
+      exitCode = await add(client, args);
+      break;
     case 'access-summary':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(accessSummarySubcommand);
       }
       telemetry.trackCliSubcommandAccessSummary(subcommandOriginal);
-      return accessSummary(client, args);
+      exitCode = await accessSummary(client, args);
+      break;
     case 'checks':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
@@ -134,21 +141,24 @@ export default async function main(client: Client) {
             ? 'checks remove'
             : subcommandOriginal
       );
-      return checks(client, args);
+      exitCode = await checks(client, args);
+      break;
     case 'members':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(membersSubcommand);
       }
       telemetry.trackCliSubcommandMembers(subcommandOriginal);
-      return members(client, args);
+      exitCode = await members(client, args);
+      break;
     case 'accessGroups':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(accessGroupsSubcommand);
       }
       telemetry.trackCliSubcommandAccessGroups(subcommandOriginal);
-      return accessGroups(client, args);
+      exitCode = await accessGroups(client, args);
+      break;
     case 'protection':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
@@ -161,38 +171,49 @@ export default async function main(client: Client) {
             ? 'protection disable'
             : subcommandOriginal
       );
-      return protection(client, args);
+      exitCode = await protection(client, args);
+      break;
     case 'webAnalytics':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(webAnalyticsSubcommand);
       }
       telemetry.trackCliSubcommandWebAnalytics(subcommandOriginal);
-      return webAnalytics(client, args);
+      exitCode = await webAnalytics(client, args);
+      break;
     case 'speedInsights':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(speedInsightsSubcommand);
       }
       telemetry.trackCliSubcommandSpeedInsights(subcommandOriginal);
-      return speedInsights(client, args);
+      exitCode = await speedInsights(client, args);
+      break;
     case 'token':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(tokenSubcommand);
       }
       telemetry.trackCliSubcommandToken(subcommandOriginal);
-      return getOidcToken(client, args);
+      exitCode = await getOidcToken(client, args);
+      break;
     case 'remove':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, args);
+      exitCode = await rm(client, args);
+      break;
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(projectCommand, { columns: client.stderr.columns }));
       return 2;
   }
+
+  if (exitCode === 0) {
+    await autoInstallVercelPlugin(client);
+  }
+
+  return exitCode;
 }

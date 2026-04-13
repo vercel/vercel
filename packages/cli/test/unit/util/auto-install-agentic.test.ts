@@ -124,7 +124,7 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toContain('does not have the Vercel plugin installed');
+    expect(copy.message).toBe('');
     expect(copy.confirm).toContain('official Claude marketplace');
   });
 
