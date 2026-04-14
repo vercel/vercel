@@ -90,9 +90,9 @@ describe('Client', () => {
 
       // Without redirect:'manual', node-fetch follows the redirect and
       // we get the target response (200 JSON)
-      const data = await client.fetch<{ followed: boolean }>(
-        '/v1/test-redirect-default'
-      );
+      const data = (await client.fetch('/v1/test-redirect-default')) as {
+        followed: boolean;
+      };
       expect(data.followed).toEqual(true);
     });
   });
