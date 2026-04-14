@@ -34,6 +34,7 @@ import {
   type PackageJson,
   glob,
   type Service,
+  type ServiceQueueTopic,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
   isQueueLikeService,
@@ -2088,7 +2089,7 @@ function attachQueueServiceTrigger(
 
 function createQueueTrigger(
   service: Service,
-  topic: ReturnType<typeof getServiceQueueTopicConfigs>[number],
+  topic: ServiceQueueTopic,
   functionPath: string
 ): TriggerEvent {
   const baseTrigger = {

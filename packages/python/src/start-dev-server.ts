@@ -769,7 +769,7 @@ export const startDevServer: StartDevServer = async opts => {
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
 
-  // For cron/worker services, use the raw entrypoint directly, because
+  // For schedule-triggered job and worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let resolved: PythonEntrypoint | undefined;
   const handlerFunction =

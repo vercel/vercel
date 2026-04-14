@@ -205,7 +205,7 @@ describe('detectRailwayServices', () => {
   });
 
   describe('schedule-triggered job hints', () => {
-    it('should skip Railway cron services and emit a schedule-triggered job hint', async () => {
+    it('should skip Railway scheduled jobs and emit a schedule-triggered job hint', async () => {
       const fs = new VirtualFilesystem({
         'web/railway.json': JSON.stringify({}),
         'web/package.json': JSON.stringify({

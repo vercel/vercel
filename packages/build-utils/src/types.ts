@@ -607,7 +607,6 @@ export interface Service {
 
 export function getServiceQueueTopicConfigs(config: {
   type?: ServiceType;
-  trigger?: JobTrigger;
   topics?: ServiceTopics;
 }): ServiceQueueTopic[] {
   if (Array.isArray(config.topics) && config.topics.length > 0) {
@@ -621,7 +620,6 @@ export function getServiceQueueTopicConfigs(config: {
 
 export function getServiceQueueTopics(config: {
   type?: ServiceType;
-  trigger?: JobTrigger;
   topics?: ServiceTopics;
 }): string[] {
   return getServiceQueueTopicConfigs(config).map(topic => topic.topic);

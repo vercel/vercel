@@ -269,7 +269,7 @@ export async function detectServices(
  *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  *
- * - Cron and schedule-triggered job services:
+ * - Schedule-triggered job services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */

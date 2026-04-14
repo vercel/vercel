@@ -82,7 +82,7 @@ function parseServiceEntrypointConfig(
       ? normalizeServiceEntrypoint(config.entrypoint)
       : undefined;
   const moduleAttrParsed = configuredEntrypoint
-    ? parsePyModuleAttrEntrypoint(config.entrypoint!)
+    ? parsePyModuleAttrEntrypoint(configuredEntrypoint)
     : null;
 
   let entrypointToResolve = moduleAttrParsed
@@ -394,7 +394,7 @@ export function validateServiceConfig(
   const isQueueJobService = isJobService && config.trigger === 'queue';
   const isWorkflowService = isJobService && config.trigger === 'workflow';
   const serviceTypeLabel =
-    serviceType === 'worker' ? 'Worker' : serviceType === 'job' ? 'Job' : 'Web';
+    serviceType === 'job' ? 'Job' : serviceType === 'worker' ? 'Worker' : 'Web';
   const routingResult = resolveServiceRoutingConfig(name, config);
   if (routingResult.error) {
     return routingResult.error;
