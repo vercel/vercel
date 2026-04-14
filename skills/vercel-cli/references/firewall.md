@@ -2,17 +2,19 @@
 
 `vercel firewall` manages your project's [Web Application Firewall (WAF)](https://vercel.com/docs/vercel-firewall/vercel-waf). It provides multiple layers of protection:
 
-- **Custom rules** — match requests by path, method, IP, geo, headers, cookies, and more, then deny, challenge, rate limit, log, or redirect them
+- **Custom rules** — match requests by path, method, IP, geo, headers, cookies, and more, then deny, challenge, rate limit, log, bypass, or redirect them
 - **IP blocks** — block specific IPs or CIDR ranges from accessing your project
-- **System bypass** — exempt trusted IPs from all firewall checks (e.g., your office, CI servers, monitoring)
-- **Attack mode** — emergency mode that challenges every visitor with a verification page during an active attack
+- **System bypass** — exempt trusted IPs or CIDRs from all firewall checks (e.g., your office, CI servers, monitoring)
+- **Attack mode** — emergency mode that challenges unverified visitors during an active attack (verified bots and crawlers are exempt)
 - **System mitigations** — automatic DDoS protection that can be temporarily paused for debugging
 
 ## Overview
 
 ```bash
 vercel firewall overview                              # full firewall summary
+vercel firewall overview --json                       # JSON output
 vercel firewall diff                                  # show unpublished draft changes
+vercel firewall diff --json                           # JSON diff
 ```
 
 ## Custom Rules
@@ -153,7 +155,7 @@ Conditions within a group are **AND'd**. Multiple groups (separated by `--or`) a
 | `cookie` | HTTP cookie | **Yes** |
 | `query` | URL query parameter | **Yes** |
 | `ja4_digest` | JA4 TLS fingerprint | No |
-| `ja3_digest` | JA3 TLS fingerprint (Enterprise teams only) | No |
+| `ja3_digest` | JA3 TLS fingerprint — legacy, prefer ja4 (Enterprise teams only) | No |
 | `bot_name` | Verified bot name (Security Plus projects only) | No |
 | `bot_category` | Verified bot category (Security Plus projects only) | No |
 
@@ -168,7 +170,7 @@ Conditions within a group are **AND'd**. Multiple groups (separated by `--or`) a
 | `rate_limit` | Throttle requests | `--rate-limit-window`, `--rate-limit-requests`, `--rate-limit-keys`, `--rate-limit-algo`, `--rate-limit-action`, `--duration` |
 | `redirect` | Redirect to URL | `--redirect-url`, `--redirect-permanent` |
 
-**Durations:** `1m`, `5m`, `15m`, `30m`, `1h` — makes the action persistent for the matched client. A `deny` with `--duration 30m` blocks the client for 30 minutes. A `challenge` with `--duration 30m` challenges once and grants a 30-minute pass. Without a duration, the action is evaluated per-request.
+**Durations (Pro/Enterprise only):** `1m`, `5m`, `15m`, `30m`, `1h` — makes the action persistent for the matched client. A `deny` with `--duration 30m` blocks the client for 30 minutes. A `challenge` with `--duration 30m` challenges once and grants a 30-minute pass. Without a duration, the action is evaluated per-request.
 
 ### Rate limit example
 
@@ -185,8 +187,8 @@ vercel firewall rules add "Rate limit API" \
 
 - `--rate-limit-window` — time window in seconds (10–3600)
 - `--rate-limit-requests` — max requests per window (1–10,000,000)
-- `--rate-limit-keys` — what to count by: `ip` (default), `ja4`, `header:<name>` (repeatable)
-- `--rate-limit-algo` — algorithm: `fixed_window` (default), `token_bucket`
+- `--rate-limit-keys` — what to count by: `ip` (default), `ja4`. `header:<name>` is Enterprise only (repeatable)
+- `--rate-limit-algo` — algorithm: `fixed_window` (default), `token_bucket` (Enterprise only)
 - `--rate-limit-action` — what happens when a client exceeds the limit: `rate_limit` returns 429 (default), `deny` returns 403, `challenge` shows verification page, `log` logs without blocking
 
 ### Redirect example
@@ -255,12 +257,13 @@ vercel firewall ip-blocks block 1.2.3.4 --yes                          # block a
 vercel firewall ip-blocks block 10.0.0.0/24 --hostname example.com --yes  # block CIDR on specific host
 vercel firewall ip-blocks block 1.2.3.4 --notes "Abuse report #123" --yes  # block with a note
 vercel firewall ip-blocks unblock 1.2.3.4 --yes                        # unblock by IP
-vercel firewall ip-blocks unblock 1.2.3.4 --hostname example.com --yes # unblock scoped to hostname
+vercel firewall ip-blocks unblock 1.2.3.4 --hostname example.com --yes # unblock scoped to hostname (when same IP blocked on multiple hosts)
+vercel firewall ip-blocks unblock ip_abc123 --yes                      # unblock by rule ID
 ```
 
 ## System Bypass
 
-Exempt trusted IP addresses from all firewall checks. Use for your office IP, CI/CD servers, uptime monitors, or other trusted infrastructure that should never be blocked.
+Exempt trusted IPs or CIDR ranges from all firewall checks. Use for your office IP, CI/CD servers, uptime monitors, or other trusted infrastructure that should never be blocked. Supports wildcard domains.
 
 Takes effect immediately — no publishing required.
 
@@ -268,14 +271,16 @@ Takes effect immediately — no publishing required.
 vercel firewall system-bypass list                                      # list all bypass rules
 vercel firewall system-bypass list --json                               # JSON output
 vercel firewall system-bypass add 10.0.0.1 --yes                       # bypass for an IP
+vercel firewall system-bypass add 10.0.0.0/24 --yes                    # bypass for a CIDR range
 vercel firewall system-bypass add 10.0.0.1 --domain example.com --yes  # bypass scoped to a domain
+vercel firewall system-bypass add 10.0.0.1 --domain "*.example.com" --yes  # bypass with wildcard domain
 vercel firewall system-bypass add 10.0.0.1 --notes "Office IP" --yes   # bypass with a note
 vercel firewall system-bypass remove 10.0.0.1 --yes                    # remove bypass
 ```
 
 ## Attack Mode
 
-[Attack Challenge Mode](https://vercel.com/docs/vercel-firewall/attack-challenge-mode) is an emergency response for active attacks. When enabled, every visitor sees a verification challenge page before accessing your site. Use when you're under a DDoS attack or experiencing a surge of malicious traffic.
+[Attack Challenge Mode](https://vercel.com/docs/vercel-firewall/attack-challenge-mode) is an emergency response for active attacks. When enabled, unverified visitors see a verification challenge page before accessing your site. Verified bots and search crawlers are exempt. Use when you're under a DDoS attack or experiencing a surge of malicious traffic.
 
 Takes effect immediately — no publishing required. **Requires interactive confirmation — blocked for agents/scripts due to the severity of enabling this.**
 
@@ -309,7 +314,7 @@ vercel firewall discard --yes                         # throw away all draft cha
 
 ## Agent Usage
 
-- **Pass `--yes`** to skip confirmation prompts
+- **Pass `--yes`** for commands that prompt for confirmation (rule/IP block mutations, publish, discard)
 - **Publish after staging rules/IP blocks**: `vercel firewall publish --yes`
 - **Use `--json` for structured output**: `vercel firewall rules list --json`
 - Project must be linked first (`vercel link`)
