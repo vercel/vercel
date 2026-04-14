@@ -762,9 +762,6 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
-  if (config.command) {
-    builderConfig.command = config.command;
-  }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
   }
@@ -792,7 +789,6 @@ export async function resolveConfiguredService(
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
     consumer,
-    command: config.command,
     envPrefix: config.envPrefix,
   };
 }

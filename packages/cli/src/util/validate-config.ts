@@ -254,11 +254,6 @@ const serviceCommonProperties = {
     minLength: 1,
     maxLength: 512,
   },
-  command: {
-    type: 'string',
-    minLength: 1,
-    maxLength: 2048,
-  },
   framework: {
     type: 'string',
     minLength: 1,

@@ -69,7 +69,6 @@ describe('validateConfig', () => {
           trigger: 'schedule',
           root: 'jobs',
           entrypoint: 'cleanup.py',
-          command: 'python cleanup.py',
           schedule: ['0 0 * * *', '0 12 * * *'],
         },
       },

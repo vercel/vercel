@@ -40,7 +40,6 @@ import {
   isQueueLikeService,
   isScheduleLikeService,
   type Lambda,
-  sanitizeConsumerName,
   type TriggerEvent,
   downloadFile,
 } from '@vercel/build-utils';
@@ -53,7 +52,6 @@ import {
   detectFrameworkVersion,
   detectInstrumentation,
   getInternalServiceCronPath,
-  getInternalServiceFunctionPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -2061,60 +2059,31 @@ function attachQueueServiceTrigger(
   service: Service
 ): void {
   const topics = getServiceQueueTopicConfigs(service);
-  const defaultFunctionPath = getInternalServiceFunctionPath(service.name);
+  const consumer = service.consumer || 'default';
 
-  if (isLambda(buildOutput)) {
-    for (const topic of topics) {
-      appendQueueTrigger(
-        buildOutput,
-        createQueueTrigger(service, topic, defaultFunctionPath)
-      );
-    }
-    return;
-  }
-
-  for (const [functionPath, output] of Object.entries(buildOutput)) {
-    if (!isLambda(output)) {
-      continue;
-    }
-
-    for (const topic of topics) {
-      appendQueueTrigger(
-        output,
-        createQueueTrigger(service, topic, functionPath)
-      );
-    }
-  }
-}
-
-function createQueueTrigger(
-  service: Service,
-  topic: ServiceQueueTopic,
-  functionPath: string
-): TriggerEvent {
-  const baseTrigger = {
-    topic: topic.topic,
-    ...(topic.retryAfterSeconds !== undefined
-      ? { retryAfterSeconds: topic.retryAfterSeconds }
-      : undefined),
-    ...(topic.initialDelaySeconds !== undefined
-      ? { initialDelaySeconds: topic.initialDelaySeconds }
-      : undefined),
-  };
-
-  if (service.type === 'worker') {
-    return {
+  for (const topicConfig of topics) {
+    const trigger: TriggerEvent = {
       type: 'queue/v1beta',
-      consumer: service.consumer || 'default',
-      ...baseTrigger,
+      topic: topicConfig.topic,
+      consumer,
     };
-  }
+    if (topicConfig.retryAfterSeconds !== undefined) {
+      trigger.retryAfterSeconds = topicConfig.retryAfterSeconds;
+    }
+    if (topicConfig.initialDelaySeconds !== undefined) {
+      trigger.initialDelaySeconds = topicConfig.initialDelaySeconds;
+    }
 
-  return {
-    type: 'queue/v2beta',
-    consumer: sanitizeConsumerName(functionPath),
-    ...baseTrigger,
-  };
+    if (isLambda(buildOutput)) {
+      appendQueueTrigger(buildOutput, trigger);
+    } else {
+      for (const output of Object.values(buildOutput)) {
+        if (isLambda(output)) {
+          appendQueueTrigger(output, trigger);
+        }
+      }
+    }
+  }
 }
 
 function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {

@@ -68,28 +68,19 @@ interface ServiceDescriptionInfo {
   colorFn: (text: string) => string;
 }
 
-function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
-  // Non-routable services aren't framework apps, so show type + runtime instead.
-  if (service.type === 'worker' || service.type === 'job') {
-    let typeLabel: string;
-    let typeColorFn: (text: string) => string;
+const jobTriggerLabels: Record<string, string> = {
+  queue: 'Job/Queue',
+  schedule: 'Job/Schedule',
+  workflow: 'Job/Workflow',
+};
 
-    if (service.type === 'worker') {
-      typeLabel = 'Worker';
-      typeColorFn = chalk.magenta;
-    } else {
-      typeColorFn = chalk.cyan;
-      switch (service.trigger) {
-        case 'queue':
-          typeLabel = 'Job/Queue';
-          break;
-        case 'schedule':
-          typeLabel = 'Job/Schedule';
-          break;
-        default:
-          typeLabel = 'Job/Workflow';
-      }
-    }
+function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
+  if (service.type === 'worker' || service.type === 'job') {
+    const typeLabel =
+      service.type === 'worker'
+        ? 'Worker'
+        : (jobTriggerLabels[service.trigger ?? ''] ?? 'Job/Workflow');
+    const typeColorFn = service.type === 'worker' ? chalk.magenta : chalk.cyan;
 
     if (service.runtime) {
       const runtimeName =

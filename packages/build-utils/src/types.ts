@@ -600,7 +600,6 @@ export interface Service {
   /* worker/job service config */
   topics?: ServiceTopics;
   consumer?: string;
-  command?: string;
   /** custom prefix to inject service URL env vars */
   envPrefix?: string;
 }
@@ -841,8 +840,6 @@ export interface ExperimentalServiceConfig {
   entrypoint?: string;
   /** Service root directory, relative to the project root. */
   root?: string;
-  /** Command to run for the service workload. */
-  command?: string;
 
   /** Framework to use */
   framework?: string;

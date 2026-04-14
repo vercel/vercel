@@ -585,10 +585,6 @@ export interface VercelConfig {
        */
       root?: string;
       /**
-       * Command to execute the workload.
-       */
-      command?: string;
-      /**
        * Path to the directory containing the service manifest file (package.json, pyproject.toml, etc.). Defaults to "." (project root).
        */
       workspace?: string;

@@ -1155,9 +1155,9 @@ describe.skipIf(flakey)('build', () => {
     );
     expect(vcConfig.experimentalTriggers).toEqual([
       {
-        type: 'queue/v2beta',
+        type: 'queue/v1beta',
         topic: 'orders',
-        consumer: expect.any(String),
+        consumer: 'default',
         retryAfterSeconds: 10,
         initialDelaySeconds: 5,
       },
