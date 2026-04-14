@@ -1,4 +1,5 @@
 import { downloadInstallAndBundle } from './utils.js';
+import { generateProjectManifest } from './diagnostics.js';
 import {
   defaultCachePathGlob,
   glob,
@@ -39,6 +40,7 @@ import { Colors as c } from './cervel/utils.js';
 
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
+export { diagnostics } from './diagnostics.js';
 
 export const version = 2;
 
@@ -153,6 +155,21 @@ export const build: BuildV2 = async args => {
       conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
+
+    try {
+      await generateProjectManifest({
+        workPath: args.workPath,
+        entrypointDir: downloadResult.entrypointFsDirname,
+        nodeVersion,
+        cliType: downloadResult.cliType,
+        lockfilePath: downloadResult.lockfilePath,
+        lockfileVersion: downloadResult.lockfileVersion,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write node manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
 
     const baseDir = args.repoRootPath || args.workPath;
     const includeResults = await Promise.all(
