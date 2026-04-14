@@ -4,61 +4,65 @@ import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { detectServices, LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
+  getBuildableServices,
   getServicesConfigWriteBlocker,
-  isExperimentalServicesEnabled,
-  tryDetectServices,
+  hasExperimentalServicesConfig,
   writeServicesConfig,
 } from '../../../../src/util/projects/detect-services';
 
-describe('tryDetectServices()', () => {
-  const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+describe('getBuildableServices()', () => {
+  const originalInferredEnv =
+    process.env.VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES;
   const originalTomlEnv = process.env.VERCEL_TOML_CONFIG_ENABLED;
   let tempDir: string;
 
   beforeEach(async () => {
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+    delete process.env.VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES;
     process.env.VERCEL_TOML_CONFIG_ENABLED = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
 
   afterEach(async () => {
-    if (originalEnv === undefined) {
-      delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+    if (originalInferredEnv === undefined) {
+      delete process.env.VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES;
     } else {
-      process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
+      process.env.VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES =
+        originalInferredEnv;
     }
+
     if (originalTomlEnv === undefined) {
       delete process.env.VERCEL_TOML_CONFIG_ENABLED;
     } else {
       process.env.VERCEL_TOML_CONFIG_ENABLED = originalTomlEnv;
     }
+
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it('should return null when no vercel.json exists and no service found', async () => {
-    const result = await tryDetectServices(tempDir);
-    expect(result).toBeNull();
+  it('should return an empty array when no vercel.json exists and no service found', async () => {
+    const result = await getBuildableServices(tempDir);
+    expect(result).toEqual([]);
   });
 
-  it('should return null for root-only project with no backend', async () => {
+  it('should return an empty array for root-only project with no backend', async () => {
     await writeFile(
       join(tempDir, 'package.json'),
       JSON.stringify({ dependencies: { next: '14.0.0' } })
     );
 
-    const result = await tryDetectServices(tempDir);
-    expect(result).toBeNull();
+    const result = await getBuildableServices(tempDir);
+    expect(result).toEqual([]);
   });
 
-  it('should return null when vercel.json has no experimentalServices and no service found', async () => {
+  it('should return an empty array when vercel.json has no experimentalServices and no service found', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({ buildCommand: 'npm run build' })
     );
 
-    const result = await tryDetectServices(tempDir);
-    expect(result).toBeNull();
+    const result = await getBuildableServices(tempDir);
+    expect(result).toEqual([]);
   });
 
   it('should return services when configured', async () => {
@@ -77,15 +81,14 @@ describe('tryDetectServices()', () => {
       'def app():\n  return None\n'
     );
 
-    const result = await tryDetectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(2);
-    expect(result?.services.find(s => s.name === 'frontend')).toMatchObject({
+    const services = await getBuildableServices(tempDir);
+    expect(services).toHaveLength(2);
+    expect(services.find(s => s.name === 'frontend')).toMatchObject({
       name: 'frontend',
       framework: 'nextjs',
       routePrefix: '/',
     });
-    expect(result?.services.find(s => s.name === 'backend')).toMatchObject({
+    expect(services.find(s => s.name === 'backend')).toMatchObject({
       name: 'backend',
       entrypoint: 'api/index.py',
       routePrefix: '/api',
@@ -109,40 +112,60 @@ routePrefix = "/api"`
       'def app():\n  return None\n'
     );
 
-    const result = await tryDetectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(2);
-    expect(result?.services.find(s => s.name === 'frontend')).toMatchObject({
+    const services = await getBuildableServices(tempDir);
+    expect(services).toHaveLength(2);
+    expect(services.find(s => s.name === 'frontend')).toMatchObject({
       name: 'frontend',
       framework: 'nextjs',
       routePrefix: '/',
     });
-    expect(result?.services.find(s => s.name === 'backend')).toMatchObject({
+    expect(services.find(s => s.name === 'backend')).toMatchObject({
       name: 'backend',
       entrypoint: 'api/index.py',
       routePrefix: '/api',
     });
   });
 
-  it('should return validation errors for invalid services', async () => {
+  it('should return an empty array for invalid services config', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
         experimentalServices: {
-          // Missing routePrefix for web service
           'invalid-service': { entrypoint: 'index.ts' },
         },
       })
     );
 
-    const result = await tryDetectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(0);
-    expect(result?.errors.length).toBeGreaterThan(0);
+    const result = await getBuildableServices(tempDir);
+    expect(result).toEqual([]);
+  });
+
+  it('should return inferred runnable services when opted in', async () => {
+    process.env.VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES = '1';
+    await mkdir(join(tempDir, 'frontend'), { recursive: true });
+    await mkdir(join(tempDir, 'services/api'), { recursive: true });
+    await writeFile(
+      join(tempDir, 'frontend/package.json'),
+      JSON.stringify({ dependencies: { next: '14.0.0' } })
+    );
+    await writeFile(
+      join(tempDir, 'services/api/requirements.txt'),
+      'fastapi\n'
+    );
+    await writeFile(
+      join(tempDir, 'services/api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const services = await getBuildableServices(tempDir);
+    expect(services).toHaveLength(2);
+    expect(services.map(service => service.name).sort()).toEqual([
+      'api',
+      'frontend',
+    ]);
   });
 
   it('should report builds as a blocker for inferred services config writes', async () => {
-    delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     await mkdir(join(tempDir, 'services/api'), { recursive: true });
     await writeFile(
       join(tempDir, 'package.json'),
@@ -168,6 +191,7 @@ routePrefix = "/api"`
     });
 
     expect(result.inferred?.source).toBe('layout');
+    expect(result.inferred?.config).not.toBeNull();
     await expect(
       getServicesConfigWriteBlocker(tempDir, result.inferred!.config)
     ).resolves.toBe('builds');
@@ -202,53 +226,7 @@ routePrefix = "/api"`
     });
   });
 
-  describe('without VERCEL_USE_EXPERIMENTAL_SERVICES env var', () => {
-    beforeEach(() => {
-      delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    });
-
-    it('should return services when vercel.json has experimentalServices', async () => {
-      await mkdir(join(tempDir, 'api'), { recursive: true });
-      await writeFile(
-        join(tempDir, 'vercel.json'),
-        JSON.stringify({
-          experimentalServices: {
-            frontend: { framework: 'nextjs', routePrefix: '/' },
-            backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
-          },
-        })
-      );
-      await writeFile(
-        join(tempDir, 'api/index.py'),
-        'def app():\n  return None\n'
-      );
-
-      const result = await tryDetectServices(tempDir);
-      expect(result).not.toBeNull();
-      expect(result?.services).toHaveLength(2);
-    });
-
-    it('should return null when vercel.json has no experimentalServices', async () => {
-      await writeFile(
-        join(tempDir, 'vercel.json'),
-        JSON.stringify({ buildCommand: 'npm run build' })
-      );
-
-      const result = await tryDetectServices(tempDir);
-      expect(result).toBeNull();
-    });
-
-    it('should return null when no vercel.json exists', async () => {
-      const result = await tryDetectServices(tempDir);
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('isExperimentalServicesEnabled()', () => {
-    beforeEach(() => {
-      delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    });
-
+  describe('hasExperimentalServicesConfig()', () => {
     it('should return true when vercel.json has experimentalServices', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
@@ -259,12 +237,26 @@ routePrefix = "/api"`
         })
       );
 
-      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+      await expect(hasExperimentalServicesConfig(tempDir)).resolves.toBe(true);
     });
 
-    it('should return true when env var is set', async () => {
-      process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    it('should return false when services are only inferred from layout', async () => {
+      await mkdir(join(tempDir, 'frontend'), { recursive: true });
+      await mkdir(join(tempDir, 'services/api'), { recursive: true });
+      await writeFile(
+        join(tempDir, 'frontend/package.json'),
+        JSON.stringify({ dependencies: { next: '14.0.0' } })
+      );
+      await writeFile(
+        join(tempDir, 'services/api/requirements.txt'),
+        'fastapi\n'
+      );
+      await writeFile(
+        join(tempDir, 'services/api/index.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+
+      await expect(hasExperimentalServicesConfig(tempDir)).resolves.toBe(false);
     });
 
     it('should return false when vercel.json has no experimentalServices', async () => {
@@ -273,11 +265,11 @@ routePrefix = "/api"`
         JSON.stringify({ buildCommand: 'npm run build' })
       );
 
-      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
+      await expect(hasExperimentalServicesConfig(tempDir)).resolves.toBe(false);
     });
 
     it('should return false when no vercel.json exists', async () => {
-      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
+      await expect(hasExperimentalServicesConfig(tempDir)).resolves.toBe(false);
     });
 
     it('should return true when vercel.ts has experimentalServices', async () => {
@@ -290,7 +282,7 @@ routePrefix = "/api"`
         };`
       );
 
-      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+      await expect(hasExperimentalServicesConfig(tempDir)).resolves.toBe(true);
     });
 
     it('should return true when vercel.toml has experimentalServices', async () => {
@@ -301,7 +293,7 @@ framework = "nextjs"
 routePrefix = "/"`
       );
 
-      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+      await expect(hasExperimentalServicesConfig(tempDir)).resolves.toBe(true);
     });
 
     it('should return false when vercel.toml has no experimentalServices', async () => {
@@ -310,7 +302,7 @@ routePrefix = "/"`
         `buildCommand = "npm run build"`
       );
 
-      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
+      await expect(hasExperimentalServicesConfig(tempDir)).resolves.toBe(false);
     });
   });
 });

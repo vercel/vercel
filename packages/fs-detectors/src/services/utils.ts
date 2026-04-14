@@ -7,7 +7,7 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ServiceDetectionError,
-  ResolvedService,
+  Service,
 } from './types';
 import {
   RUNTIME_BUILDERS,
@@ -84,7 +84,7 @@ export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   return builder;
 }
 
-export function isStaticBuild(service: ResolvedService): boolean {
+export function isStaticBuild(service: Service): boolean {
   return STATIC_BUILDERS.has(service.builder.use);
 }
 
@@ -96,7 +96,7 @@ export function isStaticBuild(service: ResolvedService): boolean {
  * hit, error). The services system should NOT generate synthetic catch-all
  * rewrites for them — instead, we rely on the builder's own `routes[]`.
  */
-export function isRouteOwningBuilder(service: ResolvedService): boolean {
+export function isRouteOwningBuilder(service: Service): boolean {
   return ROUTE_OWNING_BUILDERS.has(service.builder.use);
 }
 
@@ -149,6 +149,20 @@ export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
 
   return frameworks.filter(
     framework => inferRuntimeFromFramework(framework.slug) === runtime
+  );
+}
+
+export function getServiceDetectionFrameworks<
+  T extends {
+    slug?: string | null;
+    experimental?: boolean;
+    runtimeFramework?: boolean;
+  },
+>(frameworks: readonly T[], runtime?: ServiceRuntime): T[] {
+  // Service detection should still consider runtime frameworks like Python,
+  // Ruby, and Go even when they are marked experimental in the shared list.
+  return filterFrameworksByRuntime(frameworks, runtime).filter(
+    framework => !framework.experimental || framework.runtimeFramework
   );
 }
 

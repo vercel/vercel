@@ -1,5 +1,9 @@
 import { frameworkList } from '@vercel/frameworks';
-import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
+import type {
+  InferredService,
+  Service,
+  ServiceDetectionError,
+} from '@vercel/fs-detectors';
 import { getWorkerTopics } from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
@@ -64,7 +68,17 @@ interface ServiceDescriptionInfo {
   colorFn: (text: string) => string;
 }
 
-function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
+type DisplayableService = Service | InferredService;
+
+function getServiceBuilder(
+  service: DisplayableService
+): Service['builder'] | undefined {
+  return 'builder' in service ? service.builder : undefined;
+}
+
+function getServiceDescriptionInfo(
+  service: DisplayableService
+): ServiceDescriptionInfo {
   // Cron and worker services aren't framework apps, so we'll just show type + runtime for them
   // e.g. [Cron/Python] or [Worker/Python]
   if (service.type === 'cron' || service.type === 'worker') {
@@ -90,13 +104,17 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
     const normalizedRuntime = service.runtime.toLowerCase().replace(/@.*$/, '');
     const colorFn = runtimeColors[normalizedRuntime] || chalk.yellow;
     return { label: service.runtime, colorFn };
-  } else if (service.builder?.use) {
-    return { label: service.builder.use, colorFn: chalk.magenta };
   }
+
+  const builder = getServiceBuilder(service);
+  if (builder?.use) {
+    return { label: builder.use, colorFn: chalk.magenta };
+  }
+
   return { label: 'unknown', colorFn: chalk.dim };
 }
 
-function getServiceTarget(service: Service): string {
+function getServiceTarget(service: DisplayableService): string {
   switch (service.type) {
     case 'cron':
       return `schedule: ${service.schedule ?? 'none'}`;
@@ -119,7 +137,7 @@ function getServiceTarget(service: Service): string {
  *   cleanup           [node]      →  schedule: 0 0 * * *
  *   processor         [node]      →  topics: jobs
  */
-export function displayDetectedServices(services: Service[]): void {
+export function displayDetectedServices(services: DisplayableService[]): void {
   output.print(`Detected services:\n`);
 
   const outputOrder: Record<string, number> = { web: 0, cron: 1, worker: 2 };

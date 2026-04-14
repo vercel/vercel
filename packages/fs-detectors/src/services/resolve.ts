@@ -14,8 +14,8 @@ import {
   RUNTIME_MANIFESTS,
 } from './types';
 import {
-  filterFrameworksByRuntime,
   getBuilderForRuntime,
+  getServiceDetectionFrameworks,
   hasFile,
   inferRuntimeFromFramework,
   inferServiceRuntime,
@@ -185,10 +185,14 @@ async function detectFrameworkFromWorkspace({
   runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
-  const frameworkCandidates = filterFrameworksByRuntime(frameworkList, runtime);
+  const frameworkCandidates = getServiceDetectionFrameworks(
+    frameworkList,
+    runtime
+  );
   const frameworks = await detectFrameworks({
     fs: serviceFs,
     frameworkList: frameworkCandidates,
+    useExperimentalFrameworks: true,
   });
 
   if (frameworks.length > 1) {

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -23,7 +23,7 @@ import {
 } from '../../util/agent-output';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
-import { tryDetectServices } from '../../util/projects/detect-services';
+import { getBuildableServices } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
@@ -125,16 +125,16 @@ export default async function dev(
       .env;
   }
 
-  let services: ResolvedService[] | undefined;
-  const servicesResult = await tryDetectServices(cwd);
-  const foundServices = servicesResult && servicesResult.services.length > 0;
-  if (foundServices) {
-    displayDetectedServices(servicesResult.services);
-    services = servicesResult.services;
+  let services: Service[] | undefined;
+  const detectedServices = await getBuildableServices(cwd);
+
+  if (detectedServices.length > 0) {
+    displayDetectedServices(detectedServices);
+    services = detectedServices;
   }
 
   let lockAcquired = false;
-  if (foundServices) {
+  if (detectedServices.length > 0) {
     const port = typeof listen[0] === 'number' ? listen[0] : 0;
     const lockResult = await acquireDevLock(cwd, port);
 

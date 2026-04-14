@@ -599,13 +599,10 @@ describe('detectServices with Railway detection', () => {
 
     const result = await detectServices({ fs });
 
-    expect(result.errors).toEqual([]);
-    expect(result.source).toBe('auto-detected');
-    // Railway detection is suggestion-only,
-    // so resolved.services (or .services which are the same) should be empty
-    expect(result.services).toHaveLength(0);
+    expect(result.resolved).toBeNull();
     expect(result.inferred).not.toBeNull();
     expect(result.inferred!.source).toBe('railway');
+    expect(result.inferred!.errors).toEqual([]);
     expect(result.inferred!.services).toHaveLength(2);
     expect(result.inferred!.config.api.buildCommand).toBe("echo 'test'");
   });
@@ -624,9 +621,10 @@ describe('detectServices with Railway detection', () => {
 
     const result = await detectServices({ fs });
 
-    expect(result.errors).toEqual([]);
+    expect(result.resolved).toBeNull();
     expect(result.inferred).not.toBeNull();
     expect(result.inferred!.source).toBe('railway');
+    expect(result.inferred!.errors).toEqual([]);
     expect(result.inferred!.services).toHaveLength(1);
     expect(result.inferred!.services[0].routePrefix).toBe('/');
     expect(result.inferred!.services[0].name).toBe('backend');
@@ -649,7 +647,7 @@ describe('detectServices with Railway detection', () => {
 
     const result = await detectServices({ fs });
 
-    expect(result.source).toBe('configured');
+    expect(result.resolved?.source).toBe('configured');
     expect(result.inferred).toBeNull();
   });
 });

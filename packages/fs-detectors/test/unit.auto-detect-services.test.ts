@@ -1,5 +1,33 @@
-import { detectServices, autoDetectServices } from '../src';
+import {
+  detectServices as rawDetectServices,
+  autoDetectServices,
+  type DetectServicesResult,
+  type InferredServicesResult,
+  type ResolvedServicesResult,
+} from '../src';
 import VirtualFilesystem from './virtual-file-system';
+
+function expectResolvedResult(
+  result: DetectServicesResult
+): ResolvedServicesResult {
+  expect(result.resolved).not.toBeNull();
+  expect(result.inferred).toBeNull();
+  return result.resolved!;
+}
+
+function expectInferredResult(
+  result: DetectServicesResult
+): InferredServicesResult {
+  expect(result.resolved).toBeNull();
+  expect(result.inferred).not.toBeNull();
+  return result.inferred!;
+}
+
+async function detectResolvedServices(
+  ...args: Parameters<typeof rawDetectServices>
+): Promise<ResolvedServicesResult> {
+  return expectResolvedResult(await rawDetectServices(...args));
+}
 
 describe('autoDetectServices', () => {
   describe('Frontend at root, backend in backend/', () => {
@@ -16,7 +44,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'nextjs',
@@ -41,7 +69,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).toBeNull();
     });
 
@@ -57,7 +85,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).toBeNull();
     });
   });
@@ -76,7 +104,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'nextjs',
@@ -90,7 +118,7 @@ describe('autoDetectServices', () => {
       });
     });
 
-    it('should error when frontend in frontend/ has no backend', async () => {
+    it('should warn when frontend in frontend/ has no backend', async () => {
       const fs = new VirtualFilesystem({
         'frontend/package.json': JSON.stringify({
           dependencies: {
@@ -102,12 +130,12 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.services).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('NO_BACKEND_SERVICES');
-      expect(result.errors[0].message).toContain('frontend/');
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].code).toBe('NO_BACKEND_SERVICES');
+      expect(result.warnings[0].message).toContain('frontend/');
     });
 
-    it('should error when multiple frameworks detected in frontend/', async () => {
+    it('should warn when multiple frameworks are detected in frontend/', async () => {
       const fs = new VirtualFilesystem({
         'frontend/package.json': JSON.stringify({
           dependencies: {
@@ -120,9 +148,9 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.services).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
-      expect(result.errors[0].message).toContain('frontend/');
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
+      expect(result.warnings[0].message).toContain('frontend/');
     });
   });
 
@@ -143,7 +171,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(Object.keys(result.services!)).toHaveLength(3);
 
@@ -177,7 +205,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(Object.keys(result.services!)).toHaveLength(2);
 
@@ -206,7 +234,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(Object.keys(result.services!)).toHaveLength(2);
       expect(result.services!.frontend).toBeDefined();
@@ -214,7 +242,7 @@ describe('autoDetectServices', () => {
       expect(result.services!.shared).toBeUndefined();
     });
 
-    it('should error when multiple frameworks detected in a service', async () => {
+    it('should warn when multiple frameworks are detected in a service', async () => {
       const fs = new VirtualFilesystem({
         'frontend/package.json': JSON.stringify({
           dependencies: {
@@ -227,9 +255,9 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.services).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
-      expect(result.errors[0].message).toContain('services/api');
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
+      expect(result.warnings[0].message).toContain('services/api');
     });
   });
 
@@ -251,7 +279,7 @@ describe('autoDetectServices', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(Object.keys(result.services!)).toHaveLength(4);
 
@@ -277,7 +305,7 @@ describe('autoDetectServices', () => {
       });
     });
 
-    it('should error when multiple frameworks detected in apps/web/', async () => {
+    it('should warn when multiple frameworks are detected in apps/web/', async () => {
       const fs = new VirtualFilesystem({
         'apps/web/package.json': JSON.stringify({
           dependencies: {
@@ -290,14 +318,14 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.services).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
-      expect(result.errors[0].message).toContain('apps/web');
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
+      expect(result.warnings[0].message).toContain('apps/web');
     });
   });
 
   describe('error cases', () => {
-    it('should error when multiple frameworks detected at root', async () => {
+    it('should warn when multiple frameworks are detected at root', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -310,12 +338,12 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.services).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_ROOT');
-      expect(result.errors[0].message).toContain('Multiple frameworks');
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].code).toBe('MULTIPLE_FRAMEWORKS_ROOT');
+      expect(result.warnings[0].message).toContain('Multiple frameworks');
     });
 
-    it('should error when multiple frameworks detected in backend', async () => {
+    it('should warn when multiple frameworks are detected in backend', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -328,12 +356,12 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.services).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
-      expect(result.errors[0].message).toContain('backend');
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
+      expect(result.warnings[0].message).toContain('backend');
     });
 
-    it('should error when service name conflicts between backend/ and services/backend/', async () => {
+    it('should warn when service names conflict between backend/ and services/backend/', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -349,10 +377,10 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.services).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('SERVICE_NAME_CONFLICT');
-      expect(result.errors[0].message).toContain('backend');
-      expect(result.errors[0].message).toContain('services/backend');
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].code).toBe('SERVICE_NAME_CONFLICT');
+      expect(result.warnings[0].message).toContain('backend');
+      expect(result.warnings[0].message).toContain('services/backend');
     });
   });
 });
@@ -377,7 +405,7 @@ describe('detectServices with auto-detection', () => {
         }),
       });
 
-      const result = await detectServices({ fs });
+      const result = await detectResolvedServices({ fs });
 
       expect(result.errors).toEqual([]);
       expect(result.warnings).toEqual([]);
@@ -405,7 +433,7 @@ describe('detectServices with auto-detection', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'sveltekit-1',
@@ -436,7 +464,7 @@ describe('detectServices with auto-detection', () => {
 
       const result = await autoDetectServices({ fs });
 
-      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'sveltekit-1',
@@ -463,11 +491,12 @@ describe('detectServices with auto-detection', () => {
         }),
       });
 
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(0);
-      expect(result.errors).toEqual([
+      expect(inferred.source).toBe('layout');
+      expect(inferred.services).toHaveLength(0);
+      expect(inferred.warnings).toEqual([
         {
           code: 'NO_SERVICES_CONFIGURED',
           message:
@@ -485,11 +514,12 @@ describe('detectServices with auto-detection', () => {
         }),
       });
 
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(0);
-      expect(result.errors).toEqual([
+      expect(inferred.source).toBe('layout');
+      expect(inferred.services).toHaveLength(0);
+      expect(inferred.warnings).toEqual([
         {
           code: 'NO_SERVICES_CONFIGURED',
           message:
@@ -509,18 +539,19 @@ describe('detectServices with auto-detection', () => {
         'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
       });
 
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
-      expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(2);
-      const backend = result.services.find(
+      expect(inferred.warnings).toEqual([]);
+      expect(inferred.warnings).toHaveLength(0);
+      expect(inferred.source).toBe('layout');
+      expect(inferred.services).toHaveLength(2);
+      const backend = inferred.services.find(
         service => service.name === 'backend'
       );
       expect(backend).toBeDefined();
       expect(backend?.routePrefix).toBe('/_/backend');
-      expect(backend?.routePrefixSource).toBe('generated');
+      expect(inferred.config?.backend?.routePrefix).toBe('/_/backend');
     });
   });
 });

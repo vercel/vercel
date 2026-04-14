@@ -7,16 +7,19 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
+  type BuildableServicesResult,
   type InferredServicesResult,
   type ResolvedServicesResult,
   type Service,
   type ServicesConfig,
   type ServicesRoutes,
 } from './types';
+import type { DetectorFilesystem } from '../detectors/filesystem';
 import {
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
+  inferServiceRuntime,
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
@@ -43,16 +46,19 @@ function emptyRoutes(): ServicesRoutes {
 }
 
 function withResolvedResult(
-  resolved: ResolvedServicesResult,
-  inferred: InferredServicesResult | null = null
+  resolved: ResolvedServicesResult
 ): DetectServicesResult {
   return {
-    services: resolved.services,
-    source: resolved.source,
-    routes: resolved.routes,
-    errors: resolved.errors,
-    warnings: resolved.warnings,
     resolved,
+    inferred: null,
+  };
+}
+
+function withInferredResult(
+  inferred: InferredServicesResult
+): DetectServicesResult {
+  return {
+    resolved: null,
     inferred,
   };
 }
@@ -90,6 +96,88 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
   return inferredConfig;
 }
 
+function toInferredLayoutServices(
+  services: ServicesConfig
+): InferredServicesResult['services'] {
+  return Object.entries(services).map(([name, service]) => {
+    const workerTopics = (service as { topics?: string[] }).topics;
+    const consumer = (service as { consumer?: string }).consumer;
+
+    return {
+      name,
+      type: service.type || 'web',
+      workspace:
+        typeof service.entrypoint === 'string' ? service.entrypoint : '.',
+      entrypoint:
+        typeof service.entrypoint === 'string' ? service.entrypoint : undefined,
+      framework:
+        typeof service.framework === 'string' ? service.framework : undefined,
+      runtime: inferServiceRuntime({
+        runtime: service.runtime,
+        framework: service.framework,
+        builder: service.builder,
+        entrypoint: service.entrypoint,
+      }),
+      routePrefix:
+        typeof service.routePrefix === 'string'
+          ? service.routePrefix
+          : undefined,
+      schedule:
+        typeof service.schedule === 'string' ? service.schedule : undefined,
+      topics: Array.isArray(workerTopics) ? workerTopics : undefined,
+      consumer: typeof consumer === 'string' ? consumer : undefined,
+    };
+  });
+}
+
+export function isExperimentalInferredServicesEnabled(
+  value = process.env.VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES
+): boolean {
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
+export async function resolveBuildableServices(options: {
+  detection: DetectServicesResult;
+  fs: DetectorFilesystem;
+  useInferred?: boolean;
+}): Promise<BuildableServicesResult | null> {
+  const { detection, fs, useInferred = false } = options;
+
+  if (detection.resolved) {
+    return detection.resolved;
+  }
+
+  if (!useInferred || !detection.inferred) {
+    return null;
+  }
+
+  const inferred = detection.inferred;
+
+  if (inferred.errors.length > 0 || inferred.services.length === 0) {
+    return {
+      source: 'inferred',
+      services: [],
+      routes: emptyRoutes(),
+      errors: inferred.errors,
+      warnings: inferred.warnings,
+    };
+  }
+
+  const result = await resolveAllConfiguredServices(
+    inferred.config,
+    fs,
+    'generated'
+  );
+
+  return {
+    source: 'inferred',
+    services: result.services,
+    routes: generateServicesRoutes(result.services),
+    errors: result.errors,
+    warnings: inferred.warnings,
+  };
+}
+
 /**
  * Detect and resolve services within a project.
  *
@@ -121,124 +209,95 @@ export async function detectServices(
   const configuredServices = vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
-
-  // Try auto-detection
-  if (!hasConfiguredServices) {
-    // Try Railway config detection first
-    const railwayResult = await detectRailwayServices({ fs: scopedFs });
-    if (railwayResult.errors.length > 0) {
-      return withResolvedResult({
-        services: [],
-        source: 'auto-detected',
-        routes: emptyRoutes(),
-        errors: railwayResult.errors,
-        warnings: railwayResult.warnings,
-      });
-    }
-    if (railwayResult.services) {
-      const result = await resolveAllConfiguredServices(
-        railwayResult.services,
-        scopedFs,
-        'generated'
-      );
-      const inferred =
-        result.errors.length === 0 && result.services.length > 0
-          ? {
-              source: 'railway' as const,
-              config: toInferredLayoutConfig(railwayResult.services),
-              services: result.services,
-              warnings: railwayResult.warnings,
-            }
-          : null;
-
-      // Railway detection is used only for a suggestion to generate vercel.json,
-      // so the .resolved field in the result would be useless, we care only
-      // about the source + inferred config.
-      return withResolvedResult(
-        {
-          services: [],
-          source: 'auto-detected',
-          routes: emptyRoutes(),
-          errors: result.errors,
-          warnings: railwayResult.warnings,
-        },
-        inferred
-      );
-    }
-
-    // Fall back to layout-based auto-detection
-    const autoResult = await autoDetectServices({ fs: scopedFs });
-    if (autoResult.services && autoResult.errors.length === 0) {
-      const result = await resolveAllConfiguredServices(
-        autoResult.services,
-        scopedFs,
-        'generated'
-      );
-      const routes = generateServicesRoutes(result.services);
-      const resolved: ResolvedServicesResult = {
-        services: result.services,
-        source: 'auto-detected',
-        routes,
-        errors: result.errors,
-        warnings: [],
-      };
-      const rootWebFrameworkServices = result.services.filter(
-        service =>
-          service.type === 'web' &&
-          service.routePrefix === '/' &&
-          typeof service.framework === 'string'
-      );
-      const inferred =
-        result.errors.length === 0 &&
-        rootWebFrameworkServices.length === 1 &&
-        result.services.length > 1
-          ? {
-              source: 'layout' as const,
-              config: toInferredLayoutConfig(autoResult.services),
-              services: result.services,
-              warnings: [],
-            }
-          : null;
-      return withResolvedResult(resolved, inferred);
-    } else if (autoResult.errors.length > 0) {
-      return withResolvedResult({
-        services: [],
-        source: 'auto-detected',
-        routes: emptyRoutes(),
-        errors: autoResult.errors,
-        warnings: [],
-      });
-    }
+  if (hasConfiguredServices) {
+    const result = await resolveAllConfiguredServices(
+      configuredServices,
+      scopedFs,
+      'configured'
+    );
+    const routes = generateServicesRoutes(result.services);
 
     return withResolvedResult({
+      services: result.services,
+      source: 'configured',
+      routes,
+      errors: result.errors,
+      warnings: [],
+    });
+  }
+
+  const railwayResult = await detectRailwayServices({ fs: scopedFs });
+
+  if (railwayResult.errors.length > 0) {
+    return withInferredResult({
+      source: 'railway',
+      config: {},
       services: [],
-      source: 'auto-detected',
-      routes: emptyRoutes(),
-      errors: [
+      errors: railwayResult.errors,
+      warnings: railwayResult.warnings,
+    });
+  }
+
+  if (railwayResult.services) {
+    const result = await resolveAllConfiguredServices(
+      railwayResult.services,
+      scopedFs,
+      'generated'
+    );
+
+    return withInferredResult({
+      source: 'railway',
+      config: toInferredLayoutConfig(railwayResult.services),
+      services:
+        result.errors.length === 0
+          ? toInferredLayoutServices(railwayResult.services)
+          : [],
+      errors: result.errors,
+      warnings: railwayResult.warnings,
+    });
+  }
+
+  const autoResult = await autoDetectServices({ fs: scopedFs });
+
+  if (autoResult.warnings.length > 0) {
+    return withInferredResult({
+      source: 'layout',
+      config: {},
+      services: [],
+      errors: [],
+      warnings: autoResult.warnings,
+    });
+  }
+
+  if (!autoResult.services) {
+    return withInferredResult({
+      source: 'layout',
+      config: {},
+      services: [],
+      errors: [],
+      warnings: [
         {
           code: 'NO_SERVICES_CONFIGURED',
           message:
             'No services configured. Add `experimentalServices` to vercel.json.',
         },
       ],
-      warnings: [],
     });
   }
 
-  // Resolve configured services from vercel.json
   const result = await resolveAllConfiguredServices(
-    configuredServices,
+    autoResult.services,
     scopedFs,
-    'configured'
+    'generated'
   );
 
-  // Generate routes
-  const routes = generateServicesRoutes(result.services);
-
-  return withResolvedResult({
-    services: result.services,
-    source: 'configured',
-    routes,
+  return withInferredResult({
+    source: 'layout',
+    config: toInferredLayoutConfig(autoResult.services),
+    services:
+      result.errors.length === 0
+        ? toInferredLayoutServices(autoResult.services)
+        : [],
     errors: result.errors,
     warnings: [],
   });

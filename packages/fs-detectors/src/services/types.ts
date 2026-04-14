@@ -56,34 +56,52 @@ export interface ServicesRoutes {
 export type ServicesConfig = ExperimentalServices;
 
 export interface ResolvedServicesResult {
+  source: 'configured';
   services: Service[];
-  source: DetectServicesSource;
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
 
+export interface InferredService {
+  name: Service['name'];
+  type: Service['type'];
+  workspace: Service['workspace'];
+  entrypoint?: Service['entrypoint'];
+  framework?: Service['framework'];
+  runtime?: Service['runtime'];
+  routePrefix?: Service['routePrefix'];
+  schedule?: string;
+  topics?: string[];
+  consumer?: string;
+}
+
 export interface InferredServicesResult {
   source: 'layout' | 'procfile' | 'railway';
   config: ServicesConfig;
-  services: Service[];
+  services: InferredService[];
+  errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
 
-export interface DetectServicesResult extends ResolvedServicesResult {
-  /**
-   * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
-   * - `auto-detected`: inferred from project structure
-   */
-  // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
-  /* Resolved services used by build/dev flows. */
-  resolved: ResolvedServicesResult;
-  /* Inferred services that can be migrated into project config. */
+export interface DetectServicesResult {
+  /* Services resolved from explicit project configuration. */
+  resolved: ResolvedServicesResult | null;
+  /* Services inferred from project structure or other metadata. */
   inferred: InferredServicesResult | null;
 }
 
-export type DetectServicesSource = 'configured' | 'auto-detected';
+export interface BuildableServicesResult {
+  source: 'configured' | 'inferred';
+  services: Service[];
+  routes: ServicesRoutes;
+  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
+}
+
+export type DetectServicesSource =
+  | ResolvedServicesResult['source']
+  | InferredServicesResult['source'];
 
 export interface ServiceDetectionWarning {
   code: string;
