@@ -68,30 +68,6 @@ vercel firewall rules add "Block methods" \
   --action challenge --yes
 ```
 
-### Rate limit example
-
-```bash
-vercel firewall rules add "Rate limit API" \
-  --condition '{"type":"path","op":"pre","value":"/api"}' \
-  --action rate_limit \
-  --rate-limit-window 60 \
-  --rate-limit-requests 100 \
-  --rate-limit-keys ip \
-  --rate-limit-action rate_limit \
-  --yes
-```
-
-### Redirect example
-
-```bash
-vercel firewall rules add "Redirect old path" \
-  --condition '{"type":"path","op":"eq","value":"/old"}' \
-  --action redirect \
-  --redirect-url "/new" \
-  --redirect-permanent \
-  --yes
-```
-
 ### Editing rules
 
 ```bash
@@ -192,11 +168,40 @@ Conditions within a group are **AND'd**. Multiple groups (separated by `--or`) a
 | `rate_limit` | Throttle requests | `--rate-limit-window`, `--rate-limit-requests`, `--rate-limit-keys`, `--rate-limit-algo`, `--rate-limit-action`, `--duration` |
 | `redirect` | Redirect to URL | `--redirect-url`, `--redirect-permanent` |
 
-**Durations:** `1m`, `5m`, `15m`, `30m`, `1h`
+**Durations:** `1m`, `5m`, `15m`, `30m`, `1h` — how long the action persists for a matched visitor. For example, a `challenge` with `--duration 30m` means the visitor sees a challenge page and won't be re-challenged for 30 minutes after passing. Without a duration, the action applies per-request.
 
-**Rate limit keys:** `ip` (default), `ja4`, `header:<name>` (repeatable)
+### Rate limit example
 
-**Rate limit exceeded action:** `log`, `deny`, `challenge`, `rate_limit` (default: `rate_limit` / 429)
+```bash
+vercel firewall rules add "Rate limit API" \
+  --condition '{"type":"path","op":"pre","value":"/api"}' \
+  --action rate_limit \
+  --rate-limit-window 60 \
+  --rate-limit-requests 100 \
+  --rate-limit-keys ip \
+  --rate-limit-action rate_limit \
+  --yes
+```
+
+- `--rate-limit-window` — time window in seconds (10–3600)
+- `--rate-limit-requests` — max requests per window (1–10,000,000)
+- `--rate-limit-keys` — what to count by: `ip` (default), `ja4`, `header:<name>` (repeatable)
+- `--rate-limit-algo` — algorithm: `fixed_window` (default), `token_bucket`
+- `--rate-limit-action` — action when limit exceeded: `log`, `deny`, `challenge`, `rate_limit` (default: `rate_limit` / 429)
+
+### Redirect example
+
+```bash
+vercel firewall rules add "Redirect old path" \
+  --condition '{"type":"path","op":"eq","value":"/old"}' \
+  --action redirect \
+  --redirect-url "/new" \
+  --redirect-permanent \
+  --yes
+```
+
+- `--redirect-url` — destination URL or path (must start with `/`, `http://`, or `https://`)
+- `--redirect-permanent` — permanent redirect (301). Default: temporary (307)
 
 ### JSON rule schema
 
