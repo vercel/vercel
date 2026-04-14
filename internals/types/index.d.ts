@@ -491,7 +491,8 @@ export type ProjectLinkedError = {
     | 'TEAM_DELETED'
     | 'PATH_IS_FILE'
     | 'INVALID_ROOT_DIRECTORY'
-    | 'TOO_MANY_PROJECTS';
+    | 'TOO_MANY_PROJECTS'
+    | 'PROJECT_CREATION_DISABLED';
 };
 
 export type ProjectLinkResult =
