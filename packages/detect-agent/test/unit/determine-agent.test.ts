@@ -55,6 +55,48 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('aider detection', () => {
+    it('detects aider from AI_AGENT=aider', async () => {
+      vi.stubEnv('AI_AGENT', 'aider');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.AIDER },
+      });
+    });
+
+    it('normalizes aider product names from AI_AGENT', async () => {
+      vi.stubEnv('AI_AGENT', 'aider-browser');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.AIDER },
+      });
+    });
+
+    it('normalizes versioned aider product names from AI_AGENT', async () => {
+      vi.stubEnv('AI_AGENT', 'aider-watch@0.82.0');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.AIDER },
+      });
+    });
+
+    it('leaves unrelated custom agents unchanged', async () => {
+      vi.stubEnv('AI_AGENT', 'aiderish');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: 'aiderish' },
+      });
+    });
+  });
+
   describe('github copilot detection', () => {
     it('detects github copilot from AI_AGENT=github-copilot', async () => {
       vi.stubEnv('AI_AGENT', 'github-copilot');
