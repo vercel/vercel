@@ -210,26 +210,27 @@ describe('experimentalAllowBundling', () => {
     });
 
     const lambda = buildResult.output as NodejsLambda;
-    const configFile = lambda.files['___vc_bundled_api_config.json'];
+    const handlerFile = lambda.files['___vc_bundled_api_handler.js'];
 
     expect(lambda.handler).toBe('___vc_bundled_api_handler.js');
-    expect(configFile).toBeDefined();
+    expect(handlerFile).toBeDefined();
     expect(
       lambda.files[
         join('workbench', 'example', 'api', 'test-direct-step-call.js')
       ]
     ).toBeDefined();
 
-    if (!configFile || configFile.type !== 'FileBlob') {
-      throw new Error('Expected bundled handler config to be a FileBlob');
+    // The entrypoint prefix should be inlined directly in the handler file
+    expect(lambda.files['___vc_bundled_api_config.json']).toBeUndefined();
+
+    if (!handlerFile || handlerFile.type !== 'FileBlob') {
+      throw new Error('Expected bundled handler to be a FileBlob');
     }
 
-    const configContents = Buffer.isBuffer(configFile.data)
-      ? configFile.data.toString('utf8')
-      : configFile.data;
-    expect(configContents).toBe(
-      JSON.stringify({ entrypointPrefix: 'workbench/example' })
-    );
+    const handlerContents = Buffer.isBuffer(handlerFile.data)
+      ? handlerFile.data.toString('utf8')
+      : handlerFile.data;
+    expect(handlerContents).toContain('"workbench/example"');
   });
 
   it('should emit handle:hit routes with x-matched-path request header transforms when bundling is enabled', async () => {
@@ -791,10 +792,7 @@ describe('bundling-handler with rootDirectory project', () => {
       recursive: true,
     });
 
-    await fs.writeFile(
-      join(fixtureDir, '___vc_bundled_api_config.json'),
-      JSON.stringify({ entrypointPrefix: 'workbench/example' })
-    );
+    process.env.VERCEL_ENTRYPOINT_PREFIX = 'workbench/example';
 
     await fs.writeFile(
       join(
@@ -851,6 +849,7 @@ describe('bundling-handler with rootDirectory project', () => {
   });
 
   afterAll(async () => {
+    delete process.env.VERCEL_ENTRYPOINT_PREFIX;
     process.chdir(originalCwd);
     if (server) {
       await new Promise<void>((resolve, reject) =>

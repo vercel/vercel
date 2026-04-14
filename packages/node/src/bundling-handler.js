@@ -1,10 +1,10 @@
 //
 // Unified Lambda handler for bundled vanilla API routes.
-// All bundleable lambdas share this exact file (same handler digest).
+// All bundleable lambdas share this handler (same handler digest).
 // It reads x-matched-path to determine which entrypoint to invoke.
 //
-// IMPORTANT: This file must remain entrypoint-agnostic. Do not embed
-// any path-specific constants. The x-matched-path header is set by
+// At build time the builder replaces `process.env.VERCEL_ENTRYPOINT_PREFIX`
+// with the actual prefix string. The x-matched-path header is set by
 // route rules injected by the builder.
 //
 // This runs at Lambda runtime where the handler is invoked with (req, res).
@@ -18,7 +18,7 @@
 //
 
 const http = require('http');
-const { existsSync, readFileSync } = require('fs');
+const { existsSync } = require('fs');
 const { resolve } = require('path');
 const { pathToFileURL } = require('url');
 const { Readable } = require('stream');
@@ -34,27 +34,12 @@ const HTTP_METHODS = [
 ];
 
 const handlerCache = Object.create(null);
-let bundlingConfig;
 
-function getBundlingConfig() {
-  if (bundlingConfig !== undefined) {
-    return bundlingConfig;
-  }
-
-  try {
-    bundlingConfig = JSON.parse(
-      readFileSync(resolve('./___vc_bundled_api_config.json'), 'utf8')
-    );
-  } catch {
-    bundlingConfig = null;
-  }
-
-  return bundlingConfig;
-}
+// At build time the builder replaces the token below with the actual prefix.
+const entrypointPrefix = process.env.VERCEL_ENTRYPOINT_PREFIX;
 
 function getEntrypointCandidates(entrypoint) {
   const candidates = [entrypoint];
-  const entrypointPrefix = getBundlingConfig()?.entrypointPrefix;
 
   if (typeof entrypointPrefix === 'string' && entrypointPrefix) {
     candidates.push(entrypointPrefix + '/' + entrypoint);

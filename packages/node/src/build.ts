@@ -619,13 +619,15 @@ export const build = async ({
       // them into a single Lambda. At runtime, the shared handler uses
       // x-matched-path to route to the correct user entrypoint.
       const bundledHandlerName = '___vc_bundled_api_handler.js';
-      const bundledHandlerConfigName = '___vc_bundled_api_config.json';
       const entrypointPrefix = relative(baseDir, workPath).split(sep).join('/');
-      preparedFiles[bundledHandlerName] = new FileFsRef({
-        fsPath: join(dirname(__filename), 'bundling-handler.js'),
-      });
-      preparedFiles[bundledHandlerConfigName] = new FileBlob({
-        data: JSON.stringify({ entrypointPrefix }),
+      preparedFiles[bundledHandlerName] = new FileBlob({
+        data: readFileSync(
+          join(dirname(__filename), 'bundling-handler.js'),
+          'utf8'
+        ).replace(
+          'process.env.VERCEL_ENTRYPOINT_PREFIX',
+          JSON.stringify(entrypointPrefix)
+        ),
       });
       handler = bundledHandlerName;
 

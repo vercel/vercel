@@ -283,7 +283,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       const lambda = await createLambdaFromFuncDir(funcDir, cwd);
 
       expect(lambda.handler).toEqual('___vc_bundled_api_handler.js');
-      expect(lambda.files?.['___vc_bundled_api_config.json']).toBeDefined();
+      expect(lambda.files?.['___vc_bundled_api_config.json']).toBeUndefined();
       expect(
         lambda.files?.[
           join('workbench', 'example', 'api', 'test-direct-step-call.js')
