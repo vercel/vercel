@@ -297,9 +297,7 @@ export default async function setupAndLink(
       err instanceof Error &&
       (err as NodeJS.ErrnoException).code === 'PROJECT_CREATION_DISABLED'
     ) {
-      output.error(
-        'No existing project found to link.'
-      );
+      output.error('No existing project found to link.');
       return {
         status: 'error',
         exitCode: 1,
