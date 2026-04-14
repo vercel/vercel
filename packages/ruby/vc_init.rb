@@ -6,13 +6,22 @@ require 'json'
 require_relative 'vc__utils__ruby'
 
 $entrypoint = '__VC_HANDLER_FILENAME'
+$framework = ENV['VC_FRAMEWORK']
 
 ENV['RAILS_ENV'] ||= 'production'
 ENV['RACK_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
 
-
 $service_route_prefix = resolve_service_route_prefix
+
+# Zero-config fallback: if SECRET_KEY_BASE is not provided by the user,
+# and this is a Rails app, use the per-deployment generated value.
+if $framework == 'rails' && (ENV['SECRET_KEY_BASE'].nil? || ENV['SECRET_KEY_BASE'].empty?)
+  generated = ENV['VC_GENERATED_SECRET_KEY_BASE']
+  if generated && !generated.empty?
+    ENV['SECRET_KEY_BASE'] = generated
+  end
+end
 
 def rack_handler(httpMethod, path, body, headers, script_name = '')
   require 'rack'

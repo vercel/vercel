@@ -26,6 +26,7 @@ const experimentalExamples = new Set([
   'axum',
   'gin',
   'django',
+  'rails',
 ]);
 
 describe('examples should be detected', () => {
