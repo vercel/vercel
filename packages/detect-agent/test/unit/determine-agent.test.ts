@@ -12,6 +12,12 @@ describe('determineAgent', () => {
     vi.stubEnv('CURSOR_AGENT', '');
     vi.stubEnv('CURSOR_EXTENSION_HOST_ROLE', '');
     vi.stubEnv('GEMINI_CLI', '');
+    vi.stubEnv('PROCESS_LAUNCHED_BY_Q', '');
+    vi.stubEnv('QTERM_SESSION_ID', '');
+    vi.stubEnv('Q_TERM', '');
+    vi.stubEnv('Q_CLI_CLIENT_APPLICATION', '');
+    vi.stubEnv('AMAZON_Q_CHAT_SHELL', '');
+    vi.stubEnv('AMAZON_Q_SIGV4', '');
     vi.stubEnv('CODEX_SANDBOX', '');
     vi.stubEnv('CODEX_CI', '');
     vi.stubEnv('CODEX_THREAD_ID', '');
@@ -183,6 +189,25 @@ describe('determineAgent', () => {
           isAgent: true,
           agent: { name: KNOWN_AGENTS.GEMINI },
         });
+      });
+    });
+  });
+
+  describe('amazon q detection', () => {
+    it.each([
+      ['PROCESS_LAUNCHED_BY_Q', '1'],
+      ['QTERM_SESSION_ID', 'session-123'],
+      ['Q_TERM', '1.0.0'],
+      ['Q_CLI_CLIENT_APPLICATION', 'vscode'],
+      ['AMAZON_Q_CHAT_SHELL', 'bash'],
+      ['AMAZON_Q_SIGV4', '1'],
+    ])('detects Amazon Q from %s', async (envName, value) => {
+      vi.stubEnv(envName, value);
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.AMAZON_Q },
       });
     });
   });
@@ -480,6 +505,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_TRACE_ID', 'some-uuid');
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
+      vi.stubEnv('PROCESS_LAUNCHED_BY_Q', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
       vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
@@ -550,6 +576,30 @@ describe('determineAgent', () => {
       expect(result).toEqual({
         isAgent: true,
         agent: { name: KNOWN_AGENTS.CURSOR_CLI },
+      });
+    });
+
+    it('Amazon Q markers take priority over later agent checks', async () => {
+      vi.stubEnv('QTERM_SESSION_ID', 'session-123');
+      vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('ANTIGRAVITY_AGENT', '1');
+      vi.stubEnv('AUGMENT_AGENT', '1');
+      vi.stubEnv('OPENCODE_CLIENT', 'opencode');
+      vi.stubEnv('CLAUDE_CODE', '1');
+      vi.stubEnv('REPL_ID', '1');
+      vi.stubEnv('COPILOT_MODEL', 'gpt-5');
+      vi.stubEnv('COPILOT_ALLOW_ALL', 'true');
+      vi.stubEnv('COPILOT_GITHUB_TOKEN', 'ghp_xxx');
+      mockFs({
+        '/opt/.devin': mockFs.directory({
+          mode: 0o755,
+        }),
+      });
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.AMAZON_Q },
       });
     });
   });

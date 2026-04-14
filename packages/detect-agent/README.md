@@ -32,6 +32,7 @@ This package can detect the following AI agents and development environments:
 - **Gemini CLI** (Google)
 - **Codex** (OpenAI)
 - **Antigravity** (Google DeepMind)
+- **Amazon Q** (via `PROCESS_LAUNCHED_BY_Q`, `QTERM_SESSION_ID`, `Q_TERM`, `Q_CLI_CLIENT_APPLICATION`, `AMAZON_Q_CHAT_SHELL`, or `AMAZON_Q_SIGV4`)
 - **GitHub Copilot** (via `AI_AGENT=github-copilot|github-copilot-cli`, `COPILOT_MODEL`, `COPILOT_ALLOW_ALL`, or `COPILOT_GITHUB_TOKEN`)
 - **Replit** (online IDE)
 

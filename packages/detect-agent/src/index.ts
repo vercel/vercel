@@ -14,6 +14,7 @@ const CODEX = 'codex' as const;
 const ANTIGRAVITY = 'antigravity' as const;
 const AUGMENT_CLI = 'augment-cli' as const;
 const OPENCODE = 'opencode' as const;
+const AMAZON_Q = 'amazon-q' as const;
 const GITHUB_COPILOT = 'github-copilot' as const;
 const GITHUB_COPILOT_CLI = 'github-copilot-cli' as const;
 
@@ -29,6 +30,7 @@ export type KnownAgentNames =
   | typeof ANTIGRAVITY
   | typeof AUGMENT_CLI
   | typeof OPENCODE
+  | typeof AMAZON_Q
   | typeof GITHUB_COPILOT;
 
 export interface KnownAgentDetails {
@@ -57,6 +59,7 @@ export const KNOWN_AGENTS = {
   ANTIGRAVITY,
   AUGMENT_CLI,
   OPENCODE,
+  AMAZON_Q,
   GITHUB_COPILOT,
 } as const;
 
@@ -91,6 +94,17 @@ export async function determineAgent(): Promise<AgentResult> {
 
   if (process.env.GEMINI_CLI) {
     return { isAgent: true, agent: { name: GEMINI } };
+  }
+
+  if (
+    process.env.PROCESS_LAUNCHED_BY_Q ||
+    process.env.QTERM_SESSION_ID ||
+    process.env.Q_TERM ||
+    process.env.Q_CLI_CLIENT_APPLICATION ||
+    process.env.AMAZON_Q_CHAT_SHELL ||
+    process.env.AMAZON_Q_SIGV4
+  ) {
+    return { isAgent: true, agent: { name: AMAZON_Q } };
   }
 
   if (
