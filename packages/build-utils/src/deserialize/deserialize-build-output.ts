@@ -54,6 +54,12 @@ export interface DeserializeBuildOutputCoreResult {
   meta?: DeserializeBuildOutputMeta;
 }
 
+export type FinalizeBuildOutputCoreResult = BuildResultV2TypicalWithCron;
+
+export interface FinalizeBuildOutputCoreResultOptions {
+  defaultMeta?: DeserializeBuildOutputMeta;
+}
+
 export interface DeserializeBuildOutputCoreOptions<
   TLambda extends Lambda = Lambda,
   TEdgeFunction extends EdgeFunction = EdgeFunction,
@@ -233,6 +239,24 @@ async function defaultGroupLambdas({
   lambdas,
 }: DeserializeBuildOutputGroupLambdasOptions): Promise<Record<string, Lambda>> {
   return lambdas;
+}
+
+export function finalizeBuildOutputCoreResult(
+  { config, flags, output, framework, meta }: DeserializeBuildOutputCoreResult,
+  options: FinalizeBuildOutputCoreResultOptions = {}
+): FinalizeBuildOutputCoreResult {
+  return {
+    wildcard: config.wildcard,
+    images: config.images,
+    crons: config.crons,
+    // TODO: Remove `config.flags` once removed from existing callers.
+    flags: flags ? flags : config.flags,
+    routes: config.routes,
+    output,
+    framework,
+    deploymentId: config.deploymentId,
+    meta: meta ?? options.defaultMeta,
+  };
 }
 
 export async function deserializeBuildOutputCore<

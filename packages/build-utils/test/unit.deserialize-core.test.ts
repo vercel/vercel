@@ -6,10 +6,13 @@ import { describe, expect, it } from 'vitest';
 import {
   deserializeBuildOutputCore,
   deserializeLambda,
+  finalizeBuildOutputCoreResult,
   Lambda,
   NowBuildError,
   validateDeploymentId,
+  type DeploymentFlagLegacy,
   type DeserializeNodejsLambdaParams,
+  type DeploymentFlags,
   type SerializedNodejsLambda,
 } from '../src';
 
@@ -185,5 +188,87 @@ describe('deserialize shared core', () => {
     } finally {
       await fs.remove(root);
     }
+  });
+
+  it('finalizes the core result into the existing caller shape', () => {
+    const flags: DeploymentFlags = {
+      definitions: {
+        foo: {
+          url: 'https://example.com/flags/foo',
+        },
+      },
+    };
+
+    const result = finalizeBuildOutputCoreResult({
+      config: {
+        version: 3,
+        wildcard: [{ domain: 'example.com', value: '1' }],
+        images: {
+          sizes: [16],
+          domains: ['example.com'],
+        },
+        crons: [{ path: '/api/cron', schedule: '0 0 * * *' }],
+        routes: [{ src: '/(.*)', dest: '/api' }],
+        deploymentId: 'dpl_123',
+      },
+      flags,
+      output: {},
+      framework: { version: 'nextjs@14.0.0' },
+      meta: { hasServerActions: true },
+    });
+
+    expect(result).toEqual({
+      wildcard: [{ domain: 'example.com', value: '1' }],
+      images: {
+        sizes: [16],
+        domains: ['example.com'],
+      },
+      crons: [{ path: '/api/cron', schedule: '0 0 * * *' }],
+      flags,
+      routes: [{ src: '/(.*)', dest: '/api' }],
+      output: {},
+      framework: { version: 'nextjs@14.0.0' },
+      deploymentId: 'dpl_123',
+      meta: { hasServerActions: true },
+    });
+  });
+
+  it('applies default metadata when the core result does not set meta', () => {
+    const result = finalizeBuildOutputCoreResult(
+      {
+        config: {
+          version: 3,
+        },
+        output: {},
+      },
+      {
+        defaultMeta: {
+          hasServerActions: false,
+        },
+      }
+    );
+
+    expect(result.meta).toEqual({ hasServerActions: false });
+  });
+
+  it('falls back to legacy config flags when flags.json is absent', () => {
+    const legacyFlags: DeploymentFlagLegacy[] = [
+      {
+        key: 'foo',
+        metadata: {
+          description: 'flag',
+        },
+      },
+    ];
+
+    const result = finalizeBuildOutputCoreResult({
+      config: {
+        version: 3,
+        flags: legacyFlags,
+      },
+      output: {},
+    });
+
+    expect(result.flags).toEqual(legacyFlags);
   });
 });

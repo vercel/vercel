@@ -3,10 +3,31 @@ import type FileFsRef from '../file-fs-ref';
 import type { Lambda } from '../lambda';
 import type { NodejsLambda } from '../nodejs-lambda';
 import type { Prerender } from '../prerender';
-import type { BuildResultV2Typical, FlagDefinitions, Service } from '../types';
+import type { BuildResultV2Typical, Service } from '../types';
+
+type FlagJSONArray = readonly FlagJSONValue[];
+
+type FlagJSONValue =
+  | string
+  | boolean
+  | number
+  | null
+  | FlagJSONArray
+  | { [key: string]: FlagJSONValue };
+
+interface FlagOption {
+  value: FlagJSONValue;
+  label?: string;
+}
+
+interface FlagDefinition {
+  options?: FlagOption[];
+  url?: string;
+  description?: string;
+}
 
 export interface DeploymentFlags {
-  definitions: FlagDefinitions;
+  definitions: Record<string, FlagDefinition>;
 }
 
 /**
@@ -84,7 +105,10 @@ export interface BuildOutputCron {
   path: string;
 }
 
-export type BuildResultV2TypicalWithCron = BuildResultV2Typical & {
+export type BuildResultV2TypicalWithCron = Omit<
+  BuildResultV2Typical,
+  'flags'
+> & {
   crons?: BuildOutputCron[];
   flags?: DeploymentFlags | DeploymentFlagLegacy[];
   deploymentId?: string;

@@ -42,6 +42,7 @@ describe('deserialize shared types', () => {
       definitions: {
         foo: {
           description: 'flag',
+          url: 'https://example.com/flags/foo',
         },
       },
     };
@@ -71,6 +72,9 @@ describe('deserialize shared types', () => {
 
     expect(currentBuildResult.meta?.hasServerActions).toBe(true);
     expect(currentBuildResult.deploymentId).toBe('dpl_123');
+    expect(currentFlags.definitions.foo?.url).toBe(
+      'https://example.com/flags/foo'
+    );
     expect(Array.isArray(legacyBuildResult.flags)).toBe(true);
   });
 

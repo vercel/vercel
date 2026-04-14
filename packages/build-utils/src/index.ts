@@ -240,11 +240,14 @@ export {
 } from './deserialize/deserialize-edge-function';
 export {
   deserializeBuildOutputCore,
+  finalizeBuildOutputCoreResult,
   type DeserializeBuildOutputCoreOptions,
   type DeserializeBuildOutputCoreResult,
   type DeserializeBuildOutputGroupLambdasOptions,
   type DeserializeBuildOutputInspectLambdaOptions,
   type DeserializeBuildOutputMeta,
+  type FinalizeBuildOutputCoreResultOptions,
+  type FinalizeBuildOutputCoreResult,
 } from './deserialize/deserialize-build-output';
 export type {
   BuildOutputConfig,
