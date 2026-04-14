@@ -95,4 +95,38 @@ describe('printFlagEnvironmentDetails', () => {
     expect(printed).toContain('split (Control: 25%, Variant A: 75%)');
     expect(printed).toContain('Default split: Control: 25%, Variant A: 75%');
   });
+
+  it('shows when a rule comparison is case-insensitive', () => {
+    const flag: Flag = {
+      ...testFlag,
+      environments: {
+        ...testFlag.environments,
+        production: {
+          ...testFlag.environments.production,
+          rules: [
+            {
+              ...testFlag.environments.production.rules[0],
+              conditions: [
+                {
+                  ...testFlag.environments.production.rules[0].conditions[0],
+                  cmpOptions: { ignoreCase: true },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    printFlagEnvironmentDetails(flag);
+
+    const printed = stripAnsi(
+      vi
+        .mocked(output.print)
+        .mock.calls.map(([message]) => message)
+        .join('')
+    );
+
+    expect(printed).toContain('if user.plan is (case-insensitive) pro');
+  });
 });

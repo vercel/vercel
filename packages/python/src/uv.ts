@@ -25,8 +25,21 @@ interface UvPythonEntry {
   implementation: string;
 }
 
+const KNOWN_UV_PATH = '/usr/local/bin/uv';
+
+/**
+ * On the Vercel build image, return the known uv path directly instead of
+ * scanning PATH via `which`.
+ */
+export function findUvOnBuildImage(
+  knownPath: string = KNOWN_UV_PATH
+): string | null {
+  if (!process.env.VERCEL_BUILD_IMAGE) return null;
+  return fs.existsSync(knownPath) ? knownPath : null;
+}
+
 export function findUvInPath(): string | null {
-  return which.sync('uv', { nothrow: true });
+  return findUvOnBuildImage() ?? which.sync('uv', { nothrow: true });
 }
 
 export function getUvCacheDir(workPath: string): string {
@@ -270,6 +283,9 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
 }
 
 export async function findUvBinary(pythonPath: string): Promise<string | null> {
+  const buildImageUv = findUvOnBuildImage();
+  if (buildImageUv) return buildImageUv;
+
   const found = which.sync('uv', { nothrow: true });
   if (found) return found;
 
