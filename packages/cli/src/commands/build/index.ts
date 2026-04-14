@@ -5,8 +5,6 @@ import minimatch from 'minimatch';
 import { dirname, join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
 import { readdirSync, statSync } from 'fs';
-import type { Writable } from 'stream';
-
 import {
   download,
   FileBlob,
@@ -168,59 +166,98 @@ export interface BuildsManifest {
 }
 
 /**
- * Narrow view of `Client` — only the fields `doBuild` actually reads.
- * Existing callers pass a full `Client`; `vercelBuild` passes a plain object.
+ * Narrow view of `Client` - only the fields `doBuild` actually reads.
  */
 type BuildClient = Pick<Client, 'localConfigPath' | 'nonInteractive'>;
 
-/**
- * Options accepted by the programmatic {@link vercelBuild} entry point.
- * Every field matches data that existing callers already have, so they
- * never need to construct a full CLI `Client`.
- */
-export interface VercelBuildConfig {
-  /** Working directory — typically the repo root or project root. */
+interface PrewarmConfig {
   cwd: string;
-  /** Directory where Build Output API artifacts are written. */
   outputDir: string;
-  /** Project link & settings — same shape as `.vercel/project.json`. */
   project: ProjectLinkAndSettings;
-  /** Build target. @default 'preview' */
   target?: string;
-  /** Produce a standalone build. @default false */
-  standalone?: boolean;
-  /** Writable stream for user-facing build output (defaults to `process.stderr`). */
-  output?: Writable;
+  env?: Record<string, string>;
+}
+
+// Inline validation so parse errors surface clearly while iterating.
+function parsePrewarmConfig(raw: string): PrewarmConfig {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`[prewarm] Invalid JSON on stdin: ${err}`);
+  }
+
+  if (typeof json !== 'object' || json === null) {
+    throw new Error(`[prewarm] Expected JSON object, got ${typeof json}`);
+  }
+
+  const obj = json as Record<string, unknown>;
+
+  for (const key of ['cwd', 'outputDir'] as const) {
+    if (typeof obj[key] !== 'string') {
+      throw new Error(
+        `[prewarm] Missing or invalid field "${key}" (expected string)`
+      );
+    }
+  }
+
+  if (typeof obj.project !== 'object' || obj.project === null) {
+    throw new Error(
+      '[prewarm] Missing or invalid field "project" (expected object)'
+    );
+  }
+
+  const project = obj.project as Record<string, unknown>;
+  for (const key of ['projectId', 'orgId'] as const) {
+    if (typeof project[key] !== 'string') {
+      throw new Error(
+        `[prewarm] Missing or invalid field "project.${key}" (expected string)`
+      );
+    }
+  }
+
+  if (typeof project.settings !== 'object' || project.settings === null) {
+    throw new Error(
+      '[prewarm] Missing or invalid field "project.settings" (expected object)'
+    );
+  }
+
+  if (
+    obj.env !== undefined &&
+    (typeof obj.env !== 'object' || obj.env === null)
+  ) {
+    throw new Error('[prewarm] Invalid field "env" (expected object)');
+  }
+
+  return obj as unknown as PrewarmConfig;
 }
 
 /**
- * Run `vercel build` programmatically — no CLI startup, no arg parsing,
- * no telemetry, no interactive prompts.
+ * MVP: --experimental-prewarm mode.
  *
- * The caller is responsible for:
- *  - setting platform env vars (`VERCEL=1`, `NOW_BUILDER=1`) if desired
- *  - loading project env vars (`.env.*`, API fetch, etc.)
- *  - writing `.vercel/project.json` if builders need it on disk
- *  - restoring `process.env` after the call returns
- *
- * On failure the error is written to `builds.json` / `config.json` in
- * `outputDir` **and** re-thrown so the caller can handle it.
+ * Existing callers spawn `vercel build --experimental-prewarm` early so
+ * Node.js and all modules are warm by the time a build request arrives.
+ * The process blocks on stdin, reads a JSON config, then runs doBuild().
+ * Logs flow through the normal piped stdout/stderr.
  */
-export async function vercelBuild(config: VercelBuildConfig): Promise<void> {
-  const {
-    cwd,
-    outputDir,
-    project,
-    target = 'preview',
-    standalone = false,
-  } = config;
-
-  // Redirect the output singleton if a custom stream was provided.
-  const prevStream = output.stream;
-  if (config.output) {
-    output.initialize({ stream: config.output as any });
+async function handlePrewarmBuild(): Promise<number> {
+  // Read all of stdin. The caller sends JSON config then closes the stream.
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
   }
+  const raw = Buffer.concat(chunks).toString('utf8');
 
+  const config = parsePrewarmConfig(raw);
+
+  const { cwd, outputDir, project, target = 'preview' } = config;
+
+  // Apply build environment variables from the caller.
+  if (config.env) {
+    for (const [key, val] of Object.entries(config.env)) {
+      process.env[key] = val;
+    }
+  }
   process.env.__VERCEL_BUILD_RUNNING = '1';
 
   const buildsJson: BuildsManifest = {
@@ -230,11 +267,8 @@ export async function vercelBuild(config: VercelBuildConfig): Promise<void> {
     cliVersion: cliPkg.version,
   };
 
-  // Delete stale output from a previous build and create a fresh dir.
   await fs.remove(outputDir);
 
-  // Collect trace events so we can write cli_traces.json diagnostics,
-  // mirroring what the CLI framework does via InMemoryReporter.
   const traceEvents: unknown[] = [];
   const reporter: Reporter = { report: e => traceEvents.push(e) };
   const span = new Span({ name: 'vc', reporter });
@@ -250,14 +284,12 @@ export async function vercelBuild(config: VercelBuildConfig): Promise<void> {
           cwd,
           outputDir,
           s,
-          standalone
+          false
         )
       );
+    return 0;
   } catch (err: any) {
     output.prettyError(err);
-
-    // Serialize the error into builds.json so callers that inspect the
-    // output directory can still extract structured error information.
     buildsJson.error = toEnumerableError(err);
     await fs.outputJSON(join(outputDir, 'builds.json'), buildsJson, {
       spaces: 2,
@@ -265,16 +297,12 @@ export async function vercelBuild(config: VercelBuildConfig): Promise<void> {
     await fs.writeJSON(
       join(outputDir, 'config.json'),
       { version: 3 },
-      {
-        spaces: 2,
-      }
+      { spaces: 2 }
     );
-    throw err;
+    return 1;
   } finally {
     span.stop();
     resetCustomInstallCommandSet();
-
-    // Write CLI diagnostic traces
     try {
       const diagnosticsDir = join(outputDir, 'diagnostics');
       await fs.mkdirp(diagnosticsDir);
@@ -282,14 +310,15 @@ export async function vercelBuild(config: VercelBuildConfig): Promise<void> {
     } catch {
       // best-effort
     }
-
-    if (config.output) {
-      output.initialize({ stream: prevStream });
-    }
   }
 }
 
 export default async function main(client: Client): Promise<number> {
+  // MVP: prewarm mode - skip all CLI setup, wait for config on stdin
+  if (process.argv.includes('--experimental-prewarm')) {
+    return handlePrewarmBuild();
+  }
+
   const telemetryClient = new BuildTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
