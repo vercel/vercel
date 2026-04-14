@@ -75,7 +75,8 @@ export const createSubcommand = {
       shorthand: 'k',
       type: String,
       deprecated: false,
-      description: 'The type of the flag value (boolean, string, or number)',
+      description:
+        'The type of the flag value (boolean, string, number, or json)',
       argument: 'KIND',
     },
     {
@@ -92,7 +93,7 @@ export const createSubcommand = {
       type: [String],
       deprecated: false,
       description:
-        'Variant definition as VALUE[=LABEL] (can be repeated for string and number flags)',
+        'Variant definition as VALUE[=LABEL] (can be repeated for string, number, and json flags)',
       argument: 'VALUE[=LABEL]',
     },
   ],
@@ -108,6 +109,10 @@ export const createSubcommand = {
     {
       name: 'Create a string feature flag with explicit variants',
       value: `${packageName} flags add my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Create a JSON feature flag with explicit variants',
+      value: `${packageName} flags add layout-config --kind json --variant '{"theme":"light"}'=Light --variant '{"theme":"dark","sidebar":true}'=Dark`,
     },
   ],
 } as const;

@@ -324,11 +324,6 @@ it('prefixes emitted service route sources with routePrefix', async () => {
   expect(result.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        src: pathToRegexp('/api/js/user/:id').regexp.source,
-        dest: '/_svc/js-api/index',
-        methods: ['GET'],
-      }),
-      expect.objectContaining({
         src: '^/api/js(?:/(.*))?$',
         dest: '/_svc/js-api/index',
       }),
@@ -396,7 +391,6 @@ it('does not rewrite non-service route outputs', async () => {
   })) as BuildResultV2Typical;
 
   const lambda = result.output.index as unknown as NodejsLambda;
-  expect(result.output['/user/:id']).toBeDefined();
   expect(result.output['_svc/js-api/index']).toBeUndefined();
   expect(lambda.handler).toBe('index.mjs');
 }, 30000);

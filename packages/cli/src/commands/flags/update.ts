@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -302,7 +303,7 @@ function applyVariantUpdates(
     const existingVariant = variants[variantIndex];
 
     const hasChanged =
-      existingVariant.value !== nextValue ||
+      !deepEqual(existingVariant.value, nextValue) ||
       existingVariant.label !== nextLabel;
 
     variants[variantIndex] = {
@@ -328,7 +329,7 @@ function parseUpdatedVariantValue(
   valueInput: string,
   kind: Flag['kind'],
   existingVariant: FlagVariant
-): string | number | boolean {
+): FlagVariant['value'] {
   const validationError = validateVariantValue(valueInput, kind);
   if (validationError) {
     throw new Error(validationError);
@@ -346,6 +347,10 @@ function parseUpdatedVariantValue(
 
   if (kind === 'number') {
     return Number(valueInput);
+  }
+
+  if (kind === 'json') {
+    return JSON.parse(valueInput) as FlagVariant['value'];
   }
 
   return valueInput;
@@ -370,6 +375,14 @@ function validateVariantValue(
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) {
       return 'Number variants must be valid numeric values';
+    }
+  }
+
+  if (kind === 'json') {
+    try {
+      JSON.parse(value);
+    } catch {
+      return 'JSON variant values must be valid JSON';
     }
   }
 

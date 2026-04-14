@@ -24,6 +24,7 @@ describe('blob list-stores', () => {
     {
       id: 'store_abc123def456ghij',
       name: 'my-store',
+      type: 'blob',
       projectsMetadata: [
         {
           projectId: 'proj_123',
@@ -35,6 +36,7 @@ describe('blob list-stores', () => {
     {
       id: 'store_xyz789uvw012klmn',
       name: 'other-store',
+      type: 'blob',
       projectsMetadata: [
         {
           projectId: 'proj_456',
@@ -46,6 +48,7 @@ describe('blob list-stores', () => {
     {
       id: 'store_shared123456789',
       name: 'shared-store',
+      type: 'blob',
       projectsMetadata: [
         {
           projectId: 'proj_123',
@@ -257,6 +260,7 @@ describe('blob list-stores', () => {
           {
             id: 'store_unrelated1234567',
             name: 'unrelated-store',
+            type: 'blob',
             projectsMetadata: [
               { projectId: 'proj_other', name: 'other', environments: [] },
             ],
@@ -302,6 +306,120 @@ describe('blob list-stores', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:all', value: 'TRUE' },
       ]);
+    });
+  });
+
+  describe('--json', () => {
+    it('should print JSON to stdout and skip interactive UI', async () => {
+      client.fetch = vi.fn().mockResolvedValue({
+        stores: [
+          {
+            id: 'store_json',
+            name: 'json-store',
+            type: 'blob',
+            region: 'cdg1',
+            size: 5000,
+            count: 10,
+            billingState: 'active',
+            status: 'available',
+            createdAt: 1705420800000,
+            updatedAt: 1705507200000,
+            projectsMetadata: [
+              { projectId: 'proj_123', name: 'my-project', environments: [] },
+            ],
+          },
+        ],
+      });
+
+      const exitCode = await listStores(client, ['--json']);
+
+      expect(exitCode).toBe(0);
+      expect(selectInputMock).not.toHaveBeenCalled();
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.stores[0]).toMatchObject({
+        id: 'store_json',
+        name: 'json-store',
+        region: 'cdg1',
+        projects: [{ id: 'proj_123', name: 'my-project' }],
+      });
+    });
+
+    it('should output empty stores array when none match', async () => {
+      client.fetch = vi.fn().mockResolvedValue({ stores: [] });
+
+      const exitCode = await listStores(client, ['--json']);
+
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+        stores: [],
+      });
+    });
+
+    it('should track json flag in telemetry', async () => {
+      client.fetch = vi.fn().mockResolvedValue({ stores: mockStores });
+
+      await listStores(client, ['--json']);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
+    });
+  });
+
+  describe('--no-projects', () => {
+    beforeEach(() => {
+      (client.stdin as any).isTTY = false;
+    });
+
+    it('should omit Projects column from table output', async () => {
+      client.fetch = vi.fn().mockResolvedValue({ stores: mockStores });
+
+      const exitCode = await listStores(client, ['--no-projects']);
+
+      expect(exitCode).toBe(0);
+      const printCall = mockedOutput.print.mock.calls[0][0];
+      expect(printCall).toContain('Name');
+      expect(printCall).not.toContain('Projects');
+    });
+
+    it('should track --no-projects telemetry', async () => {
+      client.fetch = vi.fn().mockResolvedValue({ stores: mockStores });
+
+      await listStores(client, ['--no-projects']);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:no-projects', value: 'TRUE' },
+      ]);
+    });
+  });
+
+  describe('non-blob stores', () => {
+    it('should exclude non-blob store types from results', async () => {
+      client.fetch = vi.fn().mockResolvedValue({
+        stores: [
+          {
+            id: 'blob-one',
+            name: 'blob-store',
+            type: 'blob',
+            projectsMetadata: [],
+          },
+          {
+            id: 'pg-one',
+            name: 'postgres-store',
+            type: 'postgres',
+            projectsMetadata: [],
+          },
+        ],
+      });
+
+      const exitCode = await listStores(client, ['--all']);
+
+      expect(exitCode).toBe(0);
+
+      const choices = selectInputMock.mock.calls[0][0].choices;
+      const storeValues = choices.map((c: { value: string }) => c.value);
+      expect(storeValues).toContain('blob-one');
+      expect(storeValues).not.toContain('pg-one');
     });
   });
 
