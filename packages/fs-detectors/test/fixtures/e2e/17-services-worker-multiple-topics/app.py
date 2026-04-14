@@ -56,7 +56,11 @@ def root():
 def enqueue():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
-        payload = {}
+        payload = {
+          'orderId': 42,
+          'eventId': 24,
+          'action': 'test'
+        }
 
     try:
         order_payload = payload.copy()
