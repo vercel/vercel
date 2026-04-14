@@ -235,7 +235,7 @@ export async function resolveBuilders(
           paths: [__dirname],
         });
         builderPkg = await readJSON(pkgPath);
-        output.debug(`Found "${name}@${builderPkg.version}" in CLI bundle`);
+        output.debug(`Found "${name}@${builderPkg?.version}" in CLI bundle`);
       } catch (err: unknown) {
         if (!isErrnoException(err) || err.code !== 'MODULE_NOT_FOUND') {
           throw err;
