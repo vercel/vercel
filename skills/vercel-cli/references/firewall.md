@@ -168,7 +168,7 @@ Conditions within a group are **AND'd**. Multiple groups (separated by `--or`) a
 | `rate_limit` | Throttle requests | `--rate-limit-window`, `--rate-limit-requests`, `--rate-limit-keys`, `--rate-limit-algo`, `--rate-limit-action`, `--duration` |
 | `redirect` | Redirect to URL | `--redirect-url`, `--redirect-permanent` |
 
-**Durations:** `1m`, `5m`, `15m`, `30m`, `1h` — how long the action persists for a matched visitor. For example, a `challenge` with `--duration 30m` means the visitor sees a challenge page and won't be re-challenged for 30 minutes after passing. Without a duration, the action applies per-request.
+**Durations:** `1m`, `5m`, `15m`, `30m`, `1h` — makes the action persistent for the matched client. A `deny` with `--duration 30m` blocks the client for 30 minutes. A `challenge` with `--duration 30m` challenges once and grants a 30-minute pass. Without a duration, the action is evaluated per-request.
 
 ### Rate limit example
 
