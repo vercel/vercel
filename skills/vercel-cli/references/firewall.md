@@ -1,6 +1,6 @@
 # Firewall
 
-`vercel firewall` manages your project's Web Application Firewall (WAF). It provides multiple layers of protection:
+`vercel firewall` manages your project's [Web Application Firewall (WAF)](https://vercel.com/docs/vercel-firewall/vercel-waf). It provides multiple layers of protection:
 
 - **Custom rules** — match requests by path, method, IP, geo, headers, cookies, and more, then deny, challenge, rate limit, log, or redirect them
 - **IP blocks** — block specific IPs or CIDR ranges from accessing your project
@@ -17,7 +17,7 @@ vercel firewall diff                                  # show unpublished draft c
 
 ## Custom Rules
 
-Custom rules let you define precise traffic policies based on request attributes. Use them to block abusive traffic, rate limit APIs, challenge suspicious requests, redirect legacy paths, or log traffic for monitoring.
+[Custom rules](https://vercel.com/docs/security/vercel-waf/custom-rules) let you define precise traffic policies based on request attributes. Use them to block abusive traffic, rate limit APIs, challenge suspicious requests, redirect legacy paths, or log traffic for monitoring.
 
 Rule changes are staged as drafts — run `vercel firewall publish --yes` to make them live.
 
@@ -239,7 +239,7 @@ For `--json` mode, the full rule structure:
 
 ## IP Blocks
 
-Block specific IP addresses or CIDR ranges from accessing your project entirely. Use for known malicious IPs, abuse sources, or to restrict access to specific networks.
+[IP blocking](https://vercel.com/docs/security/vercel-waf/ip-blocking) lets you block specific IP addresses or CIDR ranges from accessing your project entirely. Use for known malicious IPs, abuse sources, or to restrict access to specific networks.
 
 IP block changes are staged as drafts — run `vercel firewall publish --yes` to make them live.
 
@@ -270,7 +270,7 @@ vercel firewall system-bypass remove 10.0.0.1 --yes                    # remove 
 
 ## Attack Mode
 
-Emergency response for active attacks. When enabled, every visitor sees a verification challenge page before accessing your site. Use when you're under a DDoS attack or experiencing a surge of malicious traffic.
+[Attack Challenge Mode](https://vercel.com/docs/attack-challenge-mode) is an emergency response for active attacks. When enabled, every visitor sees a verification challenge page before accessing your site. Use when you're under a DDoS attack or experiencing a surge of malicious traffic.
 
 Takes effect immediately — no publishing required. **Requires interactive confirmation — blocked for agents/scripts due to the severity of enabling this.**
 
@@ -283,7 +283,7 @@ vercel firewall attack-mode disable --yes                # stop challenging visi
 
 ## System Mitigations
 
-Vercel automatically mitigates DDoS attacks and filters malicious traffic. In rare cases (debugging false positives, testing), you may need to temporarily pause these protections.
+Vercel automatically [mitigates DDoS attacks](https://vercel.com/docs/security/ddos-mitigation) and filters malicious traffic. In rare cases (debugging false positives, testing), you may need to temporarily pause these protections.
 
 Takes effect immediately — no publishing required. Automatically resumes after 24 hours. **Requires interactive confirmation — blocked for agents/scripts due to the severity of pausing DDoS protection.**
 
