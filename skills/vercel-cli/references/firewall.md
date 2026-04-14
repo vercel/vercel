@@ -117,6 +117,126 @@ vercel firewall rules reorder "My Rule" --position 3 --yes  # move to position (
 
 Rules are evaluated in priority order (top to bottom). Use `reorder` to control which rules are checked first.
 
+### Conditions
+
+Each `--condition` is a JSON object:
+
+```json
+{
+  "type": "path",          // condition type (required)
+  "op": "pre",             // operator (required)
+  "value": "/api",         // value (required for most operators, omit for ex/nex)
+  "key": "Authorization",  // key (required for header, cookie, query types)
+  "neg": true              // negate the condition (optional, default false)
+}
+```
+
+Conditions within a group are **AND'd**. Multiple groups (separated by `--or`) are **OR'd**.
+
+### Operators
+
+| Operator | Meaning | Value | Negated form |
+|----------|---------|-------|--------------|
+| `eq` | Equals | string | `neq` or `neg: true` |
+| `sub` | Contains | string | `neg: true` |
+| `pre` | Starts with | string | `neg: true` |
+| `suf` | Ends with | string | `neg: true` |
+| `re` | Matches regex | string | `neg: true` |
+| `ex` | Exists | none | `nex` |
+| `inc` | Is any of | array or comma-separated | `ninc` |
+| `gt` | Greater than | number | `neg: true` |
+| `gte` | Greater or equal | number | `neg: true` |
+| `lt` | Less than | number | `neg: true` |
+| `lte` | Less or equal | number | `neg: true` |
+
+### Condition types
+
+| Type | Category | Description | Needs `key` |
+|------|----------|-------------|-------------|
+| `path` | Request | URL path | No |
+| `raw_path` | Request | Pre-rewrite URL path | No |
+| `target_path` | Request | Post-rewrite destination path | No |
+| `route` | Request | Route pattern (e.g., /blog/[slug]) | No |
+| `server_action` | Request | Next.js Server Action name | No |
+| `method` | Request | HTTP method (GET, POST, etc.) | No |
+| `host` | Request | Request hostname | No |
+| `protocol` | Request | HTTP protocol version | No |
+| `scheme` | Request | http or https | No |
+| `environment` | Request | preview or production | No |
+| `region` | Request | Vercel edge region | No |
+| `ssl` | Request | SSL/TLS connection (exists only) | No |
+| `rate_limit_api_id` | Request | Rate limit API grouping ID | No |
+| `ip_address` | Client | Client IP or CIDR range | No |
+| `user_agent` | Client | User-Agent string | No |
+| `geo_country` | Geo | Country code (ISO 3166-1 alpha-2) | No |
+| `geo_continent` | Geo | Continent code (AF, AN, AS, EU, NA, OC, SA) | No |
+| `geo_country_region` | Geo | State or region code | No |
+| `geo_city` | Geo | City name | No |
+| `geo_as_number` | Geo | Autonomous System Number | No |
+| `header` | Key-value | HTTP request header | **Yes** |
+| `cookie` | Key-value | HTTP cookie | **Yes** |
+| `query` | Key-value | URL query parameter | **Yes** |
+| `ja4_digest` | Security | JA4 TLS fingerprint | No |
+| `ja3_digest` | Security | JA3 TLS fingerprint (Enterprise) | No |
+| `bot_name` | Bot | Verified bot name (Security Plus) | No |
+| `bot_category` | Bot | Verified bot category (Security Plus) | No |
+
+### Actions
+
+| Action | Description | Extra flags |
+|--------|-------------|-------------|
+| `deny` | Block request (403) | `--duration` |
+| `challenge` | Show verification page | `--duration` |
+| `log` | Log without blocking | `--duration` |
+| `bypass` | Skip other rules | `--duration` |
+| `rate_limit` | Throttle requests | `--rate-limit-window`, `--rate-limit-requests`, `--rate-limit-keys`, `--rate-limit-algo`, `--rate-limit-action`, `--duration` |
+| `redirect` | Redirect to URL | `--redirect-url`, `--redirect-permanent` |
+
+**Durations:** `1m`, `5m`, `15m`, `30m`, `1h`
+
+**Rate limit keys:** `ip` (default), `ja4`, `header:<name>` (repeatable)
+
+**Rate limit exceeded action:** `log`, `deny`, `challenge`, `rate_limit` (default: `rate_limit` / 429)
+
+### JSON rule schema
+
+For `--json` mode, the full rule structure:
+
+```json
+{
+  "name": "Rule name (max 160 chars)",
+  "description": "Optional description (max 256 chars)",
+  "active": true,
+  "conditionGroup": [
+    {
+      "conditions": [
+        { "type": "path", "op": "pre", "value": "/api" },
+        { "type": "method", "op": "inc", "value": ["POST", "PUT"] }
+      ]
+    },
+    {
+      "conditions": [
+        { "type": "ip_address", "op": "eq", "value": "1.2.3.4" }
+      ]
+    }
+  ],
+  "action": {
+    "mitigate": {
+      "action": "rate_limit",
+      "actionDuration": "1h",
+      "rateLimit": {
+        "algo": "fixed_window",
+        "window": 60,
+        "limit": 100,
+        "keys": ["ip"],
+        "action": "rate_limit"
+      },
+      "redirect": null
+    }
+  }
+}
+```
+
 ## IP Blocks
 
 Block specific IP addresses or CIDR ranges from accessing your project entirely. Use for known malicious IPs, abuse sources, or to restrict access to specific networks.
@@ -181,108 +301,6 @@ vercel firewall diff                                  # review staged changes
 vercel firewall publish --yes                         # push all draft changes to production
 vercel firewall discard --yes                         # throw away all draft changes
 ```
-
-## Conditions Reference
-
-Each `--condition` is a JSON object:
-
-```json
-{
-  "type": "path",          // condition type (required)
-  "op": "pre",             // operator (required)
-  "value": "/api",         // value (required for most operators, omit for ex/nex)
-  "key": "Authorization",  // key (required for header, cookie, query types)
-  "neg": true              // negate the condition (optional, default false)
-}
-```
-
-### Operators
-
-| Operator | Meaning | Value | Negated form |
-|----------|---------|-------|--------------|
-| `eq` | Equals | string | `neq` or `neg: true` |
-| `sub` | Contains | string | `neg: true` |
-| `pre` | Starts with | string | `neg: true` |
-| `suf` | Ends with | string | `neg: true` |
-| `re` | Matches regex | string | `neg: true` |
-| `ex` | Exists | none | `nex` |
-| `inc` | Is any of | array or comma-separated | `ninc` |
-| `gt` | Greater than | number | `neg: true` |
-| `gte` | Greater or equal | number | `neg: true` |
-| `lt` | Less than | number | `neg: true` |
-| `lte` | Less or equal | number | `neg: true` |
-
-### Condition Types
-
-**Request:** `path`, `raw_path`, `target_path`, `route`, `server_action`, `method`, `host`, `protocol`, `scheme`, `environment`, `region`, `ssl`, `rate_limit_api_id`
-
-**Client:** `ip_address`, `user_agent`
-
-**Geo:** `geo_country`, `geo_continent`, `geo_country_region`, `geo_city`, `geo_as_number`
-
-**Key-value (require `key` field):** `header`, `cookie`, `query`
-
-**Security:** `ja4_digest`, `ja3_digest` (Enterprise)
-
-**Bot:** `bot_name`, `bot_category` (Security Plus)
-
-## Actions Reference
-
-| Action | Description | Extra flags |
-|--------|-------------|-------------|
-| `deny` | Block request (403) | `--duration` |
-| `challenge` | Show verification page | `--duration` |
-| `log` | Log without blocking | `--duration` |
-| `bypass` | Skip other rules | `--duration` |
-| `rate_limit` | Throttle requests | `--rate-limit-window`, `--rate-limit-requests`, `--rate-limit-keys`, `--rate-limit-algo`, `--rate-limit-action`, `--duration` |
-| `redirect` | Redirect to URL | `--redirect-url`, `--redirect-permanent` |
-
-**Durations:** `1m`, `5m`, `15m`, `30m`, `1h`
-
-**Rate limit keys:** `ip` (default), `ja4`, `header:<name>` (repeatable)
-
-**Rate limit exceeded action:** `log`, `deny`, `challenge`, `rate_limit` (default: `rate_limit` / 429)
-
-## JSON Rule Schema
-
-For `--json` mode, the full rule structure:
-
-```json
-{
-  "name": "Rule name (max 160 chars)",
-  "description": "Optional description (max 256 chars)",
-  "active": true,
-  "conditionGroup": [
-    {
-      "conditions": [
-        { "type": "path", "op": "pre", "value": "/api" },
-        { "type": "method", "op": "inc", "value": ["POST", "PUT"] }
-      ]
-    },
-    {
-      "conditions": [
-        { "type": "ip_address", "op": "eq", "value": "1.2.3.4" }
-      ]
-    }
-  ],
-  "action": {
-    "mitigate": {
-      "action": "rate_limit",
-      "actionDuration": "1h",
-      "rateLimit": {
-        "algo": "fixed_window",
-        "window": 60,
-        "limit": 100,
-        "keys": ["ip"],
-        "action": "rate_limit"
-      },
-      "redirect": null
-    }
-  }
-}
-```
-
-Conditions within a group are **AND'd**. Multiple groups are **OR'd**.
 
 ## Agent Usage
 
