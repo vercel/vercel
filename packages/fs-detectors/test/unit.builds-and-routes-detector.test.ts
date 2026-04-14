@@ -109,7 +109,8 @@ describe('Test `detectBuilders`', () => {
             routePrefix: '/',
           },
           cleanup: {
-            type: 'cron',
+            type: 'job',
+            trigger: 'schedule',
             entrypoint: 'jobs/cleanup.py',
             schedule: '0 0 * * *',
           },

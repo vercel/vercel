@@ -121,8 +121,10 @@ export interface BuildOptions {
   service?: {
     /** The service name as declared in the project configuration. */
     name?: string;
-    /** The service type (e.g., "web", "cron", "worker"). */
+    /** The service type (e.g., "web", "worker", "job"). */
     type?: ServiceType;
+    /** The job trigger type (e.g., "queue", "schedule", "workflow"). */
+    trigger?: JobTrigger;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
     /** Optional subdomain this service is mounted on (e.g., "api"). */
@@ -566,9 +568,19 @@ export interface Cron {
   schedule: string;
 }
 
+export interface ServiceQueueTopic {
+  topic: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+}
+
+export type ServiceTopics = string[] | ServiceQueueTopic[];
+export type JobTrigger = 'queue' | 'schedule' | 'workflow';
+
 export interface Service {
   name: string;
   type: ServiceType;
+  trigger?: JobTrigger;
   group?: string;
   workspace: string;
   entrypoint?: string;
@@ -581,26 +593,55 @@ export interface Service {
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
   subdomain?: string;
-  /* cron service config */
-  schedule?: string;
-  /* optional handler for cron service in format of {module}:{callable} */
+  /* scheduled job config */
+  schedule?: string | string[];
+  /* optional handler for a schedule-triggered job in format of {module}:{callable} */
   handlerFunction?: string;
-  /* worker service config */
-  topics?: string[];
+  /* worker/job service config */
+  topics?: ServiceTopics;
   consumer?: string;
+  command?: string;
   /** custom prefix to inject service URL env vars */
   envPrefix?: string;
 }
 
-/**
- * Returns the topics a worker service subscribes to, defaulting to ['default'].
- */
-export function getWorkerTopics(config: {
-  topics?: string[];
-}): [string, ...string[]] {
-  return config.topics?.length
-    ? (config.topics as [string, ...string[]])
-    : ['default'];
+export function getServiceQueueTopicConfigs(config: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+  topics?: ServiceTopics;
+}): ServiceQueueTopic[] {
+  if (Array.isArray(config.topics) && config.topics.length > 0) {
+    return typeof config.topics[0] === 'string'
+      ? (config.topics as string[]).map(topic => ({ topic }))
+      : (config.topics as ServiceQueueTopic[]);
+  }
+
+  return config.type === 'worker' ? [{ topic: 'default' }] : [];
+}
+
+export function getServiceQueueTopics(config: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+  topics?: ServiceTopics;
+}): string[] {
+  return getServiceQueueTopicConfigs(config).map(topic => topic.topic);
+}
+
+export function isQueueLikeService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    service.type === 'worker' ||
+    (service.type === 'job' && service.trigger === 'queue')
+  );
+}
+
+export function isScheduleLikeService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return service.type === 'job' && service.trigger === 'schedule';
 }
 
 /** The framework which created the function */
@@ -777,7 +818,7 @@ export interface TriggerEvent extends TriggerEventBase {
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
-export type ServiceType = 'web' | 'cron' | 'worker';
+export type ServiceType = 'web' | 'worker' | 'job';
 
 export interface ServiceMount {
   /** URL path prefix where the service is mounted. */
@@ -792,6 +833,7 @@ export interface ServiceMount {
  */
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
+  trigger?: JobTrigger;
   /**
    * Service entrypoint, relative to the project root.
    * Can be either a file path (runtime entrypoint) or a directory path
@@ -799,6 +841,10 @@ export interface ExperimentalServiceConfig {
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
+  /** Service root directory, relative to the project root. */
+  root?: string;
+  /** Command to run for the service workload. */
+  command?: string;
 
   /** Framework to use */
   framework?: string;
@@ -824,12 +870,12 @@ export interface ExperimentalServiceConfig {
   /** Subdomain this service should respond to (web services only). */
   subdomain?: string;
 
-  /* Cron service config */
-  /** Cron schedule expression (e.g., "0 0 * * *") */
-  schedule?: string;
+  /* Scheduled job config */
+  /** Cron schedule expression(s) (e.g., "0 0 * * *") */
+  schedule?: string | string[];
 
-  /* Worker service config */
-  topics?: string[];
+  /* Worker/job service config */
+  topics?: ServiceTopics;
   consumer?: string;
 
   /** Custom prefix to use to inject service URL env vars */

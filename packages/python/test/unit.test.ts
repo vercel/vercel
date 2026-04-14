@@ -1893,7 +1893,7 @@ describe('handlerFunction validation', () => {
       meta: { isDev: false },
       config: { handlerFunction: 'sync_handler' },
       repoRootPath: mockWorkPath,
-      service: { type: 'cron' },
+      service: { type: 'job', trigger: 'schedule' },
     });
 
     const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
@@ -1922,7 +1922,7 @@ describe('handlerFunction validation', () => {
       meta: { isDev: false },
       config: { handlerFunction: 'async_handler' },
       repoRootPath: mockWorkPath,
-      service: { type: 'cron' },
+      service: { type: 'job', trigger: 'schedule' },
     });
 
     const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
@@ -1952,7 +1952,7 @@ describe('handlerFunction validation', () => {
         meta: { isDev: false },
         config: { handlerFunction: 'nonexistent_handler' },
         repoRootPath: mockWorkPath,
-        service: { type: 'cron' },
+        service: { type: 'job', trigger: 'schedule' },
       })
     ).rejects.toThrow(/Handler function "nonexistent_handler" not found/);
   });
@@ -1975,7 +1975,7 @@ describe('handlerFunction validation', () => {
         meta: { isDev: false },
         config: { handlerFunction: 'cleanup' },
         repoRootPath: mockWorkPath,
-        service: { type: 'cron' },
+        service: { type: 'job', trigger: 'schedule' },
       })
     ).rejects.toThrow(/Handler function "cleanup" not found/);
   });

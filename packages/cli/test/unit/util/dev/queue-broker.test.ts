@@ -30,6 +30,24 @@ function makeWorkerService(
   } as Service;
 }
 
+function makeQueueJobService(
+  name: string,
+  topics: Array<{
+    topic: string;
+    retryAfterSeconds?: number;
+    initialDelaySeconds?: number;
+  }>
+): Service {
+  return {
+    name,
+    type: 'job',
+    trigger: 'queue',
+    workspace: '.',
+    builder: { src: 'index.ts', use: '@vercel/node' },
+    topics,
+  } as Service;
+}
+
 function makeWebService(name: string): Service {
   return {
     name,
@@ -253,6 +271,29 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('dispatches queue-triggered job services and respects topic timing config', async () => {
+      broker = new QueueBroker(
+        [
+          makeQueueJobService('processor', [
+            {
+              topic: 'orders',
+              retryAfterSeconds: 30,
+              initialDelaySeconds: 5,
+            },
+          ]),
+        ],
+        getServiceOrigin
+      );
+
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(findCloudEvent().data.consumerGroup).toBe('processor');
     });
 
     it('does not dispatch delayed messages immediately', async () => {

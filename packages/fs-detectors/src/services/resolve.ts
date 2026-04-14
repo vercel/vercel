@@ -6,7 +6,7 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { getWorkerTopics } from '@vercel/build-utils';
+import { getServiceQueueTopics } from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -61,6 +61,48 @@ interface ResolvedEntrypointPath {
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
+}
+
+interface ParsedServiceEntrypointConfig {
+  serviceRoot?: string;
+  rawEntrypoint?: string;
+  moduleAttrParsed: ReturnType<typeof parsePyModuleAttrEntrypoint>;
+  entrypointToResolve?: string;
+}
+
+function parseServiceEntrypointConfig(
+  config: ExperimentalServiceConfig
+): ParsedServiceEntrypointConfig {
+  const serviceRoot =
+    typeof config.root === 'string'
+      ? normalizeServiceEntrypoint(config.root)
+      : undefined;
+  const configuredEntrypoint =
+    typeof config.entrypoint === 'string'
+      ? normalizeServiceEntrypoint(config.entrypoint)
+      : undefined;
+  const moduleAttrParsed = configuredEntrypoint
+    ? parsePyModuleAttrEntrypoint(config.entrypoint!)
+    : null;
+
+  let entrypointToResolve = moduleAttrParsed
+    ? moduleAttrParsed.filePath
+    : configuredEntrypoint;
+
+  if (serviceRoot && entrypointToResolve) {
+    entrypointToResolve = posixPath.join(serviceRoot, entrypointToResolve);
+  }
+
+  if (!configuredEntrypoint && serviceRoot) {
+    entrypointToResolve = serviceRoot;
+  }
+
+  return {
+    serviceRoot,
+    rawEntrypoint: configuredEntrypoint ?? serviceRoot,
+    moduleAttrParsed,
+    entrypointToResolve,
+  };
 }
 
 async function resolveEntrypointPath({
@@ -347,6 +389,12 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
+  const isJobService = serviceType === 'job';
+  const isScheduleJobService = isJobService && config.trigger === 'schedule';
+  const isQueueJobService = isJobService && config.trigger === 'queue';
+  const isWorkflowService = isJobService && config.trigger === 'workflow';
+  const serviceTypeLabel =
+    serviceType === 'worker' ? 'Worker' : serviceType === 'job' ? 'Job' : 'Web';
   const routingResult = resolveServiceRoutingConfig(name, config);
   if (routingResult.error) {
     return routingResult.error;
@@ -382,27 +430,60 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (
-    (serviceType === 'worker' || serviceType === 'cron') &&
-    configuredRoutePrefix
-  ) {
+  if ((serviceType === 'worker' || isJobService) && configuredRoutePrefix) {
     return {
       code: 'INVALID_ROUTE_PREFIX',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
+      message: `${serviceTypeLabel} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
       serviceName: name,
     };
   }
-  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+  if ((serviceType === 'worker' || isJobService) && hasSubdomain) {
     return {
       code: 'INVALID_HOST_ROUTING_CONFIG',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
+      message: `${serviceTypeLabel} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
       serviceName: name,
     };
   }
-  if (serviceType === 'cron' && !config.schedule) {
+  if (isJobService && config.trigger === undefined) {
     return {
-      code: 'MISSING_CRON_SCHEDULE',
-      message: `Cron service "${name}" is missing required "schedule" field.`,
+      code: 'MISSING_JOB_TRIGGER',
+      message: `Job service "${name}" is missing required "trigger" field.`,
+      serviceName: name,
+    };
+  }
+  if (
+    isJobService &&
+    config.trigger !== 'queue' &&
+    config.trigger !== 'schedule' &&
+    config.trigger !== 'workflow'
+  ) {
+    return {
+      code: 'INVALID_JOB_TRIGGER',
+      message: `Job service "${name}" has invalid trigger "${config.trigger}". Expected "queue", "schedule", or "workflow".`,
+      serviceName: name,
+    };
+  }
+  if (isScheduleJobService && !config.schedule) {
+    return {
+      code: 'MISSING_JOB_SCHEDULE',
+      message: `${serviceTypeLabel} service "${name}" is missing required "schedule" field.`,
+      serviceName: name,
+    };
+  }
+  if (
+    isQueueJobService &&
+    (!Array.isArray(config.topics) || config.topics.length === 0)
+  ) {
+    return {
+      code: 'MISSING_QUEUE_TOPICS',
+      message: `${serviceTypeLabel} service "${name}" is missing required "topics" field.`,
+      serviceName: name,
+    };
+  }
+  if (isWorkflowService && typeof config.entrypoint !== 'string') {
+    return {
+      code: 'MISSING_ENTRYPOINT',
+      message: `Job service "${name}" with "workflow" trigger must specify "entrypoint".`,
       serviceName: name,
     };
   }
@@ -442,19 +523,19 @@ export function validateServiceConfig(
 
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
-  const hasEntrypoint = Boolean(config.entrypoint);
+  const hasEntrypoint = Boolean(config.entrypoint || config.root);
 
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
     return {
       code: 'MISSING_SERVICE_CONFIG',
-      message: `Service "${name}" must specify "framework", "entrypoint", or both "builder"/"runtime" with "entrypoint".`,
+      message: `Service "${name}" must specify "framework", "root", "entrypoint", or both "builder"/"runtime" with "entrypoint" or "root".`,
       serviceName: name,
     };
   }
   if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
     return {
       code: 'MISSING_ENTRYPOINT',
-      message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
+      message: `Service "${name}" must specify "entrypoint" or "root" when using "${config.builder ? 'builder' : 'runtime'}".`,
       serviceName: name,
     };
   }
@@ -484,7 +565,7 @@ export function validateServiceEntrypoint(
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
         code: 'UNSUPPORTED_ENTRYPOINT',
-        message: `Service "${name}" has unsupported entrypoint "${config.entrypoint}". Use a supported extension (${supported}) or specify "builder", "framework", or "runtime".`,
+        message: `Service "${name}" has unsupported entrypoint "${config.entrypoint || config.root}". Use a supported extension (${supported}) or specify "builder", "framework", or "runtime".`,
         serviceName: name,
       };
     }
@@ -508,12 +589,9 @@ export async function resolveConfiguredService(
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
-  const rawEntrypoint = config.entrypoint;
-
-  const moduleAttrParsed =
-    typeof rawEntrypoint === 'string'
-      ? parsePyModuleAttrEntrypoint(rawEntrypoint)
-      : null;
+  const trigger = type === 'job' ? config.trigger : undefined;
+  const { serviceRoot, rawEntrypoint, moduleAttrParsed, entrypointToResolve } =
+    parseServiceEntrypointConfig(config);
   const routingResult = resolveServiceRoutingConfig(name, config);
   if (routingResult.error) {
     throw new Error(routingResult.error.message);
@@ -524,10 +602,7 @@ export async function resolveConfiguredService(
     routingResult.routing?.routePrefixConfigured ?? false;
 
   let resolvedEntrypointPath = resolvedEntrypoint;
-  if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
-    const entrypointToResolve = moduleAttrParsed
-      ? moduleAttrParsed.filePath
-      : rawEntrypoint;
+  if (!resolvedEntrypointPath && typeof entrypointToResolve === 'string') {
     const resolved = await resolveEntrypointPath({
       fs,
       serviceName: name,
@@ -547,14 +622,21 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
-  let workspace = '.';
+  let workspace = serviceRoot || '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint
       ? undefined
       : normalizedEntrypoint;
 
-  // Directory entrypoints define the service workspace directly.
-  if (entrypointIsDirectory && normalizedEntrypoint) {
+  if (serviceRoot) {
+    if (resolvedEntrypointFile) {
+      resolvedEntrypointFile = toWorkspaceRelativeEntrypoint(
+        resolvedEntrypointFile,
+        serviceRoot
+      );
+    }
+  } else if (entrypointIsDirectory && normalizedEntrypoint) {
+    // Directory entrypoints define the service workspace directly.
     workspace = normalizedEntrypoint;
   } else {
     // File entrypoints infer workspace from nearest runtime manifest.
@@ -574,7 +656,12 @@ export async function resolveConfiguredService(
     }
   }
 
-  const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
+  const topics =
+    type === 'worker'
+      ? getServiceQueueTopics({ type, topics: config.topics })
+      : trigger === 'queue'
+        ? config.topics
+        : undefined;
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
@@ -675,6 +762,9 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (config.command) {
+    builderConfig.command = config.command;
+  }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
   }
@@ -682,6 +772,7 @@ export async function resolveConfiguredService(
   return {
     name,
     type,
+    trigger,
     group,
     workspace,
     entrypoint: resolvedEntrypointFile,
@@ -701,6 +792,7 @@ export async function resolveConfiguredService(
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
     consumer,
+    command: config.command,
     envPrefix: config.envPrefix,
   };
 }
@@ -731,10 +823,8 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    if (typeof serviceConfig.entrypoint === 'string') {
-      const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
-      const entrypointToResolve =
-        moduleAttr?.filePath ?? serviceConfig.entrypoint;
+    const { entrypointToResolve } = parseServiceEntrypointConfig(serviceConfig);
+    if (typeof entrypointToResolve === 'string') {
       const resolvedPath = await resolveEntrypointPath({
         fs,
         serviceName: name,

@@ -783,9 +783,12 @@ export const startDevServer: StartDevServer = async opts => {
     entrypoint
       ? {
           filePath: entrypoint,
-          // For cron services, the WSGI variable is always 'app' (created dynamically).
-          // For other services, handlerFunction is used as the entrypoint variable name.
-          varName: service?.type === 'cron' ? undefined : handlerFunction,
+          // Schedule-triggered services create their own "app" wrapper dynamically.
+          // Other services use handlerFunction as the entrypoint variable name.
+          varName:
+            service?.type === 'job' && service.trigger === 'schedule'
+              ? undefined
+              : handlerFunction,
         }
       : undefined,
     service

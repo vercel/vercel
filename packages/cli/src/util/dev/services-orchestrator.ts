@@ -12,6 +12,8 @@ import {
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
+  isQueueLikeService,
+  isScheduleLikeService,
   cloneEnv,
   getNodeBinPaths,
   spawnCommand,
@@ -139,13 +141,16 @@ interface ServiceDevProcess {
 }
 
 function getServiceRoutePrefixes(service: Service): string[] {
-  if (service.type === 'worker') {
+  if (isQueueLikeService(service)) {
     return [getInternalServiceWorkerPathPrefix(service.name)];
   }
-  if (service.type === 'cron') {
+  if (isScheduleLikeService(service)) {
     return [getInternalServiceCronPathPrefix(service.name)];
   }
-  return [service.routePrefix || '/'];
+  if (service.type === 'web') {
+    return [service.routePrefix || '/'];
+  }
+  return [];
 }
 
 interface ServicesOrchestratorOptions {
@@ -169,7 +174,7 @@ export class ServicesOrchestrator {
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
-  private hasWorkerServices: boolean;
+  private hasQueueServices: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -181,7 +186,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
-    this.hasWorkerServices = options.services.some(s => s.type === 'worker');
+    this.hasQueueServices = options.services.some(isQueueLikeService);
   }
 
   async startAll(): Promise<void> {
@@ -342,8 +347,11 @@ export class ServicesOrchestrator {
       serviceUrlEnvVars
     );
     env.VERCEL_SERVICE_TYPE = service.type;
+    if (service.trigger) {
+      env.VERCEL_SERVICE_TRIGGER = service.trigger;
+    }
     if (
-      this.hasWorkerServices &&
+      this.hasQueueServices &&
       service.runtime === 'python' &&
       env.VERCEL_HAS_WORKER_SERVICES === undefined
     ) {
@@ -353,7 +361,7 @@ export class ServicesOrchestrator {
     // When any worker service exists, point all services at the dev server's
     // queue proxy so that send() calls from web services are routed through
     // the proxy and dispatched to the matching worker process.
-    if (this.hasWorkerServices) {
+    if (this.hasQueueServices) {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
     }
@@ -451,6 +459,7 @@ export class ServicesOrchestrator {
         service: {
           name: service.name,
           type: service.type,
+          trigger: service.trigger,
           routePrefix: service.routePrefix,
           subdomain: service.subdomain,
           workspace: service.workspace,
@@ -708,16 +717,21 @@ export class ServicesOrchestrator {
 
   private startCronSchedulers(): void {
     for (const service of this.services) {
-      if (service.type !== 'cron' || !service.schedule) continue;
+      if (!isScheduleLikeService(service) || !service.schedule) continue;
 
       const managed = this.managedServices.get(service.name);
       if (!managed) continue;
 
+      const schedules = Array.isArray(service.schedule)
+        ? service.schedule
+        : [service.schedule];
       output.debug(
-        `Scheduling cron service ${chalk.bold(service.name)} (${chalk.cyan(service.schedule)})`
+        `Scheduling job service ${chalk.bold(service.name)} (${chalk.cyan(schedules.join(', '))})`
       );
 
-      this.scheduleCronTrigger(service.name, service.schedule, managed);
+      for (const schedule of schedules) {
+        this.scheduleCronTrigger(service.name, schedule, managed);
+      }
     }
   }
 
@@ -738,7 +752,7 @@ export class ServicesOrchestrator {
       if (this.stopping) return;
 
       output.debug(
-        `Triggering cron service ${chalk.bold(serviceName)} (schedule: ${chalk.cyan(schedule)})`
+        `Triggering scheduled job ${chalk.bold(serviceName)} (schedule: ${chalk.cyan(schedule)})`
       );
 
       try {

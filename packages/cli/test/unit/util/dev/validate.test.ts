@@ -61,6 +61,72 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with schedule-triggered job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        cleanup: {
+          type: 'job',
+          trigger: 'schedule',
+          root: 'jobs',
+          entrypoint: 'cleanup.py',
+          command: 'python cleanup.py',
+          schedule: ['0 0 * * *', '0 12 * * *'],
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with queue-triggered job services using topic objects', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        processor: {
+          type: 'job',
+          trigger: 'queue',
+          entrypoint: 'worker.py',
+          topics: [
+            {
+              topic: 'orders',
+              retryAfterSeconds: 10,
+              initialDelaySeconds: 5,
+            },
+          ],
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with workflow-triggered job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        workflow: {
+          type: 'job',
+          trigger: 'workflow',
+          entrypoint: 'src/workflow.ts',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should reject unsupported beat config for job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        processor: {
+          type: 'job',
+          trigger: 'queue',
+          entrypoint: 'worker.py',
+          topics: ['orders'],
+          beat: {
+            schedule: '0 * * * *',
+          },
+        } as any,
+      },
+    });
+    expect(error).not.toBeNull();
+  });
+
   it('should not error with builds and routes', async () => {
     const config = {
       builds: [{ src: 'api/index.js', use: '@vercel/node' }],

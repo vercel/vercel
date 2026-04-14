@@ -1,6 +1,10 @@
 import { frameworkList } from '@vercel/frameworks';
 import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
-import { getWorkerTopics } from '@vercel/build-utils';
+import {
+  getServiceQueueTopics,
+  isQueueLikeService,
+  isScheduleLikeService,
+} from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
 
@@ -65,11 +69,28 @@ interface ServiceDescriptionInfo {
 }
 
 function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
-  // Cron and worker services aren't framework apps, so we'll just show type + runtime for them
-  // e.g. [Cron/Python] or [Worker/Python]
-  if (service.type === 'cron' || service.type === 'worker') {
-    const typeLabel = service.type === 'cron' ? 'Cron' : 'Worker';
-    const typeColorFn = service.type === 'cron' ? chalk.yellow : chalk.magenta;
+  // Non-routable services aren't framework apps, so show type + runtime instead.
+  if (service.type === 'worker' || service.type === 'job') {
+    let typeLabel: string;
+    let typeColorFn: (text: string) => string;
+
+    if (service.type === 'worker') {
+      typeLabel = 'Worker';
+      typeColorFn = chalk.magenta;
+    } else {
+      typeColorFn = chalk.cyan;
+      switch (service.trigger) {
+        case 'queue':
+          typeLabel = 'Job/Queue';
+          break;
+        case 'schedule':
+          typeLabel = 'Job/Schedule';
+          break;
+        default:
+          typeLabel = 'Job/Workflow';
+      }
+    }
+
     if (service.runtime) {
       const runtimeName =
         service.runtime.charAt(0).toUpperCase() + service.runtime.slice(1);
@@ -97,18 +118,27 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
 }
 
 function getServiceTarget(service: Service): string {
-  switch (service.type) {
-    case 'cron':
-      return `schedule: ${service.schedule ?? 'none'}`;
-    case 'worker': {
-      const topics = getWorkerTopics(service);
-      return `topics: ${topics.join(', ')}`;
-    }
-    default:
-      return service.routePrefix
-        ? formatRoutePrefix(service.routePrefix)
-        : 'no route';
+  if (isScheduleLikeService(service)) {
+    const schedules = Array.isArray(service.schedule)
+      ? service.schedule
+      : service.schedule
+        ? [service.schedule]
+        : [];
+    return `schedule: ${schedules.join(', ') || 'none'}`;
   }
+
+  if (isQueueLikeService(service)) {
+    const topics = getServiceQueueTopics(service);
+    return `topics: ${topics.join(', ')}`;
+  }
+
+  if (service.type === 'job' && service.trigger === 'workflow') {
+    return 'workflow';
+  }
+
+  return service.routePrefix
+    ? formatRoutePrefix(service.routePrefix)
+    : 'no route';
 }
 
 /**
@@ -122,7 +152,11 @@ function getServiceTarget(service: Service): string {
 export function displayDetectedServices(services: Service[]): void {
   output.print(`Detected services:\n`);
 
-  const outputOrder: Record<string, number> = { web: 0, cron: 1, worker: 2 };
+  const outputOrder: Record<string, number> = {
+    web: 0,
+    job: 1,
+    worker: 2,
+  };
   const sorted = [...services].sort(
     (a, b) => (outputOrder[a.type] ?? 3) - (outputOrder[b.type] ?? 3)
   );

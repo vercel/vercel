@@ -1110,7 +1110,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should include cron services in build output crons without the services framework setting', async () => {
+  it('should include schedule-triggered jobs in build output crons without the services framework setting', async () => {
     const cwd = fixture('with-services-cron');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
@@ -1129,6 +1129,39 @@ describe.skipIf(flakey)('build', () => {
       dest: '/_svc/cleanup/index',
       check: true,
     });
+  });
+
+  it('should include job service schedules and queue triggers in build output', async () => {
+    const cwd = fixture('with-services-job');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/index/cron',
+        schedule: '0 0 * * *',
+      },
+      {
+        path: '/_svc/cleanup/crons/index/cron',
+        schedule: '0 12 * * *',
+      },
+    ]);
+
+    const vcConfig = await fs.readJSON(
+      join(output, 'functions/_svc/processor/index.func/.vc-config.json')
+    );
+    expect(vcConfig.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: expect.any(String),
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 5,
+      },
+    ]);
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {

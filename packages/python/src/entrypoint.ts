@@ -214,7 +214,7 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework | undefined,
   workPath: string,
   configuredEntrypoint?: { filePath: string; varName?: string },
-  service?: { type?: string }
+  service?: { type?: string; trigger?: string }
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
@@ -229,10 +229,10 @@ export async function detectPythonEntrypoint(
 
     if (!varName) {
       const isSpecialService =
-        service?.type === 'cron' || service?.type === 'worker';
+        service?.type === 'worker' ||
+        (service?.type === 'job' && service.trigger !== 'workflow');
       if (isSpecialService) {
-        // Crons and worker have their own special entry point logic
-        // that involves creating an `app` dynamically.
+        // Queue-backed and schedule-triggered jobs create an `app` dynamically.
         varName = 'app';
       }
     }

@@ -26,7 +26,6 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
-  type PrepareCache,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -36,12 +35,7 @@ import {
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import {
-  UvRunner,
-  getUvBinaryOrInstall,
-  getUvCacheDir,
-  findUvInPath,
-} from './uv';
+import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
@@ -63,6 +57,8 @@ import {
 } from './entrypoint';
 
 export const version = -1;
+
+const COMMAND_CRON_ENTRYPOINT = '__vc_cron_command_entrypoint__.py';
 
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
@@ -216,6 +212,13 @@ export const build: BuildVX = async ({
   // When true, runtime dependency installation is disabled because
   // custom commands may install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
+  const cronCommand =
+    service?.type === 'job' &&
+    service.trigger === 'schedule' &&
+    typeof config?.command === 'string'
+      ? config.command
+      : undefined;
+  const isCommandCron = typeof cronCommand === 'string';
 
   debug(`workPath: ${workPath}`);
 
@@ -246,28 +249,37 @@ export const build: BuildVX = async ({
   // Entrypoint discovery
   let detected: DetectedPythonEntrypoint | undefined;
 
-  const handlerFunction =
-    typeof config?.handlerFunction === 'string'
-      ? config.handlerFunction
-      : undefined;
+  if (isCommandCron) {
+    detected = {
+      entrypoint: {
+        entrypoint: COMMAND_CRON_ENTRYPOINT,
+        variableName: 'app',
+      },
+    };
+  } else {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+          ? {
+              filePath: entrypoint,
+              // Schedule-triggered services create their own "app" wrapper dynamically.
+              // Other services use handlerFunction as the entrypoint variable name.
+              varName:
+                service?.type === 'job' && service.trigger === 'schedule'
+                  ? undefined
+                  : typeof config?.handlerFunction === 'string'
+                    ? config.handlerFunction
+                    : undefined,
+            }
+          : undefined,
+        service
+      )) ?? undefined;
 
-  detected =
-    (await detectPythonEntrypoint(
-      config.framework as PythonFramework,
-      workPath,
-      entrypoint
-        ? {
-            filePath: entrypoint,
-            // For cron services, the WSGI variable is always 'app' (created dynamically).
-            // For other services, handlerFunction is used as the entrypoint variable name.
-            varName: service?.type === 'cron' ? undefined : handlerFunction,
-          }
-        : undefined,
-      service
-    )) ?? undefined;
-
-  if (detected?.error && detected?.baseDir === undefined) {
-    throw detected?.error;
+    if (detected?.error && detected?.baseDir === undefined) {
+      throw detected?.error;
+    }
   }
 
   const entryDirectory =
@@ -318,24 +330,15 @@ export const build: BuildVX = async ({
   const venvPath = service?.name
     ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
     : join(workPath, '.vercel', 'python', '.venv');
-  const uvCacheDir = getUvCacheDir(workPath);
-  const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
-  const hasCachedUv = fs.existsSync(uvCacheDir);
-  if (hasCachedVenv || hasCachedUv) {
-    debug(
-      `Build cache detected: venv=${hasCachedVenv}, uv-cache=${hasCachedUv}`
-    );
-  }
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
-      pythonVersion,
+      pythonPath: pythonVersion.pythonPath,
       venvPath,
-      uvCacheDir,
     });
   });
 
   // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
+  if (isPythonFramework(framework) || isCommandCron) {
     const {
       cliType,
       lockfileVersion,
@@ -363,7 +366,7 @@ export const build: BuildVX = async ({
   }
 
   const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
+  const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
   pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
@@ -375,7 +378,7 @@ export const build: BuildVX = async ({
   let uv: UvRunner;
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
-    uv = new UvRunner(uvPath, uvCacheDir);
+    uv = new UvRunner(uvPath);
     const uvVersionOutput = execSync(`${uvPath} --version`, {
       encoding: 'utf8',
     }).trim();
@@ -400,15 +403,6 @@ export const build: BuildVX = async ({
     })
     .trace(async () => {
       if (projectInstallCommand) {
-        // Custom commands may not prune removed packages, so always
-        // start from a fresh venv to avoid stale dependency accumulation.
-        await fs.promises.rm(venvPath, { recursive: true, force: true });
-        await ensureVenv({
-          pythonVersion,
-          venvPath,
-          uvCacheDir,
-          quiet: true,
-        });
         console.log(
           `Running "install" command: \`${projectInstallCommand}\`...`
         );
@@ -421,27 +415,18 @@ export const build: BuildVX = async ({
       } else {
         // Check and run a custom vercel install command from project manifest.
         // This will return `false` if no script was ran.
-        const hasCustomScript = await runPyprojectScript(
+        assumeDepsInstalled = await runPyprojectScript(
           workPath,
           ['vercel-install', 'now-install', 'install'],
           pythonEnv,
           /* useUserVirtualEnv */ false
         );
-        if (hasCustomScript) {
-          assumeDepsInstalled = true;
+        if (assumeDepsInstalled) {
           hasCustomCommand = true;
         }
       }
 
       if (!assumeDepsInstalled) {
-        // Compute the path where we stash a copy of the generated uv.lock
-        // so `uv lock` can validate it on the next build instead of
-        // re-resolving all packages from PyPI.
-        const lockCacheKey = service?.name
-          ? `uv.lock.${service.name}`
-          : 'uv.lock';
-        const cachedLockPath = join(uvCacheDir, lockCacheKey);
-
         // Default installation path: use uv to normalize manifests into a uv.lock and
         // sync dependencies into the virtualenv, including required runtime deps.
         // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
@@ -454,8 +439,8 @@ export const build: BuildVX = async ({
             pythonPackage,
             pythonVersion: pythonVersionString(pythonVersion),
             uv,
+            generateLockFile: true,
             requireBinaryWheels: false,
-            cachedLockPath,
           });
 
         uvLockPath = lockPath;
@@ -475,18 +460,11 @@ export const build: BuildVX = async ({
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
         });
-
-        // Stash the lock file into the cache dir so prepareCache
-        // preserves it and the next build can skip full resolution.
-        if (lockPath && fs.existsSync(lockPath)) {
-          await fs.promises.mkdir(uvCacheDir, { recursive: true });
-          await fs.promises.copyFile(lockPath, cachedLockPath);
-        }
       }
     });
 
   // Run the project build command (if any) AFTER dependencies are installed.
-  if (isPythonFramework(framework)) {
+  if (isPythonFramework(framework) || isCommandCron) {
     const projectBuildCommand =
       config?.projectSettings?.buildCommand ??
       // fallback if provided directly on config (some callers set this)
@@ -512,7 +490,6 @@ export const build: BuildVX = async ({
       });
   }
 
-  // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
   const hookResult = await runFrameworkHook(framework, {
     pythonEnv,
     projectDir: join(workPath, entryDirectory),
@@ -521,9 +498,13 @@ export const build: BuildVX = async ({
     entrypoint,
     detected,
   });
+  const resolvedFromHook =
+    hookResult && 'entrypoint' in hookResult
+      ? hookResult.entrypoint
+      : undefined;
 
   // Collect the resolved entrypoint from detection or hook, preferring the hook.
-  const resolved = hookResult?.entrypoint ?? detected?.entrypoint;
+  const resolved = resolvedFromHook ?? detected?.entrypoint;
   if (!resolved && detected?.error) {
     throw detected?.error;
   }
@@ -583,6 +564,10 @@ export const build: BuildVX = async ({
   }
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const handlerFunction =
+    typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined;
 
   if (handlerFunction) {
     const entrypointPath = join(workPath, entrypoint);
@@ -605,11 +590,29 @@ export const build: BuildVX = async ({
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
 
-  const handlerFuncEnvLine = handlerFunction
-    ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
+  const variableName = resolved?.variableName ?? 'app';
+  const bootstrapEnvEntries = [
+    `  "__VC_HANDLER_MODULE_NAME": ${JSON.stringify(moduleName)}`,
+    `  "__VC_HANDLER_ENTRYPOINT": ${JSON.stringify(entrypointWithSuffix)}`,
+    `  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, ${JSON.stringify(
+      entrypointWithSuffix
+    )})`,
+    `  "__VC_HANDLER_VENDOR_DIR": ${JSON.stringify(vendorDir)}`,
+    `  "__VC_HANDLER_VARIABLE_NAME": ${JSON.stringify(variableName)}`,
+  ];
+  if (handlerFunction) {
+    bootstrapEnvEntries.push(
+      `  "__VC_HANDLER_FUNC_NAME": ${JSON.stringify(handlerFunction)}`
+    );
+  }
+  if (cronCommand) {
+    bootstrapEnvEntries.push(
+      `  "__VC_CRON_COMMAND": ${JSON.stringify(cronCommand)}`
+    );
+  }
+  const cronCommandCwdLine = cronCommand
+    ? '\nos.environ["__VC_CRON_COMMAND_CWD"] = _here\n'
     : '';
-
-  const variableName = resolved?.variableName ?? '';
 
   const runtimeTrampoline = `
 import importlib
@@ -621,12 +624,9 @@ import sys
 _here = os.path.dirname(__file__)
 
 os.environ.update({
-  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
-  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
-  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${handlerFuncEnvLine}
+${bootstrapEnvEntries.join(',\n')}
 })
+${cronCommandCwdLine}
 
 _vendor_rel = '${vendorDir}'
 _vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
@@ -686,6 +686,13 @@ from vercel_runtime.vc_init import vc_handler
   };
 
   const files: Files = await glob('**', globOptions);
+  if (isCommandCron) {
+    // vc_init.py imports the declared entrypoint module before cron bootstrap.
+    // Command-backed scheduled jobs ignore this file's contents, but the module must exist.
+    files[COMMAND_CRON_ENTRYPOINT] = new FileBlob({
+      data: '"""Synthetic entrypoint for command-backed scheduled jobs."""\n',
+    });
+  }
 
   // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
   // backend is in use. The CDN serves static assets; only the manifest is
@@ -805,39 +812,6 @@ from vercel_runtime.vc_init import vc_handler
 };
 
 export { startDevServer };
-
-export const prepareCache: PrepareCache = async ({
-  repoRootPath,
-  workPath,
-}) => {
-  // Feature-gated: only enabled when the platform sets this env var.
-  // This allows incremental rollout to specific teams before general availability.
-  if (process.env.VERCEL_PYTHON_PREPARE_CACHE !== '1') {
-    return {};
-  }
-
-  const root = repoRootPath || workPath;
-  const ignore = ['**/*.pyc', '**/__pycache__/**'];
-
-  // Prune pre-built wheels from the uv cache (source-built wheels are retained).
-  const uvCacheDir = getUvCacheDir(workPath);
-  try {
-    const uvPath = findUvInPath();
-    if (uvPath) {
-      const uv = new UvRunner(uvPath, uvCacheDir);
-      await uv.cachePrune();
-    }
-  } catch {
-    // best-effort; don't fail the build
-  }
-
-  // Cache the uv package cache, the default venv, and any service-namespaced
-  // venvs so that subsequent builds can skip dependency installation.
-  return glob('**/.vercel/python/{.venv,services/*/.venv,cache/uv}/**', {
-    cwd: root,
-    ignore,
-  });
-};
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;

@@ -4,7 +4,10 @@ import ms from 'ms';
 import { randomBytes } from 'crypto';
 import nodeFetch from 'node-fetch';
 import type { Service } from '@vercel/fs-detectors';
-import { getWorkerTopics } from '@vercel/build-utils';
+import {
+  getServiceQueueTopicConfigs,
+  isQueueLikeService,
+} from '@vercel/build-utils';
 import output from '../../output-manager';
 
 interface StoredMessage {
@@ -80,10 +83,11 @@ export class QueueBroker {
     private getServiceOrigin: (name: string) => string | null
   ) {
     for (const service of services) {
-      if (service.type !== 'worker') continue;
+      if (!isQueueLikeService(service)) continue;
 
-      const topicPatterns = getWorkerTopics(service);
-      for (const topicPattern of topicPatterns) {
+      const topicConfigs = getServiceQueueTopicConfigs(service);
+      for (const topicConfig of topicConfigs) {
+        const topicPattern = topicConfig.topic;
         const id = `${service.name}::${topicPattern}`;
         const group: ConsumerGroup = {
           id,
@@ -91,9 +95,15 @@ export class QueueBroker {
           topicPattern,
           topicRegex: topicPatternToRegex(topicPattern),
           serviceOriginFn: () => this.getServiceOrigin(service.name),
-          retryAfterMs: DEFAULT_RETRY_AFTER,
+          retryAfterMs:
+            topicConfig.retryAfterSeconds !== undefined
+              ? topicConfig.retryAfterSeconds * 1000
+              : DEFAULT_RETRY_AFTER,
           maxDeliveries: DEFAULT_MAX_DELIVERIES,
-          initialDelayMs: DEFAULT_INITIAL_DELAY,
+          initialDelayMs:
+            topicConfig.initialDelaySeconds !== undefined
+              ? topicConfig.initialDelaySeconds * 1000
+              : DEFAULT_INITIAL_DELAY,
         };
 
         this.consumerGroups.push(group);

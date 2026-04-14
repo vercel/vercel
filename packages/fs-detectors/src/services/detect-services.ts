@@ -1,4 +1,5 @@
 import type { HasField, Route } from '@vercel/routing-utils';
+import { isQueueLikeService, isScheduleLikeService } from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -264,11 +265,11 @@ export async function detectServices(
  * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
- * - Worker services:
+ * - Worker and queue-triggered job services:
  *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  *
- * - Cron services:
+ * - Cron and schedule-triggered job services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
@@ -365,7 +366,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     }
   }
 
-  const workerServices = services.filter(s => s.type === 'worker');
+  const workerServices = services.filter(isQueueLikeService);
   for (const service of workerServices) {
     const workerEntrypoint =
       service.entrypoint || service.builder.src || 'index';
@@ -381,7 +382,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     });
   }
 
-  const cronServices = services.filter(s => s.type === 'cron');
+  const cronServices = services.filter(isScheduleLikeService);
   for (const service of cronServices) {
     const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
     const cronPath = getInternalServiceCronPath(

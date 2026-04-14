@@ -34,9 +34,12 @@ import {
   type PackageJson,
   glob,
   type Service,
-  getWorkerTopics,
+  getServiceQueueTopicConfigs,
   isBackendBuilder,
+  isQueueLikeService,
+  isScheduleLikeService,
   type Lambda,
+  sanitizeConsumerName,
   type TriggerEvent,
   downloadFile,
 } from '@vercel/build-utils';
@@ -49,6 +52,7 @@ import {
   detectFrameworkVersion,
   detectInstrumentation,
   getInternalServiceCronPath,
+  getInternalServiceFunctionPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -847,8 +851,8 @@ async function doBuild(
 
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
-  const hasWorkerServices =
-    hasDetectedServices && detectedServices!.some(s => s.type === 'worker');
+  const hasQueueServices =
+    hasDetectedServices && detectedServices!.some(isQueueLikeService);
   const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
@@ -954,7 +958,7 @@ async function doBuild(
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
-            ...(hasWorkerServices ? { hasWorkerServices: true } : undefined),
+            ...(hasQueueServices ? { hasWorkerServices: true } : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
             // propagated to individual builders.
@@ -1217,8 +1221,8 @@ async function doBuild(
         });
       }
 
-      if (service?.type === 'worker' && 'output' in buildResult) {
-        attachWorkerServiceTrigger(buildResult.output, service);
+      if (service && isQueueLikeService(service) && 'output' in buildResult) {
+        attachQueueServiceTrigger(buildResult.output, service);
       }
 
       let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
@@ -1867,14 +1871,23 @@ function getServiceCrons(services?: Service[]): Cron[] {
 
   const crons: Cron[] = [];
   for (const service of services) {
-    if (service.type !== 'cron' || typeof service.schedule !== 'string') {
+    if (!isScheduleLikeService(service) || !service.schedule) {
       continue;
     }
     const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    crons.push({
-      path: getInternalServiceCronPath(service.name, cronEntrypoint),
-      schedule: service.schedule,
-    });
+    const schedules = Array.isArray(service.schedule)
+      ? service.schedule
+      : [service.schedule];
+    for (const schedule of schedules) {
+      crons.push({
+        path: getInternalServiceCronPath(
+          service.name,
+          cronEntrypoint,
+          service.handlerFunction || 'cron'
+        ),
+        schedule,
+      });
+    }
   }
 
   return crons;
@@ -2042,33 +2055,68 @@ function getServicesMergeEntrypoint(
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
 }
 
-function attachWorkerServiceTrigger(
+function attachQueueServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
-  const topics = getWorkerTopics(service);
-  const consumer = service.consumer || 'default';
+  const topics = getServiceQueueTopicConfigs(service);
+  const defaultFunctionPath = getInternalServiceFunctionPath(service.name);
 
-  for (const topic of topics) {
-    const trigger: TriggerEvent = {
-      type: 'queue/v1beta',
-      topic,
-      consumer,
-    };
+  if (isLambda(buildOutput)) {
+    for (const topic of topics) {
+      appendQueueTrigger(
+        buildOutput,
+        createQueueTrigger(service, topic, defaultFunctionPath)
+      );
+    }
+    return;
+  }
 
-    if (isLambda(buildOutput)) {
-      appendWorkerTrigger(buildOutput, trigger);
-    } else {
-      for (const output of Object.values(buildOutput)) {
-        if (isLambda(output)) {
-          appendWorkerTrigger(output, trigger);
-        }
-      }
+  for (const [functionPath, output] of Object.entries(buildOutput)) {
+    if (!isLambda(output)) {
+      continue;
+    }
+
+    for (const topic of topics) {
+      appendQueueTrigger(
+        output,
+        createQueueTrigger(service, topic, functionPath)
+      );
     }
   }
 }
 
-function appendWorkerTrigger(lambda: Lambda, trigger: TriggerEvent): void {
+function createQueueTrigger(
+  service: Service,
+  topic: ReturnType<typeof getServiceQueueTopicConfigs>[number],
+  functionPath: string
+): TriggerEvent {
+  const baseTrigger = {
+    topic: topic.topic,
+    ...(topic.retryAfterSeconds !== undefined
+      ? { retryAfterSeconds: topic.retryAfterSeconds }
+      : undefined),
+    ...(topic.initialDelaySeconds !== undefined
+      ? { initialDelaySeconds: topic.initialDelaySeconds }
+      : undefined),
+  };
+
+  if (service.type === 'worker') {
+    return {
+      type: 'queue/v1beta',
+      consumer: service.consumer || 'default',
+      ...baseTrigger,
+    };
+  }
+
+  return {
+    type: 'queue/v2beta',
+    consumer: sanitizeConsumerName(functionPath),
+    ...baseTrigger,
+  };
+}
+
+function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {
   const existingTriggers = Array.isArray(lambda.experimentalTriggers)
     ? lambda.experimentalTriggers
     : [];

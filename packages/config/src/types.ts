@@ -177,6 +177,12 @@ export interface CronJob {
   path: string;
 }
 
+export interface ServiceQueueTopic {
+  topic: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+}
+
 export interface GitDeploymentConfig {
   [branch: string]: boolean;
 }
@@ -563,13 +569,25 @@ export interface VercelConfig {
     string,
     {
       /**
-       * Service type: web, cron, or worker. Defaults to web.
+       * Service type: web, worker, or job. Defaults to web.
        */
-      type?: 'web' | 'cron' | 'worker';
+      type?: 'web' | 'worker' | 'job';
+      /**
+       * Trigger for job services.
+       */
+      trigger?: 'queue' | 'schedule' | 'workflow';
       /**
        * Entry file for the service, relative to the workspace directory.
        */
       entrypoint?: string;
+      /**
+       * Root path to the service, relative to the project root.
+       */
+      root?: string;
+      /**
+       * Command to execute the workload.
+       */
+      command?: string;
       /**
        * Path to the directory containing the service manifest file (package.json, pyproject.toml, etc.). Defaults to "." (project root).
        */
@@ -628,13 +646,13 @@ export interface VercelConfig {
        */
       excludeFiles?: string | string[];
       /**
-       * Cron schedule expression (e.g., "0 0 * * *"). Required for cron services.
+       * Cron schedule expression(s) (e.g., "0 0 * * *"). Required for schedule-triggered job services.
        */
-      schedule?: string;
+      schedule?: string | string[];
       /**
-       * Topic names for worker subscription.
+       * Topic names or queue topic configs for worker and queue-triggered job services.
        */
-      topics?: string[];
+      topics?: string[] | ServiceQueueTopic[];
       /**
        * Consumer group name for worker subscription.
        */
