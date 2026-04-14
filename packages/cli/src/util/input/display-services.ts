@@ -2,8 +2,8 @@ import { frameworkList } from '@vercel/frameworks';
 import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopics,
-  isQueueLikeService,
-  isScheduleLikeService,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
@@ -109,7 +109,7 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
 }
 
 function getServiceTarget(service: Service): string {
-  if (isScheduleLikeService(service)) {
+  if (isScheduleTriggeredService(service)) {
     const schedules = Array.isArray(service.schedule)
       ? service.schedule
       : service.schedule
@@ -118,7 +118,7 @@ function getServiceTarget(service: Service): string {
     return `schedule: ${schedules.join(', ') || 'none'}`;
   }
 
-  if (isQueueLikeService(service)) {
+  if (isQueueTriggeredService(service)) {
     const topics = getServiceQueueTopics(service);
     return `topics: ${topics.join(', ')}`;
   }

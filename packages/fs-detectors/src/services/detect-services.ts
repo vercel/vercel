@@ -1,5 +1,8 @@
 import type { HasField, Route } from '@vercel/routing-utils';
-import { isQueueLikeService, isScheduleLikeService } from '@vercel/build-utils';
+import {
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
+} from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -366,7 +369,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     }
   }
 
-  const workerServices = services.filter(isQueueLikeService);
+  const workerServices = services.filter(isQueueTriggeredService);
   for (const service of workerServices) {
     const workerEntrypoint =
       service.entrypoint || service.builder.src || 'index';
@@ -382,7 +385,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     });
   }
 
-  const cronServices = services.filter(isScheduleLikeService);
+  const cronServices = services.filter(isScheduleTriggeredService);
   for (const service of cronServices) {
     const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
     const cronPath = getInternalServiceCronPath(

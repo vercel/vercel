@@ -35,7 +35,7 @@ import {
   cloneEnv,
   type Env,
   getNodeBinPaths,
-  isQueueLikeService,
+  isQueueTriggeredService,
   type StartDevServerResult,
   FileFsRef,
   type PackageJson,
@@ -952,7 +952,9 @@ export default class DevServer {
       this.devProcessOrigin = undefined;
 
       // Instantiate the dev queue broker if any queue-backed services exist.
-      const queueServices = (this.services || []).filter(isQueueLikeService);
+      const queueServices = (this.services || []).filter(
+        isQueueTriggeredService
+      );
       if (queueServices.length > 0) {
         this.queueBroker = new QueueBroker(this.services || [], name =>
           this.orchestrator!.getServiceOrigin(name)

@@ -624,7 +624,7 @@ export function getServiceQueueTopics(config: {
   return getServiceQueueTopicConfigs(config).map(topic => topic.topic);
 }
 
-export function isQueueLikeService(service: {
+export function isQueueTriggeredService(service: {
   type?: ServiceType;
   trigger?: JobTrigger;
 }): boolean {
@@ -634,7 +634,7 @@ export function isQueueLikeService(service: {
   );
 }
 
-export function isScheduleLikeService(service: {
+export function isScheduleTriggeredService(service: {
   type?: ServiceType;
   trigger?: JobTrigger;
 }): boolean {

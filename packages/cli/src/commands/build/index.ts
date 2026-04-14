@@ -34,11 +34,10 @@ import {
   type PackageJson,
   glob,
   type Service,
-  type ServiceQueueTopic,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
-  isQueueLikeService,
-  isScheduleLikeService,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
   downloadFile,
@@ -851,7 +850,7 @@ async function doBuild(
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
   const hasQueueServices =
-    hasDetectedServices && detectedServices!.some(isQueueLikeService);
+    hasDetectedServices && detectedServices!.some(isQueueTriggeredService);
   const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
@@ -1220,7 +1219,11 @@ async function doBuild(
         });
       }
 
-      if (service && isQueueLikeService(service) && 'output' in buildResult) {
+      if (
+        service &&
+        isQueueTriggeredService(service) &&
+        'output' in buildResult
+      ) {
         attachQueueServiceTrigger(buildResult.output, service);
       }
 
@@ -1870,7 +1873,7 @@ function getServiceCrons(services?: Service[]): Cron[] {
 
   const crons: Cron[] = [];
   for (const service of services) {
-    if (!isScheduleLikeService(service) || !service.schedule) {
+    if (!isScheduleTriggeredService(service) || !service.schedule) {
       continue;
     }
     const cronEntrypoint = service.entrypoint || service.builder.src || 'index';

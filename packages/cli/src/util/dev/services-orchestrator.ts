@@ -12,8 +12,8 @@ import {
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
-  isQueueLikeService,
-  isScheduleLikeService,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
   cloneEnv,
   getNodeBinPaths,
   spawnCommand,
@@ -141,10 +141,10 @@ interface ServiceDevProcess {
 }
 
 function getServiceRoutePrefixes(service: Service): string[] {
-  if (isQueueLikeService(service)) {
+  if (isQueueTriggeredService(service)) {
     return [getInternalServiceWorkerPathPrefix(service.name)];
   }
-  if (isScheduleLikeService(service)) {
+  if (isScheduleTriggeredService(service)) {
     return [getInternalServiceCronPathPrefix(service.name)];
   }
   if (service.type === 'web') {
@@ -186,7 +186,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
-    this.hasQueueServices = options.services.some(isQueueLikeService);
+    this.hasQueueServices = options.services.some(isQueueTriggeredService);
   }
 
   async startAll(): Promise<void> {
@@ -717,7 +717,7 @@ export class ServicesOrchestrator {
 
   private startCronSchedulers(): void {
     for (const service of this.services) {
-      if (!isScheduleLikeService(service) || !service.schedule) continue;
+      if (!isScheduleTriggeredService(service) || !service.schedule) continue;
 
       const managed = this.managedServices.get(service.name);
       if (!managed) continue;
