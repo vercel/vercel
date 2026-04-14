@@ -179,7 +179,7 @@ vercel firewall rules add "Rate limit API" \
   --rate-limit-window 60 \
   --rate-limit-requests 100 \
   --rate-limit-keys ip \
-  --rate-limit-action rate_limit \
+  --rate-limit-action deny \
   --yes
 ```
 
@@ -187,7 +187,7 @@ vercel firewall rules add "Rate limit API" \
 - `--rate-limit-requests` — max requests per window (1–10,000,000)
 - `--rate-limit-keys` — what to count by: `ip` (default), `ja4`, `header:<name>` (repeatable)
 - `--rate-limit-algo` — algorithm: `fixed_window` (default), `token_bucket`
-- `--rate-limit-action` — action when limit exceeded: `log`, `deny`, `challenge`, `rate_limit` (default: `rate_limit` / 429)
+- `--rate-limit-action` — what happens when a client exceeds the limit: `rate_limit` returns 429 (default), `deny` returns 403, `challenge` shows verification page, `log` logs without blocking
 
 ### Redirect example
 
