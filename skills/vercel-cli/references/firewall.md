@@ -304,18 +304,14 @@ vercel firewall discard --yes                         # throw away all draft cha
 
 ## Agent Usage
 
-Agents must use flag mode (`--condition` + `--action`) or JSON mode (`--json`). AI mode and interactive mode are not available in non-interactive environments.
-
-- **Always pass `--yes`** to skip confirmation prompts
+- **Pass `--yes`** to skip confirmation prompts
 - **Publish after staging rules/IP blocks**: `vercel firewall publish --yes`
 - **Use `--json` for structured output**: `vercel firewall rules list --json`
-- Errors return structured JSON with `next[]` command suggestions
 - Project must be linked first (`vercel link`)
 
 ## Anti-Patterns
 
 - **Forgetting `--yes`** — non-interactive commands fail without it
 - **Not publishing** — rule and IP block changes stay as drafts until `vercel firewall publish --yes`
-- **Using `--ai` in scripts/agents** — blocked; use `--json` or `--condition` flags
-- **Missing `key` for header/cookie/query** — these types require `"key": "header-name"` in the condition
+- **Using `--ai` for custom rules in scripts/agents** — blocked; use `--json` or `--condition` flags instead
 - **Broad deny rules** — a deny rule with a loose condition (e.g., path starts with `/`) will block all traffic. Review with `vercel firewall rules inspect` before publishing
