@@ -1,6 +1,6 @@
 # Firewall
 
-`vercel firewall` manages your project's Web Application Firewall — custom rules, IP blocks, system bypass, attack mode, and DDoS mitigations. All changes are staged as drafts and must be explicitly published to take effect.
+`vercel firewall` manages your project's Web Application Firewall — custom rules, IP blocks, system bypass, attack mode, and DDoS mitigations.
 
 ## Viewing Configuration
 
@@ -15,6 +15,8 @@ vercel firewall diff                                  # show unpublished draft c
 ```
 
 ## Creating Rules
+
+Rule changes are staged as drafts — run `vercel firewall publish --yes` to make them live.
 
 Four modes (mutually exclusive):
 
@@ -161,6 +163,8 @@ Each `--condition` is a JSON object:
 
 ## IP Blocks
 
+IP block changes are staged as drafts — run `vercel firewall publish --yes` to make them live.
+
 ```bash
 vercel firewall ip-blocks list                                        # list all blocked IPs
 vercel firewall ip-blocks block 1.2.3.4 --yes                        # block an IP
@@ -170,6 +174,8 @@ vercel firewall ip-blocks unblock 1.2.3.4 --hostname example.com --yes  # unbloc
 ```
 
 ## System Controls
+
+These take effect immediately — no publishing required.
 
 ```bash
 vercel firewall system-bypass list                    # list bypass rules
@@ -185,7 +191,7 @@ vercel firewall system-mitigations resume --yes       # resume DDoS protection
 
 ## Publishing
 
-All changes are staged as drafts. Nothing is live until published.
+Rule and IP block changes are staged as drafts. Nothing is live until published.
 
 ```bash
 vercel firewall diff                                  # review staged changes
@@ -247,7 +253,7 @@ Agents must use flag mode (`--condition` + `--action`) or JSON mode (`--json`). 
 ## Anti-Patterns
 
 - **Forgetting `--yes`** — non-interactive commands fail without it
-- **Not publishing** — changes stay as drafts until `vercel firewall publish --yes`
+- **Not publishing** — rule and IP block changes stay as drafts until `vercel firewall publish --yes`
 - **Using `--ai` in scripts/agents** — blocked; use `--json` or `--condition` flags
 - **Missing `key` for header/cookie/query** — these types require `"key": "header-name"` in the condition
 - **Broad deny rules** — a deny rule with a loose condition (e.g., path starts with `/`) will block all traffic. Use `vercel firewall rules inspect` to review before publishing
