@@ -306,10 +306,13 @@ export function useUpdateAttackMode() {
   });
 }
 
+export let lastPatchBody: any = null;
+
 export function usePatchDraft(
   responseOverrides: Partial<FirewallConfigResponse> = {}
 ) {
   delete capturedRequests.patchDraft;
+  lastPatchBody = null;
   client.scenario.patch(
     '/v1/security/firewall/config/draft',
     (req: any, res: any) => {
@@ -319,6 +322,7 @@ export function usePatchDraft(
         id: patch.id,
         value: patch.value,
       };
+      lastPatchBody = patch;
       res.json(
         createConfig({
           id: 'config_draft',
