@@ -892,6 +892,7 @@ describe('link', () => {
     useUnknownProject();
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -951,6 +952,7 @@ describe('link', () => {
     );
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -1029,6 +1031,7 @@ describe('link', () => {
     );
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -1099,6 +1102,7 @@ describe('link', () => {
     );
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -1188,6 +1192,7 @@ describe('link', () => {
     );
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -1275,6 +1280,7 @@ describe('link', () => {
     );
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -1342,6 +1348,7 @@ describe('link', () => {
     await writeFile(join(cwd, 'apps/web/vercel.json'), '{\n');
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -1402,6 +1409,7 @@ describe('link', () => {
     );
 
     client.cwd = cwd;
+    client.setArgv('--create');
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
@@ -2015,6 +2023,7 @@ describe('link', () => {
       useUnknownProject();
 
       client.cwd = cwd;
+      client.setArgv('--create');
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
