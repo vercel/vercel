@@ -23,6 +23,23 @@ export interface PathItem {
   parameters?: Parameter[];
 }
 
+/**
+ * `x-vercel-cli` on an **operation** (GET/POST/…). Distinct from schema-level `x-vercel-cli`.
+ */
+export interface VercelCliOperationExtension {
+  /**
+   * Opt this operation into `vercel openapi` (list, describe, invoke). Operations
+   * without `supported: true` are ignored by the openapi command.
+   */
+  supported?: boolean;
+  /**
+   * Alternate names for the second CLI argument (in addition to `operationId`), e.g.
+   * `["list"]` so `vercel openapi projects list` works alongside `getProjects`.
+   * Matched with the same folding rules as `operationId`.
+   */
+  aliases?: string[];
+}
+
 export interface Operation {
   summary?: string;
   description?: string;
@@ -32,6 +49,7 @@ export interface Operation {
   responses?: Record<string, Response>;
   tags?: string[];
   security?: Array<Record<string, string[]>>;
+  'x-vercel-cli'?: VercelCliOperationExtension;
 }
 
 export interface Parameter {
@@ -52,6 +70,36 @@ export interface MediaType {
   schema?: Schema;
 }
 
+/**
+ * CLI-only OpenAPI extension (`x-vercel-cli` on schemas). Ignored by standard OpenAPI tooling.
+ */
+/** Resolved `x-vercel-cli` layout for a successful JSON response. */
+export interface VercelCliTableDisplay {
+  /**
+   * Top-level response property whose value is rendered:
+   * - **Object** → key/value card (label | value).
+   * - **Array** of objects → table with one row per element (and these column paths).
+   */
+  displayProperty: string;
+  /** Column dot-paths for each row object (e.g. full AuthUser). */
+  columnsDefault: string[];
+  /** When a row has `limited: true`, use these columns (e.g. AuthUserLimited). */
+  columnsWhenLimited?: string[];
+}
+
+export interface VercelCliSchemaExtension {
+  /**
+   * On a **response wrapper** object schema: name of the property to render. If its
+   * schema is an object, the CLI uses a card layout; if an array of objects, a table.
+   */
+  displayProperty?: string;
+  /**
+   * On **AuthUser** (or similar) component schemas: dot-paths into the row object for
+   * table columns (e.g. `["email", "softUser.blockedAt"]`).
+   */
+  displayColumns?: string[];
+}
+
 export interface Schema {
   type?: string;
   properties?: Record<string, Schema>;
@@ -65,6 +113,7 @@ export interface Schema {
   oneOf?: Schema[];
   anyOf?: Schema[];
   allOf?: Schema[];
+  'x-vercel-cli'?: VercelCliSchemaExtension;
 }
 
 export interface Response {
@@ -86,6 +135,12 @@ export interface EndpointInfo {
   tags: string[];
   parameters: Parameter[];
   requestBody?: RequestBody;
+  /** HTTP status code → response (for documentation / `--describe`) */
+  responses?: Record<string, Response>;
+  /** True when the operation has `x-vercel-cli.supported: true` in the OpenAPI document. */
+  vercelCliSupported: boolean;
+  /** `x-vercel-cli.aliases` from the OpenAPI document (trimmed, non-empty). */
+  vercelCliAliases: string[];
 }
 
 export interface BodyField {

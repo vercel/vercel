@@ -1,17 +1,13 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import type { Response } from 'node-fetch';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { help } from '../help';
 import { apiCommand, listSubcommand } from './command';
 import { ApiTelemetryClient } from '../../util/telemetry/commands/api';
-import {
-  buildRequest,
-  formatOutput,
-  generateCurlCommand,
-} from './request-builder';
+import { buildRequest, generateCurlCommand } from './request-builder';
+import { executeApiRequest } from './execute';
 import { OpenApiCache } from '../../util/openapi';
 import { API_BASE_URL } from './constants';
 import {
@@ -29,7 +25,6 @@ import type {
   BodyField,
   SelectedEndpoint,
   PromptResult,
-  RequestConfig,
 } from './types';
 
 export default async function api(client: Client): Promise<number> {
@@ -194,185 +189,6 @@ export default async function api(client: Client): Promise<number> {
   }
 
   return executeApiRequest(client, endpoint, finalFlags);
-}
-
-async function executeApiRequest(
-  client: Client,
-  endpoint: string,
-  flags: ParsedFlags
-): Promise<number> {
-  // Build request from flags
-  let requestConfig: RequestConfig;
-  try {
-    requestConfig = await buildRequest(endpoint, flags);
-  } catch (err) {
-    printError(err);
-    return 1;
-  }
-
-  // Verbose mode: show request details
-  if (flags['--verbose']) {
-    output.debug(`Request: ${requestConfig.method} ${requestConfig.url}`);
-    if (Object.keys(requestConfig.headers).length > 0) {
-      output.debug(`Headers: ${JSON.stringify(requestConfig.headers)}`);
-    }
-    if (requestConfig.body) {
-      output.debug(
-        `Body: ${typeof requestConfig.body === 'string' ? requestConfig.body : JSON.stringify(requestConfig.body)}`
-      );
-    }
-  }
-
-  // Execute request (handles pagination if needed)
-  if (flags['--paginate']) {
-    return executePaginatedRequest(client, requestConfig, flags);
-  }
-
-  return executeSingleRequest(client, requestConfig, flags);
-}
-
-async function executeSingleRequest(
-  client: Client,
-  config: RequestConfig,
-  flags: ParsedFlags
-): Promise<number> {
-  try {
-    // Check for confirmation before proceeding with DELETE operations
-    const confirmed = await client.confirmMutatingOperation(
-      config.url,
-      config.method
-    );
-    if (!confirmed) {
-      return 1;
-    }
-
-    const response: Response = await client.fetch(config.url, {
-      method: config.method,
-      body: config.body,
-      headers: config.headers,
-      json: false, // Get raw response
-    });
-
-    return handleResponse(client, response, flags);
-  } catch (err) {
-    output.prettyError(err);
-    return 1;
-  }
-}
-
-async function executePaginatedRequest(
-  client: Client,
-  config: RequestConfig,
-  flags: ParsedFlags
-): Promise<number> {
-  const results: unknown[] = [];
-
-  try {
-    // Check for confirmation before proceeding with DELETE operations
-    const confirmed = await client.confirmMutatingOperation(
-      config.url,
-      config.method
-    );
-    if (!confirmed) {
-      return 1;
-    }
-
-    for await (const page of client.fetchPaginated<Record<string, unknown>>(
-      config.url,
-      {
-        method: config.method,
-        body: config.body,
-        headers: config.headers,
-      }
-    )) {
-      // Extract array data from response
-      const data = extractPaginatedData(page);
-      results.push(...data);
-    }
-
-    // Output combined results
-    return outputResults(client, results, flags);
-  } catch (err) {
-    output.prettyError(err);
-    return 1;
-  }
-}
-
-/**
- * Extract array data from a paginated response
- * Vercel API returns data in various keys like 'deployments', 'projects', 'domains', etc.
- */
-function extractPaginatedData(page: Record<string, unknown>): unknown[] {
-  // Find the first array value in the response (skip pagination metadata)
-  for (const [key, value] of Object.entries(page)) {
-    if (key !== 'pagination' && Array.isArray(value)) {
-      return value;
-    }
-  }
-
-  // If no array found, return the page without pagination as a single item
-  const { pagination, ...rest } = page;
-  void pagination; // Explicitly ignore pagination
-  return [rest];
-}
-
-async function handleResponse(
-  client: Client,
-  response: Response,
-  flags: ParsedFlags
-): Promise<number> {
-  // Include headers if requested
-  if (flags['--include']) {
-    outputHeaders(client, response);
-  }
-
-  // Silent mode
-  if (flags['--silent']) {
-    return response.ok ? 0 : 1;
-  }
-
-  // Get response body
-  const contentType = response.headers.get('content-type') || '';
-
-  if (contentType.includes('application/json')) {
-    const json = await response.json();
-
-    // Verbose mode: show response details
-    if (flags['--verbose']) {
-      output.debug(
-        `Response status: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return outputResults(client, json, flags);
-  }
-
-  // Non-JSON response
-  const text = await response.text();
-  client.stdout.write(text);
-
-  return response.ok ? 0 : 1;
-}
-
-function outputHeaders(client: Client, response: Response): void {
-  client.stdout.write(`HTTP ${response.status} ${response.statusText}\n`);
-  response.headers.forEach((value, key) => {
-    client.stdout.write(`${key}: ${value}\n`);
-  });
-  client.stdout.write('\n');
-}
-
-function outputResults(
-  client: Client,
-  data: unknown,
-  flags: ParsedFlags
-): number {
-  const formatted = formatOutput(data, {
-    raw: flags['--raw'],
-  });
-
-  client.stdout.write(formatted + '\n');
-  return 0;
 }
 
 async function promptEndpointSelection(
