@@ -69,7 +69,7 @@ describe('validateConfig', () => {
           trigger: 'schedule',
           root: 'jobs',
           entrypoint: 'cleanup.py',
-          schedule: ['0 0 * * *', '0 12 * * *'],
+          schedule: '0 0 * * *',
         },
       },
     } satisfies Parameters<typeof validateConfig>[0]);

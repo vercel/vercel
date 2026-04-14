@@ -183,22 +183,9 @@ const serviceMountSchema = {
 };
 
 const serviceScheduleSchema = {
-  oneOf: [
-    {
-      type: 'string',
-      minLength: 9,
-      maxLength: 256,
-    },
-    {
-      type: 'array',
-      minItems: 1,
-      items: {
-        type: 'string',
-        minLength: 9,
-        maxLength: 256,
-      },
-    },
-  ],
+  type: 'string',
+  minLength: 9,
+  maxLength: 256,
 };
 
 const serviceQueueTopicSchema = {

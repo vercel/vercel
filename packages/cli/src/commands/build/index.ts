@@ -1877,19 +1877,14 @@ function getServiceCrons(services?: Service[]): Cron[] {
       continue;
     }
     const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    const schedules = Array.isArray(service.schedule)
-      ? service.schedule
-      : [service.schedule];
-    for (const schedule of schedules) {
-      crons.push({
-        path: getInternalServiceCronPath(
-          service.name,
-          cronEntrypoint,
-          service.handlerFunction || 'cron'
-        ),
-        schedule,
-      });
-    }
+    crons.push({
+      path: getInternalServiceCronPath(
+        service.name,
+        cronEntrypoint,
+        service.handlerFunction || 'cron'
+      ),
+      schedule: service.schedule,
+    });
   }
 
   return crons;

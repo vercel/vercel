@@ -1144,10 +1144,6 @@ describe.skipIf(flakey)('build', () => {
         path: '/_svc/cleanup/crons/index/cron',
         schedule: '0 0 * * *',
       },
-      {
-        path: '/_svc/cleanup/crons/index/cron',
-        schedule: '0 12 * * *',
-      },
     ]);
 
     const vcConfig = await fs.readJSON(

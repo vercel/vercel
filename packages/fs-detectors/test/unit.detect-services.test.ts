@@ -1493,7 +1493,7 @@ describe('detectServices', () => {
               type: 'job',
               trigger: 'schedule',
               entrypoint: 'jobs/cleanup.py',
-              schedule: ['0 0 * * *', '0 12 * * *'],
+              schedule: '0 0 * * *',
             },
           },
         }),
@@ -1508,7 +1508,7 @@ describe('detectServices', () => {
         type: 'job',
         trigger: 'schedule',
         entrypoint: 'jobs/cleanup.py',
-        schedule: ['0 0 * * *', '0 12 * * *'],
+        schedule: '0 0 * * *',
       });
       expect(result.routes.crons).toHaveLength(1);
       expect(result.routes.crons[0]).toEqual({

@@ -644,7 +644,7 @@ export interface VercelConfig {
       /**
        * Cron schedule expression(s) (e.g., "0 0 * * *"). Required for schedule-triggered job services.
        */
-      schedule?: string | string[];
+      schedule?: string;
       /**
        * Topic names or queue topic configs for worker and queue-triggered job services.
        */

@@ -722,16 +722,10 @@ export class ServicesOrchestrator {
       const managed = this.managedServices.get(service.name);
       if (!managed) continue;
 
-      const schedules = Array.isArray(service.schedule)
-        ? service.schedule
-        : [service.schedule];
       output.debug(
-        `Scheduling job service ${chalk.bold(service.name)} (${chalk.cyan(schedules.join(', '))})`
+        `Scheduling job service ${chalk.bold(service.name)} (${chalk.cyan(service.schedule)})`
       );
-
-      for (const schedule of schedules) {
-        this.scheduleCronTrigger(service.name, schedule, managed);
-      }
+      this.scheduleCronTrigger(service.name, service.schedule, managed);
     }
   }
 

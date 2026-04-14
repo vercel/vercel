@@ -6,7 +6,7 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { getServiceQueueTopics } from '@vercel/build-utils';
+import { getServiceQueueTopics, JOB_TRIGGERS, JobTrigger } from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -453,13 +453,12 @@ export function validateServiceConfig(
   }
   if (
     isJobService &&
-    config.trigger !== 'queue' &&
-    config.trigger !== 'schedule' &&
-    config.trigger !== 'workflow'
+    config.trigger &&
+    !JOB_TRIGGERS.includes(config.trigger)
   ) {
     return {
       code: 'INVALID_JOB_TRIGGER',
-      message: `Job service "${name}" has invalid trigger "${config.trigger}". Expected "queue", "schedule", or "workflow".`,
+      message: `Job service "${name}" has invalid trigger "${config.trigger}". Expected ${JOB_TRIGGERS.map((t: JobTrigger) => `"${t}"`).join(', ')}.`,
       serviceName: name,
     };
   }

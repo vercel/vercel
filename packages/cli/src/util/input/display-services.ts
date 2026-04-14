@@ -110,12 +110,7 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
 
 function getServiceTarget(service: Service): string {
   if (isScheduleTriggeredService(service)) {
-    const schedules = Array.isArray(service.schedule)
-      ? service.schedule
-      : service.schedule
-        ? [service.schedule]
-        : [];
-    return `schedule: ${schedules.join(', ') || 'none'}`;
+    return `schedule: ${service.schedule ?? 'none'}`;
   }
 
   if (isQueueTriggeredService(service)) {

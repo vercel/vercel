@@ -575,7 +575,8 @@ export interface ServiceQueueTopic {
 }
 
 export type ServiceTopics = string[] | ServiceQueueTopic[];
-export type JobTrigger = 'queue' | 'schedule' | 'workflow';
+export const JOB_TRIGGERS = ['queue', 'schedule', 'workflow'] as const;
+export type JobTrigger = (typeof JOB_TRIGGERS)[number];
 
 export interface Service {
   name: string;
@@ -594,7 +595,7 @@ export interface Service {
   routePrefixSource?: 'configured' | 'generated';
   subdomain?: string;
   /* scheduled job config */
-  schedule?: string | string[];
+  schedule?: string;
   /* optional handler for a schedule-triggered job in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker/job service config */
@@ -867,7 +868,7 @@ export interface ExperimentalServiceConfig {
 
   /* Scheduled job config */
   /** Cron schedule expression(s) (e.g., "0 0 * * *") */
-  schedule?: string | string[];
+  schedule?: string;
 
   /* Worker/job service config */
   topics?: ServiceTopics;
