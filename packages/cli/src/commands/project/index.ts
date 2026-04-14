@@ -10,6 +10,7 @@ import inspect from './inspect';
 import list from './list';
 import members from './members';
 import accessGroups from './access-groups';
+import rename from './rename';
 import rm from './rm';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
@@ -25,6 +26,7 @@ import {
   membersSubcommand,
   projectCommand,
   protectionSubcommand,
+  renameSubcommand,
   removeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
@@ -45,6 +47,7 @@ const COMMAND_CONFIG = {
   'access-summary': getCommandAliases(accessSummarySubcommand),
   checks: getCommandAliases(checksSubcommand),
   protection: getCommandAliases(protectionSubcommand),
+  rename: getCommandAliases(renameSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
@@ -183,6 +186,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandToken(subcommandOriginal);
       return getOidcToken(client, args);
+    case 'rename':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(renameSubcommand);
+      }
+      telemetry.trackCliSubcommandRename(subcommandOriginal);
+      return rename(client, args);
     case 'remove':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);

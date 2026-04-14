@@ -217,3 +217,8 @@ export {
   validateEnvWrapperSupport,
   ENV_WRAPPER_SUPPORTED_FAMILIES,
 } from './validate-lambda-size';
+
+export { validateFrameworkVersion } from './deserialize/validate-framework-version';
+export { hydrateFilesMap } from './deserialize/hydrate-files-map';
+export { createFunctionsIterator } from './deserialize/create-functions-iterator';
+export { maybeReadJSON } from './deserialize/maybe-read-json';
