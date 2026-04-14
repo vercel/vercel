@@ -219,6 +219,45 @@ export {
 } from './validate-lambda-size';
 
 export { validateFrameworkVersion } from './deserialize/validate-framework-version';
+export {
+  MAX_DEPLOYMENT_ID_LENGTH,
+  VALID_DEPLOYMENT_ID_PATTERN,
+  validateDeploymentId,
+} from './deserialize/validate-deployment-id';
 export { hydrateFilesMap } from './deserialize/hydrate-files-map';
 export { createFunctionsIterator } from './deserialize/create-functions-iterator';
 export { maybeReadJSON } from './deserialize/maybe-read-json';
+export {
+  deserializeLambda,
+  type DeserializeLambdaOptions,
+  type DeserializeLambdaParams,
+  type DeserializeNodejsLambdaParams,
+} from './deserialize/deserialize-lambda';
+export {
+  deserializeEdgeFunction,
+  type DeserializeEdgeFunctionOptions,
+  type DeserializeEdgeFunctionParams,
+} from './deserialize/deserialize-edge-function';
+export {
+  deserializeBuildOutputCore,
+  type DeserializeBuildOutputCoreOptions,
+  type DeserializeBuildOutputCoreResult,
+  type DeserializeBuildOutputGroupLambdasOptions,
+  type DeserializeBuildOutputInspectLambdaOptions,
+  type DeserializeBuildOutputMeta,
+} from './deserialize/deserialize-build-output';
+export type {
+  BuildOutputConfig,
+  BuildOutputCron,
+  BuildResultV2TypicalWithCron,
+  DeploymentFlagLegacy,
+  DeploymentFlags,
+  ExternalConfig,
+  PathOverride,
+  Properties,
+  SerializedEdgeFunction,
+  SerializedFileFsRef,
+  SerializedLambda,
+  SerializedNodejsLambda,
+  SerializedPrerender,
+} from './deserialize/types';
