@@ -399,8 +399,31 @@ export const listStoresSubcommand = {
       description:
         'List all blob stores for the team, not just the ones connected to the current project',
     },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output results as JSON',
+    },
+    {
+      name: 'no-projects',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Hide the Projects column (table output only)',
+    },
   ],
-  examples: [],
+  examples: [
+    {
+      name: 'List blob stores for the linked project',
+      value: 'vercel blob list-stores',
+    },
+    {
+      name: 'List all team blob stores as JSON',
+      value: 'vercel blob list-stores --all --json',
+    },
+  ],
 } as const;
 
 export const blobCommand = {

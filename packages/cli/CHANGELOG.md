@@ -1,5 +1,48 @@
 # vercel
 
+## 51.2.1
+
+### Patch Changes
+
+- Add `ai-gateway api-keys create` command for creating AI Gateway API keys with optional quota limits ([#15744](https://github.com/vercel/vercel/pull/15744))
+
+- Improve `vercel blob list-stores` with `--json` and `--no-projects`, exclude non-blob stores when the API returns a `type` field, and show a richer table for non-TTY output while keeping linked-project filtering, `--all`, and interactive store selection on TTY. ([#14653](https://github.com/vercel/vercel/pull/14653))
+
+- Add a `project rename` command to rename projects from the CLI. ([#15918](https://github.com/vercel/vercel/pull/15918))
+
+- Updated dependencies [[`8b77cdcd71ba645df4eed52cdccde9a2cbb913f8`](https://github.com/vercel/vercel/commit/8b77cdcd71ba645df4eed52cdccde9a2cbb913f8), [`2d7d14db1c6448f716d1ccc30844b43f47e8e6ee`](https://github.com/vercel/vercel/commit/2d7d14db1c6448f716d1ccc30844b43f47e8e6ee), [`d731f1b69030ddcaa0b7f4f1854f79ea92671b1e`](https://github.com/vercel/vercel/commit/d731f1b69030ddcaa0b7f4f1854f79ea92671b1e), [`4e62f6c2204dd148643f86f140f0ae7995778017`](https://github.com/vercel/vercel/commit/4e62f6c2204dd148643f86f140f0ae7995778017), [`45c8d4f54cc831695375794964a29145860fa45b`](https://github.com/vercel/vercel/commit/45c8d4f54cc831695375794964a29145860fa45b), [`42a70e1e6318615bd420933f9cc978bed3a43936`](https://github.com/vercel/vercel/commit/42a70e1e6318615bd420933f9cc978bed3a43936)]:
+  - @vercel/backends@0.0.60
+  - @vercel/python@6.31.0
+  - @vercel/next@4.16.7
+  - @vercel/build-utils@13.15.0
+  - @vercel/elysia@0.1.63
+  - @vercel/express@0.1.73
+  - @vercel/fastify@0.1.66
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.72
+  - @vercel/hono@0.2.66
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.46
+  - @vercel/nestjs@0.2.67
+  - @vercel/node@5.7.5
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.0
+  - @vercel/static-build@2.9.13
+
+## 51.2.0
+
+### Minor Changes
+
+- Add `vercel domains price` to show registrar purchase, renewal, and transfer pricing for a domain. ([#15851](https://github.com/vercel/vercel/pull/15851))
+
+### Patch Changes
+
+- Updated dependencies [[`63a7bd6b8ce887f98bb6ee8c09e7196e7105e90d`](https://github.com/vercel/vercel/commit/63a7bd6b8ce887f98bb6ee8c09e7196e7105e90d), [`71e5dcc49d6b1eb3955ca7e18a52e76d18e8e8dc`](https://github.com/vercel/vercel/commit/71e5dcc49d6b1eb3955ca7e18a52e76d18e8e8dc)]:
+  - @vercel/go@3.5.0
+  - @vercel/python@6.30.1
+
 ## 51.1.0
 
 ### Minor Changes

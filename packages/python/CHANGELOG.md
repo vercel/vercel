@@ -1,5 +1,21 @@
 # @vercel/python
 
+## 6.31.0
+
+### Minor Changes
+
+- Parse python module:variable entrypoint notation in experimentalServices for all service types. ([#15844](https://github.com/vercel/vercel/pull/15844))
+
+### Patch Changes
+
+- [python] set the `UV_PROJECT_ENVIRONMENT` and `UV_NO_DEV` env vars so that custom `installCommand` and `buildCommand` commands can be called without the `--active` and `--no-dev` flags ([#15715](https://github.com/vercel/vercel/pull/15715))
+
+## 6.30.1
+
+### Patch Changes
+
+- Replace subprocess calls with fs.existsSync ([#15913](https://github.com/vercel/vercel/pull/15913))
+
 ## 6.30.0
 
 ### Minor Changes
