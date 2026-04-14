@@ -213,19 +213,15 @@ export async function detectDjangoPythonEntrypoint(
 export async function detectPythonEntrypoint(
   framework: PythonFramework | undefined,
   workPath: string,
-  configuredEntrypoint?: { filePath: string; varName?: string },
+  configuredEntrypoint?: string,
   service?: { type?: string }
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
-    const { filePath: configEntryFile, varName: configEntryVar } =
-      configuredEntrypoint;
-    const entrypoint = configEntryFile.endsWith('.py')
-      ? configEntryFile
-      : `${configEntryFile}.py`;
-
-    let varName: string | null =
-      configEntryVar ?? (await checkEntrypoint(workPath, entrypoint));
+    const entrypoint = configuredEntrypoint.endsWith('.py')
+      ? configuredEntrypoint
+      : `${configuredEntrypoint}.py`;
+    let varName = await checkEntrypoint(workPath, entrypoint);
 
     if (!varName) {
       const isSpecialService =

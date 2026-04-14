@@ -511,7 +511,7 @@ export async function resolveConfiguredService(
   const rawEntrypoint = config.entrypoint;
 
   const moduleAttrParsed =
-    typeof rawEntrypoint === 'string'
+    typeof rawEntrypoint === 'string' && type === 'cron'
       ? parsePyModuleAttrEntrypoint(rawEntrypoint)
       : null;
   const routingResult = resolveServiceRoutingConfig(name, config);
@@ -731,10 +731,15 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
+    const serviceType = serviceConfig.type || 'web';
     if (typeof serviceConfig.entrypoint === 'string') {
-      const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
-      const entrypointToResolve =
-        moduleAttr?.filePath ?? serviceConfig.entrypoint;
+      const moduleAttr =
+        serviceType === 'cron'
+          ? parsePyModuleAttrEntrypoint(serviceConfig.entrypoint)
+          : null;
+      const entrypointToResolve = moduleAttr
+        ? moduleAttr.filePath
+        : serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
         fs,
         serviceName: name,

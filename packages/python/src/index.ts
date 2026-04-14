@@ -246,23 +246,11 @@ export const build: BuildVX = async ({
   // Entrypoint discovery
   let detected: DetectedPythonEntrypoint | undefined;
 
-  const handlerFunction =
-    typeof config?.handlerFunction === 'string'
-      ? config.handlerFunction
-      : undefined;
-
   detected =
     (await detectPythonEntrypoint(
       config.framework as PythonFramework,
       workPath,
-      entrypoint
-        ? {
-            filePath: entrypoint,
-            // For cron services, the WSGI variable is always 'app' (created dynamically).
-            // For other services, handlerFunction is used as the entrypoint variable name.
-            varName: service?.type === 'cron' ? undefined : handlerFunction,
-          }
-        : undefined,
+      entrypoint,
       service
     )) ?? undefined;
 
@@ -583,6 +571,10 @@ export const build: BuildVX = async ({
   }
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const handlerFunction =
+    typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined;
 
   if (handlerFunction) {
     const entrypointPath = join(workPath, entrypoint);

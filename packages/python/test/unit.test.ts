@@ -1787,80 +1787,6 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 });
 
-describe('vercel.json entrypoint configuration', () => {
-  let workPath: string;
-
-  beforeEach(() => {
-    workPath = path.join(
-      tmpdir(),
-      `python-vercel-json-entrypoint-${Date.now()}`
-    );
-    fs.mkdirSync(workPath, { recursive: true });
-    makeMockPython('3.9');
-  });
-
-  afterEach(() => {
-    if (fs.existsSync(workPath)) fs.removeSync(workPath);
-  });
-
-  it('errors when the configured entrypoint file does not exist', async () => {
-    await expect(
-      build({
-        workPath,
-        files: {},
-        entrypoint: 'nonexistent.py',
-        meta: { isDev: true },
-        config: { framework: 'fastapi' },
-        repoRootPath: workPath,
-      })
-    ).rejects.toThrow(/ENOENT/);
-  });
-
-  it('detects the variable automatically when no variable is specified', async () => {
-    const files = {
-      'app/wsgi.py': new FileBlob({
-        data: 'application = lambda env, start: None\n',
-      }),
-    } as Record<string, FileBlob>;
-    await download(files, workPath);
-
-    const result = await build({
-      workPath,
-      files,
-      entrypoint: 'app/wsgi.py',
-      meta: { isDev: true },
-      config: { framework: 'django' },
-      repoRootPath: workPath,
-    });
-
-    const handler =
-      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
-    if (!handler || !('data' in handler)) throw new Error('handler not found');
-    const content = handler.data.toString();
-    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "application"');
-  });
-
-  it('errors when no standard callable is found in the configured entrypoint', async () => {
-    const files = {
-      'myapp.py': new FileBlob({ data: 'print("hello")\n' }),
-    } as Record<string, FileBlob>;
-    await download(files, workPath);
-
-    await expect(
-      build({
-        workPath,
-        files,
-        entrypoint: 'myapp.py',
-        meta: { isDev: true },
-        config: { framework: 'fastapi' },
-        repoRootPath: workPath,
-      })
-    ).rejects.toThrow(
-      /Could not find a top-level "app", "application", or "handler" in "myapp\.py"/
-    );
-  });
-});
-
 describe('handlerFunction validation', () => {
   let mockWorkPath: string;
 
@@ -1978,58 +1904,6 @@ describe('handlerFunction validation', () => {
         service: { type: 'cron' },
       })
     ).rejects.toThrow(/Handler function "cleanup" not found/);
-  });
-
-  it('uses handlerFunction as variable name for web services', async () => {
-    const files = {
-      'app.py': new FileBlob({
-        data: 'flask_app = lambda environ, start_response: None\n',
-      }),
-      'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
-      }),
-    } as Record<string, FileBlob>;
-    await download(files, mockWorkPath);
-
-    const result = await build({
-      workPath: mockWorkPath,
-      files,
-      entrypoint: 'app.py',
-      meta: { isDev: true },
-      config: { handlerFunction: 'flask_app', framework: 'flask' },
-      repoRootPath: mockWorkPath,
-    });
-
-    const handler =
-      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
-    if (!handler || !('data' in handler)) {
-      throw new Error('handler bootstrap not found');
-    }
-    const content = handler.data.toString();
-    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "flask_app"');
-  });
-
-  it('errors when handlerFunction variable does not exist for web services', async () => {
-    const files = {
-      'app.py': new FileBlob({
-        data: 'other_var = lambda environ, start_response: None\n',
-      }),
-      'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
-      }),
-    } as Record<string, FileBlob>;
-    await download(files, mockWorkPath);
-
-    await expect(
-      build({
-        workPath: mockWorkPath,
-        files,
-        entrypoint: 'app.py',
-        meta: { isDev: true },
-        config: { handlerFunction: 'flask_app', framework: 'flask' },
-        repoRootPath: mockWorkPath,
-      })
-    ).rejects.toThrow(/Handler function "flask_app" not found in app\.py/);
   });
 
   it('does not set __VC_HANDLER_FUNC_NAME when handlerFunction is not configured', async () => {
