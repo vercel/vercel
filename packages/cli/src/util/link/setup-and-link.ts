@@ -67,6 +67,8 @@ export interface SetupAndLinkOptions {
   v0?: boolean;
   /** When true, search matching projects across teams before standard linking flow */
   searchAcrossTeams?: boolean;
+  /** When true, allow creating a new project if no existing one is found */
+  allowCreateProject?: boolean;
 }
 
 export default async function setupAndLink(
@@ -83,6 +85,7 @@ export default async function setupAndLink(
     pullEnv = true,
     v0,
     searchAcrossTeams = false,
+    allowCreateProject = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -280,7 +283,8 @@ export default async function setupAndLink(
       org,
       projectName,
       autoConfirm,
-      skipAutoDetect
+      skipAutoDetect,
+      allowCreateProject
     );
   } catch (err) {
     if (
@@ -288,6 +292,19 @@ export default async function setupAndLink(
       (err as NodeJS.ErrnoException).code === 'HEADLESS'
     ) {
       return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+    }
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'PROJECT_CREATION_DISABLED'
+    ) {
+      output.error(
+        'No existing project found to link. Re-run with `--create` to create a new project.'
+      );
+      return {
+        status: 'error',
+        exitCode: 1,
+        reason: 'HEADLESS',
+      };
     }
     throw err;
   }

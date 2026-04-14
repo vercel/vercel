@@ -59,6 +59,14 @@ export const linkCommand = {
       description:
         'Skip questions when setting up new project using default scope and settings',
     },
+    {
+      name: 'create',
+      description:
+        'Allow creating a new project if no matching existing project is found',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
     confirmOption,
   ],
   examples: [
@@ -69,6 +77,10 @@ export const linkCommand = {
     {
       name: 'Link current directory with default options and skip questions',
       value: `${packageName} link --yes`,
+    },
+    {
+      name: 'Create a new project when no existing project is found',
+      value: `${packageName} link --create`,
     },
     {
       name: 'Non-interactive: link to an existing project (CI/agents)',

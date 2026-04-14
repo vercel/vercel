@@ -274,6 +274,7 @@ async function handleInitDeployment(
       paths,
     }),
     v0: isV0,
+    allowCreateProject: true,
   });
   if (typeof link === 'number') {
     return link;
@@ -817,6 +818,7 @@ async function handleContinueSubcommand(
       nowConfig: localConfig,
       paths,
     }),
+    allowCreateProject: true,
   });
   if (typeof link === 'number') {
     return link;
@@ -1072,6 +1074,7 @@ async function handleDefaultDeploy(
       paths,
     }),
     v0: isV0,
+    allowCreateProject: true,
   });
   if (typeof link === 'number') {
     return link;

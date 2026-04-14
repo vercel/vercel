@@ -25,6 +25,12 @@ export class LinkTelemetryClient
     }
   }
 
+  trackCliFlagCreate(create: boolean | undefined) {
+    if (create) {
+      this.trackCliFlag('create');
+    }
+  }
+
   trackCliFlagConfirm(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('confirm');

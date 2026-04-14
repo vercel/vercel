@@ -11,7 +11,8 @@ export default async function inputProject(
   org: Org,
   detectedProjectName: string,
   autoConfirm = false,
-  skipAutoDetect = false
+  skipAutoDetect = false,
+  allowCreateProject = true
 ): Promise<Project | string> {
   const slugifiedName = slugify(detectedProjectName);
 
@@ -42,12 +43,22 @@ export default async function inputProject(
   }
 
   if (autoConfirm) {
+    if (!detectedProject && !allowCreateProject) {
+      const err = new Error('Project creation requires explicit confirmation');
+      (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+      throw err;
+    }
     return detectedProject || detectedProjectName;
   }
 
   if (client.nonInteractive) {
     if (detectedProject) {
       return detectedProject;
+    }
+    if (!allowCreateProject) {
+      const err = new Error('Project creation requires explicit confirmation');
+      (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+      throw err;
     }
     const err = new Error('Confirmation required');
     (err as NodeJS.ErrnoException).code = 'HEADLESS';
@@ -91,6 +102,13 @@ export default async function inputProject(
     const hasMoreProjects = firstPage.pagination.next !== null;
 
     if (projects.length === 0) {
+      if (!allowCreateProject) {
+        const err = new Error(
+          'Project creation requires explicit confirmation'
+        );
+        (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+        throw err;
+      }
       output.log(
         `No existing projects found under ${chalk.bold(org.slug)}. Creating new project.`
       );
@@ -126,6 +144,12 @@ export default async function inputProject(
 
       return toLink;
     }
+  }
+
+  if (!allowCreateProject) {
+    const err = new Error('Project creation requires explicit confirmation');
+    (err as NodeJS.ErrnoException).code = 'PROJECT_CREATION_DISABLED';
+    throw err;
   }
 
   // user wants to create a new project

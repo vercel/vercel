@@ -54,6 +54,9 @@ export async function ensureLink(
     (link.status === 'linked' && opts.forceDelete) ||
     link.status === 'not_linked'
   ) {
+    if (typeof opts.allowCreateProject === 'undefined') {
+      opts.allowCreateProject = false;
+    }
     link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {

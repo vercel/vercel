@@ -64,6 +64,7 @@ export default async function dev(
         successEmoji: 'link',
         setupMsg: 'Set up and develop',
         nonInteractive: client.nonInteractive,
+        allowCreateProject: true,
       });
 
       if (link.status === 'not_linked') {

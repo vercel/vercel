@@ -94,6 +94,7 @@ export default async function link(client: Client) {
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetry.trackCliFlagCreate(parsedArgs.flags['--create']);
   telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
 
   if ('--confirm' in parsedArgs.flags) {
@@ -103,6 +104,7 @@ export default async function link(client: Client) {
   }
 
   const yes = !!parsedArgs.flags['--yes'];
+  const create = !!parsedArgs.flags['--create'];
 
   let cwd = parsedArgs.args[1];
   if (cwd) {
@@ -155,6 +157,7 @@ export default async function link(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
       searchAcrossTeams: true,
+      allowCreateProject: create,
     });
 
     if (typeof link === 'number') {

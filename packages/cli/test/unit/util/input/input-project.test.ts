@@ -48,4 +48,13 @@ describe('inputProject', () => {
       inputProject(client, org, 'my-app', false, false)
     ).rejects.toMatchObject({ code: 'HEADLESS' });
   });
+
+  it('throws PROJECT_CREATION_DISABLED when creation is disallowed', async () => {
+    mockedGetProject.mockResolvedValue(new ProjectNotFound('my-app'));
+    (client as { nonInteractive: boolean }).nonInteractive = true;
+
+    await expect(
+      inputProject(client, org, 'my-app', false, false, false)
+    ).rejects.toMatchObject({ code: 'PROJECT_CREATION_DISABLED' });
+  });
 });
