@@ -1338,7 +1338,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // Step 1. Create a simple static deployment with no configuration.
   // Deployment should succeed and page should display "0"
 
-  await mkdir(path.join(directory, 'public'), { recursive: true });
+  await mkdir(path.join(directory, 'public'));
   await writeFile(path.join(directory, 'public/index.txt'), '0');
 
   // auto-confirm this deployment
@@ -1352,7 +1352,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // Step 2. Now that the project exists, override the buildCommand and outputDirectory.
   // The CLI should not prompt the user about the overrides.
 
-  const BUILD_COMMAND = 'mkdir -p output && echo "1" > output/index.txt';
+  const BUILD_COMMAND = 'mkdir output && echo "1" >> output/index.txt';
   const OUTPUT_DIRECTORY = 'output';
 
   await writeFile(
@@ -1369,7 +1369,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   expect(text).toBe('1\n');
 
   // // Step 3. Do a more complex deployment using a framework this time
-  await mkdir(`${directory}/pages`, { recursive: true });
+  await mkdir(`${directory}/pages`);
   await writeFile(
     `${directory}/pages/index.js`,
     `export default () => 'Next.js Test'`
