@@ -48,6 +48,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandRename(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rename',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandToken(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'token',
