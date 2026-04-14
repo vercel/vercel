@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
 import { client } from '../../../mocks/client';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import alerts from '../../../../src/commands/alerts';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getScopeModule from '../../../../src/util/get-scope';
@@ -47,12 +47,8 @@ describe('alerts rules', () => {
     client.reset();
     mockLinkedProject();
     mockTeamScope();
-    tmpDir = mkdtempSync(join(tmpdir(), 'vercel-alerts-rules-'));
+    tmpDir = setupTmpDir('vercel-alerts-rules');
     client.cwd = tmpDir;
-  });
-
-  afterEach(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
   });
 
   it('lists alert rules for linked project', async () => {
