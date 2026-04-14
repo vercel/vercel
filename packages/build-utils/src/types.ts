@@ -779,6 +779,13 @@ export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
 export type ServiceType = 'web' | 'cron' | 'worker';
 
+export interface ServiceMount {
+  /** URL path prefix where the service is mounted. */
+  path?: string;
+  /** Optional subdomain this service is mounted on. */
+  subdomain?: string;
+}
+
 /**
  * Configuration for a service in vercel.json.
  * @experimental This feature is experimental and may change.
@@ -810,7 +817,9 @@ export interface ExperimentalServiceConfig {
   excludeFiles?: string | string[];
 
   /* Web service config */
-  /** URL prefix for routing */
+  /** Preferred routing config alias for routePrefix/subdomain. */
+  mount?: string | ServiceMount;
+  /** URL prefix for routing (deprecated, use mount instead) */
   routePrefix?: string;
   /** Subdomain this service should respond to (web services only). */
   subdomain?: string;

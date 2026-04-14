@@ -1,5 +1,93 @@
 # @vercel/fs-detectors
 
+## 5.16.0
+
+### Minor Changes
+
+- Parse python module:variable entrypoint notation in experimentalServices for all service types. ([#15844](https://github.com/vercel/vercel/pull/15844))
+
+### Patch Changes
+
+- Updated dependencies [[`4e62f6c2204dd148643f86f140f0ae7995778017`](https://github.com/vercel/vercel/commit/4e62f6c2204dd148643f86f140f0ae7995778017), [`42a70e1e6318615bd420933f9cc978bed3a43936`](https://github.com/vercel/vercel/commit/42a70e1e6318615bd420933f9cc978bed3a43936)]:
+  - @vercel/build-utils@13.15.0
+
+## 5.15.2
+
+### Patch Changes
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+- Updated dependencies [[`9b3ea340f23c1faad6d56c2a54d75bb2e77b0162`](https://github.com/vercel/vercel/commit/9b3ea340f23c1faad6d56c2a54d75bb2e77b0162)]:
+  - @vercel/build-utils@13.14.2
+
+## 5.15.1
+
+### Patch Changes
+
+- feat(node): filter non-entrypoint Node.js files in `/api` directory ([#15873](https://github.com/vercel/vercel/pull/15873))
+
+- Updated dependencies [[`2e15ee828f14de4a849a462429ca03feab161174`](https://github.com/vercel/vercel/commit/2e15ee828f14de4a849a462429ca03feab161174), [`a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57`](https://github.com/vercel/vercel/commit/a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57)]:
+  - @vercel/build-utils@13.14.1
+
+## 5.15.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+### Patch Changes
+
+- remove experimental flag on node preset ([#15628](https://github.com/vercel/vercel/pull/15628))
+
+- Updated dependencies [[`aea2272ac976a2e13591e402b2a41173cf51f740`](https://github.com/vercel/vercel/commit/aea2272ac976a2e13591e402b2a41173cf51f740), [`42b6ff3113eb7ba5302b8469f8dd10070ecec6f0`](https://github.com/vercel/vercel/commit/42b6ff3113eb7ba5302b8469f8dd10070ecec6f0)]:
+  - @vercel/frameworks@3.24.0
+  - @vercel/build-utils@13.14.0
+
+## 5.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`a80217a9ed60d7b7f3e98537b0468cc5488078c1`](https://github.com/vercel/vercel/commit/a80217a9ed60d7b7f3e98537b0468cc5488078c1)]:
+  - @vercel/build-utils@13.13.0
+
+## 5.14.2
+
+### Patch Changes
+
+- Fall back to `--scope` flag for Turborepo versions 1.1 and below when generating default build commands. ([#15835](https://github.com/vercel/vercel/pull/15835))
+
+## 5.14.1
+
+### Patch Changes
+
+- Updated dependencies [[`d034d90dcf78316ddacdcce8fd51329fb7eefe82`](https://github.com/vercel/vercel/commit/d034d90dcf78316ddacdcce8fd51329fb7eefe82)]:
+  - @vercel/frameworks@3.23.0
+
+## 5.14.0
+
+### Minor Changes
+
+- [services] infer services from Railway configs ([#15787](https://github.com/vercel/vercel/pull/15787))
+
+## 5.13.1
+
+### Patch Changes
+
+- Updated dependencies [[`c98a02d87276f41b1580b78d37f9f671fd9d1f12`](https://github.com/vercel/vercel/commit/c98a02d87276f41b1580b78d37f9f671fd9d1f12)]:
+  - @vercel/build-utils@13.12.2
+
+## 5.13.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+### Patch Changes
+
+- Updated dependencies [[`f912eef614731a75ecdca3bee159cc59abd4c58e`](https://github.com/vercel/vercel/commit/f912eef614731a75ecdca3bee159cc59abd4c58e), [`6cb5c6e1216d7a0dbaa6f740875a36f1b7166900`](https://github.com/vercel/vercel/commit/6cb5c6e1216d7a0dbaa6f740875a36f1b7166900)]:
+  - @vercel/frameworks@3.22.0
+  - @vercel/build-utils@13.12.1
+
 ## 5.12.2
 
 ### Patch Changes

@@ -509,6 +509,13 @@ async function writeStaticFile(
 
   // if already on disk hard link instead of copying
   if ('fsPath' in file) {
+    // If source and destination resolve to the same path (e.g. local builds
+    // where a builder writes static files directly into outputDir/static/ and
+    // then returns FileFsRef objects pointing to those same paths), the file
+    // is already in place — skip to avoid truncating it via downloadFile.
+    if (resolve(file.fsPath) === resolve(dest)) {
+      return;
+    }
     try {
       return await fs.link(file.fsPath, dest);
     } catch (_) {

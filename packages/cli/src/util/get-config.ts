@@ -14,7 +14,14 @@ import output from '../output-manager';
 
 let config: VercelConfig;
 
-export default async function getConfig(
+/**
+ * Best-effort early config read for CLI startup. Only reads vercel.json and
+ * now.json directly — does NOT handle vercel.ts or vercel.toml (those go
+ * through compileVercelConfig in the per-command path). Used in index.ts for
+ * early error checking and scope resolution; commands that need full config
+ * support should use readConfig() instead.
+ */
+export default async function earlyGetConfig(
   configFile?: string
 ): Promise<VercelConfig | Error> {
   // If config was already read, just return it

@@ -448,6 +448,13 @@ export class ServicesOrchestrator {
           syncDependencies: true,
           serviceName: service.name,
         },
+        service: {
+          name: service.name,
+          type: service.type,
+          routePrefix: service.routePrefix,
+          subdomain: service.subdomain,
+          workspace: service.workspace,
+        },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
         onStderr: (data: Buffer) => logger.stderr.write(data),
