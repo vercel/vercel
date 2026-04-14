@@ -52,6 +52,8 @@ export function createVenvEnv(
   const env: NodeJS.ProcessEnv = {
     ...getProtectedUvEnv(baseEnv, uvCacheDir),
     VIRTUAL_ENV: venvPath,
+    UV_PROJECT_ENVIRONMENT: venvPath,
+    UV_NO_DEV: 'true',
   };
   const binDir = getVenvBinDir(venvPath);
   const existingPath = env.PATH || process.env.PATH || '';
