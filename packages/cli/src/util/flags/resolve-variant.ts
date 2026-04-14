@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import deepEqual from 'fast-deep-equal';
 import type { FlagVariant } from './types';
 
 export interface ResolveVariantResult {
@@ -37,7 +38,7 @@ export function formatAvailableVariants(variants: FlagVariant[]): string {
  *
  * Resolution order:
  * 1. Exact match on variant ID
- * 2. Match on variant value (supports true/false, string values, numbers, etc.)
+ * 2. Match on variant value (supports booleans, strings, numbers, and JSON)
  *
  * Labels are intentionally excluded because they are presentation-oriented and
  * may not be unique across variants.
@@ -56,18 +57,19 @@ export function resolveVariant(
     return { variant: byId, error: null };
   }
 
-  // 2. Try to match by value
-  // First try exact string match (for string variants with values like "off")
-  const byExactValue = variants.find(v => v.value === input);
-  if (byExactValue) {
-    return { variant: byExactValue, error: null };
-  }
-
-  // Then try parsed value (handles "true"/"false" for boolean flags)
+  // 2. Try to match by parsed value so JSON-kind flags can resolve objects,
+  // arrays, null, and other JSON literals by value.
   const parsedInput = parseVariantValue(input);
   const byValue = variants.find(v => valuesMatch(v.value, parsedInput));
   if (byValue) {
     return { variant: byValue, error: null };
+  }
+
+  // 3. Fall back to an exact string match so string variants like "true" or
+  // "020" still resolve naturally when no parsed-value match exists.
+  const byExactStringValue = variants.find(v => v.value === input);
+  if (byExactStringValue) {
+    return { variant: byExactStringValue, error: null };
   }
 
   // No match found - return helpful error
@@ -79,47 +81,42 @@ export function resolveVariant(
 
 /**
  * Parses a string input into the appropriate type for comparison.
- * Handles booleans, numbers, and strings.
+ * Handles JSON literals first, then falls back to the raw string input.
  */
-function parseVariantValue(input: string): string | number | boolean {
-  // Handle boolean values (only true/false)
-  const lowerInput = input.toLowerCase();
-  if (lowerInput === 'true') {
-    return true;
-  }
-  if (lowerInput === 'false') {
-    return false;
+function parseVariantValue(input: string): FlagVariant['value'] {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return input;
   }
 
-  // Handle numeric values
-  const num = Number(input);
-  if (!isNaN(num) && input.trim() !== '') {
-    return num;
-  }
+  try {
+    return JSON.parse(trimmed) as FlagVariant['value'];
+  } catch {
+    const lowerInput = trimmed.toLowerCase();
+    if (lowerInput === 'true') {
+      return true;
+    }
+    if (lowerInput === 'false') {
+      return false;
+    }
 
-  // Return as string
-  return input;
+    const parsedNumber = Number(trimmed);
+    if (!Number.isNaN(parsedNumber)) {
+      return parsedNumber;
+    }
+
+    return input;
+  }
 }
 
 /**
  * Compares two variant values for equality.
- * Handles type coercion for common cases.
  */
 function valuesMatch(
-  variantValue: string | number | boolean,
-  inputValue: string | number | boolean
+  variantValue: FlagVariant['value'],
+  inputValue: FlagVariant['value']
 ): boolean {
-  // Direct equality
-  if (variantValue === inputValue) {
-    return true;
-  }
-
-  // String comparison of values (for cases like "off" matching string "off")
-  if (String(variantValue) === String(inputValue)) {
-    return true;
-  }
-
-  return false;
+  return deepEqual(variantValue, inputValue);
 }
 
 function formatAvailableVariant(variant: FlagVariant): string {

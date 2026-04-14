@@ -268,6 +268,53 @@ describe('flags create', () => {
     ]);
   });
 
+  it('parses JSON variants from flags and assigns default labels when omitted', async () => {
+    client.setArgv(
+      'flags',
+      'add',
+      'layout-config',
+      '--kind',
+      'json',
+      '--variant',
+      '{"theme":"light","sidebar":false}=Light',
+      '--variant',
+      '["dark","compact"]'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createdFlags[0].variants).toMatchObject([
+      {
+        value: { theme: 'light', sidebar: false },
+        label: 'Light',
+      },
+      {
+        value: ['dark', 'compact'],
+        label: 'Variant 2',
+      },
+    ]);
+  });
+
+  it('rejects invalid JSON variants', async () => {
+    client.setArgv(
+      'flags',
+      'add',
+      'layout-config',
+      '--kind',
+      'json',
+      '--variant',
+      '{"theme":"light"'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'JSON variants must be valid JSON'
+    );
+  });
+
   it('collects variants interactively for string flags', async () => {
     textMock
       .mockResolvedValueOnce('control')

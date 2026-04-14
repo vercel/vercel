@@ -193,6 +193,29 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const renameSubcommand = {
+  name: 'rename',
+  aliases: [],
+  description: 'Rename a project',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+    {
+      name: 'new-name',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Rename a project',
+      value: `${packageName} project rename my-project my-renamed-project`,
+    },
+  ],
+} as const;
+
 export const tokenSubcommand = {
   name: 'token',
   aliases: [],
@@ -526,6 +549,7 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    renameSubcommand,
     removeSubcommand,
     tokenSubcommand,
   ],
