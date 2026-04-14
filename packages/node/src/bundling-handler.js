@@ -3,7 +3,7 @@
 // All bundleable lambdas share this handler (same handler digest).
 // It reads x-matched-path to determine which entrypoint to invoke.
 //
-// At build time the builder replaces `process.env.VERCEL_ENTRYPOINT_PREFIX`
+// At build time the builder replaces the VERCEL_ENTRYPOINT_PREFIX env lookup
 // with the actual prefix string. The x-matched-path header is set by
 // route rules injected by the builder.
 //
