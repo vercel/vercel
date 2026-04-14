@@ -106,10 +106,8 @@ export default async function main(client: Client) {
     parsedArgs.flags
   );
 
-  if (returnCode === 0) {
-    await autoInstallVercelPlugin(client, {
-      autoConfirm,
-    });
+  if (returnCode === 0 && !autoConfirm) {
+    await autoInstallVercelPlugin(client);
   }
 
   return returnCode;
