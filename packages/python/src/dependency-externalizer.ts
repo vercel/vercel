@@ -133,17 +133,14 @@ export class PythonDependencyExternalizer {
       this.hasCustomCommand &&
       !pythonOnHiveEnabled
     ) {
-      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the Lambda size limit (${limitMB} MB).\n\n` +
-          `Runtime dependency installation is not available for projects that use a custom ` +
-          `build or install command, because custom commands may install dependencies that ` +
-          `are not tracked in uv.lock.\n\n` +
-          `To resolve this, either:\n` +
-          `  1. Remove the custom build/install command and let Vercel manage dependencies automatically\n` +
-          `  2. Reduce your dependency footprint to fit within the ${limitMB} MB limit`,
+          `The installed dependencies are too large to fit in a Serverless Function (${totalBundleSizeMB} MB).\n\n` +
+          `When using a custom install command, Vercel cannot automatically optimize ` +
+          `dependency bundling. To reduce the size of your dependencies, you can:\n` +
+          `  1. Remove unused dependencies from your project\n` +
+          `  2. Remove the custom install command to allow Vercel to manage and optimize dependencies automatically`,
         link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
         action: 'Learn More',
       });
