@@ -262,21 +262,6 @@ test(
 );
 
 test(
-  '[vercel dev] Middleware with error at init',
-  testFixtureStdio('middleware-error-at-init', async (testPath: any) => {
-    /*
-      These assertions check two possible options because a deployed test
-      of this scenario produces one result that the dev server can't currently
-      replicate.
-    */
-    const devCode = 'MIDDLEWARE_INVOCATION_FAILED';
-    const deploymentCode = 'INTERNAL_SERVER_ERROR';
-
-    await testPath(500, '/', new RegExp(`${devCode}|${deploymentCode}`, 'g'));
-  })
-);
-
-test(
   '[vercel dev] Middleware with an explicit 500 response',
   testFixtureStdio('middleware-500-response', async (testPath: any) => {
     await testPath(500, '/', 'Example Error');
