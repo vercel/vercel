@@ -151,35 +151,35 @@ Conditions within a group are **AND'd**. Multiple groups (separated by `--or`) a
 
 ### Condition types
 
-| Type | Category | Description | Needs `key` |
-|------|----------|-------------|-------------|
-| `path` | Request | URL path | No |
-| `raw_path` | Request | Pre-rewrite URL path | No |
-| `target_path` | Request | Post-rewrite destination path | No |
-| `route` | Request | Route pattern (e.g., /blog/[slug]) | No |
-| `server_action` | Request | Next.js Server Action name | No |
-| `method` | Request | HTTP method (GET, POST, etc.) | No |
-| `host` | Request | Request hostname | No |
-| `protocol` | Request | HTTP protocol version | No |
-| `scheme` | Request | http or https | No |
-| `environment` | Request | preview or production | No |
-| `region` | Request | Vercel edge region | No |
-| `ssl` | Request | SSL/TLS connection (exists only) | No |
-| `rate_limit_api_id` | Request | Rate limit API grouping ID | No |
-| `ip_address` | Client | Client IP or CIDR range | No |
-| `user_agent` | Client | User-Agent string | No |
-| `geo_country` | Geo | Country code (ISO 3166-1 alpha-2) | No |
-| `geo_continent` | Geo | Continent code (AF, AN, AS, EU, NA, OC, SA) | No |
-| `geo_country_region` | Geo | State or region code | No |
-| `geo_city` | Geo | City name | No |
-| `geo_as_number` | Geo | Autonomous System Number | No |
-| `header` | Key-value | HTTP request header | **Yes** |
-| `cookie` | Key-value | HTTP cookie | **Yes** |
-| `query` | Key-value | URL query parameter | **Yes** |
-| `ja4_digest` | Security | JA4 TLS fingerprint | No |
-| `ja3_digest` | Security | JA3 TLS fingerprint (Enterprise) | No |
-| `bot_name` | Bot | Verified bot name (Security Plus) | No |
-| `bot_category` | Bot | Verified bot category (Security Plus) | No |
+| Type | Description | Needs `key` |
+|------|-------------|-------------|
+| `path` | URL path | No |
+| `raw_path` | Pre-rewrite URL path | No |
+| `target_path` | Post-rewrite destination path | No |
+| `route` | Route pattern (e.g., /blog/[slug]) | No |
+| `server_action` | Next.js Server Action name | No |
+| `method` | HTTP method (GET, POST, etc.) | No |
+| `host` | Request hostname | No |
+| `protocol` | HTTP protocol version | No |
+| `scheme` | http or https | No |
+| `environment` | preview or production | No |
+| `region` | Vercel edge region | No |
+| `ssl` | SSL/TLS connection (exists only) | No |
+| `rate_limit_api_id` | Rate limit API grouping ID | No |
+| `ip_address` | Client IP or CIDR range | No |
+| `user_agent` | User-Agent string | No |
+| `geo_country` | Country code (ISO 3166-1 alpha-2) | No |
+| `geo_continent` | Continent code (AF, AN, AS, EU, NA, OC, SA) | No |
+| `geo_country_region` | State or region code | No |
+| `geo_city` | City name | No |
+| `geo_as_number` | Autonomous System Number | No |
+| `header` | HTTP request header | **Yes** |
+| `cookie` | HTTP cookie | **Yes** |
+| `query` | URL query parameter | **Yes** |
+| `ja4_digest` | JA4 TLS fingerprint | No |
+| `ja3_digest` | JA3 TLS fingerprint (Enterprise teams only) | No |
+| `bot_name` | Verified bot name (Security Plus projects only) | No |
+| `bot_category` | Verified bot category (Security Plus projects only) | No |
 
 ### Actions
 
@@ -272,7 +272,7 @@ vercel firewall system-bypass remove 10.0.0.1 --yes                    # remove 
 
 Emergency response for active attacks. When enabled, every visitor sees a verification challenge page before accessing your site. Use when you're under a DDoS attack or experiencing a surge of malicious traffic.
 
-Takes effect immediately — no publishing required.
+Takes effect immediately — no publishing required. **Interactive only — blocked for agents/scripts due to the severity of enabling this.**
 
 ```bash
 vercel firewall attack-mode enable --duration 1h --yes   # challenge all visitors for 1 hour
@@ -285,7 +285,7 @@ vercel firewall attack-mode disable --yes                # stop challenging visi
 
 Vercel automatically mitigates DDoS attacks and filters malicious traffic. In rare cases (debugging false positives, testing), you may need to temporarily pause these protections.
 
-Takes effect immediately — no publishing required. Automatically resumes after 24 hours.
+Takes effect immediately — no publishing required. Automatically resumes after 24 hours. **Interactive only — blocked for agents/scripts due to the severity of pausing DDoS protection.**
 
 ```bash
 vercel firewall system-mitigations pause --yes           # pause DDoS protection (24h)
