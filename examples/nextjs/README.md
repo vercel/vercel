@@ -34,3 +34,59 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Skills
+
+This project includes agent skills installed from [skills.sh](https://skills.sh) that enhance AI coding assistants with specialized knowledge:
+
+- [`vercel-labs/skills`](https://skills.sh/vercel-labs/skills)
+    - `find-skills`: Search and install skills from the registry
+- [`vercel-labs/agent-skills`](https://skills.sh/vercel-labs/agent-skills)
+    - `vercel-composition-patterns`: Compound components and context patterns
+    - `vercel-react-best-practices`: React and Next.js performance rules
+    - `web-design-guidelines`: Review UI against Web Interface Guidelines
+- [`vercel-labs/next-skills`](https://skills.sh/vercel-labs/next-skills)
+    - `next-best-practices`: File conventions, RSC, data fetching, metadata
+    - `next-cache-components`: PPR, `use cache`, cacheLife, cacheTag
+    - `next-upgrade`: Upgrade Next.js with codemods and migration guides
+- [`vercel-labs/turbo-skills`](https://skills.sh/vercel-labs/turbo-skills)
+    - `turborepo`: Task pipelines, caching, filtering, and monorepo setup
+
+### Platforms
+
+The installed skills will work out-of-the-box with the following AI agents:
+
+- [Amp](https://amp.dev) (Sourcegraph)
+- [Claude Code](https://claude.ai/code) (Anthropic)
+- [Codex](https://openai.com/index/introducing-codex/) (OpenAI)
+- [Cursor](https://cursor.com) (Anysphere)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli) (Google)
+- [GitHub Copilot](https://github.com/features/copilot) (GitHub)
+- [Kimi Code CLI](https://github.com/aspect-build/kimi-code) (Moonshot AI)
+- [OpenCode](https://opencode.ai) (OpenCode AI)
+
+Skills are designed to be platform-agnostic and can be used by any AI agent that can call external APIs.
+
+### Find More Skills
+
+Run `npx skills search` to find more skills that can help you with your Next.js project or any other development needs.
+
+### Ask an Agent to Find Skills
+
+The `find-skills` skill means you can ask an agent to find and install new skills on demand. 
+
+For example:
+
+```shell
+> claude
+> Find a skill that will help me use `ai-sdk` in my Next.js project.
+✶ Cogitating… 
+> vercel/ai@ai-sdk — This is the official AI SDK skill maintained by the Vercel team. Would you like to install it?
+> Yes, please
+```
+
+### Create Your Own Skills
+
+Run `npx skills init` to start creating your own agent skills. 
+
+You can share them with the community by publishing to npm and adding to the [Skills Registry](https://skills.sh/explore).
