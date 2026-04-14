@@ -263,7 +263,7 @@ vercel firewall ip-blocks unblock ip_abc123 --yes                      # unblock
 
 ## System Bypass
 
-Exempt trusted IPs or CIDR ranges from all firewall checks. Use for your office IP, CI/CD servers, uptime monitors, or other trusted infrastructure that should never be blocked. Supports wildcard domains.
+[System bypass rules](https://vercel.com/docs/vercel-firewall/vercel-waf/system-bypass-rules) exempt trusted IPs or CIDR ranges from all firewall checks. Use for your office IP, CI/CD servers, uptime monitors, or other trusted infrastructure that should never be blocked. Supports wildcard domains.
 
 Takes effect immediately — no publishing required.
 
