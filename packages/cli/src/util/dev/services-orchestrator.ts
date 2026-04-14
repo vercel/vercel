@@ -347,6 +347,9 @@ export class ServicesOrchestrator {
       serviceUrlEnvVars
     );
     env.VERCEL_SERVICE_TYPE = service.type;
+    if (service.trigger) {
+      env.VERCEL_SERVICE_TRIGGER = service.trigger;
+    }
     if (
       this.hasQueueServices &&
       service.runtime === 'python' &&

@@ -159,6 +159,9 @@ function injectServiceEnvVars(
   if (service?.type) {
     lambda.environment.VERCEL_SERVICE_TYPE = service.type;
   }
+  if (service?.trigger) {
+    lambda.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
+  }
   if (service?.routePrefix && service.routePrefix !== '/') {
     lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
   }

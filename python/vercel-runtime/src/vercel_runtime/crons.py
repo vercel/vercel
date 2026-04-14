@@ -24,7 +24,13 @@ type CronHandler = SyncCronHandler | AsyncCronHandler
 
 def is_cron_service() -> bool:
     svc_type = os.environ.get("VERCEL_SERVICE_TYPE") or ""
-    return svc_type.strip().lower() == "cron"
+    normalized_type = svc_type.strip().lower()
+    if normalized_type == "cron":
+        return True
+
+    svc_trigger = os.environ.get("VERCEL_SERVICE_TRIGGER") or ""
+    normalized_trigger = svc_trigger.strip().lower()
+    return normalized_type == "job" and normalized_trigger == "schedule"
 
 
 def bootstrap_cron_service_app(module: ModuleType) -> ASGI:
