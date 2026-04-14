@@ -21,6 +21,15 @@ const AGENT_TO_TARGET: Record<string, string> = {
   [KNOWN_AGENTS.COWORK]: 'claude-code',
 };
 
+export function getPluginTargetForAgent(
+  agentName?: string
+): string | undefined {
+  if (!agentName) {
+    return undefined;
+  }
+  return AGENT_TO_TARGET[agentName];
+}
+
 interface AgentPreferences {
   pluginDeclined?: boolean;
   lastPromptedAt?: string;
@@ -101,8 +110,12 @@ async function writePrefs(prefs: AgentPreferences): Promise<void> {
 }
 
 async function getPluginTargets(agentName?: string): Promise<string[]> {
-  if (agentName && AGENT_TO_TARGET[agentName]) {
-    return [AGENT_TO_TARGET[agentName]];
+  const targetForAgent = getPluginTargetForAgent(agentName);
+  if (targetForAgent) {
+    return [targetForAgent];
+  }
+  if (agentName) {
+    return [];
   }
   const home = homedir();
   const targets: string[] = [];
@@ -150,14 +163,7 @@ async function isPluginInstalledForTarget(target: string): Promise<boolean> {
   return false;
 }
 
-async function confirm(
-  client: Client,
-  message: string,
-  autoConfirm?: boolean
-): Promise<boolean> {
-  if (autoConfirm && !client.isAgent) {
-    return true;
-  }
+async function confirm(client: Client, message: string): Promise<boolean> {
   if (!client.stdin.isTTY) {
     return false;
   }
@@ -339,23 +345,23 @@ export function buildClaudePromptCopy(
     return {
       message: '',
       confirm:
-        'Install the Vercel plugin from the official Claude marketplace?',
+        'Working with Vercel is easier with the Vercel Plugin for Claude Code. Would you like to install it?',
     };
   }
 
   if (plan.installOfficial && status.state === 'legacy-only') {
     return {
-      message:
-        "You're using an older version of the Vercel Plugin. Update from the official Claude Plugin Marketplace?",
-      confirm: 'Update the Vercel Plugin?',
+      message: '',
+      confirm:
+        'Working with Vercel is easier with the latest Vercel Plugin for Claude Code. Would you like to update it?',
     };
   }
 
   if (status.state === 'both' && plan.removeLegacy) {
     return {
-      message:
-        "You're using an older version of the Vercel Plugin. Update from the official Claude Plugin Marketplace?",
-      confirm: 'Update the Vercel Plugin?',
+      message: '',
+      confirm:
+        'Working with Vercel is easier with the latest Vercel Plugin for Claude Code. Would you like to update it?',
     };
   }
 
@@ -363,8 +369,8 @@ export function buildClaudePromptCopy(
     const fromVersion = status.official?.version ?? 'your current version';
     const toVersion = status.latestVersion ?? 'the latest version';
     return {
-      message: `A newer Vercel plugin version is available in the official Claude marketplace. Update from ${fromVersion} to ${toVersion}.`,
-      confirm: `Update the Vercel plugin from ${fromVersion} to ${toVersion}?`,
+      message: '',
+      confirm: `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. Would you like to update from ${fromVersion} to ${toVersion}?`,
     };
   }
 
@@ -380,18 +386,18 @@ export function buildClaudeActionRequiredMessage(
   plan: ClaudePluginMigrationPlan
 ): string {
   if (status.state === 'legacy-only') {
-    return `It's also suggesting updating the Vercel Plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\n2. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
+    return `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\n2. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
   }
 
   if (status.state === 'both' || plan.removeLegacy) {
-    return `It's also suggesting updating the Vercel Plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
+    return `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. It will run:\n1. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
   }
 
   if (plan.updateOfficial) {
-    return `It's also suggesting updating the Vercel Plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to update it?`;
+    return `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. It will run:\n1. claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to update it?`;
   }
 
-  return `It's also suggesting installing a Vercel plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to install it?`;
+  return `Working with Vercel is easier with the Vercel Plugin for Claude Code. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to install it?`;
 }
 
 function buildClaudeActionRequiredLabel(
@@ -616,14 +622,6 @@ export async function autoInstallVercelPlugin(
 
         // Agents in non-TTY: output structured JSON so agent prompts the user
         if (client.isAgent && !client.stdin.isTTY) {
-          if (options?.autoConfirm) {
-            await markPromptedToday(prefs);
-            prefs.pluginDeclined = false;
-            await writePrefs(prefs);
-            await applyPluginActions(uninstalledTargets, claudePlan);
-            return;
-          }
-
           const actionRequiredMessage =
             uninstalledTargets.includes('claude-code') &&
             claudeStatus &&
@@ -663,11 +661,7 @@ export async function autoInstallVercelPlugin(
         if (promptMessage) {
           output.log(promptMessage);
         }
-        const accepted = await confirm(
-          client,
-          confirmMessage,
-          options?.autoConfirm
-        );
+        const accepted = await confirm(client, confirmMessage);
         await markPromptedToday(prefs);
         if (accepted) {
           prefs.pluginDeclined = false;

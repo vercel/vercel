@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
   buildClaudeActionRequiredMessage,
   buildClaudePromptCopy,
   buildClaudePluginMigrationPlan,
   buildClaudePluginStatus,
   comparePluginVersions,
+  getPluginTargetForAgent,
 } from '../../../src/util/agent/auto-install-agentic';
 
 describe('comparePluginVersions', () => {
@@ -13,6 +15,17 @@ describe('comparePluginVersions', () => {
     expect(comparePluginVersions('0.32.8', '0.32.7')).toBe(1);
     expect(comparePluginVersions('0.32.7', '0.32.8')).toBe(-1);
     expect(comparePluginVersions('1.0.0', '0.99.9')).toBe(1);
+  });
+});
+
+describe('getPluginTargetForAgent', () => {
+  it('maps Claude Code agents to the Claude plugin target', () => {
+    expect(getPluginTargetForAgent(KNOWN_AGENTS.CLAUDE)).toBe('claude-code');
+    expect(getPluginTargetForAgent(KNOWN_AGENTS.COWORK)).toBe('claude-code');
+  });
+
+  it('does not map Codex to a Claude plugin target', () => {
+    expect(getPluginTargetForAgent(KNOWN_AGENTS.CODEX)).toBeUndefined();
   });
 });
 
@@ -126,7 +139,10 @@ describe('buildClaudePromptCopy', () => {
     );
 
     expect(copy.message).toBe('');
-    expect(copy.confirm).toContain('official Claude marketplace');
+    expect(copy.confirm).toContain(
+      'Working with Vercel is easier with the Vercel Plugin for Claude Code'
+    );
+    expect(copy.confirm).toContain('Would you like to install it?');
   });
 
   it('uses migration copy for the old Claude marketplace install', () => {
@@ -144,10 +160,11 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toContain(
-      "You're using an older version of the Vercel Plugin"
+    expect(copy.message).toBe('');
+    expect(copy.confirm).toContain(
+      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
     );
-    expect(copy.confirm).toContain('Update the Vercel Plugin');
+    expect(copy.confirm).toContain('Would you like to update it?');
   });
 
   it('uses cleanup copy when both Claude installs exist', () => {
@@ -166,10 +183,11 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toContain(
-      "You're using an older version of the Vercel Plugin"
+    expect(copy.message).toBe('');
+    expect(copy.confirm).toContain(
+      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
     );
-    expect(copy.confirm).toContain('Update the Vercel Plugin');
+    expect(copy.confirm).toContain('Would you like to update it?');
   });
 
   it('uses update copy for an outdated official Claude install', () => {
@@ -187,7 +205,10 @@ describe('buildClaudePromptCopy', () => {
       }
     );
 
-    expect(copy.message).toContain('Update from 0.32.6 to 0.32.7');
+    expect(copy.message).toBe('');
+    expect(copy.confirm).toContain(
+      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
+    );
     expect(copy.confirm).toContain('0.32.6 to 0.32.7');
   });
 });
@@ -209,7 +230,7 @@ describe('buildClaudeActionRequiredMessage', () => {
     );
 
     expect(message).toContain(
-      'updating the Vercel Plugin for Claude Code from the Claude Marketplace'
+      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
     );
     expect(message).toContain(
       'claude plugins install vercel@claude-plugins-official'
