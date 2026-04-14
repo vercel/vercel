@@ -79,7 +79,7 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
     const typeLabel =
       service.type === 'worker'
         ? 'Worker'
-        : (jobTriggerLabels[service.trigger ?? ''] ?? 'Job/Workflow');
+        : (jobTriggerLabels[service.trigger ?? ''] ?? 'Job');
     const typeColorFn = service.type === 'worker' ? chalk.magenta : chalk.cyan;
 
     if (service.runtime) {

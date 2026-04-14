@@ -581,10 +581,6 @@ export interface VercelConfig {
        */
       entrypoint?: string;
       /**
-       * Root path to the service, relative to the project root.
-       */
-      root?: string;
-      /**
        * Path to the directory containing the service manifest file (package.json, pyproject.toml, etc.). Defaults to "." (project root).
        */
       workspace?: string;

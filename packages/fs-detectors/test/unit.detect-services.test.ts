@@ -1212,14 +1212,21 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
+      expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(1);
       expect(result.services[0]).toMatchObject({
         name: 'cleanup',
         type: 'job',
         trigger: 'schedule',
+        entrypoint: 'cron/cleanup.py',
         schedule: '0 0 * * *',
       });
-      expect(result.errors).toEqual([]);
+      expect(result.routes.crons).toHaveLength(1);
+      expect(result.routes.crons[0]).toEqual({
+        src: '^/_svc/cleanup/crons/cron/cleanup/cron$',
+        dest: '/_svc/cleanup/index',
+        check: true,
+      });
     });
 
     it('should generate internal callback routes for schedule-triggered jobs', async () => {
@@ -1485,39 +1492,6 @@ describe('detectServices', () => {
   });
 
   describe('job services', () => {
-    it('should detect a schedule-triggered job service', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            cleanup: {
-              type: 'job',
-              trigger: 'schedule',
-              entrypoint: 'jobs/cleanup.py',
-              schedule: '0 0 * * *',
-            },
-          },
-        }),
-        'jobs/cleanup.py': 'def main(): pass',
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.errors).toEqual([]);
-      expect(result.services).toHaveLength(1);
-      expect(result.services[0]).toMatchObject({
-        name: 'cleanup',
-        type: 'job',
-        trigger: 'schedule',
-        entrypoint: 'jobs/cleanup.py',
-        schedule: '0 0 * * *',
-      });
-      expect(result.routes.crons).toHaveLength(1);
-      expect(result.routes.crons[0]).toEqual({
-        src: '^/_svc/cleanup/crons/jobs/cleanup/cron$',
-        dest: '/_svc/cleanup/index',
-        check: true,
-      });
-    });
-
     it('should detect a queue-triggered job service with topic objects', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

@@ -839,8 +839,6 @@ export interface ExperimentalServiceConfig {
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
-  /** Service root directory, relative to the project root. */
-  root?: string;
 
   /** Framework to use */
   framework?: string;

@@ -67,7 +67,6 @@ describe('validateConfig', () => {
         cleanup: {
           type: 'job',
           trigger: 'schedule',
-          root: 'jobs',
           entrypoint: 'cleanup.py',
           schedule: '0 0 * * *',
         },

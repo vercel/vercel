@@ -6,7 +6,11 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { getServiceQueueTopics, JOB_TRIGGERS, JobTrigger } from '@vercel/build-utils';
+import {
+  getServiceQueueTopics,
+  JOB_TRIGGERS,
+  JobTrigger,
+} from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -61,48 +65,6 @@ interface ResolvedEntrypointPath {
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
-}
-
-interface ParsedServiceEntrypointConfig {
-  serviceRoot?: string;
-  rawEntrypoint?: string;
-  moduleAttrParsed: ReturnType<typeof parsePyModuleAttrEntrypoint>;
-  entrypointToResolve?: string;
-}
-
-function parseServiceEntrypointConfig(
-  config: ExperimentalServiceConfig
-): ParsedServiceEntrypointConfig {
-  const serviceRoot =
-    typeof config.root === 'string'
-      ? normalizeServiceEntrypoint(config.root)
-      : undefined;
-  const configuredEntrypoint =
-    typeof config.entrypoint === 'string'
-      ? normalizeServiceEntrypoint(config.entrypoint)
-      : undefined;
-  const moduleAttrParsed = configuredEntrypoint
-    ? parsePyModuleAttrEntrypoint(configuredEntrypoint)
-    : null;
-
-  let entrypointToResolve = moduleAttrParsed
-    ? moduleAttrParsed.filePath
-    : configuredEntrypoint;
-
-  if (serviceRoot && entrypointToResolve) {
-    entrypointToResolve = posixPath.join(serviceRoot, entrypointToResolve);
-  }
-
-  if (!configuredEntrypoint && serviceRoot) {
-    entrypointToResolve = serviceRoot;
-  }
-
-  return {
-    serviceRoot,
-    rawEntrypoint: configuredEntrypoint ?? serviceRoot,
-    moduleAttrParsed,
-    entrypointToResolve,
-  };
 }
 
 async function resolveEntrypointPath({
@@ -522,19 +484,19 @@ export function validateServiceConfig(
 
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
-  const hasEntrypoint = Boolean(config.entrypoint || config.root);
+  const hasEntrypoint = Boolean(config.entrypoint);
 
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
     return {
       code: 'MISSING_SERVICE_CONFIG',
-      message: `Service "${name}" must specify "framework", "root", "entrypoint", or both "builder"/"runtime" with "entrypoint" or "root".`,
+      message: `Service "${name}" must specify "framework", "entrypoint", or both "builder"/"runtime" with "entrypoint".`,
       serviceName: name,
     };
   }
   if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
     return {
       code: 'MISSING_ENTRYPOINT',
-      message: `Service "${name}" must specify "entrypoint" or "root" when using "${config.builder ? 'builder' : 'runtime'}".`,
+      message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
       serviceName: name,
     };
   }
@@ -564,7 +526,7 @@ export function validateServiceEntrypoint(
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
         code: 'UNSUPPORTED_ENTRYPOINT',
-        message: `Service "${name}" has unsupported entrypoint "${config.entrypoint || config.root}". Use a supported extension (${supported}) or specify "builder", "framework", or "runtime".`,
+        message: `Service "${name}" has unsupported entrypoint "${config.entrypoint}". Use a supported extension (${supported}) or specify "builder", "framework", or "runtime".`,
         serviceName: name,
       };
     }
@@ -589,8 +551,12 @@ export async function resolveConfiguredService(
   } = options;
   const type = config.type || 'web';
   const trigger = type === 'job' ? config.trigger : undefined;
-  const { serviceRoot, rawEntrypoint, moduleAttrParsed, entrypointToResolve } =
-    parseServiceEntrypointConfig(config);
+  const rawEntrypoint = config.entrypoint;
+
+  const moduleAttrParsed =
+    typeof rawEntrypoint === 'string'
+      ? parsePyModuleAttrEntrypoint(rawEntrypoint)
+      : null;
   const routingResult = resolveServiceRoutingConfig(name, config);
   if (routingResult.error) {
     throw new Error(routingResult.error.message);
@@ -601,7 +567,10 @@ export async function resolveConfiguredService(
     routingResult.routing?.routePrefixConfigured ?? false;
 
   let resolvedEntrypointPath = resolvedEntrypoint;
-  if (!resolvedEntrypointPath && typeof entrypointToResolve === 'string') {
+  if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+    const entrypointToResolve = moduleAttrParsed
+      ? moduleAttrParsed.filePath
+      : rawEntrypoint;
     const resolved = await resolveEntrypointPath({
       fs,
       serviceName: name,
@@ -621,21 +590,14 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
-  let workspace = serviceRoot || '.';
+  let workspace = '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint
       ? undefined
       : normalizedEntrypoint;
 
-  if (serviceRoot) {
-    if (resolvedEntrypointFile) {
-      resolvedEntrypointFile = toWorkspaceRelativeEntrypoint(
-        resolvedEntrypointFile,
-        serviceRoot
-      );
-    }
-  } else if (entrypointIsDirectory && normalizedEntrypoint) {
-    // Directory entrypoints define the service workspace directly.
+  // Directory entrypoints define the service workspace directly.
+  if (entrypointIsDirectory && normalizedEntrypoint) {
     workspace = normalizedEntrypoint;
   } else {
     // File entrypoints infer workspace from nearest runtime manifest.
@@ -818,8 +780,10 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    const { entrypointToResolve } = parseServiceEntrypointConfig(serviceConfig);
-    if (typeof entrypointToResolve === 'string') {
+    if (typeof serviceConfig.entrypoint === 'string') {
+      const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
+      const entrypointToResolve =
+        moduleAttr?.filePath ?? serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
         fs,
         serviceName: name,

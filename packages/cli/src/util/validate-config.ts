@@ -236,11 +236,6 @@ const serviceCommonProperties = {
     minLength: 1,
     maxLength: 512,
   },
-  root: {
-    type: 'string',
-    minLength: 1,
-    maxLength: 512,
-  },
   framework: {
     type: 'string',
     minLength: 1,
@@ -352,6 +347,11 @@ const serviceConfigSchema = {
           const: 'queue',
         },
         topics: serviceTopicsSchema,
+        consumer: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 256,
+        },
       },
     },
     {
