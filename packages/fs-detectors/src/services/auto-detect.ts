@@ -2,7 +2,12 @@ import type { Framework } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
-import type { ExperimentalServices, ServiceDetectionError } from './types';
+import type {
+  ExperimentalServices,
+  ServiceDetectionError,
+  ServiceDetectionWarning,
+} from './types';
+import { DETECTION_FRAMEWORKS } from './utils';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
@@ -11,6 +16,7 @@ export interface AutoDetectOptions {
 export interface AutoDetectResult {
   services: ExperimentalServices | null;
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
 const FRONTEND_DIR = 'frontend';
@@ -19,12 +25,6 @@ const BACKEND_DIR = 'backend';
 const SERVICES_DIR = 'services';
 
 const FRONTEND_LOCATIONS = [FRONTEND_DIR, APPS_WEB_DIR];
-// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
-// but service auto-detection should still consider them.
-const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
 
 /**
  * Auto-detect services when experimentalServices is not configured.
@@ -69,6 +69,7 @@ export async function autoDetectServices(
     const frameworkNames = rootFrameworks.map(f => f.name).join(', ');
     return {
       services: null,
+      warnings: [],
       errors: [
         {
           code: 'MULTIPLE_FRAMEWORKS_ROOT',
@@ -98,6 +99,7 @@ export async function autoDetectServices(
       const frameworkNames = frontendFrameworks.map(f => f.name).join(', ');
       return {
         services: null,
+        warnings: [],
         errors: [
           {
             code: 'MULTIPLE_FRAMEWORKS_SERVICE',
@@ -118,6 +120,7 @@ export async function autoDetectServices(
 
   return {
     services: null,
+    warnings: [],
     errors: [
       {
         code: 'NO_SERVICES_CONFIGURED',
@@ -143,12 +146,14 @@ async function detectServicesAtRoot(
   if (backendResult.error) {
     return {
       services: null,
+      warnings: [],
       errors: [backendResult.error],
     };
   }
   if (Object.keys(backendResult.services).length === 0) {
     return {
       services: null,
+      warnings: [],
       errors: [],
     };
   }
@@ -156,6 +161,7 @@ async function detectServicesAtRoot(
 
   return {
     services,
+    warnings: [],
     errors: [],
   };
 }
@@ -180,6 +186,7 @@ async function detectServicesFrontendSubdir(
   if (backendResult.error) {
     return {
       services: null,
+      warnings: [],
       errors: [backendResult.error],
     };
   }
@@ -188,6 +195,7 @@ async function detectServicesFrontendSubdir(
   if (Object.keys(backendResult.services).length === 0) {
     return {
       services: null,
+      warnings: [],
       errors: [
         {
           code: 'NO_BACKEND_SERVICES',
@@ -201,6 +209,7 @@ async function detectServicesFrontendSubdir(
 
   return {
     services,
+    warnings: [],
     errors: [],
   };
 }
