@@ -1,22 +1,37 @@
 # Firewall
 
-`vercel firewall` manages your project's Web Application Firewall — custom rules, IP blocks, system bypass, attack mode, and DDoS mitigations.
+`vercel firewall` manages your project's Web Application Firewall (WAF). It provides multiple layers of protection:
 
-## Viewing Configuration
+- **Custom rules** — match requests by path, method, IP, geo, headers, cookies, and more, then deny, challenge, rate limit, log, or redirect them
+- **IP blocks** — block specific IPs or CIDR ranges from accessing your project
+- **System bypass** — exempt trusted IPs from all firewall checks (e.g., your office, CI servers, monitoring)
+- **Attack mode** — emergency mode that challenges every visitor with a verification page during an active attack
+- **System mitigations** — automatic DDoS protection that can be temporarily paused for debugging
+
+## Overview
 
 ```bash
-vercel firewall overview                              # firewall summary: rules, IP blocks, bypasses, attack mode
-vercel firewall rules list                            # table of all custom rules
-vercel firewall rules list --expand                   # expanded view with conditions and actions
-vercel firewall rules list --json                     # JSON output for scripting
-vercel firewall rules inspect "My Rule"               # full detail of a single rule
-vercel firewall rules inspect "My Rule" --json        # JSON detail for a single rule
+vercel firewall overview                              # full firewall summary
 vercel firewall diff                                  # show unpublished draft changes
 ```
 
-## Creating Rules
+## Custom Rules
+
+Custom rules let you define precise traffic policies based on request attributes. Use them to block abusive traffic, rate limit APIs, challenge suspicious requests, redirect legacy paths, or log traffic for monitoring.
 
 Rule changes are staged as drafts — run `vercel firewall publish --yes` to make them live.
+
+### Viewing rules
+
+```bash
+vercel firewall rules list                            # table of all rules
+vercel firewall rules list --expand                   # show conditions and actions
+vercel firewall rules list --json                     # JSON for scripting
+vercel firewall rules inspect "My Rule"               # full detail of a single rule
+vercel firewall rules inspect "My Rule" --json        # JSON detail
+```
+
+### Creating rules
 
 Four modes (mutually exclusive):
 
@@ -77,19 +92,19 @@ vercel firewall rules add "Redirect old path" \
   --yes
 ```
 
-## Editing Rules
+### Editing rules
 
 ```bash
-vercel firewall rules edit "My Rule"                                  # interactive editor
+vercel firewall rules edit "My Rule"                                    # interactive editor
 vercel firewall rules edit "My Rule" --ai "change action to challenge"  # AI (interactive only)
-vercel firewall rules edit "My Rule" --action challenge --yes         # change action
-vercel firewall rules edit "My Rule" --name "New Name" --yes          # rename
-vercel firewall rules edit "My Rule" --enabled --yes                  # enable
-vercel firewall rules edit "My Rule" --disabled --yes                 # disable
+vercel firewall rules edit "My Rule" --action challenge --yes           # change action
+vercel firewall rules edit "My Rule" --name "New Name" --yes            # rename
+vercel firewall rules edit "My Rule" --enabled --yes                    # enable
+vercel firewall rules edit "My Rule" --disabled --yes                   # disable
 vercel firewall rules edit "My Rule" --condition '{"type":"path","op":"pre","value":"/new"}' --yes  # replace conditions
 ```
 
-## Managing Rules
+### Managing rules
 
 ```bash
 vercel firewall rules enable "My Rule"                # enable a disabled rule
@@ -97,10 +112,77 @@ vercel firewall rules disable "My Rule"               # disable without removing
 vercel firewall rules remove "My Rule" --yes          # delete (aliases: rm, delete)
 vercel firewall rules reorder "My Rule" --first --yes # move to highest priority
 vercel firewall rules reorder "My Rule" --last --yes  # move to lowest priority
-vercel firewall rules reorder "My Rule" --position 3 --yes  # move to position 3 (1-based)
+vercel firewall rules reorder "My Rule" --position 3 --yes  # move to position (1-based)
 ```
 
-## Conditions
+Rules are evaluated in priority order (top to bottom). Use `reorder` to control which rules are checked first.
+
+## IP Blocks
+
+Block specific IP addresses or CIDR ranges from accessing your project entirely. Use for known malicious IPs, abuse sources, or to restrict access to specific networks.
+
+IP block changes are staged as drafts — run `vercel firewall publish --yes` to make them live.
+
+```bash
+vercel firewall ip-blocks list                                          # list all blocked IPs
+vercel firewall ip-blocks list --json                                   # JSON output
+vercel firewall ip-blocks block 1.2.3.4 --yes                          # block an IP on all hosts
+vercel firewall ip-blocks block 10.0.0.0/24 --hostname example.com --yes  # block CIDR on specific host
+vercel firewall ip-blocks block 1.2.3.4 --notes "Abuse report #123" --yes  # block with a note
+vercel firewall ip-blocks unblock 1.2.3.4 --yes                        # unblock by IP
+vercel firewall ip-blocks unblock 1.2.3.4 --hostname example.com --yes # unblock scoped to hostname
+```
+
+## System Bypass
+
+Exempt trusted IP addresses from all firewall checks. Use for your office IP, CI/CD servers, uptime monitors, or other trusted infrastructure that should never be blocked.
+
+Takes effect immediately — no publishing required.
+
+```bash
+vercel firewall system-bypass list                                      # list all bypass rules
+vercel firewall system-bypass list --json                               # JSON output
+vercel firewall system-bypass add 10.0.0.1 --yes                       # bypass for an IP
+vercel firewall system-bypass add 10.0.0.1 --domain example.com --yes  # bypass scoped to a domain
+vercel firewall system-bypass add 10.0.0.1 --notes "Office IP" --yes   # bypass with a note
+vercel firewall system-bypass remove 10.0.0.1 --yes                    # remove bypass
+```
+
+## Attack Mode
+
+Emergency response for active attacks. When enabled, every visitor sees a verification challenge page before accessing your site. Use when you're under a DDoS attack or experiencing a surge of malicious traffic.
+
+Takes effect immediately — no publishing required.
+
+```bash
+vercel firewall attack-mode enable --duration 1h --yes   # challenge all visitors for 1 hour
+vercel firewall attack-mode enable --duration 6h --yes   # for 6 hours
+vercel firewall attack-mode enable --duration 24h --yes  # for 24 hours
+vercel firewall attack-mode disable --yes                # stop challenging visitors
+```
+
+## System Mitigations
+
+Vercel automatically mitigates DDoS attacks and filters malicious traffic. In rare cases (debugging false positives, testing), you may need to temporarily pause these protections.
+
+Takes effect immediately — no publishing required. Automatically resumes after 24 hours.
+
+```bash
+vercel firewall system-mitigations pause --yes           # pause DDoS protection (24h)
+vercel firewall system-mitigations resume --yes          # resume DDoS protection
+```
+
+## Publishing
+
+Rule and IP block changes are staged as drafts. Use `diff` to review, then `publish` or `discard`.
+
+```bash
+vercel firewall diff                                  # review staged changes
+vercel firewall publish --yes                         # push all draft changes to production
+vercel firewall discard --yes                         # throw away all draft changes
+```
+
+## Conditions Reference
 
 Each `--condition` is a JSON object:
 
@@ -144,7 +226,7 @@ Each `--condition` is a JSON object:
 
 **Bot:** `bot_name`, `bot_category` (Security Plus)
 
-## Actions
+## Actions Reference
 
 | Action | Description | Extra flags |
 |--------|-------------|-------------|
@@ -160,44 +242,6 @@ Each `--condition` is a JSON object:
 **Rate limit keys:** `ip` (default), `ja4`, `header:<name>` (repeatable)
 
 **Rate limit exceeded action:** `log`, `deny`, `challenge`, `rate_limit` (default: `rate_limit` / 429)
-
-## IP Blocks
-
-IP block changes are staged as drafts — run `vercel firewall publish --yes` to make them live.
-
-```bash
-vercel firewall ip-blocks list                                        # list all blocked IPs
-vercel firewall ip-blocks block 1.2.3.4 --yes                        # block an IP
-vercel firewall ip-blocks block 10.0.0.0/24 --hostname example.com --notes "Abuse" --yes  # block CIDR on specific host
-vercel firewall ip-blocks unblock 1.2.3.4 --yes                      # unblock by IP
-vercel firewall ip-blocks unblock 1.2.3.4 --hostname example.com --yes  # unblock scoped to hostname
-```
-
-## System Controls
-
-These take effect immediately — no publishing required.
-
-```bash
-vercel firewall system-bypass list                    # list bypass rules
-vercel firewall system-bypass add 10.0.0.1 --yes      # add bypass (skip firewall for this IP)
-vercel firewall system-bypass remove 10.0.0.1 --yes   # remove bypass
-
-vercel firewall attack-mode enable --duration 1h --yes  # challenge all visitors (1h, 6h, or 24h)
-vercel firewall attack-mode disable --yes               # stop challenging visitors
-
-vercel firewall system-mitigations pause --yes        # pause automatic DDoS protection (24h)
-vercel firewall system-mitigations resume --yes       # resume DDoS protection
-```
-
-## Publishing
-
-Rule and IP block changes are staged as drafts. Nothing is live until published.
-
-```bash
-vercel firewall diff                                  # review staged changes
-vercel firewall publish --yes                         # push all draft changes to production
-vercel firewall discard --yes                         # throw away all draft changes
-```
 
 ## JSON Rule Schema
 
@@ -245,7 +289,7 @@ Conditions within a group are **AND'd**. Multiple groups are **OR'd**.
 Agents must use flag mode (`--condition` + `--action`) or JSON mode (`--json`). AI mode and interactive mode are not available in non-interactive environments.
 
 - **Always pass `--yes`** to skip confirmation prompts
-- **Always publish after staging**: `vercel firewall publish --yes`
+- **Publish after staging rules/IP blocks**: `vercel firewall publish --yes`
 - **Use `--json` for structured output**: `vercel firewall rules list --json`
 - Errors return structured JSON with `next[]` command suggestions
 - Project must be linked first (`vercel link`)
@@ -256,4 +300,4 @@ Agents must use flag mode (`--condition` + `--action`) or JSON mode (`--json`). 
 - **Not publishing** — rule and IP block changes stay as drafts until `vercel firewall publish --yes`
 - **Using `--ai` in scripts/agents** — blocked; use `--json` or `--condition` flags
 - **Missing `key` for header/cookie/query** — these types require `"key": "header-name"` in the condition
-- **Broad deny rules** — a deny rule with a loose condition (e.g., path starts with `/`) will block all traffic. Use `vercel firewall rules inspect` to review before publishing
+- **Broad deny rules** — a deny rule with a loose condition (e.g., path starts with `/`) will block all traffic. Review with `vercel firewall rules inspect` before publishing
