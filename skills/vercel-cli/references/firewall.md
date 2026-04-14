@@ -272,7 +272,7 @@ vercel firewall system-bypass remove 10.0.0.1 --yes                    # remove 
 
 Emergency response for active attacks. When enabled, every visitor sees a verification challenge page before accessing your site. Use when you're under a DDoS attack or experiencing a surge of malicious traffic.
 
-Takes effect immediately — no publishing required. **Interactive only — blocked for agents/scripts due to the severity of enabling this.**
+Takes effect immediately — no publishing required. **Requires interactive confirmation — blocked for agents/scripts due to the severity of enabling this.**
 
 ```bash
 vercel firewall attack-mode enable --duration 1h --yes   # challenge all visitors for 1 hour
@@ -285,7 +285,7 @@ vercel firewall attack-mode disable --yes                # stop challenging visi
 
 Vercel automatically mitigates DDoS attacks and filters malicious traffic. In rare cases (debugging false positives, testing), you may need to temporarily pause these protections.
 
-Takes effect immediately — no publishing required. Automatically resumes after 24 hours. **Interactive only — blocked for agents/scripts due to the severity of pausing DDoS protection.**
+Takes effect immediately — no publishing required. Automatically resumes after 24 hours. **Requires interactive confirmation — blocked for agents/scripts due to the severity of pausing DDoS protection.**
 
 ```bash
 vercel firewall system-mitigations pause --yes           # pause DDoS protection (24h)
