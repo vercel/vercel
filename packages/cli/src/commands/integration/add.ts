@@ -436,7 +436,8 @@ async function provisionResourceViaCLI(
       client,
       integration,
       product,
-      metadata
+      metadata,
+      installation.id
     );
     billingPlans = billingPlansResponse.plans;
   } catch (error) {
