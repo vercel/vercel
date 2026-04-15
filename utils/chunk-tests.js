@@ -123,24 +123,7 @@ function getRunnerOptions(scriptName, packageName) {
       `Unable to find runner options for package "${packageName}" and script ${scriptName}`
     );
   }
-  return applyFastLaneRunnerOptions(runnerOptions);
-}
-
-function applyFastLaneRunnerOptions(runnerOptions) {
-  const isFastLane = process.env.FAST_LANE === 'true';
-  if (!isFastLane) {
-    return runnerOptions;
-  }
-
-  const filteredRunners = runnerOptions.runners.includes('ubuntu-latest')
-    ? ['ubuntu-latest']
-    : runnerOptions.runners;
-
-  return {
-    ...runnerOptions,
-    runners: filteredRunners,
-    nodeVersions: ['22'],
-  };
+  return runnerOptions;
 }
 
 async function getChunkedTests() {
@@ -339,6 +322,5 @@ if (module === require.main || !module.parent) {
 }
 
 module.exports = {
-  applyFastLaneRunnerOptions,
   intoChunks,
 };
