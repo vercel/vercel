@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
 import { useConfiguration, useResources } from '../../../mocks/integration';
@@ -7,6 +7,10 @@ import { useUser } from '../../../mocks/user';
 
 describe('integration', () => {
   describe('remove', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     describe('happy path', () => {
       let team: Team;
       beforeEach(() => {
@@ -56,6 +60,25 @@ describe('integration', () => {
         );
 
         await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('parses slug when global flags are before the integration subcommand', async () => {
+        useConfiguration();
+        mockDeleteIntegration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv(
+          '--cwd',
+          '/tmp/proj',
+          '--non-interactive',
+          'integration',
+          'remove',
+          integration,
+          '--yes'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toBe(0);
+        await expect(client.stderr).toOutput('Uninstalling integration…');
       });
 
       it('exits gracefully when cancelling during confirmation for removing an integration', async () => {
@@ -270,6 +293,33 @@ describe('integration', () => {
           await expect(exitCodePromise).resolves.toEqual(1);
         });
 
+        it('writes structured JSON when non-interactive and integration slug is missing', async () => {
+          vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+            throw new Error(`exit:${code ?? 0}`);
+          }) as () => never);
+          client.nonInteractive = true;
+          client.setArgv(
+            'integration',
+            'remove',
+            '--non-interactive',
+            '--cwd',
+            '/tmp/example'
+          );
+          await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+          const payload = JSON.parse(client.stdout.getFullOutput().trim());
+          expect(payload).toMatchObject({
+            status: 'error',
+            reason: 'missing_arguments',
+          });
+          expect(payload.message).toMatch(/specify an integration/i);
+          expect(payload.next?.[0]?.command).toBe(
+            'vercel --non-interactive --cwd /tmp/example integration installations'
+          );
+          expect(payload.next?.[1]?.command).toBe(
+            'vercel --non-interactive --cwd /tmp/example integration remove <slug> --yes'
+          );
+        });
+
         it('should error when more arguments than a single integration are passed', async () => {
           client.setArgv('integration', 'remove', 'a', 'b');
           const exitCodePromise = integrationCommand(client);
@@ -335,9 +385,12 @@ describe('integration', () => {
           expect(exitCode).toEqual(1);
 
           const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          expect(jsonOutput.status).toEqual('error');
+          expect(jsonOutput.reason).toEqual('has_resources');
           expect(jsonOutput.integration).toEqual(integration);
           expect(jsonOutput.removed).toEqual(false);
           expect(jsonOutput.error).toEqual('has_resources');
+          expect(jsonOutput.hint).toMatch(/user approval|--disconnect-all/i);
           expect(jsonOutput.resources).toEqual(
             expect.arrayContaining([
               'store-acme-other-project',
@@ -350,11 +403,13 @@ describe('integration', () => {
                 command: expect.stringContaining(
                   'integration-resource remove store-acme-other-project --disconnect-all --yes --format=json'
                 ),
+                when: expect.stringMatching(/store-acme-other-project/),
               }),
               expect.objectContaining({
                 command: expect.stringContaining(
                   'integration-resource remove store-acme-no-projects --disconnect-all --yes --format=json'
                 ),
+                when: expect.stringMatching(/store-acme-no-projects/),
               }),
             ])
           );
@@ -363,6 +418,45 @@ describe('integration', () => {
               `integration remove ${integration} --yes --format=json`
             )
           );
+        });
+
+        it('prints structured JSON in non-interactive mode when integration still has resources', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.setArgv(
+            '--cwd',
+            '/tmp/neon-proj',
+            '--non-interactive',
+            'integration',
+            'remove',
+            integration,
+            '--yes'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput().trim());
+          expect(jsonOutput.status).toEqual('error');
+          expect(jsonOutput.reason).toEqual('has_resources');
+          expect(jsonOutput.resources).toEqual(
+            expect.arrayContaining(['store-acme-other-project'])
+          );
+          expect(jsonOutput.next?.[0]?.command).toContain(
+            '--cwd /tmp/neon-proj'
+          );
+          expect(jsonOutput.next?.[0]?.command).toContain('--non-interactive');
+          expect(jsonOutput.retry).toContain('--cwd /tmp/neon-proj');
+          expect(jsonOutput.retry).toContain(
+            `integration remove ${integration} --yes`
+          );
+          expect(jsonOutput.retry).not.toContain('--format=json');
+          expect(jsonOutput.next?.[0]?.command).not.toMatch(/--yes.*--yes/);
         });
 
         it('should show agent approval warning when removing integration with resources as agent', async () => {

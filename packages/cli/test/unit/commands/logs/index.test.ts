@@ -73,7 +73,7 @@ describe('logs', () => {
       client.setArgv('logs', '--help');
       const exitCode = await logs(client);
 
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -131,6 +131,35 @@ describe('logs', () => {
       await expect(client.stdout).toOutput('"message":"JSON log test"');
     });
 
+    it('should output all request logs as a logs array in JSON mode', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            {
+              ...createMockLog(),
+              logs: [
+                { level: 'info', message: 'first message' },
+                { level: 'error', message: 'actual error' },
+              ],
+            },
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--json', '--level', 'error');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain(
+        '"logs":[{"level":"info","message":"first message"},{"level":"error","message":"actual error"}]'
+      );
+      expect(output).toContain('"level":"error"');
+      expect(output).toContain('"message":"actual error"');
+    });
+
     it('should track telemetry for --json flag', async () => {
       useRequestLogs([]);
 
@@ -144,6 +173,19 @@ describe('logs', () => {
           value: 'TRUE',
         },
       ]);
+    });
+
+    it('should display help when an invalid flag is provided', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--output', 'json');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      const output = client.getFullOutput();
+      expect(output).toContain('--output');
+      expect(output).toContain('unknown or unexpected option');
+      expect(output).toContain('Display request logs');
+      expect(output).toContain('--json');
     });
 
     it('should display "no logs found" when empty', async () => {

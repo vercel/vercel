@@ -11,6 +11,7 @@ import { compileVercelConfig } from '../compile-vercel-config';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
@@ -29,14 +30,21 @@ export async function isExperimentalServicesEnabled(
 }
 
 async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
-  const config = await readJSONFile<Record<string, unknown>>(
-    join(cwd, 'vercel.json')
-  );
-  if (!config || config instanceof Error) return false;
-  return (
-    config.experimentalServices != null &&
-    typeof config.experimentalServices === 'object'
-  );
+  try {
+    const compileResult = await compileVercelConfig(cwd);
+    if (!compileResult.configPath) return false;
+
+    const config = await readJSONFile<Record<string, unknown>>(
+      compileResult.configPath
+    );
+    if (!config || config instanceof Error) return false;
+    return (
+      config.experimentalServices != null &&
+      typeof config.experimentalServices === 'object'
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -123,6 +131,14 @@ async function prepareServicesConfigWrite(
     basename(compileResult.configPath) === 'now.json'
   ) {
     throw new Error('Cannot automatically update now.json.');
+  }
+
+  if (
+    isVercelTomlEnabled() &&
+    compileResult.configPath &&
+    basename(compileResult.configPath) === 'vercel.toml'
+  ) {
+    throw new Error('Cannot automatically update vercel.toml.');
   }
 
   let existingConfig: VercelConfig = {};

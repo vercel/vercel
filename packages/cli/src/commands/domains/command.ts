@@ -89,6 +89,29 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const priceSubcommand = {
+  name: 'price',
+  aliases: [],
+  description: 'Show registrar price quote for a domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Price quote for a domain',
+      value: `${packageName} domains price example.com`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains price example.com --format json`,
+    },
+  ],
+} as const;
+
 export const buySubcommand = {
   name: 'buy',
   aliases: [],
@@ -159,6 +182,7 @@ export const domainsCommand = {
     addSubcommand,
     buySubcommand,
     moveSubcommand,
+    priceSubcommand,
     transferInSubcommand,
     removeSubcommand,
   ],

@@ -65,6 +65,7 @@ from .app import (
 )
 from .broker import (
     DramatiqTaskEnvelope,
+    VercelDramatiqEncoder,
     VercelQueuesBroker,
     VercelQueuesBrokerOptions,
 )
@@ -72,6 +73,7 @@ from .worker import PollingWorker
 
 __all__ = [
     # Broker
+    "VercelDramatiqEncoder",
     "VercelQueuesBroker",
     "VercelQueuesBrokerOptions",
     "DramatiqTaskEnvelope",
