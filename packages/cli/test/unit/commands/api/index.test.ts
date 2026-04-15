@@ -1,6 +1,14 @@
-import { describe, expect, it, afterEach, vi } from 'vitest';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import { describe, expect, it, afterEach, vi, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import api from '../../../../src/commands/api';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const minimalOpenApiPath = join(
+  __dirname,
+  '../../../fixtures/unit/openapi/minimal-openapi.json'
+);
 
 describe('api', () => {
   afterEach(() => {
@@ -273,6 +281,32 @@ describe('api', () => {
       const methodEvent = events.find(e => e.key === 'option:method');
       expect(methodEvent).toBeDefined();
       expect(methodEvent?.value).toBe('POST');
+    });
+  });
+
+  describe('OpenAPI CLI tag routing', () => {
+    beforeEach(() => {
+      vi.stubEnv('VERCEL_OPENAPI_SPEC_PATH', minimalOpenApiPath);
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('delegates opted-in tag and operation to OpenAPI resolution', async () => {
+      client.setArgv('api', 'test-tag', 'testOp', '--describe', '--refresh');
+      const exitCode = await api(client);
+      expect(exitCode).toBe(0);
+      const out = client.stdout.getFullOutput();
+      expect(out).toContain('test-tag');
+      expect(out).toContain('first');
+    });
+
+    it('lists operations for `api ls <tag>` when the tag is opted in', async () => {
+      client.setArgv('api', 'ls', 'test-tag', '--refresh');
+      const exitCode = await api(client);
+      expect(exitCode).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('test-op-two');
     });
   });
 });

@@ -5,52 +5,46 @@ export const openapiCommand = {
   name: 'openapi',
   aliases: [],
   description:
-    'Call the Vercel REST API using OpenAPI tag and operationId (same flags as `vercel api`). Only operations with `x-vercel-cli.supported: true` are listed or invokable. Use `x-vercel-cli.aliases` for short names (e.g. `list` for `getProjects`). Tag and operation names match case-insensitively and across camelCase, kebab-case, and snake_case.',
+    'Same behavior as `vercel api` when the first argument matches an opted-in OpenAPI tag (alias for tag-based usage). Prefer `vercel api <tag> [<operationId>]`. Only operations with `x-vercel-cli.supported: true` are listed or invokable. Use `x-vercel-cli.aliases` for short names (e.g. `list` for `getProjects`). Path parameters are positional values after `<operationId>` (in `{path}` order); query parameters use `--kebab-case` flags (see `x-vercel-cli.kind` on parameters: `argument` | `option`, with defaults by `in: path` / `in: query`). Tag and operation names match case-insensitively and across camelCase, kebab-case, and snake_case.',
   arguments: [
     {
       name: 'tag',
-      required: true,
+      required: false,
     },
     {
       name: 'operationId',
       required: false,
     },
   ],
-  options: [
-    {
-      name: 'describe',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description:
-        'Print kebab-case operation names and optional descriptions instead of calling the API. With only `<tag>`, lists every operation in that tag.',
-    },
-    ...apiCommand.options,
-  ],
+  options: apiCommand.options,
   examples: [
     {
-      name: 'List all opted-in operations (by tag)',
-      value: `${packageName} openapi ls`,
+      name: 'List all opted-in operations (same as `vercel api`)',
+      value: `${packageName} api`,
     },
     {
       name: 'Describe every operation under a tag',
-      value: `${packageName} openapi user --describe`,
+      value: `${packageName} api user`,
     },
     {
       name: 'Describe a single operation',
-      value: `${packageName} openapi access-groups readAccessGroup --describe`,
+      value: `${packageName} api access-groups readAccessGroup --describe`,
     },
     {
       name: 'Invoke an operation (GET)',
-      value: `${packageName} openapi user getAuthUser`,
+      value: `${packageName} api user getAuthUser`,
     },
     {
       name: 'Invoke with body fields',
-      value: `${packageName} openapi projects createProject -X POST -F name=my-app`,
+      value: `${packageName} api projects createProject -X POST -F name=my-app`,
     },
     {
-      name: 'Generate curl (same as vercel api)',
-      value: `${packageName} openapi teams getTeams --generate=curl`,
+      name: 'Generate curl',
+      value: `${packageName} api teams getTeams --generate=curl`,
+    },
+    {
+      name: 'Path and query parameters (positional + flags)',
+      value: `${packageName} api rolling-release delete-rolling-release-config my-project-id --team-id team_abc123`,
     },
   ],
 } as const;

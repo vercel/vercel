@@ -104,6 +104,12 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliFlagDescribe(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('describe');
+    }
+  }
+
   trackCliOptionGenerate(format: string | undefined) {
     if (format) {
       const validFormats = ['curl'];

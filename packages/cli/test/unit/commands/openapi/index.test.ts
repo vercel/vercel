@@ -25,25 +25,27 @@ describe('openapi', () => {
       client.setArgv('openapi', '--help');
       const exitCode = await openapi(client);
       expect(exitCode).toEqual(2);
-      expect(client.getFullOutput()).toContain(
-        'Call the Vercel REST API using OpenAPI tag and operationId'
-      );
+      expect(client.getFullOutput()).toContain('Same behavior as `vercel api`');
     });
   });
 
   describe('arguments', () => {
-    it('requires tag when not using tag-only --describe or ls', async () => {
+    it('lists all opted-in operations when no tag (same as `openapi ls`)', async () => {
       client.setArgv('openapi', '--refresh');
       const exitCode = await openapi(client);
-      expect(exitCode).toEqual(1);
-      expect(client.getFullOutput()).toContain('Missing argument');
+      expect(exitCode).toEqual(0);
+      const out = client.stdout.getFullOutput();
+      expect(out).toContain('test-tag');
+      expect(out).toContain('first ');
     });
 
-    it('requires operationId unless --describe or ls', async () => {
+    it('treats missing operationId as tag describe', async () => {
       client.setArgv('openapi', 'test-tag', '--refresh');
       const exitCode = await openapi(client);
-      expect(exitCode).toEqual(1);
-      expect(client.getFullOutput()).toContain('Missing operationId');
+      expect(exitCode).toEqual(0);
+      const out = client.stdout.getFullOutput();
+      expect(out).toContain('test-tag');
+      expect(out).toContain('first ');
     });
   });
 
@@ -97,6 +99,7 @@ describe('openapi', () => {
       const exitCode = await openapi(client);
       expect(exitCode).toEqual(0);
       const out = client.stdout.getFullOutput();
+      expect(out).toContain('test-tag');
       expect(out).toContain('first');
       expect(out).toContain('First operation');
       expect(out).not.toContain('GET');
@@ -124,6 +127,25 @@ describe('openapi', () => {
       expect(out).not.toContain('hidden-op');
     });
 
+    it('matches bare openapi, list, --describe, and ls for global output', async () => {
+      const outputs: string[] = [];
+      for (const argv of [
+        ['openapi', '--refresh'],
+        ['openapi', 'list', '--refresh'],
+        ['openapi', '--describe', '--refresh'],
+        ['openapi', 'ls', '--refresh'],
+      ] as const) {
+        client.reset();
+        vi.stubEnv('VERCEL_OPENAPI_SPEC_PATH', minimalOpenApiPath);
+        client.setArgv(...argv);
+        await openapi(client);
+        outputs.push(client.stdout.getFullOutput());
+      }
+      expect(outputs[0]).toBe(outputs[1]);
+      expect(outputs[1]).toBe(outputs[2]);
+      expect(outputs[2]).toBe(outputs[3]);
+    });
+
     it('lists opted-in operations for one tag', async () => {
       client.setArgv('openapi', 'ls', 'test-tag', '--refresh');
       const exitCode = await openapi(client);
@@ -131,6 +153,28 @@ describe('openapi', () => {
       const out = client.stdout.getFullOutput();
       expect(out).toContain('test-tag');
       expect(out).toContain('test-op-two');
+    });
+  });
+
+  describe('path and query parameters', () => {
+    it('substitutes path placeholders and query options for the HTTP request', async () => {
+      let filter: string | undefined;
+      client.scenario.get('/v1/projects/:projectId/things', (req, res) => {
+        filter = req.query.filter as string | undefined;
+        res.json({ ok: true });
+      });
+      client.setArgv(
+        'openapi',
+        'test-tag',
+        'projectThing',
+        'p1',
+        '--filter=hello',
+        '--refresh'
+      );
+      const exitCode = await openapi(client);
+      expect(exitCode).toBe(0);
+      expect(filter).toBe('hello');
+      expect(client.stdout.getFullOutput()).toContain('"ok": true');
     });
   });
 

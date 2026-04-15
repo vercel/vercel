@@ -63,6 +63,40 @@
           }
         }
       }
+    },
+    "/v1/projects/{projectId}/things": {
+      "get": {
+        "x-vercel-cli": { "supported": true },
+        "operationId": "projectThing",
+        "tags": ["test-tag"],
+        "summary": "Path and query params",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean" } }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

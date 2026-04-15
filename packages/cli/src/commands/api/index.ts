@@ -26,6 +26,11 @@ import type {
   SelectedEndpoint,
   PromptResult,
 } from './types';
+import {
+  runOpenapiCli,
+  buildUnknownTagMessage,
+} from '../openapi/run-openapi-cli';
+import { OpenapiTelemetryClient } from '../../util/telemetry/commands/openapi';
 
 export default async function api(client: Client): Promise<number> {
   const telemetryClient = new ApiTelemetryClient({
@@ -45,6 +50,7 @@ export default async function api(client: Client): Promise<number> {
   }
 
   const { args, flags } = parsedArgs;
+  const typedFlags = flags as ParsedFlags & { '--describe'?: boolean };
   const needHelp = flags['--help'];
 
   // Check for 'ls' or 'list' subcommand first (before general --help)
@@ -73,6 +79,33 @@ export default async function api(client: Client): Promise<number> {
       return 2;
     }
 
+    const secondArg = args[2];
+    const openApiForList = new OpenApiCache();
+    const listSpecLoaded = await openApiForList.loadWithSpinner(
+      lsFlags['--refresh'] ?? false
+    );
+    if (!listSpecLoaded) {
+      output.error('Could not load OpenAPI specification');
+      return 1;
+    }
+
+    if (secondArg && openApiForList.findEndpointsByTag(secondArg).length > 0) {
+      const openapiTelemetryClient = new OpenapiTelemetryClient({
+        opts: { store: client.telemetryEventStore },
+      });
+      const mergedFlags = { ...typedFlags, ...lsFlags };
+      return runOpenapiCli(
+        client,
+        { args, flags: mergedFlags as Record<string, unknown> },
+        openapiTelemetryClient
+      );
+    }
+
+    if (secondArg) {
+      output.error(buildUnknownTagMessage(openApiForList, secondArg));
+      return 1;
+    }
+
     telemetryClient.trackCliSubcommandList();
     if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
     if (lsFlags['--format'])
@@ -96,12 +129,18 @@ export default async function api(client: Client): Promise<number> {
     client.dangerouslySkipPermissions = true;
   }
 
-  // Get endpoint from args (args[0] is 'api', args[1] is the endpoint)
-  let endpoint = firstArg;
-  let selectedMethod: string | undefined;
-  let selectedBodyFields: string[] = [];
+  if (!firstArg) {
+    if (typedFlags['--describe']) {
+      const openapiTelemetryClient = new OpenapiTelemetryClient({
+        opts: { store: client.telemetryEventStore },
+      });
+      return runOpenapiCli(
+        client,
+        parsedArgs as { args: string[]; flags: Record<string, unknown> },
+        openapiTelemetryClient
+      );
+    }
 
-  if (!endpoint) {
     // Interactive mode: prompt for endpoint selection
     if (client.stdin.isTTY) {
       const selected = await promptEndpointSelection(
@@ -111,18 +150,62 @@ export default async function api(client: Client): Promise<number> {
       if (!selected) {
         return 1;
       }
-      endpoint = selected.finalUrl;
-      selectedMethod = selected.method;
-      selectedBodyFields = selected.bodyFields;
-    } else {
-      output.error('Endpoint is required. Usage: vercel api <endpoint>');
-      return 1;
+      return executePathApiRequest(
+        client,
+        telemetryClient,
+        selected.finalUrl,
+        flags as ParsedFlags,
+        selected.method,
+        selected.bodyFields
+      );
     }
+    output.error('Endpoint is required. Usage: vercel api <endpoint>');
+    return 1;
   }
 
+  if (firstArg.startsWith('/')) {
+    return executePathApiRequest(
+      client,
+      telemetryClient,
+      firstArg,
+      flags as ParsedFlags,
+      undefined,
+      []
+    );
+  }
+
+  const openApiForTag = new OpenApiCache();
+  const tagSpecLoaded = await openApiForTag.loadWithSpinner(
+    typedFlags['--refresh'] ?? false
+  );
+  if (!tagSpecLoaded) {
+    output.error('Could not load OpenAPI specification');
+    return 1;
+  }
+  if (openApiForTag.findEndpointsByTag(firstArg).length > 0) {
+    const openapiTelemetryClient = new OpenapiTelemetryClient({
+      opts: { store: client.telemetryEventStore },
+    });
+    return runOpenapiCli(
+      client,
+      parsedArgs as { args: string[]; flags: Record<string, unknown> },
+      openapiTelemetryClient
+    );
+  }
+
+  output.error('Endpoint must start with /');
+  return 1;
+}
+
+async function executePathApiRequest(
+  client: Client,
+  telemetryClient: ApiTelemetryClient,
+  endpoint: string,
+  flags: ParsedFlags,
+  selectedMethod: string | undefined,
+  selectedBodyFields: string[]
+): Promise<number> {
   // Validate endpoint format and prevent SSRF
-  // The URL constructor treats '//host' as protocol-relative, which would
-  // redirect requests to arbitrary hosts. We must validate the resolved URL.
   if (!endpoint.startsWith('/')) {
     output.error('Endpoint must start with /');
     return 1;
@@ -141,7 +224,6 @@ export default async function api(client: Client): Promise<number> {
     return 1;
   }
 
-  // Track telemetry
   telemetryClient.trackCliArgumentEndpoint(endpoint);
   telemetryClient.trackCliOptionMethod(flags['--method']);
   telemetryClient.trackCliOptionHeader(flags['--header']);
@@ -157,19 +239,16 @@ export default async function api(client: Client): Promise<number> {
   if (flags['--dangerously-skip-permissions'])
     telemetryClient.trackCliFlagDangerouslySkipPermissions(true);
 
-  // Use method from interactive selection if not overridden by flag
   const finalFlags = { ...flags } as ParsedFlags;
   if (selectedMethod && !flags['--method']) {
     finalFlags['--method'] = selectedMethod;
   }
 
-  // Merge body fields from interactive selection with any existing --field flags
   if (selectedBodyFields.length > 0) {
     const existingFields = finalFlags['--field'] || [];
     finalFlags['--field'] = [...existingFields, ...selectedBodyFields];
   }
 
-  // If generate mode, build request config and output in requested format
   if (flags['--generate'] === 'curl') {
     try {
       const requestConfig = await buildRequest(endpoint, finalFlags);

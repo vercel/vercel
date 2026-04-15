@@ -40,6 +40,18 @@ export interface VercelCliOperationExtension {
   aliases?: string[];
 }
 
+/**
+ * `x-vercel-cli` on an OpenAPI **parameter** (path/query/header).
+ */
+export interface VercelCliParameterExtension {
+  /**
+   * How the parameter is exposed for `vercel openapi <tag> <operationId> ...`:
+   * - **argument** — positional value after `<operationId>`, in `{pathTemplate}` order (default for `in: path`).
+   * - **option** — `--kebab-param-name` (and `--name=value`), default for `in: query` / `in: header` / `in: cookie`.
+   */
+  kind?: 'argument' | 'option';
+}
+
 export interface Operation {
   summary?: string;
   description?: string;
@@ -58,6 +70,7 @@ export interface Parameter {
   required?: boolean;
   description?: string;
   schema?: Schema;
+  'x-vercel-cli'?: VercelCliParameterExtension;
 }
 
 export interface RequestBody {

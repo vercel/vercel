@@ -11,3 +11,10 @@ export {
   humanizeIdentifier,
   humanReadableColumnLabel,
 } from './column-label';
+export {
+  resolveOpenapiInvocationUrl,
+  splitOpenapiInvocationPositionals,
+  extractBracePathParamNames,
+  parameterNameToCliOptionFlag,
+  getParameterCliKind,
+} from './openapi-operation-cli';
