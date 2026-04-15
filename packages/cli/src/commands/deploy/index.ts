@@ -309,6 +309,9 @@ async function handleInitDeployment(
     cwd = link.repoRoot;
   }
 
+  const contextName = org.slug;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
   // #region Functions Beta toggle
   if (functionsBeta || noFunctionsBeta) {
     const toggleResult = await applyFunctionsBetaToggle(
@@ -322,9 +325,6 @@ async function handleInitDeployment(
     }
   }
   // #endregion
-
-  const contextName = org.slug;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   if (
     rootDirectory &&
@@ -1148,20 +1148,6 @@ async function handleDefaultDeploy(
     cwd = link.repoRoot;
   }
 
-  // #region Functions Beta toggle
-  if (functionsBeta || noFunctionsBeta) {
-    const toggleResult = await applyFunctionsBetaToggle(
-      client,
-      project,
-      functionsBeta,
-      noFunctionsBeta
-    );
-    if (toggleResult.error) {
-      return toggleResult.exitCode;
-    }
-  }
-  // #endregion
-
   // #region Build `--prebuilt`
   let vercelOutputDir: string | undefined;
   if (parsedArguments.flags['--prebuilt']) {
@@ -1220,6 +1206,20 @@ async function handleDefaultDeploy(
 
   const contextName = org.slug;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  // #region Functions Beta toggle
+  if (functionsBeta || noFunctionsBeta) {
+    const toggleResult = await applyFunctionsBetaToggle(
+      client,
+      project,
+      functionsBeta,
+      noFunctionsBeta
+    );
+    if (toggleResult.error) {
+      return toggleResult.exitCode;
+    }
+  }
+  // #endregion
 
   if (
     rootDirectory &&
