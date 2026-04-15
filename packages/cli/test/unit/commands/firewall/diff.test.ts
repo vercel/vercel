@@ -202,4 +202,305 @@ describe('firewall diff', () => {
     await expect(client.stderr).toOutput('Modified rule "Renamed Rule"');
     expect(await exitCodePromise).toEqual(0);
   });
+
+  describe('field-level diff', () => {
+    it('should show action change details', async () => {
+      const rule = {
+        id: 'rule_010',
+        name: 'Action Test',
+        description: '',
+        active: true,
+        conditionGroup: [
+          { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+        ],
+        action: { mitigate: { action: 'log' } },
+      };
+
+      const active = createConfig({ rules: [rule] });
+      const draft = createConfig({
+        id: 'draft',
+        rules: [
+          {
+            ...rule,
+            action: { mitigate: { action: 'deny', actionDuration: '1h' } },
+          },
+        ],
+        changes: [
+          createChange('rules.update', {
+            id: 'rule_010',
+            value: {
+              ...rule,
+              action: { mitigate: { action: 'deny', actionDuration: '1h' } },
+            },
+          }),
+        ],
+      });
+      useListFirewallConfigs(active, draft);
+
+      client.setArgv('firewall', 'diff');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Action: Log');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should show added condition', async () => {
+      const rule = {
+        id: 'rule_011',
+        name: 'Condition Add Test',
+        description: '',
+        active: true,
+        conditionGroup: [
+          { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+        ],
+        action: { mitigate: { action: 'deny' } },
+      };
+
+      const active = createConfig({ rules: [rule] });
+      const draft = createConfig({
+        id: 'draft',
+        rules: [
+          {
+            ...rule,
+            conditionGroup: [
+              {
+                conditions: [
+                  { type: 'path', op: 'pre', value: '/api' },
+                  { type: 'method', op: 'eq', value: 'POST' },
+                ],
+              },
+            ],
+          },
+        ],
+        changes: [
+          createChange('rules.update', {
+            id: 'rule_011',
+            value: {
+              ...rule,
+              conditionGroup: [
+                {
+                  conditions: [
+                    { type: 'path', op: 'pre', value: '/api' },
+                    { type: 'method', op: 'eq', value: 'POST' },
+                  ],
+                },
+              ],
+            },
+          }),
+        ],
+      });
+      useListFirewallConfigs(active, draft);
+
+      client.setArgv('firewall', 'diff');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Condition: method equals POST');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should show removed condition', async () => {
+      const rule = {
+        id: 'rule_012',
+        name: 'Condition Remove Test',
+        description: '',
+        active: true,
+        conditionGroup: [
+          {
+            conditions: [
+              { type: 'path', op: 'pre', value: '/api' },
+              { type: 'method', op: 'eq', value: 'DELETE' },
+            ],
+          },
+        ],
+        action: { mitigate: { action: 'deny' } },
+      };
+
+      const active = createConfig({ rules: [rule] });
+      const draft = createConfig({
+        id: 'draft',
+        rules: [
+          {
+            ...rule,
+            conditionGroup: [
+              { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+            ],
+          },
+        ],
+        changes: [
+          createChange('rules.update', {
+            id: 'rule_012',
+            value: {
+              ...rule,
+              conditionGroup: [
+                { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+              ],
+            },
+          }),
+        ],
+      });
+      useListFirewallConfigs(active, draft);
+
+      client.setArgv('firewall', 'diff');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Condition: method equals DELETE');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should show name change', async () => {
+      const rule = {
+        id: 'rule_013',
+        name: 'Old Name',
+        description: '',
+        active: true,
+        conditionGroup: [
+          { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+        ],
+        action: { mitigate: { action: 'deny' } },
+      };
+
+      const active = createConfig({ rules: [rule] });
+      const draft = createConfig({
+        id: 'draft',
+        rules: [{ ...rule, name: 'New Name' }],
+        changes: [
+          createChange('rules.update', {
+            id: 'rule_013',
+            value: { ...rule, name: 'New Name' },
+          }),
+        ],
+      });
+      useListFirewallConfigs(active, draft);
+
+      client.setArgv('firewall', 'diff');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Name: "Old Name"');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should show multiple field changes together', async () => {
+      const rule = {
+        id: 'rule_014',
+        name: 'Multi Change',
+        description: '',
+        active: true,
+        conditionGroup: [
+          { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+        ],
+        action: { mitigate: { action: 'log' } },
+      };
+
+      const active = createConfig({ rules: [rule] });
+      const draft = createConfig({
+        id: 'draft',
+        rules: [
+          {
+            ...rule,
+            active: false,
+            action: { mitigate: { action: 'deny' } },
+          },
+        ],
+        changes: [
+          createChange('rules.update', {
+            id: 'rule_014',
+            value: {
+              ...rule,
+              active: false,
+              action: { mitigate: { action: 'deny' } },
+            },
+          }),
+        ],
+      });
+      useListFirewallConfigs(active, draft);
+
+      client.setArgv('firewall', 'diff');
+      const exitCodePromise = firewall(client);
+      // Should say "Modified rule" (not "Disabled rule") since action also changed
+      // Should show the action sub-line but NOT a status sub-line
+      await expect(client.stderr).toOutput('Action: Log');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should not show field details for insert or remove', async () => {
+      const rule = {
+        id: 'rule_015',
+        name: 'New Rule',
+        description: '',
+        active: true,
+        conditionGroup: [
+          { conditions: [{ type: 'path', op: 'pre', value: '/test' }] },
+        ],
+        action: { mitigate: { action: 'deny' } },
+      };
+
+      const active = createConfig({ rules: [] });
+      const draft = createConfig({
+        id: 'draft',
+        rules: [rule],
+        changes: [
+          createChange('rules.insert', {
+            id: 'rule_015',
+            value: rule,
+          }),
+          createChange('rules.remove', {
+            id: 'rule_old',
+          }),
+        ],
+      });
+      useListFirewallConfigs(active, draft);
+
+      client.setArgv('firewall', 'diff');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Removed rule "rule_old"');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should show condition group restructuring', async () => {
+      const rule = {
+        id: 'rule_016',
+        name: 'Restructure Test',
+        description: '',
+        active: true,
+        conditionGroup: [
+          {
+            conditions: [
+              { type: 'path', op: 'pre', value: '/api' },
+              { type: 'method', op: 'eq', value: 'POST' },
+            ],
+          },
+        ],
+        action: { mitigate: { action: 'deny' } },
+      };
+
+      // Same conditions but split into two OR groups instead of one AND group
+      const active = createConfig({ rules: [rule] });
+      const draft = createConfig({
+        id: 'draft',
+        rules: [
+          {
+            ...rule,
+            conditionGroup: [
+              { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+              { conditions: [{ type: 'method', op: 'eq', value: 'POST' }] },
+            ],
+          },
+        ],
+        changes: [
+          createChange('rules.update', {
+            id: 'rule_016',
+            value: {
+              ...rule,
+              conditionGroup: [
+                { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+                { conditions: [{ type: 'method', op: 'eq', value: 'POST' }] },
+              ],
+            },
+          }),
+        ],
+      });
+      useListFirewallConfigs(active, draft);
+
+      client.setArgv('firewall', 'diff');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Condition groups restructured');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
 });

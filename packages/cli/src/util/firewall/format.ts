@@ -365,16 +365,127 @@ export function formatChangeDescription(
   }
 }
 
+/**
+ * Generate field-level diff lines for a rules.update change.
+ * Compares the active rule against the draft value and returns
+ * indented sub-lines showing what changed.
+ */
+export function formatRuleFieldDiff(
+  activeRule: FirewallRule,
+  draftValue: {
+    name?: string;
+    conditionGroup?: FirewallConditionGroup[];
+    action?: FirewallRuleAction;
+  }
+): string[] {
+  const lines: string[] = [];
+
+  // Name change
+  if (draftValue.name && activeRule.name !== draftValue.name) {
+    lines.push(
+      chalk.yellow(`      ~ Name: "${activeRule.name}" → "${draftValue.name}"`)
+    );
+  }
+
+  // Action change
+  if (
+    draftValue.action &&
+    JSON.stringify(activeRule.action) !== JSON.stringify(draftValue.action)
+  ) {
+    const oldAction = formatActionDisplay(activeRule.action);
+    const newAction = formatActionDisplay(draftValue.action);
+    lines.push(chalk.yellow(`      ~ Action: ${oldAction} → ${newAction}`));
+  }
+
+  // Condition changes — flat set comparison using formatConditionCompact
+  if (
+    draftValue.conditionGroup &&
+    JSON.stringify(activeRule.conditionGroup) !==
+      JSON.stringify(draftValue.conditionGroup)
+  ) {
+    const oldConditions = new Set(
+      activeRule.conditionGroup.flatMap(g =>
+        g.conditions.map(c => formatConditionCompact(c))
+      )
+    );
+    const newConditions = new Set(
+      draftValue.conditionGroup.flatMap(g =>
+        g.conditions.map(c => formatConditionCompact(c))
+      )
+    );
+
+    const added = [...newConditions].filter(c => !oldConditions.has(c));
+    const removed = [...oldConditions].filter(c => !newConditions.has(c));
+
+    for (const c of added) {
+      lines.push(chalk.green(`      + Condition: ${c}`));
+    }
+    for (const c of removed) {
+      lines.push(chalk.red(`      - Condition: ${c}`));
+    }
+
+    // If no individual conditions changed but the grouping (AND/OR structure) did
+    if (added.length === 0 && removed.length === 0) {
+      lines.push(chalk.yellow('      ~ Condition groups restructured'));
+    }
+  }
+
+  return lines;
+}
+
+// Sort order for diff change actions — most impactful first
+const CHANGE_ACTION_ORDER: Record<string, number> = {
+  firewallEnabled: 0,
+  'rules.insert': 1,
+  'rules.update': 2,
+  'rules.remove': 3,
+  'rules.priority': 4,
+  'ip.insert': 5,
+  'ip.update': 6,
+  'ip.remove': 7,
+  'crs.update': 8,
+  'crs.disable': 9,
+  'managedRules.update': 10,
+  'managedRuleGroup.update': 11,
+  'botId.toggle': 12,
+  ja3Enabled: 13,
+  ja4Enabled: 14,
+  'logHeaders.update': 15,
+};
+
 export function formatDiffOutput(
   changes: FirewallConfigChange[],
   activeRules?: Map<string, FirewallRule>
 ): string {
   const lines: string[] = [];
 
-  for (const change of changes) {
+  // Sort changes: firewall toggle first, then rules, IPs, system config
+  const sorted = [...changes].sort(
+    (a, b) =>
+      (CHANGE_ACTION_ORDER[a.action] ?? 99) -
+      (CHANGE_ACTION_ORDER[b.action] ?? 99)
+  );
+
+  for (const change of sorted) {
     const { symbol, color } = getDiffSymbol(change.action);
     const description = formatChangeDescription(change, activeRules);
     lines.push(color(`  ${symbol} ${description}`));
+
+    // For rules.update, show field-level diff sub-lines
+    if (change.action === 'rules.update' && activeRules && change.id) {
+      const activeRule = activeRules.get(change.id);
+      if (activeRule && change.value) {
+        const subLines = formatRuleFieldDiff(
+          activeRule,
+          change.value as {
+            name?: string;
+            conditionGroup?: FirewallConditionGroup[];
+            action?: FirewallRuleAction;
+          }
+        );
+        lines.push(...subLines);
+      }
+    }
   }
 
   return lines.join('\n');
