@@ -27,6 +27,23 @@ export interface FlagSplitOutcome {
   defaultVariantId: string;
 }
 
+export interface FlagRolloutOutcome {
+  type: 'rollout';
+  base: {
+    type: 'entity';
+    kind: string;
+    attribute: string;
+  };
+  startTimestamp: number;
+  rollFromVariantId: string;
+  rollToVariantId: string;
+  defaultVariantId: string;
+  slots: Array<{
+    durationMs: number;
+    promille: number;
+  }>;
+}
+
 export interface FlagCondition {
   lhs:
     | { type: 'segment' }
@@ -41,7 +58,7 @@ export interface FlagCondition {
 export interface FlagRule {
   id: string;
   conditions: FlagCondition[];
-  outcome: FlagOutcome | FlagSplitOutcome;
+  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome;
 }
 
 export interface FlagEnvironmentConfig {
@@ -51,7 +68,7 @@ export interface FlagEnvironmentConfig {
     environment: string;
   };
   pausedOutcome?: FlagOutcome;
-  fallthrough: FlagOutcome | FlagSplitOutcome;
+  fallthrough: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome;
   rules: FlagRule[];
   targets?: Record<
     string,

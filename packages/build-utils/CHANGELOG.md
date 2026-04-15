@@ -1,5 +1,21 @@
 # @vercel/build-utils
 
+## 13.17.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 13.16.0
+
+### Minor Changes
+
+- Add shared deserialization and build-result collection utilities. ([#15961](https://github.com/vercel/vercel/pull/15961))
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
 ## 13.15.0
 
 ### Minor Changes

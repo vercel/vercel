@@ -31,6 +31,25 @@ export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
+// Extended limit for Python on Hive (Functions Beta). All dependencies are
+// bundled directly into the Lambda instead of using runtime installation.
+export const HIVE_LAMBDA_SIZE_BYTES = 1 * 1024 * 1024 * 1024;
+
+const FUNCTIONS_BETA_CTA =
+  'Run `vercel deploy --functions-beta` to use extended function limits ' +
+  '(up to 1 GB), or reduce your dependency footprint.';
+
+/**
+ * Returns true when the build environment opts in to showing the
+ * `--functions-beta` suggestion in size-limit error messages.
+ * Gated behind `VERCEL_FUNCTIONS_BETA_HINT` so it can be rolled out
+ * independently of the feature itself.
+ */
+export function shouldShowFunctionsBetaHint(): boolean {
+  const v = process.env.VERCEL_FUNCTIONS_BETA_HINT;
+  return v === '1' || v === 'true';
+}
+
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
   vendorDir: string;
@@ -133,14 +152,33 @@ export class PythonDependencyExternalizer {
       this.hasCustomCommand &&
       !pythonOnHiveEnabled
     ) {
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message: shouldShowFunctionsBetaHint()
+          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
+            FUNCTIONS_BETA_CTA
+          : `The installed dependencies are too large to fit in a Serverless Function (${totalBundleSizeMB} MB).\n\n` +
+            `When using a custom install command, Vercel cannot automatically optimize ` +
+            `dependency bundling. To reduce the size of your dependencies, you can:\n` +
+            `  1. Remove unused dependencies from your project\n` +
+            `  2. Remove the custom install command to allow Vercel to manage and optimize dependencies automatically`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
+      });
+    }
+
+    // Enforce the extended 1 GB limit for Python on Hive (Functions Beta).
+    // All dependencies are bundled directly, so check the total uncompressed
+    // size before we proceed to avoid a slower failure at ZIP time.
+    if (pythonOnHiveEnabled && this.totalBundleSize > HIVE_LAMBDA_SIZE_BYTES) {
+      const limitMB = (HIVE_LAMBDA_SIZE_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
-          `The installed dependencies are too large to fit in a Serverless Function (${totalBundleSizeMB} MB).\n\n` +
-          `When using a custom install command, Vercel cannot automatically optimize ` +
-          `dependency bundling. To reduce the size of your dependencies, you can:\n` +
-          `  1. Remove unused dependencies from your project\n` +
-          `  2. Remove the custom install command to allow Vercel to manage and optimize dependencies automatically`,
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function ` +
+          `size limit (${limitMB} MB). Consider removing unused dependencies or ` +
+          `splitting your application into smaller functions.`,
         link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
         action: 'Learn More',
       });
@@ -188,12 +226,14 @@ export class PythonDependencyExternalizer {
       ).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
-          `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
-          `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
-          `to Lambda functions. Consider removing unused dependencies or splitting your ` +
-          `application into smaller functions.`,
+        message: shouldShowFunctionsBetaHint()
+          ? `Total dependency size (${totalBundleSizeMB} MB) exceeds the size limit (${ephemeralLimitMB} MB).\n\n` +
+            FUNCTIONS_BETA_CTA
+          : `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
+            `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
+            `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
+            `to Lambda functions. Consider removing unused dependencies or splitting your ` +
+            `application into smaller functions.`,
         link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
         action: 'Learn More',
       });
@@ -473,11 +513,13 @@ export class PythonDependencyExternalizer {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
-          `deferring public packages to runtime installation. This usually means your ` +
-          `private packages or source code are too large. Consider reducing the size of ` +
-          `private dependencies or splitting your application.`,
+        message: shouldShowFunctionsBetaHint()
+          ? `Bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
+            FUNCTIONS_BETA_CTA
+          : `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
+            `deferring public packages to runtime installation. This usually means your ` +
+            `private packages or source code are too large. Consider reducing the size of ` +
+            `private dependencies or splitting your application.`,
         link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
         action: 'Learn More',
       });

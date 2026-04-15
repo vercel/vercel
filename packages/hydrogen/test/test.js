@@ -10,7 +10,7 @@ jest.setTimeout(12 * 60 * 1000);
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  it(`should build ${fixture}`, async () => {
+  it.concurrent(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(path.join(fixturesPath, fixture))
     ).resolves.toBeDefined();
