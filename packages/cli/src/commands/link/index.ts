@@ -102,7 +102,7 @@ export default async function link(client: Client) {
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
-  // console.log('hello')
+  // console.log('hello fixednow')
 
   const yes = !!parsedArgs.flags['--yes'];
 
