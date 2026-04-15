@@ -33,13 +33,15 @@ jobs:
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
           token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+      # pnpm must exist before setup-node cache: pnpm (see actions/setup-node docs)
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.3.1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
       - run: pnpm install
       - id: affected-packages
         run: |
@@ -308,6 +310,9 @@ jobs:
           fetch-depth: 0 # Need full history for turbo query to work
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.3.1
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -324,9 +329,6 @@ jobs:
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
-
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
 
       - name: install uv@0.10.11
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
