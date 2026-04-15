@@ -1334,6 +1334,45 @@ describe('generateProjectManifest — bun binary (bun.lockb)', () => {
   });
 });
 
+// ─── vlt fallback ────────────────────────────────────────────────────────────
+
+describe('generateProjectManifest — vlt fallback', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  it('emits direct deps with empty resolved, no transitive', async () => {
+    writePackageJson(tempDir, {
+      dependencies: { express: '^4.18.0' },
+      devDependencies: { vitest: '^2.0.0' },
+    });
+    // File is never read — vlt format is undocumented
+    const lockPath = path.join(tempDir, 'vlt-lock.json');
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'vlt',
+      lockfilePath: lockPath,
+      lockfileVersion: undefined,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies.every((d: any) => d.type === 'direct')).toBe(true);
+    expect(dependencies.every((d: any) => d.resolved === '')).toBe(true);
+
+    const names = dependencies.map((d: any) => d.name);
+    expect(names).toContain('express');
+    expect(names).toContain('vitest');
+  });
+});
+
 // ─── diagnostics callback ─────────────────────────────────────────────────────
 
 describe('diagnostics callback', () => {

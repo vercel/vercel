@@ -317,9 +317,9 @@ async function parseLockfile(
   lockfileVersion: number | undefined
 ): Promise<Map<string, LockEntry>> {
   // bun.lockb is a binary format — not parseable without invoking bun
-  if (cliType === 'bun' && lockfileVersion === 0) {
-    return new Map();
-  }
+  if (cliType === 'bun' && lockfileVersion === 0) return new Map();
+  // vlt-lock.json format is undocumented — emit direct deps only
+  if (cliType === 'vlt') return new Map();
 
   const content = await fs.promises.readFile(lockfilePath, 'utf-8');
   switch (cliType) {
