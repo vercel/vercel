@@ -1,5 +1,11 @@
 # vercel-workers
 
+## 0.0.16
+
+### Patch Changes
+
+- Stop publishing the generic `test` console script from `vercel-workers` so installs no longer shadow the system `test` command. ([#15932](https://github.com/vercel/vercel/pull/15932))
+
 ## 0.0.15
 
 ### Patch Changes

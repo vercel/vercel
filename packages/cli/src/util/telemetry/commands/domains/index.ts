@@ -34,6 +34,13 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandPrice(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'price',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',
