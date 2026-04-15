@@ -289,6 +289,42 @@ export const installationsSubcommand = {
   ],
 } as const;
 
+export const transfersSubcommand = {
+  name: 'transfers',
+  aliases: [],
+  description: 'Manage marketplace transfer requests for an installation',
+  arguments: [
+    { name: 'action', required: true },
+    { name: 'transferId', required: false },
+  ],
+  options: [
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description: 'Installation configuration id',
+    },
+    formatOption,
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'List transfer requests for an installation',
+      value: `${packageName} integration transfers ls --installation-id icfg_123`,
+    },
+    {
+      name: 'Accept transfer from marketplace',
+      value: `${packageName} integration transfers accept --installation-id icfg_123`,
+    },
+    {
+      name: 'Discard a transfer request',
+      value: `${packageName} integration transfers discard --installation-id icfg_123 --yes`,
+    },
+  ],
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -586,6 +622,7 @@ export const integrationCommand = {
     discoverSubcommand,
     guideSubcommand,
     installationsSubcommand,
+    transfersSubcommand,
     listSubcommand,
     openSubcommand,
     updateSubcommand,
