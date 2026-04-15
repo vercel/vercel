@@ -102,6 +102,8 @@ export default async function link(client: Client) {
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
+  ('hello');
+
   const yes = !!parsedArgs.flags['--yes'];
 
   let cwd = parsedArgs.args[1];
