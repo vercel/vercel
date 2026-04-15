@@ -84,7 +84,7 @@ afterAll(async () => {
 test('agent used the slash syntax upstash/redis', () => {
   const commands = getShellCommands();
   const slashCommands = commands.filter(c =>
-    /\bupstash\/redis\b/.test(c.command)
+    /\bupstash\/upstash-kv\b/.test(c.command)
   );
   expect(slashCommands.length).toBeGreaterThan(0);
 });

@@ -694,7 +694,12 @@ async function getMultiServicePythonRunner(
 
   // Create a per-service .venv, so deps are managed separately.
   const venvPath = join(workPath, '.venv');
-  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath, quiet: true });
+  await ensureVenv({
+    pythonVersion: { pythonPath: systemPython },
+    venvPath,
+    uvPath,
+    quiet: true,
+  });
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);
@@ -767,10 +772,22 @@ export const startDevServer: StartDevServer = async opts => {
   // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let resolved: PythonEntrypoint | undefined;
+  const handlerFunction =
+    typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined;
+
   const detected = await detectPythonEntrypoint(
     framework as PythonFramework,
     workPath,
-    entrypoint,
+    entrypoint
+      ? {
+          filePath: entrypoint,
+          // For cron services, the WSGI variable is always 'app' (created dynamically).
+          // For other services, handlerFunction is used as the entrypoint variable name.
+          varName: service?.type === 'cron' ? undefined : handlerFunction,
+        }
+      : undefined,
     service
   );
   if (detected?.entrypoint) {

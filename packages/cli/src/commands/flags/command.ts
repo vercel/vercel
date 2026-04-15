@@ -75,7 +75,8 @@ export const createSubcommand = {
       shorthand: 'k',
       type: String,
       deprecated: false,
-      description: 'The type of the flag value (boolean, string, or number)',
+      description:
+        'The type of the flag value (boolean, string, number, or json)',
       argument: 'KIND',
     },
     {
@@ -92,7 +93,7 @@ export const createSubcommand = {
       type: [String],
       deprecated: false,
       description:
-        'Variant definition as VALUE[=LABEL] (can be repeated for string and number flags)',
+        'Variant definition as VALUE[=LABEL] (can be repeated for string, number, and json flags)',
       argument: 'VALUE[=LABEL]',
     },
   ],
@@ -108,6 +109,10 @@ export const createSubcommand = {
     {
       name: 'Create a string feature flag with explicit variants',
       value: `${packageName} flags add my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Create a JSON feature flag with explicit variants',
+      value: `${packageName} flags add layout-config --kind json --variant '{"theme":"light"}'=Light --variant '{"theme":"dark","sidebar":true}'=Dark`,
     },
   ],
 } as const;
@@ -519,6 +524,55 @@ export const prepareSubcommand = {
   examples: [],
 } as const;
 
+export const overrideSubcommand = {
+  name: 'override',
+  aliases: [],
+  description:
+    'Encrypt flag overrides into a secure token for the vercel-flag-overrides cookie',
+  arguments: [
+    {
+      name: 'flag=value',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Expiration time for the encrypted token (default: 1y)',
+      argument: 'TIME',
+    },
+    {
+      name: 'decrypt',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Decrypt an encrypted override token and print the JSON',
+      argument: 'TOKEN',
+    },
+  ],
+  examples: [
+    {
+      name: 'Encrypt a single flag override',
+      value: `${packageName} flags override my-flag=true`,
+    },
+    {
+      name: 'Encrypt multiple flag overrides',
+      value: `${packageName} flags override flag-a=true flag-b=hello`,
+    },
+    {
+      name: 'Set a custom expiration',
+      value: `${packageName} flags override my-flag=42 --expiration 30d`,
+    },
+    {
+      name: 'Decrypt an override token',
+      value: `${packageName} flags override --decrypt <token>`,
+    },
+  ],
+} as const;
+
 export const flagsCommand = {
   name: 'flags',
   aliases: [],
@@ -540,6 +594,7 @@ export const flagsCommand = {
     enableSubcommand,
     sdkKeysSubcommand,
     prepareSubcommand,
+    overrideSubcommand,
   ],
   options: [],
   examples: [],

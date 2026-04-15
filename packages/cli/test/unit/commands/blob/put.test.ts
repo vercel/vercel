@@ -46,9 +46,13 @@ describe('blob put', () => {
   describe('successful upload', () => {
     it('should upload file successfully with default options', async () => {
       const testFile = getFixturePath('test-file.txt');
-      client.setArgv('blob', 'put', testFile);
+      client.setArgv('blob', 'put', '--access', 'public', testFile);
 
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -77,6 +81,10 @@ describe('blob put', () => {
           key: 'argument:pathToFile',
           value: '[REDACTED]',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
@@ -85,6 +93,8 @@ describe('blob put', () => {
       client.setArgv(
         'blob',
         'put',
+        '--access',
+        'public',
         '--add-random-suffix',
         '--pathname',
         'custom-name.txt',
@@ -93,13 +103,15 @@ describe('blob put', () => {
         'text/plain',
         '--cache-control-max-age',
         '3600',
-        '--force',
+        '--allow-overwrite',
         testFile
       );
 
       const exitCode = await put(
         client,
         [
+          '--access',
+          'public',
           '--add-random-suffix',
           '--pathname',
           'custom-name.txt',
@@ -108,7 +120,7 @@ describe('blob put', () => {
           'text/plain',
           '--cache-control-max-age',
           '3600',
-          '--force',
+          '--allow-overwrite',
           testFile,
         ],
         testToken
@@ -136,6 +148,10 @@ describe('blob put', () => {
           value: '[REDACTED]',
         },
         {
+          key: 'option:access',
+          value: 'public',
+        },
+        {
           key: 'flag:add-random-suffix',
           value: 'TRUE',
         },
@@ -156,7 +172,7 @@ describe('blob put', () => {
           value: '3600',
         },
         {
-          key: 'flag:force',
+          key: 'flag:allow-overwrite',
           value: 'TRUE',
         },
       ]);
@@ -164,7 +180,11 @@ describe('blob put', () => {
 
     it('should use filename as pathname when no --pathname provided', async () => {
       const testFile = getFixturePath('path/to/myfile.pdf');
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -194,7 +214,11 @@ describe('blob put', () => {
 
       for (const filename of testCases) {
         const testFile = getFixturePath(filename);
-        const exitCode = await put(client, [testFile], testToken);
+        const exitCode = await put(
+          client,
+          ['--access', 'public', testFile],
+          testToken
+        );
         expect(exitCode).toBe(0);
       }
     });
@@ -213,8 +237,19 @@ describe('blob put', () => {
       expect(exitCode).toBe(1);
     });
 
+    it('should return 1 when --access flag is missing', async () => {
+      const testFile = getFixturePath('test-file.txt');
+      const exitCode = await put(client, [testFile], testToken);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        "Missing required --access flag. Must be 'public' or 'private'."
+      );
+      expect(mockedBlob.put).not.toHaveBeenCalled();
+    });
+
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await put(client, [], testToken);
+      const exitCode = await put(client, ['--access', 'public'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedBlob.put).not.toHaveBeenCalled();
@@ -222,7 +257,11 @@ describe('blob put', () => {
     });
 
     it('should return 1 when file does not exist', async () => {
-      const exitCode = await put(client, ['nonexistent-file.txt'], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', 'nonexistent-file.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -233,7 +272,11 @@ describe('blob put', () => {
 
     it('should return 1 when path is a directory', async () => {
       const testDir = getFixturePath('some-directory');
-      const exitCode = await put(client, [testDir], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testDir],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -247,7 +290,11 @@ describe('blob put', () => {
       const uploadError = new Error('Upload failed');
       mockedBlob.put.mockRejectedValue(uploadError);
 
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
@@ -261,7 +308,7 @@ describe('blob put', () => {
       const testFile = getFixturePath('test-file.txt');
       const exitCode = await put(
         client,
-        ['--add-random-suffix', testFile],
+        ['--access', 'public', '--add-random-suffix', testFile],
         testToken
       );
 
@@ -277,7 +324,7 @@ describe('blob put', () => {
       const testFile = getFixturePath('test-file.txt');
       const exitCode = await put(
         client,
-        ['--pathname', 'custom/path.txt', testFile],
+        ['--access', 'public', '--pathname', 'custom/path.txt', testFile],
         testToken
       );
 
@@ -293,7 +340,7 @@ describe('blob put', () => {
       const testFile = getFixturePath('image.jpg');
       const exitCode = await put(
         client,
-        ['--content-type', 'image/jpeg', testFile],
+        ['--access', 'public', '--content-type', 'image/jpeg', testFile],
         testToken
       );
 
@@ -309,7 +356,7 @@ describe('blob put', () => {
       const testFile = getFixturePath('test-file.txt');
       const exitCode = await put(
         client,
-        ['--cache-control-max-age', '86400', testFile],
+        ['--access', 'public', '--cache-control-max-age', '86400', testFile],
         testToken
       );
 
@@ -318,18 +365,6 @@ describe('blob put', () => {
         'test-file.txt',
         expect.any(ReadStream),
         expect.objectContaining({ cacheControlMaxAge: 86400 })
-      );
-    });
-
-    it('should handle --force flag', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(client, ['--force', testFile], testToken);
-
-      expect(exitCode).toBe(0);
-      expect(mockedBlob.put).toHaveBeenCalledWith(
-        'test-file.txt',
-        expect.any(ReadStream),
-        expect.objectContaining({ allowOverwrite: true })
       );
     });
 
@@ -364,38 +399,7 @@ describe('blob put', () => {
       const testFile = getFixturePath('test-file.txt');
       const exitCode = await put(
         client,
-        ['--allow-overwrite', testFile],
-        testToken
-      );
-
-      expect(exitCode).toBe(0);
-      expect(mockedBlob.put).toHaveBeenCalledWith(
-        'test-file.txt',
-        expect.any(ReadStream),
-        expect.objectContaining({ allowOverwrite: true })
-      );
-    });
-
-    it('should show deprecation warning when --force is used', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(client, ['--force', testFile], testToken);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.warn).toHaveBeenCalledWith(
-        '--force is deprecated, use --allow-overwrite instead'
-      );
-      expect(mockedBlob.put).toHaveBeenCalledWith(
-        'test-file.txt',
-        expect.any(ReadStream),
-        expect.objectContaining({ allowOverwrite: true })
-      );
-    });
-
-    it('should prefer --allow-overwrite over --force', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(
-        client,
-        ['--allow-overwrite', '--force', testFile],
+        ['--access', 'public', '--allow-overwrite', testFile],
         testToken
       );
 
@@ -411,7 +415,7 @@ describe('blob put', () => {
       const testFile = getFixturePath('test-file.txt');
       const exitCode = await put(
         client,
-        ['--if-match', '"some-etag"', testFile],
+        ['--access', 'public', '--if-match', '"some-etag"', testFile],
         testToken
       );
 
@@ -425,7 +429,11 @@ describe('blob put', () => {
 
     it('should handle --multipart flag (enabled by default)', async () => {
       const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(client, ['--multipart', testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', '--multipart', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -439,7 +447,11 @@ describe('blob put', () => {
   describe('telemetry tracking', () => {
     it('should track file argument', async () => {
       const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -447,12 +459,20 @@ describe('blob put', () => {
           key: 'argument:pathToFile',
           value: '[REDACTED]',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
     it('should not track optional flags when not provided', async () => {
       const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
@@ -474,6 +494,8 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         [
+          '--access',
+          'public',
           '--add-random-suffix',
           '--pathname',
           'custom.txt',
@@ -481,7 +503,7 @@ describe('blob put', () => {
           'application/octet-stream',
           '--cache-control-max-age',
           '7200',
-          '--force',
+          '--allow-overwrite',
           testFile,
         ],
         testToken
@@ -492,6 +514,10 @@ describe('blob put', () => {
         {
           key: 'argument:pathToFile',
           value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'public',
         },
         {
           key: 'flag:add-random-suffix',
@@ -510,7 +536,7 @@ describe('blob put', () => {
           value: '7200',
         },
         {
-          key: 'flag:force',
+          key: 'flag:allow-overwrite',
           value: 'TRUE',
         },
       ]);
@@ -520,7 +546,11 @@ describe('blob put', () => {
   describe('file system operations', () => {
     it('should read file content as Buffer', async () => {
       const testFile = getFixturePath('hello.txt');
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -535,7 +565,11 @@ describe('blob put', () => {
 
       for (const filePath of filePaths) {
         const testFile = getFixturePath(filePath);
-        const exitCode = await put(client, [testFile], testToken);
+        const exitCode = await put(
+          client,
+          ['--access', 'public', testFile],
+          testToken
+        );
         expect(exitCode).toBe(0);
       }
     });
@@ -544,7 +578,11 @@ describe('blob put', () => {
   describe('spinner and output behavior', () => {
     it('should show spinner during upload and stop on success', async () => {
       const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
@@ -559,7 +597,11 @@ describe('blob put', () => {
       const uploadError = new Error('Network error');
       mockedBlob.put.mockRejectedValue(uploadError);
 
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(
+        client,
+        ['--access', 'public', testFile],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
@@ -576,7 +618,7 @@ describe('blob put', () => {
     it('should upload from stdin with pathname successfully', async () => {
       const exitCode = await put(
         client,
-        ['--pathname', 'from-stdin.txt'],
+        ['--access', 'public', '--pathname', 'from-stdin.txt'],
         testToken
       );
 
@@ -601,7 +643,7 @@ describe('blob put', () => {
     });
 
     it('should fail when reading from stdin without pathname', async () => {
-      const exitCode = await put(client, [], testToken);
+      const exitCode = await put(client, ['--access', 'public'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -615,6 +657,8 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         [
+          '--access',
+          'public',
           '--pathname',
           'custom-stdin.txt',
           '--add-random-suffix',
@@ -622,7 +666,7 @@ describe('blob put', () => {
           'text/plain',
           '--cache-control-max-age',
           '3600',
-          '--force',
+          '--allow-overwrite',
         ],
         testToken
       );
