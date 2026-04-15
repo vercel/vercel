@@ -4285,7 +4285,6 @@ export const frameworks = [
     name: 'Axum',
     slug: 'axum',
     experimental: true,
-    runtimeFramework: true,
     supersedes: ['rust'],
     logo: 'https://api-frameworks.vercel.sh/framework-logos/axum.svg',
     tagline:
