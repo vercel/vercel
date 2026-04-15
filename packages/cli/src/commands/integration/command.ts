@@ -289,6 +289,34 @@ export const installationsSubcommand = {
   ],
 } as const;
 
+export const provisioningSubcommand = {
+  name: 'provisioning',
+  aliases: [],
+  description: 'Check or trigger installation billing provisioning',
+  arguments: [{ name: 'action', required: true }],
+  options: [
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description: 'Installation configuration id',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Get provisioning status',
+      value: `${packageName} integration provisioning status --installation-id icfg_123`,
+    },
+    {
+      name: 'Trigger provisioning',
+      value: `${packageName} integration provisioning trigger --installation-id icfg_123`,
+    },
+  ],
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -586,6 +614,7 @@ export const integrationCommand = {
     discoverSubcommand,
     guideSubcommand,
     installationsSubcommand,
+    provisioningSubcommand,
     listSubcommand,
     openSubcommand,
     updateSubcommand,
