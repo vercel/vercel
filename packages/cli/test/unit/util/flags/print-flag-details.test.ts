@@ -173,7 +173,7 @@ describe('printFlagEnvironmentDetails', () => {
 
     expect(printed).toContain('production: custom');
     expect(printed).toContain(
-      'Rollout: rollout (Off -> On; 5% for 6 hours, 10% for 6 hours; then 100%)'
+      'Rollout: Off -> On; 5% for 6 hours, 10% for 6 hours; then 100%; Fallback: Off'
     );
   });
 });

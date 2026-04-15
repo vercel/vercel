@@ -307,6 +307,7 @@ function formatRolloutOutcome(
 ): string {
   const fromVariant = variants.find(v => v.id === outcome.rollFromVariantId);
   const toVariant = variants.find(v => v.id === outcome.rollToVariantId);
+  const defaultVariant = variants.find(v => v.id === outcome.defaultVariantId);
   const stages = outcome.slots
     .map(slot => {
       const percentage = slot.promille / 1000;
@@ -317,13 +318,16 @@ function formatRolloutOutcome(
     })
     .join(', ');
 
-  return `rollout (${formatEnvironmentVariantSummary(
+  return `${formatEnvironmentVariantSummary(
     fromVariant,
     outcome.rollFromVariantId
   )} -> ${formatEnvironmentVariantSummary(
     toVariant,
     outcome.rollToVariantId
-  )}; ${stages}; then 100%)`;
+  )}; ${stages}; then 100%; Fallback: ${formatEnvironmentVariantSummary(
+    defaultVariant,
+    outcome.defaultVariantId
+  )}`;
 }
 
 function formatVariantListSummary(variant: FlagVariant): string {
