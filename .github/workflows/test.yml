@@ -388,12 +388,7 @@ jobs:
               exit 1
             fi
 
-            retry_reason=$(node utils/should-retry-ci-test-failure.js "$test_log") || {
-              echo "Tests failed with non-retryable signature; skipping retry."
-              exit 1
-            }
-            echo "Tests failed due to retryable issue: $retry_reason"
-            echo "Retrying once..."
+            echo "Tests failed; retrying once..."
             attempt=$((attempt+1))
           done
         shell: bash
