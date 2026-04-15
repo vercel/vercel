@@ -943,9 +943,14 @@ const main = async () => {
           func = (await import('./commands-bulk.js')).cache;
           break;
         case 'connex':
-          telemetry.trackCliCommandConnex(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).connex;
-          break;
+          if (process.env.FF_CONNEX_ENABLED) {
+            telemetry.trackCliCommandConnex(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).connex;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'contract':
           telemetry.trackCliCommandContract(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).contract;

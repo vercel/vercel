@@ -76,7 +76,6 @@ const commandsStructs = [
   buyCommand,
   cacheCommand,
   certsCommand,
-  connexCommand,
   contractCommand,
   cronsCommand,
   curlCommand,
@@ -134,6 +133,10 @@ if (process.env.FF_GUIDANCE_MODE) {
 
 if (process.env.FF_METRICS) {
   commandsStructs.push(metricsCommand);
+}
+
+if (process.env.FF_CONNEX_ENABLED) {
+  commandsStructs.push(connexCommand);
 }
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
