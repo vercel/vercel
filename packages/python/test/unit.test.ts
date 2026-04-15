@@ -2072,7 +2072,7 @@ describe('cron service build result', () => {
     ]);
   });
 
-  it('does not emit per-path cron rewrite routes (handled by generateServicesRoutes)', async () => {
+  it('does not emit routes (handled by generateServicesRoutes)', async () => {
     const files = {
       'jobs/cleanup.py': new FileBlob({
         data: 'def sync_handler():\n    print("done")\n',
@@ -2093,10 +2093,7 @@ describe('cron service build result', () => {
     });
 
     const v2result = getBuildOutputV2(result);
-    const cronRoutes = (v2result.routes as any[]).filter(
-      (r: any) => r.check && r.src?.includes('crons')
-    );
-    expect(cronRoutes).toHaveLength(0);
+    expect(v2result.routes).toBeUndefined();
   });
 
   it('uses default handler name "cron" when no handlerFunction', async () => {
@@ -2371,7 +2368,7 @@ describe('non-web services should not generate catch-all routes', () => {
     }
   });
 
-  it('cron service returns V3', async () => {
+  it('cron service returns V2 with no routes', async () => {
     const files = {
       'jobs/cleanup.py': new FileBlob({
         data: 'if __name__ == "__main__":\n    print("cleanup done")\n',
@@ -2391,10 +2388,12 @@ describe('non-web services should not generate catch-all routes', () => {
       service: { type: 'cron', name: 'my-cron' },
     });
 
-    expect(result.resultVersion).toBe(3);
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-cron/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
   });
 
-  it('worker service with detected python framework returns V3 (no routes)', async () => {
+  it('worker service returns V2 with no routes', async () => {
     const files = {
       'worker/broker.py': new FileBlob({
         data: [
@@ -2437,10 +2436,12 @@ describe('non-web services should not generate catch-all routes', () => {
       service: { type: 'worker', name: 'my-worker' },
     });
 
-    expect(result.resultVersion).toBe(3);
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-worker/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
   });
 
-  it('web service with framework returns V2 result with catch-all route', async () => {
+  it('web service returns V2 with no routes', async () => {
     const files = {
       'main.py': new FileBlob({
         data: 'from fastapi import FastAPI; app = FastAPI()',
@@ -2462,43 +2463,8 @@ describe('non-web services should not generate catch-all routes', () => {
     });
 
     const v2result = getBuildOutputV2(result);
-    expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
-    expect(v2result.routes).toContainEqual(
-      expect.objectContaining({
-        src: '/(.*)',
-        dest: '/_svc/my-api/index',
-      })
-    );
-  });
-
-  it('no service (legacy) with framework returns V2 result with catch-all route', async () => {
-    const files = {
-      'main.py': new FileBlob({
-        data: 'from fastapi import FastAPI; app = FastAPI()',
-      }),
-      'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "my-api"\nversion = "0.0.1"\ndependencies = ["fastapi"]\n',
-      }),
-    } as Record<string, FileBlob>;
-    await download(files, mockWorkPath);
-
-    const result = await build({
-      workPath: mockWorkPath,
-      files,
-      entrypoint: 'main.py',
-      meta: { isDev: false },
-      config: { framework: 'fastapi' },
-      repoRootPath: mockWorkPath,
-    });
-
-    const v2result = getBuildOutputV2(result);
-    expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
-    expect(v2result.routes).toContainEqual(
-      expect.objectContaining({
-        src: '/(.*)',
-        dest: '/index',
-      })
-    );
+    expect(v2result.output['_svc/my-api/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
   });
 });
 

@@ -2244,6 +2244,27 @@ fs.writeFileSync(
     ]);
   });
 
+  it('should not generate catch-all routes for Python cron services', async () => {
+    const cwd = fixture('with-services-python-cron-no-catchall');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+
+    // Cron routes should only match their specific /_svc/ callback paths
+    const cronRoutes = (config.routes as any[]).filter(
+      (r: any) =>
+        typeof r.dest === 'string' &&
+        (r.dest.includes('/_svc/cleanup-minute/') ||
+          r.dest.includes('/_svc/cleanup-daily/'))
+    );
+    for (const route of cronRoutes) {
+      expect(route.src).toMatch(/\/_svc\//);
+    }
+  });
+
   it('should not write trace spans for non-build commands', async () => {
     const cwd = fixture('static');
     const tracePath = join(cwd, '.vercel/output/diagnostics/cli_traces.json');
