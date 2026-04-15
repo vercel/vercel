@@ -410,7 +410,6 @@ jobs:
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
     needs:
       - setup
-      - test-fast
     strategy:
       fail-fast: false
       max-parallel: 75
