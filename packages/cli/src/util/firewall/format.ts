@@ -116,7 +116,8 @@ export function formatStatusOutput(
     lines.push(
       `  ${chalk.bold('Pending Draft:')}        ${chalk.yellow(`${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`)}`
     );
-    lines.push(formatDiffOutput(draft.changes));
+    const activeRulesMap = new Map((active?.rules || []).map(r => [r.id, r]));
+    lines.push(formatDiffOutput(draft.changes, activeRulesMap));
   }
 
   return lines.join('\n');
@@ -273,7 +274,10 @@ export function getDiffSymbol(action: FirewallChangeAction): {
   return { symbol: '~', color: chalk.yellow };
 }
 
-export function formatChangeDescription(change: FirewallConfigChange): string {
+export function formatChangeDescription(
+  change: FirewallConfigChange,
+  activeRules?: Map<string, FirewallRule>
+): string {
   const { action, id, value } = change;
 
   switch (action) {
@@ -282,8 +286,45 @@ export function formatChangeDescription(change: FirewallConfigChange): string {
       return `Added rule "${rule?.name || id || 'unknown'}"`;
     }
     case 'rules.update': {
-      const rule = value as { name?: string } | undefined;
-      return `Modified rule "${rule?.name || id || 'unknown'}"`;
+      const draft = value as
+        | {
+            name?: string;
+            active?: boolean;
+            conditionGroup?: FirewallConditionGroup[];
+            action?: FirewallRuleAction;
+            description?: string;
+          }
+        | undefined;
+      const ruleName = draft?.name || id || 'unknown';
+
+      // Detect enable/disable-only changes by comparing against active rule
+      if (activeRules && id && draft && typeof draft.active === 'boolean') {
+        const activeRule = activeRules.get(id);
+        if (activeRule && activeRule.active !== draft.active) {
+          // Check if other fields are unchanged
+          const nameUnchanged = activeRule.name === draft.name;
+          const conditionsUnchanged =
+            JSON.stringify(activeRule.conditionGroup) ===
+            JSON.stringify(draft.conditionGroup);
+          const actionUnchanged =
+            JSON.stringify(activeRule.action) === JSON.stringify(draft.action);
+          const descriptionUnchanged =
+            (activeRule.description || '') === (draft.description || '');
+
+          if (
+            nameUnchanged &&
+            conditionsUnchanged &&
+            actionUnchanged &&
+            descriptionUnchanged
+          ) {
+            return draft.active
+              ? `Enabled rule "${ruleName}"`
+              : `Disabled rule "${ruleName}"`;
+          }
+        }
+      }
+
+      return `Modified rule "${ruleName}"`;
     }
     case 'rules.remove':
       return `Removed rule "${id || 'unknown'}"`;
@@ -324,12 +365,15 @@ export function formatChangeDescription(change: FirewallConfigChange): string {
   }
 }
 
-export function formatDiffOutput(changes: FirewallConfigChange[]): string {
+export function formatDiffOutput(
+  changes: FirewallConfigChange[],
+  activeRules?: Map<string, FirewallRule>
+): string {
   const lines: string[] = [];
 
   for (const change of changes) {
     const { symbol, color } = getDiffSymbol(change.action);
-    const description = formatChangeDescription(change);
+    const description = formatChangeDescription(change, activeRules);
     lines.push(color(`  ${symbol} ${description}`));
   }
 
@@ -384,7 +428,6 @@ const CONDITION_TYPE_LABELS: Record<string, string> = {
   scheme: 'scheme',
   environment: 'environment',
   region: 'region',
-  ssl: 'SSL',
   ip_address: 'IP address',
   user_agent: 'user agent',
   geo_country: 'geo country',
