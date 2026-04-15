@@ -819,11 +819,6 @@ from vercel_runtime.vc_init import vc_handler
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
 
-  const routes: any[] = [
-    { handle: 'filesystem' },
-    { src: '/(.*)', dest: `/${lambdaPath}` },
-  ];
-
   return {
     resultVersion: 2,
     result: {
@@ -831,7 +826,6 @@ from vercel_runtime.vc_init import vc_handler
         [lambdaPath]: output,
         ...staticFiles,
       },
-      routes,
       crons,
     },
   };
