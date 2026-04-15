@@ -23,6 +23,8 @@ describe('index', () => {
         ['crons', 'crons'],
         ['curl', 'curl'],
         ['deploy', 'deploy'],
+        ['deploy-hooks', 'deploy-hooks'],
+        ['deploy-hook', 'deploy-hooks'],
         ['dev', 'dev'],
         ['develop', 'dev'],
         ['dns', 'dns'],

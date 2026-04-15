@@ -129,4 +129,51 @@ describe('printFlagEnvironmentDetails', () => {
 
     expect(printed).toContain('if user.plan is (case-insensitive) pro');
   });
+
+  it('shows rollout schedules', () => {
+    const flag: Flag = {
+      ...testFlag,
+      variants: [
+        { id: 'off', value: false, label: 'Off' },
+        { id: 'on', value: true, label: 'On' },
+      ],
+      environments: {
+        production: {
+          active: true,
+          pausedOutcome: { type: 'variant', variantId: 'off' },
+          fallthrough: {
+            type: 'rollout',
+            base: {
+              type: 'entity',
+              kind: 'user',
+              attribute: 'userId',
+            },
+            startTimestamp: 1,
+            rollFromVariantId: 'off',
+            rollToVariantId: 'on',
+            defaultVariantId: 'off',
+            slots: [
+              { promille: 5000, durationMs: 21_600_000 },
+              { promille: 10000, durationMs: 21_600_000 },
+            ],
+          },
+          rules: [],
+        },
+      },
+    };
+
+    printFlagEnvironmentDetails(flag);
+
+    const printed = stripAnsi(
+      vi
+        .mocked(output.print)
+        .mock.calls.map(([message]) => message)
+        .join('')
+    );
+
+    expect(printed).toContain('production: custom');
+    expect(printed).toContain(
+      'Rollout: Off -> On; 5% for 6 hours, 10% for 6 hours; then 100%; Fallback: Off'
+    );
+  });
 });
