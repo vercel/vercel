@@ -157,12 +157,6 @@ export class LogsTelemetryClient
     }
   }
 
-  trackCliFlagExpand(v: boolean | undefined) {
-    if (v) {
-      this.trackCliFlag('expand');
-    }
-  }
-
   trackCliOptionBranch(v: string | undefined) {
     if (v) {
       this.trackCliOption({

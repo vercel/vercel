@@ -160,6 +160,72 @@ describe('logs', () => {
       expect(output).toContain('"message":"actual error"');
     });
 
+    it('should flatten nested request log lines in default text output', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            {
+              ...createMockLog(),
+              logs: [
+                { level: 'info', message: 'first message' },
+                { level: 'error', message: 'actual error' },
+              ],
+            },
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('first message');
+      expect(output).toContain('actual error');
+      expect(output).toContain('info');
+      expect(output).toContain('error');
+    });
+
+    it('should use per-log levels instead of the request summary level in default text output', async () => {
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({
+          rows: [
+            {
+              ...createMockLog({ level: 'error', message: 'summary error' }),
+              logs: [{ level: 'info', message: 'actual info log' }],
+            },
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('actual info log');
+      expect(output).toContain('info');
+      expect(output).not.toContain('summary error');
+    });
+
+    it('should still surface long log messages in default text output', async () => {
+      const longMessage =
+        'This is a very long request log message that should remain visible in plain text output even when the compact table summary runs out of room.';
+      useRequestLogs([createMockLog({ message: longMessage })]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain(longMessage);
+    });
+
     it('should track telemetry for --json flag', async () => {
       useRequestLogs([]);
 
@@ -186,6 +252,17 @@ describe('logs', () => {
       expect(output).toContain('unknown or unexpected option');
       expect(output).toContain('Display request logs');
       expect(output).toContain('--json');
+    });
+
+    it('should reject the removed --expand flag', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--expand');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      const output = client.getFullOutput();
+      expect(output).toContain('--expand');
+      expect(output).toContain('unknown or unexpected option');
     });
 
     it('should display "no logs found" when empty', async () => {

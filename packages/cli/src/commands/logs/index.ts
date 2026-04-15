@@ -16,11 +16,7 @@ import {
   ProjectNotFound,
 } from '../../util/errors-ts';
 import { displayRuntimeLogs } from '../../util/logs';
-import {
-  fetchAllRequestLogs,
-  type RequestLogEntry,
-  type RequestLogMessage,
-} from '../../util/logs-v2';
+import { fetchAllRequestLogs, type RequestLogEntry } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
 import { getCommandName } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
@@ -73,7 +69,6 @@ async function getLatestDeploymentByBranch(
 
 const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
 const DATE_TIME_FORMAT = 'MMM DD HH:mm:ss.SS';
-
 interface ColumnDef<T> {
   label: string;
   padding?: [number, number];
@@ -252,7 +247,6 @@ export default async function logs(client: Client) {
   const queryOption = parsedArguments.flags['--query'];
   const searchOption = parsedArguments.flags['--search'];
   const requestIdOption = parsedArguments.flags['--request-id'];
-  const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
 
   // Implicit --follow when deployment is specified (for backwards compatibility)
@@ -277,7 +271,6 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionSearch(searchOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
-  telemetry.trackCliFlagExpand(expandOption);
   telemetry.trackCliOptionBranch(branchFlagValue);
 
   if (followOption) {
@@ -567,22 +560,40 @@ export default async function logs(client: Client) {
         statusCode: number;
         message: string;
         messageTruncated?: boolean;
-        logs: RequestLogMessage[];
       };
 
-      const rowData: RowData[] = logs.map(log => {
+      const rowData: RowData[] = logs.flatMap(log => {
         const statusCode = log.responseStatusCode;
-        return {
+        const sharedRowData = {
           time: format(log.timestamp, timeFormat),
           host: log.domain || '',
-          level: log.level,
           path: `${getSourceIcon(log.source)} ${log.requestMethod} ${log.requestPath}`,
           status: !statusCode || statusCode <= 0 ? '---' : String(statusCode),
           statusCode,
-          message: log.message?.replace(/\n/g, ' ').trim() || '',
-          messageTruncated: log.messageTruncated,
-          logs: log.logs,
         };
+
+        const normalizedLogs = log.logs.map(message => ({
+          ...message,
+          message: normalizeLogMessage(message.message),
+        }));
+
+        if (normalizedLogs.length === 0) {
+          return [
+            {
+              ...sharedRowData,
+              level: log.level,
+              message: normalizeLogMessage(log.message),
+              messageTruncated: log.messageTruncated,
+            },
+          ];
+        }
+
+        return normalizedLogs.map(message => ({
+          ...sharedRowData,
+          level: message.level,
+          message: message.message,
+          messageTruncated: message.messageTruncated,
+        }));
       });
 
       // Define columns with formatting
@@ -609,52 +620,32 @@ export default async function logs(client: Client) {
         },
       ];
 
-      const columns: ColumnDef<RowData>[] = expandOption
-        ? baseColumns
-        : [
-            ...baseColumns,
-            {
-              label: 'STATUS',
-              getValue: row => row.status,
-              format: (padded, row) =>
-                row.statusCode <= 0
-                  ? chalk.gray(padded)
-                  : colorizeStatus(padded, row.statusCode),
-            },
-            {
-              label: 'MESSAGE',
-              width: 'stretch',
-              getValue: row => row.message || '(no message)',
-              format: (padded, row) =>
-                row.message
-                  ? colorizeMessage(padded, row.level)
-                  : chalk.dim(padded),
-            },
-          ];
+      const columns: ColumnDef<RowData>[] = [
+        ...baseColumns,
+        {
+          label: 'STATUS',
+          getValue: row => row.status,
+          format: (padded, row) =>
+            row.statusCode <= 0
+              ? chalk.gray(padded)
+              : colorizeStatus(padded, row.statusCode),
+        },
+        {
+          label: 'MESSAGE',
+          width: 'stretch',
+          getValue: row => row.message || '(no message)',
+          format: (padded, row) =>
+            row.message
+              ? colorizeMessage(padded, row.level)
+              : chalk.dim(padded),
+        },
+      ];
 
       const formatted = table({
         columns,
         rows: rowData,
         tableWidth: terminalWidth,
         formatHeader: header => chalk.dim(header),
-        formatRow: expandOption
-          ? (rowStr, row) => {
-              if (row.logs.length > 0) {
-                const renderedLogs = row.logs
-                  .map(log => {
-                    const message = log.message.replace(/\n/g, ' ').trim();
-                    const safeMessage = message || '(no message)';
-                    const truncatedIndicator = log.messageTruncated
-                      ? chalk.gray('…')
-                      : '';
-                    return `${colorizeMessage(safeMessage, log.level)}${truncatedIndicator}`;
-                  })
-                  .join('\n');
-                return `${rowStr}\n${renderedLogs}\n`;
-              }
-              return rowStr + '\n';
-            }
-          : undefined,
       });
 
       // Print header
@@ -730,4 +721,8 @@ function colorizeMessage(message: string, level: string): string {
     default:
       return chalk.dim(message);
   }
+}
+
+function normalizeLogMessage(message: string | undefined): string {
+  return message?.replace(/\s+/g, ' ').trim() || '';
 }
