@@ -2072,7 +2072,7 @@ describe('cron service build result', () => {
     ]);
   });
 
-  it('does not emit per-path cron rewrite routes (handled by generateServicesRoutes)', async () => {
+  it('does not emit routes (handled by generateServicesRoutes)', async () => {
     const files = {
       'jobs/cleanup.py': new FileBlob({
         data: 'def sync_handler():\n    print("done")\n',
@@ -2093,10 +2093,7 @@ describe('cron service build result', () => {
     });
 
     const v2result = getBuildOutputV2(result);
-    const cronRoutes = (v2result.routes as any[]).filter(
-      (r: any) => r.check && r.src?.includes('crons')
-    );
-    expect(cronRoutes).toHaveLength(0);
+    expect(v2result.routes).toBeUndefined();
   });
 
   it('uses default handler name "cron" when no handlerFunction', async () => {
@@ -2353,6 +2350,121 @@ describe('dynamic cron detection', () => {
         workPath: '/tmp/test',
       })
     ).rejects.toThrow(/module:function/);
+  });
+});
+
+describe('non-web services should not generate catch-all routes', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-service-routes-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('cron service returns V2 with no routes', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'if __name__ == "__main__":\n    print("cleanup done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'my-cron' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-cron/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
+  });
+
+  it('worker service returns V2 with no routes', async () => {
+    const files = {
+      'worker/broker.py': new FileBlob({
+        data: [
+          'import dramatiq',
+          'from vercel.workers.dramatiq import VercelQueuesBroker',
+          '',
+          'broker = VercelQueuesBroker()',
+          'dramatiq.set_broker(broker)',
+        ].join('\n'),
+      }),
+      'worker/tasks.py': new FileBlob({
+        data: [
+          'import dramatiq',
+          '',
+          "@dramatiq.actor(queue_name='jobs')",
+          'def process_job(payload: dict):',
+          "    return {'ok': True, 'payload': payload}",
+        ].join('\n'),
+      }),
+      'worker/run.py': new FileBlob({
+        data: [
+          'from worker.broker import broker',
+          'from worker import tasks',
+          '',
+          "__all__ = ['broker', 'tasks']",
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "my-worker"\nversion = "0.0.1"\ndependencies = ["dramatiq", "vercel-workers"]\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'worker/run.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'worker', name: 'my-worker' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-worker/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
+  });
+
+  it('web service returns V2 with no routes', async () => {
+    const files = {
+      'main.py': new FileBlob({
+        data: 'from fastapi import FastAPI; app = FastAPI()',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "my-api"\nversion = "0.0.1"\ndependencies = ["fastapi"]\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'main.py',
+      meta: { isDev: false },
+      config: { framework: 'fastapi' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'web', name: 'my-api' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-api/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
   });
 });
 
