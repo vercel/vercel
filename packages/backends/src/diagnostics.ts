@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 import {
   writeProjectManifest,
   createDiagnostics,
@@ -120,6 +121,101 @@ function parseNpmLock(
   return lockMap;
 }
 
+function parsePnpmV9Key(key: string): { name: string; version: string } | null {
+  // Strip peer dep suffix: foo@1.2.3(react@18.0.0) → foo@1.2.3
+  const withoutPeers = key.replace(/\(.*\)$/, '');
+  if (withoutPeers.startsWith('@')) {
+    // Scoped: @scope/pkg@1.2.3 — find the @ after the initial one
+    const atIndex = withoutPeers.indexOf('@', 1);
+    if (atIndex === -1) return null;
+    return {
+      name: withoutPeers.slice(0, atIndex),
+      version: withoutPeers.slice(atIndex + 1),
+    };
+  }
+  const atIndex = withoutPeers.lastIndexOf('@');
+  if (atIndex === -1) return null;
+  return {
+    name: withoutPeers.slice(0, atIndex),
+    version: withoutPeers.slice(atIndex + 1),
+  };
+}
+
+function parsePnpmV6Key(key: string): { name: string; version: string } | null {
+  if (!key.startsWith('/')) return null;
+  const rest = key.slice(1);
+  if (rest.startsWith('@')) {
+    // Scoped: @scope/pkg/1.2.3(_peers)
+    const firstSlash = rest.indexOf('/');
+    if (firstSlash === -1) return null;
+    const secondSlash = rest.indexOf('/', firstSlash + 1);
+    if (secondSlash === -1) return null;
+    const name = rest.slice(0, secondSlash);
+    const version = rest.slice(secondSlash + 1).split('_')[0];
+    return { name, version };
+  }
+  // Non-scoped: pkg/1.2.3(_peers)
+  const slashIndex = rest.indexOf('/');
+  if (slashIndex === -1) return null;
+  const name = rest.slice(0, slashIndex);
+  const version = rest.slice(slashIndex + 1).split('_')[0];
+  return { name, version };
+}
+
+function classifyPnpmResolution(
+  resolution: Record<string, unknown> | undefined
+): { source?: string; sourceUrl?: string; local?: boolean } {
+  if (!resolution) return {};
+  if (resolution.type === 'directory' || resolution.directory)
+    return { local: true };
+  if (typeof resolution.tarball === 'string')
+    return classifySource(resolution.tarball);
+  if (resolution.type === 'git' || typeof resolution.repo === 'string') {
+    return {
+      source: 'git',
+      sourceUrl: (resolution.repo as string) ?? undefined,
+    };
+  }
+  return {};
+}
+
+function parsePnpmLock(
+  content: string,
+  lockfileVersion: number | undefined
+): Map<string, LockEntry> {
+  const lockMap = new Map<string, LockEntry>();
+  const parsedYaml = yaml.load(content) as Record<string, unknown> | null;
+  if (!parsedYaml) return lockMap;
+
+  const lv =
+    lockfileVersion ?? Number((parsedYaml.lockfileVersion as string) ?? '0');
+  const packages = parsedYaml.packages as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  if (!packages) return lockMap;
+
+  const parseKey = lv >= 9 ? parsePnpmV9Key : parsePnpmV6Key;
+
+  for (const [key, entry] of Object.entries(packages)) {
+    const keyParsed = parseKey(key);
+    if (!keyParsed) continue;
+    const { name, version } = keyParsed;
+
+    const resolution = entry.resolution as Record<string, unknown> | undefined;
+    const { local, source, sourceUrl } = classifyPnpmResolution(resolution);
+    if (local) continue;
+
+    if (lockMap.has(name)) continue; // keep first occurrence (dedup by name)
+
+    const lockEntry: LockEntry = { resolved: version, scopes: ['prod'] };
+    if (source) lockEntry.source = source;
+    if (sourceUrl) lockEntry.sourceUrl = sourceUrl;
+    lockMap.set(name, lockEntry);
+  }
+
+  return lockMap;
+}
+
 async function parseLockfile(
   cliType: CliType,
   lockfilePath: string,
@@ -129,6 +225,8 @@ async function parseLockfile(
   switch (cliType) {
     case 'npm':
       return parseNpmLock(content, lockfileVersion);
+    case 'pnpm':
+      return parsePnpmLock(content, lockfileVersion);
     default:
       return new Map();
   }

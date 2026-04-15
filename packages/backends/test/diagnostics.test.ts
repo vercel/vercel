@@ -32,6 +32,12 @@ function writeNpmLock(dir: string, lock: object): string {
   return lockPath;
 }
 
+function writePnpmLock(dir: string, content: string): string {
+  const lockPath = path.join(dir, 'pnpm-lock.yaml');
+  fs.writeFileSync(lockPath, content);
+  return lockPath;
+}
+
 function readManifest(dir: string): any {
   return JSON.parse(fs.readFileSync(path.join(dir, DIAGNOSTICS_PATH), 'utf-8'));
 }
@@ -575,6 +581,322 @@ describe('generateProjectManifest — npm v1', () => {
     });
 
     const names = readManifest(tempDir).dependencies.map((d: any) => d.name);
+    expect(names).not.toContain('local-pkg');
+  });
+});
+
+// ─── pnpm v9 ──────────────────────────────────────────────────────────────────
+
+describe('generateProjectManifest — pnpm v9', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  it('resolves direct and transitive deps', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.18.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '9.0'
+
+packages:
+  express@4.18.2:
+    resolution: {integrity: sha512-abc}
+  accepts@1.3.8:
+    resolution: {integrity: sha512-def}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 9,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    const express = dependencies.find((d: any) => d.name === 'express');
+    expect(express.type).toBe('direct');
+    expect(express.resolved).toBe('4.18.2');
+
+    const accepts = dependencies.find((d: any) => d.name === 'accepts');
+    expect(accepts.type).toBe('transitive');
+    expect(accepts.resolved).toBe('1.3.8');
+  });
+
+  it('handles @org/pkg namespaced packages', async () => {
+    writePackageJson(tempDir, { dependencies: { '@vercel/node': '^3.0.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '9.0'
+
+packages:
+  '@vercel/node@3.0.7':
+    resolution: {integrity: sha512-abc}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 9,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies).toEqual([
+      {
+        name: '@vercel/node',
+        type: 'direct',
+        scopes: ['prod'],
+        requested: '^3.0.0',
+        resolved: '3.0.7',
+      },
+    ]);
+  });
+
+  it('strips peer dep suffixes from keys', async () => {
+    writePackageJson(tempDir, { dependencies: { foo: '^1.0.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '9.0'
+
+packages:
+  'foo@1.0.0(react@18.0.0)':
+    resolution: {integrity: sha512-abc}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 9,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies[0].name).toBe('foo');
+    expect(dependencies[0].resolved).toBe('1.0.0');
+  });
+
+  it('deduplicates packages with different peer dep variants', async () => {
+    writePackageJson(tempDir, { dependencies: { foo: '^1.0.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '9.0'
+
+packages:
+  'foo@1.0.0(react@17.0.0)':
+    resolution: {integrity: sha512-abc}
+  'foo@1.0.0(react@18.0.0)':
+    resolution: {integrity: sha512-def}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 9,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    const fooEntries = dependencies.filter((d: any) => d.name === 'foo');
+    expect(fooEntries).toHaveLength(1);
+    expect(fooEntries[0].resolved).toBe('1.0.0');
+  });
+
+  it('excludes local directory packages', async () => {
+    writePackageJson(tempDir, { dependencies: { real: '^1.0.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '9.0'
+
+packages:
+  real@1.0.0:
+    resolution: {integrity: sha512-abc}
+  local-pkg@0.0.1:
+    resolution: {directory: ../local-pkg, type: directory}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 9,
+    });
+
+    const names = readManifest(tempDir).dependencies.map((d: any) => d.name);
+    expect(names).toContain('real');
+    expect(names).not.toContain('local-pkg');
+  });
+
+  it('classifies tarball URL source', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.18.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '9.0'
+
+packages:
+  express@4.18.2:
+    resolution: {integrity: sha512-abc, tarball: https://registry.npmjs.org/express/-/express-4.18.2.tgz}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 9,
+    });
+
+    const dep = readManifest(tempDir).dependencies[0];
+    expect(dep.source).toBe('registry');
+    expect(dep.sourceUrl).toBe('https://registry.npmjs.org');
+  });
+});
+
+// ─── pnpm v6 ──────────────────────────────────────────────────────────────────
+
+describe('generateProjectManifest — pnpm v6', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  it('resolves direct and transitive deps', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.18.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '6.0'
+
+packages:
+  /express/4.18.2:
+    resolution: {integrity: sha512-abc}
+  /accepts/1.3.8:
+    resolution: {integrity: sha512-def}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 6,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    const express = dependencies.find((d: any) => d.name === 'express');
+    expect(express.type).toBe('direct');
+    expect(express.resolved).toBe('4.18.2');
+
+    const accepts = dependencies.find((d: any) => d.name === 'accepts');
+    expect(accepts.type).toBe('transitive');
+    expect(accepts.resolved).toBe('1.3.8');
+  });
+
+  it('handles @org/pkg namespaced packages', async () => {
+    writePackageJson(tempDir, { dependencies: { '@vercel/node': '^3.0.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '6.0'
+
+packages:
+  /@vercel/node/3.0.7:
+    resolution: {integrity: sha512-abc}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 6,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies[0].name).toBe('@vercel/node');
+    expect(dependencies[0].resolved).toBe('3.0.7');
+  });
+
+  it('strips peer dep suffixes from keys', async () => {
+    writePackageJson(tempDir, { dependencies: { foo: '^1.0.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '6.0'
+
+packages:
+  /foo/1.0.0_react@18.0.0:
+    resolution: {integrity: sha512-abc}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 6,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies[0].name).toBe('foo');
+    expect(dependencies[0].resolved).toBe('1.0.0');
+  });
+
+  it('excludes local directory packages', async () => {
+    writePackageJson(tempDir, { dependencies: { real: '^1.0.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+lockfileVersion: '6.0'
+
+packages:
+  /real/1.0.0:
+    resolution: {integrity: sha512-abc}
+  /local-pkg/0.0.1:
+    resolution: {directory: ../local-pkg, type: directory}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 6,
+    });
+
+    const names = readManifest(tempDir).dependencies.map((d: any) => d.name);
+    expect(names).toContain('real');
     expect(names).not.toContain('local-pkg');
   });
 });

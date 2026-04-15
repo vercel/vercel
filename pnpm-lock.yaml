@@ -222,6 +222,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       oxc-transform:
         specifier: 0.111.0
         version: 0.111.0
@@ -253,6 +256,9 @@ importers:
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
