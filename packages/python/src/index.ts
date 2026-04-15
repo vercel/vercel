@@ -322,10 +322,27 @@ export const build: BuildVX = async ({
   // part of a named service, namespace the venv so multiple services sharing
   // the same source don't overwrite each other's artifacts in case of custom
   // installCommand or buildCommand.
+  const uvCacheDir = getUvCacheDir(workPath);
+  let uv: UvRunner;
+  try {
+    const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
+    uv = new UvRunner(uvPath, uvCacheDir);
+    const uvVersionOutput = execSync(`${uvPath} --version`, {
+      encoding: 'utf8',
+    }).trim();
+    console.log(`Using ${uvVersionOutput}`);
+  } catch (err) {
+    console.log('Failed to install or locate uv');
+    throw new Error(
+      `uv is required for this project but failed to install: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+
   const venvPath = service?.name
     ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
     : join(workPath, '.vercel', 'python', '.venv');
-  const uvCacheDir = getUvCacheDir(workPath);
   const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
   const hasCachedUv = fs.existsSync(uvCacheDir);
   if (hasCachedVenv || hasCachedUv) {
@@ -337,6 +354,7 @@ export const build: BuildVX = async ({
     await ensureVenv({
       pythonVersion,
       venvPath,
+      uvPath: uv.getPath(),
       uvCacheDir,
     });
   });
@@ -379,23 +397,6 @@ export const build: BuildVX = async ({
   // virtualenv
   let assumeDepsInstalled = false;
 
-  let uv: UvRunner;
-  try {
-    const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
-    uv = new UvRunner(uvPath, uvCacheDir);
-    const uvVersionOutput = execSync(`${uvPath} --version`, {
-      encoding: 'utf8',
-    }).trim();
-    console.log(`Using ${uvVersionOutput}`);
-  } catch (err) {
-    console.log('Failed to install or locate uv');
-    throw new Error(
-      `uv is required for this project but failed to install: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
-
   // Track the lock file path and project info for package classification (used when runtime install is enabled)
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
@@ -413,6 +414,7 @@ export const build: BuildVX = async ({
         await ensureVenv({
           pythonVersion,
           venvPath,
+          uvPath: uv.getPath(),
           uvCacheDir,
           quiet: true,
         });
