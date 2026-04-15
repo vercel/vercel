@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 13.15.0
+
+### Minor Changes
+
+- [services] allow multiple v2beta triggers for a single Lambda when config is coming from services ([#15890](https://github.com/vercel/vercel/pull/15890))
+
+### Patch Changes
+
+- Add deserialization utilities ([#15927](https://github.com/vercel/vercel/pull/15927))
+
 ## 13.14.2
 
 ### Patch Changes

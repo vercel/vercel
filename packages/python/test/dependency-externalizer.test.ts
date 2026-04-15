@@ -9,6 +9,7 @@ import {
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  HIVE_LAMBDA_SIZE_BYTES,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef, FileBlob } from '@vercel/build-utils';
@@ -160,6 +161,16 @@ describe('dependency externalizer support', () => {
     it('ephemeral storage limit is greater than the bundle size threshold', () => {
       expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
         LAMBDA_SIZE_THRESHOLD_BYTES
+      );
+    });
+
+    it('HIVE_LAMBDA_SIZE_BYTES is 1 GB', () => {
+      expect(HIVE_LAMBDA_SIZE_BYTES).toBe(1 * 1024 * 1024 * 1024);
+    });
+
+    it('Hive limit is greater than the ephemeral storage limit', () => {
+      expect(HIVE_LAMBDA_SIZE_BYTES).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
       );
     });
   });
