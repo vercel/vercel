@@ -62,6 +62,7 @@ export const help = () => `
       logs                 [url]       Displays the logs for a deployment${metricsLine}
       mcp                              Set up MCP agents and configuration
       microfrontends                   Manages your microfrontends
+      observability        [cmd]       Manages observability resources
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project
       rm | remove          [id]        Removes a deployment

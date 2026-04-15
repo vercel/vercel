@@ -1047,6 +1047,9 @@ const main = async () => {
           telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).oauthApps;
           break;
+        case 'observability':
+          func = (await import('./commands-bulk.js')).observability;
+          break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).open;
