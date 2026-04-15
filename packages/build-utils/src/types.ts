@@ -110,6 +110,13 @@ export interface BuildOptions {
   buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 
   /**
+   * Called by the builder to register a callback that will execute the
+   * service's pre-deploy command. The CLI collects these and invokes
+   * them only after every builder has succeeded.
+   */
+  registerPreDeploy?: (callback: () => Promise<void>) => void;
+
+  /**
    * The current trace state from the internal vc tracing
    */
   span?: Span;
@@ -577,6 +584,7 @@ export interface Service {
   runtime?: string;
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
   /* web service config */
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
@@ -815,6 +823,7 @@ export interface ExperimentalServiceConfig {
 
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
 
   /** Lambda config */
   memory?: number;

@@ -763,6 +763,7 @@ export async function resolveConfiguredService(
     runtime,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
+    preDeployCommand: config.preDeployCommand,
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,

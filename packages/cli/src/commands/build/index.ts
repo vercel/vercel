@@ -856,6 +856,11 @@ async function doBuild(
     }
   }
 
+  const preDeployEntries: {
+    service: string;
+    callback?: () => Promise<void>;
+  }[] = [];
+
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -966,6 +971,7 @@ async function doBuild(
             },
             installCommand: service.installCommand ?? undefined,
             buildCommand: service.buildCommand ?? undefined,
+            preDeployCommand: service.preDeployCommand ?? undefined,
             framework: builderFramework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
@@ -1000,6 +1006,16 @@ async function doBuild(
 
       const serviceRoutePrefix = build.config?.routePrefix;
       const serviceWorkspace = build.config?.workspace;
+      const preDeployCmd = service?.preDeployCommand?.trim();
+
+      const preDeployEntry =
+        preDeployCmd && service
+          ? ({ service: service.name } as (typeof preDeployEntries)[number])
+          : undefined;
+      if (preDeployEntry) {
+        preDeployEntries.push(preDeployEntry);
+      }
+
       const buildOptions: BuildOptions = {
         files: buildFiles,
         entrypoint: buildEntrypoint,
@@ -1008,6 +1024,13 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
+        ...(preDeployCmd
+          ? {
+              registerPreDeploy: (callback: () => Promise<void>) => {
+                preDeployEntry!.callback = callback;
+              },
+            }
+          : undefined),
         ...(service
           ? {
               service: {
@@ -1307,6 +1330,21 @@ async function doBuild(
           () => undefined,
           err => err
         )
+      );
+    }
+  }
+
+  // Run pre-deploy commands after all builders succeeded.
+  // A builder is responsible for handling preDeployCommand, so
+  // it will actually own its env, tracing, etc.
+  // We do not fire them during the build itself, because not all builds
+  // might succeed and be actually deployed.
+  for (const entry of preDeployEntries) {
+    if (entry.callback) {
+      await entry.callback();
+    } else {
+      output.warn(
+        `Service "${entry.service}" has a preDeployCommand but its builder does not support it. The command was not executed.`
       );
     }
   }

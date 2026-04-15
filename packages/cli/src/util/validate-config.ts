@@ -235,6 +235,11 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 2048,
     },
+    preDeployCommand: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 2048,
+    },
     memory: {
       type: 'integer',
       minimum: 128,
