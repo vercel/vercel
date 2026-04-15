@@ -1,6 +1,8 @@
-import { describe, expect, it, afterEach, vi } from 'vitest';
+import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import api from '../../../../src/commands/api';
+import { OpenApiCache } from '../../../../src/util/openapi';
+import type { EndpointInfo } from '../../../../src/commands/api/types';
 
 describe('api', () => {
   afterEach(() => {
@@ -18,12 +20,170 @@ describe('api', () => {
     });
   });
 
+  describe('tag + operationId', () => {
+    const mockGetUser: EndpointInfo = {
+      path: '/v5/mock-user',
+      method: 'GET',
+      operationId: 'getAuthUser',
+      summary: '',
+      description: '',
+      tags: ['user'],
+      parameters: [],
+    };
+
+    beforeEach(() => {
+      vi.spyOn(OpenApiCache.prototype, 'loadWithSpinner').mockResolvedValue(
+        true
+      );
+      vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+        mockGetUser,
+      ]);
+      vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    });
+
+    it('resolves tag and exact operationId and performs GET', async () => {
+      client.scenario.get('/v5/mock-user', (_req, res) => {
+        res.json({ user: { id: 'u1' } });
+      });
+
+      client.setArgv('api', 'user', 'getAuthUser');
+      const exitCode = await api(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('u1');
+    });
+
+    it('lists operations when only a tag is given', async () => {
+      const mockList: EndpointInfo = {
+        path: '/v10/projects',
+        method: 'GET',
+        operationId: 'getProjects',
+        summary: 'List projects',
+        description: '',
+        tags: ['projects'],
+        parameters: [],
+      };
+      const mockGet: EndpointInfo = {
+        path: '/v9/projects/{idOrName}',
+        method: 'GET',
+        operationId: 'getProject',
+        summary: 'Get one project',
+        description: '',
+        tags: ['projects'],
+        parameters: [],
+      };
+
+      vi.spyOn(OpenApiCache.prototype, 'loadWithSpinner').mockResolvedValue(
+        true
+      );
+      vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+        mockList,
+        mockGet,
+      ]);
+
+      client.setArgv('api', 'projects');
+      const exitCode = await api(client);
+
+      expect(exitCode).toBe(0);
+      const err = client.stderr.getFullOutput();
+      expect(err).toContain('Operations for tag projects');
+      expect(err).toContain('getProjects');
+      expect(err).toContain('getProject');
+      expect(err).toContain('List projects');
+      expect(err).toContain('Get one project');
+    });
+
+    it('prints required options when non-TTY and path params are missing', async () => {
+      (client.stdin as { isTTY: boolean }).isTTY = false;
+
+      const getProjectDomain: EndpointInfo = {
+        path: '/v9/projects/{idOrName}/domains/{domain}',
+        method: 'GET',
+        operationId: 'getProjectDomain',
+        summary: '',
+        description: '',
+        tags: ['projects'],
+        parameters: [
+          {
+            name: 'idOrName',
+            in: 'path',
+            required: true,
+            description: 'Project ID or name',
+          },
+          {
+            name: 'domain',
+            in: 'path',
+            required: true,
+            description: 'Domain name',
+          },
+        ],
+      };
+
+      vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+        getProjectDomain,
+      ]);
+
+      client.setArgv('api', 'projects', 'getProjectDomain');
+      const exitCode = await api(client);
+
+      (client.stdin as { isTTY: boolean }).isTTY = true;
+
+      expect(exitCode).toBe(1);
+      const err = client.stderr.getFullOutput();
+      expect(err).toContain('Missing required options');
+      expect(err).toContain('idOrName');
+      expect(err).toContain('domain');
+    });
+
+    it('prints OpenAPI option help for tag + operationId with --help', async () => {
+      const getProjectDomain: EndpointInfo = {
+        path: '/v9/projects/{idOrName}/domains/{domain}',
+        method: 'GET',
+        operationId: 'getProjectDomain',
+        summary: 'Read a project domain',
+        description: '',
+        tags: ['projects'],
+        parameters: [
+          {
+            name: 'idOrName',
+            in: 'path',
+            required: true,
+            description: 'Project ID or name',
+          },
+          {
+            name: 'domain',
+            in: 'path',
+            required: true,
+            description: 'Domain name',
+          },
+        ],
+      };
+
+      vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+        getProjectDomain,
+      ]);
+
+      client.setArgv('api', 'projects', 'getProjectDomain', '--help');
+      const exitCode = await api(client);
+
+      expect(exitCode).toBe(2);
+      const out = client.getFullOutput();
+      expect(out).toContain('getProjectDomain');
+      expect(out).toContain('Options');
+      expect(out).toContain('idOrName');
+      expect(out).toContain('domain');
+      expect(out).toContain('Read a project domain');
+    });
+  });
+
   describe('endpoint validation', () => {
     it('should reject endpoint without leading slash', async () => {
       client.setArgv('api', 'v2/user');
       const exitCode = await api(client);
       expect(exitCode).toEqual(1);
-      expect(client.getFullOutput()).toContain('Endpoint must start with /');
+      expect(client.getFullOutput()).toContain(
+        'Use an API path starting with /'
+      );
     });
 
     it('should reject protocol-relative URLs to prevent SSRF', async () => {
