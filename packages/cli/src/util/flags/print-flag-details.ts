@@ -161,7 +161,7 @@ export function printFlagEnvironmentDetails(
           output.print(`      ${chalk.dim('Default split:')} ${weights}\n`);
         } else if (fallthrough.type === 'rollout') {
           output.print(
-            `      ${chalk.dim('Default rollout:')} ${formatRolloutOutcome(
+            `      ${chalk.dim('Rollout:')} ${formatRolloutOutcome(
               fallthrough,
               flag.variants
             )}\n`
