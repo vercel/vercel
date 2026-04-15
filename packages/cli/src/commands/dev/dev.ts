@@ -147,17 +147,19 @@ export default async function dev(
       .env;
   }
 
-  // Auto-detect framework if not already set in project settings
+  // Auto-detect runtime frameworks (e.g., Rust, Python, Go) if not already set.
+  // Only runtime frameworks are auto-detected to avoid overriding the behavior
+  // of projects that use explicit builds in vercel.json (e.g., @vercel/static-build).
   if (!projectSettings?.framework) {
+    const runtimeFrameworks = frameworkList.filter(f => f.runtimeFramework);
     const fs = new LocalFileSystemDetector(cwd);
     const detectedFramework = await detectFramework({
       fs,
-      frameworkList,
-      // Enable experimental frameworks for runtime frameworks like Rust
+      frameworkList: runtimeFrameworks,
       useExperimentalFrameworks: true,
     });
     if (detectedFramework) {
-      output.debug(`Auto-detected framework: ${detectedFramework}`);
+      output.debug(`Auto-detected runtime framework: ${detectedFramework}`);
       projectSettings = {
         ...projectSettings,
         framework: detectedFramework,
