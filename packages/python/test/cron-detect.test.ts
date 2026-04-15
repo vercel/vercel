@@ -32,8 +32,11 @@ describe('dynamic cron detection (integration)', () => {
   it('detects a single cron entry', async () => {
     await setupWorkDir({
       'jobs/cleanup.py': `
-def get_crons():
-    return [("jobs.cleanup:run", "0 0 * * *")]
+class Registry:
+    def get_crons(self):
+        return [("jobs.cleanup:run", "0 0 * * *")]
+
+registry = Registry()
 
 def run():
     pass
@@ -43,7 +46,7 @@ def run():
     const result = await getServiceCrons({
       service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
       entrypoint: 'jobs/cleanup.py',
-      handlerFunction: 'get_crons',
+      handlerFunction: 'registry',
       pythonBin,
       env: { ...process.env, PYTHONPATH: workDir },
       workPath: workDir,
@@ -61,11 +64,14 @@ def run():
   it('detects multiple cron entries', async () => {
     await setupWorkDir({
       'jobs/tasks.py': `
-def get_crons():
-    return [
-        ("jobs.tasks:daily_sync", "0 6 * * *"),
-        ("jobs.tasks:hourly_check", "0 * * * *"),
-    ]
+class Registry:
+    def get_crons(self):
+        return [
+            ("jobs.tasks:daily_sync", "0 6 * * *"),
+            ("jobs.tasks:hourly_check", "0 * * * *"),
+        ]
+
+registry = Registry()
 
 def daily_sync():
     pass
@@ -78,7 +84,7 @@ def hourly_check():
     const result = await getServiceCrons({
       service: { type: 'cron', name: 'tasks', schedule: '<dynamic>' },
       entrypoint: 'jobs/tasks.py',
-      handlerFunction: 'get_crons',
+      handlerFunction: 'registry',
       pythonBin,
       env: { ...process.env, PYTHONPATH: workDir },
       workPath: workDir,
@@ -102,11 +108,14 @@ def hourly_check():
     await setupWorkDir({
       'jobs/__init__.py': '',
       'jobs/registry.py': `
-def get_crons():
-    return [
-        ("jobs.sync:run", "0 0 * * *"),
-        ("jobs.report:generate", "0 6 * * 1"),
-    ]
+class CronTab:
+    def get_crons(self):
+        return [
+            ("jobs.sync:run", "0 0 * * *"),
+            ("jobs.report:generate", "0 6 * * 1"),
+        ]
+
+crontab = CronTab()
 `,
       'jobs/sync.py': `
 def run():
@@ -121,7 +130,7 @@ def generate():
     const result = await getServiceCrons({
       service: { type: 'cron', name: 'scheduler', schedule: '<dynamic>' },
       entrypoint: 'jobs/registry.py',
-      handlerFunction: 'get_crons',
+      handlerFunction: 'crontab',
       pythonBin,
       env: { ...process.env, PYTHONPATH: workDir },
       workPath: workDir,
@@ -148,7 +157,7 @@ def generate():
       getServiceCrons({
         service: { type: 'cron', name: 'bad', schedule: '<dynamic>' },
         entrypoint: 'nonexistent.py',
-        handlerFunction: 'get_crons',
+        handlerFunction: 'registry',
         pythonBin,
         env: { ...process.env, PYTHONPATH: workDir },
         workPath: workDir,
@@ -156,7 +165,7 @@ def generate():
     ).rejects.toThrow(/Failed to import module/);
   });
 
-  it('reports error when callable does not exist', async () => {
+  it('reports error when attribute does not exist', async () => {
     await setupWorkDir({
       'jobs/cleanup.py': `
 def something_else():
@@ -168,19 +177,21 @@ def something_else():
       getServiceCrons({
         service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
         entrypoint: 'jobs/cleanup.py',
-        handlerFunction: 'get_crons',
+        handlerFunction: 'registry',
         pythonBin,
         env: { ...process.env, PYTHONPATH: workDir },
         workPath: workDir,
       })
-    ).rejects.toThrow(/no attribute 'get_crons'/);
+    ).rejects.toThrow(/no attribute 'registry'/);
   });
 
-  it('reports error when callable returns invalid entries', async () => {
+  it('reports error when object has no get_crons method', async () => {
     await setupWorkDir({
       'jobs/cleanup.py': `
-def get_crons():
-    return ["not a tuple"]
+class Registry:
+    pass
+
+registry = Registry()
 `,
     });
 
@@ -188,7 +199,30 @@ def get_crons():
       getServiceCrons({
         service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
         entrypoint: 'jobs/cleanup.py',
-        handlerFunction: 'get_crons',
+        handlerFunction: 'registry',
+        pythonBin,
+        env: { ...process.env, PYTHONPATH: workDir },
+        workPath: workDir,
+      })
+    ).rejects.toThrow(/no 'get_crons' method/);
+  });
+
+  it('reports error when get_crons returns invalid entries', async () => {
+    await setupWorkDir({
+      'jobs/cleanup.py': `
+class Registry:
+    def get_crons(self):
+        return ["not a tuple"]
+
+registry = Registry()
+`,
+    });
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'registry',
         pythonBin,
         env: { ...process.env, PYTHONPATH: workDir },
         workPath: workDir,
@@ -196,11 +230,14 @@ def get_crons():
     ).rejects.toThrow(/must be a.*pair/);
   });
 
-  it('reports error when callable returns empty iterable', async () => {
+  it('reports error when get_crons returns empty iterable', async () => {
     await setupWorkDir({
       'jobs/cleanup.py': `
-def get_crons():
-    return []
+class Registry:
+    def get_crons(self):
+        return []
+
+registry = Registry()
 `,
     });
 
@@ -208,7 +245,7 @@ def get_crons():
       getServiceCrons({
         service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
         entrypoint: 'jobs/cleanup.py',
-        handlerFunction: 'get_crons',
+        handlerFunction: 'registry',
         pythonBin,
         env: { ...process.env, PYTHONPATH: workDir },
         workPath: workDir,

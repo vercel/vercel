@@ -942,10 +942,9 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
-    // Detect crons before spawning so we can override the handler/module
-    // for dynamic cron services. With "<dynamic>", handlerFunction names
-    // the detection function (e.g. "cron"), but the actual HTTP handler is
-    // the module:function returned by detection (e.g. "jobs.cleanup:cleanup").
+    // Detect crons before spawning so we can set __VC_CRON_ROUTES.
+    // For "<dynamic>" schedules, the entrypoint "module:object" must have
+    // a get_crons() method returning (module:function, schedule) pairs.
     const crons = await getServiceCrons({
       service,
       entrypoint,

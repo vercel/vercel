@@ -134,7 +134,7 @@ async function getServiceCronsDynamic(opts: {
     throw new NowBuildError({
       code: 'PYTHON_DYNAMIC_CRON_NO_HANDLER',
       message:
-        'Dynamic cron detection requires handlerFunction to be specified in service config.',
+        'Dynamic cron detection requires a "module:object" entrypoint where the object has a get_crons() method.',
     });
   }
 
@@ -145,7 +145,7 @@ async function getServiceCronsDynamic(opts: {
     env,
     workPath,
     moduleName,
-    callableName: handlerFunction,
+    attrName: handlerFunction,
   });
 
   console.log(
@@ -157,7 +157,7 @@ async function getServiceCronsDynamic(opts: {
       code: 'PYTHON_DYNAMIC_CRON_EMPTY',
       message:
         `Dynamic cron detection returned no entries. ` +
-        `"${moduleName}.${handlerFunction}()" returned an empty iterable.`,
+        `"${moduleName}.${handlerFunction}.get_crons()" returned an empty iterable.`,
     });
   }
 
@@ -182,15 +182,15 @@ async function detectDynamicCrons(opts: {
   env: NodeJS.ProcessEnv;
   workPath: string;
   moduleName: string;
-  callableName: string;
+  attrName: string;
 }): Promise<DynamicCronEntry[]> {
-  const { pythonBin, env, workPath, moduleName, callableName } = opts;
+  const { pythonBin, env, workPath, moduleName, attrName } = opts;
 
   let stdout: string;
   try {
     const result = await execa(
       pythonBin,
-      ['-c', script, moduleName, callableName],
+      ['-c', script, moduleName, attrName],
       { env, cwd: workPath }
     );
     stdout = result.stdout;

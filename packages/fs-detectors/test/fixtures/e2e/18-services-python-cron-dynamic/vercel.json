@@ -11,7 +11,7 @@
     },
     "scheduler": {
       "type": "cron",
-      "entrypoint": "jobs.registry:get_crons",
+      "entrypoint": "jobs.registry:crontab",
       "schedule": "<dynamic>"
     }
   }

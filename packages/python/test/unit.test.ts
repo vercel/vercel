@@ -2313,7 +2313,7 @@ describe('dynamic cron detection', () => {
         env: {},
         workPath: '/tmp/test',
       })
-    ).rejects.toThrow(/handlerFunction/);
+    ).rejects.toThrow(/get_crons/);
   });
 
   it('throws with structured error when python fails', async () => {
