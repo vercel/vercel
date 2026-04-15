@@ -37,6 +37,8 @@ import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import getSubcommand from '../../util/get-subcommand';
+import { tryOpenApiFallback } from '../../util/openapi';
+import { resolveOpenApiTagForProjectsCli } from '../../util/openapi/matches-cli-api-tag';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
@@ -200,9 +202,18 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
-    default:
+    default: {
+      const fallback = await tryOpenApiFallback(
+        client,
+        parsedArgs.args.slice(1),
+        resolveOpenApiTagForProjectsCli
+      );
+      if (fallback !== null) {
+        return fallback;
+      }
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(projectCommand, { columns: client.stderr.columns }));
       return 2;
+    }
   }
 }

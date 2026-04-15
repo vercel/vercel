@@ -33,7 +33,7 @@ import {
   formatDescription,
 } from './format-utils';
 import output from '../../output-manager';
-import table from '../../util/output/table';
+import { renderCard, renderTable } from './display-columns';
 import { packageName } from '../../util/pkg-name';
 import type {
   ParsedFlags,
@@ -102,54 +102,6 @@ export default async function api(client: Client): Promise<number> {
     );
   }
 
-  const secondArg = args[2];
-  const isTagOperationMode = Boolean(
-    firstArg &&
-      secondArg &&
-      !firstArg.startsWith('/') &&
-      firstArg !== 'ls' &&
-      firstArg !== 'list'
-  );
-  // Single-token tag browse: exclude path fragments like "v2/user" (contain "/")
-  const isSingleTagLookup = Boolean(
-    firstArg &&
-      !secondArg &&
-      !firstArg.startsWith('/') &&
-      !firstArg.includes('/') &&
-      firstArg !== 'ls' &&
-      firstArg !== 'list'
-  );
-
-  // `vercel api <tag> <operationId> -h` — OpenAPI options for that operation
-  if (needHelp && isTagOperationMode) {
-    telemetryClient.trackCliFlagHelp('api', secondArg);
-    return printOperationHelpForTagCommand(flags, firstArg!, secondArg!);
-  }
-
-  // `vercel api <tag> -h` — list operations for that tag (same as bare `<tag>`)
-  if (needHelp && isSingleTagLookup) {
-    telemetryClient.trackCliFlagHelp('api', firstArg);
-    const openApi = new OpenApiCache();
-    const loaded = await openApi.loadWithSpinner(flags['--refresh'] ?? false);
-    if (!loaded) {
-      output.error('Could not load API specification');
-      return 1;
-    }
-    const allEndpoints = openApi.getEndpoints();
-    const tagLower = firstArg!.toLowerCase();
-    const tagMatches = allEndpoints.filter(ep =>
-      ep.tags.some(t => t.toLowerCase() === tagLower)
-    );
-    if (tagMatches.length > 0) {
-      printOperationsHelpForTag(firstArg!, tagMatches);
-      return 2;
-    }
-    output.error(
-      `No API operations use tag "${firstArg}". Run \`${packageName} api ls --format json\` to browse available tags and operationIds.`
-    );
-    return 1;
-  }
-
   // Handle 'api --help' (no subcommand)
   if (needHelp) {
     telemetryClient.trackCliFlagHelp('api');
@@ -162,14 +114,11 @@ export default async function api(client: Client): Promise<number> {
     client.dangerouslySkipPermissions = true;
   }
 
-  // Get endpoint from args (args[0] is 'api', args[1] is the endpoint or tag)
   let endpoint: string | undefined;
   let selectedMethod: string | undefined;
   let selectedBodyFields: string[] = [];
-  let positionalOperationFields: string[] = [];
 
   if (!firstArg) {
-    // Interactive mode: prompt for endpoint selection
     if (client.stdin.isTTY) {
       const selected = await promptEndpointSelection(
         client,
@@ -185,167 +134,51 @@ export default async function api(client: Client): Promise<number> {
       output.error('Endpoint is required. Usage: vercel api <endpoint>');
       return 1;
     }
-  } else if (isSingleTagLookup) {
-    const openApi = new OpenApiCache();
-    const loaded = await openApi.loadWithSpinner(flags['--refresh'] ?? false);
-    if (!loaded) {
-      output.error('Could not load API specification');
-      return 1;
-    }
-
-    const allEndpoints = openApi.getEndpoints();
-    const tagLower = firstArg.toLowerCase();
-    const tagMatches = allEndpoints.filter(ep =>
-      ep.tags.some(t => t.toLowerCase() === tagLower)
-    );
-
-    if (tagMatches.length > 0) {
-      if (flags['--refresh']) {
-        telemetryClient.trackCliFlagRefresh(true);
-      }
-      printOperationsHelpForTag(firstArg, tagMatches);
-      return 0;
-    }
-
-    output.error(
-      `No API operations use tag "${firstArg}". Run \`${packageName} api ls --format json\` to browse available tags and operationIds.`
-    );
-    return 1;
-  } else if (isTagOperationMode) {
-    positionalOperationFields = args.slice(3);
   } else {
     endpoint = firstArg;
   }
 
-  // Validate endpoint format and prevent SSRF (path-based / interactive URLs only)
-  if (!isTagOperationMode && endpoint) {
-    if (!endpoint.startsWith('/')) {
+  if (endpoint && !endpoint.startsWith('/')) {
+    output.error(
+      `Invalid arguments. Use an API path starting with /, or run \`${packageName} api\` interactively.`
+    );
+    return 1;
+  }
+
+  try {
+    const resolvedUrl = new URL(endpoint!, API_BASE_URL);
+    if (resolvedUrl.origin !== API_BASE_URL) {
       output.error(
-        `Invalid arguments. Use an API path starting with /, or \`${packageName} api <tag> <operationId>\` (for example \`${packageName} api user getAuthUser\`), or run \`${packageName} api\` interactively.`
+        'Invalid endpoint: must be a Vercel API path, not an external URL'
       );
       return 1;
     }
-
-    try {
-      const resolvedUrl = new URL(endpoint, API_BASE_URL);
-      if (resolvedUrl.origin !== API_BASE_URL) {
-        output.error(
-          'Invalid endpoint: must be a Vercel API path, not an external URL'
-        );
-        return 1;
-      }
-    } catch {
-      output.error('Invalid endpoint URL format');
-      return 1;
-    }
+  } catch {
+    output.error('Invalid endpoint URL format');
+    return 1;
   }
 
-  // Use method from interactive selection if not overridden by flag
   const finalFlags = { ...flags } as ParsedFlags;
   if (selectedMethod && !flags['--method']) {
     finalFlags['--method'] = selectedMethod;
   }
 
-  // Merge body fields from interactive selection with any existing --field flags
   if (selectedBodyFields.length > 0) {
     const existingFields = finalFlags['--field'] || [];
     finalFlags['--field'] = [...existingFields, ...selectedBodyFields];
   }
 
   let requestConfig: RequestConfig;
-
-  if (isTagOperationMode) {
-    const openApi = new OpenApiCache();
-    const loaded = await openApi.loadWithSpinner(flags['--refresh'] ?? false);
-    if (!loaded) {
-      output.error('Could not load API specification');
-      return 1;
-    }
-
-    const allEndpoints = openApi.getEndpoints();
-    const resolved = resolveEndpointByTagAndOperationId(
-      allEndpoints,
-      firstArg!,
-      secondArg!
-    );
-
-    if (!resolved.ok) {
-      printTagOperationResolveError(resolved, allEndpoints);
-      return 1;
-    }
-
-    const bodyFields = openApi.getBodyFields(resolved.endpoint);
-    let tagOperationPositional = positionalOperationFields;
-
-    if (client.stdin.isTTY) {
-      const prompted = await promptMissingParamsForTagOperation(
-        client,
-        resolved.endpoint,
-        bodyFields,
-        finalFlags,
-        tagOperationPositional
-      );
-      if (prompted === null) {
-        return 1;
-      }
-      tagOperationPositional = prompted;
-    } else {
-      try {
-        const parsed = await parseOperationKeyValuePairs(
-          resolved.endpoint,
-          bodyFields,
-          finalFlags,
-          tagOperationPositional
-        );
-        const missing = getMissingRequiredOperationParams(
-          resolved.endpoint,
-          bodyFields,
-          parsed,
-          finalFlags
-        );
-        if (
-          missing.path.length > 0 ||
-          missing.query.length > 0 ||
-          missing.header.length > 0 ||
-          missing.body.length > 0
-        ) {
-          printMissingOperationParamsHelp(resolved.endpoint, missing);
-          return 1;
-        }
-      } catch (err) {
-        printError(err);
-        return 1;
-      }
-    }
-
-    try {
-      requestConfig = await buildRequestForResolvedOperation(
-        resolved.endpoint,
-        bodyFields,
-        finalFlags,
-        tagOperationPositional
-      );
-    } catch (err) {
-      printError(err);
-      return 1;
-    }
-  } else {
-    try {
-      requestConfig = await buildRequest(endpoint!, finalFlags);
-    } catch (err) {
-      printError(err);
-      return 1;
-    }
+  try {
+    requestConfig = await buildRequest(endpoint!, finalFlags);
+  } catch (err) {
+    printError(err);
+    return 1;
   }
 
-  // Track telemetry
-  if (isTagOperationMode) {
-    telemetryClient.trackCliArgumentEndpoint(firstArg);
-    telemetryClient.trackCliArgumentOperationId(secondArg);
-  } else {
-    telemetryClient.trackCliArgumentEndpoint(requestConfig.url);
-    telemetryClient.trackCliArgumentOperationId(undefined);
-  }
+  // Track telemetry (tag + operationId path uses {@link runTagOperation})
+  telemetryClient.trackCliArgumentEndpoint(requestConfig.url);
+  telemetryClient.trackCliArgumentOperationId(undefined);
   telemetryClient.trackCliOptionMethod(flags['--method']);
   telemetryClient.trackCliOptionHeader(flags['--header']);
   telemetryClient.trackCliOptionInput(flags['--input']);
@@ -376,7 +209,7 @@ export default async function api(client: Client): Promise<number> {
   return executeApiRequest(client, requestConfig, finalFlags);
 }
 
-async function printOperationHelpForTagCommand(
+export async function printOperationHelpForTagCommand(
   flags: ParsedFlags,
   tag: string,
   operationId: string
@@ -487,39 +320,6 @@ function printOperationHelpDetails(
 /**
  * Print operations for a tag when the user runs `vercel api <tag>` with no operationId.
  */
-function printOperationsHelpForTag(
-  tag: string,
-  endpoints: EndpointInfo[]
-): void {
-  const sorted = [...endpoints].sort((a, b) => {
-    const idCmp = a.operationId.localeCompare(b.operationId);
-    if (idCmp !== 0) {
-      return idCmp;
-    }
-    return a.path.localeCompare(b.path);
-  });
-
-  output.log('');
-  output.log(
-    `${chalk.bold(`Operations for tag ${chalk.cyan(tag)}`)}${chalk.dim(` (${sorted.length})`)}`
-  );
-  output.log(
-    chalk.dim(`Usage: ${packageName} api ${tag} <operationId> [key=value ...]`)
-  );
-  output.log('');
-
-  const rows = sorted.map(ep => {
-    const idCol = ep.operationId
-      ? chalk.bold(ep.operationId)
-      : chalk.dim('(no operationId)');
-    const desc = ep.summary?.trim() || ep.description?.trim() || chalk.dim('—');
-    return [idCol, desc];
-  });
-
-  output.log(table(rows, { align: ['l', 'l'] }));
-  output.log('');
-}
-
 type MissingOperationBundle = ReturnType<
   typeof getMissingRequiredOperationParams
 >;
@@ -782,7 +582,8 @@ function printTagOperationResolveError(
 async function executeApiRequest(
   client: Client,
   requestConfig: RequestConfig,
-  flags: ParsedFlags
+  flags: ParsedFlags,
+  displayColumns?: Record<string, string> | null
 ): Promise<number> {
   // Verbose mode: show request details
   if (flags['--verbose']) {
@@ -802,16 +603,16 @@ async function executeApiRequest(
     return executePaginatedRequest(client, requestConfig, flags);
   }
 
-  return executeSingleRequest(client, requestConfig, flags);
+  return executeSingleRequest(client, requestConfig, flags, displayColumns);
 }
 
 async function executeSingleRequest(
   client: Client,
   config: RequestConfig,
-  flags: ParsedFlags
+  flags: ParsedFlags,
+  displayColumns?: Record<string, string> | null
 ): Promise<number> {
   try {
-    // Check for confirmation before proceeding with DELETE operations
     const confirmed = await client.confirmMutatingOperation(
       config.url,
       config.method
@@ -824,10 +625,10 @@ async function executeSingleRequest(
       method: config.method,
       body: config.body,
       headers: config.headers,
-      json: false, // Get raw response
+      json: false,
     });
 
-    return handleResponse(client, response, flags);
+    return handleResponse(client, response, flags, displayColumns);
   } catch (err) {
     output.prettyError(err);
     return 1;
@@ -893,35 +694,35 @@ function extractPaginatedData(page: Record<string, unknown>): unknown[] {
 async function handleResponse(
   client: Client,
   response: Response,
-  flags: ParsedFlags
+  flags: ParsedFlags,
+  displayColumns?: Record<string, string> | null
 ): Promise<number> {
-  // Include headers if requested
   if (flags['--include']) {
     outputHeaders(client, response);
   }
 
-  // Silent mode
   if (flags['--silent']) {
     return response.ok ? 0 : 1;
   }
 
-  // Get response body
   const contentType = response.headers.get('content-type') || '';
 
   if (contentType.includes('application/json')) {
     const json = await response.json();
 
-    // Verbose mode: show response details
     if (flags['--verbose']) {
       output.debug(
         `Response status: ${response.status} ${response.statusText}`
       );
     }
 
+    if (displayColumns && response.ok && !flags['--raw']) {
+      return outputWithDisplayColumns(client, json, displayColumns);
+    }
+
     return outputResults(client, json, flags);
   }
 
-  // Non-JSON response
   const text = await response.text();
   client.stdout.write(text);
 
@@ -934,6 +735,21 @@ function outputHeaders(client: Client, response: Response): void {
     client.stdout.write(`${key}: ${value}\n`);
   });
   client.stdout.write('\n');
+}
+
+function outputWithDisplayColumns(
+  client: Client,
+  data: unknown,
+  columns: Record<string, string>
+): number {
+  if (Array.isArray(data)) {
+    client.stdout.write(renderTable(data, columns) + '\n');
+  } else if (data && typeof data === 'object') {
+    client.stdout.write(renderCard(data, columns) + '\n');
+  } else {
+    client.stdout.write(formatOutput(data, {}) + '\n');
+  }
+  return 0;
 }
 
 function outputResults(
@@ -1300,4 +1116,134 @@ async function promptForBodyField(
     message: `Enter value for ${chalk.cyan(field.name)}${optionalHint}${typeHint}${description}:`,
     validate: required ? createRequiredValidator(field.name) : undefined,
   });
+}
+
+/**
+ * Shared path for `vercel api <tag> <operationId> …` and for commands that delegate
+ * (e.g. `project`) without mutating `process.argv`.
+ */
+export async function runTagOperation(
+  client: Client,
+  options: {
+    tag: string;
+    operationId: string;
+    flags: ParsedFlags;
+    positionalOperationFields: string[];
+  }
+): Promise<number> {
+  const { tag, operationId, flags, positionalOperationFields } = options;
+  const telemetryClient = new ApiTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
+
+  const finalFlags = { ...flags } as ParsedFlags;
+
+  const openApi = new OpenApiCache();
+  const loaded = await openApi.loadWithSpinner(
+    finalFlags['--refresh'] ?? false
+  );
+  if (!loaded) {
+    output.error('Could not load API specification');
+    return 1;
+  }
+
+  const allEndpoints = openApi.getEndpoints();
+  const resolved = resolveEndpointByTagAndOperationId(
+    allEndpoints,
+    tag,
+    operationId
+  );
+
+  if (!resolved.ok) {
+    printTagOperationResolveError(resolved, allEndpoints);
+    return 1;
+  }
+
+  const bodyFields = openApi.getBodyFields(resolved.endpoint);
+  const displayColumns = openApi.getDisplayColumns(resolved.endpoint);
+  let tagOperationPositional = positionalOperationFields;
+
+  if (client.stdin.isTTY) {
+    const prompted = await promptMissingParamsForTagOperation(
+      client,
+      resolved.endpoint,
+      bodyFields,
+      finalFlags,
+      tagOperationPositional
+    );
+    if (prompted === null) {
+      return 1;
+    }
+    tagOperationPositional = prompted;
+  } else {
+    try {
+      const parsed = await parseOperationKeyValuePairs(
+        resolved.endpoint,
+        bodyFields,
+        finalFlags,
+        tagOperationPositional
+      );
+      const missing = getMissingRequiredOperationParams(
+        resolved.endpoint,
+        bodyFields,
+        parsed,
+        finalFlags
+      );
+      if (
+        missing.path.length > 0 ||
+        missing.query.length > 0 ||
+        missing.header.length > 0 ||
+        missing.body.length > 0
+      ) {
+        printMissingOperationParamsHelp(resolved.endpoint, missing);
+        return 1;
+      }
+    } catch (err) {
+      printError(err);
+      return 1;
+    }
+  }
+
+  let requestConfig: RequestConfig;
+  try {
+    requestConfig = await buildRequestForResolvedOperation(
+      resolved.endpoint,
+      bodyFields,
+      finalFlags,
+      tagOperationPositional
+    );
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  telemetryClient.trackCliArgumentEndpoint(tag);
+  telemetryClient.trackCliArgumentOperationId(operationId);
+  telemetryClient.trackCliOptionMethod(finalFlags['--method']);
+  telemetryClient.trackCliOptionHeader(finalFlags['--header']);
+  telemetryClient.trackCliOptionInput(finalFlags['--input']);
+  if (finalFlags['--paginate']) telemetryClient.trackCliFlagPaginate(true);
+  if (finalFlags['--include']) telemetryClient.trackCliFlagInclude(true);
+  if (finalFlags['--silent']) telemetryClient.trackCliFlagSilent(true);
+  if (finalFlags['--verbose']) telemetryClient.trackCliFlagVerbose(true);
+  if (finalFlags['--raw']) telemetryClient.trackCliFlagRaw(true);
+  if (finalFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+  if (finalFlags['--generate'])
+    telemetryClient.trackCliOptionGenerate(finalFlags['--generate']);
+  if (finalFlags['--dangerously-skip-permissions'])
+    telemetryClient.trackCliFlagDangerouslySkipPermissions(true);
+
+  if (finalFlags['--generate'] === 'curl') {
+    const curlCmd = generateCurlCommand(
+      requestConfig,
+      'https://api.vercel.com'
+    );
+    output.log('');
+    output.log('Replace <TOKEN> with your auth token:');
+    output.log('');
+    client.stdout.write(curlCmd + '\n');
+    return 0;
+  }
+
+  return executeApiRequest(client, requestConfig, finalFlags, displayColumns);
 }
