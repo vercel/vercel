@@ -163,6 +163,7 @@ export {
 
 export * from './python';
 export * from './node-entrypoint';
+export * from './service-path-utils';
 
 export {
   getEncryptedEnv,
