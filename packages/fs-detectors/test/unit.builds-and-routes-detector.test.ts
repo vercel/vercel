@@ -146,7 +146,7 @@ describe('Test `detectBuilders`', () => {
     expect(rewriteRoutes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          src: '^/_svc/cleanup/crons/jobs/cleanup/cron$',
+          src: '^/_svc/cleanup/crons/.*$',
           dest: '/_svc/cleanup/index',
           check: true,
         }),
@@ -4110,6 +4110,21 @@ describe('Test `detectApiExtensions`', () => {
       expect(apiBuilders[0].src).toBe('api/index.ts');
     });
 
+    it('should not filter middleware files that export middleware function', async () => {
+      const files = ['api/index.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Middleware file should still get a builder even though it doesn't
+      // match standard API handler export patterns
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
+    });
+
     it('should not filter entrypoints when env var is not set', async () => {
       delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
 
@@ -4123,6 +4138,61 @@ describe('Test `detectApiExtensions`', () => {
 
       // Without the env var, all files get builders (existing behavior)
       expect(apiBuilders).toHaveLength(2);
+    });
+  });
+
+  describe('Node.js entrypoint detection in monorepo', () => {
+    // Simulates a monorepo where workPath points to a nested workspace
+    // (e.g., apps/web). File paths passed to detectBuilders are always
+    // relative to workPath, mirroring how the CLI resolves them.
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      '71-node-monorepo',
+      'apps',
+      'web'
+    );
+
+    beforeEach(() => {
+      process.env.VERCEL_NODE_FILTER_ENTRYPOINTS = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+    });
+
+    it('should filter helpers and keep entrypoints in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+    });
+
+    it('should not filter middleware in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Helper filtered, entrypoint kept
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+
+      // Middleware preserved
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
     });
   });
 });

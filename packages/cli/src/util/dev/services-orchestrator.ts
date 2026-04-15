@@ -5,10 +5,12 @@ import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
 import {
+  getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceWorkerPathPrefix,
   type Service,
 } from '@vercel/fs-detectors';
+import type { Cron } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
@@ -138,6 +140,7 @@ interface ServiceDevProcess {
   routePrefixes: string[];
   workspace: string;
   logger: ServiceLogger;
+  crons?: Cron[];
 }
 
 function getServiceRoutePrefixes(service: Service): string[] {
@@ -463,6 +466,7 @@ export class ServicesOrchestrator {
           routePrefix: service.routePrefix,
           subdomain: service.subdomain,
           workspace: service.workspace,
+          schedule: service.schedule,
         },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
@@ -485,6 +489,7 @@ export class ServicesOrchestrator {
         routePrefixes: getServiceRoutePrefixes(service),
         workspace: service.workspace || '.',
         logger,
+        crons: result.crons,
       };
     } catch (err) {
       output.debug(`Failed to use startDevServer for ${service.name}: ${err}`);
@@ -716,21 +721,40 @@ export class ServicesOrchestrator {
   }
 
   private startCronSchedulers(): void {
-    for (const service of this.services) {
-      if (!isScheduleTriggeredService(service) || !service.schedule) continue;
+    for (const [name, managed] of this.managedServices) {
+      const service = this.services.find(candidate => candidate.name === name);
+      const crons =
+        managed.crons && managed.crons.length > 0
+          ? managed.crons
+          : service &&
+              isScheduleTriggeredService(service) &&
+              service.schedule &&
+              service.schedule !== '<dynamic>'
+            ? [
+                {
+                  path: getInternalServiceCronPath(
+                    name,
+                    service.entrypoint || service.builder.src || 'index',
+                    service.handlerFunction || 'cron'
+                  ),
+                  schedule: service.schedule,
+                },
+              ]
+            : [];
+      if (crons.length === 0) continue;
 
-      const managed = this.managedServices.get(service.name);
-      if (!managed) continue;
-
-      output.debug(
-        `Scheduling job service ${chalk.bold(service.name)} (${chalk.cyan(service.schedule)})`
-      );
-      this.scheduleCronTrigger(service.name, service.schedule, managed);
+      for (const cron of crons) {
+        output.debug(
+          `Scheduling job service ${chalk.bold(name)} (${chalk.cyan(cron.schedule)})`
+        );
+        this.scheduleCronTrigger(name, cron.path, cron.schedule, managed);
+      }
     }
   }
 
   private scheduleCronTrigger(
     serviceName: string,
+    cronPath: string,
     schedule: string,
     managed: ServiceDevProcess
   ): void {
@@ -750,7 +774,7 @@ export class ServicesOrchestrator {
       );
 
       try {
-        const url = `http://${managed.host}:${managed.port}/`;
+        const url = `http://${managed.host}:${managed.port}${cronPath}`;
         const res = await fetch(url, { method: 'POST' });
         output.debug(
           `Cron trigger for "${serviceName}" responded with status ${res.status}`
@@ -761,7 +785,7 @@ export class ServicesOrchestrator {
         );
       }
 
-      this.scheduleCronTrigger(serviceName, schedule, managed);
+      this.scheduleCronTrigger(serviceName, cronPath, schedule, managed);
     }, delayMs);
 
     this.cronTimers.push(timer);

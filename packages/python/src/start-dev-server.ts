@@ -4,6 +4,7 @@ import { join, delimiter, dirname, basename } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
+import { buildCronRouteTable, getServiceCrons } from './crons';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import { detectPythonEntrypoint, type PythonEntrypoint } from './entrypoint';
@@ -944,12 +945,25 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
+    // Detect crons before spawning so we can set __VC_CRON_ROUTES.
+    // For "<dynamic>" schedules, the entrypoint "module:object" must have
+    // a get_crons() method returning (module:function, schedule) pairs.
+    const crons = await getServiceCrons({
+      service,
+      entrypoint,
+      rawEntrypoint,
+      handlerFunction,
+      pythonBin: spawnCommand,
+      env,
+      workPath,
+    });
+
+    if (crons?.length) {
+      env.__VC_CRON_ROUTES = JSON.stringify(buildCronRouteTable(crons));
+    }
+
     const port = typeof meta.port === 'number' ? meta.port : await getPort();
     env.PORT = `${port}`;
-
-    if (config.handlerFunction && typeof config?.handlerFunction === 'string') {
-      env.__VC_HANDLER_FUNC_NAME = config.handlerFunction;
-    }
 
     if (entry) {
       env.__VC_HANDLER_ENTRYPOINT_ABS = join(workPath, entry);
@@ -1044,7 +1058,7 @@ export const startDevServer: StartDevServer = async opts => {
 
     // No-op shutdown so CLI won't kill the server after each request
     const shutdown = async () => {};
-    return { port, pid, shutdown };
+    return { port, pid, shutdown, crons };
   } catch (err) {
     rejectChildReady(err);
     throw err;

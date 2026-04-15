@@ -1,5 +1,25 @@
 # @vercel/build-utils
 
+## 13.16.0
+
+### Minor Changes
+
+- Add shared deserialization and build-result collection utilities. ([#15961](https://github.com/vercel/vercel/pull/15961))
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
+## 13.15.0
+
+### Minor Changes
+
+- [services] allow multiple v2beta triggers for a single Lambda when config is coming from services ([#15890](https://github.com/vercel/vercel/pull/15890))
+
+### Patch Changes
+
+- Add deserialization utilities ([#15927](https://github.com/vercel/vercel/pull/15927))
+
 ## 13.14.2
 
 ### Patch Changes

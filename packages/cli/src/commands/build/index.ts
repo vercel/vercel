@@ -34,6 +34,7 @@ import {
   type PackageJson,
   glob,
   type Service,
+  getInternalServiceCronPath,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
   isQueueTriggeredService,
@@ -50,7 +51,6 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
-  getInternalServiceCronPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -851,6 +851,7 @@ async function doBuild(
     detectedServices !== undefined && detectedServices.length > 0;
   const hasQueueServices =
     hasDetectedServices && detectedServices!.some(isQueueTriggeredService);
+  const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
@@ -1024,6 +1025,7 @@ async function doBuild(
                   typeof serviceWorkspace === 'string'
                     ? serviceWorkspace
                     : undefined,
+                schedule: service.schedule,
               },
             }
           : undefined),
@@ -1226,6 +1228,14 @@ async function doBuild(
         'output' in buildResult
       ) {
         attachQueueServiceTrigger(buildResult.output, service);
+      }
+
+      if (
+        service &&
+        isScheduleTriggeredService(service) &&
+        !('crons' in buildResult && buildResult.crons?.length)
+      ) {
+        synthesizedServiceCrons.push(...getServiceCrons([service]));
       }
 
       let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
@@ -1468,9 +1478,8 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const serviceCrons = getServiceCrons(detectedServices);
   const mergedCrons = mergeCrons(
-    [...(localConfig.crons || []), ...serviceCrons],
+    [...(localConfig.crons || []), ...synthesizedServiceCrons],
     buildResults.values()
   );
   const mergedWildcard = mergeWildcard(buildResults.values());
@@ -1874,7 +1883,11 @@ function getServiceCrons(services?: Service[]): Cron[] {
 
   const crons: Cron[] = [];
   for (const service of services) {
-    if (!isScheduleTriggeredService(service) || !service.schedule) {
+    if (
+      !isScheduleTriggeredService(service) ||
+      !service.schedule ||
+      service.schedule === '<dynamic>'
+    ) {
       continue;
     }
     const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
@@ -1890,7 +1903,6 @@ function getServiceCrons(services?: Service[]): Cron[] {
 
   return crons;
 }
-
 function mergeCrons(
   crons: BuildOutputConfig['crons'] = [],
   buildResults: Iterable<BuildResult | BuildOutputConfig>

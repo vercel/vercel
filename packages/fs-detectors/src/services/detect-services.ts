@@ -18,7 +18,7 @@ import {
   type ServicesRoutes,
 } from './types';
 import {
-  getInternalServiceCronPath,
+  getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
   isFrontendFramework,
@@ -387,19 +387,15 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
 
   const cronServices = services.filter(isScheduleTriggeredService);
   for (const service of cronServices) {
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    const cronPath = getInternalServiceCronPath(
-      service.name,
-      cronEntrypoint,
-      service.handlerFunction || 'cron'
-    );
+    const cronPrefix = getInternalServiceCronPathPrefix(service.name);
     const functionPath = getInternalServiceFunctionPath(service.name);
     crons.push({
-      src: `^${escapeRegex(cronPath)}$`,
+      src: `^${escapeRegex(cronPrefix)}/.*$`,
       dest: functionPath,
       check: true,
     });
   }
+
   return { hostRewrites, rewrites, defaults, crons, workers };
 }
 

@@ -311,6 +311,9 @@ importers:
       '@types/js-yaml':
         specifier: 3.12.1
         version: 3.12.1
+      '@types/mime-types':
+        specifier: 2.1.0
+        version: 2.1.0
       '@types/minimatch':
         specifier: ^5.1.2
         version: 5.1.2
@@ -380,6 +383,9 @@ importers:
       json5:
         specifier: 2.2.3
         version: 2.2.3
+      mime-types:
+        specifier: 2.1.28
+        version: 2.1.28
       minimatch:
         specifier: 3.1.2
         version: 3.1.2
@@ -1725,8 +1731,8 @@ importers:
         version: 1.5.0
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.18
-        version: 0.0.1-beta.18(next@16.1.6)
+        specifier: 0.0.1-beta.19
+        version: 0.0.1-beta.19(next@16.1.6)
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -6552,8 +6558,8 @@ packages:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  /@next-community/adapter-vercel@0.0.1-beta.18(next@16.1.6):
-    resolution: {integrity: sha512-s745YaepifWu0B3DnJ2YnQ50h6qc6MfK4/W3jiyn4+5xl+Q4R3zZPoVd/BJzXg65ZspFfoJ9xWxuqIYQ03pG+Q==}
+  /@next-community/adapter-vercel@0.0.1-beta.19(next@16.1.6):
+    resolution: {integrity: sha512-pZAAdgo3H8GOPfhKrEJjD6isz492aAzCLGzUcAUec5fi456A0rFhqxXLcrvVuQJ9dh+C9/MBip624xo1C52hGQ==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'
@@ -16540,6 +16546,11 @@ packages:
     engines: {node: '>= 0.6'}
     dev: true
 
+  /mime-db@1.45.0:
+    resolution: {integrity: sha512-CkqLUxUk15hofLoLyljJSrukZi8mAtgd+yE5uO4tqRZsdsAJKv0O+rFMhVDRJgozy+yG6md5KwuXhD4ocIoP+w==}
+    engines: {node: '>= 0.6'}
+    dev: true
+
   /mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
     engines: {node: '>= 0.6'}
@@ -16561,6 +16572,13 @@ packages:
     engines: {node: '>= 0.6'}
     dependencies:
       mime-db: 1.40.0
+    dev: true
+
+  /mime-types@2.1.28:
+    resolution: {integrity: sha512-0TO2yJ5YHYr7M2zzT7gDU1tbwHxEUWBCLt0lscSNpcdAfFyJOVEpRYNS7EXVcTLNj/25QO8gulHC5JtTzSE2UQ==}
+    engines: {node: '>= 0.6'}
+    dependencies:
+      mime-db: 1.45.0
     dev: true
 
   /mime-types@2.1.35:

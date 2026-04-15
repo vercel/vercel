@@ -5,6 +5,7 @@ describe('index', () => {
     expect(commands).toEqual(
       new Map([
         ['agent', 'agent'],
+        ['ai-gateway', 'ai-gateway'],
         ['alerts', 'alerts'],
         ['alias', 'alias'],
         ['aliases', 'alias'],

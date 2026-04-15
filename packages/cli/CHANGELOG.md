@@ -1,5 +1,77 @@
 # vercel
 
+## 51.3.0
+
+### Minor Changes
+
+- Add `vercel alerts inspect` to fetch a single alert group by id with linked project, explicit `--project`, or `--all` scope. ([#15850](https://github.com/vercel/vercel/pull/15850))
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
+### Patch Changes
+
+- Return 3xx responses directly in `client.fetch()` when `redirect: 'manual'` is passed, instead of entering the error/retry path. ([#15953](https://github.com/vercel/vercel/pull/15953))
+
+- Add JSON feature flag support to the CLI so flags can be created, updated, listed, inspected, and set with JSON variant values just like existing boolean, string, and number kinds. ([#15741](https://github.com/vercel/vercel/pull/15741))
+
+  This aligns the CLI with the recent API and dashboard changes for `json` flags, including parsing raw JSON inputs and preserving structured values in output.
+
+- Display case-insensitive feature flag rule comparisons correctly in the CLI. ([#15743](https://github.com/vercel/vercel/pull/15743))
+
+- Updated dependencies [[`86d1f5b3cbd520af2632d4a3d6a1f24557448c0e`](https://github.com/vercel/vercel/commit/86d1f5b3cbd520af2632d4a3d6a1f24557448c0e), [`1056be976b6ba9b42cc1e2ffe895d255ab6c9850`](https://github.com/vercel/vercel/commit/1056be976b6ba9b42cc1e2ffe895d255ab6c9850), [`c27eedaa1b0e3f6e3770b578f62e5463d82f06e0`](https://github.com/vercel/vercel/commit/c27eedaa1b0e3f6e3770b578f62e5463d82f06e0)]:
+  - @vercel/build-utils@13.16.0
+  - @vercel/python@6.32.0
+  - @vercel/backends@0.0.61
+  - @vercel/elysia@0.1.64
+  - @vercel/express@0.1.74
+  - @vercel/fastify@0.1.67
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.73
+  - @vercel/hono@0.2.67
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.47
+  - @vercel/nestjs@0.2.68
+  - @vercel/next@4.16.7
+  - @vercel/node@5.7.6
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.0
+  - @vercel/static-build@2.9.14
+
+## 51.2.1
+
+### Patch Changes
+
+- Add `ai-gateway api-keys create` command for creating AI Gateway API keys with optional quota limits ([#15744](https://github.com/vercel/vercel/pull/15744))
+
+- Improve `vercel blob list-stores` with `--json` and `--no-projects`, exclude non-blob stores when the API returns a `type` field, and show a richer table for non-TTY output while keeping linked-project filtering, `--all`, and interactive store selection on TTY. ([#14653](https://github.com/vercel/vercel/pull/14653))
+
+- Add a `project rename` command to rename projects from the CLI. ([#15918](https://github.com/vercel/vercel/pull/15918))
+
+- Updated dependencies [[`8b77cdcd71ba645df4eed52cdccde9a2cbb913f8`](https://github.com/vercel/vercel/commit/8b77cdcd71ba645df4eed52cdccde9a2cbb913f8), [`2d7d14db1c6448f716d1ccc30844b43f47e8e6ee`](https://github.com/vercel/vercel/commit/2d7d14db1c6448f716d1ccc30844b43f47e8e6ee), [`d731f1b69030ddcaa0b7f4f1854f79ea92671b1e`](https://github.com/vercel/vercel/commit/d731f1b69030ddcaa0b7f4f1854f79ea92671b1e), [`4e62f6c2204dd148643f86f140f0ae7995778017`](https://github.com/vercel/vercel/commit/4e62f6c2204dd148643f86f140f0ae7995778017), [`45c8d4f54cc831695375794964a29145860fa45b`](https://github.com/vercel/vercel/commit/45c8d4f54cc831695375794964a29145860fa45b), [`42a70e1e6318615bd420933f9cc978bed3a43936`](https://github.com/vercel/vercel/commit/42a70e1e6318615bd420933f9cc978bed3a43936)]:
+  - @vercel/backends@0.0.60
+  - @vercel/python@6.31.0
+  - @vercel/next@4.16.7
+  - @vercel/build-utils@13.15.0
+  - @vercel/elysia@0.1.63
+  - @vercel/express@0.1.73
+  - @vercel/fastify@0.1.66
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.72
+  - @vercel/hono@0.2.66
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.46
+  - @vercel/nestjs@0.2.67
+  - @vercel/node@5.7.5
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.0
+  - @vercel/static-build@2.9.13
+
 ## 51.2.0
 
 ### Minor Changes

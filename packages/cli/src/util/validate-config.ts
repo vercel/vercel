@@ -231,6 +231,11 @@ const serviceTopicsSchema = {
 };
 
 const serviceCommonProperties = {
+  root: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
   entrypoint: {
     type: 'string',
     minLength: 1,

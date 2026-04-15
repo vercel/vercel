@@ -42,6 +42,10 @@ vi.mock('../src/django', () => ({
   runDjangoCollectStatic: vi.fn(async () => null),
 }));
 
+vi.mock('execa', () => ({
+  default: vi.fn(),
+}));
+
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
   resolvePythonVersion,
@@ -63,6 +67,8 @@ import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob, download } from '@vercel/build-utils';
+import { getServiceCrons } from '../src/crons';
+import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(2);
@@ -1896,13 +1902,7 @@ describe('handlerFunction validation', () => {
       service: { type: 'job', trigger: 'schedule' },
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
-    if (!handler || !('data' in handler)) {
-      throw new Error('handler bootstrap not found');
-    }
-    const content = handler.data.toString();
-    expect(content).toContain('__VC_HANDLER_FUNC_NAME');
-    expect(content).toContain('sync_handler');
+    expect(result).toBeDefined();
   });
 
   it('builds successfully when handlerFunction exists as an async function', async () => {
@@ -1925,13 +1925,7 @@ describe('handlerFunction validation', () => {
       service: { type: 'job', trigger: 'schedule' },
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
-    if (!handler || !('data' in handler)) {
-      throw new Error('handler bootstrap not found');
-    }
-    const content = handler.data.toString();
-    expect(content).toContain('__VC_HANDLER_FUNC_NAME');
-    expect(content).toContain('async_handler');
+    expect(result).toBeDefined();
   });
 
   it('throws PYTHON_HANDLER_NOT_FOUND when handlerFunction does not exist', async () => {
@@ -2031,8 +2025,136 @@ describe('handlerFunction validation', () => {
       })
     ).rejects.toThrow(/Handler function "flask_app" not found in app\.py/);
   });
+});
 
-  it('does not set __VC_HANDLER_FUNC_NAME when handlerFunction is not configured', async () => {
+describe('cron service build result', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-cron-result-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('returns crons with correct path and schedule', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+  });
+
+  it('does not emit per-path cron rewrite routes (handled by generateServicesRoutes)', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    const cronRoutes = (v2result.routes as any[]).filter(
+      (r: any) => r.check && r.src?.includes('crons')
+    );
+    expect(cronRoutes).toHaveLength(0);
+  });
+
+  it('uses default handler name "cron" when no handlerFunction', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def handler():\n    pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '*/5 * * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/cron',
+        schedule: '*/5 * * * *',
+        resolvedHandler: 'jobs.cleanup',
+      },
+    ]);
+  });
+
+  it('does not return crons for non-cron services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'app = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'web', name: 'api' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toBeUndefined();
+  });
+
+  it('does not set __VC_CRON_ROUTES when not a cron service', async () => {
     const files = {
       'handler.py': new FileBlob({
         data: 'def app(environ, start_response): pass',
@@ -2056,7 +2178,181 @@ describe('handlerFunction validation', () => {
       throw new Error('handler bootstrap not found');
     }
     const content = handler.data.toString();
-    expect(content).not.toContain('__VC_HANDLER_FUNC_NAME');
+    expect(content).not.toContain('__VC_CRON_ROUTES');
+  });
+});
+
+describe('dynamic cron detection', () => {
+  const mockedExeca = vi.mocked(execa);
+
+  afterEach(() => {
+    mockedExeca.mockReset();
+  });
+
+  it('returns undefined for non-cron services', async () => {
+    const result = await getServiceCrons({
+      service: { type: 'web', name: 'api' },
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('returns static cron for non-dynamic schedule', async () => {
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'sync_handler',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+  });
+
+  it('calls python and returns dynamic cron entry', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [
+          {
+            module_function: 'jobs.cleanup:sync_handler',
+            schedule: '0 0 * * *',
+          },
+        ],
+      }),
+    } as any);
+
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'get_crons',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+
+    // Verify execa was called with the right args
+    expect(mockedExeca).toHaveBeenCalledWith(
+      '/usr/bin/python3',
+      ['-c', expect.any(String), 'jobs.cleanup', 'get_crons'],
+      { env: {}, cwd: '/tmp/test' }
+    );
+  });
+
+  it('throws if dynamic returns 0 entries', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({ entries: [] }),
+    } as any);
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/returned no entries/);
+  });
+
+  it('returns multiple dynamic cron entries', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [
+          { module_function: 'jobs.cleanup:sync', schedule: '0 0 * * *' },
+          { module_function: 'jobs.cleanup:daily', schedule: '0 6 * * *' },
+        ],
+      }),
+    } as any);
+
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'get_crons',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync',
+      },
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/daily',
+        schedule: '0 6 * * *',
+        resolvedHandler: 'jobs.cleanup:daily',
+      },
+    ]);
+  });
+
+  it('throws if handlerFunction is missing for dynamic', async () => {
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/get_crons/);
+  });
+
+  it('throws with structured error when python fails', async () => {
+    mockedExeca.mockRejectedValueOnce({
+      stdout: JSON.stringify({
+        error: "Failed to import module 'jobs.cleanup': No module named 'jobs'",
+      }),
+      stderr: '',
+    });
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/Failed to import module/);
+  });
+
+  it('throws if module:function lacks colon', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [{ module_function: 'no_colon_here', schedule: '0 0 * * *' }],
+      }),
+    } as any);
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/module:function/);
   });
 });
 
@@ -2605,7 +2901,11 @@ describe('custom install hooks', () => {
       'echo custom-install',
       expect.objectContaining({
         cwd: workPath,
-        env: expect.any(Object),
+        env: expect.objectContaining({
+          VIRTUAL_ENV: expect.any(String),
+          UV_PROJECT_ENVIRONMENT: expect.any(String),
+          UV_NO_DEV: 'true',
+        }),
       })
     );
   });
@@ -2980,6 +3280,8 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       const env = createVenvEnv(venvPath, process.env, cacheDir);
 
       expect(env.VIRTUAL_ENV).toBe(venvPath);
+      expect(env.UV_PROJECT_ENVIRONMENT).toBe(venvPath);
+      expect(env.UV_NO_DEV).toBe('true');
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);

@@ -52,6 +52,8 @@ export function createVenvEnv(
   const env: NodeJS.ProcessEnv = {
     ...getProtectedUvEnv(baseEnv, uvCacheDir),
     VIRTUAL_ENV: venvPath,
+    UV_PROJECT_ENVIRONMENT: venvPath,
+    UV_NO_DEV: 'true',
   };
   const binDir = getVenvBinDir(venvPath);
   const existingPath = env.PATH || process.env.PATH || '';
@@ -129,7 +131,8 @@ export async function ensureVenv({
 
   if (uvPath) {
     // --allow-existing allows uv to reuse a cached venv
-    const args = ['venv', venvPath, '--allow-existing'];
+    // --seed installs pip into the venv so custom install commands can use it
+    const args = ['venv', venvPath, '--allow-existing', '--seed'];
     // vc dev uses system python so we skip passing the python version to uv
     if (pythonVersion.major != null && pythonVersion.minor != null) {
       args.push('--python', `${pythonVersion.major}.${pythonVersion.minor}`);
