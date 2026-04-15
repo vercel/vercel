@@ -38,6 +38,12 @@ function writePnpmLock(dir: string, content: string): string {
   return lockPath;
 }
 
+function writeYarnLock(dir: string, content: string): string {
+  const lockPath = path.join(dir, 'yarn.lock');
+  fs.writeFileSync(lockPath, content);
+  return lockPath;
+}
+
 function readManifest(dir: string): any {
   return JSON.parse(fs.readFileSync(path.join(dir, DIAGNOSTICS_PATH), 'utf-8'));
 }
@@ -893,6 +899,288 @@ packages:
       cliType: 'pnpm',
       lockfilePath: lockPath,
       lockfileVersion: 6,
+    });
+
+    const names = readManifest(tempDir).dependencies.map((d: any) => d.name);
+    expect(names).toContain('real');
+    expect(names).not.toContain('local-pkg');
+  });
+});
+
+// ─── yarn v1 ─────────────────────────────────────────────────────────────────
+
+describe('generateProjectManifest — yarn v1', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  it('resolves direct and transitive deps', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.18.0' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+# yarn lockfile v1
+
+express@^4.18.0:
+  version "4.18.2"
+  resolved "https://registry.yarnpkg.com/express/-/express-4.18.2.tgz#abc"
+
+accepts@^1.3.7:
+  version "1.3.8"
+  resolved "https://registry.yarnpkg.com/accepts/-/accepts-1.3.8.tgz#def"
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    const express = dependencies.find((d: any) => d.name === 'express');
+    expect(express.type).toBe('direct');
+    expect(express.resolved).toBe('4.18.2');
+    expect(express.source).toBe('registry');
+    expect(express.sourceUrl).toBe('https://registry.yarnpkg.com');
+
+    const accepts = dependencies.find((d: any) => d.name === 'accepts');
+    expect(accepts.type).toBe('transitive');
+    expect(accepts.resolved).toBe('1.3.8');
+  });
+
+  it('handles @org/pkg namespaced packages', async () => {
+    writePackageJson(tempDir, { dependencies: { '@vercel/node': '^3.0.0' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+# yarn lockfile v1
+
+"@vercel/node@^3.0.0":
+  version "3.0.7"
+  resolved "https://registry.yarnpkg.com/@vercel/node/-/node-3.0.7.tgz#abc"
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies[0].name).toBe('@vercel/node');
+    expect(dependencies[0].resolved).toBe('3.0.7');
+  });
+
+  it('deduplicates multiple specifiers for the same package', async () => {
+    writePackageJson(tempDir, { dependencies: { foo: '^1.0.0' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+# yarn lockfile v1
+
+foo@^1.0.0, foo@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/foo/-/foo-1.1.0.tgz#abc"
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const fooEntries = readManifest(tempDir).dependencies.filter(
+      (d: any) => d.name === 'foo'
+    );
+    expect(fooEntries).toHaveLength(1);
+    expect(fooEntries[0].resolved).toBe('1.1.0');
+  });
+
+  it('classifies git-resolved packages', async () => {
+    writePackageJson(tempDir, { dependencies: { mylib: 'org/mylib' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+# yarn lockfile v1
+
+mylib@org/mylib:
+  version "1.2.3"
+  resolved "git+https://github.com/org/mylib.git#abc123"
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const dep = readManifest(tempDir).dependencies.find(
+      (d: any) => d.name === 'mylib'
+    );
+    expect(dep.source).toBe('git');
+    expect(dep.sourceUrl).toBe('https://github.com/org/mylib.git#abc123');
+  });
+
+  it('excludes file: resolved packages', async () => {
+    writePackageJson(tempDir, { dependencies: { real: '^1.0.0' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+# yarn lockfile v1
+
+real@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/real/-/real-1.0.0.tgz#abc"
+
+local-pkg@file:../local-pkg:
+  version "0.0.1"
+  resolved "file:../local-pkg"
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const names = readManifest(tempDir).dependencies.map((d: any) => d.name);
+    expect(names).toContain('real');
+    expect(names).not.toContain('local-pkg');
+  });
+});
+
+// ─── yarn berry ───────────────────────────────────────────────────────────────
+
+describe('generateProjectManifest — yarn berry', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  it('resolves direct and transitive deps', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.18.0' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+__metadata:
+  version: 8
+  cacheKey: 10c0
+
+"express@npm:^4.18.0":
+  version: 4.18.2
+  resolution: "express@npm:4.18.2"
+  languageName: node
+  linkType: hard
+
+"accepts@npm:^1.3.7":
+  version: 1.3.8
+  resolution: "accepts@npm:1.3.8"
+  languageName: node
+  linkType: hard
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 8,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    const express = dependencies.find((d: any) => d.name === 'express');
+    expect(express.type).toBe('direct');
+    expect(express.resolved).toBe('4.18.2');
+
+    const accepts = dependencies.find((d: any) => d.name === 'accepts');
+    expect(accepts.type).toBe('transitive');
+    expect(accepts.resolved).toBe('1.3.8');
+  });
+
+  it('handles @org/pkg namespaced packages', async () => {
+    writePackageJson(tempDir, { dependencies: { '@vercel/node': '^3.0.0' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+__metadata:
+  version: 8
+
+"@vercel/node@npm:^3.0.0":
+  version: 3.0.7
+  resolution: "@vercel/node@npm:3.0.7"
+  languageName: node
+  linkType: hard
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 8,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies[0].name).toBe('@vercel/node');
+    expect(dependencies[0].resolved).toBe('3.0.7');
+  });
+
+  it('excludes workspace packages (linkType: soft)', async () => {
+    writePackageJson(tempDir, { dependencies: { real: '^1.0.0' } });
+    const lockPath = writeYarnLock(
+      tempDir,
+      `\
+__metadata:
+  version: 8
+
+"real@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "real@npm:1.0.0"
+  languageName: node
+  linkType: hard
+
+"local-pkg@workspace:packages/local-pkg":
+  version: 0.0.0-use.local
+  resolution: "local-pkg@workspace:packages/local-pkg"
+  languageName: unknown
+  linkType: soft
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'yarn',
+      lockfilePath: lockPath,
+      lockfileVersion: 8,
     });
 
     const names = readManifest(tempDir).dependencies.map((d: any) => d.name);

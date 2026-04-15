@@ -121,24 +121,24 @@ function parseNpmLock(
   return lockMap;
 }
 
-function parsePnpmV9Key(key: string): { name: string; version: string } | null {
-  // Strip peer dep suffix: foo@1.2.3(react@18.0.0) → foo@1.2.3
-  const withoutPeers = key.replace(/\(.*\)$/, '');
-  if (withoutPeers.startsWith('@')) {
-    // Scoped: @scope/pkg@1.2.3 — find the @ after the initial one
-    const atIndex = withoutPeers.indexOf('@', 1);
-    if (atIndex === -1) return null;
-    return {
-      name: withoutPeers.slice(0, atIndex),
-      version: withoutPeers.slice(atIndex + 1),
-    };
+// Shared: extract package name from a versioned specifier, stripping any peer
+// dep suffix first. Works for: foo@1.2.3, @scope/pkg@1.2.3, foo@1.2.3(react@18),
+// express@npm:^4.18.0 (yarn berry), @scope/pkg@npm:^1.0.0.
+function extractPackageName(spec: string): string | null {
+  const s = spec.replace(/\(.*\)$/, ''); // strip peer dep suffix
+  if (s.startsWith('@')) {
+    const i = s.indexOf('@', 1);
+    return i === -1 ? null : s.slice(0, i);
   }
-  const atIndex = withoutPeers.lastIndexOf('@');
-  if (atIndex === -1) return null;
-  return {
-    name: withoutPeers.slice(0, atIndex),
-    version: withoutPeers.slice(atIndex + 1),
-  };
+  const i = s.lastIndexOf('@');
+  return i <= 0 ? null : s.slice(0, i);
+}
+
+function parsePnpmV9Key(key: string): { name: string; version: string } | null {
+  const name = extractPackageName(key);
+  if (!name) return null;
+  const withoutPeers = key.replace(/\(.*\)$/, '');
+  return { name, version: withoutPeers.slice(name.length + 1) };
 }
 
 function parsePnpmV6Key(key: string): { name: string; version: string } | null {
@@ -216,6 +216,71 @@ function parsePnpmLock(
   return lockMap;
 }
 
+function parseYarnLock(
+  content: string,
+  lockfileVersion: number | undefined
+): Map<string, LockEntry> {
+  const lockMap = new Map<string, LockEntry>();
+  const isBerry = (lockfileVersion ?? 1) >= 2;
+
+  for (const block of content.split(/\n\n+/)) {
+    const trimmed = block.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const firstLine = trimmed.split('\n')[0];
+    if (!firstLine.endsWith(':')) continue;
+    if (firstLine === '__metadata:') continue;
+
+    // Berry: skip workspace/linked packages
+    if (isBerry && /\blinkType:\s+soft\b/.test(block)) continue;
+
+    // Extract resolved version
+    let version: string | undefined;
+    if (isBerry) {
+      const m = block.match(/^\s+version:\s+(.+)$/m);
+      if (!m) continue;
+      version = m[1].trim().replace(/^["']|["']$/g, '');
+    } else {
+      const m = block.match(/^\s+version\s+"([^"]+)"/m);
+      if (!m) continue;
+      version = m[1];
+    }
+
+    // Extract source from resolved URL (v1 only — berry has no registry URL)
+    let source: string | undefined;
+    let sourceUrl: string | undefined;
+    if (!isBerry) {
+      const m = block.match(/^\s+resolved\s+"([^"]+)/m);
+      if (m) {
+        if (m[1].startsWith('file:')) continue; // local package, skip
+        const classified = classifySource(m[1]);
+        source = classified.source;
+        sourceUrl = classified.sourceUrl;
+      }
+    }
+
+    // Get package name from the first specifier in the header
+    const specifiers = firstLine
+      .slice(0, -1) // strip trailing ':'
+      .split(',')
+      .map(s => s.trim().replace(/^"|"$/g, ''));
+
+    let name: string | null = null;
+    for (const spec of specifiers) {
+      name = extractPackageName(spec);
+      if (name) break;
+    }
+    if (!name || lockMap.has(name)) continue;
+
+    const lockEntry: LockEntry = { resolved: version, scopes: ['prod'] };
+    if (source) lockEntry.source = source;
+    if (sourceUrl) lockEntry.sourceUrl = sourceUrl;
+    lockMap.set(name, lockEntry);
+  }
+
+  return lockMap;
+}
+
 async function parseLockfile(
   cliType: CliType,
   lockfilePath: string,
@@ -227,6 +292,8 @@ async function parseLockfile(
       return parseNpmLock(content, lockfileVersion);
     case 'pnpm':
       return parsePnpmLock(content, lockfileVersion);
+    case 'yarn':
+      return parseYarnLock(content, lockfileVersion);
     default:
       return new Map();
   }
