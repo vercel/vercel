@@ -4,7 +4,7 @@
   "paths": {
     "/v1/test": {
       "get": {
-        "x-vercel-cli": { "supported": true, "aliases": ["first"] },
+        "x-vercel-cli": { "supportedSubcommands": true, "aliases": ["first"] },
         "operationId": "testOp",
         "tags": ["test-tag"],
         "summary": "First operation",
@@ -66,7 +66,7 @@
     },
     "/v1/projects/{projectId}/things": {
       "get": {
-        "x-vercel-cli": { "supported": true },
+        "x-vercel-cli": { "supportedSubcommands": true },
         "operationId": "projectThing",
         "tags": ["test-tag"],
         "summary": "Path and query params",

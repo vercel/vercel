@@ -66,6 +66,7 @@ async function executeSingleRequest(
       body: config.body,
       headers: config.headers,
       json: false,
+      ...(options?.useCurrentTeam === false ? { useCurrentTeam: false } : {}),
     });
 
     return handleResponse(client, response, flags, options);
@@ -98,6 +99,7 @@ async function executePaginatedRequest(
         method: config.method,
         body: config.body,
         headers: config.headers,
+        ...(options?.useCurrentTeam === false ? { useCurrentTeam: false } : {}),
       }
     )) {
       const data = extractPaginatedData(page);

@@ -80,6 +80,19 @@ export default async function api(client: Client): Promise<number> {
     }
 
     const secondArg = args[2];
+
+    if (!secondArg) {
+      telemetryClient.trackCliSubcommandList();
+      if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+      if (lsFlags['--format'])
+        telemetryClient.trackCliOptionFormat(lsFlags['--format']);
+      return listEndpoints(
+        client,
+        lsFlags['--refresh'] ?? false,
+        lsFlags['--format'] ?? 'table'
+      );
+    }
+
     const openApiForList = new OpenApiCache();
     const listSpecLoaded = await openApiForList.loadWithSpinner(
       lsFlags['--refresh'] ?? false
@@ -89,7 +102,7 @@ export default async function api(client: Client): Promise<number> {
       return 1;
     }
 
-    if (secondArg && openApiForList.findEndpointsByTag(secondArg).length > 0) {
+    if (openApiForList.findEndpointsByTag(secondArg).length > 0) {
       const openapiTelemetryClient = new OpenapiTelemetryClient({
         opts: { store: client.telemetryEventStore },
       });
@@ -101,20 +114,8 @@ export default async function api(client: Client): Promise<number> {
       );
     }
 
-    if (secondArg) {
-      output.error(buildUnknownTagMessage(openApiForList, secondArg));
-      return 1;
-    }
-
-    telemetryClient.trackCliSubcommandList();
-    if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
-    if (lsFlags['--format'])
-      telemetryClient.trackCliOptionFormat(lsFlags['--format']);
-    return listEndpoints(
-      client,
-      lsFlags['--refresh'] ?? false,
-      lsFlags['--format'] ?? 'table'
-    );
+    output.error(buildUnknownTagMessage(openApiForList, secondArg));
+    return 1;
   }
 
   // Handle 'api --help' (no subcommand)

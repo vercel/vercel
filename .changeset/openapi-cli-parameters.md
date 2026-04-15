@@ -13,3 +13,9 @@ List/describe tables no longer cap tag and operation column widths; the descript
 Single-operation `--describe` uses the same tag | operation | args | description row as tag-wide listings (plus response schema when present).
 
 In a TTY, missing path positionals and required `--…` query flags for tag/operation invocations are prompted interactively (aligned with path-based `vercel api`).
+
+Tag mode uses `x-vercel-cli.supportedSubcommands: true` in the OpenAPI document; `x-vercel-cli.supported: true` remains accepted as a legacy alias. `x-vercel-cli.supportedProduction` is reserved for future top-level CLI commands.
+
+The CLI loads the published OpenAPI document from `https://openapi.vercel.sh/` (with an on-disk cache).
+
+Tag-mode requests only append the current team’s `teamId` query param when the operation declares `teamId` or `slug` as query parameters in the OpenAPI document, avoiding 400s on endpoints that reject unsolicited scope params.

@@ -6,6 +6,7 @@ import type { ExecuteApiRequestOptions } from '../api/types';
 import { buildRequest, generateCurlCommand } from '../api/request-builder';
 import { API_BASE_URL } from '../api/constants';
 import { OpenApiCache, foldNamingStyle } from '../../util/openapi';
+import { operationDeclaresTeamOrSlugQueryParam } from '../../util/openapi/openapi-operation-cli';
 import output from '../../output-manager';
 import type { ParsedFlags } from '../api/types';
 import {
@@ -34,7 +35,7 @@ export function buildUnknownTagMessage(
   const lines = [`No operations found for tag ${JSON.stringify(tag)}.`];
   if (openApi.getCliSupportedEndpoints().length === 0) {
     lines.push(
-      'No operations are opted in for this mode. Add `x-vercel-cli.supported: true` to operations in the OpenAPI document.'
+      'No operations are opted in for this mode. Add `x-vercel-cli.supportedSubcommands: true` (or legacy `supported: true`) to operations in the OpenAPI document.'
     );
     return lines.join(' ');
   }
@@ -118,7 +119,7 @@ export async function runOpenapiCli(
   if (wantsAllTagsList) {
     if (openApi.getCliSupportedEndpoints().length === 0) {
       output.error(
-        'No operations are opted in. Add `x-vercel-cli: { "supported": true }` to operations in the OpenAPI document.'
+        'No operations are opted in. Add `x-vercel-cli: { "supportedSubcommands": true }` (or legacy `"supported": true`) to operations in the OpenAPI document.'
       );
       return 1;
     }
@@ -132,7 +133,7 @@ export async function runOpenapiCli(
   if (isExplicitList && second) {
     if (openApi.getCliSupportedEndpoints().length === 0) {
       output.error(
-        'No operations are opted in. Add `x-vercel-cli: { "supported": true }` to operations in the OpenAPI document.'
+        'No operations are opted in. Add `x-vercel-cli: { "supportedSubcommands": true }` (or legacy `"supported": true`) to operations in the OpenAPI document.'
       );
       return 1;
     }
@@ -170,7 +171,7 @@ export async function runOpenapiCli(
     const raw = openApi.findEndpointByTagAndOperationId(tag, operationId);
     if (raw && !raw.vercelCliSupported) {
       output.error(
-        `Operation "${operationId}" exists in the OpenAPI document but is not opted in. Add "x-vercel-cli": { "supported": true } to this operation.`
+        `Operation "${operationId}" exists in the OpenAPI document but is not opted in. Add "x-vercel-cli": { "supportedSubcommands": true } (or legacy "supported": true) to this operation.`
       );
       return 1;
     }
@@ -247,6 +248,7 @@ export async function runOpenapiCli(
 
   const tableOpts: ExecuteApiRequestOptions = {
     vercelCliTable: openApi.getVercelCliTableDisplay(endpoint),
+    useCurrentTeam: operationDeclaresTeamOrSlugQueryParam(endpoint),
   };
   return executeApiRequest(client, resolvedPath, finalFlags, tableOpts);
 }

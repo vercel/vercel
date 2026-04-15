@@ -28,8 +28,18 @@ export interface PathItem {
  */
 export interface VercelCliOperationExtension {
   /**
-   * Opt this operation into `vercel openapi` (list, describe, invoke). Operations
-   * without `supported: true` are ignored by the openapi command.
+   * Opt this operation into `vercel api` / `vercel openapi` tag subcommands (list,
+   * describe, invoke under `vercel api <tag> <operationId>`).
+   */
+  supportedSubcommands?: boolean;
+  /**
+   * Reserved for future top-level `vercel <command>` wiring (not nested under
+   * `vercel api`). Ignored until implemented.
+   */
+  supportedProduction?: boolean;
+  /**
+   * @deprecated Prefer `supportedSubcommands`. When `true`, same as
+   * `supportedSubcommands: true`.
    */
   supported?: boolean;
   /**
@@ -150,7 +160,10 @@ export interface EndpointInfo {
   requestBody?: RequestBody;
   /** HTTP status code → response (for documentation / `--describe`) */
   responses?: Record<string, Response>;
-  /** True when the operation has `x-vercel-cli.supported: true` in the OpenAPI document. */
+  /**
+   * True when the operation opts into `vercel api` tag mode (`x-vercel-cli.supportedSubcommands`,
+   * or legacy `x-vercel-cli.supported`).
+   */
   vercelCliSupported: boolean;
   /** `x-vercel-cli.aliases` from the OpenAPI document (trimmed, non-empty). */
   vercelCliAliases: string[];

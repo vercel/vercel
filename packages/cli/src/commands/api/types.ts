@@ -57,4 +57,9 @@ export interface PromptResult {
 /** Optional behavior for `executeApiRequest` (e.g. OpenAPI-driven table output). */
 export interface ExecuteApiRequestOptions {
   vercelCliTable?: VercelCliTableDisplay | null;
+  /**
+   * When false, do not append `teamId` from the current team scope to the request URL.
+   * Used for OpenAPI operations that reject unsolicited scope query params.
+   */
+  useCurrentTeam?: boolean;
 }

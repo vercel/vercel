@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
@@ -9,15 +10,23 @@ const minimalOpenApiPath = join(
   __dirname,
   '../../../fixtures/unit/openapi/minimal-openapi.json'
 );
+const minimalOpenApiJson = readFileSync(minimalOpenApiPath, 'utf-8');
 
 describe('openapi', () => {
   beforeEach(() => {
-    vi.stubEnv('VERCEL_OPENAPI_SPEC_PATH', minimalOpenApiPath);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        text: async () => minimalOpenApiJson,
+      }))
+    );
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
-    vi.unstubAllEnvs();
   });
 
   describe('--help', () => {
@@ -136,7 +145,6 @@ describe('openapi', () => {
         ['openapi', 'ls', '--refresh'],
       ] as const) {
         client.reset();
-        vi.stubEnv('VERCEL_OPENAPI_SPEC_PATH', minimalOpenApiPath);
         client.setArgv(...argv);
         await openapi(client);
         outputs.push(client.stdout.getFullOutput());

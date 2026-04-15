@@ -5,7 +5,7 @@ export const openapiCommand = {
   name: 'openapi',
   aliases: [],
   description:
-    'Same behavior as `vercel api` when the first argument matches an opted-in OpenAPI tag (alias for tag-based usage). Prefer `vercel api <tag> [<operationId>]`. Only operations with `x-vercel-cli.supported: true` are listed or invokable. Use `x-vercel-cli.aliases` for short names (e.g. `list` for `getProjects`). Path parameters are positional values after `<operationId>` (in `{path}` order); query parameters use `--kebab-case` flags (see `x-vercel-cli.kind` on parameters: `argument` | `option`, with defaults by `in: path` / `in: query`). Tag and operation names match case-insensitively and across camelCase, kebab-case, and snake_case.',
+    'Same behavior as `vercel api` when the first argument matches an opted-in OpenAPI tag (alias for tag-based usage). Prefer `vercel api <tag> [<operationId>]`. Only operations with `x-vercel-cli.supportedSubcommands: true` (or legacy `supported: true`) are listed or invokable. Use `x-vercel-cli.aliases` for short names (e.g. `list` for `getProjects`). Path parameters are positional values after `<operationId>` (in `{path}` order); query parameters use `--kebab-case` flags (see `x-vercel-cli.kind` on parameters: `argument` | `option`, with defaults by `in: path` / `in: query`). Tag and operation names match case-insensitively and across camelCase, kebab-case, and snake_case.',
   arguments: [
     {
       name: 'tag',

@@ -1,14 +1,8 @@
 /**
- * URL for the Vercel OpenAPI specification
+ * Published OpenAPI document URL. The CLI fetches this (with a disk cache) for
+ * `vercel api`, `vercel openapi`, interactive endpoint search, and webhooks.
  */
 export const OPENAPI_URL = 'https://openapi.vercel.sh/';
-
-/**
- * When set, the CLI loads the OpenAPI document from this file path instead of
- * fetching {@link OPENAPI_URL} (skips network and the global on-disk cache).
- * Use for local iteration (e.g. `export VERCEL_OPENAPI_SPEC_PATH=~/code/vercel/openapi.json`).
- */
-export const VERCEL_OPENAPI_SPEC_PATH = process.env.VERCEL_OPENAPI_SPEC_PATH;
 
 /**
  * Filename for the cached OpenAPI spec

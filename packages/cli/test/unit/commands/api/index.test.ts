@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { describe, expect, it, afterEach, vi, beforeEach } from 'vitest';
@@ -9,9 +10,22 @@ const minimalOpenApiPath = join(
   __dirname,
   '../../../fixtures/unit/openapi/minimal-openapi.json'
 );
+const minimalOpenApiJson = readFileSync(minimalOpenApiPath, 'utf-8');
 
 describe('api', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        text: async () => minimalOpenApiJson,
+      }))
+    );
+  });
+
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
@@ -285,14 +299,6 @@ describe('api', () => {
   });
 
   describe('OpenAPI CLI tag routing', () => {
-    beforeEach(() => {
-      vi.stubEnv('VERCEL_OPENAPI_SPEC_PATH', minimalOpenApiPath);
-    });
-
-    afterEach(() => {
-      vi.unstubAllEnvs();
-    });
-
     it('delegates opted-in tag and operation to OpenAPI resolution', async () => {
       client.setArgv('api', 'test-tag', 'testOp', '--describe', '--refresh');
       const exitCode = await api(client);

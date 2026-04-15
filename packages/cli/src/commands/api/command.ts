@@ -32,7 +32,7 @@ export const apiCommand = {
   name: 'api',
   aliases: [],
   description:
-    'Make authenticated HTTP requests to the Vercel API. When the first argument is an OpenAPI tag with opted-in operations (`x-vercel-cli.supported: true`), commands are resolved by tag and operationId (see `vercel openapi`); otherwise the first argument is treated as an API path starting with `/`.',
+    'Make authenticated HTTP requests to the Vercel API. When the first argument is an OpenAPI tag with opted-in operations (`x-vercel-cli.supportedSubcommands`, or legacy `supported`), commands are resolved by tag and operationId (see `vercel openapi`); otherwise the first argument is treated as an API path starting with `/`.',
   arguments: [
     {
       name: 'endpoint',

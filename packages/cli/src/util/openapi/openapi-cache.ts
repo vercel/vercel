@@ -1,6 +1,5 @@
-import { readFile } from 'fs/promises';
 import output from '../../output-manager';
-import { resolveOpenApiSpecPathForCli } from './resolve-openapi-spec-path';
+import { readPublicOpenApiSpecFromCacheOrNetwork } from './fetch-public-openapi-spec';
 import type {
   OpenApiSpec,
   EndpointInfo,
@@ -22,6 +21,8 @@ import { VERCEL_CLI_ROOT_DISPLAY_KEY } from './constants';
  * const endpoints = cache.getEndpoints();
  * const bodyFields = cache.getBodyFields(endpoint);
  * ```
+ *
+ * Loads from the published spec URL (with disk cache).
  */
 export class OpenApiCache {
   private spec: OpenApiSpec | null = null;
@@ -34,34 +35,25 @@ export class OpenApiCache {
   }
 
   /**
-   * Load the OpenAPI spec from disk (never from openapi.vercel.sh).
-   * Resolution order: `VERCEL_OPENAPI_SPEC_PATH`, `openapi.json` walking
-   * up from `process.cwd()`, then repo-root `openapi.json` next to this package.
-   * `forceRefresh` is kept for API compatibility and always re-reads the file.
+   * Load the OpenAPI document from the published URL (with disk cache).
    */
   async load(forceRefresh = false): Promise<boolean> {
-    void forceRefresh;
-    const resolvedPath = resolveOpenApiSpecPathForCli();
-    if (!resolvedPath) {
-      output.debug(
-        'No openapi.json found. Set VERCEL_OPENAPI_SPEC_PATH or run from a checkout whose root contains openapi.json.'
-      );
+    const result = await readPublicOpenApiSpecFromCacheOrNetwork(forceRefresh);
+    if ('error' in result) {
+      output.debug(result.error);
       return false;
     }
     try {
-      output.debug(`Loading OpenAPI spec from ${resolvedPath}`);
-      const raw = await readFile(resolvedPath, 'utf-8');
-      this.spec = JSON.parse(raw) as OpenApiSpec;
+      this.spec = JSON.parse(result.raw) as OpenApiSpec;
       return true;
     } catch (err) {
-      output.debug(`Failed to load OpenAPI spec: ${err}`);
+      output.debug(`Failed to parse OpenAPI spec: ${err}`);
       return false;
     }
   }
 
   /**
    * Load the OpenAPI spec with spinner UI.
-   * Returns true if successful, false otherwise.
    */
   async loadWithSpinner(forceRefresh = false): Promise<boolean> {
     output.spinner(
@@ -83,7 +75,8 @@ export class OpenApiCache {
   }
 
   /**
-   * Endpoints with `x-vercel-cli.supported: true` on the operation (for `vercel openapi`).
+   * Endpoints with `x-vercel-cli.supportedSubcommands: true` (or legacy `supported: true`)
+   * on the operation (for `vercel api` / `vercel openapi` tag mode).
    */
   getCliSupportedEndpoints(): EndpointInfo[] {
     return this.getEndpoints().filter(ep => ep.vercelCliSupported);
@@ -146,7 +139,7 @@ export class OpenApiCache {
 
   /**
    * Find an operation by tag and `operationId` that is opted into `vercel openapi`
-   * (`x-vercel-cli.supported: true`).
+   * (`x-vercel-cli.supportedSubcommands` or legacy `supported`).
    */
   findByTagAndOperationId(
     tag: string,
@@ -188,7 +181,7 @@ export class OpenApiCache {
   /**
    * All operations that list `tag` in `tags`, sorted by operationId then path.
    * Matching is case-insensitive and treats camel / kebab / snake as equivalent.
-   * Only operations with `x-vercel-cli.supported: true` are included (for `vercel openapi`).
+   * Only operations opted in via `supportedSubcommands` (or legacy `supported`) are included.
    */
   findEndpointsByTag(tag: string): EndpointInfo[] {
     const list = this.getCliSupportedEndpoints().filter(ep =>
@@ -806,7 +799,14 @@ export class OpenApiCache {
   }
 
   private isVercelCliOperationSupported(operation: Operation): boolean {
-    return operation['x-vercel-cli']?.supported === true;
+    const ext = operation['x-vercel-cli'];
+    if (!ext) {
+      return false;
+    }
+    return (
+      ext.supportedSubcommands === true ||
+      ext.supported === true
+    );
   }
 
   private normalizeVercelCliAliases(operation: Operation): string[] {

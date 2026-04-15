@@ -4,6 +4,7 @@ import {
   composeOpenapiInvocationUrl,
   extractBracePathParamNames,
   getOpenapiQueryOptionParameters,
+  operationDeclaresTeamOrSlugQueryParam,
   parameterNameToCliOptionFlag,
   parseOpenapiOptionFlagTokens,
   resolveOpenapiInvocationUrl,
@@ -12,6 +13,40 @@ import {
 import type { EndpointInfo } from '../../../../src/util/openapi/types';
 
 describe('openapi-operation-cli', () => {
+  it('operationDeclaresTeamOrSlugQueryParam detects teamId/slug query params', () => {
+    const withTeam: EndpointInfo = {
+      path: '/x',
+      method: 'GET',
+      summary: '',
+      description: '',
+      operationId: 'a',
+      tags: [],
+      parameters: [
+        {
+          name: 'teamId',
+          in: 'query',
+          schema: { type: 'string' },
+        },
+      ],
+      responses: {},
+      vercelCliSupported: true,
+      vercelCliAliases: [],
+    };
+    expect(operationDeclaresTeamOrSlugQueryParam(withTeam)).toBe(true);
+
+    const noScope: EndpointInfo = {
+      ...withTeam,
+      parameters: [
+        {
+          name: 'limit',
+          in: 'query',
+          schema: { type: 'number' },
+        },
+      ],
+    };
+    expect(operationDeclaresTeamOrSlugQueryParam(noScope)).toBe(false);
+  });
+
   it('extractBracePathParamNames preserves template order', () => {
     expect(extractBracePathParamNames('/v1/{a}/{b}/x')).toEqual(['a', 'b']);
   });

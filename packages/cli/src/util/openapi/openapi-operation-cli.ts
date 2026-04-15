@@ -25,6 +25,21 @@ export function getParameterCliKind(param: Parameter): 'argument' | 'option' {
   return 'option';
 }
 
+/**
+ * True when the operation documents `teamId` or `slug` as query parameters.
+ * Used to decide whether the CLI may append scope query params (some endpoints
+ * return 400 if `teamId`/`slug` are present but not supported).
+ */
+export function operationDeclaresTeamOrSlugQueryParam(
+  endpoint: EndpointInfo
+): boolean {
+  return endpoint.parameters.some(
+    p =>
+      p.in === 'query' &&
+      (p.name === 'teamId' || p.name === 'slug')
+  );
+}
+
 /** CLI flag segment for an OpenAPI parameter name (e.g. `teamId` → `team-id`). */
 export function parameterNameToCliOptionFlag(paramName: string): string {
   return operationIdToKebabCase(paramName);
