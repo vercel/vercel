@@ -36,6 +36,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
@@ -309,6 +311,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
@@ -330,6 +334,15 @@ jobs:
           version: '0.10.11'
 
       - run: pnpm install
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.workflow }}-${{ runner.os }}-${{ matrix.packageName }}-${{ matrix.scriptName }}-${{ matrix.nodeVersion }}-${{ github.event.pull_request.base.sha }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.workflow }}-${{ runner.os }}-${{ matrix.packageName }}-${{ matrix.scriptName }}-${{ matrix.nodeVersion }}-${{ github.event.pull_request.base.sha }}-
+            turbo-${{ github.workflow }}-${{ runner.os }}-${{ matrix.packageName }}-${{ matrix.scriptName }}-${{ matrix.nodeVersion }}-
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
