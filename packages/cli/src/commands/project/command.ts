@@ -506,6 +506,43 @@ export const webAnalyticsSubcommand = {
   ],
 } as const;
 
+export const transferSubcommand = {
+  name: 'transfer',
+  aliases: [],
+  description: 'Manage project transfer requests',
+  arguments: [
+    { name: 'action', required: true },
+    { name: 'value', required: false },
+  ],
+  options: [
+    formatOption,
+    yesOption,
+    {
+      name: 'callback-url',
+      shorthand: null,
+      type: String,
+      argument: 'URL',
+      description:
+        'Optional callback URL for transfer request notifications (request action only).',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a transfer request for a project',
+      value: `${packageName} project transfer request my-project`,
+    },
+    {
+      name: 'Accept a transfer request code',
+      value: `${packageName} project transfer accept <code> --yes`,
+    },
+    {
+      name: 'Preflight resource transfer checks',
+      value: `${packageName} project transfer preflight <code>`,
+    },
+  ],
+} as const;
+
 export const speedInsightsSubcommand = {
   name: 'speed-insights',
   aliases: [],
@@ -547,6 +584,7 @@ export const projectCommand = {
     membersSubcommand,
     accessGroupsSubcommand,
     protectionSubcommand,
+    transferSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
     renameSubcommand,
