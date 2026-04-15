@@ -1,12 +1,8 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import api from '../../../../src/commands/api';
 
 describe('api', () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe('--help', () => {
     it('prints help message', async () => {
       client.setArgv('api', '--help');

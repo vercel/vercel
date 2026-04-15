@@ -37,10 +37,6 @@ export const apiCommand = {
       name: 'endpoint',
       required: false,
     },
-    {
-      name: 'operationId',
-      required: false,
-    },
   ],
   subcommands: [listSubcommand],
   options: [
@@ -51,7 +47,7 @@ export const apiCommand = {
       argument: 'METHOD',
       deprecated: false,
       description:
-        'HTTP method (GET, POST, PUT, PATCH, DELETE). Defaults to GET, or POST if body is provided. Not needed when using tag + operationId (method comes from the OpenAPI operation)',
+        'HTTP method (GET, POST, PUT, PATCH, DELETE). Defaults to GET, or POST if body is provided',
     },
     {
       name: 'field',
@@ -60,7 +56,7 @@ export const apiCommand = {
       argument: 'KEY=VALUE',
       deprecated: false,
       description:
-        'Add a typed option (numbers, booleans parsed). Use @file for file contents. With tag + operationId, key=value pairs can be passed positionally without -F',
+        'Add a typed parameter (numbers, booleans parsed). Use @file for file contents',
     },
     {
       name: 'raw-field',
@@ -150,10 +146,6 @@ export const apiCommand = {
     {
       name: 'Get current user information',
       value: `${packageName} api /v2/user`,
-    },
-    {
-      name: 'Get current user by OpenAPI tag and operationId',
-      value: `${packageName} api user getAuthUser`,
     },
     {
       name: 'List projects with team scope',
