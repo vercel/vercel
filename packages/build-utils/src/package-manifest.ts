@@ -24,6 +24,7 @@ export interface PackageManifest {
   dependencies: PackageManifestDependency[];
 }
 
+export const MANIFEST_VERSION = '20260304';
 export const MANIFEST_FILENAME = 'package-manifest.json';
 
 export function manifestPath(runtime: string): string {

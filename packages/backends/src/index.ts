@@ -159,7 +159,6 @@ export const build: BuildV2 = async args => {
     try {
       await generateProjectManifest({
         workPath: args.workPath,
-        entrypointDir: downloadResult.entrypointFsDirname,
         nodeVersion,
         cliType: downloadResult.cliType,
         lockfilePath: downloadResult.lockfilePath,

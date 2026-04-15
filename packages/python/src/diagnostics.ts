@@ -2,6 +2,7 @@ import fs from 'fs';
 import {
   writeProjectManifest,
   createDiagnostics,
+  MANIFEST_VERSION,
   type PackageManifest,
   type PackageManifestDependency,
 } from '@vercel/build-utils';
@@ -16,8 +17,6 @@ import {
 } from '@vercel/python-analysis';
 import type { PythonVersion } from './version';
 import { pythonVersionString } from './version';
-
-const MANIFEST_VERSION = '20260304';
 
 function isDependencyGroupInclude(
   entry: DependencyGroupEntry
