@@ -16,6 +16,7 @@ import getOidcToken from './token';
 import speedInsights from './speed-insights';
 import webAnalytics from './web-analytics';
 import protection from './protection';
+import transfer from './transfer';
 import {
   accessGroupsSubcommand,
   addSubcommand,
@@ -30,6 +31,7 @@ import {
   removeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
+  transferSubcommand,
   webAnalyticsSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -52,6 +54,7 @@ const COMMAND_CONFIG = {
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
   webAnalytics: getCommandAliases(webAnalyticsSubcommand),
+  transfer: getCommandAliases(transferSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -186,6 +189,12 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandToken(subcommandOriginal);
       return getOidcToken(client, args);
+    case 'transfer':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(transferSubcommand);
+      }
+      return transfer(client, args);
     case 'rename':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
