@@ -247,6 +247,7 @@ export default async function logs(client: Client) {
   const queryOption = parsedArguments.flags['--query'];
   const searchOption = parsedArguments.flags['--search'];
   const requestIdOption = parsedArguments.flags['--request-id'];
+  const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
 
   // Implicit --follow when deployment is specified (for backwards compatibility)
@@ -271,6 +272,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionSearch(searchOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
+  telemetry.trackCliFlagExpand(expandOption);
   telemetry.trackCliOptionBranch(branchFlagValue);
 
   if (followOption) {
@@ -577,6 +579,17 @@ export default async function logs(client: Client) {
           message: normalizeLogMessage(message.message),
         }));
 
+        if (expandOption) {
+          return [
+            {
+              ...sharedRowData,
+              level: log.level,
+              message: normalizeLogMessage(log.message),
+              messageTruncated: log.messageTruncated,
+            },
+          ];
+        }
+
         if (normalizedLogs.length === 0) {
           return [
             {
@@ -620,32 +633,46 @@ export default async function logs(client: Client) {
         },
       ];
 
-      const columns: ColumnDef<RowData>[] = [
-        ...baseColumns,
-        {
-          label: 'STATUS',
-          getValue: row => row.status,
-          format: (padded, row) =>
-            row.statusCode <= 0
-              ? chalk.gray(padded)
-              : colorizeStatus(padded, row.statusCode),
-        },
-        {
-          label: 'MESSAGE',
-          width: 'stretch',
-          getValue: row => row.message || '(no message)',
-          format: (padded, row) =>
-            row.message
-              ? colorizeMessage(padded, row.level)
-              : chalk.dim(padded),
-        },
-      ];
+      const columns: ColumnDef<RowData>[] = expandOption
+        ? baseColumns
+        : [
+            ...baseColumns,
+            {
+              label: 'STATUS',
+              getValue: row => row.status,
+              format: (padded, row) =>
+                row.statusCode <= 0
+                  ? chalk.gray(padded)
+                  : colorizeStatus(padded, row.statusCode),
+            },
+            {
+              label: 'MESSAGE',
+              width: 'stretch',
+              getValue: row => row.message || '(no message)',
+              format: (padded, row) =>
+                row.message
+                  ? colorizeMessage(padded, row.level)
+                  : chalk.dim(padded),
+            },
+          ];
 
       const formatted = table({
         columns,
         rows: rowData,
         tableWidth: terminalWidth,
         formatHeader: header => chalk.dim(header),
+        formatRow: expandOption
+          ? (rowStr, row) => {
+              if (row.message) {
+                const coloredMessage = colorizeMessage(row.message, row.level);
+                const truncatedIndicator = row.messageTruncated
+                  ? chalk.gray(' [truncated]')
+                  : '';
+                return `${rowStr}\n${coloredMessage}${truncatedIndicator}\n`;
+              }
+              return rowStr + '\n';
+            }
+          : undefined,
       });
 
       // Print header

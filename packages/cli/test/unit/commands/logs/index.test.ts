@@ -254,17 +254,6 @@ describe('logs', () => {
       expect(output).toContain('--json');
     });
 
-    it('should reject the removed --expand flag', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--expand');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      const output = client.getFullOutput();
-      expect(output).toContain('--expand');
-      expect(output).toContain('unknown or unexpected option');
-    });
-
     it('should display "no logs found" when empty', async () => {
       useRequestLogs([]);
 

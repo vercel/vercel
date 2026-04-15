@@ -128,6 +128,13 @@ export const logsCommand = {
       description: 'Filter by request ID',
     },
     {
+      name: 'expand',
+      shorthand: 'x',
+      type: Boolean,
+      deprecated: false,
+      description: 'Show full request log details below each request line',
+    },
+    {
       name: 'branch',
       shorthand: 'b',
       type: String,
@@ -183,6 +190,10 @@ export const logsCommand = {
     {
       name: 'Display logs for a specific request',
       value: `${packageName} logs --request-id req_xxxxx`,
+    },
+    {
+      name: 'Display logs with full request details',
+      value: `${packageName} logs --expand`,
     },
     {
       name: 'Display logs for a specific branch',
