@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import ms from 'ms';
 import output from '../../output-manager';
 import formatDate from '../format-date';
 import { getFlagDashboardUrl } from './dashboard-url';
@@ -8,6 +9,7 @@ import type {
   FlagCondition,
   FlagEnvironmentConfig,
   FlagOutcome,
+  FlagRolloutOutcome,
   FlagSettings,
   FlagSplitOutcome,
   FlagVariant,
@@ -157,6 +159,13 @@ export function printFlagEnvironmentDetails(
             flag.variants
           );
           output.print(`      ${chalk.dim('Default split:')} ${weights}\n`);
+        } else if (fallthrough.type === 'rollout') {
+          output.print(
+            `      ${chalk.dim('Default rollout:')} ${formatRolloutOutcome(
+              fallthrough,
+              flag.variants
+            )}\n`
+          );
         }
       }
     } else {
@@ -231,12 +240,13 @@ function hasCustomConfigurationEnabled(
   return (
     Boolean(envConfig.targets && Object.keys(envConfig.targets).length > 0) ||
     envConfig.rules.length > 0 ||
-    envConfig.fallthrough.type === 'split'
+    envConfig.fallthrough.type === 'split' ||
+    envConfig.fallthrough.type === 'rollout'
   );
 }
 
 function formatEnvironmentOutcome(
-  outcome: FlagOutcome | FlagSplitOutcome,
+  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome,
   variants: FlagVariant[]
 ): string {
   if (outcome.type === 'variant') {
@@ -247,6 +257,10 @@ function formatEnvironmentOutcome(
   if (outcome.type === 'split') {
     const weights = formatSplitWeights(outcome.weights, variants);
     return `split (${weights})`;
+  }
+
+  if (outcome.type === 'rollout') {
+    return formatRolloutOutcome(outcome, variants);
   }
 
   return 'unknown';
@@ -285,6 +299,31 @@ function formatEnvironmentVariantSummary(
   }
 
   return chalk.bold(formatVariantValue(variant.value));
+}
+
+function formatRolloutOutcome(
+  outcome: FlagRolloutOutcome,
+  variants: FlagVariant[]
+): string {
+  const fromVariant = variants.find(v => v.id === outcome.rollFromVariantId);
+  const toVariant = variants.find(v => v.id === outcome.rollToVariantId);
+  const stages = outcome.slots
+    .map(slot => {
+      const percentage = slot.promille / 1000;
+      const formattedPercentage = Number.isInteger(percentage)
+        ? String(percentage)
+        : String(Number(percentage.toFixed(3)));
+      return `${formattedPercentage}% for ${ms(slot.durationMs, { long: true })}`;
+    })
+    .join(', ');
+
+  return `rollout (${formatEnvironmentVariantSummary(
+    fromVariant,
+    outcome.rollFromVariantId
+  )} -> ${formatEnvironmentVariantSummary(
+    toVariant,
+    outcome.rollToVariantId
+  )}; ${stages}; then 100%)`;
 }
 
 function formatVariantListSummary(variant: FlagVariant): string {
