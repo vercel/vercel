@@ -1,16 +1,22 @@
-const fs = require('fs-extra');
+const fs = require('fs/promises');
 const path = require('path');
 
 async function main(turboRunDirectory, turboRunDirectoryParent) {
   const turboRunDir = path.join(turboRunDirectoryParent, turboRunDirectory);
-  const turboRunFiles = await fs.readdir(turboRunDir).catch(() => []);
+  let turboRunFiles = [];
+  try {
+    turboRunFiles = await fs.readdir(turboRunDir);
+  } catch {
+    turboRunFiles = [];
+  }
 
   let missCount = 0;
 
   await Promise.all(
     turboRunFiles.map(async fileName => {
       const runFile = path.join(turboRunDir, fileName);
-      const runData = await fs.readJson(runFile);
+      const raw = await fs.readFile(runFile, 'utf8');
+      const runData = JSON.parse(raw);
       const { attempted, cached } = runData.execution;
 
       missCount += attempted - cached;
