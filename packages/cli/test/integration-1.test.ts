@@ -255,6 +255,9 @@ test('should deploy and not wait for completion', async () => {
     [
       // omit the default "deploy" command
       '--no-wait',
+      // Confirm non-interactively if the link must be re-established (e.g. after
+      // transient project lookup failures in CI).
+      '--yes',
     ],
     {
       cwd: projectDir,
