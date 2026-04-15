@@ -1,5 +1,13 @@
 # @vercel/python
 
+## 6.33.0
+
+### Minor Changes
+
+- Fix local builds when pinned Python version is not on PATH. ([#15897](https://github.com/vercel/vercel/pull/15897))
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
 ## 6.32.0
 
 ### Minor Changes

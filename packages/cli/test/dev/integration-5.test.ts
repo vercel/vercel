@@ -984,7 +984,7 @@ describe('[vercel dev] Cron service', () => {
 
       // Trigger the service directly via the proxy to not wait for a minute
       const cronRes = await nodeFetch(
-        `http://localhost:${port}/_svc/cron/crons`,
+        `http://localhost:${port}/_svc/cron/crons/task/run_cron_task`,
         { method: 'POST' }
       );
       expect(cronRes.status).toBe(200);

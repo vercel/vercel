@@ -56,6 +56,7 @@ export const help = () => `
       contract                         Show contract information for billing periods
       cron | crons         [cmd]       Manage cron jobs for a project [beta]
       curl                 [path]      cURL requests to your linked project's deployment [beta]
+      deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       httpstat             path        Visualize HTTP timing statistics for deployments

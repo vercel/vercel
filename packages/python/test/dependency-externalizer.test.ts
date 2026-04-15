@@ -8,6 +8,7 @@ import {
   getPackagesReachableOnPlatform,
   getLambdaEphemeralStorageBytes,
   lambdaKnapsack,
+  shouldShowFunctionsBetaHint,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
   MAX_EPHEMERAL_STORAGE_BYTES,
@@ -261,6 +262,43 @@ describe('dependency externalizer support', () => {
       expect(getLambdaEphemeralStorageBytes()).toBe(
         LAMBDA_EPHEMERAL_STORAGE_BYTES
       );
+    });
+  });
+
+  describe('shouldShowFunctionsBetaHint', () => {
+    const originalEnv = process.env.VERCEL_FUNCTIONS_BETA_HINT;
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_FUNCTIONS_BETA_HINT;
+      } else {
+        process.env.VERCEL_FUNCTIONS_BETA_HINT = originalEnv;
+      }
+    });
+
+    it('returns true when VERCEL_FUNCTIONS_BETA_HINT is "1"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = '1';
+      expect(shouldShowFunctionsBetaHint()).toBe(true);
+    });
+
+    it('returns true when VERCEL_FUNCTIONS_BETA_HINT is "true"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = 'true';
+      expect(shouldShowFunctionsBetaHint()).toBe(true);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is unset', () => {
+      delete process.env.VERCEL_FUNCTIONS_BETA_HINT;
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is "0"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = '0';
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is an unrecognised value', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = 'yes';
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
     });
   });
 

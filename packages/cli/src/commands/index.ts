@@ -13,6 +13,7 @@ import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
 import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
+import { deployHooksCommand } from './deploy-hooks/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
@@ -78,6 +79,7 @@ const commandsStructs = [
   cronsCommand,
   curlCommand,
   deployCommand,
+  deployHooksCommand,
   devCommand,
   dnsCommand,
   domainsCommand,
