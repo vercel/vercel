@@ -3,10 +3,21 @@ import { packageName } from '../../util/pkg-name';
 
 export const contractCommand = {
   name: 'contract',
-  aliases: [],
+  aliases: ['billing'],
   description: 'Show contract information for all billing periods',
   arguments: [],
-  options: [formatOption, jsonOption],
+  options: [
+    formatOption,
+    jsonOption,
+    {
+      name: 'to',
+      shorthand: null,
+      type: String,
+      argument: 'PLAN',
+      description: 'Target plan for billing plan change commands',
+      deprecated: false,
+    },
+  ],
   examples: [
     {
       name: 'Show contract information for all billing periods',
