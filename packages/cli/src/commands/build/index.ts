@@ -48,7 +48,6 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
-  getInternalServiceCronPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -1021,6 +1020,7 @@ async function doBuild(
                   typeof serviceWorkspace === 'string'
                     ? serviceWorkspace
                     : undefined,
+                schedule: service.schedule,
               },
             }
           : undefined),
@@ -1219,6 +1219,16 @@ async function doBuild(
 
       if (service?.type === 'worker' && 'output' in buildResult) {
         attachWorkerServiceTrigger(buildResult.output, service);
+      }
+
+      if (
+        service?.type === 'cron' &&
+        !('crons' in buildResult && buildResult.crons?.length)
+      ) {
+        throw new NowBuildError({
+          code: 'CRON_SERVICE_NO_CRONS',
+          message: `Cron service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support cron services.`,
+        });
       }
 
       let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
@@ -1461,9 +1471,8 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const serviceCrons = getServiceCrons(detectedServices);
   const mergedCrons = mergeCrons(
-    [...(localConfig.crons || []), ...serviceCrons],
+    localConfig.crons || [],
     buildResults.values()
   );
   const mergedWildcard = mergeWildcard(buildResults.values());
@@ -1858,26 +1867,6 @@ function mergeImages(
     }
   }
   return images;
-}
-
-function getServiceCrons(services?: Service[]): Cron[] {
-  if (!services || services.length === 0) {
-    return [];
-  }
-
-  const crons: Cron[] = [];
-  for (const service of services) {
-    if (service.type !== 'cron' || typeof service.schedule !== 'string') {
-      continue;
-    }
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    crons.push({
-      path: getInternalServiceCronPath(service.name, cronEntrypoint),
-      schedule: service.schedule,
-    });
-  }
-
-  return crons;
 }
 
 function mergeCrons(

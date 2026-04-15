@@ -130,7 +130,42 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     await new Promise(r => setTimeout(r, 1000));
   }
 
+  await disableSSO(deploymentId, deploymentUrl);
+
   return { deploymentId, deploymentUrl };
+}
+
+async function disableSSO(deploymentId, deploymentUrl) {
+  const deployRes = await fetchWithAuth(
+    `/v13/deployments/${encodeURIComponent(deploymentId)}`
+  );
+  if (!deployRes.ok) return;
+
+  const { projectId } = await deployRes.json();
+  if (!projectId) return;
+
+  const settingRes = await fetchWithAuth(
+    `/v5/projects/${encodeURIComponent(projectId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ssoProtection: null }),
+    }
+  );
+
+  if (!settingRes.ok) {
+    console.log(
+      `Warning: failed to disable SSO protection (status: ${settingRes.status})`
+    );
+    return;
+  }
+
+  // Wait for the SSO change to propagate
+  for (let i = 0; i < 10; i++) {
+    const res = await _fetch(`https://${deploymentUrl}`);
+    if (res.status !== 401) return;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
 }
 
 function digestOfFile(body) {
