@@ -1373,6 +1373,83 @@ describe('generateProjectManifest — vlt fallback', () => {
   });
 });
 
+// ─── runtimeVersion ───────────────────────────────────────────────────────────
+
+describe('runtimeVersion', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  async function getVersion(dir: string) {
+    await generateProjectManifest({
+      workPath: dir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+    });
+    return readManifest(dir).runtimeVersion;
+  }
+
+  it('resolved comes from nodeVersion.major', async () => {
+    writePackageJson(tempDir, {});
+    const rv = await getVersion(tempDir);
+    expect(rv.resolved).toBe('20');
+  });
+
+  it('reads requested from engines.node in package.json', async () => {
+    writePackageJson(tempDir, { engines: { node: '>=20.0.0' } });
+    const rv = await getVersion(tempDir);
+    expect(rv.requested).toBe('>=20.0.0');
+    expect(rv.requestedSource).toBe('package.json');
+  });
+
+  it('reads requested from .node-version when no engines.node', async () => {
+    writePackageJson(tempDir, {});
+    fs.writeFileSync(path.join(tempDir, '.node-version'), '20.11.0\n');
+    const rv = await getVersion(tempDir);
+    expect(rv.requested).toBe('20.11.0');
+    expect(rv.requestedSource).toBe('.node-version');
+  });
+
+  it('reads requested from .nvmrc when no engines.node or .node-version', async () => {
+    writePackageJson(tempDir, {});
+    fs.writeFileSync(path.join(tempDir, '.nvmrc'), 'lts/iron\n');
+    const rv = await getVersion(tempDir);
+    expect(rv.requested).toBe('lts/iron');
+    expect(rv.requestedSource).toBe('.nvmrc');
+  });
+
+  it('engines.node takes priority over .node-version', async () => {
+    writePackageJson(tempDir, { engines: { node: '>=20.0.0' } });
+    fs.writeFileSync(path.join(tempDir, '.node-version'), '18.0.0');
+    const rv = await getVersion(tempDir);
+    expect(rv.requested).toBe('>=20.0.0');
+    expect(rv.requestedSource).toBe('package.json');
+  });
+
+  it('.node-version takes priority over .nvmrc', async () => {
+    writePackageJson(tempDir, {});
+    fs.writeFileSync(path.join(tempDir, '.node-version'), '20.11.0');
+    fs.writeFileSync(path.join(tempDir, '.nvmrc'), '18.0.0');
+    const rv = await getVersion(tempDir);
+    expect(rv.requested).toBe('20.11.0');
+    expect(rv.requestedSource).toBe('.node-version');
+  });
+
+  it('omits requested when none of the sources are present', async () => {
+    writePackageJson(tempDir, {});
+    const rv = await getVersion(tempDir);
+    expect(rv).toEqual({ resolved: '20' });
+  });
+});
+
 // ─── diagnostics callback ─────────────────────────────────────────────────────
 
 describe('diagnostics callback', () => {

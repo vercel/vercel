@@ -434,12 +434,39 @@ export async function generateProjectManifest({
       transitiveDeps.push(dep);
     }
 
+    const runtimeVersion: PackageManifest['runtimeVersion'] = {
+      resolved: String(nodeVersion.major),
+    };
+
+    // Populate requested/requestedSource from engines.node, .node-version, .nvmrc
+    const enginesNode = (pkgJson.engines as Record<string, string> | undefined)
+      ?.node;
+    if (enginesNode) {
+      runtimeVersion.requested = enginesNode;
+      runtimeVersion.requestedSource = 'package.json';
+    } else {
+      for (const filename of ['.node-version', '.nvmrc'] as const) {
+        try {
+          const val = await fs.promises.readFile(
+            path.join(workPath, filename),
+            'utf-8'
+          );
+          const trimmed = val.trim();
+          if (trimmed) {
+            runtimeVersion.requested = trimmed;
+            runtimeVersion.requestedSource = filename;
+            break;
+          }
+        } catch {
+          // file not present, try next
+        }
+      }
+    }
+
     const manifest: PackageManifest = {
       version: MANIFEST_VERSION,
       runtime: 'node',
-      runtimeVersion: {
-        resolved: String(nodeVersion.major),
-      },
+      runtimeVersion,
       dependencies: [
         ...directDeps.sort((a, b) => a.name.localeCompare(b.name)),
         ...transitiveDeps.sort((a, b) => a.name.localeCompare(b.name)),
