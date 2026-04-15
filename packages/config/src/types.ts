@@ -567,11 +567,18 @@ export interface VercelConfig {
        */
       type?: 'web' | 'cron' | 'worker';
       /**
-       * Entry file for the service, relative to the workspace directory.
+       * Path to the service's root directory relative to the project root.
+       * Should contain a manifest file (package.json, pyproject.toml, etc.).
+       * Defaults to ".".
+       */
+      root?: string;
+      /**
+       * Entry file for the service, relative to the service root directory.
        */
       entrypoint?: string;
       /**
        * Path to the directory containing the service manifest file (package.json, pyproject.toml, etc.). Defaults to "." (project root).
+       * @deprecated Use `root` instead.
        */
       workspace?: string;
       /**

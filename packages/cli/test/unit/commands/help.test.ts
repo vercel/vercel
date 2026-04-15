@@ -270,6 +270,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('domains price help output snapshots', () => {
+      it('domains price help column width 120', () => {
+        expect(
+          help(domains.priceSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('domains inspect help output snapshots', () => {
       it('domains inspect help column width 120', () => {
         expect(
@@ -641,6 +651,16 @@ describe('help command', () => {
       it('project remove help column width 120', () => {
         expect(
           help(project.removeSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project rename help output snapshots', () => {
+      it('project rename help column width 120', () => {
+        expect(
+          help(project.renameSubcommand, {
             columns: 120,
             parent: project.projectCommand,
           })

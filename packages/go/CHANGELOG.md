@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.5.0
+
+### Minor Changes
+
+- Support go apps using vendored dependencies. ([#15907](https://github.com/vercel/vercel/pull/15907))
+
 ## 3.4.7
 
 ### Patch Changes

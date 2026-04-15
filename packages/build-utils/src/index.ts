@@ -217,3 +217,34 @@ export {
   validateEnvWrapperSupport,
   ENV_WRAPPER_SUPPORTED_FAMILIES,
 } from './validate-lambda-size';
+
+export { validateFrameworkVersion } from './deserialize/validate-framework-version';
+export { hydrateFilesMap } from './deserialize/hydrate-files-map';
+export { createFunctionsIterator } from './deserialize/create-functions-iterator';
+export { maybeReadJSON } from './deserialize/maybe-read-json';
+
+export {
+  deserializeLambda,
+  type DeserializeLambdaOptions,
+} from './deserialize/deserialize-lambda';
+export { deserializeEdgeFunction } from './deserialize/deserialize-edge-function';
+export type {
+  Properties,
+  SerializedLambda,
+  SerializedNodejsLambda,
+  SerializedEdgeFunction,
+  SerializedFileFsRef,
+  SerializedPrerender,
+} from './deserialize/serialized-types';
+
+export { validateRegularFile } from './collect-build-result/validate-regular-file';
+export { validatePrerender } from './collect-build-result/validate-prerender';
+export { getContentType } from './collect-build-result/get-content-type';
+export {
+  fileToBuildOutputFile,
+  type BuildOutputFile,
+} from './collect-build-result/file-to-build-output-file';
+export {
+  prerenderToBuildOutputFile,
+  type ExtendedPayload,
+} from './collect-build-result/prerender-to-build-output-file';
