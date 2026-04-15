@@ -145,7 +145,7 @@ describe('Test `detectBuilders`', () => {
     expect(rewriteRoutes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          src: '^/_svc/cleanup/crons/jobs/cleanup/cron$',
+          src: '^/_svc/cleanup/crons/.*$',
           dest: '/_svc/cleanup/index',
           check: true,
         }),

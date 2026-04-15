@@ -1,5 +1,14 @@
 # @vercel/node
 
+## 5.7.7
+
+### Patch Changes
+
+- Fix bundled vanilla Node API routing for projects that build from a root directory. ([#15891](https://github.com/vercel/vercel/pull/15891))
+
+- Updated dependencies [[`44897297d569742e93725d71ca481803c9b0b9cc`](https://github.com/vercel/vercel/commit/44897297d569742e93725d71ca481803c9b0b9cc)]:
+  - @vercel/build-utils@13.17.0
+
 ## 5.7.6
 
 ### Patch Changes
