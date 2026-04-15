@@ -1189,6 +1189,151 @@ __metadata:
   });
 });
 
+// ─── bun text ─────────────────────────────────────────────────────────────────
+
+describe('generateProjectManifest — bun text (bun.lock)', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  it('resolves direct and transitive deps', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.18.0' } });
+    const lockPath = path.join(tempDir, 'bun.lock');
+    fs.writeFileSync(
+      lockPath,
+      JSON.stringify({
+        lockfileVersion: 0,
+        packages: {
+          express: ['express@4.18.2', {}, 'hash'],
+          accepts: ['accepts@1.3.8', {}, 'hash'],
+        },
+      })
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'bun',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    const express = dependencies.find((d: any) => d.name === 'express');
+    expect(express.type).toBe('direct');
+    expect(express.resolved).toBe('4.18.2');
+
+    const accepts = dependencies.find((d: any) => d.name === 'accepts');
+    expect(accepts.type).toBe('transitive');
+    expect(accepts.resolved).toBe('1.3.8');
+  });
+
+  it('handles @org/pkg namespaced packages', async () => {
+    writePackageJson(tempDir, { dependencies: { '@vercel/node': '^3.0.0' } });
+    const lockPath = path.join(tempDir, 'bun.lock');
+    fs.writeFileSync(
+      lockPath,
+      JSON.stringify({
+        lockfileVersion: 0,
+        packages: {
+          '@vercel/node': ['@vercel/node@3.0.7', {}, 'hash'],
+        },
+      })
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'bun',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies[0].name).toBe('@vercel/node');
+    expect(dependencies[0].resolved).toBe('3.0.7');
+  });
+
+  it('excludes file: and workspace: linked packages', async () => {
+    writePackageJson(tempDir, { dependencies: { real: '^1.0.0' } });
+    const lockPath = path.join(tempDir, 'bun.lock');
+    fs.writeFileSync(
+      lockPath,
+      JSON.stringify({
+        lockfileVersion: 0,
+        packages: {
+          real: ['real@1.0.0', {}, 'hash'],
+          'local-pkg': ['local-pkg@file:../local-pkg', {}, null],
+          'workspace-pkg': [
+            'workspace-pkg@workspace:packages/workspace-pkg',
+            {},
+            null,
+          ],
+        },
+      })
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'bun',
+      lockfilePath: lockPath,
+      lockfileVersion: 1,
+    });
+
+    const names = readManifest(tempDir).dependencies.map((d: any) => d.name);
+    expect(names).toContain('real');
+    expect(names).not.toContain('local-pkg');
+    expect(names).not.toContain('workspace-pkg');
+  });
+});
+
+// ─── bun binary fallback ──────────────────────────────────────────────────────
+
+describe('generateProjectManifest — bun binary (bun.lockb)', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.removeSync(tempDir);
+  });
+
+  it('emits direct deps with empty resolved, no transitive', async () => {
+    writePackageJson(tempDir, {
+      dependencies: { express: '^4.18.0' },
+      devDependencies: { vitest: '^2.0.0' },
+    });
+    // Content is irrelevant — binary lockfiles are never read
+    const lockPath = path.join(tempDir, 'bun.lockb');
+    fs.writeFileSync(lockPath, Buffer.from([0x00, 0x01, 0x02]));
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'bun',
+      lockfilePath: lockPath,
+      lockfileVersion: 0,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies.every((d: any) => d.type === 'direct')).toBe(true);
+    expect(dependencies.every((d: any) => d.resolved === '')).toBe(true);
+
+    const names = dependencies.map((d: any) => d.name);
+    expect(names).toContain('express');
+    expect(names).toContain('vitest');
+  });
+});
+
 // ─── diagnostics callback ─────────────────────────────────────────────────────
 
 describe('diagnostics callback', () => {

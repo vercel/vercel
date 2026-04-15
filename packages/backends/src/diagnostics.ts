@@ -281,11 +281,46 @@ function parseYarnLock(
   return lockMap;
 }
 
+function parseBunLock(content: string): Map<string, LockEntry> {
+  const lockMap = new Map<string, LockEntry>();
+  const parsed = JSON.parse(content) as Record<string, unknown>;
+
+  // packages keys are plain package names; value[0] is "name@resolved-version"
+  const packages = parsed.packages as Record<string, unknown[]> | undefined;
+  if (!packages) return lockMap;
+
+  for (const [name, value] of Object.entries(packages)) {
+    if (!Array.isArray(value)) continue;
+    const ref = value[0] as string | undefined;
+    if (!ref || typeof ref !== 'string') continue;
+
+    // Extract resolved version from "name@version" ref string
+    const pkgName = extractPackageName(ref);
+    if (!pkgName) continue;
+    const version = ref.slice(pkgName.length + 1);
+    if (!version) continue;
+
+    // Skip local/workspace packages
+    if (version.startsWith('file:') || version.startsWith('workspace:'))
+      continue;
+
+    if (lockMap.has(name)) continue;
+    lockMap.set(name, { resolved: version, scopes: ['prod'] });
+  }
+
+  return lockMap;
+}
+
 async function parseLockfile(
   cliType: CliType,
   lockfilePath: string,
   lockfileVersion: number | undefined
 ): Promise<Map<string, LockEntry>> {
+  // bun.lockb is a binary format — not parseable without invoking bun
+  if (cliType === 'bun' && lockfileVersion === 0) {
+    return new Map();
+  }
+
   const content = await fs.promises.readFile(lockfilePath, 'utf-8');
   switch (cliType) {
     case 'npm':
@@ -294,6 +329,8 @@ async function parseLockfile(
       return parsePnpmLock(content, lockfileVersion);
     case 'yarn':
       return parseYarnLock(content, lockfileVersion);
+    case 'bun':
+      return parseBunLock(content);
     default:
       return new Map();
   }
