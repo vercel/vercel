@@ -201,6 +201,7 @@ describe('flags rollout', () => {
     expect(output).toContain('Roll from: Off');
     expect(output).toContain('Roll to: On');
     expect(output).toContain('Fallback: Off');
+    expect(output).toContain('Start: immediately');
     expect(output).toContain(
       'Stages: 5% for 6 hours, 10% for 12 hours, then 100% indefinitely'
     );

@@ -383,10 +383,10 @@ function formatStartLabel(
   if (start === undefined) {
     return currentStartTimestamp
       ? 'preserve current start time'
-      : 'start immediately';
+      : 'immediately';
   }
   if (start === 'now') {
-    return 'start immediately';
+    return 'immediately';
   }
   return `start at ${start}`;
 }
