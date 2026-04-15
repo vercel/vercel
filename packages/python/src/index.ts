@@ -777,7 +777,7 @@ from vercel_runtime.vc_init import vc_handler
     }
   }
 
-  if (!isPythonFramework(framework)) {
+  if (!isPythonFramework(framework) || (service && service.type !== 'web')) {
     return { resultVersion: 3, result: { output } };
   }
 
