@@ -232,13 +232,15 @@ jobs:
           done
       - name: Test ${{matrix.packageName}}
         run: |
+          set -o pipefail
           attempt=1
           max_attempts=2
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+            test_log="$(mktemp)"
 
-            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }} 2>&1 | tee "$test_log"; then
               exit 0
             fi
 
@@ -247,7 +249,12 @@ jobs:
               exit 1
             fi
 
-            echo "Tests failed; retrying once..."
+            retry_reason=$(node utils/should-retry-ci-test-failure.js "$test_log") || {
+              echo "Tests failed with non-retryable signature; skipping retry."
+              exit 1
+            }
+            echo "Tests failed due to retryable issue: $retry_reason"
+            echo "Retrying once..."
             attempt=$((attempt+1))
           done
         shell: bash
