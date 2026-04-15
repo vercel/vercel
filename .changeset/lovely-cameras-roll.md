@@ -2,7 +2,7 @@
 'vercel': patch
 ---
 
-Add `vercel flags rollout` for staged, time-based progressive rollouts.
+Add `vercel flags rollout` for progressive rollouts.
 
 Examples:
 
