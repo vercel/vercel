@@ -3048,11 +3048,7 @@ function hasNewRoutingProperties(vercelConfig: VercelConfig) {
  */
 function shouldUseExperimentalFrameworks(): boolean {
   const experimentalEnv = process.env.VERCEL_USE_EXPERIMENTAL_FRAMEWORKS;
-  return (
-    experimentalEnv === '1' ||
-    (typeof experimentalEnv === 'string' &&
-      experimentalEnv.toLowerCase() === 'true')
-  );
+  return experimentalEnv === '1' || experimentalEnv?.toLowerCase() === 'true';
 }
 
 /**

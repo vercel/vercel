@@ -126,44 +126,17 @@ export default async function dev(
       getVercelDirectory(cwd)
     );
     if (localProjectSettings?.settings) {
-      const localSettings = localProjectSettings.settings;
-      // Only use local settings as fallback for null/undefined API values
-      if (projectSettings.framework == null && localSettings.framework) {
-        projectSettings = {
-          ...projectSettings,
-          framework: localSettings.framework,
-        };
-      }
-      if (projectSettings.devCommand == null && localSettings.devCommand) {
-        projectSettings = {
-          ...projectSettings,
-          devCommand: localSettings.devCommand,
-        };
-      }
-      if (projectSettings.buildCommand == null && localSettings.buildCommand) {
-        projectSettings = {
-          ...projectSettings,
-          buildCommand: localSettings.buildCommand,
-        };
-      }
-      if (
-        projectSettings.installCommand == null &&
-        localSettings.installCommand
-      ) {
-        projectSettings = {
-          ...projectSettings,
-          installCommand: localSettings.installCommand,
-        };
-      }
-      if (
-        projectSettings.outputDirectory == null &&
-        localSettings.outputDirectory
-      ) {
-        projectSettings = {
-          ...projectSettings,
-          outputDirectory: localSettings.outputDirectory,
-        };
-      }
+      projectSettings = mergeProjectSettings(
+        projectSettings,
+        localProjectSettings.settings,
+        [
+          'framework',
+          'devCommand',
+          'buildCommand',
+          'installCommand',
+          'outputDirectory',
+        ]
+      );
     }
 
     if (project.rootDirectory) {
@@ -315,4 +288,22 @@ export default async function dev(
     clearTimeout(timeout);
     controller.abort();
   }
+}
+
+/**
+ * Merges local project settings into project settings.
+ * Local settings are used as fallbacks when API values are null/undefined.
+ */
+function mergeProjectSettings(
+  projectSettings: ProjectSettings,
+  localSettings: Partial<ProjectSettings>,
+  keys: (keyof ProjectSettings)[]
+): ProjectSettings {
+  let merged = projectSettings;
+  for (const key of keys) {
+    if (merged[key] == null && localSettings[key]) {
+      merged = { ...merged, [key]: localSettings[key] };
+    }
+  }
+  return merged;
 }
