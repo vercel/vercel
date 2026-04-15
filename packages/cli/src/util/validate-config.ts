@@ -398,6 +398,18 @@ const serviceConfigSchema = {
         },
       },
     },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'schedule'],
+      properties: {
+        ...serviceCommonProperties,
+        type: {
+          const: 'cron',
+        },
+        schedule: serviceScheduleSchema,
+      },
+    },
   ],
 };
 

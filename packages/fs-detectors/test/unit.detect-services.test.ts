@@ -1439,6 +1439,55 @@ describe('detectServices', () => {
   });
 
   describe('schedule-triggered job services', () => {
+    it('should detect a legacy cron service and treat it as a schedule-triggered job', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cron/cleanup.py',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'cron/cleanup.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'cleanup',
+        type: 'cron',
+        trigger: 'schedule',
+        entrypoint: 'cron/cleanup.py',
+        schedule: '0 0 * * *',
+      });
+      expect(result.routes.crons).toHaveLength(1);
+    });
+
+    it('should return error for legacy cron service without schedule', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cron/cleanup.py',
+            },
+          },
+        }),
+        'cron/cleanup.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'MISSING_CRON_SCHEDULE',
+        serviceName: 'cleanup',
+      });
+    });
+
     it('should detect a schedule-triggered job service', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

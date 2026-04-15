@@ -61,6 +61,19 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with legacy cron service type', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        cleanup: {
+          type: 'cron',
+          entrypoint: 'cleanup.py',
+          schedule: '0 0 * * *',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
   it('should not error with schedule-triggered job services', () => {
     const error = validateConfig({
       experimentalServices: {

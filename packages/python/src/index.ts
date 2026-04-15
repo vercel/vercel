@@ -268,7 +268,8 @@ export const build: BuildVX = async ({
             // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
             // For other services, handlerFunction is used as the entrypoint variable name.
             varName:
-              service?.type === 'job' && service.trigger === 'schedule'
+              service?.type === 'cron' ||
+              (service?.type === 'job' && service.trigger === 'schedule')
                 ? undefined
                 : handlerFunction,
           }

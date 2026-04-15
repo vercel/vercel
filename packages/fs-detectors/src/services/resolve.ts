@@ -388,12 +388,19 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
-  const isJobService = serviceType === 'job';
-  const isScheduleJobService = isJobService && config.trigger === 'schedule';
-  const isQueueJobService = isJobService && config.trigger === 'queue';
-  const isWorkflowService = isJobService && config.trigger === 'workflow';
-  const serviceTypeLabel =
-    serviceType === 'job' ? 'Job' : serviceType === 'worker' ? 'Worker' : 'Web';
+  const isJobService = serviceType === 'job' || serviceType === 'cron';
+  const isScheduleJobService =
+    serviceType === 'cron' ||
+    (serviceType === 'job' && config.trigger === 'schedule');
+  const isQueueJobService = serviceType === 'job' && config.trigger === 'queue';
+  const isWorkflowService =
+    serviceType === 'job' && config.trigger === 'workflow';
+  const isNonWebService = serviceType === 'worker' || isJobService;
+  const serviceTypeLabel = isJobService
+    ? 'Job'
+    : serviceType === 'worker'
+      ? 'Worker'
+      : 'Web';
   const routingResult = resolveServiceRoutingConfig(name, config);
   if (routingResult.error) {
     return routingResult.error;
@@ -429,21 +436,21 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if ((serviceType === 'worker' || isJobService) && configuredRoutePrefix) {
+  if (isNonWebService && configuredRoutePrefix) {
     return {
       code: 'INVALID_ROUTE_PREFIX',
       message: `${serviceTypeLabel} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
       serviceName: name,
     };
   }
-  if ((serviceType === 'worker' || isJobService) && hasSubdomain) {
+  if (isNonWebService && hasSubdomain) {
     return {
       code: 'INVALID_HOST_ROUTING_CONFIG',
       message: `${serviceTypeLabel} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
       serviceName: name,
     };
   }
-  if (isJobService && config.trigger === undefined) {
+  if (serviceType === 'job' && config.trigger === undefined) {
     return {
       code: 'MISSING_JOB_TRIGGER',
       message: `Job service "${name}" is missing required "trigger" field.`,
@@ -451,7 +458,7 @@ export function validateServiceConfig(
     };
   }
   if (
-    isJobService &&
+    serviceType === 'job' &&
     config.trigger &&
     !JOB_TRIGGERS.includes(config.trigger)
   ) {
@@ -463,7 +470,10 @@ export function validateServiceConfig(
   }
   if (isScheduleJobService && !config.schedule) {
     return {
-      code: 'MISSING_JOB_SCHEDULE',
+      code:
+        serviceType === 'cron'
+          ? 'MISSING_CRON_SCHEDULE'
+          : 'MISSING_JOB_SCHEDULE',
       message: `${serviceTypeLabel} service "${name}" is missing required "schedule" field.`,
       serviceName: name,
     };
@@ -605,7 +615,8 @@ export async function resolveConfiguredService(
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
-  const trigger = type === 'job' ? config.trigger : undefined;
+  const trigger =
+    type === 'cron' ? 'schedule' : type === 'job' ? config.trigger : undefined;
   const rawEntrypoint = config.entrypoint;
 
   const moduleAttrParsed =

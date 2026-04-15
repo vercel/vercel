@@ -229,6 +229,7 @@ export async function detectPythonEntrypoint(
 
     if (!varName) {
       const isSpecialService =
+        service?.type === 'cron' ||
         service?.type === 'worker' ||
         (service?.type === 'job' && service.trigger !== 'workflow');
       if (isSpecialService) {

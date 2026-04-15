@@ -787,7 +787,8 @@ export const startDevServer: StartDevServer = async opts => {
           // Schedule-triggered services create their own "app" wrapper dynamically.
           // Other services use handlerFunction as the entrypoint variable name.
           varName:
-            service?.type === 'job' && service.trigger === 'schedule'
+            service?.type === 'cron' ||
+            (service?.type === 'job' && service.trigger === 'schedule')
               ? undefined
               : handlerFunction,
         }

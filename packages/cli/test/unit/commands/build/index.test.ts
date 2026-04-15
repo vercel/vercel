@@ -1110,7 +1110,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should include schedule-triggered jobs in build output crons without the services framework setting', async () => {
+  it('should include legacy cron service type in build output crons', async () => {
     const cwd = fixture('with-services-cron');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;

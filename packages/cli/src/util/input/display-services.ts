@@ -75,7 +75,11 @@ const jobTriggerLabels: Record<string, string> = {
 };
 
 function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
-  if (service.type === 'worker' || service.type === 'job') {
+  if (
+    service.type === 'worker' ||
+    service.type === 'job' ||
+    service.type === 'cron'
+  ) {
     const typeLabel =
       service.type === 'worker'
         ? 'Worker'
@@ -140,6 +144,7 @@ export function displayDetectedServices(services: Service[]): void {
 
   const outputOrder: Record<string, number> = {
     web: 0,
+    cron: 1,
     job: 1,
     worker: 2,
   };

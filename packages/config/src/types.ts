@@ -571,7 +571,7 @@ export interface VercelConfig {
       /**
        * Service type: web, worker, or job. Defaults to web.
        */
-      type?: 'web' | 'worker' | 'job';
+      type?: 'web' | 'cron' | 'worker' | 'job';
       /**
        * Trigger for job services.
        */

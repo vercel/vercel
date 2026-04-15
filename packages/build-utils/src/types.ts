@@ -647,7 +647,10 @@ export function isScheduleTriggeredService(service: {
   type?: ServiceType;
   trigger?: JobTrigger;
 }): boolean {
-  return service.type === 'job' && service.trigger === 'schedule';
+  return (
+    service.type === 'cron' ||
+    (service.type === 'job' && service.trigger === 'schedule')
+  );
 }
 
 /** The framework which created the function */
@@ -826,7 +829,7 @@ export interface TriggerEvent extends TriggerEventBase {
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
-export type ServiceType = 'web' | 'worker' | 'job';
+export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
 
 export interface ServiceMount {
   /** URL path prefix where the service is mounted. */
