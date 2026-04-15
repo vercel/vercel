@@ -8,6 +8,7 @@ import {
 } from '@edge-runtime/node-utils';
 import type { Server } from 'http';
 import type Client from '../client';
+import { APIError } from '../errors-ts';
 import output from '../../output-manager';
 
 const toHeaders = buildToHeaders({
@@ -42,10 +43,38 @@ export function createProxy(client: Client): Server {
       mergeIntoServerResponse(outgoingHeaders, res);
       fetchRes.body.pipe(res);
     } catch (err: unknown) {
-      output.prettyError(err);
       if (!res.headersSent) {
-        res.statusCode = 500;
-        res.end('Unexpected error during API call');
+        // client.fetch throws APIError for non-2xx responses before the
+        // `json: false` return path is reached.  Forward the original status
+        // and error body so extensions see the real API error instead of 500.
+        if (err instanceof APIError) {
+          res.statusCode = err.status;
+          res.setHeader('Content-Type', 'application/json');
+
+          const errorBody: Record<string, unknown> = {
+            message: err.serverMessage,
+          };
+          // Recover fields that the APIError constructor copied from the
+          // response body (code, meta fields, etc.).
+          const internal = new Set([
+            'message',
+            'status',
+            'serverMessage',
+            'retryAfterMs',
+            'stack',
+          ]);
+          for (const key of Object.keys(err)) {
+            if (!internal.has(key)) {
+              errorBody[key] = (err as Record<string, unknown>)[key];
+            }
+          }
+
+          res.end(JSON.stringify({ error: errorBody }));
+        } else {
+          output.prettyError(err);
+          res.statusCode = 500;
+          res.end('Unexpected error during API call');
+        }
       }
     }
   });
