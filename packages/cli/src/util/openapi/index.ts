@@ -12,9 +12,12 @@ export {
   humanReadableColumnLabel,
 } from './column-label';
 export {
+  buildOpenapiInvocationUrlAfterPathSubstitution,
+  composeOpenapiInvocationUrl,
   resolveOpenapiInvocationUrl,
   splitOpenapiInvocationPositionals,
   extractBracePathParamNames,
   parameterNameToCliOptionFlag,
   getParameterCliKind,
+  substitutePathTemplate,
 } from './openapi-operation-cli';

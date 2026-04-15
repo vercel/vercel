@@ -160,7 +160,7 @@ function buildQueryString(query: Record<string, string>): string {
   return parts.join('&');
 }
 
-function substitutePathTemplate(
+export function substitutePathTemplate(
   pathTemplate: string,
   pathPlaceholderNames: string[],
   pathValues: string[]
@@ -220,6 +220,58 @@ export function getOpenapiQueryOptionParameters(
 }
 
 /**
+ * After path template substitution succeeds, validate required query options and
+ * append the query string.
+ */
+export function buildOpenapiInvocationUrlAfterPathSubstitution(
+  substitutedPath: string,
+  endpoint: EndpointInfo,
+  queryValues: Record<string, string>
+): { url: string } | { error: string } {
+  const optionParams = getOpenapiQueryOptionParameters(endpoint);
+  for (const param of optionParams) {
+    if (param.in !== 'query') {
+      continue;
+    }
+    if (param.required && queryValues[param.name] === undefined) {
+      return {
+        error: `Missing required option --${parameterNameToCliOptionFlag(param.name)}.`,
+      };
+    }
+  }
+
+  const query = buildQueryString(queryValues);
+  const url = query ? `${substitutedPath}?${query}` : substitutedPath;
+  return { url };
+}
+
+/**
+ * Build the request path (including `?query`) from resolved path values and query
+ * flag values (same validation as {@link resolveOpenapiInvocationUrl}).
+ */
+export function composeOpenapiInvocationUrl(
+  endpoint: EndpointInfo,
+  pathValues: string[],
+  queryValues: Record<string, string>
+): { url: string } | { error: string } {
+  const pathNames = extractBracePathParamNames(endpoint.path);
+  const substituted = substitutePathTemplate(
+    endpoint.path,
+    pathNames,
+    pathValues
+  );
+  if (substituted.error) {
+    return { error: substituted.error };
+  }
+
+  return buildOpenapiInvocationUrlAfterPathSubstitution(
+    substituted.path,
+    endpoint,
+    queryValues
+  );
+}
+
+/**
  * Build the request path (including `?query`) for `vercel openapi` from OpenAPI
  * metadata and argv positionals / `--option` tokens.
  */
@@ -248,18 +300,9 @@ export function resolveOpenapiInvocationUrl(input: {
     return { error: parsed.error };
   }
 
-  for (const param of optionParams) {
-    if (param.in !== 'query') {
-      continue;
-    }
-    if (param.required && parsed.values[param.name] === undefined) {
-      return {
-        error: `Missing required option --${parameterNameToCliOptionFlag(param.name)}.`,
-      };
-    }
-  }
-
-  const query = buildQueryString(parsed.values);
-  const url = query ? `${substituted.path}?${query}` : substituted.path;
-  return { url };
+  return buildOpenapiInvocationUrlAfterPathSubstitution(
+    substituted.path,
+    input.endpoint,
+    parsed.values
+  );
 }

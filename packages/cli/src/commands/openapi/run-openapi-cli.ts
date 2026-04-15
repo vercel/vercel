@@ -5,11 +5,7 @@ import { executeApiRequest } from '../api/execute';
 import type { ExecuteApiRequestOptions } from '../api/types';
 import { buildRequest, generateCurlCommand } from '../api/request-builder';
 import { API_BASE_URL } from '../api/constants';
-import {
-  OpenApiCache,
-  foldNamingStyle,
-  resolveOpenapiInvocationUrl,
-} from '../../util/openapi';
+import { OpenApiCache, foldNamingStyle } from '../../util/openapi';
 import output from '../../output-manager';
 import type { ParsedFlags } from '../api/types';
 import {
@@ -17,6 +13,7 @@ import {
   formatOperationDescribe,
   formatTagDescribe,
 } from './describe-operation';
+import { composeOpenapiInvocationUrlWithPromptsIfNeeded } from './prompt-openapi-invocation';
 
 export function buildUnknownTagMessage(
   openApi: OpenApiCache,
@@ -200,10 +197,11 @@ export async function runOpenapiCli(
     return 0;
   }
 
-  const invocation = resolveOpenapiInvocationUrl({
+  const invocation = await composeOpenapiInvocationUrlWithPromptsIfNeeded(
+    client,
     endpoint,
-    positionalArgs: args,
-  });
+    args
+  );
   if ('error' in invocation) {
     output.error(invocation.error);
     return 1;

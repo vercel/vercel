@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildOpenapiInvocationUrlAfterPathSubstitution,
+  composeOpenapiInvocationUrl,
   extractBracePathParamNames,
+  getOpenapiQueryOptionParameters,
   parameterNameToCliOptionFlag,
   parseOpenapiOptionFlagTokens,
   resolveOpenapiInvocationUrl,
@@ -89,6 +92,84 @@ describe('openapi-operation-cli', () => {
     expect(r).toEqual({
       url: '/v1/projects/my-proj/rolling-release?teamId=t1',
     });
+  });
+
+  it('composeOpenapiInvocationUrl matches resolveOpenapiInvocationUrl for full argv', () => {
+    const endpoint: EndpointInfo = {
+      path: '/v1/projects/{projectId}/rolling-release',
+      method: 'DELETE',
+      summary: '',
+      description: '',
+      operationId: 'x',
+      tags: ['rolling-release'],
+      parameters: [
+        {
+          name: 'projectId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string' },
+        },
+        {
+          name: 'teamId',
+          in: 'query',
+          schema: { type: 'string' },
+        },
+      ],
+      responses: {},
+      vercelCliSupported: true,
+      vercelCliAliases: [],
+    };
+    const positionalArgs = [
+      'openapi',
+      'rolling-release',
+      'x',
+      'my-proj',
+      '--team-id=t1',
+    ];
+    const { pathValues, optionArgvTail } =
+      splitOpenapiInvocationPositionals(positionalArgs);
+    const parsed = parseOpenapiOptionFlagTokens(
+      optionArgvTail,
+      getOpenapiQueryOptionParameters(endpoint)
+    );
+    expect(parsed.error).toBeUndefined();
+    const composed = composeOpenapiInvocationUrl(
+      endpoint,
+      pathValues,
+      parsed.values
+    );
+    const resolved = resolveOpenapiInvocationUrl({ endpoint, positionalArgs });
+    expect(composed).toEqual(resolved);
+  });
+
+  it('buildOpenapiInvocationUrlAfterPathSubstitution requires query options', () => {
+    const endpoint: EndpointInfo = {
+      path: '/x',
+      method: 'GET',
+      summary: '',
+      description: '',
+      operationId: 'op',
+      tags: ['t'],
+      parameters: [
+        {
+          name: 'q',
+          in: 'query',
+          required: true,
+          schema: { type: 'string' },
+        },
+      ],
+      responses: {},
+      vercelCliSupported: true,
+      vercelCliAliases: [],
+    };
+    expect(
+      buildOpenapiInvocationUrlAfterPathSubstitution('/x', endpoint, {})
+    ).toEqual({
+      error: 'Missing required option --q.',
+    });
+    expect(
+      buildOpenapiInvocationUrlAfterPathSubstitution('/x', endpoint, { q: '1' })
+    ).toEqual({ url: '/x?q=1' });
   });
 
   it('resolveOpenapiInvocationUrl errors on path arity mismatch', () => {

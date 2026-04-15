@@ -11,3 +11,5 @@ List/describe tables no longer cap tag and operation column widths; the descript
 `vercel openapi ls` (all tags) prints a lightweight tag | operation table. The same global listing applies to `vercel openapi`, `vercel openapi list`, and `vercel openapi --describe` (no tag). Tag-scoped views (`vercel openapi <tag>`, `vercel openapi ls <tag>`, `--describe`) use the full table with args and description. Omitting `<operationId>` matches `--describe` for that tag.
 
 Single-operation `--describe` uses the same tag | operation | args | description row as tag-wide listings (plus response schema when present).
+
+In a TTY, missing path positionals and required `--…` query flags for tag/operation invocations are prompted interactively (aligned with path-based `vercel api`).
