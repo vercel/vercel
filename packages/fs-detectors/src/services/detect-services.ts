@@ -24,6 +24,7 @@ import {
 } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
+import { detectRailwayServices } from './detect-railway';
 
 // don't apply subdomain rewrites on preview urls
 const PREVIEW_DOMAIN_MISSING: HasField = [
@@ -79,6 +80,10 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
       serviceConfig.framework = service.framework;
     }
 
+    if (typeof service.buildCommand === 'string') {
+      serviceConfig.buildCommand = service.buildCommand;
+    }
+
     inferredConfig[name] = serviceConfig;
   }
 
@@ -119,19 +124,51 @@ export async function detectServices(
 
   // Try auto-detection
   if (!hasConfiguredServices) {
-    const autoResult = await autoDetectServices({ fs: scopedFs });
-
-    if (autoResult.errors.length > 0) {
+    // Try Railway config detection first
+    const railwayResult = await detectRailwayServices({ fs: scopedFs });
+    if (railwayResult.errors.length > 0) {
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
         routes: emptyRoutes(),
-        errors: autoResult.errors,
-        warnings: [],
+        errors: railwayResult.errors,
+        warnings: railwayResult.warnings,
       });
     }
+    if (railwayResult.services) {
+      const result = await resolveAllConfiguredServices(
+        railwayResult.services,
+        scopedFs,
+        'generated'
+      );
+      const inferred =
+        result.errors.length === 0 && result.services.length > 0
+          ? {
+              source: 'railway' as const,
+              config: toInferredLayoutConfig(railwayResult.services),
+              services: result.services,
+              warnings: railwayResult.warnings,
+            }
+          : null;
 
-    if (autoResult.services) {
+      // Railway detection is used only for a suggestion to generate vercel.json,
+      // so the .resolved field in the result would be useless, we care only
+      // about the source + inferred config.
+      return withResolvedResult(
+        {
+          services: [],
+          source: 'auto-detected',
+          routes: emptyRoutes(),
+          errors: result.errors,
+          warnings: railwayResult.warnings,
+        },
+        inferred
+      );
+    }
+
+    // Fall back to layout-based auto-detection
+    const autoResult = await autoDetectServices({ fs: scopedFs });
+    if (autoResult.services && autoResult.errors.length === 0) {
       const result = await resolveAllConfiguredServices(
         autoResult.services,
         scopedFs,
@@ -163,6 +200,14 @@ export async function detectServices(
             }
           : null;
       return withResolvedResult(resolved, inferred);
+    } else if (autoResult.errors.length > 0) {
+      return withResolvedResult({
+        services: [],
+        source: 'auto-detected',
+        routes: emptyRoutes(),
+        errors: autoResult.errors,
+        warnings: [],
+      });
     }
 
     return withResolvedResult({

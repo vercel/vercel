@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import microfrontends from '../../../../src/commands/microfrontends';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -31,6 +31,20 @@ const defaultProjects = [
   {
     id: 'proj_docs',
     name: 'docs',
+    accountId: 'team_123',
+    updatedAt: Date.now(),
+    createdAt: Date.now(),
+  },
+  {
+    id: 'proj_blog',
+    name: 'blog',
+    accountId: 'team_123',
+    updatedAt: Date.now(),
+    createdAt: Date.now(),
+  },
+  {
+    id: 'proj_shop',
+    name: 'shop',
     accountId: 'team_123',
     updatedAt: Date.now(),
     createdAt: Date.now(),
@@ -436,6 +450,336 @@ describe('microfrontends create-group', () => {
       );
       expect(await exitCodePromise).toBe(1);
       (client.stdin as any).isTTY = true;
+    });
+  });
+
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('errors when --name is missing', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--project=web',
+        '--default-app=web'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Missing required flag --name. Use --name in non-interactive mode.'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('errors when --project is missing', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Missing required flag --project. Use --project in non-interactive mode.'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('errors when multiple projects are set without --default-app', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Missing required flag --default-app when using multiple --project values in non-interactive mode.'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('creates group without prompts when billing is not affected', async () => {
+      const mocks = setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--yes',
+        '--name=My Group',
+        '--project=web',
+        '--default-app=web'
+      );
+
+      const exitCode = await microfrontends(client);
+
+      expect(exitCode).toBe(0);
+      expect(mocks.getPostCalled()).toBe(true);
+      expect(mocks.getPostBody()).toEqual({
+        groupName: 'My Group',
+        defaultApp: { projectId: 'proj_web', defaultRoute: '/' },
+        otherApplications: [],
+      });
+    });
+
+    it('errors in non-interactive mode when missing project default routes', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--default-app=web'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Missing required flag --project-default-route for "docs". Use --project-default-route=docs=/<path> in non-interactive mode.'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('errors for invalid --project-default-route format', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--default-app=web',
+        '--project-default-route=docs'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Invalid --project-default-route value "docs". Use "<project>=<route>", for example "docs=/docs".'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('errors when --project-default-route points to an unselected project', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--default-app=web',
+        '--project-default-route=shop=/shop'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Invalid --project-default-route value "shop=/shop". Project "shop" is not one of the selected projects.'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('errors when --project-default-route is provided for the default app', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--default-app=web',
+        '--project-default-route=web=/'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Invalid --project-default-route value "web=/". Use --default-route for the default app "web".'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('errors for invalid route value in --project-default-route', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--default-app=web',
+        '--project-default-route=docs=docs'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Invalid --project-default-route value "docs=docs": Route must start with /'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('creates group in non-interactive mode with multiple projects and project default routes', async () => {
+      const mocks = setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--yes',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--default-app=web',
+        '--project-default-route=docs=/docs'
+      );
+
+      const exitCode = await microfrontends(client);
+
+      expect(exitCode).toBe(0);
+      expect(mocks.getPostCalled()).toBe(true);
+      expect(mocks.getPostBody()).toEqual({
+        groupName: 'My Group',
+        defaultApp: { projectId: 'proj_web', defaultRoute: '/' },
+        otherApplications: [{ projectId: 'proj_docs', defaultRoute: '/docs' }],
+      });
+    });
+
+    it('accepts multiple --project-default-route values', async () => {
+      const mocks = setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--project=blog',
+        '--default-app=web',
+        '--project-default-route=docs=/docs',
+        '--project-default-route=blog=/blog'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput('Create microfrontends group?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Create a microfrontends.json now?');
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+
+      expect(exitCode).toBe(0);
+      expect(mocks.getPostCalled()).toBe(true);
+      expect(mocks.getPostBody()).toEqual({
+        groupName: 'My Group',
+        defaultApp: { projectId: 'proj_web', defaultRoute: '/' },
+        otherApplications: [
+          { projectId: 'proj_docs', defaultRoute: '/docs' },
+          { projectId: 'proj_blog', defaultRoute: '/blog' },
+        ],
+      });
+    });
+
+    it('errors on duplicate --project-default-route for the same project', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--project=docs',
+        '--default-app=web',
+        '--project-default-route=docs=/docs',
+        '--project-default-route=docs=/docs-v2'
+      );
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Duplicate --project-default-route for project "docs".'
+      );
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('errors when --yes is missing and stdin is not a TTY', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--default-app=web'
+      );
+      (client.stdin as any).isTTY = false;
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Confirmation required. Use --yes to confirm group creation in non-interactive mode.'
+      );
+      expect(await exitCodePromise).toBe(1);
+      (client.stdin as any).isTTY = true;
+    });
+
+    it('errors in non-interactive mode when creation would affect billing', async () => {
+      const mocks = setupMocks({
+        groupsResponse: {
+          ...defaultGroupsResponse,
+          groups: [
+            {
+              group: { id: 'group_1', slug: 'existing', name: 'Existing' },
+              projects: [
+                { id: 'proj_a', name: 'a' },
+                { id: 'proj_b', name: 'b' },
+              ],
+            },
+          ],
+        },
+      });
+
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--default-app=web'
+      );
+
+      await expect(microfrontends(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'purchase_requires_user',
+      });
+      expect(mocks.getPostCalled()).toBe(false);
     });
   });
 

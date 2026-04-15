@@ -7,8 +7,8 @@ on:
     paths:
       - 'packages/cli/evals/**'
   schedule:
-    # Run hourly to track eval health over time.
-    - cron: '0 * * * *'
+    # Run weekly on Tuesday at 9:00 AM UTC.
+    - cron: '0 9 * * 2'
 
 jobs:
   evals:

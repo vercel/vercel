@@ -205,6 +205,15 @@ export const pullSubcommand = {
       deprecated: false,
     },
     {
+      name: 'id',
+      description:
+        'Pull environment variables for a specific deployment (e.g. dpl_xxx)',
+      shorthand: null,
+      type: String,
+      argument: 'ID',
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Skip the confirmation prompt when removing an environment variable',
@@ -217,6 +226,10 @@ export const pullSubcommand = {
         `${packageName} env pull <file>`,
         `${packageName} env pull .env.development.local`,
       ],
+    },
+    {
+      name: 'Pull environment variables for a specific deployment',
+      value: `${packageName} env pull --id dpl_xxx`,
     },
   ],
 } as const;
