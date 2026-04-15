@@ -56,6 +56,7 @@ export interface CreateOptions {
   agentName?: string;
   manual?: boolean;
   jsonOutput?: boolean;
+  functionsBeta?: boolean;
 }
 
 export interface RemoveOptions {
@@ -134,6 +135,7 @@ export default class Now {
       agentName,
       manual,
       jsonOutput = false,
+      functionsBeta,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -186,6 +188,7 @@ export default class Now {
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
       jsonOutput,
+      functionsBeta,
     });
 
     if (deployment && deployment.warnings) {

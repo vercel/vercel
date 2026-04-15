@@ -793,7 +793,13 @@ export interface ServiceMount {
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
   /**
-   * Service entrypoint, relative to the project root.
+   * Path to the service's root directory relative to the project root.
+   * Should contain a manifest file (package.json, pyproject.toml, etc.).
+   * Defaults to ".".
+   */
+  root?: string;
+  /**
+   * Service entrypoint, relative to the service root directory.
    * Can be either a file path (runtime entrypoint) or a directory path
    * (service workspace for framework-based services).
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
