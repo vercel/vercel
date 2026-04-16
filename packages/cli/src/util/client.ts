@@ -359,7 +359,11 @@ export default class Client extends EventEmitter implements Stdio {
         } else {
           url.searchParams.delete('teamId');
         }
-      } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
+      } else if (
+        opts.useCurrentTeam !== false &&
+        this.config.currentTeam &&
+        !url.searchParams.has('teamId')
+      ) {
         url.searchParams.set('teamId', this.config.currentTeam);
       }
     }

@@ -71,6 +71,17 @@ describe('Client', () => {
       expect(res.headers.get('location')).toEqual('https://example.com/target');
     });
 
+    it('does not overwrite teamId when the request URL already includes it', async () => {
+      client.config.currentTeam = 'team_from_config';
+
+      client.scenario.get('/v9/projects', (req, res) => {
+        expect(req.query.teamId).toBe('team_explicit');
+        res.json({ ok: true });
+      });
+
+      await client.fetch('/v9/projects?teamId=team_explicit', { json: false });
+    });
+
     it('should treat 3xx as errors when redirect is not manual', async () => {
       // When redirect is not set to 'manual', node-fetch follows the
       // redirect by default. If the redirect target doesn't exist, the
