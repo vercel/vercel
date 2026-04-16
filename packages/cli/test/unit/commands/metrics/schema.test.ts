@@ -63,7 +63,7 @@ describe('metrics schema v2', () => {
             defaultAggregation: 'sum',
           },
           {
-            id: 'vercel.request.request_duration_ms',
+            id: 'vercel.request.route_cpu_duration_ms',
             description: 'Request Duration',
             dimensions: [
               { name: 'route', label: 'Route' },
@@ -94,7 +94,7 @@ describe('metrics schema v2', () => {
     expect(output).toContain('Count');
     expect(output).toContain('count');
     expect(output).toContain('sum (default)');
-    expect(output).toContain('vercel.request.request_duration_ms');
+    expect(output).toContain('vercel.request.route_cpu_duration_ms');
     expect(output).toContain('Request Duration');
     expect(output).toContain('milliseconds');
     expect(output).toContain('avg (default), p95');
@@ -119,7 +119,7 @@ describe('metrics schema v2', () => {
             defaultAggregation: 'sum',
           },
           {
-            id: 'vercel.request.request_duration_ms',
+            id: 'vercel.request.route_cpu_duration_ms',
             description: 'Request Duration',
             dimensions: [
               { name: 'route', label: 'Route' },

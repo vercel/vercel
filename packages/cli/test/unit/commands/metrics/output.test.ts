@@ -18,8 +18,8 @@ describe('output', () => {
 
     it('should return custom column name', () => {
       expect(
-        getRollupColumnName('vercel.request.request_duration_ms', 'p95')
-      ).toBe('vercel_request_request_duration_ms_p95');
+        getRollupColumnName('vercel.request.route_cpu_duration_ms', 'p95')
+      ).toBe('vercel_request_route_cpu_duration_ms_p95');
     });
   });
 

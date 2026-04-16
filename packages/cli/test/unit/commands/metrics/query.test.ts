@@ -897,7 +897,7 @@ describe('metrics query v2', () => {
 
   describe('request body', () => {
     it('should send correct request structure', async () => {
-      mockMetricDetail('vercel.request.request_duration_ms', {
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
         description: 'Request Duration',
         unit: 'milliseconds',
         aggregations: ['avg', 'p95'],
@@ -906,7 +906,7 @@ describe('metrics query v2', () => {
       mockApiSuccess();
       client.setArgv(
         'metrics',
-        'vercel.request.request_duration_ms',
+        'vercel.request.route_cpu_duration_ms',
         '--aggregation',
         'p95',
         '--group-by',
@@ -922,7 +922,7 @@ describe('metrics query v2', () => {
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(postedBody?.metric).toBe('vercel.request.request_duration_ms');
+      expect(postedBody?.metric).toBe('vercel.request.route_cpu_duration_ms');
       expect(postedBody?.aggregation).toBe('p95');
       expect(postedBody?.groupBy).toEqual(['http_status']);
       expect(postedBody?.granularity).toEqual({ minutes: 15 });

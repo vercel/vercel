@@ -314,7 +314,7 @@ describe('text-output', () => {
   describe('section formatters', () => {
     it('should render usage-style metadata fields', () => {
       const metadata = formatMetadataHeader({
-        metric: 'vercel.request.request_duration_ms',
+        metric: 'vercel.request.route_cpu_duration_ms',
         aggregation: 'avg',
         periodStart: '2026-02-19T10:00:00.000Z',
         periodEnd: '2026-02-19T10:15:00.000Z',
@@ -423,31 +423,31 @@ describe('text-output', () => {
             timestamp: '2026-02-19T10:00:00.000Z',
             projectName: 'my-app',
             httpStatus: '200',
-            vercel_request_request_duration_ms_avg: 100,
+            vercel_request_route_cpu_duration_ms_avg: 100,
           },
           {
             timestamp: '2026-02-19T10:05:00.000Z',
             projectName: 'my-app',
             httpStatus: '200',
-            vercel_request_request_duration_ms_avg: 200,
+            vercel_request_route_cpu_duration_ms_avg: 200,
           },
           {
             timestamp: '2026-02-19T10:10:00.000Z',
             projectName: 'my-app',
             httpStatus: '200',
-            vercel_request_request_duration_ms_avg: 300,
+            vercel_request_route_cpu_duration_ms_avg: 300,
           },
           {
             timestamp: '2026-02-19T10:00:00.000Z',
             projectName: 'my-app',
             httpStatus: '500',
-            vercel_request_request_duration_ms_avg: 10,
+            vercel_request_route_cpu_duration_ms_avg: 10,
           },
           {
             timestamp: '2026-02-19T10:10:00.000Z',
             projectName: 'my-app',
             httpStatus: '500',
-            vercel_request_request_duration_ms_avg: 30,
+            vercel_request_route_cpu_duration_ms_avg: 30,
           },
         ],
         summary: [],
@@ -455,7 +455,7 @@ describe('text-output', () => {
       };
 
       const output = formatText(response, {
-        metric: 'vercel.request.request_duration_ms',
+        metric: 'vercel.request.route_cpu_duration_ms',
         metricUnit: 'milliseconds',
         aggregation: 'avg',
         groupBy: ['projectName', 'httpStatus'],
@@ -658,18 +658,18 @@ describe('text-output', () => {
           data: [
             {
               timestamp: '2026-02-19T10:00:00.000Z',
-              vercel_request_request_duration_ms_sum: 500,
+              vercel_request_route_cpu_duration_ms_sum: 500,
             },
             {
               timestamp: '2026-02-19T10:05:00.000Z',
-              vercel_request_request_duration_ms_sum: 300,
+              vercel_request_route_cpu_duration_ms_sum: 300,
             },
           ],
           summary: [],
           statistics: {},
         },
         {
-          metric: 'vercel.request.request_duration_ms',
+          metric: 'vercel.request.route_cpu_duration_ms',
           metricUnit: 'milliseconds',
           aggregation: 'sum',
           groupBy: [],
