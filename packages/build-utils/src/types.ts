@@ -129,6 +129,8 @@ export interface BuildOptions {
     subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
+    /** Cron schedule expression (e.g., "0 0 * * *"). Only present for cron services. */
+    schedule?: string;
   };
 }
 
@@ -245,6 +247,12 @@ export interface StartDevServerSuccess {
    * dev server will forcefully be killed.
    */
   shutdown?: () => Promise<void>;
+
+  /**
+   * Cron entries produced by the builder for this service.
+   * Used by the dev orchestrator to schedule cron triggers.
+   */
+  crons?: Cron[];
 }
 
 /**
@@ -636,6 +644,7 @@ export interface BuildResultV2Typical {
    * @example "abc123"
    */
   deploymentId?: string;
+  crons?: Cron[];
 }
 
 export type BuildResultVX =
@@ -648,6 +657,7 @@ export interface BuildResultV3 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   output: Lambda | EdgeFunction;
+  crons?: Cron[];
 }
 
 export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;
@@ -779,6 +789,13 @@ export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
 export type ServiceType = 'web' | 'cron' | 'worker';
 
+export interface ServiceMount {
+  /** URL path prefix where the service is mounted. */
+  path?: string;
+  /** Optional subdomain this service is mounted on. */
+  subdomain?: string;
+}
+
 /**
  * Configuration for a service in vercel.json.
  * @experimental This feature is experimental and may change.
@@ -786,7 +803,13 @@ export type ServiceType = 'web' | 'cron' | 'worker';
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
   /**
-   * Service entrypoint, relative to the project root.
+   * Path to the service's root directory relative to the project root.
+   * Should contain a manifest file (package.json, pyproject.toml, etc.).
+   * Defaults to ".".
+   */
+  root?: string;
+  /**
+   * Service entrypoint, relative to the service root directory.
    * Can be either a file path (runtime entrypoint) or a directory path
    * (service workspace for framework-based services).
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
@@ -810,7 +833,9 @@ export interface ExperimentalServiceConfig {
   excludeFiles?: string | string[];
 
   /* Web service config */
-  /** URL prefix for routing */
+  /** Preferred routing config alias for routePrefix/subdomain. */
+  mount?: string | ServiceMount;
+  /** URL prefix for routing (deprecated, use mount instead) */
   routePrefix?: string;
   /** Subdomain this service should respond to (web services only). */
   subdomain?: string;

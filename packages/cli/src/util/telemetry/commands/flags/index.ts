@@ -47,6 +47,14 @@ export class FlagsTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandRollout(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rollout',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',
@@ -85,6 +93,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandPrepare(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'prepare',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandOverride(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'override',
       value: actual,
     });
   }

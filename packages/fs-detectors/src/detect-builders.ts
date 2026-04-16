@@ -15,6 +15,7 @@ import type {
 import { isOfficialRuntime } from './is-official-runtime';
 import {
   isPythonEntrypoint,
+  isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
@@ -463,6 +464,24 @@ async function maybeGetApiBuilder(
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
     const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    if (!isEntrypoint) {
+      return null;
+    }
+  }
+
+  // For Node.js files under api/, verify they are valid entrypoints before
+  // creating a builder. This only applies to api/ files — root-level platform
+  // files (middleware.js, proxy.js, etc.) use different export signatures and
+  // must not be filtered by API handler pattern detection.
+  const nodeExtensions = ['.js', '.mjs', '.ts', '.tsx'];
+  if (
+    fileName.startsWith('api/') &&
+    process.env.VERCEL_NODE_FILTER_ENTRYPOINTS === '1' &&
+    nodeExtensions.some(ext => fileName.endsWith(ext)) &&
+    options.workPath
+  ) {
+    const fsPath = join(options.workPath, fileName);
+    const isEntrypoint = await isNodeEntrypoint({ fsPath });
     if (!isEntrypoint) {
       return null;
     }

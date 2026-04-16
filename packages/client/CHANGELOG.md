@@ -1,5 +1,51 @@
 # @vercel/client
 
+## 17.3.4
+
+### Patch Changes
+
+- Updated dependencies [[`44897297d569742e93725d71ca481803c9b0b9cc`](https://github.com/vercel/vercel/commit/44897297d569742e93725d71ca481803c9b0b9cc)]:
+  - @vercel/build-utils@13.17.0
+
+## 17.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`86d1f5b3cbd520af2632d4a3d6a1f24557448c0e`](https://github.com/vercel/vercel/commit/86d1f5b3cbd520af2632d4a3d6a1f24557448c0e), [`1056be976b6ba9b42cc1e2ffe895d255ab6c9850`](https://github.com/vercel/vercel/commit/1056be976b6ba9b42cc1e2ffe895d255ab6c9850), [`c27eedaa1b0e3f6e3770b578f62e5463d82f06e0`](https://github.com/vercel/vercel/commit/c27eedaa1b0e3f6e3770b578f62e5463d82f06e0)]:
+  - @vercel/build-utils@13.16.0
+
+## 17.3.2
+
+### Patch Changes
+
+- Updated dependencies [[`4e62f6c2204dd148643f86f140f0ae7995778017`](https://github.com/vercel/vercel/commit/4e62f6c2204dd148643f86f140f0ae7995778017), [`42a70e1e6318615bd420933f9cc978bed3a43936`](https://github.com/vercel/vercel/commit/42a70e1e6318615bd420933f9cc978bed3a43936)]:
+  - @vercel/build-utils@13.15.0
+
+## 17.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`9b3ea340f23c1faad6d56c2a54d75bb2e77b0162`](https://github.com/vercel/vercel/commit/9b3ea340f23c1faad6d56c2a54d75bb2e77b0162)]:
+  - @vercel/build-utils@13.14.2
+
+## 17.3.0
+
+### Minor Changes
+
+- Add Deployment Checks support to `deploy --prod`. Shows "Running Checks..." spinner when checks are pending, detects check failures before alias promotion, and displays failed check run details with links to logs. ([#15884](https://github.com/vercel/vercel/pull/15884))
+
+### Patch Changes
+
+- Updated dependencies [[`2e15ee828f14de4a849a462429ca03feab161174`](https://github.com/vercel/vercel/commit/2e15ee828f14de4a849a462429ca03feab161174), [`a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57`](https://github.com/vercel/vercel/commit/a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57)]:
+  - @vercel/build-utils@13.14.1
+
+## 17.2.69
+
+### Patch Changes
+
+- Updated dependencies [[`42b6ff3113eb7ba5302b8469f8dd10070ecec6f0`](https://github.com/vercel/vercel/commit/42b6ff3113eb7ba5302b8469f8dd10070ecec6f0)]:
+  - @vercel/build-utils@13.14.0
+
 ## 17.2.68
 
 ### Patch Changes

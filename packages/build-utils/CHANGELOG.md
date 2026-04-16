@@ -1,5 +1,51 @@
 # @vercel/build-utils
 
+## 13.17.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 13.16.0
+
+### Minor Changes
+
+- Add shared deserialization and build-result collection utilities. ([#15961](https://github.com/vercel/vercel/pull/15961))
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
+## 13.15.0
+
+### Minor Changes
+
+- [services] allow multiple v2beta triggers for a single Lambda when config is coming from services ([#15890](https://github.com/vercel/vercel/pull/15890))
+
+### Patch Changes
+
+- Add deserialization utilities ([#15927](https://github.com/vercel/vercel/pull/15927))
+
+## 13.14.2
+
+### Patch Changes
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+## 13.14.1
+
+### Patch Changes
+
+- Restore `finalizeLambda()` to return `zipPath: null` for the default in-memory path, preserving the existing caller-facing result contract while keeping custom ZIP strategies supported. ([#15887](https://github.com/vercel/vercel/pull/15887))
+
+- feat(node): filter non-entrypoint Node.js files in `/api` directory ([#15873](https://github.com/vercel/vercel/pull/15873))
+
+## 13.14.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
 ## 13.13.0
 
 ### Minor Changes

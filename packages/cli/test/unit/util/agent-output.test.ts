@@ -7,6 +7,8 @@ import {
   exitWithNonInteractiveError,
   buildCommandWithScope,
   buildCommandWithYes,
+  buildCommandWithGlobalFlags,
+  getGlobalFlagsFromArgv,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
@@ -131,6 +133,22 @@ describe('outputActionRequired', () => {
     expect(parsed.status).toBe('action_required');
     expect(parsed.message).toBe(payload.message);
 
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('logs JSON when argv includes --non-interactive even if client.nonInteractive is false', () => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: false,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy', '--non-interactive'],
+    } as unknown as Client;
+
+    outputActionRequired(client, payload);
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(stdoutWrite.mock.calls[0][0])).status).toBe(
+      'action_required'
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
@@ -402,6 +420,54 @@ describe('argvHasNonInteractive', () => {
   });
 });
 
+describe('getGlobalFlagsFromArgv', () => {
+  it('does not treat the subcommand after --non-interactive as a flag value', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      'integration',
+      'remove',
+      'neon',
+      '--yes',
+    ];
+    expect(getGlobalFlagsFromArgv(argv)).toEqual([
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      '--yes',
+    ]);
+  });
+});
+
+describe('buildCommandWithGlobalFlags', () => {
+  it('prepends globals without swallowing the integration subcommand', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      'integration',
+      'remove',
+      'neon',
+      '--yes',
+    ];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'integration-resource remove r1 --disconnect-all --yes',
+        'vercel',
+        { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
+      )
+    ).toBe(
+      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
+    );
+  });
+});
+
 describe('exitWithNonInteractiveError', () => {
   it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
     const { Response } = await import('node-fetch');
@@ -473,5 +539,36 @@ describe('exitWithNonInteractiveError', () => {
     });
 
     vi.restoreAllMocks();
+  });
+});
+
+describe('getGlobalFlagsFromArgv', () => {
+  it('does not treat the subcommand after --non-interactive as a flag value', () => {
+    expect(
+      getGlobalFlagsFromArgv([
+        'node',
+        'vc.js',
+        '--non-interactive',
+        'oauth-apps',
+        'register',
+        '--name',
+        'x',
+      ])
+    ).toEqual(['--non-interactive']);
+  });
+
+  it('collects --cwd and --non-interactive from anywhere in argv', () => {
+    expect(
+      getGlobalFlagsFromArgv([
+        'node',
+        'vc.js',
+        'oauth-apps',
+        'register',
+        '--name',
+        'display-name',
+        '--cwd=/tmp/proj',
+        '--non-interactive',
+      ])
+    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
   });
 });

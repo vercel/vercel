@@ -193,6 +193,29 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const renameSubcommand = {
+  name: 'rename',
+  aliases: [],
+  description: 'Rename a project',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+    {
+      name: 'new-name',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Rename a project',
+      value: `${packageName} project rename my-project my-renamed-project`,
+    },
+  ],
+} as const;
+
 export const tokenSubcommand = {
   name: 'token',
   aliases: [],
@@ -305,6 +328,14 @@ export const protectionSubcommand = {
       deprecated: false,
     },
     {
+      name: 'customer-support-code-visibility',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to customer support code visibility protection.',
+      deprecated: false,
+    },
+    {
       name: 'skew',
       shorthand: null,
       type: Boolean,
@@ -318,6 +349,29 @@ export const protectionSubcommand = {
       argument: 'SECONDS',
       description:
         'When enabling with --skew, max age in seconds for skew protection (default 2592000, 30 days).',
+      deprecated: false,
+    },
+    {
+      name: 'protection-bypass',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to automation protection bypass secrets.',
+      deprecated: false,
+    },
+    {
+      name: 'protection-bypass-secret',
+      shorthand: null,
+      type: String,
+      argument: 'SECRET',
+      description:
+        'Optional secret value for protection bypass. Required when disabling bypass.',
+      deprecated: false,
+    },
+    {
+      name: 'git-fork-protection',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to Git fork protection.',
       deprecated: false,
     },
   ],
@@ -339,6 +393,14 @@ export const protectionSubcommand = {
       value: `${packageName} project protection enable my-app --password`,
     },
     {
+      name: 'Enable customer support code visibility',
+      value: `${packageName} project protection enable my-app --customer-support-code-visibility`,
+    },
+    {
+      name: 'Disable customer support code visibility',
+      value: `${packageName} project protection disable my-app --customer-support-code-visibility`,
+    },
+    {
       name: 'Enable skew protection',
       value: `${packageName} project protection enable my-app --skew`,
     },
@@ -349,6 +411,22 @@ export const protectionSubcommand = {
     {
       name: 'Disable skew protection',
       value: `${packageName} project protection disable my-app --skew`,
+    },
+    {
+      name: 'Enable automation protection bypass',
+      value: `${packageName} project protection enable my-app --protection-bypass`,
+    },
+    {
+      name: 'Disable bypass with secret',
+      value: `${packageName} project protection disable my-app --protection-bypass --protection-bypass-secret <secret>`,
+    },
+    {
+      name: 'Enable Git fork protection',
+      value: `${packageName} project protection enable my-app --git-fork-protection`,
+    },
+    {
+      name: 'Disable Git fork protection',
+      value: `${packageName} project protection disable my-app --git-fork-protection`,
     },
     {
       name: 'Enable SSO deployment protection',
@@ -471,6 +549,7 @@ export const projectCommand = {
     protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
+    renameSubcommand,
     removeSubcommand,
     tokenSubcommand,
   ],
