@@ -31,7 +31,8 @@ export const listSubcommand = {
 export const apiCommand = {
   name: 'api',
   aliases: [],
-  description: 'Make authenticated HTTP requests to the Vercel API',
+  description:
+    'Make authenticated HTTP requests to the Vercel API. When the first argument is an OpenAPI tag with opted-in operations (`x-vercel-cli.supportedSubcommands`, or legacy `supported`), commands are resolved by tag and operationId (see `vercel openapi`); otherwise the first argument is treated as an API path starting with `/`.',
   arguments: [
     {
       name: 'endpoint',
@@ -40,6 +41,14 @@ export const apiCommand = {
   ],
   subcommands: [listSubcommand],
   options: [
+    {
+      name: 'describe',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'When the first argument is an opted-in OpenAPI tag, print operation names and descriptions instead of calling the API (same as omitting `<operationId>`). With no endpoint or tag argument, lists all opted-in operations.',
+    },
     {
       name: 'method',
       shorthand: 'X',
@@ -143,6 +152,14 @@ export const apiCommand = {
     },
   ],
   examples: [
+    {
+      name: 'List opted-in operations (OpenAPI tag mode)',
+      value: `${packageName} api --describe`,
+    },
+    {
+      name: 'Invoke an operation by tag and operationId',
+      value: `${packageName} api user getAuthUser`,
+    },
     {
       name: 'Get current user information',
       value: `${packageName} api /v2/user`,
