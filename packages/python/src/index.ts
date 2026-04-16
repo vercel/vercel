@@ -819,10 +819,11 @@ from vercel_runtime.vc_init import vc_handler
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
 
-  const routes: any[] = [
-    { handle: 'filesystem' },
-    { src: '/(.*)', dest: `/${lambdaPath}` },
-  ];
+  // for services routing is handled by fs-detectors, for legacy builds
+  // we still need to provide catch-all route
+  const routes = service?.name
+    ? undefined
+    : [{ handle: 'filesystem' }, { src: '/(.*)', dest: `/${lambdaPath}` }];
 
   return {
     resultVersion: 2,
@@ -831,7 +832,7 @@ from vercel_runtime.vc_init import vc_handler
         [lambdaPath]: output,
         ...staticFiles,
       },
-      routes,
+      ...(routes ? { routes } : {}),
       crons,
     },
   };

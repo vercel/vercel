@@ -1626,7 +1626,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "vercel_runtime"
-version = "2.1.1"
+version = "2.2.0"
 dependencies = [
  "actix-http",
  "actix-rt",

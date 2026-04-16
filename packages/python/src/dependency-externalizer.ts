@@ -168,22 +168,6 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    // Enforce the extended 1 GB limit for Python on Hive (Functions Beta).
-    // All dependencies are bundled directly, so check the total uncompressed
-    // size before we proceed to avoid a slower failure at ZIP time.
-    if (pythonOnHiveEnabled && this.totalBundleSize > HIVE_LAMBDA_SIZE_BYTES) {
-      const limitMB = (HIVE_LAMBDA_SIZE_BYTES / (1024 * 1024)).toFixed(0);
-      throw new NowBuildError({
-        code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function ` +
-          `size limit (${limitMB} MB). Consider removing unused dependencies or ` +
-          `splitting your application into smaller functions.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
-        action: 'Learn More',
-      });
-    }
-
     return {
       runtimeInstallEnabled,
       allVendorFiles: this.allVendorFiles,
