@@ -14,18 +14,20 @@ const minimalOpenApiJson = readFileSync(minimalOpenApiPath, 'utf-8');
 
 describe('api', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        text: async () => minimalOpenApiJson,
-      }))
-    );
+    const originalFetch = client.fetch.bind(client);
+    vi.spyOn(client, 'fetch').mockImplementation(async (url, opts) => {
+      if (url === 'https://openapi.vercel.sh/') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => minimalOpenApiJson,
+        } as any;
+      }
+      return originalFetch(url, opts);
+    });
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 

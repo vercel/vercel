@@ -109,7 +109,7 @@ export async function runOpenapiCli(
     client.dangerouslySkipPermissions = true;
   }
 
-  const openApi = new OpenApiCache();
+  const openApi = new OpenApiCache(client);
   const loaded = await openApi.loadWithSpinner(f['--refresh'] ?? false);
   if (!loaded) {
     output.error('Could not load OpenAPI specification');

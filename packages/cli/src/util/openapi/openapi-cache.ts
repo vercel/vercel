@@ -1,5 +1,6 @@
 import output from '../../output-manager';
 import { readPublicOpenApiSpecFromCacheOrNetwork } from './fetch-public-openapi-spec';
+import type Client from '../client';
 import type {
   OpenApiSpec,
   EndpointInfo,
@@ -26,6 +27,11 @@ import { VERCEL_CLI_ROOT_DISPLAY_KEY } from './constants';
  */
 export class OpenApiCache {
   private spec: OpenApiSpec | null = null;
+  private client?: Client;
+
+  constructor(client?: Client) {
+    this.client = client;
+  }
 
   /**
    * Check if the spec has been loaded
@@ -38,7 +44,10 @@ export class OpenApiCache {
    * Load the OpenAPI document from the published URL (with disk cache).
    */
   async load(forceRefresh = false): Promise<boolean> {
-    const result = await readPublicOpenApiSpecFromCacheOrNetwork(forceRefresh);
+    const result = await readPublicOpenApiSpecFromCacheOrNetwork(
+      forceRefresh,
+      this.client
+    );
     if ('error' in result) {
       output.debug(result.error);
       return false;
@@ -803,10 +812,7 @@ export class OpenApiCache {
     if (!ext) {
       return false;
     }
-    return (
-      ext.supportedSubcommands === true ||
-      ext.supported === true
-    );
+    return ext.supportedSubcommands === true || ext.supported === true;
   }
 
   private normalizeVercelCliAliases(operation: Operation): string[] {

@@ -93,7 +93,7 @@ export default async function api(client: Client): Promise<number> {
       );
     }
 
-    const openApiForList = new OpenApiCache();
+    const openApiForList = new OpenApiCache(client);
     const listSpecLoaded = await openApiForList.loadWithSpinner(
       lsFlags['--refresh'] ?? false
     );
@@ -175,7 +175,7 @@ export default async function api(client: Client): Promise<number> {
     );
   }
 
-  const openApiForTag = new OpenApiCache();
+  const openApiForTag = new OpenApiCache(client);
   const tagSpecLoaded = await openApiForTag.loadWithSpinner(
     typedFlags['--refresh'] ?? false
   );
@@ -276,7 +276,7 @@ async function promptEndpointSelection(
   forceRefresh: boolean
 ): Promise<SelectedEndpoint | null> {
   try {
-    const openApi = new OpenApiCache();
+    const openApi = new OpenApiCache(client);
     const success = await openApi.loadWithSpinner(forceRefresh);
     if (!success) {
       output.error('Could not load API specification for endpoint selection');
@@ -358,7 +358,7 @@ async function listEndpoints(
   forceRefresh: boolean,
   format: string
 ): Promise<number> {
-  const openApi = new OpenApiCache();
+  const openApi = new OpenApiCache(client);
   const success = await openApi.loadWithSpinner(forceRefresh);
   if (!success) {
     output.error('Could not load API specification');

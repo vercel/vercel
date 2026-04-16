@@ -1,6 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'fs';
 import { join } from 'path';
 import XDGAppPaths from 'xdg-app-paths';
+import type Client from '../client';
 import {
   CACHE_FILE,
   CACHE_TTL_MS,
@@ -9,9 +16,7 @@ import {
 } from './constants';
 import output from '../../output-manager';
 
-export type PublicOpenApiLoadResult =
-  | { raw: string }
-  | { error: string };
+export type PublicOpenApiLoadResult = { raw: string } | { error: string };
 
 function getCacheDirAndPath(): { cacheDir: string; cachePath: string } {
   const cacheDir = XDGAppPaths('com.vercel.cli').cache();
@@ -23,7 +28,8 @@ function getCacheDirAndPath(): { cacheDir: string; cachePath: string } {
  * disk cache under the XDG cache directory (see {@link CACHE_TTL_MS}).
  */
 export async function readPublicOpenApiSpecFromCacheOrNetwork(
-  forceRefresh: boolean
+  forceRefresh: boolean,
+  client?: Client
 ): Promise<PublicOpenApiLoadResult> {
   const { cacheDir, cachePath } = getCacheDirAndPath();
 
@@ -45,10 +51,7 @@ export async function readPublicOpenApiSpecFromCacheOrNetwork(
   }
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const res = await fetch(OPENAPI_URL, { signal: controller.signal });
-    clearTimeout(timeout);
+    const res = await fetchOpenApiSpec(client);
 
     if (!res.ok) {
       return useStaleCacheOrError(
@@ -70,6 +73,30 @@ export async function readPublicOpenApiSpecFromCacheOrNetwork(
       cachePath,
       `Failed to fetch OpenAPI spec: ${message}`
     );
+  }
+}
+
+async function fetchOpenApiSpec(
+  client?: Client
+): Promise<{ ok: boolean; status: number; text: () => Promise<string> }> {
+  if (client) {
+    const res = await client.fetch(OPENAPI_URL, {
+      json: false,
+      useCurrentTeam: false,
+    });
+    return {
+      ok: res.ok,
+      status: res.status,
+      text: () => res.text(),
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(OPENAPI_URL, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
