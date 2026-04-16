@@ -33,7 +33,7 @@ import {
   formatDescription,
 } from './format-utils';
 import output from '../../output-manager';
-import { renderCard, renderTable } from './display-columns';
+import { renderCard, renderTable, parseArrayColumns } from './display-columns';
 import { packageName } from '../../util/pkg-name';
 import type {
   ParsedFlags,
@@ -583,7 +583,8 @@ async function executeApiRequest(
   client: Client,
   requestConfig: RequestConfig,
   flags: ParsedFlags,
-  displayColumns?: Record<string, string> | null
+  displayColumns?: Record<string, string> | null,
+  options?: { tagOperation?: boolean }
 ): Promise<number> {
   // Verbose mode: show request details
   if (flags['--verbose']) {
@@ -603,14 +604,21 @@ async function executeApiRequest(
     return executePaginatedRequest(client, requestConfig, flags);
   }
 
-  return executeSingleRequest(client, requestConfig, flags, displayColumns);
+  return executeSingleRequest(
+    client,
+    requestConfig,
+    flags,
+    displayColumns,
+    options
+  );
 }
 
 async function executeSingleRequest(
   client: Client,
   config: RequestConfig,
   flags: ParsedFlags,
-  displayColumns?: Record<string, string> | null
+  displayColumns?: Record<string, string> | null,
+  options?: { tagOperation?: boolean }
 ): Promise<number> {
   try {
     const confirmed = await client.confirmMutatingOperation(
@@ -628,7 +636,14 @@ async function executeSingleRequest(
       json: false,
     });
 
-    return handleResponse(client, response, flags, displayColumns);
+    return handleResponse(
+      client,
+      response,
+      flags,
+      config.method,
+      displayColumns,
+      options
+    );
   } catch (err) {
     output.prettyError(err);
     return 1;
@@ -695,7 +710,9 @@ async function handleResponse(
   client: Client,
   response: Response,
   flags: ParsedFlags,
-  displayColumns?: Record<string, string> | null
+  method: string,
+  displayColumns?: Record<string, string> | null,
+  options?: { tagOperation?: boolean }
 ): Promise<number> {
   if (flags['--include']) {
     outputHeaders(client, response);
@@ -706,6 +723,7 @@ async function handleResponse(
   }
 
   const contentType = response.headers.get('content-type') || '';
+  const isMutation = options?.tagOperation && method !== 'GET';
 
   if (contentType.includes('application/json')) {
     const json = await response.json();
@@ -720,10 +738,27 @@ async function handleResponse(
       return outputWithDisplayColumns(client, json, displayColumns);
     }
 
+    if (isMutation && !flags['--raw']) {
+      if (!response.ok) {
+        return outputMutationResult(client, response, method, json);
+      }
+      return outputMutationResult(client, response, method);
+    }
+
     return outputResults(client, json, flags);
   }
 
   const text = await response.text();
+
+  if (isMutation && !flags['--raw']) {
+    return outputMutationResult(
+      client,
+      response,
+      method,
+      response.ok ? undefined : text
+    );
+  }
+
   client.stdout.write(text);
 
   return response.ok ? 0 : 1;
@@ -742,6 +777,12 @@ function outputWithDisplayColumns(
   data: unknown,
   columns: Record<string, string>
 ): number {
+  const parsed = parseArrayColumns(data, columns);
+  if (parsed) {
+    client.stdout.write(renderTable(parsed.rows, parsed.rowColumns) + '\n');
+    return 0;
+  }
+
   if (Array.isArray(data)) {
     client.stdout.write(renderTable(data, columns) + '\n');
   } else if (data && typeof data === 'object') {
@@ -750,6 +791,50 @@ function outputWithDisplayColumns(
     client.stdout.write(formatOutput(data, {}) + '\n');
   }
   return 0;
+}
+
+function outputMutationResult(
+  client: Client,
+  response: Response,
+  method: string,
+  errorBody?: unknown
+): number {
+  const verb =
+    method === 'POST'
+      ? 'Created'
+      : method === 'PATCH' || method === 'PUT'
+        ? 'Updated'
+        : method === 'DELETE'
+          ? 'Deleted'
+          : 'Done';
+
+  if (response.ok) {
+    client.stdout.write(
+      `${chalk.green('Success')}  ${verb} ${chalk.dim(`(${response.status})`)}\n`
+    );
+    return 0;
+  }
+
+  const errorMessage = extractErrorMessage(errorBody);
+  const statusLine = `${chalk.red('Error')}  ${response.status} ${response.statusText}`;
+  client.stdout.write(
+    errorMessage
+      ? `${statusLine}\n${chalk.dim(errorMessage)}\n`
+      : `${statusLine}\n`
+  );
+  return 1;
+}
+
+function extractErrorMessage(body: unknown): string | null {
+  if (!body) return null;
+  if (typeof body === 'string') return body;
+  if (typeof body === 'object' && body !== null) {
+    const obj = body as Record<string, unknown>;
+    if (typeof obj.message === 'string') return obj.message;
+    const err = obj.error as Record<string, unknown> | undefined;
+    if (err && typeof err.message === 'string') return err.message;
+  }
+  return null;
 }
 
 function outputResults(
@@ -1245,5 +1330,7 @@ export async function runTagOperation(
     return 0;
   }
 
-  return executeApiRequest(client, requestConfig, finalFlags, displayColumns);
+  return executeApiRequest(client, requestConfig, finalFlags, displayColumns, {
+    tagOperation: true,
+  });
 }

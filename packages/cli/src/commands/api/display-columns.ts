@@ -3,6 +3,10 @@ import chalk from 'chalk';
 /**
  * Resolve a dot-notation path like "user.softBlock.blockedAt" against an
  * object tree.  Returns `undefined` when any segment is missing.
+ *
+ * Paths may contain a `[]` marker (e.g. "teams[].name") which indicates
+ * array traversal.  Only the portion *after* `[]` is resolved here — callers
+ * are expected to strip the array prefix first (see `parseArrayColumns`).
  */
 function getByPath(obj: unknown, path: string): unknown {
   let current: unknown = obj;
@@ -11,6 +15,44 @@ function getByPath(obj: unknown, path: string): unknown {
     current = (current as Record<string, unknown>)[segment];
   }
   return current;
+}
+
+/**
+ * Detect whether displayColumns use `[]` array syntax and, if so, extract the
+ * array from `data` and return per-row column paths.
+ *
+ * For example, given columns `{ name: "teams[].name", slug: "teams[].slug" }`:
+ *   - Extracts `data.teams` as the row array
+ *   - Returns row-level columns `{ name: "name", slug: "slug" }`
+ *
+ * Returns `null` when the columns don't use `[]` syntax.
+ */
+export function parseArrayColumns(
+  data: unknown,
+  columns: Record<string, string>
+): { rows: unknown[]; rowColumns: Record<string, string> } | null {
+  const entries = Object.entries(columns);
+  const first = entries[0];
+  if (!first) return null;
+
+  const bracketIdx = first[1].indexOf('[].');
+  if (bracketIdx === -1) return null;
+
+  const arrayKey = first[1].slice(0, bracketIdx);
+
+  const rowColumns: Record<string, string> = {};
+  for (const [label, path] of entries) {
+    const prefix = path.slice(0, bracketIdx);
+    if (prefix !== arrayKey || !path.startsWith(prefix + '[].')) {
+      return null;
+    }
+    rowColumns[label] = path.slice(bracketIdx + 3);
+  }
+
+  const arr = getByPath(data, arrayKey);
+  if (!Array.isArray(arr)) return null;
+
+  return { rows: arr, rowColumns };
 }
 
 function formatValue(value: unknown): string {
