@@ -1,8 +1,32 @@
-import { describe, expect, it, afterEach, vi } from 'vitest';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import { describe, expect, it, afterEach, vi, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import api from '../../../../src/commands/api';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const minimalOpenApiPath = join(
+  __dirname,
+  '../../../fixtures/unit/openapi/minimal-openapi.json'
+);
+const minimalOpenApiJson = readFileSync(minimalOpenApiPath, 'utf-8');
+
 describe('api', () => {
+  beforeEach(() => {
+    const originalFetch = client.fetch.bind(client);
+    vi.spyOn(client, 'fetch').mockImplementation(async (url, opts) => {
+      if (url === 'https://openapi.vercel.sh/') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => minimalOpenApiJson,
+        } as any;
+      }
+      return originalFetch(url, opts);
+    });
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -23,7 +47,9 @@ describe('api', () => {
       client.setArgv('api', 'v2/user');
       const exitCode = await api(client);
       expect(exitCode).toEqual(1);
-      expect(client.getFullOutput()).toContain('Endpoint must start with /');
+      expect(client.getFullOutput()).toContain(
+        'Use an API path starting with /'
+      );
     });
 
     it('should reject protocol-relative URLs to prevent SSRF', async () => {
@@ -47,7 +73,6 @@ describe('api', () => {
 
   describe('GET requests', () => {
     it('makes GET request to endpoint', async () => {
-      // Use a custom endpoint to avoid conflict with useUser()
       client.scenario.get('/v5/test-endpoint', (_req, res) => {
         res.json({ data: { id: 'test_123', name: 'testdata' } });
       });
@@ -138,7 +163,6 @@ describe('api', () => {
         res.json({ uid: 'dpl_abc123' });
       });
 
-      // Skip confirmation prompt for this test (testing request, not confirmation)
       client.dangerouslySkipPermissions = true;
 
       client.setArgv('api', '/v13/deployments/dpl_abc123', '-X', 'DELETE');
@@ -177,9 +201,8 @@ describe('api', () => {
       const exitCode = await api(client);
 
       expect(exitCode).toEqual(0);
-      // Check for indented output (pretty print)
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('  '); // Has indentation
+      expect(output).toContain('  ');
     });
 
     it('outputs raw JSON with --raw', async () => {
@@ -192,7 +215,6 @@ describe('api', () => {
 
       expect(exitCode).toEqual(0);
       const output = client.stdout.getFullOutput().trim();
-      // Raw output should be compact (no extra indentation)
       expect(output).toBe('{"data":{"id":"raw_123"}}');
     });
   });
@@ -253,7 +275,6 @@ describe('api', () => {
       client.setArgv('api', '/v13/deployments/dpl_abc123');
       await api(client);
 
-      // Check that the endpoint is tracked with normalized IDs
       const events = client.telemetryEventStore.readonlyEvents;
       const endpointEvent = events.find(e => e.key === 'argument:endpoint');
       expect(endpointEvent).toBeDefined();
@@ -268,11 +289,28 @@ describe('api', () => {
       client.setArgv('api', '/v10/projects', '-X', 'POST', '-F', 'name=test');
       await api(client);
 
-      // Check that the method is tracked
       const events = client.telemetryEventStore.readonlyEvents;
       const methodEvent = events.find(e => e.key === 'option:method');
       expect(methodEvent).toBeDefined();
       expect(methodEvent?.value).toBe('POST');
+    });
+  });
+
+  describe('OpenAPI CLI tag routing', () => {
+    it('delegates opted-in tag and operation to OpenAPI resolution', async () => {
+      client.setArgv('api', 'test-tag', 'testOp', '--describe', '--refresh');
+      const exitCode = await api(client);
+      expect(exitCode).toBe(0);
+      const out = client.stdout.getFullOutput();
+      expect(out).toContain('test-tag');
+      expect(out).toContain('first');
+    });
+
+    it('lists operations for `api ls <tag>` when the tag is opted in', async () => {
+      client.setArgv('api', 'ls', 'test-tag', '--refresh');
+      const exitCode = await api(client);
+      expect(exitCode).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('test-op-two');
     });
   });
 });

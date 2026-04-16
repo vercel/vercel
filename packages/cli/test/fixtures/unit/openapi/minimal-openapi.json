@@ -1,0 +1,102 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Test", "version": "1" },
+  "paths": {
+    "/v1/test": {
+      "get": {
+        "x-vercel-cli": { "supportedSubcommands": true, "aliases": ["first"] },
+        "operationId": "testOp",
+        "tags": ["test-tag"],
+        "summary": "First operation",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/other": {
+      "post": {
+        "x-vercel-cli": { "supported": true },
+        "operationId": "testOpTwo",
+        "tags": ["test-tag"],
+        "description": "Creates another resource.",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "n": { "type": "number" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/hidden": {
+      "get": {
+        "operationId": "hiddenOp",
+        "tags": ["test-tag"],
+        "summary": "Not opted in",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "x": { "type": "number" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectId}/things": {
+      "get": {
+        "x-vercel-cli": { "supportedSubcommands": true },
+        "operationId": "projectThing",
+        "tags": ["test-tag"],
+        "summary": "Path and query params",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

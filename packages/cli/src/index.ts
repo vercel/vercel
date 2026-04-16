@@ -41,6 +41,11 @@ import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
+import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
+import {
+  tryOpenApiFallback,
+  tryOpenApiProductionOverride,
+} from './util/openapi';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -581,6 +586,27 @@ const main = async () => {
       output.debug(
         'user supplied a possible target for deployment or an extension'
       );
+      if (
+        process.env.VERCEL_AUTO_API &&
+        (await matchesCliApiTag(targetOrSubcommand))
+      ) {
+        output.debug(
+          `first token "${targetOrSubcommand}" matches an OpenAPI tag; routing to api`
+        );
+        const tag = targetOrSubcommand;
+        const result = await tryOpenApiFallback(
+          client,
+          parsedArgs.args.slice(3),
+          async () => tag
+        );
+        return finishWithExitCode(result ?? 1);
+      } else if (targetPathExists) {
+        subcommand = 'deploy';
+        userSuppliedSubCommand = targetOrSubcommand;
+        output.debug(
+          `first token "${targetOrSubcommand}" is an existing path; routing to deploy`
+        );
+      }
     }
   } else {
     output.debug('user supplied no target, defaulting to deploy');
@@ -1056,6 +1082,10 @@ const main = async () => {
           telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).oauthApps;
           break;
+        case 'openapi':
+          telemetry.trackCliCommandOpenapi(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).openapi;
+          break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).open;
@@ -1163,9 +1193,21 @@ const main = async () => {
         earlyGetUserPromise = getUser(client).catch(() => undefined);
       }
 
-      exitCode = await rootSpan
-        .child('vc.cli.command', { command: subcommand || 'deploy' })
-        .trace(() => func(client));
+      const productionOverride = subcommand
+        ? await tryOpenApiProductionOverride(
+            client,
+            subcommand,
+            client.argv.slice(3)
+          )
+        : null;
+
+      if (productionOverride !== null) {
+        exitCode = productionOverride;
+      } else {
+        exitCode = await rootSpan
+          .child('vc.cli.command', { command: subcommand || 'deploy' })
+          .trace(() => func(client));
+      }
     }
   } catch (err: unknown) {
     trackAgenticErrorTelemetry(err);
