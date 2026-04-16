@@ -75,6 +75,8 @@ import {
   getImagesManifest,
   getNextConfig,
   getPageLambdaGroups,
+  getPrivateServerSourceMapRoute,
+  getPrivateServerSourceMaps,
   getPrerenderManifest,
   getPrivateOutputs,
   getRequiredServerFilesManifest,
@@ -612,6 +614,47 @@ export const build: BuildV2 = async buildOptions => {
       }
     }
 
+    const privateServerSourceMaps = await getPrivateServerSourceMaps(
+      path.join(entryPath, outputDirectory)
+    );
+
+    for (const [outputFile, file] of Object.entries(
+      privateServerSourceMaps.files
+    )) {
+      if (!(file instanceof FileFsRef)) {
+        continue;
+      }
+
+      const destPath = path.join(staticOutputDir, outputFile);
+      await copy(file.fsPath, destPath);
+    }
+
+    if (privateServerSourceMaps.routes.length > 0) {
+      const buildOutputConfigPath = path.join(
+        entryPath,
+        outputDirectory,
+        'output/config.json'
+      );
+      const buildOutputConfig = await readJSON(buildOutputConfigPath);
+      const privateServerSourceMapRoute = getPrivateServerSourceMapRoute();
+
+      buildOutputConfig.routes = [
+        privateServerSourceMapRoute,
+        ...(Array.isArray(buildOutputConfig.routes)
+          ? buildOutputConfig.routes.filter(
+              (route: Route) =>
+                JSON.stringify(route) !==
+                JSON.stringify(privateServerSourceMapRoute)
+            )
+          : []),
+      ];
+
+      await writeFile(
+        buildOutputConfigPath,
+        JSON.stringify(buildOutputConfig, null, 2)
+      );
+    }
+
     return {
       buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
@@ -713,13 +756,26 @@ export const build: BuildV2 = async buildOptions => {
         })
       : undefined;
 
-  const privateOutputs = await getPrivateOutputs(
+  const defaultPrivateOutputs = await getPrivateOutputs(
     path.join(entryPath, outputDirectory),
     {
       'next-stats.json': '_next/__private/stats.json',
       trace: '_next/__private/trace',
     }
   );
+  const privateServerSourceMaps = await getPrivateServerSourceMaps(
+    path.join(entryPath, outputDirectory)
+  );
+  const privateOutputs = {
+    files: {
+      ...defaultPrivateOutputs.files,
+      ...privateServerSourceMaps.files,
+    },
+    routes: [
+      ...defaultPrivateOutputs.routes,
+      ...privateServerSourceMaps.routes,
+    ],
+  };
 
   const headers: Route[] = [];
   const onMatchHeaders: Route[] = [];

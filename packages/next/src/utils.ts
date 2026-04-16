@@ -3643,6 +3643,58 @@ export async function getPrivateOutputs(
   return { files, routes };
 }
 
+const PRIVATE_SERVER_SOURCE_MAP_OUTPUT_PREFIX =
+  '_next/__private/server-source-maps';
+
+export function getPrivateServerSourceMapRoute(): Route {
+  return {
+    src: `^/${escapeStringRegexp(
+      PRIVATE_SERVER_SOURCE_MAP_OUTPUT_PREFIX
+    )}/.+\\.map$`,
+    dest: '/404',
+    status: 404,
+    continue: true,
+  };
+}
+
+export async function getPrivateServerSourceMaps(dir: string) {
+  const files: Files = {};
+  const serverSourceMaps = await glob('server/**/*.map', dir);
+
+  for (const existingFile of Object.keys(serverSourceMaps)) {
+    const fsPath = path.join(dir, existingFile);
+
+    try {
+      const { mode, size } = await stat(fsPath);
+      if (size > 30 * 1024 * 1024) {
+        throw new Error(`Exceeds maximum file size: ${size}`);
+      }
+
+      const normalizedFile = existingFile.split(path.sep).join(path.posix.sep);
+      const outputFile = path.posix.join(
+        PRIVATE_SERVER_SOURCE_MAP_OUTPUT_PREFIX,
+        normalizedFile.replace(/^server\/+/, '')
+      );
+
+      files[outputFile] = new FileFsRef({
+        mode,
+        fsPath,
+        contentType: 'application/json',
+      });
+    } catch (error) {
+      debug(
+        `Private server source map ${existingFile} had an error and will not be uploaded: ${error}`
+      );
+    }
+  }
+
+  return {
+    files,
+    routes:
+      Object.keys(files).length > 0 ? [getPrivateServerSourceMapRoute()] : [],
+  };
+}
+
 export {
   excludeFiles,
   validateEntrypoint,
