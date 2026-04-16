@@ -7,9 +7,23 @@ export {
   humanReadableColumnLabel,
 } from './column-label';
 export { inferCliSubcommandAliases } from './infer-cli-aliases';
+export {
+  formatAsCard,
+  formatAsDataTable,
+} from './vercel-cli-table';
+export { readPublicOpenApiSpecFromCacheOrNetwork } from './fetch-public-openapi-spec';
+export {
+  composeOpenapiInvocationUrl,
+  resolveOpenapiInvocationUrl,
+  splitOpenapiInvocationPositionals,
+  parseOpenapiOptionFlagTokens,
+} from './openapi-operation-cli';
 export * from './resolve-by-tag-operation';
 export {
   matchesCliApiTag,
   resolveOpenApiTagForProjectsCli,
 } from './matches-cli-api-tag';
-export { tryOpenApiFallback } from './try-openapi-fallback';
+export {
+  tryOpenApiFallback,
+  tryOpenApiProductionOverride,
+} from './try-openapi-fallback';
