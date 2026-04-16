@@ -54,6 +54,7 @@ describe('index', () => {
         ['ls', 'list'],
         ['mcp', 'mcp'],
         ['mf', 'microfrontends'],
+        ['metrics', 'metrics'],
         ['microfrontends', 'microfrontends'],
         ['oauth-apps', 'oauth-apps'],
         ['open', 'open'],
