@@ -14,6 +14,7 @@ const ep = (method: string, params: Parameter[] = []): EndpointInfo => ({
   tags: ['t'],
   parameters: params,
   vercelCliSupported: true,
+  vercelCliProductionReady: false,
   vercelCliAliases: [],
   vercelCliBodyArguments: [],
 });

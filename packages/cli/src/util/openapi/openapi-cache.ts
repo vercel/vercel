@@ -93,6 +93,47 @@ export class OpenApiCache {
   }
 
   /**
+   * Endpoints with `x-vercel-cli.supportedProduction: true` — these replace
+   * native CLI commands at `vercel <command> <subcommand>`.
+   */
+  getProductionReadyEndpoints(): EndpointInfo[] {
+    return this.getEndpoints().filter(ep => ep.vercelCliProductionReady);
+  }
+
+  /**
+   * Find an operation by tag and operation hint (operationId or alias) that
+   * has `supportedProduction: true`.
+   */
+  findProductionReadyByTagAndHint(
+    tag: string,
+    hint: string
+  ): EndpointInfo | undefined {
+    const hintFold = foldNamingStyle(hint);
+    for (const ep of this.getProductionReadyEndpoints()) {
+      if (!this.tagsInclude(ep.tags, tag)) {
+        continue;
+      }
+      if (this.operationIdOrAliasMatches(ep, hintFold)) {
+        return ep;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Tags that have at least one production-ready operation.
+   */
+  getAllProductionReadyTags(): string[] {
+    const found = new Set<string>();
+    for (const ep of this.getProductionReadyEndpoints()) {
+      for (const t of ep.tags || []) {
+        found.add(t);
+      }
+    }
+    return [...found].sort((a, b) => a.localeCompare(b));
+  }
+
+  /**
    * Whether `requested` matches a tag on the operation (case-insensitive; camel /
    * kebab / snake folds match, e.g. `access-groups` and `accessGroups`).
    */
@@ -910,6 +951,8 @@ export class OpenApiCache {
             requestBody: operation.requestBody,
             responses: operation.responses,
             vercelCliSupported: this.isVercelCliOperationSupported(operation),
+            vercelCliProductionReady:
+              operation['x-vercel-cli']?.supportedProduction === true,
             vercelCliAliases: this.normalizeVercelCliAliases(operation),
             vercelCliBodyArguments:
               operation['x-vercel-cli']?.bodyArguments ?? [],

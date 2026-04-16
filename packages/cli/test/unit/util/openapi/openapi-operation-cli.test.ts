@@ -30,6 +30,7 @@ describe('openapi-operation-cli', () => {
       ],
       responses: {},
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -113,6 +114,7 @@ describe('openapi-operation-cli', () => {
       ],
       responses: {},
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -154,6 +156,7 @@ describe('openapi-operation-cli', () => {
       ],
       responses: {},
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -198,6 +201,7 @@ describe('openapi-operation-cli', () => {
       ],
       responses: {},
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -229,6 +233,7 @@ describe('openapi-operation-cli', () => {
       ],
       responses: {},
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };

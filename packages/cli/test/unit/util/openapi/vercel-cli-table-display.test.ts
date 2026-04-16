@@ -191,6 +191,7 @@ describe('OpenApiCache.getVercelCliTableDisplay', () => {
       parameters: [],
       responses: miniSpec.paths['/v2/user'].get.responses,
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -216,6 +217,7 @@ describe('OpenApiCache.getVercelCliTableDisplay', () => {
       parameters: [],
       responses: publishedStyleSpec.paths['/v2/user'].get.responses,
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -241,6 +243,7 @@ describe('OpenApiCache.getVercelCliTableDisplay', () => {
       parameters: [],
       responses: getProjectsListSpec.paths['/v10/projects'].get.responses,
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -271,6 +274,7 @@ describe('OpenApiCache.describeResponseCliColumns', () => {
       parameters: [],
       responses: getProjectsListSpec.paths['/v10/projects'].get.responses,
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };
@@ -298,6 +302,7 @@ describe('OpenApiCache.describeResponseCliColumns', () => {
       parameters: [],
       responses: miniSpec.paths['/v2/user'].get.responses,
       vercelCliSupported: true,
+      vercelCliProductionReady: false,
       vercelCliAliases: [],
       vercelCliBodyArguments: [],
     };

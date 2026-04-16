@@ -15,6 +15,7 @@ const sampleEndpoint: EndpointInfo = {
   tags: ['projects'],
   parameters: [],
   vercelCliSupported: false,
+  vercelCliProductionReady: false,
   vercelCliAliases: [],
   vercelCliBodyArguments: [],
 };

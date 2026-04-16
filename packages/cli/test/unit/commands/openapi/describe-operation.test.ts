@@ -19,6 +19,7 @@ function ep(
     parameters: [],
     responses: {},
     vercelCliSupported: true,
+    vercelCliProductionReady: false,
     vercelCliAliases: [],
     vercelCliBodyArguments: [],
     ...partial,

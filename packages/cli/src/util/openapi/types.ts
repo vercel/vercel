@@ -33,8 +33,8 @@ export interface VercelCliOperationExtension {
    */
   supportedSubcommands?: boolean;
   /**
-   * Reserved for future top-level `vercel <command>` wiring (not nested under
-   * `vercel api`). Ignored until implemented.
+   * When `true`, the operation replaces the native CLI command at
+   * `vercel <command> <subcommand>` (not nested under `vercel api`).
    */
   supportedProduction?: boolean;
   /**
@@ -171,6 +171,11 @@ export interface EndpointInfo {
    * or legacy `x-vercel-cli.supported`).
    */
   vercelCliSupported: boolean;
+  /**
+   * True when the operation should replace the native CLI command at
+   * `vercel <command> <subcommand>` (`x-vercel-cli.supportedProduction`).
+   */
+  vercelCliProductionReady: boolean;
   /** `x-vercel-cli.aliases` from the OpenAPI document (trimmed, non-empty). */
   vercelCliAliases: string[];
   /** `x-vercel-cli.bodyArguments` — body property names exposed as positionals. */

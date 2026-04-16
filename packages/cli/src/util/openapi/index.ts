@@ -27,4 +27,7 @@ export {
   matchesCliApiTag,
   resolveOpenApiTagForProjectsCli,
 } from './matches-cli-api-tag';
-export { tryOpenApiFallback } from './try-openapi-fallback';
+export {
+  tryOpenApiFallback,
+  tryOpenApiProductionOverride,
+} from './try-openapi-fallback';
