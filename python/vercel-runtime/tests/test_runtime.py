@@ -557,7 +557,9 @@ class TestCronService(_RuntimeTestCase):
         ep_abs, ep_rel, mod = _make_entrypoint(
             "cron_dunder_main.py", self.tmp_path
         )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
         marker_path = self.tmp_path / "schedule-job-dunder-main.marker"
+        routes = json.dumps({cron_path: mod})
         async with _run_runtime(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
@@ -567,6 +569,7 @@ class TestCronService(_RuntimeTestCase):
                 "VERCEL_SERVICE_TYPE": "job",
                 "VERCEL_SERVICE_TRIGGER": "schedule",
                 "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
             },
         ):
             ss = await self.n1.wait_for_message(
@@ -574,7 +577,7 @@ class TestCronService(_RuntimeTestCase):
             )
             port = ss.payload.http_port
 
-            resp = await _http_get(port, "/run")
+            resp = await _http_get(port, cron_path)
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), '{"ok":true}')
             self.assertTrue(marker_path.exists())
