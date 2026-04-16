@@ -32,6 +32,8 @@ export interface AuthConfig {
   skipWrite?: boolean;
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
+  /** The ID of the currently authenticated user, cached from `/v2/user`. */
+  userId?: string;
   /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
   refreshToken?: string;
   /**
@@ -182,6 +184,14 @@ export type Deployment = {
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   checksState?: 'completed' | 'registered' | 'running';
   checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
   createdAt: number;

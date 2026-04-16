@@ -6,6 +6,11 @@ import { removeStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getLinkedProject } from '../../util/projects/link';
 import type { BlobRWToken } from '../../util/blob/token';
+import { envPullCommandLogic } from '../env/pull';
+import {
+  formatStoreLabel,
+  formatConnectedProjects,
+} from '../../util/blob/confirm';
 
 export default async function removeStore(
   client: Client,
@@ -24,9 +29,12 @@ export default async function removeStore(
     return 1;
   }
 
-  let {
-    args: [storeId],
+  const {
+    args: [storeIdArg],
+    flags: { '--yes': yes },
   } = parsedArgs;
+
+  let storeId = storeIdArg;
 
   if (!storeId && rwToken.success) {
     const [, , , id] = rwToken.token.split('_');
@@ -35,6 +43,10 @@ export default async function removeStore(
   }
 
   if (!storeId) {
+    if (!client.stdin.isTTY) {
+      output.error('Missing required argument: storeId');
+      return 1;
+    }
     storeId = await client.input.text({
       message: 'Enter the ID of the blob store you want to remove',
       validate: value => {
@@ -46,36 +58,66 @@ export default async function removeStore(
     });
   }
 
+  const link = await getLinkedProject(client);
+  const accountId = link.status === 'linked' ? link.org.id : undefined;
+
   try {
-    const link = await getLinkedProject(client);
-
-    const store = await client.fetch<{ store: { id: string; name: string } }>(
-      `/v1/storage/stores/${storeId}`,
-      {
+    const [store, connectionsResponse] = await Promise.all([
+      client.fetch<{ store: { id: string; name: string } }>(
+        `/v1/storage/stores/${storeId}`,
+        {
+          method: 'GET',
+          accountId,
+        }
+      ),
+      client.fetch<{
+        connections: { project: { name: string } }[];
+      }>(`/v1/storage/stores/${storeId}/connections`, {
         method: 'GET',
-        accountId: link.status === 'linked' ? link.org.id : undefined,
+        accountId,
+      }),
+    ]);
+
+    const label = formatStoreLabel(store.store.name, store.store.id);
+    const projectsInfo = formatConnectedProjects(
+      connectionsResponse.connections
+    );
+
+    if (!yes) {
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
+        );
+        return 1;
       }
-    );
 
-    const res = await client.input.confirm(
-      `Are you sure you want to remove ${store.store.name} (${store.store.id})? This action cannot be undone.`,
-      false
-    );
+      const res = await client.input.confirm(
+        `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
+        false
+      );
 
-    if (!res) {
-      output.success('Blob store not removed');
-      return 0;
+      if (!res) {
+        output.success('Blob store not removed');
+        return 0;
+      }
     }
 
     output.debug('Deleting blob store');
 
     output.spinner('Deleting blob store');
 
+    // Remove all project connections first so that
+    // BLOB_READ_WRITE_TOKEN env variables are cleaned up
+    await client.fetch(`/v1/storage/stores/${storeId}/connections`, {
+      method: 'DELETE',
+      accountId,
+    });
+
     await client.fetch<{ store: { id: string } }>(
       `/v1/storage/stores/blob/${storeId}`,
       {
         method: 'DELETE',
-        accountId: link.status === 'linked' ? link.org.id : undefined,
+        accountId,
       }
     );
   } catch (err) {
@@ -86,6 +128,22 @@ export default async function removeStore(
   output.stopSpinner();
 
   output.success('Blob store deleted');
+
+  if (link.status === 'linked') {
+    client.config.currentTeam =
+      link.org.type === 'team' ? link.org.id : undefined;
+
+    await envPullCommandLogic(
+      client,
+      '.env.local',
+      true,
+      'development',
+      link,
+      undefined,
+      client.cwd,
+      'vercel-cli:blob:store-remove'
+    );
+  }
 
   return 0;
 }

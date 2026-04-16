@@ -1774,7 +1774,7 @@ describe('command-backed cron services', () => {
       service: { type: 'cron', name: 'cleanup' },
     });
 
-    const output = getBuildOutputV3(result);
+    const output = getBuildOutputV2Lambda(result);
     const handler = output.files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');

@@ -2,6 +2,12 @@ import {
   isBackendFramework,
   isPythonFramework,
 } from '@vercel/build-utils/dist/framework-helpers';
+import {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+} from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,
@@ -16,6 +22,13 @@ import {
   ROUTE_OWNING_BUILDERS,
 } from './types';
 
+export {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+};
+
 export async function hasFile(
   fs: DetectorFilesystem,
   filePath: string
@@ -28,18 +41,9 @@ export async function hasFile(
 }
 
 /**
- * Reserved internal namespace used by services routing/runtime plumbing.
- */
-export const INTERNAL_SERVICE_PREFIX = '/_svc';
-
-/**
  * Reserved internal namespace used by the dev queue proxy.
  */
 export const INTERNAL_QUEUES_PREFIX = '/_svc/_queues';
-
-export function getInternalServiceFunctionPath(serviceName: string): string {
-  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
-}
 
 function normalizeInternalServiceEntrypoint(entrypoint: string): string {
   const normalized = entrypoint
@@ -55,10 +59,6 @@ export function getInternalServiceWorkerPathPrefix(
   return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
 }
 
-export function getInternalServiceCronPathPrefix(serviceName: string): string {
-  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/crons`;
-}
-
 export function getInternalServiceWorkerPath(
   serviceName: string,
   entrypoint: string,
@@ -66,15 +66,6 @@ export function getInternalServiceWorkerPath(
 ): string {
   const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
   return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
-}
-
-export function getInternalServiceCronPath(
-  serviceName: string,
-  entrypoint: string,
-  handler = 'cron'
-): string {
-  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
-  return `${getInternalServiceCronPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
 
 const COMMAND_CRON_ENTRYPOINT = '__command__';
@@ -102,6 +93,7 @@ export function getServiceCronPath(service: {
     service.handlerFunction || 'cron'
   );
 }
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {
@@ -233,28 +225,50 @@ export interface ReadVercelConfigResult {
 }
 
 /**
- * Read and parse vercel.json from filesystem.
+ * Read and parse vercel.json or vercel.toml from filesystem.
  * Returns the parsed config or an error if the file exists but is invalid.
  */
 export async function readVercelConfig(
   fs: DetectorFilesystem
 ): Promise<ReadVercelConfigResult> {
   const hasVercelJson = await fs.hasPath('vercel.json');
-  if (!hasVercelJson) {
-    return { config: null, error: null };
+  if (hasVercelJson) {
+    try {
+      const content = await fs.readFile('vercel.json');
+      const config = JSON.parse(content.toString());
+      return { config, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_JSON',
+          message:
+            'Failed to parse vercel.json. Ensure it contains valid JSON.',
+        },
+      };
+    }
   }
 
-  try {
-    const content = await fs.readFile('vercel.json');
-    const config = JSON.parse(content.toString());
-    return { config, error: null };
-  } catch {
-    return {
-      config: null,
-      error: {
-        code: 'INVALID_VERCEL_JSON',
-        message: 'Failed to parse vercel.json. Ensure it contains valid JSON.',
-      },
-    };
+  const hasVercelToml =
+    process.env.VERCEL_TOML_CONFIG_ENABLED === '1' &&
+    (await fs.hasPath('vercel.toml'));
+  if (hasVercelToml) {
+    try {
+      const { parse: tomlParse } = await import('smol-toml');
+      const content = await fs.readFile('vercel.toml');
+      const config = tomlParse(content.toString());
+      return { config: config as any, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_TOML',
+          message:
+            'Failed to parse vercel.toml. Ensure it contains valid TOML.',
+        },
+      };
+    }
   }
+
+  return { config: null, error: null };
 }

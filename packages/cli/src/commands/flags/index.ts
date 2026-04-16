@@ -13,6 +13,7 @@ import create from './add';
 import openFlag from './open';
 import update from './update';
 import set from './set';
+import rollout from './rollout';
 import rm from './rm';
 import archive from './archive';
 import disable from './disable';
@@ -26,14 +27,17 @@ import {
   openSubcommand,
   updateSubcommand,
   setSubcommand,
+  rolloutSubcommand,
   removeSubcommand,
   archiveSubcommand,
   disableSubcommand,
   prepareSubcommand,
   enableSubcommand,
   sdkKeysSubcommand,
+  overrideSubcommand,
 } from './command';
 import emitDatafiles from './emit-datafiles';
+import override from './override';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
@@ -42,12 +46,14 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
   update: getCommandAliases(updateSubcommand),
   set: getCommandAliases(setSubcommand),
+  rollout: getCommandAliases(rolloutSubcommand),
   rm: getCommandAliases(removeSubcommand),
   archive: getCommandAliases(archiveSubcommand),
   disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
   'sdk-keys': getCommandAliases(sdkKeysSubcommand),
   prepare: getCommandAliases(prepareSubcommand),
+  override: getCommandAliases(overrideSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -137,6 +143,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
+    case 'rollout':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(rolloutSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRollout(subcommandOriginal);
+      return rollout(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -180,6 +194,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPrepare(subcommandOriginal);
       return emitDatafiles(client);
+    case 'override':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(overrideSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandOverride(subcommandOriginal);
+      return override(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

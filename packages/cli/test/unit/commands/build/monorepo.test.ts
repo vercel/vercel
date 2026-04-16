@@ -3,6 +3,8 @@ import fs from 'fs-extra';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { createServer, type Server } from 'http';
+import { pathToFileURL } from 'url';
 import execa from 'execa';
 import { FileFsRef, NodejsLambda, glob } from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
@@ -149,6 +151,86 @@ async function extractAndExecuteCode(
   await rm(tempDir, { recursive: true, force: true });
 }
 
+async function invokeBundledRoute(
+  lambda: NodejsLambda,
+  request: {
+    path: string;
+    matchedPath: string;
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }
+): Promise<{ status: number; body: string }> {
+  const out = await lambda.createZip();
+  const tempDir = await mkdtemp(join(tmpdir(), 'lambda-route-test-'));
+
+  const lambdaPath = join(tempDir, 'lambda.zip');
+  await writeFile(lambdaPath, new Uint8Array(out));
+  await execa('unzip', ['-o', lambdaPath], {
+    cwd: tempDir,
+    stdio: 'ignore',
+  });
+
+  const handlerPath = join(tempDir, lambda.handler);
+  const originalCwd = process.cwd();
+  let server: Server | undefined;
+
+  try {
+    process.chdir(tempDir);
+
+    const handlerModule = await import(pathToFileURL(handlerPath).href);
+    const handler = handlerModule.default ?? handlerModule;
+    if (typeof handler !== 'function') {
+      throw new Error(
+        `Expected ${lambda.handler} to export a function handler`
+      );
+    }
+
+    server = createServer(async (req, res) => {
+      try {
+        await handler(req, res);
+      } catch (error: any) {
+        res.statusCode = 500;
+        res.end(error.message);
+      }
+    });
+
+    await new Promise<void>(resolve => {
+      server!.listen(0, '127.0.0.1', resolve);
+    });
+
+    const addr = server.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('Expected server to listen on an object address');
+    }
+
+    const response = await fetch(
+      `http://127.0.0.1:${addr.port}${request.path}`,
+      {
+        method: request.method ?? 'GET',
+        headers: {
+          'x-matched-path': request.matchedPath,
+          ...request.headers,
+        },
+        body: request.body,
+      }
+    );
+
+    return {
+      status: response.status,
+      body: await response.text(),
+    };
+  } finally {
+    process.chdir(originalCwd);
+    if (server) {
+      await new Promise<void>((resolve, reject) =>
+        server!.close(err => (err ? reject(err) : resolve()))
+      );
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
 describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
   beforeEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
@@ -157,9 +239,123 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
   afterEach(() => {
     delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
+    delete process.env.VERCEL_API_FUNCTION_BUNDLING;
     delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
     delete process.env.TURBO_FORCE;
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'should build workflow-style bundled node api routes from a rootDirectory',
+    async () => {
+      const rootDirectory = 'workbench/example';
+      const cwd = setupUnitFixture(
+        'commands/build/workflow-root-directory-bundling'
+      );
+      const output = join(cwd, '.vercel/output');
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_workflow_example',
+        name: 'workflow-example',
+        framework: null,
+        rootDirectory,
+      });
+
+      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+      process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+      client.cwd = cwd;
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+
+      expect(exitCode).toEqual(0);
+
+      const funcDir = join(
+        output,
+        'functions',
+        'api',
+        'test-direct-step-call.func'
+      );
+      expect(await fs.pathExists(funcDir)).toBe(true);
+
+      const lambda = await createLambdaFromFuncDir(funcDir, cwd);
+
+      expect(lambda.handler).toEqual('___vc_bundled_api_handler.js');
+      expect(lambda.files?.['___vc_bundled_api_config.json']).toBeUndefined();
+      expect(
+        lambda.files?.[
+          join('workbench', 'example', 'api', 'test-direct-step-call.js')
+        ]
+      ).toBeDefined();
+
+      const response = await invokeBundledRoute(lambda, {
+        path: '/api/test-direct-step-call',
+        matchedPath: '/api/test-direct-step-call',
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ x: 2, y: 3 }),
+      });
+
+      expect(response.status).toBe(200);
+      expect(JSON.parse(response.body)).toEqual({ result: 5 });
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'should build workflow-style unbundled node api routes from a rootDirectory',
+    async () => {
+      const rootDirectory = 'workbench/example';
+      const cwd = setupUnitFixture(
+        'commands/build/workflow-root-directory-bundling'
+      );
+      const output = join(cwd, '.vercel/output');
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_workflow_example',
+        name: 'workflow-example',
+        framework: null,
+        rootDirectory,
+      });
+
+      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+      // Explicitly do NOT set VERCEL_API_FUNCTION_BUNDLING
+
+      client.cwd = cwd;
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+
+      expect(exitCode).toEqual(0);
+
+      const funcDir = join(
+        output,
+        'functions',
+        'api',
+        'test-direct-step-call.func'
+      );
+      expect(await fs.pathExists(funcDir)).toBe(true);
+
+      const lambda = await createLambdaFromFuncDir(funcDir, cwd);
+
+      // Without bundling, the handler should be the raw entrypoint path
+      expect(lambda.handler).toEqual(
+        join('workbench', 'example', 'api', 'test-direct-step-call.js')
+      );
+      expect(lambda.files?.['___vc_bundled_api_handler.js']).toBeUndefined();
+      expect(lambda.files?.['___vc_bundled_api_config.json']).toBeUndefined();
+      expect(
+        lambda.files?.[
+          join('workbench', 'example', 'api', 'test-direct-step-call.js')
+        ]
+      ).toBeDefined();
+    }
+  );
 
   it.skipIf(process.platform === 'win32').each([
     { experimentalBackends: true, expectedBuilder: '@vercel/backends' },

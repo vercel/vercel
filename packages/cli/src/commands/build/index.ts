@@ -34,8 +34,10 @@ import {
   type PackageJson,
   glob,
   type Service,
-  getWorkerTopics,
+  getServiceQueueTopicConfigs,
   isBackendBuilder,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
   downloadFile,
@@ -107,6 +109,7 @@ import {
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
+import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 
@@ -206,6 +209,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
+    telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
   } catch (error) {
     printError(error);
     return 1;
@@ -365,37 +369,69 @@ export default async function main(client: Client): Promise<number> {
     cliVersion: cliPkg.version,
   };
 
-  if (!process.env.VERCEL_BUILD_IMAGE && !client.nonInteractive) {
+  const deploymentId = parsedArgs.flags['--id'];
+
+  // When --id is provided, system env vars are fetched from the deployment,
+  // so the warning about missing system env vars does not apply.
+  if (
+    !process.env.VERCEL_BUILD_IMAGE &&
+    !deploymentId &&
+    !client.nonInteractive
+  ) {
     output.warn(
       'Build not running on Vercel. System environment variables will not be available.'
     );
   }
-
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
     const loadEnvSpan = rootSpan.child('vc.loadEnv');
     try {
-      const envPath = join(
-        cwd,
-        projectRootDirectory,
-        VERCEL_DIR,
-        `.env.${target}.local`
-      );
-      // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
-      const dotenvResult = dotenv.config({
-        path: envPath,
-        debug: output.isDebugEnabled(),
-      });
-      if (dotenvResult.error) {
-        output.debug(
-          `Failed loading environment variables: ${dotenvResult.error}`
-        );
-      } else if (dotenvResult.parsed) {
-        for (const key of Object.keys(dotenvResult.parsed)) {
-          envToUnset.add(key);
+      if (deploymentId) {
+        // Set the team context so API calls include the teamId query param.
+        // Without this, the API can't find the deployment.
+        if (link?.orgId?.startsWith('team_')) {
+          client.config.currentTeam = link.orgId;
         }
-        output.debug(`Loaded environment variables from "${envPath}"`);
+
+        // When --id is provided, fetch env vars from the deployment
+        // instead of loading from local .env files.
+        output.debug(
+          `Fetching environment variables for deployment ${deploymentId}`
+        );
+        const { buildEnv } = await fetchDeploymentBuildEnv(
+          client,
+          deploymentId
+        );
+        for (const [key, value] of Object.entries(buildEnv)) {
+          envToUnset.add(key);
+          process.env[key] = value;
+        }
+        output.debug(
+          `Loaded ${Object.keys(buildEnv).length} environment variables from deployment ${deploymentId}`
+        );
+      } else {
+        const envPath = join(
+          cwd,
+          projectRootDirectory,
+          VERCEL_DIR,
+          `.env.${target}.local`
+        );
+        // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
+        const dotenvResult = dotenv.config({
+          path: envPath,
+          debug: output.isDebugEnabled(),
+        });
+        if (dotenvResult.error) {
+          output.debug(
+            `Failed loading environment variables: ${dotenvResult.error}`
+          );
+        } else if (dotenvResult.parsed) {
+          for (const key of Object.keys(dotenvResult.parsed)) {
+            envToUnset.add(key);
+          }
+          output.debug(`Loaded environment variables from "${envPath}"`);
+        }
       }
     } finally {
       loadEnvSpan.stop();
@@ -813,8 +849,9 @@ async function doBuild(
 
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
-  const hasWorkerServices =
-    hasDetectedServices && detectedServices!.some(s => s.type === 'worker');
+  const hasQueueServices =
+    hasDetectedServices && detectedServices!.some(isQueueTriggeredService);
+  const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
@@ -920,7 +957,7 @@ async function doBuild(
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
-            ...(hasWorkerServices ? { hasWorkerServices: true } : undefined),
+            ...(hasQueueServices ? { hasWorkerServices: true } : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
             // propagated to individual builders.
@@ -979,6 +1016,7 @@ async function doBuild(
               service: {
                 name: service.name,
                 type: service.type,
+                trigger: service.trigger,
                 routePrefix:
                   typeof serviceRoutePrefix === 'string'
                     ? serviceRoutePrefix
@@ -987,6 +1025,7 @@ async function doBuild(
                   typeof serviceWorkspace === 'string'
                     ? serviceWorkspace
                     : undefined,
+                schedule: service.schedule,
               },
             }
           : undefined),
@@ -1183,8 +1222,34 @@ async function doBuild(
         });
       }
 
-      if (service?.type === 'worker' && 'output' in buildResult) {
-        attachWorkerServiceTrigger(buildResult.output, service);
+      if (
+        service &&
+        isQueueTriggeredService(service) &&
+        'output' in buildResult
+      ) {
+        attachQueueServiceTrigger(buildResult.output, service);
+      }
+
+      if (
+        service &&
+        isScheduleTriggeredService(service) &&
+        !('crons' in buildResult && buildResult.crons?.length)
+      ) {
+        if (
+          typeof service.runtime === 'string' &&
+          typeof service.schedule === 'string' &&
+          service.schedule !== '<dynamic>'
+        ) {
+          synthesizedServiceCrons.push({
+            path: getServiceCronPath(service),
+            schedule: service.schedule,
+          });
+        } else {
+          throw new NowBuildError({
+            code: 'CRON_SERVICE_NO_CRONS',
+            message: `Scheduled service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
+          });
+        }
       }
 
       let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
@@ -1427,9 +1492,8 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const serviceCrons = getServiceCrons(detectedServices);
   const mergedCrons = mergeCrons(
-    [...(localConfig.crons || []), ...serviceCrons],
+    [...(localConfig.crons || []), ...synthesizedServiceCrons],
     buildResults.values()
   );
   const mergedWildcard = mergeWildcard(buildResults.values());
@@ -1825,26 +1889,6 @@ function mergeImages(
   }
   return images;
 }
-
-function getServiceCrons(services?: Service[]): Cron[] {
-  if (!services || services.length === 0) {
-    return [];
-  }
-
-  const crons: Cron[] = [];
-  for (const service of services) {
-    if (service.type !== 'cron' || typeof service.schedule !== 'string') {
-      continue;
-    }
-    crons.push({
-      path: getServiceCronPath(service),
-      schedule: service.schedule,
-    });
-  }
-
-  return crons;
-}
-
 function mergeCrons(
   crons: BuildOutputConfig['crons'] = [],
   buildResults: Iterable<BuildResult | BuildOutputConfig>
@@ -2007,33 +2051,39 @@ function getServicesMergeEntrypoint(
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
 }
 
-function attachWorkerServiceTrigger(
+function attachQueueServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
-  const topics = getWorkerTopics(service);
+  const topics = getServiceQueueTopicConfigs(service);
   const consumer = service.consumer || 'default';
 
-  for (const topic of topics) {
+  for (const topicConfig of topics) {
     const trigger: TriggerEvent = {
       type: 'queue/v1beta',
-      topic,
+      topic: topicConfig.topic,
       consumer,
     };
+    if (topicConfig.retryAfterSeconds !== undefined) {
+      trigger.retryAfterSeconds = topicConfig.retryAfterSeconds;
+    }
+    if (topicConfig.initialDelaySeconds !== undefined) {
+      trigger.initialDelaySeconds = topicConfig.initialDelaySeconds;
+    }
 
     if (isLambda(buildOutput)) {
-      appendWorkerTrigger(buildOutput, trigger);
+      appendQueueTrigger(buildOutput, trigger);
     } else {
       for (const output of Object.values(buildOutput)) {
         if (isLambda(output)) {
-          appendWorkerTrigger(output, trigger);
+          appendQueueTrigger(output, trigger);
         }
       }
     }
   }
 }
 
-function appendWorkerTrigger(lambda: Lambda, trigger: TriggerEvent): void {
+function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {
   const existingTriggers = Array.isArray(lambda.experimentalTriggers)
     ? lambda.experimentalTriggers
     : [];
@@ -2054,4 +2104,50 @@ async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return Buffer.concat(chunks).toString('utf-8');
+}
+
+const INTEGRATIONS_POLL_INTERVAL_MS = 5000;
+const INTEGRATIONS_POLL_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes, matches API timeout
+
+/**
+ * Fetches build environment variables for a deployment from the API.
+ * If integrations are still provisioning, polls until they complete.
+ */
+async function fetchDeploymentBuildEnv(
+  client: Client,
+  deploymentId: string
+): Promise<{ env: Record<string, string>; buildEnv: Record<string, string> }> {
+  const deadline = Date.now() + INTEGRATIONS_POLL_TIMEOUT_MS;
+  let isPolling = false;
+
+  while (Date.now() < deadline) {
+    try {
+      return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
+    } catch (err: unknown) {
+      // If the API returns integrationsStatus: 'pending', poll until ready
+      if (
+        err &&
+        typeof err === 'object' &&
+        'integrationsStatus' in err &&
+        (err as { integrationsStatus?: string }).integrationsStatus ===
+          'pending'
+      ) {
+        if (!isPolling) {
+          output.spinner(
+            'Waiting for deployment integrations to finish provisioning...'
+          );
+          isPolling = true;
+        }
+        await new Promise(resolve =>
+          setTimeout(resolve, INTEGRATIONS_POLL_INTERVAL_MS)
+        );
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new Error(
+    'Timed out waiting for deployment integrations to complete provisioning.'
+  );
 }

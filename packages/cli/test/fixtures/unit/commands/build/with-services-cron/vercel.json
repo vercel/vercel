@@ -1,7 +1,8 @@
 {
   "experimentalServices": {
     "cleanup": {
-      "type": "cron",
+      "type": "job",
+      "trigger": "schedule",
       "entrypoint": "index.js",
       "schedule": "0 0 * * *"
     }

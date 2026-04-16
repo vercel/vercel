@@ -12,6 +12,7 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
     if (
       filename.startsWith('.git/') ||
       filename === 'vercel.json' ||
+      filename === 'vercel.toml' ||
       filename === '.vercelignore' ||
       filename === 'now.json' ||
       filename === '.nowignore' ||

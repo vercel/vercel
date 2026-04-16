@@ -958,14 +958,14 @@ describe('[vercel dev] Worker service', () => {
   });
 });
 
-describe('[vercel dev] Cron service', () => {
+describe('[vercel dev] Schedule-triggered job service', () => {
   const resultsDir = join(__dirname, 'fixtures', 'services-cron', '.results');
 
   beforeEach(async () => {
     await fs.remove(resultsDir);
   });
 
-  test('[vercel dev] trigger cron service via proxy', async () => {
+  test('[vercel dev] trigger schedule-triggered job via proxy', async () => {
     const dir = fixture('services-cron');
     const { dev, port, readyResolver } = await testFixture(
       dir,
@@ -984,7 +984,7 @@ describe('[vercel dev] Cron service', () => {
 
       // Trigger the service directly via the proxy to not wait for a minute
       const cronRes = await nodeFetch(
-        `http://localhost:${port}/_svc/cron/crons`,
+        `http://localhost:${port}/_svc/cron/crons/task/run_cron_task`,
         { method: 'POST' }
       );
       expect(cronRes.status).toBe(200);

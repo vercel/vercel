@@ -106,8 +106,8 @@ export async function detectRailwayServices(options: {
       useExperimentalFrameworks: true,
     });
 
-    // we don't have write access to the FS, so can't just define an entrypoint,
-    // the best we can do is to suggest how to define a cron service properly
+    // we don't have write access to the FS, so can't just define an entrypoint.
+    // The best we can do is suggest a canonical schedule-triggered job service.
     if (cf.config.deploy?.cronSchedule) {
       const schedule = cf.config.deploy.cronSchedule;
       const runtime =
@@ -116,7 +116,8 @@ export async function detectRailwayServices(options: {
           : undefined;
 
       const hint: Record<string, string> = {
-        type: 'cron',
+        type: 'job',
+        trigger: 'schedule',
         schedule,
         entrypoint: '<path-to-handler>',
       };
@@ -128,7 +129,7 @@ export async function detectRailwayServices(options: {
         code: 'RAILWAY_CRON_HINT',
         message:
           `Found Railway cron in ${dirLabel}/ (schedule: "${schedule}"). ` +
-          `Vercel crons work with a file entrypoint. You can add the following to define this cron service:\n` +
+          `Vercel crons work with a file entrypoint. You can add the following to define this scheduled job service:\n` +
           `"${deriveServiceName(cf.dirPath)}": ${JSON.stringify(hint, null, 2)}`,
       });
       continue;

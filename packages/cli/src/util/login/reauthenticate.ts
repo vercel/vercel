@@ -30,6 +30,7 @@ export default async function reauthenticate(
 
   client.updateAuthConfig({
     token: tokens.access_token,
+    userId: undefined,
     expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     refreshToken: tokens.refresh_token,
   });
