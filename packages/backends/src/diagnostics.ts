@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+import { parseSyml } from '@yarnpkg/parsers';
 import {
   writeProjectManifest,
   createDiagnostics,
@@ -226,7 +227,10 @@ function parsePnpmLock(
 ): Map<string, LockEntry> {
   const lockMap = new Map<string, LockEntry>();
   // pnpm lockfiles may have multiple YAML documents (starts with '---')
-  const docs = yaml.loadAll(content) as Array<Record<string, unknown> | null>;
+  const docs: Array<Record<string, unknown> | null> = [];
+  yaml.safeLoadAll(content, doc =>
+    docs.push(doc as Record<string, unknown> | null)
+  );
   const parsedYaml = docs[0];
   if (!parsedYaml) return lockMap;
 
@@ -272,57 +276,41 @@ function parseYarnLock(
   const lockMap = new Map<string, LockEntry>();
   const isBerry = (lockfileVersion ?? 1) >= 2;
 
-  for (const block of content.split(/\n\n+/)) {
-    const trimmed = block.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
+  const parsed = parseSyml(content) as Record<
+    string,
+    Record<string, string> | undefined
+  >;
 
-    const firstLine = trimmed.split('\n')[0];
-    if (!firstLine.endsWith(':')) continue;
-    if (firstLine === '__metadata:') continue;
+  for (const [key, entry] of Object.entries(parsed)) {
+    if (key === '__metadata' || !entry) continue;
 
     // Berry: skip workspace/linked packages
-    if (isBerry && /\blinkType:\s+soft\b/.test(block)) continue;
+    if (isBerry && entry.linkType === 'soft') continue;
 
-    // Extract resolved version
-    let version: string | undefined;
-    if (isBerry) {
-      const m = block.match(/^\s+version:\s+(.+)$/m);
-      if (!m) continue;
-      version = m[1].trim().replace(/^["']|["']$/g, '');
-    } else {
-      const m = block.match(/^\s+version\s+"([^"]+)"/m);
-      if (!m) continue;
-      version = m[1];
-    }
+    const version = entry.version;
+    if (!version) continue;
 
     // Extract source from resolved URL (v1 only — berry has no registry URL)
     let source: string | undefined;
     let sourceUrl: string | undefined;
-    if (!isBerry) {
-      const m = block.match(/^\s+resolved\s+"([^"]+)/m);
-      if (m) {
-        if (m[1].startsWith('file:')) continue; // local package, skip
-        const classified = classifySource(m[1]);
-        source = classified.source;
-        sourceUrl = classified.sourceUrl;
-      }
+    if (!isBerry && entry.resolved) {
+      if (entry.resolved.startsWith('file:')) continue;
+      const classified = classifySource(entry.resolved);
+      source = classified.source;
+      sourceUrl = classified.sourceUrl;
     }
 
-    // Get package name from the first specifier in the header
-    const specifiers = firstLine
-      .slice(0, -1) // strip trailing ':'
-      .split(',')
-      .map(s => s.trim().replace(/^"|"$/g, ''));
-
+    // Get package name from the first specifier in the (possibly comma-joined) key
+    const specifiers = key.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
     let name: string | null = null;
     for (const spec of specifiers) {
       name = extractPackageName(spec);
       if (name) break;
     }
     if (!name) continue;
-    const existingYarn = lockMap.get(name);
-    if (existingYarn && !isHigherVersion(version, existingYarn.resolved))
-      continue;
+
+    const existing = lockMap.get(name);
+    if (existing && !isHigherVersion(version, existing.resolved)) continue;
 
     const lockEntry: LockEntry = { resolved: version, scopes: ['prod'] };
     if (source) lockEntry.source = source;

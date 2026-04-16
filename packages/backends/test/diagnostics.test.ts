@@ -1050,7 +1050,7 @@ real@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/real/-/real-1.0.0.tgz#abc"
 
-local-pkg@file:../local-pkg:
+"local-pkg@file:../local-pkg":
   version "0.0.1"
   resolved "file:../local-pkg"
 `
