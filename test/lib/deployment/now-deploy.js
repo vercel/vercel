@@ -6,6 +6,7 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const ms = require('ms');
+const { isTransientError } = require('./is-transient-error');
 
 const IS_CI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -91,7 +92,23 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   console.log(`posting ${files.length} files`);
 
   for (const { file: filename } of files) {
-    await filePost(bodies[filename], digestOfFile(bodies[filename]));
+    let attempts = 0;
+    while (true) {
+      try {
+        await filePost(bodies[filename], digestOfFile(bodies[filename]));
+        break;
+      } catch (error) {
+        if (isTransientError(error) && attempts < 3) {
+          attempts++;
+          console.log(
+            `Transient error uploading ${filename} (attempt ${attempts}): ${error.message}`
+          );
+          await new Promise(r => setTimeout(r, 1000 * attempts));
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   let deploymentId;
@@ -108,7 +125,19 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   console.log('id', deploymentId);
 
   for (let i = 0; i < 750; i += 1) {
-    const deployment = await deploymentGet(deploymentId);
+    let deployment;
+    try {
+      deployment = await deploymentGet(deploymentId);
+    } catch (error) {
+      if (isTransientError(error)) {
+        console.log(
+          `Transient error polling deployment ${deploymentId} (attempt ${i}): ${error.message}`
+        );
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw error;
+    }
     const { readyState } = deployment;
     if (readyState === 'ERROR') {
       console.log('state is ERROR, throwing');
@@ -162,7 +191,19 @@ async function disableSSO(deploymentId, deploymentUrl) {
 
   // Wait for the SSO change to propagate
   for (let i = 0; i < 10; i++) {
-    const res = await _fetch(`https://${deploymentUrl}`);
+    let res;
+    try {
+      res = await _fetch(`https://${deploymentUrl}`);
+    } catch (error) {
+      if (isTransientError(error)) {
+        console.log(
+          `Transient error checking SSO propagation for ${deploymentUrl} (attempt ${i}): ${error.message}`
+        );
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      throw error;
+    }
     if (res.status !== 401) return;
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
