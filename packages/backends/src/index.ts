@@ -35,11 +35,20 @@ import { introspection } from './rolldown/introspection.js';
 import { nft } from './rolldown/nft.js';
 import { maybeDoBuildCommand } from './build.js';
 import { typescript } from './typescript.js';
+import { Colors as c } from './cervel/utils.js';
 
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
 
 export const version = 2;
+
+/** Non-empty Build Command from project settings / vercel.json (not the default `build` script). */
+function hasExplicitBuildCommand(
+  config: Parameters<BuildV2>[0]['config']
+): boolean {
+  const cmd = config.buildCommand ?? config.projectSettings?.buildCommand;
+  return typeof cmd === 'string' && cmd.trim().length > 0;
+}
 
 export const build: BuildV2 = async args => {
   const downloadResult = await downloadInstallAndBundle(args);
@@ -105,12 +114,25 @@ export const build: BuildV2 = async args => {
             additionalDeps: [],
           });
 
-    // This must come after the build command since turbo repo worksapce deps may need to be transpiled.
-    const typescriptPromise = typescript({
-      entrypoint,
-      workPath: args.workPath,
-      span: buildSpan,
-    });
+    // This must come after the build command since turbo repo workspace deps may need to be transpiled.
+    // Skip tsc when the user configured a Build Command — they own compilation/typechecking there.
+    let typescriptPromise: Promise<unknown>;
+    if (hasExplicitBuildCommand(args.config)) {
+      console.log(
+        c.gray(
+          `${c.bold(c.cyan('✓'))} Typecheck skipped ${c.gray(
+            '(Build Command is configured)'
+          )}`
+        )
+      );
+      typescriptPromise = Promise.resolve();
+    } else {
+      typescriptPromise = typescript({
+        entrypoint,
+        workPath: args.workPath,
+        span: buildSpan,
+      });
+    }
 
     const localBuildFiles =
       userBuildResult?.localBuildFiles.size > 0

@@ -158,29 +158,11 @@ export class PythonDependencyExternalizer {
         message: shouldShowFunctionsBetaHint()
           ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the Lambda size limit (${limitMB} MB).\n\n` +
-            `Runtime dependency installation is not available for projects that use a custom ` +
-            `build or install command, because custom commands may install dependencies that ` +
-            `are not tracked in uv.lock.\n\n` +
-            `To resolve this, either:\n` +
-            `  1. Remove the custom build/install command and let Vercel manage dependencies automatically\n` +
-            `  2. Reduce your dependency footprint to fit within the ${limitMB} MB limit`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
-        action: 'Learn More',
-      });
-    }
-
-    // Enforce the extended 1 GB limit for Python on Hive (Functions Beta).
-    // All dependencies are bundled directly, so check the total uncompressed
-    // size before we proceed to avoid a slower failure at ZIP time.
-    if (pythonOnHiveEnabled && this.totalBundleSize > HIVE_LAMBDA_SIZE_BYTES) {
-      const limitMB = (HIVE_LAMBDA_SIZE_BYTES / (1024 * 1024)).toFixed(0);
-      throw new NowBuildError({
-        code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function ` +
-          `size limit (${limitMB} MB). Consider removing unused dependencies or ` +
-          `splitting your application into smaller functions.`,
+          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
+            `When using a custom install command, Vercel cannot automatically optimize ` +
+            `dependency bundling. To reduce the size of your dependencies, you can:\n` +
+            `  1. Remove unused dependencies from your project\n` +
+            `  2. Remove the custom install command to allow Vercel to manage and optimize dependencies automatically`,
         link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
         action: 'Learn More',
       });
@@ -245,9 +227,9 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message: shouldShowFunctionsBetaHint()
-          ? `Total dependency size (${totalBundleSizeMB} MB) exceeds the size limit (${ephemeralLimitMB} MB).\n\n` +
+          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
+          : `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
             `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
             `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
             `to Lambda functions. Consider removing unused dependencies or splitting your ` +
@@ -532,9 +514,9 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message: shouldShowFunctionsBetaHint()
-          ? `Bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
+          ? `Total bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
+          : `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
             `deferring public packages to runtime installation. This usually means your ` +
             `private packages or source code are too large. Consider reducing the size of ` +
             `private dependencies or splitting your application.`,

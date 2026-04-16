@@ -965,6 +965,15 @@ const main = async () => {
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).cache;
           break;
+        case 'connex':
+          if (process.env.FF_CONNEX_ENABLED) {
+            telemetry.trackCliCommandConnex(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).connex;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'contract':
           telemetry.trackCliCommandContract(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).contract;
@@ -1059,14 +1068,9 @@ const main = async () => {
           func = (await import('./commands-bulk.js')).logs;
           break;
         case 'metrics':
-          if (process.env.FF_METRICS) {
-            telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).metrics;
-            break;
-          } else {
-            func = null;
-            break;
-          }
+          telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).metrics;
+          break;
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
