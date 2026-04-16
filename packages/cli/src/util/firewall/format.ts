@@ -108,7 +108,7 @@ export function formatStatusOutput(
     );
   }
   lines.push(
-    `  ${chalk.bold('System Mitigations:')}  ${formatMitigationsStatus(bypass)}`
+    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(bypass)}`
   );
 
   if (draft && draft.changes.length > 0) {
@@ -704,33 +704,25 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
     'Name'.length,
     ...annotated.map(a => a.rule.name.length)
   );
-  const statusWidth = Math.max(
-    'Status'.length,
-    ...annotated.map(a => (a.rule.active ? 'Enabled' : 'Disabled').length)
-  );
   const actionTexts = annotated.map(a => formatActionDisplay(a.rule.action));
   const actionWidth = Math.max(
     'Action'.length,
     ...actionTexts.map(t => t.length)
   );
-
-  // Header
+  // Header — Action before Status
   lines.push(
-    `  ${' '.repeat(prefixWidth)}${chalk.dim('#'.padEnd(numWidth + gap))}${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Status'.padEnd(statusWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Description')}`
+    `  ${' '.repeat(prefixWidth)}${chalk.dim('#'.padEnd(numWidth + gap))}${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Status')}`
   );
 
   for (let i = 0; i < annotated.length; i++) {
     const { rule, status } = annotated[i];
     const num = String(i + 1).padEnd(numWidth + gap);
     const name = rule.name.padEnd(nameWidth + gap);
-    const activeStatusText = (rule.active ? 'Enabled' : 'Disabled').padEnd(
-      statusWidth + gap
-    );
+    const actionText = actionTexts[i].padEnd(actionWidth + gap);
+    const activeStatusText = rule.active ? 'Enabled' : 'Disabled';
     const activeStatus = rule.active
       ? chalk.green(activeStatusText)
       : chalk.red(activeStatusText);
-    const actionText = actionTexts[i].padEnd(actionWidth + gap);
-    const description = rule.description || '';
 
     let prefix = '  ';
     let colorFn: (s: string) => string = (s: string) => s;
@@ -746,11 +738,11 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
       colorFn = chalk.yellow;
     }
 
-    lines.push(
-      colorFn(
-        `  ${prefix}${num}${name}${activeStatus}${actionText}${description}`
-      )
-    );
+    // Line 1: #, Name, Action, Status
+    lines.push(colorFn(`  ${prefix}${num}${name}${actionText}${activeStatus}`));
+    // Line 2: ID (dimmed, indented under Name column)
+    const idIndent = ' '.repeat(prefixWidth + numWidth + gap);
+    lines.push(`  ${idIndent}${chalk.dim(rule.id)}`);
   }
 
   return lines.join('\n');
