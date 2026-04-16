@@ -69,7 +69,12 @@ import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
-import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  Team,
+  User,
+} from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
@@ -216,6 +221,56 @@ class InMemoryReporter implements Reporter {
   report(event: TraceEvent) {
     this.events.push(event);
   }
+}
+
+/**
+ * Resolve `--scope` / `--team` flag to a team ID and set
+ * `client.config.currentTeam`.  Returns an exit code when it needs to
+ * abort, or `undefined` to continue normally.
+ */
+async function resolveScope(
+  client: Client,
+  parsedArgs: { flags: Record<string, unknown> }
+): Promise<number | undefined> {
+  const scope =
+    (parsedArgs.flags['--scope'] as string | undefined) ||
+    (parsedArgs.flags['--team'] as string | undefined);
+  if (!scope) return undefined;
+
+  let user;
+  try {
+    user = await getUser(client);
+  } catch {
+    return undefined;
+  }
+
+  if (user.id === scope || user.email === scope || user.username === scope) {
+    if (user.version === 'northstar') {
+      output.error('You cannot set your Personal Account as the scope.');
+      return 1;
+    }
+    delete client.config.currentTeam;
+    return undefined;
+  }
+
+  let teams: Team[] = [];
+  try {
+    teams = await getTeams(client);
+  } catch {
+    return undefined;
+  }
+
+  const related = teams.find(t => t.id === scope || t.slug === scope);
+  if (related) {
+    client.config.currentTeam = related.id;
+    return undefined;
+  }
+
+  output.prettyError({
+    message: 'The specified scope does not exist',
+    link: 'https://err.sh/vercel/scope-not-existent',
+  });
+  return 1;
 }
 
 const main = async () => {
@@ -642,6 +697,12 @@ const main = async () => {
         output.debug(
           `first token "${targetOrSubcommand}" matches an OpenAPI tag; routing to api`
         );
+
+        // Resolve --scope / --team before routing to OpenAPI since the normal
+        // scope resolution later in the function won't be reached.
+        const scopeExit = await resolveScope(client, parsedArgs);
+        if (scopeExit !== undefined) return finishWithExitCode(scopeExit);
+
         const tag = targetOrSubcommand;
         const result = await tryOpenApiFallback(
           client,

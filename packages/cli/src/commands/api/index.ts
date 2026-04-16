@@ -24,6 +24,7 @@ import {
 import type { CliContext } from './operation-request-builder';
 import { getLinkFromDir } from '../../util/projects/link';
 import { getVercelDirectory } from '../../util/projects/link';
+import getTeamById from '../../util/teams/get-team-by-id';
 import {
   OpenApiCache,
   resolveEndpointByTagAndOperationId,
@@ -589,6 +590,41 @@ function printTagOperationResolveError(
   );
 }
 
+async function printContextHeader(client: Client): Promise<void> {
+  const teamId = client.config.currentTeam;
+  if (!teamId) return;
+
+  let teamLabel = teamId;
+  try {
+    const team = await getTeamById(client, teamId);
+    if (team?.slug) {
+      teamLabel = `${team.name || team.slug} ${chalk.dim(`(${team.slug})`)}`;
+    }
+  } catch {
+    // Fall back to raw ID
+  }
+
+  output.log(chalk.gray('Team: ') + chalk.cyan(teamLabel));
+
+  let projectId: string | undefined;
+  try {
+    const link = await getLinkFromDir<{ projectId: string; orgId: string }>(
+      getVercelDirectory(client.cwd)
+    );
+    if (link?.projectId) {
+      projectId = link.projectId;
+    }
+  } catch {
+    // No linked project
+  }
+
+  if (projectId) {
+    output.log(chalk.gray('Project: ') + chalk.cyan(projectId));
+  }
+
+  output.log('');
+}
+
 async function executeApiRequest(
   client: Client,
   requestConfig: RequestConfig,
@@ -596,6 +632,10 @@ async function executeApiRequest(
   displayColumns?: Record<string, string> | null,
   options?: { tagOperation?: boolean }
 ): Promise<number> {
+  if (options?.tagOperation && !flags['--raw'] && !flags['--silent']) {
+    await printContextHeader(client);
+  }
+
   // Verbose mode: show request details
   if (flags['--verbose']) {
     output.debug(`Request: ${requestConfig.method} ${requestConfig.url}`);
