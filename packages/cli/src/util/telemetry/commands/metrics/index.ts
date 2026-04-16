@@ -24,10 +24,10 @@ export class MetricsTelemetryClient
     }
   }
 
-  trackCliOptionMetric(v: string | undefined) {
+  trackCliArgumentMetricId(v: string | undefined) {
     if (v) {
-      this.trackCliOption({
-        option: 'metric',
+      this.trackCliArgument({
+        arg: 'metric-id',
         value: v,
       });
     }

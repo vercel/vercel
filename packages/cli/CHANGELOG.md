@@ -1,5 +1,137 @@
 # vercel
 
+## 51.5.0
+
+### Minor Changes
+
+- Add `vercel connex create` command ([#15988](https://github.com/vercel/vercel/pull/15988))
+
+- Add `vercel deploy-hooks` command to create, list, and remove deploy hooks. ([#15935](https://github.com/vercel/vercel/pull/15935))
+
+### Patch Changes
+
+- Enable functions beta hint when flag is true ([#15965](https://github.com/vercel/vercel/pull/15965))
+
+- Improve the `vercel metrics` CLI by making it generally available, simplifying metric selection, and cleaning up schema output. ([#15904](https://github.com/vercel/vercel/pull/15904))
+
+- Updated dependencies [[`bb834e53bca374d44f86bda3892e77ded226a26a`](https://github.com/vercel/vercel/commit/bb834e53bca374d44f86bda3892e77ded226a26a), [`bab75d7ff6b7a188167bbd7583a8b36d9d250d5a`](https://github.com/vercel/vercel/commit/bab75d7ff6b7a188167bbd7583a8b36d9d250d5a), [`2243233194c6e38d75ed2a1ca040acaaf3b2e686`](https://github.com/vercel/vercel/commit/2243233194c6e38d75ed2a1ca040acaaf3b2e686), [`232b45fd82adf4a8d538a853bfc1df7a5d16f4c9`](https://github.com/vercel/vercel/commit/232b45fd82adf4a8d538a853bfc1df7a5d16f4c9)]:
+  - @vercel/python@6.33.1
+  - @vercel/rust@1.1.1
+
+## 51.4.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+### Patch Changes
+
+- Add `vercel flags rollout` for progressive rollouts. ([#15963](https://github.com/vercel/vercel/pull/15963))
+
+  Examples:
+
+  ```bash
+  vercel flags rollout redesigned-checkout \
+    --environment production \
+    --by user.userId \
+    --stage 5,6h \
+    --stage 10,6h \
+    --stage 25,12h \
+    --stage 50,1d
+  ```
+
+  ```bash
+  vercel flags rollout redesigned-checkout \
+    --environment production \
+    --by user.userId \
+    --stage 5,30m \
+    --stage 25,2h \
+    --stage 50,8h \
+    --start now
+  ```
+
+  ```bash
+  vercel flags rollout welcome-message \
+    --environment production \
+    --by user.userId \
+    --from-variant control \
+    --to-variant treatment \
+    --default-variant control \
+    --stage 10,2h \
+    --stage 50,12h \
+    --start 2026-04-16T09:00:00Z
+  ```
+
+  ```bash
+  vercel flags rollout redesigned-checkout \
+    --environment production \
+    --stage 10,6h \
+    --stage 50,1d \
+    --message "Adjust production rollout schedule"
+  ```
+
+- Updated dependencies [[`16aca7dadcea2f877ffae79afa72c14a95f682e3`](https://github.com/vercel/vercel/commit/16aca7dadcea2f877ffae79afa72c14a95f682e3), [`1a7423debdd453e4c3a6297119fc8f7b4efc14c3`](https://github.com/vercel/vercel/commit/1a7423debdd453e4c3a6297119fc8f7b4efc14c3), [`2fd561868cd4b0960ba790deed54ca77263212ec`](https://github.com/vercel/vercel/commit/2fd561868cd4b0960ba790deed54ca77263212ec), [`44897297d569742e93725d71ca481803c9b0b9cc`](https://github.com/vercel/vercel/commit/44897297d569742e93725d71ca481803c9b0b9cc)]:
+  - @vercel/node@5.7.7
+  - @vercel/python@6.33.0
+  - @vercel/next@4.16.8
+  - @vercel/build-utils@13.17.0
+  - @vercel/elysia@0.1.65
+  - @vercel/express@0.1.75
+  - @vercel/fastify@0.1.68
+  - @vercel/h3@0.1.74
+  - @vercel/hono@0.2.68
+  - @vercel/koa@0.1.48
+  - @vercel/nestjs@0.2.69
+  - @vercel/static-build@2.9.15
+  - @vercel/backends@0.0.62
+  - @vercel/go@3.5.0
+  - @vercel/hydrogen@1.3.6
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.0
+
+## 51.3.0
+
+### Minor Changes
+
+- Add `vercel alerts inspect` to fetch a single alert group by id with linked project, explicit `--project`, or `--all` scope. ([#15850](https://github.com/vercel/vercel/pull/15850))
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
+### Patch Changes
+
+- Return 3xx responses directly in `client.fetch()` when `redirect: 'manual'` is passed, instead of entering the error/retry path. ([#15953](https://github.com/vercel/vercel/pull/15953))
+
+- Add JSON feature flag support to the CLI so flags can be created, updated, listed, inspected, and set with JSON variant values just like existing boolean, string, and number kinds. ([#15741](https://github.com/vercel/vercel/pull/15741))
+
+  This aligns the CLI with the recent API and dashboard changes for `json` flags, including parsing raw JSON inputs and preserving structured values in output.
+
+- Display case-insensitive feature flag rule comparisons correctly in the CLI. ([#15743](https://github.com/vercel/vercel/pull/15743))
+
+- Updated dependencies [[`86d1f5b3cbd520af2632d4a3d6a1f24557448c0e`](https://github.com/vercel/vercel/commit/86d1f5b3cbd520af2632d4a3d6a1f24557448c0e), [`1056be976b6ba9b42cc1e2ffe895d255ab6c9850`](https://github.com/vercel/vercel/commit/1056be976b6ba9b42cc1e2ffe895d255ab6c9850), [`c27eedaa1b0e3f6e3770b578f62e5463d82f06e0`](https://github.com/vercel/vercel/commit/c27eedaa1b0e3f6e3770b578f62e5463d82f06e0)]:
+  - @vercel/build-utils@13.16.0
+  - @vercel/python@6.32.0
+  - @vercel/backends@0.0.61
+  - @vercel/elysia@0.1.64
+  - @vercel/express@0.1.74
+  - @vercel/fastify@0.1.67
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.73
+  - @vercel/hono@0.2.67
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.47
+  - @vercel/nestjs@0.2.68
+  - @vercel/next@4.16.7
+  - @vercel/node@5.7.6
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.0
+  - @vercel/static-build@2.9.14
+
 ## 51.2.1
 
 ### Patch Changes

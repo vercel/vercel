@@ -1110,25 +1110,12 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should include cron services in build output crons without the services framework setting', async () => {
+  it('should fail build when cron service builder does not produce crons', async () => {
     const cwd = fixture('with-services-cron');
-    const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
     const exitCode = await build(client);
-    expect(exitCode).toBe(0);
-
-    const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config).toHaveProperty('crons', [
-      {
-        path: '/_svc/cleanup/crons/index/cron',
-        schedule: '0 0 * * *',
-      },
-    ]);
-    expect(config.routes).toContainEqual({
-      src: '^/_svc/cleanup/crons/index/cron$',
-      dest: '/_svc/cleanup/index',
-      check: true,
-    });
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('did not produce any cron entries');
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
@@ -2255,6 +2242,27 @@ fs.writeFileSync(
       'worker-topic1',
       'worker-topic2',
     ]);
+  });
+
+  it('should not generate catch-all routes for Python cron services', async () => {
+    const cwd = fixture('with-services-python-cron-no-catchall');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+
+    // Cron routes should only match their specific /_svc/ callback paths
+    const cronRoutes = (config.routes as any[]).filter(
+      (r: any) =>
+        typeof r.dest === 'string' &&
+        (r.dest.includes('/_svc/cleanup-minute/') ||
+          r.dest.includes('/_svc/cleanup-daily/'))
+    );
+    for (const route of cronRoutes) {
+      expect(route.src).toMatch(/\/_svc\//);
+    }
   });
 
   it('should not write trace spans for non-build commands', async () => {

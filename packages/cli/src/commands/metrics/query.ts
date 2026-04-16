@@ -147,6 +147,9 @@ export default async function query(
   }
 
   const flags = parsedArgs.flags;
+  const positionalArgs = parsedArgs.args.slice(1);
+  const positionalMetric =
+    positionalArgs[0] === 'query' ? positionalArgs[1] : positionalArgs[0];
 
   // Validate output format
   const formatResult = validateJsonOutput(flags);
@@ -157,7 +160,7 @@ export default async function query(
   const jsonOutput = formatResult.jsonOutput;
 
   // Extract raw flag values
-  const metricFlag = flags['--metric'];
+  const metricFlag = positionalMetric;
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
@@ -169,7 +172,7 @@ export default async function query(
   const all = flags['--all'];
 
   // Track telemetry
-  telemetry.trackCliOptionMetric(metricFlag);
+  telemetry.trackCliArgumentMetricId(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
@@ -181,7 +184,7 @@ export default async function query(
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  // Validate --metric (required)
+  // Validate that a metric id was provided.
   const requiredMetric = validateRequiredMetric(metricFlag);
   if (!requiredMetric.valid) {
     return handleValidationError(requiredMetric, jsonOutput, client);

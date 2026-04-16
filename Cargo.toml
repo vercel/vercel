@@ -1,5 +1,4 @@
 [workspace]
 resolver = "3"
-members = [
-    "crates/vercel_runtime",
-]
+members = ["crates/vercel_runtime"]
+exclude = ["examples/axum", "examples/actix-web"]

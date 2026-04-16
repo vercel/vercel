@@ -18,6 +18,6 @@ export function validateRequiredMetric(
     valid: false,
     code: 'MISSING_METRIC',
     message:
-      "Missing required flag --metric. Specify the metric to query.\n\nRun 'vercel metrics schema' to see available metrics.",
+      "Missing required metric. Specify the metric to query.\n\nRun 'vercel metrics schema' to see available metrics.",
   };
 }

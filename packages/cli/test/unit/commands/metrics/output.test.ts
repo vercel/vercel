@@ -11,22 +11,22 @@ import type { QueryMetadata } from '../../../../src/commands/metrics/types';
 describe('output', () => {
   describe('getRollupColumnName', () => {
     it('should return metric-based column name', () => {
-      expect(getRollupColumnName('vercel.edge_requests.count', 'sum')).toBe(
-        'vercel_edge_requests_count_sum'
+      expect(getRollupColumnName('vercel.request.count', 'sum')).toBe(
+        'vercel_request_count_sum'
       );
     });
 
     it('should return custom column name', () => {
       expect(
-        getRollupColumnName('vercel.edge_requests.request_duration_ms', 'p95')
-      ).toBe('vercel_edge_requests_request_duration_ms_p95');
+        getRollupColumnName('vercel.request.route_cpu_duration_ms', 'p95')
+      ).toBe('vercel_request_route_cpu_duration_ms_p95');
     });
   });
 
   describe('formatQueryJson', () => {
     it('should format full JSON response', () => {
       const query: QueryMetadata = {
-        metric: 'vercel.edge_requests.count',
+        metric: 'vercel.request.count',
         aggregation: 'sum',
         groupBy: [],
         filter: undefined,
@@ -50,7 +50,7 @@ describe('output', () => {
 
     it('should handle missing optional fields', () => {
       const query: QueryMetadata = {
-        metric: 'vercel.edge_requests.count',
+        metric: 'vercel.request.count',
         aggregation: 'sum',
         groupBy: [],
         filter: undefined,
@@ -83,14 +83,14 @@ describe('output', () => {
     it('should include allowedValues when provided', () => {
       const result = JSON.parse(
         formatErrorJson('UNKNOWN_METRIC', 'Unknown metric', [
-          'vercel.edge_requests.count',
-          'vercel.function_execution.count',
+          'vercel.request.count',
+          'vercel.function_invocation.count',
         ])
       );
 
       expect(result.error.allowedValues).toEqual([
-        'vercel.edge_requests.count',
-        'vercel.function_execution.count',
+        'vercel.request.count',
+        'vercel.function_invocation.count',
       ]);
     });
   });
@@ -103,8 +103,8 @@ describe('output', () => {
         {
           status: 400,
           code: 'UNKNOWN_METRIC',
-          serverMessage: 'Unknown metric "vercel.edge_requests".',
-          allowedValues: ['vercel.edge_requests.count'],
+          serverMessage: 'Unknown metric "vercel.request".',
+          allowedValues: ['vercel.request.count'],
         },
         true,
         client
@@ -113,12 +113,8 @@ describe('output', () => {
       expect(exitCode).toBe(1);
       const result = JSON.parse(client.stdout.getFullOutput());
       expect(result.error.code).toBe('UNKNOWN_METRIC');
-      expect(result.error.message).toBe(
-        'Unknown metric "vercel.edge_requests".'
-      );
-      expect(result.error.allowedValues).toEqual([
-        'vercel.edge_requests.count',
-      ]);
+      expect(result.error.message).toBe('Unknown metric "vercel.request".');
+      expect(result.error.allowedValues).toEqual(['vercel.request.count']);
     });
 
     it('should honor override messages while preserving allowedValues', () => {

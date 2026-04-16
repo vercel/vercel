@@ -1,5 +1,32 @@
 # @vercel/fs-detectors
 
+## 5.18.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+### Patch Changes
+
+- Updated dependencies [[`44897297d569742e93725d71ca481803c9b0b9cc`](https://github.com/vercel/vercel/commit/44897297d569742e93725d71ca481803c9b0b9cc)]:
+  - @vercel/build-utils@13.17.0
+
+## 5.17.0
+
+### Minor Changes
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+### Patch Changes
+
+- fix(node): scope entrypoint filter to `api/` directory only ([#15954](https://github.com/vercel/vercel/pull/15954))
+
+- Add actix framework preset ([#15752](https://github.com/vercel/vercel/pull/15752))
+
+- Updated dependencies [[`86d1f5b3cbd520af2632d4a3d6a1f24557448c0e`](https://github.com/vercel/vercel/commit/86d1f5b3cbd520af2632d4a3d6a1f24557448c0e), [`1056be976b6ba9b42cc1e2ffe895d255ab6c9850`](https://github.com/vercel/vercel/commit/1056be976b6ba9b42cc1e2ffe895d255ab6c9850), [`620c42ffa6d335c9a6e3e57a1e81c522696b7c2c`](https://github.com/vercel/vercel/commit/620c42ffa6d335c9a6e3e57a1e81c522696b7c2c), [`c27eedaa1b0e3f6e3770b578f62e5463d82f06e0`](https://github.com/vercel/vercel/commit/c27eedaa1b0e3f6e3770b578f62e5463d82f06e0)]:
+  - @vercel/build-utils@13.16.0
+  - @vercel/frameworks@3.24.1
+
 ## 5.16.0
 
 ### Minor Changes
