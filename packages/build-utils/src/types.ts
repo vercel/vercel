@@ -129,6 +129,8 @@ export interface BuildOptions {
     subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
+    /** Cron schedule expression (e.g., "0 0 * * *"). Only present for cron services. */
+    schedule?: string;
   };
 }
 
@@ -245,6 +247,12 @@ export interface StartDevServerSuccess {
    * dev server will forcefully be killed.
    */
   shutdown?: () => Promise<void>;
+
+  /**
+   * Cron entries produced by the builder for this service.
+   * Used by the dev orchestrator to schedule cron triggers.
+   */
+  crons?: Cron[];
 }
 
 /**
@@ -636,6 +644,7 @@ export interface BuildResultV2Typical {
    * @example "abc123"
    */
   deploymentId?: string;
+  crons?: Cron[];
 }
 
 export type BuildResultVX =
@@ -648,6 +657,7 @@ export interface BuildResultV3 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   output: Lambda | EdgeFunction;
+  crons?: Cron[];
 }
 
 export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;

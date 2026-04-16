@@ -2,17 +2,20 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import * as ls from '../../../../src/commands/flags/ls';
 import * as openFlag from '../../../../src/commands/flags/open';
+import * as rolloutFlag from '../../../../src/commands/flags/rollout';
 import * as updateFlag from '../../../../src/commands/flags/update';
 import { client } from '../../../mocks/client';
 
 describe('flags', () => {
   const lsSpy = vi.spyOn(ls, 'default').mockResolvedValue(0);
   const openSpy = vi.spyOn(openFlag, 'default').mockResolvedValue(0);
+  const rolloutSpy = vi.spyOn(rolloutFlag, 'default').mockResolvedValue(0);
   const updateSpy = vi.spyOn(updateFlag, 'default').mockResolvedValue(0);
 
   afterEach(() => {
     lsSpy.mockClear();
     openSpy.mockClear();
+    rolloutSpy.mockClear();
     updateSpy.mockClear();
   });
 
@@ -71,5 +74,21 @@ describe('flags', () => {
     client.setArgv('flags', 'update', ...args);
     await flags(client);
     expect(updateSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to rollout subcommand', async () => {
+    const args: string[] = [
+      'my-feature',
+      '--environment',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '5,6h',
+    ];
+
+    client.setArgv('flags', 'rollout', ...args);
+    await flags(client);
+    expect(rolloutSpy).toHaveBeenCalledWith(client, args);
   });
 });

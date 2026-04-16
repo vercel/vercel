@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.13.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
 ## 0.12.0
 
 ### Minor Changes

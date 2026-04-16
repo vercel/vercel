@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.17.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
 ## 13.16.0
 
 ### Minor Changes

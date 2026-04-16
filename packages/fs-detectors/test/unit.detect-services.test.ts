@@ -1462,7 +1462,7 @@ describe('detectServices', () => {
       expect(result.errors).toEqual([]);
     });
 
-    it('should generate internal cron callback routes', async () => {
+    it('should generate a cron prefix route for cron services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1480,8 +1480,8 @@ describe('detectServices', () => {
       expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(1);
       expect(result.routes.crons).toHaveLength(1);
-      expect(result.routes.crons[0]).toEqual({
-        src: '^/_svc/cleanup/crons/cron/cleanup/cron$',
+      expect(result.routes.crons[0]).toMatchObject({
+        src: '^/_svc/cleanup/crons/.*$',
         dest: '/_svc/cleanup/index',
         check: true,
       });
@@ -1570,7 +1570,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should generate cron routes with function name as handler', async () => {
+    it('should generate cron prefix route for module:function entrypoints', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1587,8 +1587,8 @@ describe('detectServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.routes.crons).toHaveLength(1);
-      expect(result.routes.crons[0]).toEqual({
-        src: '^/_svc/sync-cleanup/crons/jobs/cleanup/sync_handler$',
+      expect(result.routes.crons[0]).toMatchObject({
+        src: '^/_svc/sync-cleanup/crons/.*$',
         dest: '/_svc/sync-cleanup/index',
         check: true,
       });
