@@ -163,8 +163,8 @@ export async function generateProjectManifest({
   }
 
   // Resolve versions and source info from the lock file
-  const directEntries: DependencyEntry[] = [];
-  const transitiveEntries: DependencyEntry[] = [];
+  const directEntries: PackageManifestDependency[] = [];
+  const transitiveEntries: PackageManifestDependency[] = [];
 
   {
     const content = await fs.promises.readFile(uvLockPath, 'utf-8');
