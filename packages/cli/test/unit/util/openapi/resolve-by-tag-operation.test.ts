@@ -10,6 +10,10 @@ const base = (overrides: Partial<EndpointInfo>): EndpointInfo => ({
   operationId: '',
   tags: [],
   parameters: [],
+  vercelCliSupported: false,
+  vercelCliProductionReady: false,
+  vercelCliAliases: [],
+  vercelCliBodyArguments: [],
   ...overrides,
 });
 
@@ -81,11 +85,142 @@ describe('resolveEndpointByTagAndOperationId', () => {
     }
   });
 
-  it('returns no_operation when hint is not an exact operationId', () => {
+  it('returns ambiguous_operation when inferred alias matches multiple endpoints', () => {
     const r = resolveEndpointByTagAndOperationId(endpoints, 'user', 'list');
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.reason).toBe('no_operation');
+      expect(r.reason).toBe('ambiguous_operation');
     }
+  });
+
+  describe('CLI alias matching', () => {
+    const aliasedEndpoints: EndpointInfo[] = [
+      base({
+        path: '/v9/projects',
+        method: 'GET',
+        operationId: 'getProjects',
+        tags: ['projects'],
+        vercelCliAliases: ['ls', 'list'],
+      }),
+      base({
+        path: '/v9/projects/{idOrName}',
+        method: 'GET',
+        operationId: 'getProject',
+        tags: ['projects'],
+        parameters: [{ name: 'idOrName', in: 'path', required: true }],
+        vercelCliAliases: ['inspect', 'get'],
+      }),
+      base({
+        path: '/v10/projects',
+        method: 'POST',
+        operationId: 'createProject',
+        tags: ['projects'],
+        vercelCliAliases: ['add', 'create'],
+      }),
+      base({
+        path: '/v9/projects/{idOrName}',
+        method: 'DELETE',
+        operationId: 'deleteProject',
+        tags: ['projects'],
+        parameters: [{ name: 'idOrName', in: 'path', required: true }],
+        vercelCliAliases: ['rm', 'remove'],
+      }),
+    ];
+
+    it('resolves "ls" to the list operation via alias', () => {
+      const r = resolveEndpointByTagAndOperationId(
+        aliasedEndpoints,
+        'projects',
+        'ls'
+      );
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.endpoint.operationId).toBe('getProjects');
+      }
+    });
+
+    it('resolves "list" to the list operation via alias', () => {
+      const r = resolveEndpointByTagAndOperationId(
+        aliasedEndpoints,
+        'projects',
+        'list'
+      );
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.endpoint.operationId).toBe('getProjects');
+      }
+    });
+
+    it('resolves "inspect" to the single-resource GET via alias', () => {
+      const r = resolveEndpointByTagAndOperationId(
+        aliasedEndpoints,
+        'projects',
+        'inspect'
+      );
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.endpoint.operationId).toBe('getProject');
+      }
+    });
+
+    it('resolves "add" to the POST operation via alias', () => {
+      const r = resolveEndpointByTagAndOperationId(
+        aliasedEndpoints,
+        'projects',
+        'add'
+      );
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.endpoint.operationId).toBe('createProject');
+      }
+    });
+
+    it('resolves "rm" to the DELETE operation via alias', () => {
+      const r = resolveEndpointByTagAndOperationId(
+        aliasedEndpoints,
+        'projects',
+        'rm'
+      );
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.endpoint.operationId).toBe('deleteProject');
+      }
+    });
+
+    it('still resolves operationId directly alongside aliases', () => {
+      const r = resolveEndpointByTagAndOperationId(
+        aliasedEndpoints,
+        'projects',
+        'getProjects'
+      );
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.endpoint.operationId).toBe('getProjects');
+      }
+    });
+
+    it('returns ambiguous_operation when alias matches multiple endpoints', () => {
+      const ambiguous: EndpointInfo[] = [
+        base({
+          path: '/v9/a',
+          method: 'GET',
+          operationId: 'listA',
+          tags: ['things'],
+          vercelCliAliases: ['ls'],
+        }),
+        base({
+          path: '/v9/b',
+          method: 'GET',
+          operationId: 'listB',
+          tags: ['things'],
+          vercelCliAliases: ['ls'],
+        }),
+      ];
+      const r = resolveEndpointByTagAndOperationId(ambiguous, 'things', 'ls');
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        expect(r.reason).toBe('ambiguous_operation');
+      }
+    });
   });
 });

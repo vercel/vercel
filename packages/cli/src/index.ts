@@ -42,7 +42,10 @@ import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
 import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
-import { tryOpenApiFallback } from './util/openapi';
+import {
+  tryOpenApiFallback,
+  tryOpenApiProductionOverride,
+} from './util/openapi';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -1186,9 +1189,21 @@ const main = async () => {
         earlyGetUserPromise = getUser(client).catch(() => undefined);
       }
 
-      exitCode = await rootSpan
-        .child('vc.cli.command', { command: subcommand || 'deploy' })
-        .trace(() => func(client));
+      const productionOverride = subcommand
+        ? await tryOpenApiProductionOverride(
+            client,
+            subcommand,
+            client.argv.slice(3)
+          )
+        : null;
+
+      if (productionOverride !== null) {
+        exitCode = productionOverride;
+      } else {
+        exitCode = await rootSpan
+          .child('vc.cli.command', { command: subcommand || 'deploy' })
+          .trace(() => func(client));
+      }
     }
   } catch (err: unknown) {
     trackAgenticErrorTelemetry(err);
