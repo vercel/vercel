@@ -1220,7 +1220,8 @@ createServer((_req, res) => {
         'Scheduled service "cleanup" did not produce any cron entries.'
       );
     } finally {
-      await fs.remove(cwd);
+      // Tolerate EBUSY on Windows when the builder still holds file handles.
+      await fs.remove(cwd).catch(() => {});
     }
   });
 
@@ -1255,7 +1256,8 @@ createServer((_req, res) => {
         'The builder "@vercel/static" may not support scheduled services.'
       );
     } finally {
-      await fs.remove(cwd);
+      // Tolerate EBUSY on Windows when the builder still holds file handles.
+      await fs.remove(cwd).catch(() => {});
     }
   });
 
