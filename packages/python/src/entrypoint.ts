@@ -1,6 +1,13 @@
 import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
-import { PythonFramework, NowBuildError } from '@vercel/build-utils';
+import {
+  PythonFramework,
+  NowBuildError,
+  isScheduleTriggeredService,
+  isQueueTriggeredService,
+  type ServiceType,
+  type JobTrigger,
+} from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
 import { findAppOrHandler } from '@vercel/python-analysis';
@@ -214,7 +221,7 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework | undefined,
   workPath: string,
   configuredEntrypoint?: { filePath: string; varName?: string },
-  service?: { type?: string }
+  service?: { type?: ServiceType; trigger?: JobTrigger }
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
@@ -228,11 +235,14 @@ export async function detectPythonEntrypoint(
       configEntryVar ?? (await checkEntrypoint(workPath, entrypoint));
 
     if (!varName) {
-      const isSpecialService =
-        service?.type === 'cron' || service?.type === 'worker';
-      if (isSpecialService) {
-        // Crons and worker have their own special entry point logic
-        // that involves creating an `app` dynamically.
+      // Queue-backed and schedule-triggered services create an `app` dynamically.
+      // Any other service type (including workflow-triggered jobs) uses the
+      // normal WSGI/ASGI entrypoint detection.
+      const needsDynamicApp =
+        !!service &&
+        (isScheduleTriggeredService(service) ||
+          isQueueTriggeredService(service));
+      if (needsDynamicApp) {
         varName = 'app';
       }
     }
