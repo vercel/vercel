@@ -96,6 +96,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandConnex(actual: string) {
+    this.trackCliCommand({
+      command: 'connex',
+      value: actual,
+    });
+  }
+
   trackCliCommandContract(actual: string) {
     this.trackCliCommand({
       command: 'contract',
@@ -120,6 +127,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandDeploy(actual: string) {
     this.trackCliCommand({
       command: 'deploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDeployHooks(actual: string) {
+    this.trackCliCommand({
+      command: 'deploy-hooks',
       value: actual,
     });
   }

@@ -189,6 +189,11 @@ const serviceConfigSchema = {
     type: {
       enum: ['web', 'cron', 'worker'],
     },
+    root: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
     entrypoint: {
       type: 'string',
       minLength: 1,

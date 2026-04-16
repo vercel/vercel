@@ -5,18 +5,8 @@ export const schemaSubcommand = {
   name: 'schema',
   aliases: [],
   description: 'List available metrics or inspect a specific metric.',
-  arguments: [],
-  options: [
-    {
-      name: 'metric',
-      shorthand: 'm',
-      type: String,
-      deprecated: false,
-      description: 'Show details for a specific metric',
-      argument: 'NAME',
-    },
-    formatOption,
-  ],
+  arguments: [{ name: 'metric-or-prefix', required: false }],
+  options: [formatOption],
   examples: [
     {
       name: 'List all metrics',
@@ -24,11 +14,11 @@ export const schemaSubcommand = {
     },
     {
       name: 'Show metric details',
-      value: `${packageName} metrics schema --metric vercel.function_execution`,
+      value: `${packageName} metrics schema vercel.function_invocation`,
     },
     {
       name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema --metric vercel.edge_requests.count --format=json`,
+      value: `${packageName} metrics schema vercel.request.count --format=json`,
     },
   ],
 } as const;
@@ -37,7 +27,7 @@ export const metricsCommand = {
   name: 'metrics',
   aliases: [],
   description: 'Query observability metrics for your Vercel project or team.',
-  arguments: [],
+  arguments: [{ name: 'metric-id', required: false }],
   subcommands: [
     // Hidden placeholder so the help synopsis renders [command] as optional
     // (help.ts treats `command` as required unless a subcommand has `default: true`)
@@ -54,14 +44,6 @@ export const metricsCommand = {
     schemaSubcommand,
   ],
   options: [
-    {
-      name: 'metric',
-      shorthand: 'm',
-      type: String,
-      deprecated: false,
-      description: 'Metric id to query (e.g., vercel.edge_requests.count)',
-      argument: 'NAME',
-    },
     {
       name: 'aggregation',
       shorthand: 'a',
@@ -140,23 +122,23 @@ export const metricsCommand = {
   examples: [
     {
       name: '5xx errors by error code in the last hour',
-      value: `${packageName} metrics --metric vercel.function_execution.count -f "http_status ge 500" --group-by error_code --since 1h`,
+      value: `${packageName} metrics vercel.function_invocation.count -f "http_status ge 500" --group-by error_code --since 1h`,
     },
     {
       name: 'Function invocations by HTTP status code',
-      value: `${packageName} metrics --metric vercel.function_execution.count --group-by http_status --since 6h`,
+      value: `${packageName} metrics vercel.function_invocation.count --group-by http_status --since 6h`,
     },
     {
       name: 'Function duration by route',
-      value: `${packageName} metrics --metric vercel.function_execution.request_duration_ms -a avg --group-by route --since 1h`,
+      value: `${packageName} metrics vercel.function_invocation.request_duration_ms -a avg --group-by route --since 1h`,
     },
     {
       name: 'AI Gateway costs by provider',
-      value: `${packageName} metrics --metric vercel.ai_gateway_request.cost -a sum --group-by ai_provider --since 7d`,
+      value: `${packageName} metrics vercel.ai_gateway_request.cost -a sum --group-by ai_provider --since 7d`,
     },
     {
       name: 'Core Web Vitals (LCP) by route',
-      value: `${packageName} metrics --metric vercel.speed_insights_metric.lcp -a p75 --group-by route --since 7d`,
+      value: `${packageName} metrics vercel.speed_insights_metric.lcp -a p75 --group-by route --since 7d`,
     },
     {
       name: 'List available metrics',
@@ -164,15 +146,15 @@ export const metricsCommand = {
     },
     {
       name: 'Function executions matching a path pattern',
-      value: `${packageName} metrics --metric vercel.function_execution.count -f "contains(request_path, '/api')" --group-by route --since 1h`,
+      value: `${packageName} metrics vercel.function_invocation.count -f "contains(request_path, '/api')" --group-by route --since 1h`,
     },
     {
       name: 'Show schema for a metric prefix',
-      value: `${packageName} metrics schema --metric vercel.edge_requests`,
+      value: `${packageName} metrics schema vercel.request`,
     },
     {
       name: 'Team-wide function executions by project',
-      value: `${packageName} metrics --all --metric vercel.function_execution.count --group-by project_id --since 24h`,
+      value: `${packageName} metrics --all vercel.function_invocation.count --group-by project_id --since 24h`,
     },
   ],
 } as const;

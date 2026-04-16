@@ -1,15 +1,10 @@
 {
+  // Resolves shared options + paths from ../../tsconfig.monorepo-parent.json → tsconfig.monorepo-root.json
+  "extends": "../../tsconfig.monorepo-parent.json",
   "compilerOptions": {
     "target": "ESNext",
     "moduleResolution": "bundler",
-    "strict": true,
-    "skipLibCheck": true,
     "types": ["node"],
-    "paths": {
-      "@/*": ["./lib/*"]
-    },
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
     "outDir": "./dist"
   },
   "exclude": ["node_modules"]
