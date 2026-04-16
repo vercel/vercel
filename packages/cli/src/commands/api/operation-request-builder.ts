@@ -8,6 +8,31 @@ import type { ParsedFlags, RequestConfig } from './types';
 /** Query params usually supplied by `vercel` scope / team context */
 export const GLOBAL_CLI_QUERY_PARAMS = new Set(['teamId', 'slug']);
 
+/**
+ * Maps OpenAPI parameter names to CLI context sources.
+ * These params can be auto-filled when the user hasn't provided them explicitly.
+ */
+export const CONTEXT_PARAM_MAP: Record<string, 'scope' | 'projectId'> = {
+  teamId: 'scope',
+  projectId: 'projectId',
+  projectIdOrName: 'projectId',
+};
+
+/** Tags where an `idOrName` path param refers to a project (not another resource type) */
+export const PROJECT_IDORNAME_TAGS = new Set([
+  'projects',
+  'projectMembers',
+  'environment',
+  'rolling-release',
+  'connect',
+  'static-ips',
+]);
+
+export type CliContext = {
+  scope?: string;
+  projectId?: string;
+};
+
 export type ParsedOperationInputs = {
   pathValues: Record<string, string>;
   queryValues: Record<string, string>;
@@ -39,6 +64,10 @@ export async function parseOperationKeyValuePairs(
   const queryValues: Record<string, string> = {};
   const headerValues: Record<string, string> = {};
   const body: JSONObject = {};
+
+  const requiredPathParams = endpoint.parameters
+    .filter(p => p.in === 'path' && p.required !== false)
+    .map(p => p.name);
 
   async function dispatchPair(field: string, typed: boolean) {
     const eqIndex = field.indexOf('=');
@@ -104,6 +133,19 @@ export async function parseOperationKeyValuePairs(
     );
   }
 
+  function assignBarePositional(value: string): void {
+    const nextPathParam = requiredPathParams.find(
+      name => pathValues[name] === undefined
+    );
+    if (nextPathParam) {
+      pathValues[nextPathParam] = value;
+      return;
+    }
+    throw new Error(
+      `Unexpected positional argument "${value}" for operation ${endpoint.operationId}. All path parameters are already set. Use key=value syntax for query/body fields.`
+    );
+  }
+
   for (const field of flags['--field'] || []) {
     await dispatchPair(field, true);
   }
@@ -111,7 +153,11 @@ export async function parseOperationKeyValuePairs(
     await dispatchPair(field, false);
   }
   for (const field of positionalKeyValues) {
-    await dispatchPair(field, true);
+    if (field.indexOf('=') === -1) {
+      assignBarePositional(field);
+    } else {
+      await dispatchPair(field, true);
+    }
   }
 
   return { pathValues, queryValues, headerValues, body };
@@ -200,6 +246,47 @@ export function getUnsetOptionalOperationParams(
 }
 
 /**
+ * Fill missing path/query params from CLI context (scope, linked project).
+ * Mutates `parsed.pathValues` and `parsed.queryValues` in place.
+ * Returns the set of param names that were auto-filled (for scope sync).
+ */
+export function applyContextDefaults(
+  endpoint: EndpointInfo,
+  parsed: ParsedOperationInputs,
+  context?: CliContext
+): Set<string> {
+  const filled = new Set<string>();
+  if (!context) return filled;
+
+  for (const param of endpoint.parameters) {
+    const { name } = param;
+    const target = param.in === 'path' ? parsed.pathValues : parsed.queryValues;
+
+    if (param.in !== 'path' && param.in !== 'query') continue;
+    if (target[name] !== undefined) continue;
+
+    let contextSource = CONTEXT_PARAM_MAP[name];
+    if (
+      !contextSource &&
+      name === 'idOrName' &&
+      param.in === 'path' &&
+      endpoint.tags.some(t => PROJECT_IDORNAME_TAGS.has(t))
+    ) {
+      contextSource = 'projectId';
+    }
+    if (!contextSource) continue;
+
+    const value = context[contextSource];
+    if (value) {
+      target[name] = value;
+      filled.add(name);
+    }
+  }
+
+  return filled;
+}
+
+/**
  * Build a {@link RequestConfig} for a resolved OpenAPI operation, routing
  * key=value arguments to path, query, header, or JSON body based on the spec.
  */
@@ -207,7 +294,8 @@ export async function buildRequestForResolvedOperation(
   endpoint: EndpointInfo,
   bodyFields: BodyField[],
   flags: ParsedFlags,
-  positionalKeyValues: string[]
+  positionalKeyValues: string[],
+  context?: CliContext
 ): Promise<RequestConfig> {
   const headers: Record<string, string> = {};
 
@@ -235,6 +323,8 @@ export async function buildRequestForResolvedOperation(
     flags,
     positionalKeyValues
   );
+
+  applyContextDefaults(endpoint, parsed, context);
 
   const { pathValues, queryValues, headerValues, body } = parsed;
 

@@ -4,6 +4,7 @@ export * from './constants';
 export * from './resolve-by-tag-operation';
 export {
   matchesCliApiTag,
+  resolveOpenApiTagForCommand,
   resolveOpenApiTagForProjectsCli,
 } from './matches-cli-api-tag';
 export { tryOpenApiFallback } from './try-openapi-fallback';

@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import getGlobalPathConfig from '../config/global-path';
 import output from '../../output-manager';
@@ -44,9 +44,20 @@ export class OpenApiCache {
 
   /**
    * Load the OpenAPI spec, using cache if available and fresh.
+   * When `VERCEL_AUTO_API_TEST` is set to a file path, loads from that file
+   * instead of the network, for local iteration without API-side changes.
    * Returns true if successful, false otherwise.
    */
   async load(forceRefresh = false): Promise<boolean> {
+    const testSpecEnv = process.env.VERCEL_AUTO_API_TEST;
+    if (testSpecEnv) {
+      const testSpecPath =
+        testSpecEnv === '1'
+          ? resolve(__dirname, '../../test/fixtures/unit/openapi-spec.json')
+          : testSpecEnv;
+      return this.loadFromFile(testSpecPath);
+    }
+
     // Try to read from cache
     if (!forceRefresh) {
       const cached = await this.readCache();
@@ -72,6 +83,21 @@ export class OpenApiCache {
         this.spec = stale.spec;
         return true;
       }
+      return false;
+    }
+  }
+
+  /**
+   * Load spec directly from a local JSON file (for VERCEL_AUTO_API_TEST).
+   */
+  private async loadFromFile(filePath: string): Promise<boolean> {
+    try {
+      output.debug('Loading OpenAPI spec from local file: ' + filePath);
+      const content = await readFile(filePath, 'utf-8');
+      this.spec = JSON.parse(content) as OpenApiSpec;
+      return true;
+    } catch (err) {
+      output.debug(`Failed to load OpenAPI spec from ${filePath}: ${err}`);
       return false;
     }
   }
@@ -295,6 +321,10 @@ export class OpenApiCache {
           const opParams = operation.parameters || [];
           const allParams = [...pathParams, ...opParams];
 
+          const xCli = (operation as Record<string, unknown>)['x-vercel-cli'] as
+            | { aliases?: string[] }
+            | undefined;
+
           endpoints.push({
             path,
             method: method.toUpperCase(),
@@ -304,6 +334,7 @@ export class OpenApiCache {
             tags: operation.tags || [],
             parameters: allParams,
             requestBody: operation.requestBody,
+            aliases: xCli?.aliases ?? [],
           });
         }
       }

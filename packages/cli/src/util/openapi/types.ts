@@ -86,6 +86,7 @@ export interface EndpointInfo {
   tags: string[];
   parameters: Parameter[];
   requestBody?: RequestBody;
+  aliases: string[];
 }
 
 export interface BodyField {

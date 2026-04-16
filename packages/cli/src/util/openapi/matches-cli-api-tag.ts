@@ -25,30 +25,22 @@ export async function matchesCliApiTag(tagHint: string): Promise<boolean> {
 }
 
 /**
- * OpenAPI tag string to use when routing `vercel project[s] …` to `vercel api …`.
- * Prefer `projects` (common in the public spec); fall back to `project` if present.
+ * Resolve a CLI command name (e.g. `alias`, `project`, `teams`) to its
+ * OpenAPI tag, trying the exact name, with trailing 's' appended, and
+ * with trailing 's' stripped.  Returns `null` when no tag matches.
  */
-export async function resolveOpenApiTagForProjectsCli(): Promise<
-  string | null
-> {
-  if (await matchesCliApiTag('projects')) {
-    return 'projects';
-  }
-  if (await matchesCliApiTag('project')) {
-    return 'project';
-  }
+export async function resolveOpenApiTagForCommand(
+  command: string
+): Promise<string | null> {
+  if (await matchesCliApiTag(command)) return command;
+  if (await matchesCliApiTag(command + 's')) return command + 's';
+  if (command.endsWith('s') && (await matchesCliApiTag(command.slice(0, -1))))
+    return command.slice(0, -1);
   return null;
 }
 
-/**
- * OpenAPI tag string to use when routing `vercel team[s] …` to the API fallback.
- */
-export async function resolveOpenApiTagForTeamsCli(): Promise<string | null> {
-  if (await matchesCliApiTag('teams')) {
-    return 'teams';
-  }
-  if (await matchesCliApiTag('team')) {
-    return 'team';
-  }
-  return null;
-}
+export const resolveOpenApiTagForProjectsCli = () =>
+  resolveOpenApiTagForCommand('project');
+
+export const resolveOpenApiTagForTeamsCli = () =>
+  resolveOpenApiTagForCommand('teams');
