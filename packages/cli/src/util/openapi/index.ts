@@ -1,6 +1,15 @@
 export { OpenApiCache } from './openapi-cache';
 export * from './types';
 export * from './constants';
+export { foldNamingStyle, operationIdToKebabCase } from './fold-naming-style';
+export { inferCliSubcommandAliases } from './infer-cli-aliases';
+export { readPublicOpenApiSpecFromCacheOrNetwork } from './fetch-public-openapi-spec';
+export {
+  composeOpenapiInvocationUrl,
+  resolveOpenapiInvocationUrl,
+  splitOpenapiInvocationPositionals,
+  parseOpenapiOptionFlagTokens,
+} from './openapi-operation-cli';
 export * from './resolve-by-tag-operation';
 export {
   matchesCliApiTag,

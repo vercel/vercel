@@ -14,6 +14,10 @@ const sampleEndpoint: EndpointInfo = {
   description: '',
   tags: ['projects'],
   parameters: [],
+  vercelCliSupported: false,
+  vercelCliProductionReady: false,
+  vercelCliAliases: [],
+  vercelCliBodyArguments: [],
 };
 
 describe('matchesCliApiTag', () => {
