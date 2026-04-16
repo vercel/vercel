@@ -61,7 +61,7 @@ export const help = () => `
       domains              [name]      Manages your domain names
       httpstat             path        Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
-      metrics                          Queries observability metrics for your project or team
+      metrics              <metric>    Queries observability metrics for your project or team
       mcp                              Set up MCP agents and configuration
       microfrontends                   Manages your microfrontends
       projects                         Manages your Projects
