@@ -1,4 +1,4 @@
-import { formatOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const createSubcommand = {
@@ -82,13 +82,71 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const tokenSubcommand = {
+  name: 'token',
+  aliases: [],
+  description: 'Get a token for a Connex client',
+  arguments: [
+    {
+      name: 'clientId',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'subject',
+      shorthand: 's',
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description: 'Subject type: app or user',
+    },
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      argument: 'ID',
+      deprecated: false,
+      description: 'Target installation ID',
+    },
+    {
+      name: 'scopes',
+      shorthand: null,
+      type: String,
+      argument: 'SCOPES',
+      deprecated: false,
+      description: 'Comma-separated scopes',
+    },
+    yesOption,
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Get a token for a client',
+      value: `${packageName} connex token scl_abc123`,
+    },
+    {
+      name: 'Get an app token',
+      value: `${packageName} connex token scl_abc123 --subject app`,
+    },
+    {
+      name: 'Get a token for a specific installation',
+      value: `${packageName} connex token scl_abc123 --installation-id inst_1`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connex token scl_abc123 --format=json`,
+    },
+  ],
+} as const;
+
 export const connexCommand = {
   name: 'connex',
   aliases: [],
   description: 'Manage Vercel Connect clients',
   arguments: [],
   options: [],
-  subcommands: [createSubcommand, listSubcommand],
+  subcommands: [createSubcommand, listSubcommand, tokenSubcommand],
   examples: [
     {
       name: 'Create a Slack app',
@@ -97,6 +155,10 @@ export const connexCommand = {
     {
       name: 'List Connex clients on the current team',
       value: `${packageName} connex list`,
+    },
+    {
+      name: 'Get a token',
+      value: `${packageName} connex token scl_abc123`,
     },
   ],
 } as const;
