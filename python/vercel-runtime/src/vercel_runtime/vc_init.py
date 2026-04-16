@@ -638,9 +638,14 @@ class ASGIMiddleware:
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
 
-        try:
-            await self.app(new_scope, receive, send)
-        finally:
+        request_finished = False
+
+        def finish_request() -> None:
+            nonlocal request_finished
+            if request_finished:
+                return
+
+            request_finished = True
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -654,6 +659,35 @@ class ASGIMiddleware:
                     },
                 }
             )
+
+        async def send_wrapper(message: dict[str, Any]) -> None:
+            await send(message)
+
+            if scope_type != "websocket":
+                return
+
+            message_type = message.get("type")
+            if message_type == "websocket.accept":
+                # Match the Node runtime's detached upgrade flow: once the 101
+                # is sent, the request lifecycle is complete even if the
+                # upgraded WebSocket stays open.
+                finish_request()
+                return
+
+            if message_type == "websocket.close":
+                finish_request()
+                return
+
+            if (
+                message_type == "websocket.http.response.body"
+                and not message.get("more_body")
+            ):
+                finish_request()
+
+        try:
+            await self.app(new_scope, receive, send_wrapper)
+        finally:
+            finish_request()
 
 
 if "VERCEL_IPC_PATH" in os.environ:

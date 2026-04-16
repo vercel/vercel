@@ -309,11 +309,11 @@ def _read_ws_frame(reader: _SocketBuffer) -> tuple[int, bytes]:
     return opcode, payload
 
 
-def _websocket_roundtrip(
+def _build_websocket_request(
     port: int,
     path: str = "/ws",
     headers: dict[str, str] | None = None,
-) -> tuple[str, list[str]]:
+) -> bytes:
     key = base64.b64encode(os.urandom(16)).decode("ascii")
     request_headers = {
         "Host": f"127.0.0.1:{port}",
@@ -328,43 +328,63 @@ def _websocket_roundtrip(
     request_lines.extend(
         f"{name}: {value}" for name, value in request_headers.items()
     )
-    request = ("\r\n".join([*request_lines, "", ""])).encode("ascii")
+    return ("\r\n".join([*request_lines, "", ""])).encode("ascii")
 
-    with socket.create_connection(("127.0.0.1", port), timeout=5) as sock:
+
+class _WebSocketClient:
+    def __init__(self, sock: socket.socket, reader: _SocketBuffer) -> None:
+        self._sock = sock
+        self._reader = reader
+
+    @classmethod
+    def connect(
+        cls,
+        port: int,
+        path: str = "/ws",
+        headers: dict[str, str] | None = None,
+    ) -> tuple[_WebSocketClient, str]:
+        sock = socket.create_connection(("127.0.0.1", port), timeout=5)
         sock.settimeout(5)
         reader = _SocketBuffer(sock)
-        sock.sendall(request)
 
-        response = reader.read_until(b"\r\n\r\n")
-        if b"sec-websocket-accept:" not in response.lower():
-            raise AssertionError(
-                "websocket upgrade response missing accept header"
-            )
+        try:
+            sock.sendall(_build_websocket_request(port, path, headers))
 
-        status_line = response.split(b"\r\n", maxsplit=1)[0].decode("ascii")
-        messages: list[str] = []
+            response = reader.read_until(b"\r\n\r\n")
+            if b"sec-websocket-accept:" not in response.lower():
+                raise AssertionError(
+                    "websocket upgrade response missing accept header"
+                )
 
-        opcode, payload = _read_ws_frame(reader)
+            status_line = response.split(b"\r\n", maxsplit=1)[0].decode("ascii")
+            return cls(sock, reader), status_line
+        except Exception:
+            sock.close()
+            raise
+
+    def read_text(self) -> str:
+        opcode, payload = _read_ws_frame(self._reader)
         if opcode != 0x1:
-            raise AssertionError(
-                f"expected first frame to be text, got opcode {opcode}"
+            raise AssertionError(f"expected text frame, got opcode {opcode}")
+        return payload.decode("utf-8")
+
+    def send_text(self, text: str) -> None:
+        self._sock.sendall(_encode_client_ws_frame(0x1, text.encode("utf-8")))
+
+    def close(self) -> None:
+        if self._sock.fileno() == -1:
+            return
+
+        with contextlib.suppress(OSError):
+            self._sock.sendall(
+                _encode_client_ws_frame(0x8, struct.pack("!H", 1000))
             )
-        messages.append(payload.decode("utf-8"))
 
-        sock.sendall(_encode_client_ws_frame(0x1, b"ping"))
+        with contextlib.suppress(ConnectionError, OSError, socket.timeout):
+            _read_ws_frame(self._reader)
 
-        opcode, payload = _read_ws_frame(reader)
-        if opcode != 0x1:
-            raise AssertionError(
-                f"expected echo frame to be text, got opcode {opcode}"
-            )
-        messages.append(payload.decode("utf-8"))
-
-        sock.sendall(_encode_client_ws_frame(0x8, struct.pack("!H", 1000)))
-        with contextlib.suppress(ConnectionError, socket.timeout):
-            _read_ws_frame(reader)
-
-    return status_line, messages
+        with contextlib.suppress(OSError):
+            self._sock.close()
 
 
 async def _read_stderr(
@@ -607,7 +627,7 @@ class TestASGIApp(_RuntimeTestCase):
             sock.close()
             self.assertIn(b"200", data)
 
-    async def test_asgi_websocket_lifecycle_and_header_stripping(
+    async def test_asgi_websocket_ends_request_after_handshake(
         self,
     ) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
@@ -628,41 +648,58 @@ class TestASGIApp(_RuntimeTestCase):
             )
             port = ss.payload.http_port
 
-            status_line, messages = await asyncio.to_thread(
-                _websocket_roundtrip,
-                port,
-                "/_svc/backend/ws",
-                {
-                    "x-vercel-internal-invocation-id": "test-inv-1",
-                    "x-vercel-internal-request-id": "42",
-                    "x-vercel-internal-span-id": "span-1",
-                    "x-vercel-internal-trace-id": "trace-1",
-                    "x-vercel-internal-oidc-token": "oidc-secret",
-                },
-            )
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/_svc/backend/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-1",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-1",
+                        "x-vercel-internal-trace-id": "trace-1",
+                        "x-vercel-internal-oidc-token": "oidc-secret",
+                    },
+                )
 
-            self.assertEqual(status_line, "HTTP/1.1 101 Switching Protocols")
-            self.assertEqual(messages[1], "echo:ping")
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
 
-            scope_data = json.loads(messages[0])
-            self.assertEqual(scope_data["path"], "/ws")
-            self.assertEqual(scope_data["root_path"], "/_svc/backend")
-            self.assertFalse(scope_data["has_internal_invocation_id"])
-            self.assertFalse(scope_data["has_internal_request_id"])
-            self.assertFalse(scope_data["has_internal_span_id"])
-            self.assertFalse(scope_data["has_internal_trace_id"])
-            self.assertEqual(scope_data["oidc_token"], "oidc-secret")
+                scope_data = json.loads(
+                    await asyncio.to_thread(client.read_text)
+                )
+                self.assertEqual(scope_data["path"], "/ws")
+                self.assertEqual(scope_data["root_path"], "/_svc/backend")
+                self.assertFalse(scope_data["has_internal_invocation_id"])
+                self.assertFalse(scope_data["has_internal_request_id"])
+                self.assertFalse(scope_data["has_internal_span_id"])
+                self.assertFalse(scope_data["has_internal_trace_id"])
+                self.assertEqual(scope_data["oidc_token"], "oidc-secret")
 
-            hs = await self.n1.wait_for_message(
-                HandlerStartedMessage, timeout=5.0
-            )
-            self.assertGreater(hs.payload.handler_started_at, 0)
-            self.assertEqual(hs.payload.context.invocation_id, "test-inv-1")
-            self.assertEqual(hs.payload.context.request_id, 42)
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertGreater(hs.payload.handler_started_at, 0)
+                self.assertEqual(hs.payload.context.invocation_id, "test-inv-1")
+                self.assertEqual(hs.payload.context.request_id, 42)
 
-            end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
-            self.assertEqual(end.payload.context.invocation_id, "test-inv-1")
-            self.assertEqual(end.payload.context.request_id, 42)
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-1"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The request should be complete at the 101 upgrade boundary
+                # while the upgraded socket remains fully usable.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
 
 
 class TestCronService(_RuntimeTestCase):
