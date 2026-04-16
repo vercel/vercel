@@ -226,7 +226,9 @@ export default async function main(client: Client): Promise<number> {
       flags: parsedArgs.flags,
     }) || 'preview';
 
-  const yes = Boolean(parsedArgs.flags['--yes']);
+  // When --id is provided the flow is non-interactive (script-driven),
+  // so auto-confirm prompts like the project-settings pull.
+  const yes = Boolean(parsedArgs.flags['--yes'] || parsedArgs.flags['--id']);
 
   // Check for deprecated env var
   const hasDeprecatedEnvVar =
@@ -330,7 +332,7 @@ export default async function main(client: Client): Promise<number> {
     const result = await pullCommandLogic(
       client,
       client.cwd,
-      Boolean(parsedArgs.flags['--yes']),
+      yes,
       target,
       parsedArgs.flags
     );
