@@ -719,11 +719,6 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
     const num = String(i + 1).padEnd(numWidth + gap);
     const name = rule.name.padEnd(nameWidth + gap);
     const actionText = actionTexts[i].padEnd(actionWidth + gap);
-    const activeStatusText = rule.active ? 'Enabled' : 'Disabled';
-    const activeStatus = rule.active
-      ? chalk.green(activeStatusText)
-      : chalk.red(activeStatusText);
-
     let prefix = '  ';
     let colorFn: (s: string) => string = (s: string) => s;
 
@@ -738,11 +733,20 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
       colorFn = chalk.yellow;
     }
 
+    // For removed rules, dim the status; otherwise color it normally
+    const activeStatusText = rule.active ? 'Enabled' : 'Disabled';
+    const activeStatus =
+      status === 'removed'
+        ? chalk.dim(activeStatusText)
+        : rule.active
+          ? chalk.green(activeStatusText)
+          : chalk.red(activeStatusText);
+
     // Line 1: #, Name, Action, Status
     lines.push(colorFn(`  ${prefix}${num}${name}${actionText}${activeStatus}`));
-    // Line 2: ID (dimmed, indented under Name column)
+    // Line 2: ID (dimmed, indented under Name column, inherits status color)
     const idIndent = ' '.repeat(prefixWidth + numWidth + gap);
-    lines.push(`  ${idIndent}${chalk.dim(rule.id)}`);
+    lines.push(colorFn(`  ${idIndent}${chalk.dim(rule.id)}`));
   }
 
   return lines.join('\n');
