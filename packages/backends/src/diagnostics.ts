@@ -76,11 +76,13 @@ function parseNpmLock(
       const resolved = entry.resolved as string | undefined;
       if (resolved?.startsWith('file:')) continue; // local/workspace package
 
-      if (lockMap.has(rest)) continue; // keep first occurrence
+      const version = (entry.version as string) ?? '';
+      const existing = lockMap.get(rest);
+      if (existing && !isHigherVersion(version, existing.resolved)) continue;
 
       const { source, sourceUrl } = classifySource(resolved);
       const lockEntry: LockEntry = {
-        resolved: (entry.version as string) ?? '',
+        resolved: version,
         scopes: npmEntryScopes(entry),
       };
       if (source) lockEntry.source = source;
@@ -97,11 +99,13 @@ function parseNpmLock(
     const walk = (deps: Record<string, Record<string, unknown>>) => {
       for (const [name, entry] of Object.entries(deps)) {
         const resolved = entry.resolved as string | undefined;
-        if (!lockMap.has(name)) {
-          if (!resolved?.startsWith('file:')) {
+        if (!resolved?.startsWith('file:')) {
+          const version = (entry.version as string) ?? '';
+          const existing = lockMap.get(name);
+          if (!existing || isHigherVersion(version, existing.resolved)) {
             const { source, sourceUrl } = classifySource(resolved);
             const lockEntry: LockEntry = {
-              resolved: (entry.version as string) ?? '',
+              resolved: version,
               scopes: npmEntryScopes(entry),
             };
             if (source) lockEntry.source = source;
@@ -119,6 +123,19 @@ function parseNpmLock(
   }
 
   return lockMap;
+}
+
+// Returns true if version a is higher than version b using numeric segment comparison.
+// Good enough for semver; does not handle pre-release ordering.
+function isHigherVersion(a: string, b: string): boolean {
+  const seg = (v: string) => v.split(/[.\-+]/).map(s => parseInt(s, 10) || 0);
+  const pa = seg(a);
+  const pb = seg(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if ((pa[i] ?? 0) > (pb[i] ?? 0)) return true;
+    if ((pa[i] ?? 0) < (pb[i] ?? 0)) return false;
+  }
+  return false;
 }
 
 // Shared: extract package name from a versioned specifier, stripping any peer
@@ -141,7 +158,8 @@ function parsePnpmV9Key(key: string): { name: string; version: string } | null {
   return { name, version: withoutPeers.slice(name.length + 1) };
 }
 
-function parsePnpmV6Key(key: string): { name: string; version: string } | null {
+// pnpm v5.x: /name/version(_peers) or /@scope/pkg/version(_peers)
+function parsePnpmV5Key(key: string): { name: string; version: string } | null {
   if (!key.startsWith('/')) return null;
   const rest = key.slice(1);
   if (rest.startsWith('@')) {
@@ -159,6 +177,29 @@ function parsePnpmV6Key(key: string): { name: string; version: string } | null {
   if (slashIndex === -1) return null;
   const name = rest.slice(0, slashIndex);
   const version = rest.slice(slashIndex + 1).split('_')[0];
+  return { name, version };
+}
+
+// pnpm v6.x: /name@version(_peers) or /@scope/pkg@version(_peers)
+// Peer dep variants use '_' suffix (unlike v9 which uses '()')
+function parsePnpmV6Key(key: string): { name: string; version: string } | null {
+  if (!key.startsWith('/')) return null;
+  const rest = key.slice(1); // strip leading '/'
+  let atIdx: number;
+  if (rest.startsWith('@')) {
+    // Scoped: @scope/pkg@version_peers
+    atIdx = rest.indexOf('@', 1);
+  } else {
+    // Non-scoped: pkg@version_peers
+    atIdx = rest.indexOf('@');
+  }
+  if (atIdx === -1) return null;
+  const name = rest.slice(0, atIdx);
+  // pnpm v6 uses both '_peerinfo' and '(peerinfo)' suffixes
+  const version = rest
+    .slice(atIdx + 1)
+    .split('_')[0]
+    .replace(/\(.*\)$/, '');
   return { name, version };
 }
 
@@ -184,7 +225,9 @@ function parsePnpmLock(
   lockfileVersion: number | undefined
 ): Map<string, LockEntry> {
   const lockMap = new Map<string, LockEntry>();
-  const parsedYaml = yaml.load(content) as Record<string, unknown> | null;
+  // pnpm lockfiles may have multiple YAML documents (starts with '---')
+  const docs = yaml.loadAll(content) as Array<Record<string, unknown> | null>;
+  const parsedYaml = docs[0];
   if (!parsedYaml) return lockMap;
 
   const lv =
@@ -194,7 +237,12 @@ function parsePnpmLock(
     | undefined;
   if (!packages) return lockMap;
 
-  const parseKey = lv >= 9 ? parsePnpmV9Key : parsePnpmV6Key;
+  const parseKey =
+    lv >= 9
+      ? parsePnpmV9Key // name@version
+      : lv >= 6
+        ? parsePnpmV6Key // /name@version
+        : parsePnpmV5Key; // /name/version
 
   for (const [key, entry] of Object.entries(packages)) {
     const keyParsed = parseKey(key);
@@ -205,7 +253,8 @@ function parsePnpmLock(
     const { local, source, sourceUrl } = classifyPnpmResolution(resolution);
     if (local) continue;
 
-    if (lockMap.has(name)) continue; // keep first occurrence (dedup by name)
+    const existing = lockMap.get(name);
+    if (existing && !isHigherVersion(version, existing.resolved)) continue;
 
     const lockEntry: LockEntry = { resolved: version, scopes: ['prod'] };
     if (source) lockEntry.source = source;
@@ -270,7 +319,10 @@ function parseYarnLock(
       name = extractPackageName(spec);
       if (name) break;
     }
-    if (!name || lockMap.has(name)) continue;
+    if (!name) continue;
+    const existingYarn = lockMap.get(name);
+    if (existingYarn && !isHigherVersion(version, existingYarn.resolved))
+      continue;
 
     const lockEntry: LockEntry = { resolved: version, scopes: ['prod'] };
     if (source) lockEntry.source = source;
@@ -283,7 +335,9 @@ function parseYarnLock(
 
 function parseBunLock(content: string): Map<string, LockEntry> {
   const lockMap = new Map<string, LockEntry>();
-  const parsed = JSON.parse(content) as Record<string, unknown>;
+  // bun.lock is JSONC — strip trailing commas before JSON.parse
+  const json = content.replace(/,(\s*[}\]])/g, '$1');
+  const parsed = JSON.parse(json) as Record<string, unknown>;
 
   // packages keys are plain package names; value[0] is "name@resolved-version"
   const packages = parsed.packages as Record<string, unknown[]> | undefined;
@@ -304,7 +358,9 @@ function parseBunLock(content: string): Map<string, LockEntry> {
     if (version.startsWith('file:') || version.startsWith('workspace:'))
       continue;
 
-    if (lockMap.has(name)) continue;
+    const existingBun = lockMap.get(name);
+    if (existingBun && !isHigherVersion(version, existingBun.resolved))
+      continue;
     lockMap.set(name, { resolved: version, scopes: ['prod'] });
   }
 

@@ -801,9 +801,9 @@ describe('generateProjectManifest — pnpm v6', () => {
 lockfileVersion: '6.0'
 
 packages:
-  /express/4.18.2:
+  /express@4.18.2:
     resolution: {integrity: sha512-abc}
-  /accepts/1.3.8:
+  /accepts@1.3.8:
     resolution: {integrity: sha512-def}
 `
     );
@@ -834,7 +834,7 @@ packages:
 lockfileVersion: '6.0'
 
 packages:
-  /@vercel/node/3.0.7:
+  /@vercel/node@3.0.7:
     resolution: {integrity: sha512-abc}
 `
     );
@@ -860,7 +860,7 @@ packages:
 lockfileVersion: '6.0'
 
 packages:
-  /foo/1.0.0_react@18.0.0:
+  /foo@1.0.0_react@18.0.0:
     resolution: {integrity: sha512-abc}
 `
     );
@@ -886,9 +886,9 @@ packages:
 lockfileVersion: '6.0'
 
 packages:
-  /real/1.0.0:
+  /real@1.0.0:
     resolution: {integrity: sha512-abc}
-  /local-pkg/0.0.1:
+  /local-pkg@0.0.1:
     resolution: {directory: ../local-pkg, type: directory}
 `
     );
