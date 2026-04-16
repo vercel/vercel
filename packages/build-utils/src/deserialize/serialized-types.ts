@@ -21,13 +21,13 @@ type FilesMapProp = {
  * Type for the `.vc-config.json` file of a serialized
  * `ServerlessFunction` instance.
  */
-export type SerializedLambda = Properties<Omit<Lambda, 'files' | 'zipBuffer'>> &
-  FilesMapProp;
-
-export type SerializedNodejsLambda = Properties<
-  Omit<NodejsLambda, 'files' | 'zipBuffer'>
+export type SerializedLambda<T extends Lambda = Lambda> = Properties<
+  Omit<T, 'files' | 'zipBuffer'>
 > &
   FilesMapProp;
+
+export type SerializedNodejsLambda<T extends NodejsLambda = NodejsLambda> =
+  Properties<Omit<T, 'files' | 'zipBuffer'>> & FilesMapProp;
 
 export type SerializedFileFsRef = Properties<FileFsRef>;
 
