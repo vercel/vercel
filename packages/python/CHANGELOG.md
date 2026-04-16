@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.33.2
+
+### Patch Changes
+
+- Update the error for custom installCommand builds >250MB. ([#15946](https://github.com/vercel/vercel/pull/15946))
+
 ## 6.33.1
 
 ### Patch Changes

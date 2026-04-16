@@ -1,5 +1,16 @@
 # @vercel/backends
 
+## 0.0.63
+
+### Patch Changes
+
+- Typecheck deployment TypeScript via the compiler API (entry + import graph), deduplicate the cervel `typescript` module, and extend the turborepo fixture with a chained `tsconfig` for monorepo path resolution. ([#15980](https://github.com/vercel/vercel/pull/15980))
+
+- Relax failures when we don't find an entrypoint for backends to maximize backwards compatibility ([#15980](https://github.com/vercel/vercel/pull/15980))
+
+- Updated dependencies [[`5219572d21a2ba4b49cc1c27d244c1ff5d76c591`](https://github.com/vercel/vercel/commit/5219572d21a2ba4b49cc1c27d244c1ff5d76c591)]:
+  - @vercel/build-utils@13.17.1
+
 ## 0.0.62
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.17.1
+
+### Patch Changes
+
+- Align deserialize logic with existing callers. ([#16002](https://github.com/vercel/vercel/pull/16002))
+
 ## 13.17.0
 
 ### Minor Changes
