@@ -34,8 +34,11 @@ import {
   type PackageJson,
   glob,
   type Service,
-  getWorkerTopics,
+  getInternalServiceCronPath,
+  getServiceQueueTopicConfigs,
   isBackendBuilder,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
   downloadFile,
@@ -846,8 +849,9 @@ async function doBuild(
 
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
-  const hasWorkerServices =
-    hasDetectedServices && detectedServices!.some(s => s.type === 'worker');
+  const hasQueueServices =
+    hasDetectedServices && detectedServices!.some(isQueueTriggeredService);
+  const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
@@ -953,7 +957,7 @@ async function doBuild(
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
-            ...(hasWorkerServices ? { hasWorkerServices: true } : undefined),
+            ...(hasQueueServices ? { hasWorkerServices: true } : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
             // propagated to individual builders.
@@ -1012,6 +1016,7 @@ async function doBuild(
               service: {
                 name: service.name,
                 type: service.type,
+                trigger: service.trigger,
                 routePrefix:
                   typeof serviceRoutePrefix === 'string'
                     ? serviceRoutePrefix
@@ -1217,18 +1222,40 @@ async function doBuild(
         });
       }
 
-      if (service?.type === 'worker' && 'output' in buildResult) {
-        attachWorkerServiceTrigger(buildResult.output, service);
+      if (
+        service &&
+        isQueueTriggeredService(service) &&
+        'output' in buildResult
+      ) {
+        attachQueueServiceTrigger(buildResult.output, service);
       }
 
       if (
-        service?.type === 'cron' &&
+        service &&
+        isScheduleTriggeredService(service) &&
         !('crons' in buildResult && buildResult.crons?.length)
       ) {
-        throw new NowBuildError({
-          code: 'CRON_SERVICE_NO_CRONS',
-          message: `Cron service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support cron services.`,
-        });
+        if (
+          typeof service.runtime === 'string' &&
+          typeof service.schedule === 'string' &&
+          service.schedule !== '<dynamic>'
+        ) {
+          const cronEntrypoint =
+            service.entrypoint || service.builder.src || 'index';
+          synthesizedServiceCrons.push({
+            path: getInternalServiceCronPath(
+              service.name,
+              cronEntrypoint,
+              service.handlerFunction || 'cron'
+            ),
+            schedule: service.schedule,
+          });
+        } else {
+          throw new NowBuildError({
+            code: 'CRON_SERVICE_NO_CRONS',
+            message: `Scheduled service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
+          });
+        }
       }
 
       let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
@@ -1472,7 +1499,7 @@ async function doBuild(
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(
-    localConfig.crons || [],
+    [...(localConfig.crons || []), ...synthesizedServiceCrons],
     buildResults.values()
   );
   const mergedWildcard = mergeWildcard(buildResults.values());
@@ -1868,7 +1895,6 @@ function mergeImages(
   }
   return images;
 }
-
 function mergeCrons(
   crons: BuildOutputConfig['crons'] = [],
   buildResults: Iterable<BuildResult | BuildOutputConfig>
@@ -2031,33 +2057,39 @@ function getServicesMergeEntrypoint(
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
 }
 
-function attachWorkerServiceTrigger(
+function attachQueueServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
-  const topics = getWorkerTopics(service);
+  const topics = getServiceQueueTopicConfigs(service);
   const consumer = service.consumer || 'default';
 
-  for (const topic of topics) {
+  for (const topicConfig of topics) {
     const trigger: TriggerEvent = {
       type: 'queue/v1beta',
-      topic,
+      topic: topicConfig.topic,
       consumer,
     };
+    if (topicConfig.retryAfterSeconds !== undefined) {
+      trigger.retryAfterSeconds = topicConfig.retryAfterSeconds;
+    }
+    if (topicConfig.initialDelaySeconds !== undefined) {
+      trigger.initialDelaySeconds = topicConfig.initialDelaySeconds;
+    }
 
     if (isLambda(buildOutput)) {
-      appendWorkerTrigger(buildOutput, trigger);
+      appendQueueTrigger(buildOutput, trigger);
     } else {
       for (const output of Object.values(buildOutput)) {
         if (isLambda(output)) {
-          appendWorkerTrigger(output, trigger);
+          appendQueueTrigger(output, trigger);
         }
       }
     }
   }
 }
 
-function appendWorkerTrigger(lambda: Lambda, trigger: TriggerEvent): void {
+function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {
   const existingTriggers = Array.isArray(lambda.experimentalTriggers)
     ? lambda.experimentalTriggers
     : [];
