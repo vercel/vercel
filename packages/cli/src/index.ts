@@ -41,7 +41,10 @@ import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
-import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
+import {
+  matchesCliApiTag,
+  resolveOpenApiTagForCommand,
+} from './util/openapi/matches-cli-api-tag';
 import { tryOpenApiFallback } from './util/openapi';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
@@ -66,7 +69,12 @@ import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
-import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  Team,
+  User,
+} from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
@@ -103,6 +111,48 @@ function hasProxyConfig(): boolean {
     'ALL_PROXY',
     'all_proxy',
   ].some(v => process.env[v]);
+}
+
+async function showInferredCommands(client: Client): Promise<number> {
+  const { OpenApiCache } = await import('./util/openapi/openapi-cache.js');
+
+  const cache = new OpenApiCache();
+  const loaded = await cache.loadWithSpinner();
+  if (!loaded) {
+    output.error('Could not load API specification');
+    return 1;
+  }
+
+  const endpoints = cache.getEndpoints();
+  const byTag = new Map<string, typeof endpoints>();
+  for (const ep of endpoints) {
+    if (ep.aliases.length === 0) continue;
+    for (const tag of ep.tags) {
+      const list = byTag.get(tag) || [];
+      list.push(ep);
+      byTag.set(tag, list);
+    }
+  }
+
+  const sortedTags = [...byTag.keys()].sort();
+  const lines: string[] = [];
+
+  for (const tag of sortedTags) {
+    const tagEndpoints = byTag.get(tag)!;
+    for (const ep of tagEndpoints) {
+      const names = ep.aliases.length > 0 ? ep.aliases : [ep.operationId];
+      const pathParams = ep.parameters
+        .filter(p => p.in === 'path')
+        .map(p => `<${p.name}>`);
+      const suffix = pathParams.length > 0 ? ` ${pathParams.join(' ')}` : '';
+      for (const name of names) {
+        lines.push(`vercel ${tag} ${name}${suffix}`);
+      }
+    }
+  }
+
+  output.print(lines.join('\n') + '\n');
+  return 0;
 }
 
 /*
@@ -171,6 +221,56 @@ class InMemoryReporter implements Reporter {
   report(event: TraceEvent) {
     this.events.push(event);
   }
+}
+
+/**
+ * Resolve `--scope` / `--team` flag to a team ID and set
+ * `client.config.currentTeam`.  Returns an exit code when it needs to
+ * abort, or `undefined` to continue normally.
+ */
+async function resolveScope(
+  client: Client,
+  parsedArgs: { flags: Record<string, unknown> }
+): Promise<number | undefined> {
+  const scope =
+    (parsedArgs.flags['--scope'] as string | undefined) ||
+    (parsedArgs.flags['--team'] as string | undefined);
+  if (!scope) return undefined;
+
+  let user;
+  try {
+    user = await getUser(client);
+  } catch {
+    return undefined;
+  }
+
+  if (user.id === scope || user.email === scope || user.username === scope) {
+    if (user.version === 'northstar') {
+      output.error('You cannot set your Personal Account as the scope.');
+      return 1;
+    }
+    delete client.config.currentTeam;
+    return undefined;
+  }
+
+  let teams: Team[] = [];
+  try {
+    teams = await getTeams(client);
+  } catch {
+    return undefined;
+  }
+
+  const related = teams.find(t => t.id === scope || t.slug === scope);
+  if (related) {
+    client.config.currentTeam = related.id;
+    return undefined;
+  }
+
+  output.prettyError({
+    message: 'The specified scope does not exist',
+    link: 'https://err.sh/vercel/scope-not-existent',
+  });
+  return 1;
 }
 
 const main = async () => {
@@ -575,6 +675,13 @@ const main = async () => {
       );
     }
 
+    if (
+      targetOrSubcommand === 'show-inferred-commands' &&
+      (process.env.VERCEL_AUTO_API || process.env.VERCEL_AUTO_API_TEST)
+    ) {
+      return finishWithExitCode(await showInferredCommands(client));
+    }
+
     if (subcommandExists) {
       output.debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
@@ -584,12 +691,18 @@ const main = async () => {
         'user supplied a possible target for deployment or an extension'
       );
       if (
-        process.env.VERCEL_AUTO_API &&
+        (process.env.VERCEL_AUTO_API || process.env.VERCEL_AUTO_API_TEST) &&
         (await matchesCliApiTag(targetOrSubcommand))
       ) {
         output.debug(
           `first token "${targetOrSubcommand}" matches an OpenAPI tag; routing to api`
         );
+
+        // Resolve --scope / --team before routing to OpenAPI since the normal
+        // scope resolution later in the function won't be reached.
+        const scopeExit = await resolveScope(client, parsedArgs);
+        if (scopeExit !== undefined) return finishWithExitCode(scopeExit);
+
         const tag = targetOrSubcommand;
         const result = await tryOpenApiFallback(
           client,
@@ -891,6 +1004,21 @@ const main = async () => {
     // Not using an `else` here because if the CLI extension
     // was not found then we have to fall back to `vc deploy`
     if (subcommand) {
+      // When opted in, try OpenAPI first for any command before native handlers.
+      if (process.env.VERCEL_AUTO_API || process.env.VERCEL_AUTO_API_TEST) {
+        const tag = await resolveOpenApiTagForCommand(subcommand);
+        if (tag) {
+          const fallback = await tryOpenApiFallback(
+            client,
+            parsedArgs.args.slice(3),
+            async () => tag
+          );
+          if (fallback !== null) {
+            return finishWithExitCode(fallback);
+          }
+        }
+      }
+
       let func: any;
       switch (targetCommand) {
         // Priority commands - separate bundles for fast loading

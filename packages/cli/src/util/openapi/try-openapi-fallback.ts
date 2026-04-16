@@ -25,7 +25,7 @@ export async function tryOpenApiFallback(
   cliArgs: string[],
   resolveTag: () => Promise<string | null>
 ): Promise<number | null> {
-  if (!process.env.VERCEL_AUTO_API) {
+  if (!process.env.VERCEL_AUTO_API && !process.env.VERCEL_AUTO_API_TEST) {
     return null;
   }
 
@@ -63,5 +63,6 @@ export async function tryOpenApiFallback(
     operationId: operationHint,
     flags,
     positionalOperationFields: cliArgs.slice(1),
+    skipOptionalPrompts: true,
   });
 }

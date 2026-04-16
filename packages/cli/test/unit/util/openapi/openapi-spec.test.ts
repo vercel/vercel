@@ -125,9 +125,9 @@ describe('OpenAPI spec fixture', () => {
       expect(cli!.aliases).toEqual(['read', 'get']);
     });
 
-    it('getAuthUser has no aliases', () => {
+    it('getAuthUser has alias "whoami"', () => {
       const cli = getXVercelCli(spec, '/v2/user', 'get');
-      expect(cli!.aliases).toBeUndefined();
+      expect(cli!.aliases).toEqual(['whoami']);
     });
   });
 
@@ -208,6 +208,30 @@ describe('OpenAPI spec fixture', () => {
         'getteam'
       );
       expect(result.ok).toBe(true);
+    });
+
+    it('resolves getTeams via "list" alias', () => {
+      const result = resolveEndpointByTagAndOperationId(
+        endpoints,
+        'teams',
+        'list'
+      );
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.endpoint.operationId).toBe('getTeams');
+      }
+    });
+
+    it('resolves getTeam via "get" alias', () => {
+      const result = resolveEndpointByTagAndOperationId(
+        endpoints,
+        'teams',
+        'get'
+      );
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.endpoint.operationId).toBe('getTeam');
+      }
     });
   });
 });

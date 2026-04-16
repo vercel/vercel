@@ -78,6 +78,22 @@ export function resolveEndpointByTagAndOperationId(
     };
   }
 
+  const aliasCi = withOpId.filter(ep =>
+    ep.aliases.some(a => a.toLowerCase() === hintLower)
+  );
+  if (aliasCi.length === 1) {
+    return { ok: true, endpoint: aliasCi[0] };
+  }
+  if (aliasCi.length > 1) {
+    return {
+      ok: false,
+      reason: 'ambiguous_operation',
+      tag,
+      tagMatches: aliasCi,
+      operationHint: hint,
+    };
+  }
+
   return {
     ok: false,
     reason: 'no_operation',

@@ -14,6 +14,7 @@ const sampleEndpoint: EndpointInfo = {
   description: '',
   tags: ['projects'],
   parameters: [],
+  aliases: [],
 };
 
 describe('matchesCliApiTag', () => {

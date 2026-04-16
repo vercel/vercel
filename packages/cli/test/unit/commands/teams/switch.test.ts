@@ -6,6 +6,9 @@ import teams from '../../../../src/commands/teams';
 import { useUser } from '../../../mocks/user';
 import { useTeam, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import * as configFiles from '../../../../src/util/config/files';
+
+vi.spyOn(configFiles, 'writeToConfigFile').mockImplementation(() => {});
 
 describe('teams switch', () => {
   describe('non-northstar', () => {

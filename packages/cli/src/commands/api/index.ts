@@ -17,8 +17,14 @@ import {
   getMissingRequiredOperationParams,
   getUnsetOptionalOperationParams,
   parseOperationKeyValuePairs,
+  applyContextDefaults,
   GLOBAL_CLI_QUERY_PARAMS,
+  CONTEXT_PARAM_MAP,
 } from './operation-request-builder';
+import type { CliContext } from './operation-request-builder';
+import { getLinkFromDir } from '../../util/projects/link';
+import { getVercelDirectory } from '../../util/projects/link';
+import getTeamById from '../../util/teams/get-team-by-id';
 import {
   OpenApiCache,
   resolveEndpointByTagAndOperationId,
@@ -363,7 +369,8 @@ async function promptMissingParamsForTagOperation(
   endpoint: EndpointInfo,
   bodyFields: BodyField[],
   flags: ParsedFlags,
-  positionalKeyValues: string[]
+  positionalKeyValues: string[],
+  skipOptionalPrompts?: boolean
 ): Promise<string[] | null> {
   const pos = [...positionalKeyValues];
 
@@ -430,6 +437,10 @@ async function promptMissingParamsForTagOperation(
       const value = await promptForBodyField(client, field, true);
       pos.push(`${field.name}=${value}`);
     }
+  }
+
+  if (skipOptionalPrompts) {
+    return pos;
   }
 
   return promptUnsetOptionalParamsForTagOperation(
@@ -579,6 +590,41 @@ function printTagOperationResolveError(
   );
 }
 
+async function printContextHeader(client: Client): Promise<void> {
+  const teamId = client.config.currentTeam;
+  if (!teamId) return;
+
+  let teamLabel = teamId;
+  try {
+    const team = await getTeamById(client, teamId);
+    if (team?.slug) {
+      teamLabel = `${team.name || team.slug} ${chalk.dim(`(${team.slug})`)}`;
+    }
+  } catch {
+    // Fall back to raw ID
+  }
+
+  output.log(chalk.gray('Team: ') + chalk.cyan(teamLabel));
+
+  let projectId: string | undefined;
+  try {
+    const link = await getLinkFromDir<{ projectId: string; orgId: string }>(
+      getVercelDirectory(client.cwd)
+    );
+    if (link?.projectId) {
+      projectId = link.projectId;
+    }
+  } catch {
+    // No linked project
+  }
+
+  if (projectId) {
+    output.log(chalk.gray('Project: ') + chalk.cyan(projectId));
+  }
+
+  output.log('');
+}
+
 async function executeApiRequest(
   client: Client,
   requestConfig: RequestConfig,
@@ -586,6 +632,10 @@ async function executeApiRequest(
   displayColumns?: Record<string, string> | null,
   options?: { tagOperation?: boolean }
 ): Promise<number> {
+  if (options?.tagOperation && !flags['--raw'] && !flags['--silent']) {
+    await printContextHeader(client);
+  }
+
   // Verbose mode: show request details
   if (flags['--verbose']) {
     output.debug(`Request: ${requestConfig.method} ${requestConfig.url}`);
@@ -645,7 +695,7 @@ async function executeSingleRequest(
       options
     );
   } catch (err) {
-    output.prettyError(err);
+    printRequestError(err, config, client);
     return 1;
   }
 }
@@ -683,7 +733,7 @@ async function executePaginatedRequest(
     // Output combined results
     return outputResults(client, results, flags);
   } catch (err) {
-    output.prettyError(err);
+    printRequestError(err, config, client);
     return 1;
   }
 }
@@ -823,6 +873,55 @@ function outputMutationResult(
       : `${statusLine}\n`
   );
   return 1;
+}
+
+function printRequestError(
+  err: unknown,
+  config: RequestConfig,
+  client: Client
+): void {
+  output.prettyError(err);
+
+  const scope = client.config.currentTeam;
+  const status =
+    err && typeof err === 'object' && 'status' in err
+      ? (err as { status: number }).status
+      : undefined;
+  const lines: string[] = [
+    '',
+    chalk.dim('Request details:'),
+    chalk.dim(`  ${config.method} ${config.url}`),
+  ];
+  if (scope) {
+    lines.push(chalk.dim(`  scope: ${scope}`));
+  }
+  if (config.body) {
+    const bodyStr =
+      typeof config.body === 'string'
+        ? config.body
+        : JSON.stringify(config.body);
+    if (bodyStr.length <= 200) {
+      lines.push(chalk.dim(`  body: ${bodyStr}`));
+    }
+  }
+
+  if (status === 403 || status === 401) {
+    lines.push('');
+    if (scope) {
+      lines.push(
+        chalk.yellow(
+          `Hint: Your current scope (${scope}) may not have access to this resource.`
+        )
+      );
+    }
+    lines.push(
+      chalk.yellow(
+        `Try a different team with ${chalk.bold(`${packageName} switch`)} or ${chalk.bold('--scope <team>')}`
+      )
+    );
+  }
+
+  output.log(lines.join('\n'));
 }
 
 function extractErrorMessage(body: unknown): string | null {
@@ -1214,6 +1313,7 @@ export async function runTagOperation(
     operationId: string;
     flags: ParsedFlags;
     positionalOperationFields: string[];
+    skipOptionalPrompts?: boolean;
   }
 ): Promise<number> {
   const { tag, operationId, flags, positionalOperationFields } = options;
@@ -1254,37 +1354,52 @@ export async function runTagOperation(
       resolved.endpoint,
       bodyFields,
       finalFlags,
-      tagOperationPositional
+      tagOperationPositional,
+      options.skipOptionalPrompts
     );
     if (prompted === null) {
       return 1;
     }
     tagOperationPositional = prompted;
-  } else {
-    try {
-      const parsed = await parseOperationKeyValuePairs(
-        resolved.endpoint,
-        bodyFields,
-        finalFlags,
-        tagOperationPositional
-      );
-      const missing = getMissingRequiredOperationParams(
-        resolved.endpoint,
-        bodyFields,
-        parsed,
-        finalFlags
-      );
-      if (
-        missing.path.length > 0 ||
-        missing.query.length > 0 ||
-        missing.header.length > 0 ||
-        missing.body.length > 0
-      ) {
-        printMissingOperationParamsHelp(resolved.endpoint, missing);
-        return 1;
-      }
-    } catch (err) {
-      printError(err);
+  }
+
+  // Parse positionals (handles both key=value and bare positional args)
+  // to discover explicit values *before* applying context defaults.
+  let earlyParsed;
+  try {
+    earlyParsed = await parseOperationKeyValuePairs(
+      resolved.endpoint,
+      bodyFields,
+      finalFlags,
+      tagOperationPositional
+    );
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  // If a scope-mapped param (teamId) was provided, sync it to client so
+  // _fetch uses it for auth.
+  syncScopeFromParsedValues(client, earlyParsed.pathValues, resolved.endpoint);
+
+  // Resolve context *after* scope sync so it picks up the explicit teamId.
+  const cliContext = await resolveCliContext(client);
+  applyContextDefaults(resolved.endpoint, earlyParsed, cliContext);
+
+  if (!client.stdin.isTTY) {
+    const missing = getMissingRequiredOperationParams(
+      resolved.endpoint,
+      bodyFields,
+      earlyParsed,
+      finalFlags
+    );
+    if (
+      missing.path.length > 0 ||
+      missing.query.length > 0 ||
+      missing.header.length > 0 ||
+      missing.body.length > 0
+    ) {
+      printMissingOperationParamsHelp(resolved.endpoint, missing);
       return 1;
     }
   }
@@ -1295,7 +1410,8 @@ export async function runTagOperation(
       resolved.endpoint,
       bodyFields,
       finalFlags,
-      tagOperationPositional
+      tagOperationPositional,
+      cliContext
     );
   } catch (err) {
     printError(err);
@@ -1333,4 +1449,47 @@ export async function runTagOperation(
   return executeApiRequest(client, requestConfig, finalFlags, displayColumns, {
     tagOperation: true,
   });
+}
+
+async function resolveCliContext(client: Client): Promise<CliContext> {
+  const scope = client.config.currentTeam || undefined;
+
+  let projectId: string | undefined;
+  try {
+    const link = await getLinkFromDir<{ projectId: string; orgId: string }>(
+      getVercelDirectory(client.cwd)
+    );
+    if (link?.projectId) {
+      projectId = link.projectId;
+    }
+  } catch {
+    // No linked project
+  }
+
+  return { scope, projectId };
+}
+
+/**
+ * If the user explicitly provided a scope-mapped param (e.g. `teamId=team_xxx`
+ * or bare positional assigned to `teamId`), update `client.config.currentTeam`
+ * so `_fetch` injects the correct teamId query param for auth.
+ *
+ * Must be called *after* parsing so bare positionals are already resolved.
+ */
+function syncScopeFromParsedValues(
+  client: Client,
+  pathValues: Record<string, string>,
+  endpoint: EndpointInfo
+): void {
+  const endpointParamNames = new Set(endpoint.parameters.map(p => p.name));
+
+  for (const [paramName, source] of Object.entries(CONTEXT_PARAM_MAP)) {
+    if (source !== 'scope') continue;
+    if (!endpointParamNames.has(paramName)) continue;
+    const value = pathValues[paramName];
+    if (value) {
+      client.config.currentTeam = value;
+      return;
+    }
+  }
 }
