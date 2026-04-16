@@ -7,7 +7,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
-const { isTransientError } = require('./is-transient-error.js');
+const { isTransientError } = require('./transient-error.js');
 const {
   scanParentDirs,
   getSupportedNodeVersion,

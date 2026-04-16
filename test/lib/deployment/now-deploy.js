@@ -6,7 +6,7 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const ms = require('ms');
-const { isTransientError } = require('./is-transient-error');
+const { isTransientError } = require('./transient-error');
 
 const IS_CI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

@@ -1,6 +1,6 @@
 const nodeFetch = require('node-fetch');
 const retryBailByDefault = require('./retry-bail-by-default.js');
-const { isTransientError } = require('./is-transient-error.js');
+const { isTransientError } = require('./transient-error.js');
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
 
