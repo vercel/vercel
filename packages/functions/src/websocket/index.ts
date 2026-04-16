@@ -24,11 +24,5 @@ export function upgradeWebSocket(): WebSocket {
     throw new Error('WebSocket upgrade failed');
   }
 
-  // When the WebSocket closes, destroy the underlying socket so the
-  // bridge's lifecycle hooks (reportEnd) fire via the 'close' event.
-  ws.on('close', () => {
-    socket.destroy();
-  });
-
   return ws;
 }
