@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { rolldown } from './rolldown.js';
-import { typescript } from './typescript.js';
+import { typescript } from '../typescript.js';
 import { join } from 'node:path';
 import execa from 'execa';
 import { findEntrypoint, findEntrypointOrThrow } from '../find-entrypoint.js';
