@@ -3,7 +3,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const contractCommand = {
   name: 'contract',
-  aliases: [],
+  aliases: ['billing'],
   description: 'Show contract information for all billing periods',
   arguments: [],
   options: [formatOption, jsonOption],
