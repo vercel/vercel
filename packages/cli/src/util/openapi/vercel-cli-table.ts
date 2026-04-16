@@ -113,8 +113,9 @@ export function formatAsDataTable(
       item !== null && typeof item === 'object' && !Array.isArray(item)
         ? (item as Record<string, unknown>)
         : {};
-    const cols = columnsForRow(row, display);
-    return cols.map(colPath => stringifyCell(getByPath(row, colPath), colPath));
+    return columns.map(colPath =>
+      stringifyCell(getByPath(row, colPath), colPath)
+    );
   });
   return table([headers, ...dataRows]);
 }

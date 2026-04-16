@@ -13,6 +13,10 @@ const ep = (method: string, params: Parameter[] = []): EndpointInfo => ({
   operationId: 'op',
   tags: ['t'],
   parameters: params,
+  vercelCliSupported: false,
+  vercelCliProductionReady: false,
+  vercelCliAliases: [],
+  vercelCliBodyArguments: [],
 });
 
 describe('inferCliSubcommandAliases', () => {

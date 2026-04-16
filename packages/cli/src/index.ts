@@ -1189,21 +1189,21 @@ const main = async () => {
         earlyGetUserPromise = getUser(client).catch(() => undefined);
       }
 
-      const productionOverride = subcommand
-        ? await tryOpenApiProductionOverride(
-            client,
-            subcommand,
-            client.argv.slice(3)
-          )
-        : null;
-
-      if (productionOverride !== null) {
-        exitCode = productionOverride;
-      } else {
-        exitCode = await rootSpan
-          .child('vc.cli.command', { command: subcommand || 'deploy' })
-          .trace(() => func(client));
-      }
+      exitCode = await rootSpan
+        .child('vc.cli.command', { command: subcommand || 'deploy' })
+        .trace(async () => {
+          if (subcommand) {
+            const productionOverride = await tryOpenApiProductionOverride(
+              client,
+              subcommand,
+              client.argv.slice(3)
+            );
+            if (productionOverride !== null) {
+              return productionOverride;
+            }
+          }
+          return func(client);
+        });
     }
   } catch (err: unknown) {
     trackAgenticErrorTelemetry(err);
