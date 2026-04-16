@@ -7,7 +7,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
-const { isTransientError } = require('./transient-error.js');
+const { handleTransientError } = require('./transient-error.js');
 const {
   scanParentDirs,
   getSupportedNodeVersion,
@@ -198,7 +198,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       try {
         result = await fetchDeploymentUrl(probeUrl, fetchOpts);
       } catch (error) {
-        if (isTransientError(error)) {
+        if (handleTransientError(error, 'preview_page')) {
           console.log(
             `Transient error checking preview page for ${probeUrl} (attempt ${retryCount}): ${error.message}`
           );
@@ -503,7 +503,7 @@ async function fetchDeploymentUrl(url, opts) {
     try {
       resp = await fetch(url, opts);
     } catch (error) {
-      if (isTransientError(error)) {
+      if (handleTransientError(error, 'deployment_url')) {
         console.log(
           `Transient error fetching deployment url ${url} (attempt ${i}): ${error.message}`
         );
@@ -529,7 +529,7 @@ async function fetchTgzUrl(url) {
     try {
       resp = await fetch(url);
     } catch (error) {
-      if (isTransientError(error)) {
+      if (handleTransientError(error, 'tgz_url')) {
         console.log(
           `Transient error fetching tgz url ${url} (attempt ${i}): ${error.message}`
         );

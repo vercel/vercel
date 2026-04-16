@@ -6,7 +6,7 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const ms = require('ms');
-const { isTransientError } = require('./transient-error');
+const { handleTransientError } = require('./transient-error');
 
 const IS_CI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -98,7 +98,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
         await filePost(bodies[filename], digestOfFile(bodies[filename]));
         break;
       } catch (error) {
-        if (isTransientError(error) && attempts < 3) {
+        if (handleTransientError(error, 'file_upload') && attempts < 3) {
           attempts++;
           console.log(
             `Transient error uploading ${filename} (attempt ${attempts}): ${error.message}`
@@ -129,7 +129,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     try {
       deployment = await deploymentGet(deploymentId);
     } catch (error) {
-      if (isTransientError(error)) {
+      if (handleTransientError(error, 'deployment_poll')) {
         console.log(
           `Transient error polling deployment ${deploymentId} (attempt ${i}): ${error.message}`
         );
@@ -195,7 +195,7 @@ async function disableSSO(deploymentId, deploymentUrl) {
     try {
       res = await _fetch(`https://${deploymentUrl}`);
     } catch (error) {
-      if (isTransientError(error)) {
+      if (handleTransientError(error, 'sso_propagation')) {
         console.log(
           `Transient error checking SSO propagation for ${deploymentUrl} (attempt ${i}): ${error.message}`
         );
