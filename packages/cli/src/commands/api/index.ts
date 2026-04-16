@@ -185,11 +185,7 @@ export default async function api(client: Client): Promise<number> {
   const tagSpecLoaded = await openApiForTag.loadWithSpinner(
     typedFlags['--refresh'] ?? false
   );
-  if (!tagSpecLoaded) {
-    output.error('Could not load OpenAPI specification');
-    return 1;
-  }
-  if (openApiForTag.findEndpointsByTag(firstArg).length > 0) {
+  if (tagSpecLoaded && openApiForTag.findEndpointsByTag(firstArg).length > 0) {
     const openapiTelemetryClient = new OpenapiTelemetryClient({
       opts: { store: client.telemetryEventStore },
     });
@@ -200,7 +196,9 @@ export default async function api(client: Client): Promise<number> {
     );
   }
 
-  output.error('Endpoint must start with /');
+  output.error(
+    `Invalid arguments. Use an API path starting with /, or run \`${packageName} api\` interactively.`
+  );
   return 1;
 }
 
@@ -991,7 +989,6 @@ export async function runTagOperation(
   }
 
   const bodyFields = openApi.getBodyFields(resolved.endpoint);
-  const displayColumns = openApi.getDisplayColumns(resolved.endpoint);
   let tagOperationPositional = positionalOperationFields;
 
   if (client.stdin.isTTY) {
@@ -1076,7 +1073,5 @@ export async function runTagOperation(
     return 0;
   }
 
-  return executePrebuiltApiRequest(client, requestConfig, finalFlags, {
-    vercelCliTable: displayColumns ?? undefined,
-  });
+  return executePrebuiltApiRequest(client, requestConfig, finalFlags);
 }

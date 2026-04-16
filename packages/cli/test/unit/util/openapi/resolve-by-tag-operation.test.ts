@@ -10,6 +10,8 @@ const base = (overrides: Partial<EndpointInfo>): EndpointInfo => ({
   operationId: '',
   tags: [],
   parameters: [],
+  vercelCliSupported: false,
+  vercelCliAliases: [],
   ...overrides,
 });
 
