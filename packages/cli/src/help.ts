@@ -4,6 +4,10 @@ import chalk from 'chalk';
 const packageName = 'vercel';
 const logo = '▲';
 
+const connexLine = process.env.FF_CONNEX_ENABLED
+  ? '\n      connex               [cmd]       Manage Vercel Connect OAuth clients'
+  : '';
+
 export const help = () => `
   ${chalk.bold(`${logo} ${packageName}`)} [options] <command | path>
 
@@ -48,10 +52,11 @@ export const help = () => `
       bisect                           Use binary search to find the deployment that introduced a bug
       blob                 [cmd]       Manages your Blob stores and files
       buy                  [cmd]       Purchase Vercel products for your team
-      certs                [cmd]       Manages your SSL certificates
+      certs                [cmd]       Manages your SSL certificates${connexLine}
       contract                         Show contract information for billing periods
       cron | crons         [cmd]       Manage cron jobs for a project [beta]
       curl                 [path]      cURL requests to your linked project's deployment [beta]
+      deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       httpstat             path        Visualize HTTP timing statistics for deployments

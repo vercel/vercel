@@ -155,6 +155,33 @@ const cronsSchema = {
   },
 };
 
+const serviceMountSchema = {
+  oneOf: [
+    {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        path: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 512,
+        },
+        subdomain: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 63,
+        },
+      },
+      anyOf: [{ required: ['path'] }, { required: ['subdomain'] }],
+    },
+  ],
+};
+
 const serviceConfigSchema = {
   type: 'object',
   additionalProperties: false,
@@ -162,11 +189,17 @@ const serviceConfigSchema = {
     type: {
       enum: ['web', 'cron', 'worker'],
     },
+    root: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
     entrypoint: {
       type: 'string',
       minLength: 1,
       maxLength: 512,
     },
+    mount: serviceMountSchema,
     routePrefix: {
       type: 'string',
       minLength: 1,

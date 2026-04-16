@@ -7,8 +7,10 @@ import {
   calculateBundleSize,
   getPackagesReachableOnPlatform,
   lambdaKnapsack,
+  shouldShowFunctionsBetaHint,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  HIVE_LAMBDA_SIZE_BYTES,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef, FileBlob } from '@vercel/build-utils';
@@ -161,6 +163,53 @@ describe('dependency externalizer support', () => {
       expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
         LAMBDA_SIZE_THRESHOLD_BYTES
       );
+    });
+
+    it('HIVE_LAMBDA_SIZE_BYTES is 1 GB', () => {
+      expect(HIVE_LAMBDA_SIZE_BYTES).toBe(1 * 1024 * 1024 * 1024);
+    });
+
+    it('Hive limit is greater than the ephemeral storage limit', () => {
+      expect(HIVE_LAMBDA_SIZE_BYTES).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+  });
+
+  describe('shouldShowFunctionsBetaHint', () => {
+    const originalEnv = process.env.VERCEL_FUNCTIONS_BETA_HINT;
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_FUNCTIONS_BETA_HINT;
+      } else {
+        process.env.VERCEL_FUNCTIONS_BETA_HINT = originalEnv;
+      }
+    });
+
+    it('returns true when VERCEL_FUNCTIONS_BETA_HINT is "1"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = '1';
+      expect(shouldShowFunctionsBetaHint()).toBe(true);
+    });
+
+    it('returns true when VERCEL_FUNCTIONS_BETA_HINT is "true"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = 'true';
+      expect(shouldShowFunctionsBetaHint()).toBe(true);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is unset', () => {
+      delete process.env.VERCEL_FUNCTIONS_BETA_HINT;
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is "0"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = '0';
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is an unrecognised value', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = 'yes';
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
     });
   });
 

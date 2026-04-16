@@ -19,6 +19,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandAiGateway(actual: string) {
+    this.trackCliCommand({
+      command: 'ai-gateway',
+      value: actual,
+    });
+  }
+
   trackCliCommandAlias(actual: string) {
     this.trackCliCommand({
       command: 'alias',
@@ -89,6 +96,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandConnex(actual: string) {
+    this.trackCliCommand({
+      command: 'connex',
+      value: actual,
+    });
+  }
+
   trackCliCommandContract(actual: string) {
     this.trackCliCommand({
       command: 'contract',
@@ -113,6 +127,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandDeploy(actual: string) {
     this.trackCliCommand({
       command: 'deploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDeployHooks(actual: string) {
+    this.trackCliCommand({
+      command: 'deploy-hooks',
       value: actual,
     });
   }
