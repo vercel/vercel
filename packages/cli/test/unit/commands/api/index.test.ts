@@ -47,7 +47,9 @@ describe('api', () => {
       client.setArgv('api', 'v2/user');
       const exitCode = await api(client);
       expect(exitCode).toEqual(1);
-      expect(client.getFullOutput()).toContain('Endpoint must start with /');
+      expect(client.getFullOutput()).toContain(
+        'Use an API path starting with /'
+      );
     });
 
     it('should reject protocol-relative URLs to prevent SSRF', async () => {
@@ -71,7 +73,6 @@ describe('api', () => {
 
   describe('GET requests', () => {
     it('makes GET request to endpoint', async () => {
-      // Use a custom endpoint to avoid conflict with useUser()
       client.scenario.get('/v5/test-endpoint', (_req, res) => {
         res.json({ data: { id: 'test_123', name: 'testdata' } });
       });
@@ -162,7 +163,6 @@ describe('api', () => {
         res.json({ uid: 'dpl_abc123' });
       });
 
-      // Skip confirmation prompt for this test (testing request, not confirmation)
       client.dangerouslySkipPermissions = true;
 
       client.setArgv('api', '/v13/deployments/dpl_abc123', '-X', 'DELETE');
@@ -201,9 +201,8 @@ describe('api', () => {
       const exitCode = await api(client);
 
       expect(exitCode).toEqual(0);
-      // Check for indented output (pretty print)
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('  '); // Has indentation
+      expect(output).toContain('  ');
     });
 
     it('outputs raw JSON with --raw', async () => {
@@ -216,7 +215,6 @@ describe('api', () => {
 
       expect(exitCode).toEqual(0);
       const output = client.stdout.getFullOutput().trim();
-      // Raw output should be compact (no extra indentation)
       expect(output).toBe('{"data":{"id":"raw_123"}}');
     });
   });
@@ -277,7 +275,6 @@ describe('api', () => {
       client.setArgv('api', '/v13/deployments/dpl_abc123');
       await api(client);
 
-      // Check that the endpoint is tracked with normalized IDs
       const events = client.telemetryEventStore.readonlyEvents;
       const endpointEvent = events.find(e => e.key === 'argument:endpoint');
       expect(endpointEvent).toBeDefined();
@@ -292,7 +289,6 @@ describe('api', () => {
       client.setArgv('api', '/v10/projects', '-X', 'POST', '-F', 'name=test');
       await api(client);
 
-      // Check that the method is tracked
       const events = client.telemetryEventStore.readonlyEvents;
       const methodEvent = events.find(e => e.key === 'option:method');
       expect(methodEvent).toBeDefined();

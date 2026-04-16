@@ -11,6 +11,35 @@ import type {
 } from './types';
 
 /**
+ * Execute an API request with a pre-built RequestConfig (no buildRequest call).
+ * Used by runTagOperation where the request is already fully resolved.
+ */
+export async function executePrebuiltApiRequest(
+  client: Client,
+  requestConfig: RequestConfig,
+  flags: ParsedFlags,
+  options?: ExecuteApiRequestOptions
+): Promise<number> {
+  if (flags['--verbose']) {
+    output.debug(`Request: ${requestConfig.method} ${requestConfig.url}`);
+    if (Object.keys(requestConfig.headers).length > 0) {
+      output.debug(`Headers: ${JSON.stringify(requestConfig.headers)}`);
+    }
+    if (requestConfig.body) {
+      output.debug(
+        `Body: ${typeof requestConfig.body === 'string' ? requestConfig.body : JSON.stringify(requestConfig.body)}`
+      );
+    }
+  }
+
+  if (flags['--paginate']) {
+    return executePaginatedRequest(client, requestConfig, flags, options);
+  }
+
+  return executeSingleRequest(client, requestConfig, flags, options);
+}
+
+/**
  * Shared HTTP execution for `vercel api` and `vercel openapi` (same flags and behavior).
  */
 export async function executeApiRequest(
