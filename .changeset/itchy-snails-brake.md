@@ -1,5 +1,4 @@
 ---
-'@vercel/rust': patch
 'vercel': patch
 ---
 
