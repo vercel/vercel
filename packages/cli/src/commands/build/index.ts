@@ -1235,7 +1235,27 @@ async function doBuild(
         isScheduleTriggeredService(service) &&
         !('crons' in buildResult && buildResult.crons?.length)
       ) {
-        synthesizedServiceCrons.push(...getServiceCrons([service]));
+        if (
+          typeof service.runtime === 'string' &&
+          typeof service.schedule === 'string' &&
+          service.schedule !== '<dynamic>'
+        ) {
+          const cronEntrypoint =
+            service.entrypoint || service.builder.src || 'index';
+          synthesizedServiceCrons.push({
+            path: getInternalServiceCronPath(
+              service.name,
+              cronEntrypoint,
+              service.handlerFunction || 'cron'
+            ),
+            schedule: service.schedule,
+          });
+        } else {
+          throw new NowBuildError({
+            code: 'CRON_SERVICE_NO_CRONS',
+            message: `Scheduled service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
+          });
+        }
       }
 
       let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
@@ -1874,34 +1894,6 @@ function mergeImages(
     }
   }
   return images;
-}
-
-function getServiceCrons(services?: Service[]): Cron[] {
-  if (!services || services.length === 0) {
-    return [];
-  }
-
-  const crons: Cron[] = [];
-  for (const service of services) {
-    if (
-      !isScheduleTriggeredService(service) ||
-      !service.schedule ||
-      service.schedule === '<dynamic>'
-    ) {
-      continue;
-    }
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    crons.push({
-      path: getInternalServiceCronPath(
-        service.name,
-        cronEntrypoint,
-        service.handlerFunction || 'cron'
-      ),
-      schedule: service.schedule,
-    });
-  }
-
-  return crons;
 }
 function mergeCrons(
   crons: BuildOutputConfig['crons'] = [],
