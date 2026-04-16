@@ -10,6 +10,7 @@ import type {
   VercelCliTableDisplay,
 } from './types';
 import { foldNamingStyle } from './fold-naming-style';
+import { inferCliSubcommandAliases } from './infer-cli-aliases';
 import { VERCEL_CLI_ROOT_DISPLAY_KEY } from './constants';
 
 /**
@@ -106,7 +107,7 @@ export class OpenApiCache {
     return epTags.some(t => foldNamingStyle(t) === want);
   }
 
-  /** `operationId` or any `x-vercel-cli.aliases` entry (same fold as tag matching). */
+  /** `operationId`, any `x-vercel-cli.aliases` entry, or any auto-inferred CLI alias. */
   private operationIdOrAliasMatches(
     ep: EndpointInfo,
     requestedFold: string
@@ -115,6 +116,11 @@ export class OpenApiCache {
       return true;
     }
     for (const a of ep.vercelCliAliases) {
+      if (foldNamingStyle(a) === requestedFold) {
+        return true;
+      }
+    }
+    for (const a of inferCliSubcommandAliases(ep)) {
       if (foldNamingStyle(a) === requestedFold) {
         return true;
       }

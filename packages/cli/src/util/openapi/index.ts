@@ -22,6 +22,7 @@ export {
   substitutePathTemplate,
 } from './openapi-operation-cli';
 export * from './resolve-by-tag-operation';
+export { inferCliSubcommandAliases } from './infer-cli-aliases';
 export {
   matchesCliApiTag,
   resolveOpenApiTagForProjectsCli,

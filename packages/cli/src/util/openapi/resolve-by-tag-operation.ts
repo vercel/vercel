@@ -1,4 +1,6 @@
 import type { EndpointInfo } from './types';
+import { foldNamingStyle } from './fold-naming-style';
+import { inferCliSubcommandAliases } from './infer-cli-aliases';
 
 export type ResolveByTagOperationResult =
   | { ok: true; endpoint: EndpointInfo }
@@ -10,9 +12,30 @@ export type ResolveByTagOperationResult =
       operationHint: string;
     };
 
+function operationIdOrAliasMatches(
+  ep: EndpointInfo,
+  hintFolded: string
+): boolean {
+  if (foldNamingStyle(ep.operationId) === hintFolded) {
+    return true;
+  }
+  for (const a of ep.vercelCliAliases) {
+    if (foldNamingStyle(a) === hintFolded) {
+      return true;
+    }
+  }
+  for (const a of inferCliSubcommandAliases(ep)) {
+    if (foldNamingStyle(a) === hintFolded) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
- * Resolve an OpenAPI operation from a tag name and an operationId.
- * The hint must match {@link EndpointInfo.operationId} exactly (case-insensitive).
+ * Resolve an OpenAPI operation from a tag name and an operationId (or CLI alias).
+ * Matches against {@link EndpointInfo.operationId} and {@link EndpointInfo.vercelCliAliases}
+ * using case-insensitive, naming-style-folded comparison.
  */
 export function resolveEndpointByTagAndOperationId(
   endpoints: EndpointInfo[],
@@ -46,8 +69,9 @@ export function resolveEndpointByTagAndOperationId(
   }
 
   const hint = operationHint.trim();
-  const hintLower = hint.toLowerCase();
+  const hintFolded = foldNamingStyle(hint);
 
+  // Exact operationId match first (case-sensitive)
   const exact = withOpId.filter(ep => ep.operationId === hint);
   if (exact.length === 1) {
     return { ok: true, endpoint: exact[0] };
@@ -62,18 +86,19 @@ export function resolveEndpointByTagAndOperationId(
     };
   }
 
-  const exactCi = withOpId.filter(
-    ep => ep.operationId.toLowerCase() === hintLower
+  // Folded match: operationId OR aliases (handles ls→list, rm→remove, etc.)
+  const aliasMatches = withOpId.filter(ep =>
+    operationIdOrAliasMatches(ep, hintFolded)
   );
-  if (exactCi.length === 1) {
-    return { ok: true, endpoint: exactCi[0] };
+  if (aliasMatches.length === 1) {
+    return { ok: true, endpoint: aliasMatches[0] };
   }
-  if (exactCi.length > 1) {
+  if (aliasMatches.length > 1) {
     return {
       ok: false,
       reason: 'ambiguous_operation',
       tag,
-      tagMatches: exactCi,
+      tagMatches: aliasMatches,
       operationHint: hint,
     };
   }
