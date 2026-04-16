@@ -8,6 +8,7 @@ export type EnvRecordsSource =
   | 'vercel-cli:env:ls'
   | 'vercel-cli:env:add'
   | 'vercel-cli:env:rm'
+  | 'vercel-cli:env:set'
   | 'vercel-cli:env:update'
   | 'vercel-cli:env:pull'
   | 'vercel-cli:env:run'
