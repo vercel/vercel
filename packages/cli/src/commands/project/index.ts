@@ -37,9 +37,9 @@ import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import getSubcommand from '../../util/get-subcommand';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import { tryOpenApiFallback } from '../../util/openapi';
 import { resolveOpenApiTagForProjectsCli } from '../../util/openapi/matches-cli-api-tag';
-import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),

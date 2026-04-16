@@ -39,16 +39,3 @@ export async function resolveOpenApiTagForProjectsCli(): Promise<
   }
   return null;
 }
-
-/**
- * OpenAPI tag string to use when routing `vercel team[s] …` to the API fallback.
- */
-export async function resolveOpenApiTagForTeamsCli(): Promise<string | null> {
-  if (await matchesCliApiTag('teams')) {
-    return 'teams';
-  }
-  if (await matchesCliApiTag('team')) {
-    return 'team';
-  }
-  return null;
-}
