@@ -10,12 +10,14 @@
       "routePrefix": "/"
     },
     "sync-cleanup": {
-      "type": "cron",
+      "type": "job",
+      "trigger": "schedule",
       "entrypoint": "jobs.cleanup:sync_handler",
       "schedule": "0 0 * * *"
     },
     "async-cleanup": {
-      "type": "cron",
+      "type": "job",
+      "trigger": "schedule",
       "entrypoint": "jobs.async_cleanup:async_handler",
       "schedule": "0 6 * * *"
     }

@@ -6,7 +6,11 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { getWorkerTopics } from '@vercel/build-utils';
+import {
+  getServiceQueueTopics,
+  JOB_TRIGGERS,
+  JobTrigger,
+} from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -384,6 +388,19 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
+  const isJobService = serviceType === 'job' || serviceType === 'cron';
+  const isScheduleJobService =
+    serviceType === 'cron' ||
+    (serviceType === 'job' && config.trigger === 'schedule');
+  const isQueueJobService = serviceType === 'job' && config.trigger === 'queue';
+  const isWorkflowService =
+    serviceType === 'job' && config.trigger === 'workflow';
+  const isNonWebService = serviceType === 'worker' || isJobService;
+  const serviceTypeLabel = isJobService
+    ? 'Job'
+    : serviceType === 'worker'
+      ? 'Worker'
+      : 'Web';
   const routingResult = resolveServiceRoutingConfig(name, config);
   if (routingResult.error) {
     return routingResult.error;
@@ -419,27 +436,62 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (
-    (serviceType === 'worker' || serviceType === 'cron') &&
-    configuredRoutePrefix
-  ) {
+  if (isNonWebService && configuredRoutePrefix) {
     return {
       code: 'INVALID_ROUTE_PREFIX',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
+      message: `${serviceTypeLabel} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
       serviceName: name,
     };
   }
-  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+  if (isNonWebService && hasSubdomain) {
     return {
       code: 'INVALID_HOST_ROUTING_CONFIG',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
+      message: `${serviceTypeLabel} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
       serviceName: name,
     };
   }
-  if (serviceType === 'cron' && !config.schedule) {
+  if (serviceType === 'job' && config.trigger === undefined) {
     return {
-      code: 'MISSING_CRON_SCHEDULE',
-      message: `Cron service "${name}" is missing required "schedule" field.`,
+      code: 'MISSING_JOB_TRIGGER',
+      message: `Job service "${name}" is missing required "trigger" field.`,
+      serviceName: name,
+    };
+  }
+  if (
+    serviceType === 'job' &&
+    config.trigger &&
+    !JOB_TRIGGERS.includes(config.trigger)
+  ) {
+    return {
+      code: 'INVALID_JOB_TRIGGER',
+      message: `Job service "${name}" has invalid trigger "${config.trigger}". Expected ${JOB_TRIGGERS.map((t: JobTrigger) => `"${t}"`).join(', ')}.`,
+      serviceName: name,
+    };
+  }
+  if (isScheduleJobService && !config.schedule) {
+    return {
+      code:
+        serviceType === 'cron'
+          ? 'MISSING_CRON_SCHEDULE'
+          : 'MISSING_JOB_SCHEDULE',
+      message: `${serviceTypeLabel} service "${name}" is missing required "schedule" field.`,
+      serviceName: name,
+    };
+  }
+  if (
+    isQueueJobService &&
+    (!Array.isArray(config.topics) || config.topics.length === 0)
+  ) {
+    return {
+      code: 'MISSING_QUEUE_TOPICS',
+      message: `${serviceTypeLabel} service "${name}" is missing required "topics" field.`,
+      serviceName: name,
+    };
+  }
+  if (isWorkflowService && typeof config.entrypoint !== 'string') {
+    return {
+      code: 'MISSING_ENTRYPOINT',
+      message: `Job service "${name}" with "workflow" trigger must specify "entrypoint".`,
       serviceName: name,
     };
   }
@@ -563,6 +615,8 @@ export async function resolveConfiguredService(
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
+  const trigger =
+    type === 'cron' ? 'schedule' : type === 'job' ? config.trigger : undefined;
   const rawEntrypoint = config.entrypoint;
 
   const moduleAttrParsed =
@@ -640,7 +694,12 @@ export async function resolveConfiguredService(
     }
   }
 
-  const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
+  const topics =
+    type === 'worker'
+      ? getServiceQueueTopics({ type, topics: config.topics })
+      : trigger === 'queue'
+        ? config.topics
+        : undefined;
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
@@ -748,6 +807,7 @@ export async function resolveConfiguredService(
   return {
     name,
     type,
+    trigger,
     group,
     workspace,
     entrypoint: resolvedEntrypointFile,
