@@ -1,5 +1,15 @@
 # @vercel/python
 
+## 6.33.1
+
+### Patch Changes
+
+- Enable functions beta hint when flag is true ([#15965](https://github.com/vercel/vercel/pull/15965))
+
+- [services] don't catch all routes for non-web Python services ([#15960](https://github.com/vercel/vercel/pull/15960))
+
+- Remove duplicated error message. ([#16000](https://github.com/vercel/vercel/pull/16000))
+
 ## 6.33.0
 
 ### Minor Changes

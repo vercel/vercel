@@ -1,5 +1,23 @@
 # vercel
 
+## 51.5.0
+
+### Minor Changes
+
+- Add `vercel connex create` command ([#15988](https://github.com/vercel/vercel/pull/15988))
+
+- Add `vercel deploy-hooks` command to create, list, and remove deploy hooks. ([#15935](https://github.com/vercel/vercel/pull/15935))
+
+### Patch Changes
+
+- Enable functions beta hint when flag is true ([#15965](https://github.com/vercel/vercel/pull/15965))
+
+- Improve the `vercel metrics` CLI by making it generally available, simplifying metric selection, and cleaning up schema output. ([#15904](https://github.com/vercel/vercel/pull/15904))
+
+- Updated dependencies [[`bb834e53bca374d44f86bda3892e77ded226a26a`](https://github.com/vercel/vercel/commit/bb834e53bca374d44f86bda3892e77ded226a26a), [`bab75d7ff6b7a188167bbd7583a8b36d9d250d5a`](https://github.com/vercel/vercel/commit/bab75d7ff6b7a188167bbd7583a8b36d9d250d5a), [`2243233194c6e38d75ed2a1ca040acaaf3b2e686`](https://github.com/vercel/vercel/commit/2243233194c6e38d75ed2a1ca040acaaf3b2e686), [`232b45fd82adf4a8d538a853bfc1df7a5d16f4c9`](https://github.com/vercel/vercel/commit/232b45fd82adf4a8d538a853bfc1df7a5d16f4c9)]:
+  - @vercel/python@6.33.1
+  - @vercel/rust@1.1.1
+
 ## 51.4.0
 
 ### Minor Changes
