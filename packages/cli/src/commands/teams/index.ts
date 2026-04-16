@@ -1,6 +1,7 @@
 import add from './add';
 import change from './switch';
 import invite from './invite';
+import list from './list';
 import request from './request';
 import members from './members';
 import sso from './sso';
@@ -8,6 +9,7 @@ import { parseArguments } from '../../util/get-args';
 import {
   addSubcommand,
   inviteSubcommand,
+  listSubcommand,
   requestSubcommand,
   membersSubcommand,
   ssoSubcommand,
@@ -88,15 +90,15 @@ export default async function teams(client: Client) {
   }
 
   switch (subcommand) {
-    // case 'list': {
-    //   if (needHelp) {
-    //     telemetry.trackCliFlagHelp('teams', subcommandOriginal);
-    //     printHelp(listSubcommand);
-    //     return 2;
-    //   }
-    //   telemetry.trackCliSubcommandList(subcommandOriginal);
-    //   return list(client, args);
-    // }
+    case 'list': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(listSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandList(subcommandOriginal);
+      return list(client, args);
+    }
     case 'switch': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
