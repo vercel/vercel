@@ -158,7 +158,7 @@ export class PythonDependencyExternalizer {
         message: shouldShowFunctionsBetaHint()
           ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `The installed dependencies are too large to fit in a Serverless Function (${totalBundleSizeMB} MB).\n\n` +
+          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
             `When using a custom install command, Vercel cannot automatically optimize ` +
             `dependency bundling. To reduce the size of your dependencies, you can:\n` +
             `  1. Remove unused dependencies from your project\n` +
@@ -227,9 +227,9 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message: shouldShowFunctionsBetaHint()
-          ? `Total dependency size (${totalBundleSizeMB} MB) exceeds the size limit (${ephemeralLimitMB} MB).\n\n` +
+          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
+          : `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
             `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
             `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
             `to Lambda functions. Consider removing unused dependencies or splitting your ` +
@@ -514,9 +514,9 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message: shouldShowFunctionsBetaHint()
-          ? `Bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
+          ? `Total bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
+          : `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
             `deferring public packages to runtime installation. This usually means your ` +
             `private packages or source code are too large. Consider reducing the size of ` +
             `private dependencies or splitting your application.`,
