@@ -29,6 +29,10 @@ describe('operation-request-builder', () => {
             description: 'Scope',
           },
         ],
+        vercelCliSupported: false,
+        vercelCliProductionReady: false,
+        vercelCliAliases: [],
+        vercelCliBodyArguments: [],
       };
 
       const parsed = await parseOperationKeyValuePairs(endpoint, [], {}, [
@@ -61,6 +65,10 @@ describe('operation-request-builder', () => {
             description: '',
           },
         ],
+        vercelCliSupported: false,
+        vercelCliProductionReady: false,
+        vercelCliAliases: [],
+        vercelCliBodyArguments: [],
       };
 
       const parsed = await parseOperationKeyValuePairs(endpoint, [], {}, [
