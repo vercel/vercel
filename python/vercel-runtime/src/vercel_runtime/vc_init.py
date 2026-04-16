@@ -533,38 +533,10 @@ class ASGIMiddleware:
     def __init__(self, app: _ASGIApp | Any) -> None:
         self.app = app
 
-    async def __call__(
-        self,
-        scope: _ASGIScope,
-        receive: _ASGIReceive,
-        send: _ASGISend,
-    ) -> None:
-        if scope.get("type") != "http":
-            # Non-HTTP traffic is forwarded verbatim
-            await self.app(scope, receive, send)
-            return
-
-        if scope.get("path") == "/_vercel/ping":
-            await send(
-                {
-                    "type": "http.response.start",
-                    "status": 200,
-                    "headers": [],
-                }
-            )
-            await send(
-                {
-                    "type": "http.response.body",
-                    "body": b"",
-                    "more_body": False,
-                }
-            )
-            return
-
-        # Extract internal headers and set per-request context
-        headers_list: list[tuple[bytes | str, bytes | str]] = (
-            scope.get("headers", []) or []
-        )
+    @staticmethod
+    def _extract_internal_headers(
+        headers_list: list[tuple[bytes | str, bytes | str]],
+    ) -> tuple[list[tuple[bytes, bytes]], str, int]:
         new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
@@ -600,6 +572,45 @@ class ASGIMiddleware:
                 new_headers.append(
                     (b"x-vercel-oidc-token", internal_oidc_token.encode())
                 )
+
+        return new_headers, invocation_id, request_id
+
+    async def __call__(
+        self,
+        scope: _ASGIScope,
+        receive: _ASGIReceive,
+        send: _ASGISend,
+    ) -> None:
+        scope_type = scope.get("type")
+        if scope_type not in ("http", "websocket"):
+            # Non-HTTP/WebSocket traffic is forwarded verbatim
+            await self.app(scope, receive, send)
+            return
+
+        if scope_type == "http" and scope.get("path") == "/_vercel/ping":
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 200,
+                    "headers": [],
+                }
+            )
+            await send(
+                {
+                    "type": "http.response.body",
+                    "body": b"",
+                    "more_body": False,
+                }
+            )
+            return
+
+        # Extract internal headers and set per-request context
+        headers_list: list[tuple[bytes | str, bytes | str]] = (
+            scope.get("headers", []) or []
+        )
+        new_headers, invocation_id, request_id = self._extract_internal_headers(
+            headers_list
+        )
 
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
