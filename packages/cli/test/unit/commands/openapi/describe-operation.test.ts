@@ -20,6 +20,7 @@ function ep(
     responses: {},
     vercelCliSupported: true,
     vercelCliAliases: [],
+    vercelCliBodyArguments: [],
     ...partial,
   };
 }

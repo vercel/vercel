@@ -12,6 +12,7 @@ const base = (overrides: Partial<EndpointInfo>): EndpointInfo => ({
   parameters: [],
   vercelCliSupported: false,
   vercelCliAliases: [],
+  vercelCliBodyArguments: [],
   ...overrides,
 });
 

@@ -15,6 +15,7 @@ const ep = (method: string, params: Parameter[] = []): EndpointInfo => ({
   parameters: params,
   vercelCliSupported: true,
   vercelCliAliases: [],
+  vercelCliBodyArguments: [],
 });
 
 describe('inferCliSubcommandAliases', () => {

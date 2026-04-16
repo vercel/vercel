@@ -31,6 +31,7 @@ describe('openapi-operation-cli', () => {
       responses: {},
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     expect(operationDeclaresTeamOrSlugQueryParam(withTeam)).toBe(true);
 
@@ -113,6 +114,7 @@ describe('openapi-operation-cli', () => {
       responses: {},
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const r = resolveOpenapiInvocationUrl({
       endpoint,
@@ -153,6 +155,7 @@ describe('openapi-operation-cli', () => {
       responses: {},
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const positionalArgs = [
       'openapi',
@@ -196,6 +199,7 @@ describe('openapi-operation-cli', () => {
       responses: {},
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     expect(
       buildOpenapiInvocationUrlAfterPathSubstitution('/x', endpoint, {})
@@ -226,6 +230,7 @@ describe('openapi-operation-cli', () => {
       responses: {},
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const r = resolveOpenapiInvocationUrl({
       endpoint,

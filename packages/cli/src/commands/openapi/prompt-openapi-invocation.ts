@@ -24,20 +24,32 @@ function createRequiredValidator(fieldName: string) {
   };
 }
 
+export interface OpenapiInvocationResult {
+  url: string;
+  /** Body fields derived from positional arguments via `x-vercel-cli.bodyArguments`. */
+  bodyFields: Record<string, string>;
+}
+
 /**
  * Resolve OpenAPI invocation URL from argv; when stdin is a TTY, prompts for
  * missing required path segments and required query flags.
+ *
+ * Positionals after the operation ID are consumed in order: first for path
+ * template placeholders, then for `x-vercel-cli.bodyArguments` fields.
  */
 export async function composeOpenapiInvocationUrlWithPromptsIfNeeded(
   client: Client,
   endpoint: EndpointInfo,
   positionalArgs: string[]
-): Promise<{ url: string } | { error: string }> {
+): Promise<OpenapiInvocationResult | { error: string }> {
   const { pathValues, optionArgvTail } =
     splitOpenapiInvocationPositionals(positionalArgs);
 
   const pathNames = extractBracePathParamNames(endpoint.path);
-  const pathVals = [...pathValues];
+  const bodyArgNames = endpoint.vercelCliBodyArguments ?? [];
+
+  const pathVals = pathValues.slice(0, pathNames.length);
+  const bodyPositionals = pathValues.slice(pathNames.length);
 
   if (pathVals.length < pathNames.length && client.stdin.isTTY) {
     for (let i = pathVals.length; i < pathNames.length; i++) {
@@ -60,6 +72,32 @@ export async function composeOpenapiInvocationUrlWithPromptsIfNeeded(
   );
   if (substituted.error) {
     return { error: substituted.error };
+  }
+
+  const bodyFields: Record<string, string> = {};
+  for (let i = 0; i < bodyArgNames.length && i < bodyPositionals.length; i++) {
+    bodyFields[bodyArgNames[i]] = bodyPositionals[i];
+  }
+
+  if (client.stdin.isTTY) {
+    for (let i = bodyPositionals.length; i < bodyArgNames.length; i++) {
+      const name = bodyArgNames[i];
+      bodyFields[name] = await client.input.text({
+        message: `Enter value for ${chalk.cyan(name)}:`,
+        validate: createRequiredValidator(name),
+      });
+    }
+  }
+
+  const extraPositionals = bodyPositionals.length - bodyArgNames.length;
+  if (extraPositionals > 0) {
+    const allExpected = [
+      ...pathNames.map(n => `{${n}}`),
+      ...bodyArgNames.map(n => `<${n}>`),
+    ];
+    return {
+      error: `Too many positional arguments: expected ${allExpected.length} (${allExpected.join(', ')}), got ${pathNames.length + bodyPositionals.length}.`,
+    };
   }
 
   const optionParams = getOpenapiQueryOptionParameters(endpoint);
@@ -88,9 +126,13 @@ export async function composeOpenapiInvocationUrlWithPromptsIfNeeded(
     }
   }
 
-  return buildOpenapiInvocationUrlAfterPathSubstitution(
+  const urlResult = buildOpenapiInvocationUrlAfterPathSubstitution(
     substituted.path,
     endpoint,
     queryVals
   );
+  if ('error' in urlResult) {
+    return urlResult;
+  }
+  return { url: urlResult.url, bodyFields };
 }

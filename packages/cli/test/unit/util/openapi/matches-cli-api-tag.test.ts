@@ -16,6 +16,7 @@ const sampleEndpoint: EndpointInfo = {
   parameters: [],
   vercelCliSupported: false,
   vercelCliAliases: [],
+  vercelCliBodyArguments: [],
 };
 
 describe('matchesCliApiTag', () => {

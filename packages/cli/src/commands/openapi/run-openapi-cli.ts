@@ -209,6 +209,7 @@ export async function runOpenapiCli(
   }
 
   const resolvedPath = invocation.url;
+  const { bodyFields } = invocation;
 
   if (!resolvedPath.startsWith('/')) {
     output.error('Resolved endpoint path must start with /');
@@ -226,6 +227,14 @@ export async function runOpenapiCli(
   } catch {
     output.error('Invalid endpoint URL format');
     return 1;
+  }
+
+  if (Object.keys(bodyFields).length > 0) {
+    const existingFields = finalFlags['--field'] ?? [];
+    const bodyFieldEntries = Object.entries(bodyFields).map(
+      ([k, v]) => `${k}=${v}`
+    );
+    finalFlags['--field'] = [...bodyFieldEntries, ...existingFields];
   }
 
   if (f['--generate'] === 'curl') {

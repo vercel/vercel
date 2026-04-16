@@ -911,6 +911,8 @@ export class OpenApiCache {
             responses: operation.responses,
             vercelCliSupported: this.isVercelCliOperationSupported(operation),
             vercelCliAliases: this.normalizeVercelCliAliases(operation),
+            vercelCliBodyArguments:
+              operation['x-vercel-cli']?.bodyArguments ?? [],
           });
         }
       }

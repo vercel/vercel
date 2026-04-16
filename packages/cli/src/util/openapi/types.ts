@@ -48,6 +48,12 @@ export interface VercelCliOperationExtension {
    * Matched with the same folding rules as `operationId`.
    */
   aliases?: string[];
+  /**
+   * Request-body property names exposed as ordered positional arguments after any
+   * path-template positionals, e.g. `["name"]` lets
+   * `vercel api domains add example.com` map to `{ name: "example.com" }`.
+   */
+  bodyArguments?: string[];
 }
 
 /**
@@ -167,6 +173,8 @@ export interface EndpointInfo {
   vercelCliSupported: boolean;
   /** `x-vercel-cli.aliases` from the OpenAPI document (trimmed, non-empty). */
   vercelCliAliases: string[];
+  /** `x-vercel-cli.bodyArguments` — body property names exposed as positionals. */
+  vercelCliBodyArguments: string[];
 }
 
 export interface BodyField {

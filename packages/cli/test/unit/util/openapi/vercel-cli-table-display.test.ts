@@ -192,6 +192,7 @@ describe('OpenApiCache.getVercelCliTableDisplay', () => {
       responses: miniSpec.paths['/v2/user'].get.responses,
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const d = cache.getVercelCliTableDisplay(ep);
     expect(d).toEqual({
@@ -216,6 +217,7 @@ describe('OpenApiCache.getVercelCliTableDisplay', () => {
       responses: publishedStyleSpec.paths['/v2/user'].get.responses,
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const d = cache.getVercelCliTableDisplay(ep);
     expect(d?.displayProperty).toBe('user');
@@ -240,6 +242,7 @@ describe('OpenApiCache.getVercelCliTableDisplay', () => {
       responses: getProjectsListSpec.paths['/v10/projects'].get.responses,
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const d = cache.getVercelCliTableDisplay(ep);
     expect(d?.displayProperty).toBe('projects');
@@ -269,6 +272,7 @@ describe('OpenApiCache.describeResponseCliColumns', () => {
       responses: getProjectsListSpec.paths['/v10/projects'].get.responses,
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const d = cache.describeResponseCliColumns(ep);
     expect(d?.displayProperty).toBe('projects');
@@ -295,6 +299,7 @@ describe('OpenApiCache.describeResponseCliColumns', () => {
       responses: miniSpec.paths['/v2/user'].get.responses,
       vercelCliSupported: true,
       vercelCliAliases: [],
+      vercelCliBodyArguments: [],
     };
     const d = cache.describeResponseCliColumns(ep);
     expect(d?.displayProperty).toBe('user');

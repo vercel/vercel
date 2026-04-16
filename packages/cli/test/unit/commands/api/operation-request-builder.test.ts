@@ -17,6 +17,7 @@ describe('operation-request-builder', () => {
         tags: ['projects'],
         vercelCliSupported: false,
         vercelCliAliases: [],
+        vercelCliBodyArguments: [],
         parameters: [
           {
             name: 'idOrName',
@@ -51,6 +52,7 @@ describe('operation-request-builder', () => {
         tags: ['projects'],
         vercelCliSupported: false,
         vercelCliAliases: [],
+        vercelCliBodyArguments: [],
         parameters: [
           {
             name: 'idOrName',
