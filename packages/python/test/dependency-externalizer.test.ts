@@ -927,7 +927,7 @@ version = "8.1.7"
 
       try {
         await expect(ext.analyze(files)).rejects.toThrow(
-          'too large to fit in a Serverless Function'
+          'exceeds the size limit'
         );
 
         // Re-create the externalizer since the previous one may have mutated state
