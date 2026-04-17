@@ -840,13 +840,6 @@ export interface ServiceMount {
   subdomain?: string;
 }
 
-export interface ServiceMount {
-  /** URL path prefix where the service is mounted. */
-  path?: string;
-  /** Optional subdomain this service is mounted on. */
-  subdomain?: string;
-}
-
 export interface ServiceRouting {
   /** URL path subtrees owned by this service. */
   paths: string[];
