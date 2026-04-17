@@ -18,20 +18,9 @@ interface ConnexTokenResponse {
   data?: Record<string, unknown>;
 }
 
-interface AutoInstallResponse {
-  action: string;
-  url: string;
-}
-
-function isAutoInstallResponse(body: unknown): body is AutoInstallResponse {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'action' in body &&
-    'url' in body &&
-    typeof (body as AutoInstallResponse).url === 'string'
-  );
-}
+type ActionableErrorCode =
+  | 'user_authorization_required'
+  | 'client_installation_required';
 
 export async function token(
   client: Client,
@@ -64,10 +53,8 @@ export async function token(
     return 1;
   }
 
-  // Resolve team
   await selectConnexTeam(client, 'Select the team for this token request');
 
-  // Build token request body
   const body: Record<string, unknown> = {};
   if (subject) {
     body.subject = subject === 'app' ? { type: 'app' } : { type: 'user' };
@@ -79,7 +66,6 @@ export async function token(
     body.scopes = flags['--scopes'].split(',').map(s => s.trim());
   }
 
-  // Attempt 1: simple token request
   output.spinner('Fetching token...');
   const result = await fetchToken(client, clientId, body);
   output.stopSpinner();
@@ -88,77 +74,73 @@ export async function token(
     return printTokenResult(client, result.data, asJson);
   }
 
-  // Check if auto-install/authorize is possible
   const errorCode = result.errorCode;
+  const errorMessage = result.errorMessage ?? 'Failed to get token';
+
   if (errorCode === 'not_found') {
     output.error('Client not found or Connex is not enabled for this team.');
     return 1;
   }
-  if (
-    errorCode !== 'no_valid_token' &&
-    errorCode !== 'client_installation_required'
-  ) {
-    output.error(result.errorMessage ?? 'Failed to get token');
-    return 1;
-  }
 
-  // Auto-install/authorize requires TTY
-  if (!client.stdin.isTTY) {
-    const action = errorCode === 'no_valid_token' ? 'authorize' : 'install';
+  if (errorCode === 'no_token') {
     output.error(
-      `${result.errorMessage}. Run \`vercel connex token ${clientId}\` interactively to ${action}.`
+      `${errorMessage} This client does not support getting a token for the requested subject.`
     );
     return 1;
   }
 
-  // Prompt user before opening browser (unless --yes)
-  const actionLabel =
-    errorCode === 'no_valid_token' ? 'Authorization' : 'Installation';
+  if (!isActionable(errorCode)) {
+    output.error(errorMessage);
+    return 1;
+  }
 
+  const teamId = client.config.currentTeam;
+  if (!teamId) {
+    output.error(
+      `${errorMessage} Unable to build recovery URL: no team resolved.`
+    );
+    return 1;
+  }
+
+  const actionLabel =
+    errorCode === 'user_authorization_required'
+      ? 'authorization'
+      : 'installation';
+
+  // Non-TTY: print URL and exit — can't open a browser interactively in CI
+  if (!client.stdin.isTTY) {
+    const { hash } = generateRequestCode();
+    const actionUrl = buildActionUrl(errorCode, clientId, teamId, hash);
+    output.error(errorMessage);
+    output.log(`To ${actionLabel}, open: ${actionUrl}`);
+    output.log(
+      `Or run \`vercel connex token ${clientId}\` in an interactive terminal.`
+    );
+    return 1;
+  }
+
+  // TTY: show error, prompt to open browser (Enter = yes)
+  output.error(errorMessage);
   if (!flags['--yes']) {
     const confirmed = await client.input.confirm(
-      `${actionLabel} required. Open browser to continue?`,
+      `Open browser to ${actionLabel}?`,
       true
     );
     if (!confirmed) {
-      output.log('Aborted.');
       return 0;
     }
   }
 
-  // Attempt 2: request with autoinstall + request_code
   const { original, hash } = generateRequestCode();
+  const actionUrl = buildActionUrl(errorCode, clientId, teamId, hash);
 
-  output.spinner('Setting up...');
-  const autoResult = await fetchTokenAutoInstall(client, clientId, body, hash);
-  output.stopSpinner();
-
-  if (!autoResult.ok) {
-    output.error(autoResult.errorMessage ?? 'Failed to initiate setup');
-    return 1;
-  }
-
-  // If the API returned a token directly (no action needed), we're done
-  if (autoResult.token) {
-    return printTokenResult(client, autoResult.token, asJson);
-  }
-
-  // Open browser for the action
-  if (!autoResult.url) {
-    output.error('Unexpected response: no action URL returned');
-    return 1;
-  }
-
-  output.log(`Opening browser for ${actionLabel.toLowerCase()}...`);
-  output.log(`If the browser doesn't open, visit:\n${autoResult.url}`);
-  open(autoResult.url).catch((err: unknown) =>
+  output.log(`Opening browser for ${actionLabel}...`);
+  output.log(`If the browser doesn't open, visit:\n${actionUrl}`);
+  open(actionUrl).catch((err: unknown) =>
     output.debug(`Failed to open browser: ${err}`)
   );
 
-  // Poll for result
-  output.spinner(
-    `Waiting for you to complete ${actionLabel.toLowerCase()} in the browser...`
-  );
+  output.spinner(`Waiting for ${actionLabel} to complete in the browser...`);
   const pollData = await awaitConnexResult(client, original);
   output.stopSpinner();
 
@@ -166,9 +148,9 @@ export async function token(
     return 1;
   }
 
-  // Retry token request with any returned installationId
+  // Carry forward installationId if returned by the install flow
   const retryBody = { ...body };
-  if (pollData.installationId) {
+  if (pollData.installationId && !retryBody.installationId) {
     retryBody.installationId = pollData.installationId as string;
   }
 
@@ -180,8 +162,31 @@ export async function token(
     return printTokenResult(client, retryResult.data, asJson);
   }
 
-  output.error(retryResult.errorMessage ?? 'Failed to get token after setup');
+  output.error(
+    retryResult.errorMessage ?? `Failed to get token after ${actionLabel}`
+  );
   return 1;
+}
+
+function isActionable(code: string | undefined): code is ActionableErrorCode {
+  return (
+    code === 'user_authorization_required' ||
+    code === 'client_installation_required'
+  );
+}
+
+function buildActionUrl(
+  code: ActionableErrorCode,
+  clientId: string,
+  teamId: string,
+  requestCodeHash: string
+): string {
+  const path = code === 'user_authorization_required' ? 'authorize' : 'install';
+  const params = new URLSearchParams({
+    teamId,
+    request_code: requestCodeHash,
+  });
+  return `https://vercel.com/api/v1/connex/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }
 
 function printTokenResult(
@@ -192,7 +197,6 @@ function printTokenResult(
   if (asJson) {
     client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
   } else {
-    // Plain output: just the token value (pipeable)
     client.stdout.write(`${data.token}\n`);
   }
   return 0;
@@ -227,45 +231,12 @@ async function fetchToken(
   }
 }
 
-type AutoInstallResult =
-  | { ok: true; token?: ConnexTokenResponse; url?: string }
-  | { ok: false; errorMessage?: string };
-
-async function fetchTokenAutoInstall(
-  client: Client,
-  clientId: string,
-  body: Record<string, unknown>,
-  requestCodeHash: string
-): Promise<AutoInstallResult> {
-  try {
-    const res = await client.fetch<ConnexTokenResponse | AutoInstallResponse>(
-      `/v1/connex/token/${encodeURIComponent(clientId)}?autoinstall=true&request_code=${encodeURIComponent(requestCodeHash)}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-
-    if (isAutoInstallResponse(res)) {
-      return { ok: true, url: res.url };
-    }
-
-    // API returned a token directly
-    return { ok: true, token: res as ConnexTokenResponse };
-  } catch (err: unknown) {
-    const serverError = extractApiError(err);
-    return { ok: false, errorMessage: serverError.message };
-  }
-}
-
 function extractApiError(err: unknown): {
   code?: string;
   message?: string;
 } {
   if (typeof err === 'object' && err !== null) {
     const errObj = err as Record<string, unknown>;
-    // client.fetch wraps API errors with serverMessage and code
     const code = typeof errObj.code === 'string' ? errObj.code : undefined;
     const message =
       typeof errObj.serverMessage === 'string'

@@ -114,7 +114,7 @@ describe('connex token', () => {
     expect(requestBody.scopes).toEqual(['chat:write', 'channels:read']);
   });
 
-  it('should show friendly error when connex feature flag is off (404)', async () => {
+  it('should show friendly error when client is not found (404)', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
@@ -128,13 +128,54 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should fail in non-TTY mode when auto-install is needed', async () => {
+  it('should handle no_token as terminal error', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
-      res.statusCode = 404;
+      res.statusCode = 422;
+      res.json({
+        error: {
+          code: 'no_token',
+          message: 'No token available',
+        },
+      });
+    });
+
+    client.setArgv('connex', 'token', 'scl_abc123');
+
+    const exitCode = await connex(client);
+
+    await expect(client.stderr).toOutput('does not support');
+    expect(exitCode).toBe(1);
+  });
+
+  it('should print authorize URL in non-TTY mode', async () => {
+    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+      res.statusCode = 422;
+      res.json({
+        error: {
+          code: 'user_authorization_required',
+          message: 'User authorization required',
+        },
+      });
+    });
+
+    client.setArgv('connex', 'token', 'scl_abc123');
+    (client.stdin as any).isTTY = false;
+
+    const exitCode = await connex(client);
+
+    await expect(client.stderr).toOutput(
+      'https://vercel.com/api/v1/connex/authorize/scl_abc123'
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('should print install URL in non-TTY mode', async () => {
+    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+      res.statusCode = 422;
       res.json({
         error: {
           code: 'client_installation_required',
-          message: 'Client installation is required',
+          message: 'Client installation required',
         },
       });
     });
@@ -144,99 +185,23 @@ describe('connex token', () => {
 
     const exitCode = await connex(client);
 
-    await expect(client.stderr).toOutput('install');
+    await expect(client.stderr).toOutput(
+      'https://vercel.com/api/v1/connex/install/scl_abc123'
+    );
     expect(exitCode).toBe(1);
   });
 
-  it('should fail in non-TTY mode when authorization is needed', async () => {
+  it('should auto-authorize when user_authorization_required and --yes', async () => {
+    let postCount = 0;
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
-      res.statusCode = 404;
-      res.json({
-        error: {
-          code: 'no_valid_token',
-          message: 'User token is not valid',
-        },
-      });
-    });
-
-    client.setArgv('connex', 'token', 'scl_abc123');
-    (client.stdin as any).isTTY = false;
-
-    const exitCode = await connex(client);
-
-    await expect(client.stderr).toOutput('authorize');
-    expect(exitCode).toBe(1);
-  });
-
-  it('should auto-install when client_installation_required and --yes', async () => {
-    let postCount = 0;
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
       postCount++;
-      const url = req.url ?? '';
       if (postCount === 1) {
-        // First attempt: installation required
-        res.statusCode = 404;
+        res.statusCode = 422;
         res.json({
           error: {
-            code: 'client_installation_required',
-            message: 'Client installation is required',
+            code: 'user_authorization_required',
+            message: 'User authorization required',
           },
-        });
-      } else if (url.includes('autoinstall=true')) {
-        // Second attempt: return action URL
-        res.json({
-          action: 'install',
-          url: 'https://vercel.com/test/~/connex/install/scl_abc123',
-        });
-      } else {
-        // Third attempt: token after install
-        res.json({
-          token: 'xoxb-after-install',
-          expiresAt: 1712345678,
-          installationId: 'inst_new',
-        });
-      }
-    });
-
-    let pollCount = 0;
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
-      pollCount++;
-      if (pollCount < 2) {
-        res.json({ status: 'pending' });
-      } else {
-        res.json({
-          status: 'success',
-          data: { clientId: 'scl_abc123', installationId: 'inst_new' },
-        });
-      }
-    });
-
-    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
-
-    const exitCode = await connex(client);
-
-    expect(exitCode).toBe(0);
-    expect(postCount).toBe(3);
-    await expect(client.stdout).toOutput('xoxb-after-install');
-  });
-
-  it('should auto-authorize when no_valid_token and --yes', async () => {
-    let postCount = 0;
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
-      postCount++;
-      const url = req.url ?? '';
-      if (postCount === 1) {
-        res.statusCode = 404;
-        res.json({
-          error: {
-            code: 'no_valid_token',
-            message: 'User token is not valid',
-          },
-        });
-      } else if (url.includes('autoinstall=true')) {
-        res.json({
-          action: 'authorize',
-          url: 'https://vercel.com/test/~/connex/authorize/scl_abc123',
         });
       } else {
         res.json({
@@ -258,29 +223,38 @@ describe('connex token', () => {
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(0);
-    expect(postCount).toBe(3);
+    expect(postCount).toBe(2);
     await expect(client.stdout).toOutput('xoxp-after-auth');
   });
 
-  it('should handle autoinstall response that returns token directly', async () => {
+  it('should auto-install when client_installation_required and --yes, and carry forward installationId', async () => {
     let postCount = 0;
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    let secondRequestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
       postCount++;
       if (postCount === 1) {
-        res.statusCode = 404;
+        res.statusCode = 422;
         res.json({
           error: {
             code: 'client_installation_required',
-            message: 'Client installation is required',
+            message: 'Client installation required',
           },
         });
       } else {
-        // Autoinstall call returns a token directly
+        secondRequestBody = req.body;
         res.json({
-          token: 'xoxb-direct-token',
+          token: 'xoxb-after-install',
           expiresAt: 1712345678,
+          installationId: 'inst_new',
         });
       }
+    });
+
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+      res.json({
+        status: 'success',
+        data: { clientId: 'scl_abc123', installationId: 'inst_new' },
+      });
     });
 
     client.setArgv('connex', 'token', 'scl_abc123', '--yes');
@@ -289,16 +263,17 @@ describe('connex token', () => {
 
     expect(exitCode).toBe(0);
     expect(postCount).toBe(2);
-    await expect(client.stdout).toOutput('xoxb-direct-token');
+    expect(secondRequestBody.installationId).toBe('inst_new');
+    await expect(client.stdout).toOutput('xoxb-after-install');
   });
 
-  it('should abort when user declines the auto-install prompt', async () => {
+  it('should abort cleanly when user declines the prompt', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
-      res.statusCode = 404;
+      res.statusCode = 422;
       res.json({
         error: {
           code: 'client_installation_required',
-          message: 'Client installation is required',
+          message: 'Client installation required',
         },
       });
     });
@@ -312,7 +287,6 @@ describe('connex token', () => {
 
     const exitCode = await exitCodePromise;
 
-    await expect(client.stderr).toOutput('Aborted');
     expect(exitCode).toBe(0);
   });
 
