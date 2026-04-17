@@ -13,4 +13,7 @@ export async function selectConnexTeam(
   const hasTeam = Boolean(client.config.currentTeam);
   const org = await selectOrg(client, message, hasTeam);
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  if (!hasTeam) {
+    client.writeToConfigFile();
+  }
 }
