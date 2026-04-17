@@ -2586,5 +2586,239 @@ describe('deploy', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
     });
+
+    // PIPE-6448: Checks Failed shown but no check runs returned
+    it('should error gracefully when v2 checks fail but check-runs is empty', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_empty',
+          url: 'checks-empty.vercel.app',
+          target: 'production',
+          checks: { 'deployment-alias': { state: 'pending' } },
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_checks_empty`, (_req, res) => {
+        callCount++;
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_empty',
+          url: 'checks-empty.vercel.app',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: false,
+          target: 'production',
+          alias: [],
+          checks: {
+            'deployment-alias': {
+              state: callCount > 2 ? 'failed' : 'pending',
+            },
+          },
+        });
+      });
+
+      // Empty check-runs response — the bug scenario
+      client.scenario.get(
+        `/v2/deployments/dpl_checks_empty/check-runs`,
+        (_req, res) => {
+          res.json({ runs: [] });
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_checks_empty/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stderrOutput = client.stderr.read().toString();
+      expect(stderrOutput).toContain('Running Checks');
+    });
+
+    // PIPE-6448: non-interactive mode with empty check-runs
+    it('should output empty failedCheckRuns array in JSON when no check runs exist', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_empty_ni',
+          url: 'checks-empty-ni.vercel.app',
+          inspectorUrl: 'https://vercel.com/test/dpl_checks_empty_ni',
+          target: 'production',
+          checks: { 'deployment-alias': { state: 'pending' } },
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(
+        `/v13/deployments/dpl_checks_empty_ni`,
+        (_req, res) => {
+          callCount++;
+          res.json({
+            creator: { uid: user.id, username: user.username },
+            id: 'dpl_checks_empty_ni',
+            url: 'checks-empty-ni.vercel.app',
+            inspectorUrl: 'https://vercel.com/test/dpl_checks_empty_ni',
+            readyState: callCount === 1 ? 'BUILDING' : 'READY',
+            aliasAssigned: false,
+            target: 'production',
+            alias: [],
+            checks: {
+              'deployment-alias': {
+                state: callCount > 2 ? 'failed' : 'pending',
+              },
+            },
+          });
+        }
+      );
+
+      client.scenario.get(
+        `/v2/deployments/dpl_checks_empty_ni/check-runs`,
+        (_req, res) => {
+          res.json({ runs: [] });
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_checks_empty_ni/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+      expect(json.status).toBe('error');
+      expect(json.reason).toBe('checks_failed');
+      expect(json.failedCheckRuns).toHaveLength(0);
+    });
+
+    // PIPE-6448: Multiple check runs with mixed conclusions
+    it('should report all conclusion counts when v2 checks have mixed results', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_mixed',
+          url: 'checks-mixed.vercel.app',
+          target: 'production',
+          checks: { 'deployment-alias': { state: 'pending' } },
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_checks_mixed`, (_req, res) => {
+        callCount++;
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_mixed',
+          url: 'checks-mixed.vercel.app',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: false,
+          target: 'production',
+          alias: [],
+          checks: {
+            'deployment-alias': {
+              state: callCount > 2 ? 'failed' : 'pending',
+            },
+          },
+        });
+      });
+
+      client.scenario.get(
+        `/v2/deployments/dpl_checks_mixed/check-runs`,
+        (_req, res) => {
+          res.json({
+            runs: [
+              {
+                id: 'cr_1',
+                name: 'Lint',
+                status: 'completed',
+                conclusion: 'failed',
+                source: 'vercel',
+              },
+              {
+                id: 'cr_2',
+                name: 'Typecheck',
+                status: 'completed',
+                conclusion: 'failed',
+                source: 'vercel',
+              },
+              {
+                id: 'cr_3',
+                name: 'Unit Tests',
+                status: 'completed',
+                conclusion: 'succeeded',
+                source: 'github',
+              },
+              {
+                id: 'cr_4',
+                name: 'E2E Tests',
+                status: 'completed',
+                conclusion: 'skipped',
+                source: 'github',
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_checks_mixed/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stderrOutput = client.stderr.read().toString();
+      expect(stderrOutput).toContain('2 failed');
+      expect(stderrOutput).toContain('1 succeeded');
+      expect(stderrOutput).toContain('1 skipped');
+      expect(stderrOutput).toContain('Lint');
+      expect(stderrOutput).toContain('Typecheck');
+    });
   });
 });
