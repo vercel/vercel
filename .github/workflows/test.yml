@@ -195,7 +195,7 @@ jobs:
 
             const existingComment = comments.find(comment =>
               comment.user.login === 'github-actions[bot]' &&
-              comment.body.includes('## 🧪 Unit Test Strategy')
+              (comment.body.includes('## 🧪 Unit Test Strategy') || comment.body.includes('## 🧪 Test Strategy'))
             );
 
             if (existingComment) {
@@ -241,6 +241,8 @@ jobs:
           toolchain: stable
           targets: wasm32-wasip2
 
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
@@ -303,6 +305,9 @@ jobs:
           done
         shell: bash
         env:
+          # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
+          # VERCEL_WORKERS_PYTHON) are also available here, injected into
+          # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -1,4 +1,8 @@
 name: E2E Tests
+# any files changing in .github/workflows will ensure
+# that all e2e tests run. One easy way of doing this
+# is to increment the counter below.
+# cache buster: 2
 
 on:
   repository_dispatch:
@@ -184,6 +188,9 @@ jobs:
           done
         shell: bash
         env:
+          # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
+          # VERCEL_WORKERS_PYTHON) are also available here, injected into
+          # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
