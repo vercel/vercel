@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.34.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
 ## 6.33.3
 
 ### Patch Changes
