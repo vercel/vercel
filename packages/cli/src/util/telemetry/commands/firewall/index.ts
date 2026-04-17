@@ -34,6 +34,69 @@ export class FirewallTelemetryClient
     });
   }
 
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:add',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesEdit(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:edit',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesEnable(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:enable',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesDisable(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:disable',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:remove',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesReorder(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:reorder',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandIpBlocks(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'ip-blocks',

@@ -70,6 +70,7 @@ export default async function unblock(client: Client, argv: string[]) {
 
     // Disambiguate if multiple matches
     if (matches.length > 1) {
+      output.stopSpinner();
       if (client.nonInteractive || !client.stdin.isTTY) {
         if (client.nonInteractive) {
           outputAgentError(
@@ -139,6 +140,7 @@ export default async function unblock(client: Client, argv: string[]) {
       {
         action: 'ip.remove',
         id: rule.id,
+        value: null,
       },
       { teamId }
     );

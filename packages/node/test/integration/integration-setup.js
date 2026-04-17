@@ -28,7 +28,7 @@ module.exports = function setupTests(groupIndex) {
   for (const fixture of fixtures) {
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
-      it(`should fail to build ${fixture}`, async () => {
+      it.concurrent(`should fail to build ${fixture}`, async () => {
         try {
           await testDeployment(path.join(fixturesPath, fixture));
         } catch (err) {
@@ -39,7 +39,7 @@ module.exports = function setupTests(groupIndex) {
       });
       continue;
     }
-    it(`should build ${fixture}`, async () => {
+    it.concurrent(`should build ${fixture}`, async () => {
       await expect(
         testDeployment(path.join(fixturesPath, fixture))
       ).resolves.toBeDefined();

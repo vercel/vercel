@@ -314,7 +314,7 @@ describe('text-output', () => {
   describe('section formatters', () => {
     it('should render usage-style metadata fields', () => {
       const metadata = formatMetadataHeader({
-        metric: 'vercel.edge_requests.request_duration_ms',
+        metric: 'vercel.request.route_cpu_duration_ms',
         aggregation: 'avg',
         periodStart: '2026-02-19T10:00:00.000Z',
         periodEnd: '2026-02-19T10:15:00.000Z',
@@ -365,15 +365,15 @@ describe('text-output', () => {
         data: [
           {
             timestamp: '2026-02-19T10:00:00.000Z',
-            vercel_edge_requests_count_sum: 10,
+            vercel_request_count_sum: 10,
           },
           {
             timestamp: '2026-02-19T10:05:00.000Z',
-            vercel_edge_requests_count_sum: 20,
+            vercel_request_count_sum: 20,
           },
           {
             timestamp: '2026-02-19T10:10:00.000Z',
-            vercel_edge_requests_count_sum: 30,
+            vercel_request_count_sum: 30,
           },
         ],
         summary: [],
@@ -381,7 +381,7 @@ describe('text-output', () => {
       };
 
       const output = formatText(response, {
-        metric: 'vercel.edge_requests.count',
+        metric: 'vercel.request.count',
         metricUnit: 'count',
         aggregation: 'sum',
         groupBy: [],
@@ -402,7 +402,7 @@ describe('text-output', () => {
         .join('\n');
 
       expect(normalized).toMatchInlineSnapshot(`
-        "> Metric: vercel.edge_requests.count sum
+        "> Metric: vercel.request.count sum
         > Period: 2026-02-19 10:00 to 2026-02-19 10:15
         > Interval: 5m
         > Project: my-project (my-team)
@@ -423,31 +423,31 @@ describe('text-output', () => {
             timestamp: '2026-02-19T10:00:00.000Z',
             projectName: 'my-app',
             httpStatus: '200',
-            vercel_edge_requests_request_duration_ms_avg: 100,
+            vercel_request_route_cpu_duration_ms_avg: 100,
           },
           {
             timestamp: '2026-02-19T10:05:00.000Z',
             projectName: 'my-app',
             httpStatus: '200',
-            vercel_edge_requests_request_duration_ms_avg: 200,
+            vercel_request_route_cpu_duration_ms_avg: 200,
           },
           {
             timestamp: '2026-02-19T10:10:00.000Z',
             projectName: 'my-app',
             httpStatus: '200',
-            vercel_edge_requests_request_duration_ms_avg: 300,
+            vercel_request_route_cpu_duration_ms_avg: 300,
           },
           {
             timestamp: '2026-02-19T10:00:00.000Z',
             projectName: 'my-app',
             httpStatus: '500',
-            vercel_edge_requests_request_duration_ms_avg: 10,
+            vercel_request_route_cpu_duration_ms_avg: 10,
           },
           {
             timestamp: '2026-02-19T10:10:00.000Z',
             projectName: 'my-app',
             httpStatus: '500',
-            vercel_edge_requests_request_duration_ms_avg: 30,
+            vercel_request_route_cpu_duration_ms_avg: 30,
           },
         ],
         summary: [],
@@ -455,7 +455,7 @@ describe('text-output', () => {
       };
 
       const output = formatText(response, {
-        metric: 'vercel.edge_requests.request_duration_ms',
+        metric: 'vercel.request.route_cpu_duration_ms',
         metricUnit: 'milliseconds',
         aggregation: 'avg',
         groupBy: ['projectName', 'httpStatus'],
@@ -483,18 +483,18 @@ describe('text-output', () => {
           data: [
             {
               timestamp: '2026-02-19T10:00:00.000Z',
-              vercel_edge_requests_count_sum: 1,
+              vercel_request_count_sum: 1,
             },
             {
               timestamp: '2026-02-19T10:05:00.000Z',
-              vercel_edge_requests_count_sum: 2,
+              vercel_request_count_sum: 2,
             },
           ],
           summary: [],
           statistics: {},
         },
         {
-          metric: 'vercel.edge_requests.count',
+          metric: 'vercel.request.count',
           metricUnit: 'count',
           aggregation: 'sum',
           groupBy: [],
@@ -516,7 +516,7 @@ describe('text-output', () => {
           statistics: {},
         },
         {
-          metric: 'vercel.edge_requests.count',
+          metric: 'vercel.request.count',
           metricUnit: 'count',
           aggregation: 'sum',
           groupBy: [],
@@ -537,15 +537,15 @@ describe('text-output', () => {
         data: [
           {
             timestamp: '2026-02-19T10:00:00.000Z',
-            vercel_edge_requests_fdt_in_bytes_percent: 40,
+            vercel_request_fdt_in_bytes_percent: 40,
           },
           {
             timestamp: '2026-02-19T10:05:00.000Z',
-            vercel_edge_requests_fdt_in_bytes_percent: 35,
+            vercel_request_fdt_in_bytes_percent: 35,
           },
           {
             timestamp: '2026-02-19T10:10:00.000Z',
-            vercel_edge_requests_fdt_in_bytes_percent: 25,
+            vercel_request_fdt_in_bytes_percent: 25,
           },
         ],
         summary: [],
@@ -553,7 +553,7 @@ describe('text-output', () => {
       };
 
       const output = formatText(response, {
-        metric: 'vercel.edge_requests.fdt_in_bytes',
+        metric: 'vercel.request.fdt_in_bytes',
         metricUnit: 'bytes',
         aggregation: 'percent',
         groupBy: [],
@@ -584,18 +584,18 @@ describe('text-output', () => {
           data: [
             {
               timestamp: '2026-02-19T10:00:00.000Z',
-              vercel_edge_requests_fdt_in_bytes_persecond: 1024,
+              vercel_request_fdt_in_bytes_persecond: 1024,
             },
             {
               timestamp: '2026-02-19T10:05:00.000Z',
-              vercel_edge_requests_fdt_in_bytes_persecond: 2048,
+              vercel_request_fdt_in_bytes_persecond: 2048,
             },
           ],
           summary: [],
           statistics: {},
         },
         {
-          metric: 'vercel.edge_requests.fdt_in_bytes',
+          metric: 'vercel.request.fdt_in_bytes',
           metricUnit: 'bytes',
           aggregation: 'persecond',
           groupBy: [],
@@ -621,18 +621,18 @@ describe('text-output', () => {
           data: [
             {
               timestamp: '2026-02-19T10:00:00.000Z',
-              vercel_edge_requests_count_unique: 5,
+              vercel_request_count_unique: 5,
             },
             {
               timestamp: '2026-02-19T10:05:00.000Z',
-              vercel_edge_requests_count_unique: 8,
+              vercel_request_count_unique: 8,
             },
           ],
           summary: [],
           statistics: {},
         },
         {
-          metric: 'vercel.edge_requests.count',
+          metric: 'vercel.request.count',
           metricUnit: 'count',
           aggregation: 'unique',
           groupBy: [],
@@ -658,18 +658,18 @@ describe('text-output', () => {
           data: [
             {
               timestamp: '2026-02-19T10:00:00.000Z',
-              vercel_edge_requests_request_duration_ms_sum: 500,
+              vercel_request_route_cpu_duration_ms_sum: 500,
             },
             {
               timestamp: '2026-02-19T10:05:00.000Z',
-              vercel_edge_requests_request_duration_ms_sum: 300,
+              vercel_request_route_cpu_duration_ms_sum: 300,
             },
           ],
           summary: [],
           statistics: {},
         },
         {
-          metric: 'vercel.edge_requests.request_duration_ms',
+          metric: 'vercel.request.route_cpu_duration_ms',
           metricUnit: 'milliseconds',
           aggregation: 'sum',
           groupBy: [],
