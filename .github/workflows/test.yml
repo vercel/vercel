@@ -33,11 +33,15 @@ jobs:
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
           token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+      # pnpm must exist before setup-node cache: pnpm (see actions/setup-node docs)
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.3.1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install
       - id: affected-packages
         run: |
@@ -306,9 +310,14 @@ jobs:
           fetch-depth: 0 # Need full history for turbo query to work
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.3.1
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
@@ -321,15 +330,21 @@ jobs:
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
-
       - name: install uv@0.10.11
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
         with:
           version: '0.10.11'
 
       - run: pnpm install
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.workflow }}-${{ runner.os }}-${{ matrix.packageName }}-${{ matrix.scriptName }}-${{ matrix.nodeVersion }}-${{ github.event.pull_request.base.sha }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.workflow }}-${{ runner.os }}-${{ matrix.packageName }}-${{ matrix.scriptName }}-${{ matrix.nodeVersion }}-${{ github.event.pull_request.base.sha }}-
+            turbo-${{ github.workflow }}-${{ runner.os }}-${{ matrix.packageName }}-${{ matrix.scriptName }}-${{ matrix.nodeVersion }}-
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
