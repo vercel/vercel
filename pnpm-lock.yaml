@@ -33,7 +33,7 @@ importers:
         version: 2.0.1
       dd-trace:
         specifier: 5.98.0
-        version: 5.98.0
+        version: 5.98.0(@openfeature/server-sdk@1.21.0)
       dot:
         specifier: 1.1.3
         version: 1.1.3
@@ -1640,8 +1640,8 @@ importers:
         version: 1.5.0
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.20
-        version: 0.0.1-beta.20(next@16.1.6)
+        specifier: https://adapter-vercel-adapter-49wvcjl52.vercel.app/adapter.tgz
+        version: '@adapter-vercel-adapter-49wvcjl52.vercel.app/adapter.tgz(next@16.1.6)'
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -4235,8 +4235,8 @@ packages:
       '@jridgewell/trace-mapping': 0.3.9
     dev: true
 
-  /@datadog/flagging-core@1.1.1:
-    resolution: {integrity: sha512-QoV2DRD7da5jTFrwc/iTjY3lvSCtFXf+yREYYpHK4RJTO/eB/B7K0Cug1bcmWxd+8acjjPWJYjht+EUNrUx3jA==}
+  /@datadog/flagging-core@0.3.3:
+    resolution: {integrity: sha512-LnkTXMVxaCDGCOF2I+CCACndpbi4E8CP8NIsb1IbMmmATzkQHmYiL1ntFcS4mt5kNGAWXNrKquM02jhoiVc+dA==}
     dependencies:
       spark-md5: 3.0.2
     dev: true
@@ -4275,17 +4275,15 @@ packages:
     dev: true
     optional: true
 
-  /@datadog/openfeature-node-server@1.1.1:
-    resolution: {integrity: sha512-044Fmlqp3fyJ6zoOEueFMuaKVZGBXWf7HjZ6zetPUeJ+AgEQkkZ6g4qQThwyUNmDddNiHOnLnkJd7KA58Sk3gA==}
+  /@datadog/openfeature-node-server@1.1.2(@openfeature/server-sdk@1.21.0):
+    resolution: {integrity: sha512-fr+zCaKoCSdizX22H7eA9Z3QaZrOMu5qU0yK0M2aWtUxokSAKPlLz3+9HdmqwBWU/ikqI+lbiAK0oNdvmUKeQA==}
     engines: {node: '>=18.0.0'}
     requiresBuild: true
     peerDependencies:
       '@openfeature/server-sdk': '>=1.15.1'
-    peerDependenciesMeta:
-      '@openfeature/server-sdk':
-        optional: true
     dependencies:
-      '@datadog/flagging-core': 1.1.1
+      '@datadog/flagging-core': 0.3.3
+      '@openfeature/server-sdk': 1.21.0(@openfeature/core@1.10.0)
     dev: true
     optional: true
 
@@ -6112,15 +6110,6 @@ packages:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  /@next-community/adapter-vercel@0.0.1-beta.20(next@16.1.6):
-    resolution: {integrity: sha512-2hHoTjhonB4ciD/wIbRtI/8M54eDl/VeTuGh1/gcCbZLCpLC6rhf5TJ5wvDt+69jIkJJk7zI3+KToAxigPhA+Q==}
-    engines: {node: '>= 20.6.0'}
-    peerDependencies:
-      next: '>= 16.1.1-canary.18'
-    dependencies:
-      next: 16.1.6(@babel/core@7.24.4)(react-dom@18.2.0)(react@18.2.0)
-    dev: true
-
   /@next/env@11.1.2:
     resolution: {integrity: sha512-+fteyVdQ7C/OoulfcF6vd1Yk0FEli4453gr8kSFbU8sKseNSizYq6df5MKz/AjwLptsxrUeIkgBdAzbziyJ3mA==}
     dev: true
@@ -6296,8 +6285,23 @@ packages:
       wrap-ansi: 7.0.0
     dev: true
 
-  /@opentelemetry/api-logs@0.215.0:
-    resolution: {integrity: sha512-xrFlqhdhUyO8wSRn6DjE0145/HPWSJ5Nm0C7vWua6TdL/FSEAZvEyvdsa9CRXuxo9ebb7j/NEPhEcO62IJ0qUA==}
+  /@openfeature/core@1.10.0:
+    resolution: {integrity: sha512-C3ynxtPYhe5qVJgQIqCNxZXeRXo4t1Eo86uiROr8+sD6F2OjEJGIp6VOGxz+r6jkad2s8Br9BnUJOvskhai/3A==}
+    dev: true
+    optional: true
+
+  /@openfeature/server-sdk@1.21.0(@openfeature/core@1.10.0):
+    resolution: {integrity: sha512-ZBVAiyMeN+dxurcXGJlvuOpYg9X7V923MVCI5dq/kE/5o8ys7MCOPhW44e4PS+XABHzSRTw44hcgWez93xwifw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@openfeature/core': ^1.10.0
+    dependencies:
+      '@openfeature/core': 1.10.0
+    dev: true
+    optional: true
+
+  /@opentelemetry/api-logs@0.216.0:
+    resolution: {integrity: sha512-KmGTgvxTJ0J01d4mOeX1wMV5NUTNf9HebIuOOGDfIn0a/IrnXIQbOnlylDyl9tkDv4h0DUpdI/GqCdLzfTkUXg==}
     engines: {node: '>=8.0.0'}
     requiresBuild: true
     dependencies:
@@ -11739,7 +11743,7 @@ packages:
     engines: {node: '>=12.17'}
     dev: true
 
-  /dd-trace@5.98.0:
+  /dd-trace@5.98.0(@openfeature/server-sdk@1.21.0):
     resolution: {integrity: sha512-B3mQrHewjTJe5C8GeNuxhnhbzAy5YlHjuFa9yuQFW1oumPEq8r/D5W+fqDi14p7bgKiU8+1GJnuR/WyqvALWcg==}
     engines: {node: '>=18 <26'}
     requiresBuild: true
@@ -11751,11 +11755,11 @@ packages:
       '@datadog/native-appsec': 11.0.1
       '@datadog/native-iast-taint-tracking': 4.1.0
       '@datadog/native-metrics': 3.1.1
-      '@datadog/openfeature-node-server': 1.1.1
+      '@datadog/openfeature-node-server': 1.1.2(@openfeature/server-sdk@1.21.0)
       '@datadog/pprof': 5.14.1
       '@datadog/wasm-js-rewriter': 5.0.1
       '@opentelemetry/api': 1.9.0
-      '@opentelemetry/api-logs': 0.215.0
+      '@opentelemetry/api-logs': 0.216.0
       oxc-parser: 0.121.0
     transitivePeerDependencies:
       - '@openfeature/server-sdk'
@@ -19520,19 +19524,16 @@ packages:
 
   /uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
     dev: true
 
   /uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
     dev: true
 
   /uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   /v8-compile-cache-lib@3.0.1:
@@ -20252,3 +20253,15 @@ packages:
   /zod@4.1.11:
     resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
     dev: false
+
+  '@adapter-vercel-adapter-49wvcjl52.vercel.app/adapter.tgz(next@16.1.6)':
+    resolution: {tarball: https://adapter-vercel-adapter-49wvcjl52.vercel.app/adapter.tgz}
+    id: '@adapter-vercel-adapter-49wvcjl52.vercel.app/adapter.tgz'
+    name: '@next-community/adapter-vercel'
+    version: 0.0.1-beta.20
+    engines: {node: '>= 20.6.0'}
+    peerDependencies:
+      next: '>= 16.1.1-canary.18'
+    dependencies:
+      next: 16.1.6(@babel/core@7.24.4)(react-dom@18.2.0)(react@18.2.0)
+    dev: true
