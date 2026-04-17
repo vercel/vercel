@@ -1,47 +1,5 @@
 # vercel
 
-## 51.6.0
-
-### Minor Changes
-
-- Add `vercel connex list` command ([#16018](https://github.com/vercel/vercel/pull/16018))
-
-### Patch Changes
-
-- Add OpenAPI-driven subcommand fallback behind `VERCEL_AUTO_API=1`. ([#15989](https://github.com/vercel/vercel/pull/15989))
-
-  When the env var is set, unrecognized CLI tokens are matched against OpenAPI tags and operation IDs from `openapi.vercel.sh`. This enables `vercel <tag> <operationId>` (e.g. `vercel user getAuthUser`) at the top level, and per-command fallthrough (e.g. `vercel projects getProject`) when a token doesn't match a native subcommand.
-
-  When `x-vercel-cli.displayColumns` is present in the OpenAPI response schema, results render as a card (single object) or table (array) instead of raw JSON.
-
-- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
-
-- Add naming and formatting utilities for OpenAPI CLI integration. ([#16010](https://github.com/vercel/vercel/pull/16010))
-
-  Introduces `foldNamingStyle` for case-insensitive matching across camelCase/kebab-case/snake_case, `humanReadableColumnLabel` for converting schema property paths to readable headers, and `inferCliSubcommandAliases` for auto-generating CLI aliases from HTTP methods.
-
-- Updated dependencies [[`44d519b8660185754d8280517adbe0ab7268f540`](https://github.com/vercel/vercel/commit/44d519b8660185754d8280517adbe0ab7268f540), [`2a6344e205910dafc05cb74a80f98165d95322d7`](https://github.com/vercel/vercel/commit/2a6344e205910dafc05cb74a80f98165d95322d7)]:
-  - @vercel/detect-agent@1.2.3
-  - @vercel/build-utils@13.17.2
-  - @vercel/python@6.33.3
-  - @vercel/backends@0.0.64
-  - @vercel/elysia@0.1.67
-  - @vercel/express@0.1.77
-  - @vercel/fastify@0.1.70
-  - @vercel/go@3.5.0
-  - @vercel/h3@0.1.76
-  - @vercel/hono@0.2.70
-  - @vercel/hydrogen@1.3.6
-  - @vercel/koa@0.1.50
-  - @vercel/nestjs@0.2.71
-  - @vercel/next@4.16.8
-  - @vercel/node@5.7.9
-  - @vercel/redwood@2.4.12
-  - @vercel/remix-builder@5.7.2
-  - @vercel/ruby@2.3.2
-  - @vercel/rust@1.1.1
-  - @vercel/static-build@2.9.17
-
 ## 51.5.1
 
 ### Patch Changes

@@ -1,11 +1,5 @@
 # @vercel/python
 
-## 6.33.3
-
-### Patch Changes
-
-- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
-
 ## 6.33.2
 
 ### Patch Changes
