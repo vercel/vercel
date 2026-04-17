@@ -9,7 +9,7 @@ env:
   VERCEL_TELEMETRY_DISABLED: '1'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.client_payload.git.sha }}
+  group: ${{ github.workflow }}-${{ github.event.client_payload.git.ref }}
   cancel-in-progress: ${{ github.event.client_payload.git.ref != 'refs/heads/main' }}
 
 jobs:
@@ -18,20 +18,25 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.client_payload.environment == 'preview'
     steps:
-      - name: Resolve PR number
+      - name: Resolve PR context
         id: pr-context
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SHA="${{ github.event.client_payload.git.sha }}"
-          PR_NUMBER=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" --jq '.[0].number')
+          PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" --jq '.[0]')
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')
           echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "prTitle=$PR_TITLE" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v4
+        if: steps.pr-context.outputs.prTitle != 'Version Packages'
         with:
           ref: ${{ github.event.client_payload.git.sha }}
 
       - name: Discover Python packages
+        if: steps.pr-context.outputs.prTitle != 'Version Packages'
         id: discoverPythonPackages
         run: |
           PACKAGES="$(node utils/get-python-packages.js)"
@@ -39,6 +44,7 @@ jobs:
           echo "Discovered Python packages: $PACKAGES"
 
       - name: Comment PR with CLI tarball instructions
+        if: steps.pr-context.outputs.prTitle != 'Version Packages'
         uses: actions/github-script@v7
         env:
           PYTHON_PACKAGES: ${{ steps.discoverPythonPackages.outputs.packages }}
