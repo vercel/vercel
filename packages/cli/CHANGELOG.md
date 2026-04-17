@@ -1,5 +1,46 @@
 # vercel
 
+## 51.7.0
+
+### Minor Changes
+
+- [detect-services] If a vercel.toml exists, update the vercel.toml ([#15895](https://github.com/vercel/vercel/pull/15895))
+
+- Use correct filename in messages when config file is not vercel.json ([#15893](https://github.com/vercel/vercel/pull/15893))
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Include `action` and `resource` fields from API 403 responses in non-interactive agent error payloads. ([#15940](https://github.com/vercel/vercel/pull/15940))
+
+- Use POST for `vercel connex create` with a browser registration fallback. ([#16026](https://github.com/vercel/vercel/pull/16026))
+
+- Add table formatting for OpenAPI CLI responses. ([#16011](https://github.com/vercel/vercel/pull/16011))
+
+  Renders API JSON responses as CLI tables and cards with relative timestamp formatting, null/undefined display as `--`, human-readable column headers, and configurable display columns via `VercelCliTableDisplay`.
+
+- Updated dependencies [[`93be6d188176cdd4451a6c62155f3ccd7dfa89e1`](https://github.com/vercel/vercel/commit/93be6d188176cdd4451a6c62155f3ccd7dfa89e1), [`0793b7d31e4ff21dd12ff727f2906be2fd63fe3e`](https://github.com/vercel/vercel/commit/0793b7d31e4ff21dd12ff727f2906be2fd63fe3e)]:
+  - @vercel/build-utils@13.19.0
+  - @vercel/python@6.35.0
+  - @vercel/backends@0.1.1
+  - @vercel/elysia@0.1.69
+  - @vercel/express@0.1.79
+  - @vercel/fastify@0.1.72
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.78
+  - @vercel/hono@0.2.72
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.52
+  - @vercel/nestjs@0.2.73
+  - @vercel/next@4.16.8
+  - @vercel/node@5.7.11
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.1
+  - @vercel/static-build@2.9.19
+
 ## 51.6.1
 
 ### Patch Changes
