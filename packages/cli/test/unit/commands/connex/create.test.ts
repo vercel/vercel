@@ -1,7 +1,10 @@
 import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { join } from 'path';
+import { mkdirp, writeJSON } from 'fs-extra';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connex from '../../../../src/commands/connex';
 import * as configFilesUtil from '../../../../src/util/config/files';
 
@@ -228,6 +231,39 @@ describe('connex create', () => {
     expect(writeConfigSpy).toHaveBeenCalledWith(
       expect.objectContaining({ currentTeam: team.id })
     );
+  });
+
+  it('should use team from .vercel/project.json without prompting', async () => {
+    client.reset();
+    useUser();
+    team = useTeam('team_linked');
+    delete client.config.currentTeam;
+
+    const cwd = setupTmpDir();
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: team.id,
+      projectId: 'proj_from_link',
+    });
+    client.cwd = cwd;
+
+    client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
+      res.writeHead(302, {
+        Location: 'https://vercel.com/test/~/connex/create?type=slack',
+      });
+      res.end();
+    });
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+      res.json({ status: 'success', data: { clientId: 'scl_linked' } });
+    });
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.config.currentTeam).toBe(team.id);
+    // No prompt means no persist path executed.
+    expect(writeConfigSpy).not.toHaveBeenCalled();
   });
 
   it('should error when user selects personal account instead of a team', async () => {
