@@ -99,7 +99,8 @@ export const tokenSubcommand = {
       type: String,
       argument: 'TYPE',
       deprecated: false,
-      description: 'Subject type: app or user',
+      description:
+        'Subject type: "user" (default, acts on behalf of you) or "app" (uses the client\'s default installation)',
     },
     {
       name: 'installation-id',
@@ -107,7 +108,8 @@ export const tokenSubcommand = {
       type: String,
       argument: 'ID',
       deprecated: false,
-      description: 'Target installation ID',
+      description:
+        "Target a specific installation (only useful with --subject app; defaults to the client's default installation)",
     },
     {
       name: 'scopes',
@@ -122,16 +124,16 @@ export const tokenSubcommand = {
   ],
   examples: [
     {
-      name: 'Get a token for a client',
+      name: 'Get a user token for the current user (default)',
       value: `${packageName} connex token scl_abc123`,
     },
     {
-      name: 'Get an app token',
+      name: 'Get an app token (default installation)',
       value: `${packageName} connex token scl_abc123 --subject app`,
     },
     {
-      name: 'Get a token for a specific installation',
-      value: `${packageName} connex token scl_abc123 --installation-id inst_1`,
+      name: 'Get an app token for a specific installation',
+      value: `${packageName} connex token scl_abc123 --subject app --installation-id inst_1`,
     },
     {
       name: 'Output as JSON',
