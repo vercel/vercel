@@ -1,4 +1,5 @@
 import { join, dirname } from 'path';
+import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { NowBuildError } from '@vercel/build-utils';
 import { selectPythonVersion, PythonConfigKind } from '@vercel/python-analysis';
@@ -65,11 +66,35 @@ const allOptions: PythonVersion[] = [
 ];
 
 function getDevPythonVersion(): PythonVersion {
-  // Use the system-installed version of `python3` when running `vercel dev`.
-  // minor is set to 0 as a placeholder — it is not used in dev mode.
+  // Detect the actual system Python version so the version string (e.g.
+  // used in `requires-python` constraints) is valid.  uv >= 0.10.11
+  // rejects "3.0" as a Python version request, breaking `vercel dev`
+  // when minor was hardcoded to 0.  See: https://github.com/vercel/vercel/issues/16014
+  try {
+    const output = execSync('python3 --version', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    // Output format: "Python 3.11.4"
+    const match = /^Python (\d+)\.(\d+)/.exec(output);
+    if (match) {
+      const major = parseInt(match[1], 10);
+      const minor = parseInt(match[2], 10);
+      return {
+        major,
+        minor,
+        pipPath: 'pip3',
+        pythonPath: 'python3',
+        runtime: 'python3',
+      };
+    }
+  } catch {
+    // Detection failed; fall through to safe default below.
+  }
+  // Fall back to the default production Python version when detection fails.
   return {
-    major: 3,
-    minor: 0,
+    major: DEFAULT_PYTHON_VERSION.major,
+    minor: DEFAULT_PYTHON_VERSION.minor,
     pipPath: 'pip3',
     pythonPath: 'python3',
     runtime: 'python3',
