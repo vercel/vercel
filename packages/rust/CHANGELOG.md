@@ -1,5 +1,11 @@
 # @vercel/rust
 
+## 1.1.1
+
+### Patch Changes
+
+- Support entry point without extension for dev server ([#15998](https://github.com/vercel/vercel/pull/15998))
+
 ## 1.1.0
 
 ### Minor Changes

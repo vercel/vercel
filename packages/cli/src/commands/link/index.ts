@@ -12,7 +12,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
-import { autoInstallAgentTooling } from '../../util/agent/auto-install-agentic';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -70,7 +70,7 @@ export default async function link(client: Client) {
       return 1;
     }
 
-    await autoInstallAgentTooling(client, {
+    await autoInstallVercelPlugin(client, {
       autoConfirm: yes,
     });
 
@@ -162,7 +162,7 @@ export default async function link(client: Client) {
     }
   }
 
-  await autoInstallAgentTooling(client, {
+  await autoInstallVercelPlugin(client, {
     autoConfirm: yes,
   });
 

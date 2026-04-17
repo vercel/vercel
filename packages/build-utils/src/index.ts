@@ -132,6 +132,7 @@ export { getOsRelease, getProvidedRuntime } from './os';
 
 export * from './should-serve';
 export * from './schemas';
+export * from './package-manifest';
 export * from './types';
 export * from './errors';
 
@@ -163,6 +164,7 @@ export {
 
 export * from './python';
 export * from './node-entrypoint';
+export * from './service-path-utils';
 
 export {
   getEncryptedEnv,
@@ -222,3 +224,29 @@ export { validateFrameworkVersion } from './deserialize/validate-framework-versi
 export { hydrateFilesMap } from './deserialize/hydrate-files-map';
 export { createFunctionsIterator } from './deserialize/create-functions-iterator';
 export { maybeReadJSON } from './deserialize/maybe-read-json';
+
+export {
+  deserializeLambda,
+  type DeserializeLambdaOptions,
+} from './deserialize/deserialize-lambda';
+export { deserializeEdgeFunction } from './deserialize/deserialize-edge-function';
+export type {
+  Properties,
+  SerializedLambda,
+  SerializedNodejsLambda,
+  SerializedEdgeFunction,
+  SerializedFileFsRef,
+  SerializedPrerender,
+} from './deserialize/serialized-types';
+
+export { validateRegularFile } from './collect-build-result/validate-regular-file';
+export { validatePrerender } from './collect-build-result/validate-prerender';
+export { getContentType } from './collect-build-result/get-content-type';
+export {
+  fileToBuildOutputFile,
+  type BuildOutputFile,
+} from './collect-build-result/file-to-build-output-file';
+export {
+  prerenderToBuildOutputFile,
+  type ExtendedPayload,
+} from './collect-build-result/prerender-to-build-output-file';

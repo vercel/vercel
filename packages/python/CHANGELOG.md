@@ -1,5 +1,47 @@
 # @vercel/python
 
+## 6.34.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 6.33.3
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 6.33.2
+
+### Patch Changes
+
+- Update the error for custom installCommand builds >250MB. ([#15946](https://github.com/vercel/vercel/pull/15946))
+
+## 6.33.1
+
+### Patch Changes
+
+- Enable functions beta hint when flag is true ([#15965](https://github.com/vercel/vercel/pull/15965))
+
+- [services] don't catch all routes for non-web Python services ([#15960](https://github.com/vercel/vercel/pull/15960))
+
+- Remove duplicated error message. ([#16000](https://github.com/vercel/vercel/pull/16000))
+
+## 6.33.0
+
+### Minor Changes
+
+- Fix local builds when pinned Python version is not on PATH. ([#15897](https://github.com/vercel/vercel/pull/15897))
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 6.32.0
+
+### Minor Changes
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
 ## 6.31.0
 
 ### Minor Changes

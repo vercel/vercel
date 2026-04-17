@@ -1,0 +1,102 @@
+import { formatOption } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
+
+export const createSubcommand = {
+  name: 'create',
+  aliases: [],
+  description: 'Create a new Connex client',
+  arguments: [
+    {
+      name: 'type',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'name',
+      shorthand: 'n',
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Name of the Connex client',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Create a Slack app',
+      value: `${packageName} connex create slack`,
+    },
+    {
+      name: 'Create with a custom name',
+      value: `${packageName} connex create slack --name my-bot`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connex create slack --format=json`,
+    },
+  ],
+} as const;
+
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List Connex clients for the current team',
+  arguments: [],
+  options: [
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'COUNT',
+      deprecated: false,
+      description: 'Number of clients to return per page',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      deprecated: false,
+      description: 'Cursor for the next page of results',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List Connex clients for the current team',
+      value: `${packageName} connex list`,
+    },
+    {
+      name: 'Limit the number of results',
+      value: `${packageName} connex list --limit 10`,
+    },
+    {
+      name: 'Fetch the next page of results',
+      value: `${packageName} connex list --next <cursor>`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connex list --format=json`,
+    },
+  ],
+} as const;
+
+export const connexCommand = {
+  name: 'connex',
+  aliases: [],
+  description: 'Manage Vercel Connect clients',
+  arguments: [],
+  options: [],
+  subcommands: [createSubcommand, listSubcommand],
+  examples: [
+    {
+      name: 'Create a Slack app',
+      value: `${packageName} connex create slack`,
+    },
+    {
+      name: 'List Connex clients on the current team',
+      value: `${packageName} connex list`,
+    },
+  ],
+} as const;

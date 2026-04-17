@@ -6,7 +6,11 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { getWorkerTopics } from '@vercel/build-utils';
+import {
+  getServiceQueueTopics,
+  JOB_TRIGGERS,
+  JobTrigger,
+} from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -58,6 +62,41 @@ interface ResolvedEntrypointPath {
   isDirectory: boolean;
 }
 
+async function getServiceFs(
+  fs: DetectorFilesystem,
+  serviceName: string,
+  root?: string
+): Promise<{
+  fs: DetectorFilesystem;
+  error?: ServiceDetectionError;
+}> {
+  if (!root) {
+    return { fs };
+  }
+  const normalizedRoot = posixPath.normalize(root);
+  if (!(await fs.hasPath(normalizedRoot))) {
+    return {
+      fs,
+      error: {
+        code: 'ROOT_NOT_FOUND',
+        message: `Service "${serviceName}" has root "${root}" but that directory does not exist.`,
+        serviceName,
+      },
+    };
+  }
+  if (await fs.isFile(normalizedRoot)) {
+    return {
+      fs,
+      error: {
+        code: 'ROOT_NOT_DIRECTORY',
+        message: `Service "${serviceName}" has root "${root}" but that path is a file, not a directory.`,
+        serviceName,
+      },
+    };
+  }
+  return { fs: fs.chdir(normalizedRoot) };
+}
+
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
@@ -100,7 +139,9 @@ type RoutePrefixSource = 'configured' | 'generated';
 interface ResolveConfiguredServiceOptions {
   name: string;
   config: ExperimentalServiceConfig;
-  fs: DetectorFilesystem;
+  /** Filesystem scoped to the service root (via chdir) when root is set, otherwise the project-level fs. */
+  serviceFs: DetectorFilesystem;
+  root?: string;
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
   routePrefixSource?: RoutePrefixSource;
@@ -347,6 +388,19 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
+  const isJobService = serviceType === 'job' || serviceType === 'cron';
+  const isScheduleJobService =
+    serviceType === 'cron' ||
+    (serviceType === 'job' && config.trigger === 'schedule');
+  const isQueueJobService = serviceType === 'job' && config.trigger === 'queue';
+  const isWorkflowService =
+    serviceType === 'job' && config.trigger === 'workflow';
+  const isNonWebService = serviceType === 'worker' || isJobService;
+  const serviceTypeLabel = isJobService
+    ? 'Job'
+    : serviceType === 'worker'
+      ? 'Worker'
+      : 'Web';
   const routingResult = resolveServiceRoutingConfig(name, config);
   if (routingResult.error) {
     return routingResult.error;
@@ -382,29 +436,81 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (
-    (serviceType === 'worker' || serviceType === 'cron') &&
-    configuredRoutePrefix
-  ) {
+  if (isNonWebService && configuredRoutePrefix) {
     return {
       code: 'INVALID_ROUTE_PREFIX',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
+      message: `${serviceTypeLabel} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
       serviceName: name,
     };
   }
-  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+  if (isNonWebService && hasSubdomain) {
     return {
       code: 'INVALID_HOST_ROUTING_CONFIG',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
+      message: `${serviceTypeLabel} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
       serviceName: name,
     };
   }
-  if (serviceType === 'cron' && !config.schedule) {
+  if (serviceType === 'job' && config.trigger === undefined) {
     return {
-      code: 'MISSING_CRON_SCHEDULE',
-      message: `Cron service "${name}" is missing required "schedule" field.`,
+      code: 'MISSING_JOB_TRIGGER',
+      message: `Job service "${name}" is missing required "trigger" field.`,
       serviceName: name,
     };
+  }
+  if (
+    serviceType === 'job' &&
+    config.trigger &&
+    !JOB_TRIGGERS.includes(config.trigger)
+  ) {
+    return {
+      code: 'INVALID_JOB_TRIGGER',
+      message: `Job service "${name}" has invalid trigger "${config.trigger}". Expected ${JOB_TRIGGERS.map((t: JobTrigger) => `"${t}"`).join(', ')}.`,
+      serviceName: name,
+    };
+  }
+  if (isScheduleJobService && !config.schedule) {
+    return {
+      code:
+        serviceType === 'cron'
+          ? 'MISSING_CRON_SCHEDULE'
+          : 'MISSING_JOB_SCHEDULE',
+      message: `${serviceTypeLabel} service "${name}" is missing required "schedule" field.`,
+      serviceName: name,
+    };
+  }
+  if (
+    isQueueJobService &&
+    (!Array.isArray(config.topics) || config.topics.length === 0)
+  ) {
+    return {
+      code: 'MISSING_QUEUE_TOPICS',
+      message: `${serviceTypeLabel} service "${name}" is missing required "topics" field.`,
+      serviceName: name,
+    };
+  }
+  if (isWorkflowService && typeof config.entrypoint !== 'string') {
+    return {
+      code: 'MISSING_ENTRYPOINT',
+      message: `Job service "${name}" with "workflow" trigger must specify "entrypoint".`,
+      serviceName: name,
+    };
+  }
+  if (config.root !== undefined) {
+    const normalizedRoot = posixPath.normalize(config.root);
+    if (normalizedRoot.startsWith('/')) {
+      return {
+        code: 'INVALID_ROOT',
+        message: `Service "${name}" has invalid "root" "${config.root}". Must be a relative path.`,
+        serviceName: name,
+      };
+    }
+    if (normalizedRoot === '..' || normalizedRoot.startsWith('../')) {
+      return {
+        code: 'INVALID_ROOT',
+        message: `Service "${name}" has invalid "root" "${config.root}". Must not escape the project root.`,
+        serviceName: name,
+      };
+    }
   }
   if (config.envPrefix !== undefined) {
     if (!ENV_PREFIX_RE.test(config.envPrefix)) {
@@ -502,12 +608,15 @@ export async function resolveConfiguredService(
   const {
     name,
     config,
-    fs,
+    serviceFs,
+    root,
     group,
     resolvedEntrypoint,
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
+  const trigger =
+    type === 'cron' ? 'schedule' : type === 'job' ? config.trigger : undefined;
   const rawEntrypoint = config.entrypoint;
 
   const moduleAttrParsed =
@@ -529,7 +638,7 @@ export async function resolveConfiguredService(
       ? moduleAttrParsed.filePath
       : rawEntrypoint;
     const resolved = await resolveEntrypointPath({
-      fs,
+      fs: serviceFs,
       serviceName: name,
       entrypoint: entrypointToResolve,
     });
@@ -559,7 +668,7 @@ export async function resolveConfiguredService(
   } else {
     // File entrypoints infer workspace from nearest runtime manifest.
     const inferredWorkspace = await inferWorkspaceFromNearestManifest({
-      fs,
+      fs: serviceFs,
       entrypoint: resolvedEntrypointFile,
       runtime: inferredRuntime,
     });
@@ -574,7 +683,23 @@ export async function resolveConfiguredService(
     }
   }
 
-  const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
+  // When root is provided, prefix workspace to make it project-root-relative.
+  if (root) {
+    const normalizedRoot = posixPath.normalize(root);
+    if (normalizedRoot !== '.') {
+      workspace =
+        workspace === '.'
+          ? normalizedRoot
+          : posixPath.join(normalizedRoot, workspace);
+    }
+  }
+
+  const topics =
+    type === 'worker'
+      ? getServiceQueueTopics({ type, topics: config.topics })
+      : trigger === 'queue'
+        ? config.topics
+        : undefined;
 
   let builderUse: string;
   let builderSrc: string;
@@ -680,6 +805,7 @@ export async function resolveConfiguredService(
   return {
     name,
     type,
+    trigger,
     group,
     workspace,
     entrypoint: resolvedEntrypointFile,
@@ -727,13 +853,22 @@ export async function resolveAllConfiguredServices(
       continue;
     }
 
+    // Scope filesystem to root if specified
+    const root = serviceConfig.root;
+    const serviceFsResult = await getServiceFs(fs, name, root);
+    if (serviceFsResult.error) {
+      errors.push(serviceFsResult.error);
+      continue;
+    }
+    const serviceFs = serviceFsResult.fs;
+
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
     if (typeof serviceConfig.entrypoint === 'string') {
       const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
       const entrypointToResolve =
         moduleAttr?.filePath ?? serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
-        fs,
+        fs: serviceFs,
         serviceName: name,
         entrypoint: entrypointToResolve,
       });
@@ -764,7 +899,7 @@ export async function resolveAllConfiguredServices(
         });
         const workspace = resolvedEntrypoint.normalized;
         const { framework, error } = await detectFrameworkFromWorkspace({
-          fs,
+          fs: serviceFs,
           workspace,
           runtime: inferredRuntime,
           serviceName: name,
@@ -793,7 +928,7 @@ export async function resolveAllConfiguredServices(
 
         if (inferredRuntime) {
           const inferredWorkspace = await inferWorkspaceFromNearestManifest({
-            fs,
+            fs: serviceFs,
             entrypoint: resolvedEntrypoint.normalized,
             runtime: inferredRuntime,
           });
@@ -801,7 +936,7 @@ export async function resolveAllConfiguredServices(
             inferredWorkspace ??
             posixPath.dirname(resolvedEntrypoint.normalized);
           const detection = await detectFrameworkFromWorkspace({
-            fs,
+            fs: serviceFs,
             workspace,
             serviceName: name,
             runtime: inferredRuntime,
@@ -819,7 +954,8 @@ export async function resolveAllConfiguredServices(
     const service = await resolveConfiguredService({
       name,
       config: resolvedConfig,
-      fs,
+      serviceFs,
+      root,
       resolvedEntrypoint,
       routePrefixSource,
     });

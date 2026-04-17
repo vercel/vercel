@@ -14,6 +14,7 @@ import * as env from '../../../src/commands/env/command';
 import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
+import * as connex from '../../../src/commands/connex/command';
 import * as integration from '../../../src/commands/integration/command';
 import * as integrationResource from '../../../src/commands/integration-resource/command';
 import { linkCommand } from '../../../src/commands/link/command';
@@ -422,6 +423,32 @@ describe('help command', () => {
     });
     it('inspect help column width 120', () => {
       expect(help(inspectCommand, { columns: 120 })).toMatchSnapshot();
+    });
+  });
+
+  describe('connex help output snapshots', () => {
+    it('connex help column width 80', () => {
+      expect(help(connex.connexCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    describe('connex create subcommand', () => {
+      it('connex create subcommand help column width 120', () => {
+        expect(
+          help(connex.createSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex list subcommand', () => {
+      it('connex list subcommand help column width 120', () => {
+        expect(
+          help(connex.listSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

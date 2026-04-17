@@ -359,7 +359,11 @@ export default class Client extends EventEmitter implements Stdio {
         } else {
           url.searchParams.delete('teamId');
         }
-      } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
+      } else if (
+        opts.useCurrentTeam !== false &&
+        this.config.currentTeam &&
+        !url.searchParams.has('teamId')
+      ) {
         url.searchParams.set('teamId', this.config.currentTeam);
       }
     }
@@ -408,6 +412,15 @@ export default class Client extends EventEmitter implements Stdio {
       printIndications(res);
 
       if (!res.ok) {
+        // Return 3xx responses directly when manual redirect is requested
+        if (
+          opts.redirect === 'manual' &&
+          res.status >= 300 &&
+          res.status < 400
+        ) {
+          return res;
+        }
+
         const error = await responseError(res);
 
         // we should force reauth only if error has a teamId
