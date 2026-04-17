@@ -26,7 +26,7 @@ export const globalCommandOptions = [
     deprecated: false,
   },
   {
-    name: 'project',
+    name: 'project-name',
     shorthand: 'P',
     type: String,
     argument: 'NAME',

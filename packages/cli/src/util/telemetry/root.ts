@@ -512,9 +512,12 @@ export class RootTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionProject(project: string | undefined) {
+  trackCliOptionProjectName(project: string | undefined) {
     if (project) {
-      this.trackCliOption({ option: 'project', value: this.redactedValue });
+      this.trackCliOption({
+        option: 'project-name',
+        value: this.redactedValue,
+      });
     }
   }
 

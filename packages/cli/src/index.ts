@@ -377,7 +377,7 @@ const main = async () => {
   telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
   telemetry.trackVersion(pkg.version);
   telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
-  telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
+  telemetry.trackCliOptionProjectName(parsedArgs.flags['--project-name']);
   telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
   telemetry.trackCliOptionGlobalConfig(parsedArgs.flags['--global-config']);
   telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
@@ -550,17 +550,17 @@ const main = async () => {
     client.cwd = parsedArgs.flags['--cwd'];
   }
 
-  // The `--project` flag resolves a monorepo project name to a directory
-  if (parsedArgs.flags['--project']) {
+  // The `--project-name` flag resolves a monorepo project name to a directory
+  if (parsedArgs.flags['--project-name']) {
     if (parsedArgs.flags['--cwd']) {
       output.error(
-        `Cannot use ${param('--project')} and ${param('--cwd')} together. ` +
-          `Use ${param('--project')} to target a monorepo project by name, ` +
+        `Cannot use ${param('--project-name')} and ${param('--cwd')} together. ` +
+          `Use ${param('--project-name')} to target a monorepo project by name, ` +
           `or ${param('--cwd')} to set an explicit working directory.`
       );
       return 1;
     }
-    const projectFlagName = parsedArgs.flags['--project'];
+    const projectFlagName = parsedArgs.flags['--project-name'];
     try {
       const { findRepoRoot } = await import('./util/link/repo.js');
       const { resolveWorkspaceProject } = await import(
@@ -569,7 +569,7 @@ const main = async () => {
       const repoRoot = await findRepoRoot(client.cwd);
       if (!repoRoot) {
         output.error(
-          `Could not find a Git repository root. ${param('--project')} requires a monorepo context.`
+          `Could not find a Git repository root. ${param('--project-name')} requires a monorepo context.`
         );
         return 1;
       }
@@ -577,7 +577,7 @@ const main = async () => {
       client.cwd = resolved.projectPath;
       client.projectName = projectFlagName;
       output.debug(
-        `Resolved ${param('--project')} "${projectFlagName}" to: ${resolved.projectPath} (via ${resolved.source})`
+        `Resolved ${param('--project-name')} "${projectFlagName}" to: ${resolved.projectPath} (via ${resolved.source})`
       );
     } catch (err: unknown) {
       if (err instanceof Error) {
