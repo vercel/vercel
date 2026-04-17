@@ -16,7 +16,7 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.client_payload.git.sha }}
+  group: ${{ github.workflow }}-${{ github.event.client_payload.git.ref }}
   cancel-in-progress: ${{ github.event.client_payload.git.ref != 'refs/heads/main' }}
 
 jobs:
