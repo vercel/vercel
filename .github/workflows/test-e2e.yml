@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
+      fastTests: ${{ steps['set-fast-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.resolveTarball.outputs.url }}
       affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
       testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
@@ -88,6 +89,16 @@ jobs:
         env:
           TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           TEST_TYPE: e2e
+      - id: set-fast-tests
+        run: |
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
+          echo "Fast-lane E2E tests to run:"
+          echo "$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+        env:
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_TYPE: e2e
+          FAST_LANE: 'true'
       - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
         continue-on-error: true
@@ -167,6 +178,102 @@ jobs:
             core.setFailed(
               'No Vercel preview deployment found for any commit in this PR.'
             );
+
+  test-fast:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: fast-lane (${{matrix.scriptName}}, ${{matrix.packageName}}, chunk ${{matrix.chunkNumber}})
+    if: ${{ needs.setup.outputs['fastTests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: true
+      max-parallel: 75
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['fastTests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Check out the PR commit directly instead of a merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - run: pnpm install
+
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: '1'
+      - name: Resolve Python wheel URLs
+        shell: bash
+        run: |
+          DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
+
+          PACKAGES_JSON="$(node utils/get-python-packages.js)"
+          if [ -z "$PACKAGES_JSON" ] || [ "$PACKAGES_JSON" = "[]" ]; then
+            echo "No Python packages discovered; skipping wheel URL resolution."
+            exit 0
+          fi
+
+          echo "$PACKAGES_JSON" | jq -c '.[]' | while IFS= read -r package; do
+            package_slug="$(echo "$package" | jq -r '.packageDir')"
+            package_name="$(echo "$package" | jq -r '.packageName')"
+
+            wheel_name="$(curl -sf "$DEPLOYMENT_URL/tarballs/$package_slug-wheel.json" | jq -r '.filename' || echo "")"
+            if [ -z "$wheel_name" ]; then
+              continue
+            fi
+
+            env_var="$(printf '%s' "$package_name" | tr -c '[:alnum:]' '_' | tr '[:lower:]' '[:upper:]')_PYTHON"
+            echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
+          done
+      - name: Test ${{matrix.packageName}}
+        run: |
+          set -o pipefail
+          attempt=1
+          max_attempts=2
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+            test_log="$(mktemp)"
+
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }} 2>&1 | tee "$test_log"; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Tests failed after $max_attempts attempts."
+              exit 1
+            fi
+
+            echo "Tests failed; retrying once..."
+            attempt=$((attempt+1))
+          done
+        shell: bash
+        env:
+          # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
+          # VERCEL_WORKERS_PYTHON) are also available here, injected into
+          # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
+          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/fast-lane-${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}.xml
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          FORCE_COLOR: '1'
 
   test:
     timeout-minutes: 120
@@ -283,6 +390,7 @@ jobs:
     if: always()
     needs:
       - setup
+      - test-fast
       - test
     steps:
       - name: Check All
