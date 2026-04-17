@@ -113,7 +113,7 @@ export const systemBypassAddSubcommand = {
   name: 'add',
   aliases: [],
   description:
-    'Add a system bypass rule to allow a specific IP address to skip firewall checks',
+    'Add a system bypass rule to allow a specific IP address to skip firewall checks. Takes effect immediately (no publish required)',
   arguments: [{ name: 'ip', required: true }],
   options: [
     {
@@ -148,7 +148,7 @@ export const systemBypassRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm'],
   description:
-    'Remove a system bypass rule so the IP is no longer exempt from firewall checks',
+    'Remove a system bypass rule so the IP is no longer exempt from firewall checks. Takes effect immediately (no publish required)',
   arguments: [{ name: 'ip', required: true }],
   options: [
     {
@@ -223,7 +223,8 @@ export const ipBlocksListSubcommand = {
 export const ipBlocksBlockSubcommand = {
   name: 'block',
   aliases: [],
-  description: 'Block an IP address or CIDR range from accessing your project',
+  description:
+    'Block an IP address or CIDR range from accessing your project. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'ip', required: true }],
   options: [
     {
@@ -263,7 +264,7 @@ export const ipBlocksUnblockSubcommand = {
   name: 'unblock',
   aliases: ['rm'],
   description:
-    'Remove an IP blocking rule to allow the address to access your project again',
+    'Remove an IP blocking rule to allow the address to access your project again. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'id-or-ip', required: true }],
   options: [
     {
@@ -388,7 +389,7 @@ export const rulesAddSubcommand = {
   name: 'add',
   aliases: [],
   description:
-    'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line flags',
+    'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name', required: false }],
   options: [
     {
@@ -533,7 +534,7 @@ export const rulesEditSubcommand = {
   name: 'edit',
   aliases: [],
   description:
-    'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags',
+    'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     {
@@ -687,7 +688,8 @@ export const rulesEditSubcommand = {
 export const rulesEnableSubcommand = {
   name: 'enable',
   aliases: [],
-  description: 'Enable a disabled custom firewall rule',
+  description:
+    'Enable a disabled custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [yesOption],
   examples: [
@@ -701,7 +703,8 @@ export const rulesEnableSubcommand = {
 export const rulesDisableSubcommand = {
   name: 'disable',
   aliases: [],
-  description: 'Disable a custom firewall rule without removing it',
+  description:
+    'Disable a custom firewall rule without removing it. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [yesOption],
   examples: [
@@ -715,7 +718,8 @@ export const rulesDisableSubcommand = {
 export const rulesRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
-  description: 'Remove a custom firewall rule',
+  description:
+    'Remove a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [yesOption],
   examples: [
@@ -729,7 +733,8 @@ export const rulesRemoveSubcommand = {
 export const rulesReorderSubcommand = {
   name: 'reorder',
   aliases: ['move'],
-  description: 'Change the priority order of a custom firewall rule',
+  description:
+    'Change the priority order of a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     {
@@ -808,7 +813,7 @@ export const attackModeEnableSubcommand = {
   name: 'enable',
   aliases: [],
   description:
-    'Enable attack mode — all visitors will be shown a verification challenge before accessing your site',
+    'Enable attack mode — all visitors will be shown a verification challenge before accessing your site. Takes effect immediately (no publish required)',
   arguments: [],
   options: [
     {
@@ -835,7 +840,8 @@ export const attackModeEnableSubcommand = {
 export const attackModeDisableSubcommand = {
   name: 'disable',
   aliases: [],
-  description: 'Disable attack mode — visitors will no longer be challenged',
+  description:
+    'Disable attack mode — visitors will no longer be challenged. Takes effect immediately (no publish required)',
   arguments: [],
   options: [yesOption],
   examples: [
@@ -871,7 +877,7 @@ export const systemMitigationsPauseSubcommand = {
   name: 'pause',
   aliases: [],
   description:
-    'Pause automatic DDoS protection and system-level traffic filtering for 24 hours',
+    'Pause automatic DDoS protection and system-level traffic filtering for 24 hours. Takes effect immediately (no publish required)',
   arguments: [],
   options: [yesOption],
   examples: [
@@ -886,7 +892,7 @@ export const systemMitigationsResumeSubcommand = {
   name: 'resume',
   aliases: [],
   description:
-    'Resume automatic DDoS protection and system-level traffic filtering',
+    'Resume automatic DDoS protection and system-level traffic filtering. Takes effect immediately (no publish required)',
   arguments: [],
   options: [yesOption],
   examples: [
