@@ -1,8 +1,5 @@
 import type { HasField, Route } from '@vercel/routing-utils';
-import {
-  isQueueTriggeredService,
-  isScheduleTriggeredService,
-} from '@vercel/build-utils';
+import { isScheduleTriggeredService } from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -20,7 +17,6 @@ import {
 import {
   getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
-  getInternalServiceWorkerPath,
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
@@ -269,8 +265,7 @@ export async function detectServices(
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
  * - Worker and queue-triggered job services:
- *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
- *   that rewrite to `/_svc/{serviceName}/index`.
+ *   Use private path routing. The generated function is not publicly accessible.
  *
  * - Schedule-triggered job services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
@@ -367,22 +362,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         });
       }
     }
-  }
-
-  const workerServices = services.filter(isQueueTriggeredService);
-  for (const service of workerServices) {
-    const workerEntrypoint =
-      service.entrypoint || service.builder.src || 'index';
-    const workerPath = getInternalServiceWorkerPath(
-      service.name,
-      workerEntrypoint
-    );
-    const functionPath = getInternalServiceFunctionPath(service.name);
-    workers.push({
-      src: `^${escapeRegex(workerPath)}$`,
-      dest: functionPath,
-      check: true,
-    });
   }
 
   const cronServices = services.filter(isScheduleTriggeredService);
