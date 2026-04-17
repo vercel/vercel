@@ -56,8 +56,14 @@ export async function token(
   await selectConnexTeam(client, 'Select the team for this token request');
 
   const body: Record<string, unknown> = {};
-  if (subject) {
-    body.subject = subject === 'app' ? { type: 'app' } : { type: 'user' };
+  if (subject === 'app') {
+    body.subject = { type: 'app' };
+  } else if (subject === 'user') {
+    const userId = client.authConfig.userId;
+    if (userId) {
+      body.subject = { type: 'user', id: userId };
+    }
+    // If userId is not available, omit subject and let the API default.
   }
   if (flags['--installation-id']) {
     body.installationId = flags['--installation-id'];

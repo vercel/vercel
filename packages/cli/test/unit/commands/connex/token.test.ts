@@ -11,9 +11,10 @@ describe('connex token', () => {
 
   beforeEach(() => {
     client.reset();
-    useUser();
+    const user = useUser();
     team = useTeam();
     client.config.currentTeam = team.id;
+    client.authConfig.userId = user.id;
   });
 
   it('should error when no clientId argument is provided', async () => {
@@ -91,6 +92,39 @@ describe('connex token', () => {
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toEqual({ type: 'app' });
     expect(requestBody.installationId).toBe('inst_42');
+  });
+
+  it('should include requester userId when --subject user', async () => {
+    let requestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'xoxp-user-token', expiresAt: 1712345678 });
+    });
+
+    client.setArgv('connex', 'token', 'scl_abc123', '--subject', 'user');
+
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestBody.subject).toEqual({
+      type: 'user',
+      id: client.authConfig.userId,
+    });
+  });
+
+  it('should omit subject when no --subject flag is provided', async () => {
+    let requestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'xoxp-default', expiresAt: 1712345678 });
+    });
+
+    client.setArgv('connex', 'token', 'scl_abc123');
+
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestBody.subject).toBeUndefined();
   });
 
   it('should pass scopes in request body', async () => {
