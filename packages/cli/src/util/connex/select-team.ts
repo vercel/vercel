@@ -12,7 +12,13 @@ export async function selectConnexTeam(
 ): Promise<void> {
   const hasTeam = Boolean(client.config.currentTeam);
   const org = await selectOrg(client, message, hasTeam);
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  // Connex clients are team-owned; personal-scope selection is not supported.
+  if (org.type !== 'team') {
+    throw new Error(
+      'Connex requires a team. Re-run and select a team to continue.'
+    );
+  }
+  client.config.currentTeam = org.id;
   if (!hasTeam) {
     client.writeToConfigFile();
   }

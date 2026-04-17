@@ -291,6 +291,23 @@ describe('connex create', () => {
     );
   });
 
+  it('should error when user selects personal account instead of a team', async () => {
+    delete client.config.currentTeam;
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCodePromise = connex(client);
+
+    await expect(client.stderr).toOutput(
+      'Select the team where you want to create this client'
+    );
+    // Accept the default (personal account for non-northstar users).
+    client.stdin.write('\n');
+
+    expect(await exitCodePromise).toBe(1);
+    await expect(client.stderr).toOutput('Connex requires a team');
+    expect(writeConfigSpy).not.toHaveBeenCalled();
+  });
+
   it('should not rewrite config when team is already set', async () => {
     client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
       res.writeHead(302, {
