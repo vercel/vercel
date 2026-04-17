@@ -39,6 +39,7 @@ const ALL_EVALS: string[] = [
   'env/remove',
   'env/update',
   'init',
+  'link',
   'login-whoami',
   'login-not-logged-in',
   'marketplace/find-postgres-integration',
