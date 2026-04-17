@@ -1,5 +1,12 @@
 # @vercel/static-build
 
+## 2.9.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.1.18
+
 ## 2.9.17
 
 ### Patch Changes
