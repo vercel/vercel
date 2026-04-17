@@ -73,31 +73,17 @@ async function checkEntrypoint(
   return findAppOrHandler(content);
 }
 
-export async function getPyprojectEntrypoint(
-  workPath: string
+async function resolveModuleAttrEntrypoint(
+  workPath: string,
+  value: string
 ): Promise<PythonEntrypoint | null> {
-  const pyprojectData = await readConfigFile<{
-    project?: { scripts?: Record<string, unknown> };
-  }>(join(workPath, 'pyproject.toml'));
-  if (!pyprojectData) return null;
-
-  // If `pyproject.toml` has a [project.scripts] table and contains a script
-  // named "app", parse the value (format: "module:attr") to determine the
-  // module and map it to a file path.
-  const scripts = pyprojectData.project?.scripts as
-    | Record<string, unknown>
-    | undefined;
-  const appScript = scripts?.app;
-  if (typeof appScript !== 'string') return null;
-
   // Expect values like "package.module:app". Extract the module portion.
-  const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
+  const match = value.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
   if (!match) return null;
   const modulePath = match[1];
   const variableName = match[2];
   const relPath = modulePath.replace(/\./g, '/');
 
-  // Prefer an existing file match if present; otherwise fall back to "<module>.py".
   const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
   for (const candidate of candidates) {
     if (await fileExists(join(workPath, candidate))) {
@@ -105,6 +91,34 @@ export async function getPyprojectEntrypoint(
     }
   }
   return null;
+}
+
+export async function getPyprojectEntrypoint(
+  workPath: string
+): Promise<PythonEntrypoint | null> {
+  const pyprojectData = await readConfigFile<{
+    project?: { scripts?: Record<string, unknown> };
+    tool?: { vercel?: { entrypoint?: unknown } };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return null;
+
+  // Prefer `[tool.vercel] entrypoint = "module:attr"` if present.
+  const vercelEntrypoint = pyprojectData.tool?.vercel?.entrypoint;
+  if (typeof vercelEntrypoint === 'string') {
+    const resolved = await resolveModuleAttrEntrypoint(
+      workPath,
+      vercelEntrypoint
+    );
+    if (resolved) return resolved;
+  }
+
+  // Fall back to `[project.scripts] app = "module:attr"`.
+  const scripts = pyprojectData.project?.scripts as
+    | Record<string, unknown>
+    | undefined;
+  const appScript = scripts?.app;
+  if (typeof appScript !== 'string') return null;
+  return resolveModuleAttrEntrypoint(workPath, appScript);
 }
 
 async function findValidEntrypoint(
@@ -157,7 +171,7 @@ function makeDetectError(framework: string): NowBuildError {
   const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
   return new NowBuildError({
     code: `${framework!.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
-    message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
+    message: `No ${framework} entrypoint found. Set \`tool.vercel.entrypoint\` in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
     link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
     action: 'Learn More',
   });
