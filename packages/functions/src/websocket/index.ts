@@ -16,9 +16,14 @@ export function upgradeWebSocket(): WebSocket {
   const wss = new WebSocketServer({ noServer: true });
 
   let ws: WebSocket | undefined;
-  wss.handleUpgrade(req, socket, head, client => {
-    ws = client;
-  });
+  try {
+    wss.handleUpgrade(req, socket, head, client => {
+      ws = client;
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`WebSocket upgrade failed: ${message}`);
+  }
 
   if (!ws) {
     throw new Error('WebSocket upgrade failed');
