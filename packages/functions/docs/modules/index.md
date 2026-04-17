@@ -541,7 +541,7 @@ export const config = { matcher: '/api/users/:path*' };
 
 #### Defined in
 
-[packages/functions/src/websocket/index.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L6)
+[packages/functions/src/websocket/index.ts:4](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L4)
 
 ---
 
