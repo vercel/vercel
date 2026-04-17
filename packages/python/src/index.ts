@@ -71,6 +71,8 @@ import {
 
 export const version = -1;
 
+const COMMAND_CRON_ENTRYPOINT = '__vc_cron_command_entrypoint__.py';
+
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   projectDir: string;
@@ -223,6 +225,11 @@ export const build: BuildVX = async ({
   // When true, runtime dependency installation is disabled because
   // custom commands may install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
+  const cronCommand =
+    service?.type === 'cron' && typeof config?.command === 'string'
+      ? config.command
+      : undefined;
+  const isCommandCron = typeof cronCommand === 'string';
 
   debug(`workPath: ${workPath}`);
 
@@ -258,27 +265,36 @@ export const build: BuildVX = async ({
       ? config.handlerFunction
       : undefined;
 
-  detected =
-    (await detectPythonEntrypoint(
-      config.framework as PythonFramework,
-      workPath,
-      entrypoint
-        ? {
-            filePath: entrypoint,
-            // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
-            // For other services, handlerFunction is used as the entrypoint variable name.
-            varName:
-              service?.type === 'cron' ||
-              (service?.type === 'job' && service.trigger === 'schedule')
-                ? undefined
-                : handlerFunction,
-          }
-        : undefined,
-      service
-    )) ?? undefined;
+  if (isCommandCron) {
+    detected = {
+      entrypoint: {
+        entrypoint: COMMAND_CRON_ENTRYPOINT,
+        variableName: 'app',
+      },
+    };
+  } else {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+          ? {
+              filePath: entrypoint,
+              // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
+              // For other services, handlerFunction is used as the entrypoint variable name.
+              varName:
+                service?.type === 'cron' ||
+                (service?.type === 'job' && service.trigger === 'schedule')
+                  ? undefined
+                  : handlerFunction,
+            }
+          : undefined,
+        service
+      )) ?? undefined;
 
-  if (detected?.error && detected?.baseDir === undefined) {
-    throw detected?.error;
+    if (detected?.error && detected?.baseDir === undefined) {
+      throw detected?.error;
+    }
   }
 
   const entryDirectory =
@@ -364,7 +380,7 @@ export const build: BuildVX = async ({
   });
 
   // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
+  if (isPythonFramework(framework) || isCommandCron) {
     const {
       cliType,
       lockfileVersion,
@@ -499,7 +515,7 @@ export const build: BuildVX = async ({
     });
 
   // Run the project build command (if any) AFTER dependencies are installed.
-  if (isPythonFramework(framework)) {
+  if (isPythonFramework(framework) || isCommandCron) {
     const projectBuildCommand =
       config?.projectSettings?.buildCommand ??
       // fallback if provided directly on config (some callers set this)
@@ -525,7 +541,6 @@ export const build: BuildVX = async ({
       });
   }
 
-  // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
   const hookResult = await runFrameworkHook(framework, {
     pythonEnv,
     projectDir: join(workPath, entryDirectory),
@@ -534,9 +549,13 @@ export const build: BuildVX = async ({
     entrypoint,
     detected,
   });
+  const resolvedFromHook =
+    hookResult && 'entrypoint' in hookResult
+      ? hookResult.entrypoint
+      : undefined;
 
   // Collect the resolved entrypoint from detection or hook, preferring the hook.
-  const resolved = hookResult?.entrypoint ?? detected?.entrypoint;
+  const resolved = resolvedFromHook ?? detected?.entrypoint;
   if (!resolved && detected?.error) {
     throw detected?.error;
   }
@@ -618,21 +637,39 @@ export const build: BuildVX = async ({
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
 
-  const crons = await getServiceCrons({
-    service,
-    entrypoint,
-    rawEntrypoint,
-    handlerFunction,
-    pythonBin: getVenvPythonBin(venvPath),
-    env: pythonEnv,
-    workPath,
-  });
+  const variableName = resolved?.variableName ?? 'app';
 
-  // Build trampoline env line for cron routing.
-  // Injected into os.environ.update() in the Python trampoline source,
-  // not lambdaEnv, because the platform rejects env var names with
-  // leading underscores.
-  let cronEnvLine = '';
+  const crons = isCommandCron
+    ? undefined
+    : await getServiceCrons({
+        service,
+        entrypoint,
+        rawEntrypoint,
+        handlerFunction,
+        pythonBin: getVenvPythonBin(venvPath),
+        env: pythonEnv,
+        workPath,
+      });
+
+  const bootstrapEnvEntries = [
+    `  "__VC_HANDLER_MODULE_NAME": ${JSON.stringify(moduleName)}`,
+    `  "__VC_HANDLER_ENTRYPOINT": ${JSON.stringify(entrypointWithSuffix)}`,
+    `  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, ${JSON.stringify(
+      entrypointWithSuffix
+    )})`,
+    `  "__VC_HANDLER_VENDOR_DIR": ${JSON.stringify(vendorDir)}`,
+    `  "__VC_HANDLER_VARIABLE_NAME": ${JSON.stringify(variableName)}`,
+  ];
+  if (handlerFunction) {
+    bootstrapEnvEntries.push(
+      `  "__VC_HANDLER_FUNC_NAME": ${JSON.stringify(handlerFunction)}`
+    );
+  }
+  if (cronCommand) {
+    bootstrapEnvEntries.push(
+      `  "__VC_CRON_COMMAND": ${JSON.stringify(cronCommand)}`
+    );
+  }
   if (crons?.length) {
     // Single-quote the JSON so embedded double quotes don't need escaping
     // in the surrounding Python dict literal. Backslashes would be
@@ -640,10 +677,11 @@ export const build: BuildVX = async ({
     // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
     const json = JSON.stringify(buildCronRouteTable(crons));
     assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
-    cronEnvLine = `\n  "__VC_CRON_ROUTES": '${json}',`;
+    bootstrapEnvEntries.push(`  "__VC_CRON_ROUTES": '${json}'`);
   }
-
-  const variableName = resolved?.variableName ?? '';
+  const cronCommandCwdLine = cronCommand
+    ? '\nos.environ["__VC_CRON_COMMAND_CWD"] = _here\n'
+    : '';
 
   const runtimeTrampoline = `
 import importlib
@@ -655,12 +693,9 @@ import sys
 _here = os.path.dirname(__file__)
 
 os.environ.update({
-  "__VC_HANDLER_MODULE_NAME": "${moduleName}",
-  "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
-  "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${cronEnvLine}
+${bootstrapEnvEntries.join(',\n')}
 })
+${cronCommandCwdLine}
 
 _vendor_rel = '${vendorDir}'
 _vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
@@ -720,6 +755,13 @@ from vercel_runtime.vc_init import vc_handler
   };
 
   const files: Files = await glob('**', globOptions);
+  if (isCommandCron) {
+    // vc_init.py imports the declared entrypoint module before cron bootstrap.
+    // Command-backed crons ignore this file's contents, but the module must exist.
+    files[COMMAND_CRON_ENTRYPOINT] = new FileBlob({
+      data: '"""Synthetic entrypoint for command-backed cron services."""\n',
+    });
+  }
 
   // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
   // backend is in use. The CDN serves static assets; only the manifest is

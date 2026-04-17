@@ -604,6 +604,8 @@ export interface Service {
   subdomain?: string;
   /* scheduled job config */
   schedule?: string;
+  /* shell command executed by a command-backed cron service */
+  command?: string;
   /* optional handler for a schedule-triggered job in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker/job service config */
@@ -886,6 +888,11 @@ export interface ExperimentalServiceConfig {
   /* Scheduled job config */
   /** Cron schedule expression(s) (e.g., "0 0 * * *") */
   schedule?: string;
+  /**
+   * Shell command executed by a cron service.
+   * Currently supported for Python cron services only.
+   */
+  command?: string;
 
   /* Worker/job service config */
   topics?: ServiceTopics;

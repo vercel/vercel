@@ -1000,3 +1000,51 @@ describe('[vercel dev] Schedule-triggered job service', () => {
     }
   });
 });
+
+describe('[vercel dev] Command-backed cron service', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-cron-command',
+    '.results'
+  );
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] trigger command-backed cron service via proxy', async () => {
+    const dir = fixture('services-cron-command');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const cronRes = await nodeFetch(
+        `http://localhost:${port}/_svc/cron/crons`,
+        { method: 'POST' }
+      );
+      expect(cronRes.status).toBe(200);
+      const cronJson = await cronRes.json();
+      expect(cronJson).toHaveProperty('ok', true);
+
+      const cronResultPath = join(resultsDir, 'cron_result.json');
+      expect(await fs.pathExists(cronResultPath)).toBe(true);
+      const cronResult = await fs.readJson(cronResultPath);
+      expect(cronResult).toHaveProperty('executed', true);
+      expect(cronResult).toHaveProperty('mode', 'command');
+    } finally {
+      await dev.kill();
+    }
+  });
+});

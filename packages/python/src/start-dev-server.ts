@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join, delimiter, dirname, basename } from 'path';
+import { join, delimiter, dirname, basename, relative } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
@@ -30,6 +30,7 @@ import {
 } from './package-versions';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
+const COMMAND_CRON_DEV_ENTRYPOINT = '__vc_cron_command_entrypoint__.py';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -675,6 +676,28 @@ function createDevShim(
   }
 }
 
+function prepareCommandCronEntrypoint(
+  workPath: string,
+  serviceName: string | undefined
+): { entry: string; modulePath: string } {
+  const commandDir = serviceName
+    ? join(workPath, '.vercel', 'python', 'services', serviceName)
+    : join(workPath, '.vercel', 'python');
+  mkdirSync(commandDir, { recursive: true });
+
+  const entryAbs = join(commandDir, COMMAND_CRON_DEV_ENTRYPOINT);
+  writeFileSync(
+    entryAbs,
+    '"""Synthetic entrypoint for command-backed cron services."""\n',
+    'utf8'
+  );
+
+  return {
+    entry: relative(workPath, entryAbs).replace(/\\/g, '/'),
+    modulePath: COMMAND_CRON_DEV_ENTRYPOINT.replace(/\.py$/i, ''),
+  };
+}
+
 interface PythonRunner {
   command: string;
   args: string[];
@@ -769,58 +792,80 @@ export const startDevServer: StartDevServer = async opts => {
   installGlobalCleanupHandlers();
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
+  const cronCommand =
+    service?.type === 'cron' && typeof config?.command === 'string'
+      ? config.command
+      : undefined;
+  const isCommandCron = typeof cronCommand === 'string';
 
-  // For schedule-triggered job and worker services, use the raw entrypoint directly, because
-  // they don't export app/application so standard detection would skip them.
-  let resolved: PythonEntrypoint | undefined;
   const handlerFunction =
     typeof config?.handlerFunction === 'string'
       ? config.handlerFunction
       : undefined;
 
-  const detected = await detectPythonEntrypoint(
-    framework as PythonFramework,
-    workPath,
-    entrypoint
-      ? {
-          filePath: entrypoint,
-          // Schedule-triggered services create their own "app" wrapper dynamically.
-          // Other services use handlerFunction as the entrypoint variable name.
-          varName:
-            service?.type === 'cron' ||
-            (service?.type === 'job' && service.trigger === 'schedule')
-              ? undefined
-              : handlerFunction,
-        }
-      : undefined,
-    service
-  );
-  if (detected?.entrypoint) {
-    resolved = detected.entrypoint;
-  } else {
-    const hookResult = await runFrameworkHook(framework, {
-      pythonEnv: env,
-      projectDir: join(workPath, detected?.baseDir ?? ''),
+  let entry: string;
+  let variableName: string;
+  let modulePath: string;
+  if (isCommandCron) {
+    const commandEntrypoint = prepareCommandCronEntrypoint(
       workPath,
-      entrypoint,
-      detected: detected ?? undefined,
-    });
-    resolved = hookResult?.entrypoint;
-  }
-  if (!resolved) {
-    if (detected?.error) {
-      throw detected.error;
-    }
-    throw new NowBuildError({
-      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message:
-        'No Python entrypoint could be detected. Please specify an entrypoint file.',
-    });
-  }
-  const { entrypoint: entry, variableName } = resolved;
+      serviceName
+    );
+    entry = commandEntrypoint.entry;
+    variableName = 'app';
+    modulePath = commandEntrypoint.modulePath;
+  } else {
+    // For schedule-triggered job and worker services, use the raw entrypoint directly, because
+    // they don't export app/application so standard detection would skip them.
+    let resolved: PythonEntrypoint | undefined;
 
-  // Convert to module path, e.g. "src/app.py" -> "src.app"
-  const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
+    const detected = await detectPythonEntrypoint(
+      framework as PythonFramework,
+      workPath,
+      entrypoint
+        ? {
+            filePath: entrypoint,
+            // Schedule-triggered services create their own "app" wrapper dynamically.
+            // Other services use handlerFunction as the entrypoint variable name.
+            varName:
+              service?.type === 'cron' ||
+              (service?.type === 'job' && service.trigger === 'schedule')
+                ? undefined
+                : handlerFunction,
+          }
+        : undefined,
+      service
+    );
+    if (detected?.entrypoint) {
+      resolved = detected.entrypoint;
+    } else {
+      const hookResult = await runFrameworkHook(framework, {
+        pythonEnv: env,
+        projectDir: join(workPath, detected?.baseDir ?? ''),
+        workPath,
+        entrypoint,
+        detected: detected ?? undefined,
+      });
+      resolved =
+        hookResult && 'entrypoint' in hookResult
+          ? hookResult.entrypoint
+          : undefined;
+    }
+    if (!resolved) {
+      if (detected?.error) {
+        throw detected.error;
+      }
+      throw new NowBuildError({
+        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+        message:
+          'No Python entrypoint could be detected. Please specify an entrypoint file.',
+      });
+    }
+    entry = resolved.entrypoint;
+    variableName = resolved.variableName ?? 'app';
+    // Convert to module path, e.g. "src/app.py" -> "src.app"
+    modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
+  }
 
   // Track child process and listeners
   let childProcess: ChildProcess | null = null;
@@ -965,6 +1010,14 @@ export const startDevServer: StartDevServer = async opts => {
 
     const port = typeof meta.port === 'number' ? meta.port : await getPort();
     env.PORT = `${port}`;
+
+    if (handlerFunction) {
+      env.__VC_HANDLER_FUNC_NAME = handlerFunction;
+    }
+    if (cronCommand) {
+      env.__VC_CRON_COMMAND = cronCommand;
+      env.__VC_CRON_COMMAND_CWD = workPath;
+    }
 
     if (entry) {
       env.__VC_HANDLER_ENTRYPOINT_ABS = join(workPath, entry);

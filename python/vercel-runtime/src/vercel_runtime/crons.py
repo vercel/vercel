@@ -6,6 +6,7 @@ import importlib
 import inspect
 import json
 import os
+import subprocess
 import traceback
 from typing import TYPE_CHECKING, Any, cast
 
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
 type SyncCronHandler = Callable[[], None]
 type AsyncCronHandler = Callable[[], Coroutine[Any, Any, None]]
 type CronHandler = SyncCronHandler | AsyncCronHandler
+type ResolvedCronHandler = tuple[CronHandler, bool]
+type CronHandlerResolver = Callable[[str], ResolvedCronHandler | None]
 
 
 def is_cron_service() -> bool:
@@ -32,7 +35,17 @@ def is_cron_service() -> bool:
     return normalized_type == "job" and normalized_trigger == "schedule"
 
 
-def bootstrap_cron_service_app(module: ModuleType) -> ASGI:
+def bootstrap_cron_service_app(_module: ModuleType) -> ASGI:
+    command = _resolve_command()
+    if command is not None:
+        command_handler: ResolvedCronHandler = (
+            lambda: _run_command(command),
+            False,
+        )
+        return _make_cron_asgi_app(
+            lambda _path: command_handler,
+        )
+
     routes_json = os.environ.get("__VC_CRON_ROUTES")
     if not routes_json:
         raise RuntimeError(
@@ -40,6 +53,18 @@ def bootstrap_cron_service_app(module: ModuleType) -> ASGI:
             '"__VC_CRON_ROUTES" environment variable is not set'
         )
     return _bootstrap_multi_cron(routes_json)
+
+
+def _resolve_command() -> str | None:
+    command = os.environ.get("__VC_CRON_COMMAND")
+    if command is None or not command.strip():
+        return None
+    return command
+
+
+def _run_command(command: str) -> None:
+    cwd = os.environ.get("__VC_CRON_COMMAND_CWD") or os.getcwd()
+    subprocess.run(command, shell=True, check=True, cwd=cwd)
 
 
 def _bootstrap_multi_cron(routes_json: str) -> ASGI:
@@ -50,7 +75,7 @@ def _bootstrap_multi_cron(routes_json: str) -> ASGI:
     name (runs the module's ``if __name__ == "__main__"`` block).
     """
     raw: dict[str, str] = json.loads(routes_json)
-    route_table: dict[str, tuple[CronHandler, bool]] = {}
+    route_table: dict[str, ResolvedCronHandler] = {}
     for path, module_function in raw.items():
         if ":" in module_function:
             colon_idx = module_function.index(":")
@@ -85,13 +110,18 @@ def _bootstrap_multi_cron(routes_json: str) -> ASGI:
                 lambda ep=mod_file: run_entrypoint_as_main(ep),
                 False,
             )
-    return _make_multi_cron_asgi_app(route_table)
+    return _make_cron_asgi_app(
+        route_table.get,
+        not_found_error=lambda path: f"no cron handler for path: {path}",
+    )
 
 
-def _make_multi_cron_asgi_app(
-    routes: dict[str, tuple[CronHandler, bool]],
+def _make_cron_asgi_app(
+    resolve_handler: CronHandlerResolver,
+    *,
+    not_found_error: Callable[[str], str] | None = None,
 ) -> ASGI:
-    """ASGI app that dispatches to different handlers based on request path."""
+    """Build an ASGI app that resolves and runs cron handlers."""
 
     async def app(
         scope: dict[str, Any],
@@ -131,15 +161,18 @@ def _make_multi_cron_asgi_app(
                 return
 
         path = str(scope.get("path") or "/")
-        route = routes.get(path)
-        if route is None:
+        resolved = resolve_handler(path)
+        if resolved is None:
             await drain_body(receive)
-            await send_json_response(
-                send, 404, {"error": f"no cron handler for path: {path}"}
-            )
+            if not_found_error is None:
+                await send_json_response(send, 404, {"error": "not found"})
+            else:
+                await send_json_response(
+                    send, 404, {"error": not_found_error(path)}
+                )
             return
 
-        run_job, is_async = route
+        run_job, is_async = resolved
         await drain_body(receive)
 
         try:

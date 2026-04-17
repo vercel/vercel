@@ -2353,6 +2353,98 @@ describe('dynamic cron detection', () => {
   });
 });
 
+describe('command-backed cron services', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-command-cron-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('builds successfully with a command and synthetic cron entrypoint', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'print("cleanup")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "jobs"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: false },
+      config: { command: 'python jobs/cleanup.py --full' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup' },
+    });
+
+    const output = getBuildOutputV2Lambda(result);
+    const handler = output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('__VC_CRON_COMMAND');
+    expect(content).toContain('python jobs/cleanup.py --full');
+
+    const syntheticEntrypoint =
+      output.files?.['__vc_cron_command_entrypoint__.py'];
+    if (!syntheticEntrypoint || !('data' in syntheticEntrypoint)) {
+      throw new Error('synthetic cron entrypoint not found');
+    }
+    expect(syntheticEntrypoint.data.toString()).toContain(
+      'Synthetic entrypoint'
+    );
+  });
+
+  it('builds successfully for command-backed crons when a framework is configured', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'print("cleanup")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "jobs"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: false },
+      config: {
+        framework: 'django',
+        command: 'python jobs/cleanup.py --full',
+      },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup' },
+    });
+
+    const output = getBuildOutputV2Lambda(result);
+    const handler = output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain('__VC_CRON_COMMAND');
+
+    const syntheticEntrypoint =
+      output.files?.['__vc_cron_command_entrypoint__.py'];
+    if (!syntheticEntrypoint || !('data' in syntheticEntrypoint)) {
+      throw new Error('synthetic cron entrypoint not found');
+    }
+  });
+});
+
 describe('non-web services should not generate catch-all routes', () => {
   let mockWorkPath: string;
 

@@ -34,7 +34,6 @@ import {
   type PackageJson,
   glob,
   type Service,
-  getInternalServiceCronPath,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
   isQueueTriggeredService,
@@ -51,6 +50,7 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  getServiceCronPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -1240,14 +1240,8 @@ async function doBuild(
           typeof service.schedule === 'string' &&
           service.schedule !== '<dynamic>'
         ) {
-          const cronEntrypoint =
-            service.entrypoint || service.builder.src || 'index';
           synthesizedServiceCrons.push({
-            path: getInternalServiceCronPath(
-              service.name,
-              cronEntrypoint,
-              service.handlerFunction || 'cron'
-            ),
+            path: getServiceCronPath(service),
             schedule: service.schedule,
           });
         } else {

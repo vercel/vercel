@@ -409,6 +409,8 @@ export function validateServiceConfig(
   const configuredSubdomain = routingResult.routing?.subdomain;
   const hasRoutePrefix = typeof configuredRoutePrefix === 'string';
   const hasSubdomain = typeof configuredSubdomain === 'string';
+  const hasEntrypoint = typeof config.entrypoint === 'string';
+  const hasCommand = typeof config.command === 'string';
 
   if (hasSubdomain && !DNS_LABEL_RE.test(configuredSubdomain!)) {
     return {
@@ -488,6 +490,48 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if (hasCommand && serviceType !== 'cron') {
+    return {
+      code: 'INVALID_COMMAND_CONFIG',
+      message: `Service "${name}" cannot specify "command". Only cron services currently support "command".`,
+      serviceName: name,
+    };
+  }
+  if (hasCommand && hasEntrypoint) {
+    return {
+      code: 'CONFLICTING_COMMAND_ENTRYPOINT',
+      message: `Cron service "${name}" cannot specify both "entrypoint" and "command". Use exactly one.`,
+      serviceName: name,
+    };
+  }
+  if (hasCommand && !config.command!.trim()) {
+    return {
+      code: 'EMPTY_COMMAND',
+      message: `Cron service "${name}" has an empty "command". Provide a non-empty shell command.`,
+      serviceName: name,
+    };
+  }
+  if (hasCommand && config.framework) {
+    return {
+      code: 'INVALID_COMMAND_FRAMEWORK',
+      message: `Cron service "${name}" cannot specify "framework" when using "command". Specify "runtime": "python" instead.`,
+      serviceName: name,
+    };
+  }
+  if (hasCommand && config.builder) {
+    return {
+      code: 'INVALID_COMMAND_BUILDER',
+      message: `Cron service "${name}" cannot specify "builder" when using "command". Specify "runtime": "python" instead.`,
+      serviceName: name,
+    };
+  }
+  if (hasCommand && config.runtime !== 'python') {
+    return {
+      code: 'INVALID_COMMAND_RUNTIME',
+      message: `Cron service "${name}" using "command" is currently only supported with "runtime": "python".`,
+      serviceName: name,
+    };
+  }
   if (isWorkflowService && typeof config.entrypoint !== 'string') {
     return {
       code: 'MISSING_ENTRYPOINT',
@@ -548,16 +592,15 @@ export function validateServiceConfig(
 
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
-  const hasEntrypoint = Boolean(config.entrypoint);
 
-  if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
+  if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint && !hasCommand) {
     return {
       code: 'MISSING_SERVICE_CONFIG',
-      message: `Service "${name}" must specify "framework", "entrypoint", or both "builder"/"runtime" with "entrypoint".`,
+      message: `Service "${name}" must specify "framework", "entrypoint", or "command".`,
       serviceName: name,
     };
   }
-  if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+  if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint && !hasCommand) {
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
@@ -618,9 +661,11 @@ export async function resolveConfiguredService(
   const trigger =
     type === 'cron' ? 'schedule' : type === 'job' ? config.trigger : undefined;
   const rawEntrypoint = config.entrypoint;
+  const rawCommand = config.command;
+  const hasCommand = typeof rawCommand === 'string';
 
   const moduleAttrParsed =
-    typeof rawEntrypoint === 'string'
+    typeof rawEntrypoint === 'string' && !hasCommand
       ? parsePyModuleAttrEntrypoint(rawEntrypoint)
       : null;
   const routingResult = resolveServiceRoutingConfig(name, config);
@@ -662,23 +707,25 @@ export async function resolveConfiguredService(
       ? undefined
       : normalizedEntrypoint;
 
-  // Directory entrypoints define the service workspace directly.
-  if (entrypointIsDirectory && normalizedEntrypoint) {
-    workspace = normalizedEntrypoint;
-  } else {
-    // File entrypoints infer workspace from nearest runtime manifest.
-    const inferredWorkspace = await inferWorkspaceFromNearestManifest({
-      fs: serviceFs,
-      entrypoint: resolvedEntrypointFile,
-      runtime: inferredRuntime,
-    });
-    if (inferredWorkspace) {
-      workspace = inferredWorkspace;
-      if (resolvedEntrypointFile) {
-        resolvedEntrypointFile = toWorkspaceRelativeEntrypoint(
-          resolvedEntrypointFile,
-          inferredWorkspace
-        );
+  if (!hasCommand) {
+    // Directory entrypoints define the service workspace directly.
+    if (entrypointIsDirectory && normalizedEntrypoint) {
+      workspace = normalizedEntrypoint;
+    } else {
+      // File entrypoints infer workspace from nearest runtime manifest.
+      const inferredWorkspace = await inferWorkspaceFromNearestManifest({
+        fs: serviceFs,
+        entrypoint: resolvedEntrypointFile,
+        runtime: inferredRuntime,
+      });
+      if (inferredWorkspace) {
+        workspace = inferredWorkspace;
+        if (resolvedEntrypointFile) {
+          resolvedEntrypointFile = toWorkspaceRelativeEntrypoint(
+            resolvedEntrypointFile,
+            inferredWorkspace
+          );
+        }
       }
     }
   }
@@ -710,7 +757,15 @@ export async function resolveConfiguredService(
     ? frameworksBySlug.get(config.framework)
     : undefined;
 
-  if (config.builder) {
+  if (hasCommand) {
+    if (!inferredRuntime) {
+      throw new Error(
+        `Could not infer runtime for command-backed service "${name}".`
+      );
+    }
+    builderUse = getBuilderForRuntime(inferredRuntime);
+    builderSrc = '<detect>';
+  } else if (config.builder) {
     builderUse = config.builder;
     builderSrc =
       resolvedEntrypointFile ||
@@ -800,6 +855,9 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (hasCommand) {
+    builderConfig.command = rawCommand;
+  }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
   }
@@ -824,6 +882,7 @@ export async function resolveConfiguredService(
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,
+    command: rawCommand,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
     consumer,

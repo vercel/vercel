@@ -408,6 +408,11 @@ const serviceConfigSchema = {
           const: 'cron',
         },
         schedule: serviceScheduleSchema,
+        command: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 2048,
+        },
       },
     },
   ],

@@ -1542,6 +1542,93 @@ describe('detectServices', () => {
       });
     });
 
+    it('should detect a command-backed python cron service', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              runtime: 'python',
+              command: 'python cleanup.py --full',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'cleanup.py': 'print("cleanup")\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'cleanup',
+        type: 'cron',
+        runtime: 'python',
+        workspace: '.',
+        command: 'python cleanup.py --full',
+        schedule: '0 0 * * *',
+        builder: {
+          src: '<detect>',
+          use: '@vercel/python',
+          config: expect.objectContaining({
+            command: 'python cleanup.py --full',
+          }),
+        },
+      });
+      expect(result.routes.crons).toContainEqual({
+        src: '^/_svc/cleanup/crons/.*$',
+        dest: '/_svc/cleanup/index',
+        check: true,
+      });
+    });
+
+    it('should error when command-backed cron also specifies entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              runtime: 'python',
+              entrypoint: 'jobs/cleanup.py',
+              command: 'python cleanup.py',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'jobs/cleanup.py': 'print("cleanup")\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'CONFLICTING_COMMAND_ENTRYPOINT',
+        serviceName: 'cleanup',
+      });
+    });
+
+    it('should error when command-backed cron omits python runtime', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              command: 'python cleanup.py',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_COMMAND_RUNTIME',
+        serviceName: 'cleanup',
+      });
+    });
+
     it('should return error for a schedule-triggered job without schedule', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
