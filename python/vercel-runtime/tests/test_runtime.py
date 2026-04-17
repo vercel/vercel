@@ -825,6 +825,102 @@ class TestLogging(_RuntimeTestCase):
             self.assertIn("ValueError", decoded)
             self.assertIn("with traceback", decoded)
 
+    async def test_loguru_json_default(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("loguru_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/log-loguru")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            decoded = base64.b64decode(log.payload.message).decode()
+            parsed = json.loads(decoded)
+            self.assertEqual(parsed["record"]["message"], "loguru info message")
+            self.assertEqual(
+                parsed["record"]["extra"]["user"], {"id": 1, "username": "alice"}
+            )
+
+    async def test_structlog_json_default(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "structlog_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/log-structlog")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            decoded = base64.b64decode(log.payload.message).decode()
+            parsed = json.loads(decoded)
+            self.assertEqual(parsed["event"], "structlog info message")
+            self.assertEqual(parsed["user"], {"id": 1, "username": "alice"})
+
+    async def test_loguru_user_config_not_overridden(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "loguru_custom_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/log-loguru")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            decoded = base64.b64decode(log.payload.message).decode()
+            self.assertRaises(json.JSONDecodeError, json.loads, decoded)
+            self.assertIn("loguru info message", decoded)
+            self.assertIn("alice", decoded)
+
+    async def test_structlog_user_config_not_overridden(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "structlog_custom_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/log-structlog")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            decoded = base64.b64decode(log.payload.message).decode()
+            self.assertRaises(json.JSONDecodeError, json.loads, decoded)
+            self.assertIn("structlog info message", decoded)
+            self.assertIn("alice", decoded)
+
 
 class TestErrorPaths(_RuntimeTestCase):
     """Tests for error handling in vc_init.py."""

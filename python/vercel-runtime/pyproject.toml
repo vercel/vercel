@@ -28,10 +28,12 @@ build-backend = "uv_build"
 test = [
     "attrs~=25.3.0",
     "basedpyright~=1.37.0",
+    "loguru~=0.7",
     "mypy~=1.19.0",
     "pytest~=9.0.2",
     "pytest-cov~=7.0.0",
     "ruff~=0.15.1",
+    "structlog~=24.0",
 ]
 
 [tool.uv]
@@ -56,6 +58,10 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = ["django", "django.conf", "django.contrib.staticfiles.handlers", "django.utils.module_loading"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["loguru", "structlog", "structlog.*"]
 ignore_missing_imports = true
 
 [tool.basedpyright]
