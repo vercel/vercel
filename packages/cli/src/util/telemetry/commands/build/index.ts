@@ -42,12 +42,6 @@ export class BuildTelemetryClient
     }
   }
 
-  trackCliFlagUnstablePrewarm(flag: boolean | undefined) {
-    if (flag) {
-      this.trackCliFlag('unstable-prewarm');
-    }
-  }
-
   trackCliOptionId(id: string | undefined) {
     if (id) {
       this.trackCliOption({

@@ -170,20 +170,14 @@ export interface BuildsManifest {
 type BuildClient = Pick<Client, 'localConfigPath' | 'nonInteractive'>;
 
 interface PrewarmBuildInput {
-  // Optional original argv for callers that want builds.json to preserve the
-  // exact command line used by the non-prewarmed path.
-  argv?: string[];
   cwd: string;
-  deploymentId?: string;
-  env?: Record<string, string>;
-  outputDir?: string;
+  env: Record<string, string>;
+  outputDir: string;
   // Intentionally matches the `.vercel/project.json` shape used by `vc pull`
   // and build-container's `linkProject()` helper.
   project: ProjectLinkAndSettings;
-  // Repo-link subdirectory, distinct from `project.settings.rootDirectory`.
-  projectRootDirectory?: string;
-  standalone?: boolean;
-  target?: string;
+  standalone: boolean;
+  target: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -198,20 +192,39 @@ function assertOptionalString(value: unknown, key: string): void {
   }
 }
 
-function assertOptionalBoolean(value: unknown, key: string): void {
-  if (value !== undefined && typeof value !== 'boolean') {
+function assertString(value: unknown, key: string): asserts value is string {
+  if (typeof value !== 'string') {
     throw new Error(
-      `[prewarm] Invalid field "${key}" (expected boolean if provided)`
+      `[prewarm] Missing or invalid field "${key}" (expected string)`
     );
   }
 }
 
-function parsePrewarmEnv(value: unknown): Record<string, string> | undefined {
-  if (value === undefined) {
-    return undefined;
+function assertNonEmptyString(
+  value: unknown,
+  key: string
+): asserts value is string {
+  assertString(value, key);
+  if (value.length === 0) {
+    throw new Error(
+      `[prewarm] Missing or invalid field "${key}" (expected non-empty string)`
+    );
   }
+}
+
+function assertBoolean(value: unknown, key: string): asserts value is boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error(
+      `[prewarm] Missing or invalid field "${key}" (expected boolean)`
+    );
+  }
+}
+
+function parsePrewarmEnv(value: unknown): Record<string, string> {
   if (!isRecord(value)) {
-    throw new Error('[prewarm] Invalid field "env" (expected object)');
+    throw new Error(
+      '[prewarm] Missing or invalid field "env" (expected object)'
+    );
   }
 
   for (const [key, envValue] of Object.entries(value)) {
@@ -221,17 +234,6 @@ function parsePrewarmEnv(value: unknown): Record<string, string> | undefined {
   }
 
   return value as Record<string, string>;
-}
-
-function parsePrewarmArgv(value: unknown): string[] | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (!Array.isArray(value) || !value.every(arg => typeof arg === 'string')) {
-    throw new Error('[prewarm] Invalid field "argv" (expected string array)');
-  }
-
-  return value;
 }
 
 function parsePrewarmBuildInput(raw: string): PrewarmBuildInput {
@@ -246,53 +248,33 @@ function parsePrewarmBuildInput(raw: string): PrewarmBuildInput {
     throw new Error(`[prewarm] Expected JSON object, got ${typeof json}`);
   }
 
-  if (typeof json.cwd !== 'string') {
-    throw new Error(
-      '[prewarm] Missing or invalid field "cwd" (expected string)'
-    );
-  }
+  const { cwd, env, outputDir, project, standalone, target } = json;
 
-  if (!isRecord(json.project)) {
+  assertNonEmptyString(cwd, 'cwd');
+  if (!isRecord(project)) {
     throw new Error(
       '[prewarm] Missing or invalid field "project" (expected object)'
     );
   }
 
-  if (!isRecord(json.project.settings)) {
+  if (!isRecord(project.settings)) {
     throw new Error(
       '[prewarm] Missing or invalid field "project.settings" (expected object)'
     );
   }
 
-  assertOptionalString(json.outputDir, 'outputDir');
-  assertOptionalString(json.projectRootDirectory, 'projectRootDirectory');
-  assertOptionalString(json.target, 'target');
-  assertOptionalString(json.deploymentId, 'deploymentId');
-  assertOptionalBoolean(json.standalone, 'standalone');
-  assertOptionalString(json.project.projectId, 'project.projectId');
-  assertOptionalString(json.project.orgId, 'project.orgId');
-  assertOptionalString(json.project.projectName, 'project.projectName');
-
-  const deploymentId =
-    typeof json.deploymentId === 'string' ? json.deploymentId : undefined;
-  const outputDir =
-    typeof json.outputDir === 'string' ? json.outputDir : undefined;
-  const projectRootDirectory =
-    typeof json.projectRootDirectory === 'string'
-      ? json.projectRootDirectory
-      : undefined;
-  const standalone =
-    typeof json.standalone === 'boolean' ? json.standalone : undefined;
-  const target = typeof json.target === 'string' ? json.target : undefined;
+  assertNonEmptyString(outputDir, 'outputDir');
+  assertNonEmptyString(target, 'target');
+  assertBoolean(standalone, 'standalone');
+  assertOptionalString(project.projectId, 'project.projectId');
+  assertOptionalString(project.orgId, 'project.orgId');
+  assertOptionalString(project.projectName, 'project.projectName');
 
   return {
-    argv: parsePrewarmArgv(json.argv),
-    cwd: json.cwd,
-    deploymentId,
-    env: parsePrewarmEnv(json.env),
+    cwd,
+    env: parsePrewarmEnv(env),
     outputDir,
-    project: json.project as PrewarmBuildInput['project'],
-    projectRootDirectory,
+    project: project as PrewarmBuildInput['project'],
     standalone,
     target,
   };
@@ -313,44 +295,10 @@ async function readStdin(stdin: Client['stdin']): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function getBuildArgv(
-  argv: string[],
-  prewarmBuildInput: PrewarmBuildInput | undefined
-): string[] {
-  const explicitArgv = prewarmBuildInput?.argv;
-  const effectiveArgv = (explicitArgv ?? argv).filter(
+function getBuildArgv(argv: string[]): string[] {
+  return argv.filter(
     arg => arg !== '--unstable-prewarm' && arg !== '--unstable-prewarm=true'
   );
-
-  if (!prewarmBuildInput || explicitArgv) {
-    return effectiveArgv;
-  }
-
-  const synthesizedArgv = [...effectiveArgv];
-  const hasFlag = (name: string) => synthesizedArgv.includes(name);
-
-  if (prewarmBuildInput.outputDir && !hasFlag('--output')) {
-    synthesizedArgv.push('--output', prewarmBuildInput.outputDir);
-  }
-
-  if (prewarmBuildInput.deploymentId && !hasFlag('--id')) {
-    synthesizedArgv.push('--id', prewarmBuildInput.deploymentId);
-  }
-
-  if (prewarmBuildInput.standalone && !hasFlag('--standalone')) {
-    synthesizedArgv.push('--standalone');
-  }
-
-  if (
-    prewarmBuildInput.target &&
-    prewarmBuildInput.target !== 'preview' &&
-    !hasFlag('--target') &&
-    !hasFlag('--prod')
-  ) {
-    synthesizedArgv.push('--target', prewarmBuildInput.target);
-  }
-
-  return synthesizedArgv;
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -393,9 +341,6 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
-    telemetryClient.trackCliFlagUnstablePrewarm(
-      parsedArgs.flags['--unstable-prewarm']
-    );
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
   } catch (error) {
     printError(error);
@@ -409,6 +354,27 @@ export default async function main(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--unstable-prewarm']) {
+    const conflictingFlags = [
+      ['--output', parsedArgs.flags['--output']],
+      ['--target', parsedArgs.flags['--target']],
+      ['--prod', parsedArgs.flags['--prod']],
+      ['--id', parsedArgs.flags['--id']],
+      ['--standalone', parsedArgs.flags['--standalone']],
+    ]
+      .filter(([, value]) => Boolean(value))
+      .map(([flag]) => cmd(flag));
+
+    if (conflictingFlags.length > 0) {
+      output.error(
+        `[prewarm] ${cmd(
+          `${cli.packageName} build --unstable-prewarm`
+        )} does not accept ${conflictingFlags.join(
+          ', '
+        )}. Pass build input on stdin instead.`
+      );
+      return 1;
+    }
+
     try {
       prewarmBuildInput = parsePrewarmBuildInput(await readStdin(client.stdin));
     } catch (error) {
@@ -437,6 +403,7 @@ export default async function main(client: Client): Promise<number> {
 
   // Check for deprecated env var
   const hasDeprecatedEnvVar =
+    !prewarmBuildInput &&
     process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
   if (hasDeprecatedEnvVar) {
     output.warn(
@@ -446,7 +413,7 @@ export default async function main(client: Client): Promise<number> {
 
   // Use flag first, fall back to deprecated env var
   const standalone = prewarmBuildInput
-    ? Boolean(prewarmBuildInput.standalone)
+    ? prewarmBuildInput.standalone
     : Boolean(parsedArgs.flags['--standalone'] || hasDeprecatedEnvVar);
 
   try {
@@ -457,7 +424,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   let link = null;
-  let projectRootDirectory = prewarmBuildInput?.projectRootDirectory ?? '';
+  let projectRootDirectory = '';
   let project = prewarmBuildInput?.project;
 
   if (!prewarmBuildInput) {
@@ -559,7 +526,7 @@ export default async function main(client: Client): Promise<number> {
 
   // Delete output directory from potential previous build
   const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
-  const outputDir = prewarmBuildInput?.outputDir
+  const outputDir = prewarmBuildInput
     ? resolve(prewarmBuildInput.outputDir)
     : parsedArgs.flags['--output']
       ? resolve(parsedArgs.flags['--output'])
@@ -580,16 +547,17 @@ export default async function main(client: Client): Promise<number> {
   const buildsJson: BuildsManifest = {
     '//': 'This file was generated by the `vercel build` command. It is not part of the Build Output API.',
     target,
-    argv: scrubArgv(getBuildArgv(client.argv, prewarmBuildInput)),
+    argv: scrubArgv(getBuildArgv(client.argv)),
     cliVersion: cliPkg.version,
   };
 
-  const deploymentId =
-    prewarmBuildInput?.deploymentId || parsedArgs.flags['--id'];
+  const deploymentId = prewarmBuildInput ? undefined : parsedArgs.flags['--id'];
 
-  // When --id is provided, system env vars are fetched from the deployment,
-  // so the warning about missing system env vars does not apply.
+  // When --id is provided, system env vars are fetched from the deployment.
+  // Prewarm mode also bypasses this warning because the parent process owns
+  // environment handoff via stdin.
   if (
+    !prewarmBuildInput &&
     !process.env.VERCEL_BUILD_IMAGE &&
     !deploymentId &&
     !client.nonInteractive
@@ -603,7 +571,7 @@ export default async function main(client: Client): Promise<number> {
   try {
     const loadEnvSpan = rootSpan.child('vc.loadEnv');
     try {
-      if (prewarmBuildInput?.env) {
+      if (prewarmBuildInput) {
         for (const [key, value] of Object.entries(prewarmBuildInput.env)) {
           envToUnset.add(key);
           process.env[key] = value;
