@@ -210,13 +210,13 @@ function printTokenResult(
     ['Expires', formatExpiresAt(data.expiresAt)],
   ];
   if (data.installationId) {
-    rows.push(['Installation', data.installationId]);
+    rows.push(['Installation ID', data.installationId]);
   }
   if (data.tenantId) {
-    rows.push(['Tenant', data.tenantId]);
+    rows.push(['Tenant ID', data.tenantId]);
   }
   if (data.externalSubject) {
-    rows.push(['Subject', data.externalSubject]);
+    rows.push(['External ID', data.externalSubject]);
   }
   if (data.name) {
     rows.push(['Name', data.name]);

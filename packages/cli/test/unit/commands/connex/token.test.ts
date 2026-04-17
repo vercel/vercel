@@ -49,7 +49,9 @@ describe('connex token', () => {
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(0);
-    await expect(client.stdout).toOutput('Token         xoxb-test-token-123');
+    await expect(client.stdout).toOutput(
+      `${'Token'.padEnd(15)}  xoxb-test-token-123`
+    );
   });
 
   it('should output JSON when --format=json is used', async () => {
