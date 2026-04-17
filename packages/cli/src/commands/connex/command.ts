@@ -38,65 +38,17 @@ export const createSubcommand = {
   ],
 } as const;
 
-export const listSubcommand = {
-  name: 'list',
-  aliases: ['ls'],
-  description: 'List Connex clients for the current team',
-  arguments: [],
-  options: [
-    {
-      name: 'limit',
-      shorthand: null,
-      type: Number,
-      argument: 'COUNT',
-      deprecated: false,
-      description: 'Number of clients to return per page',
-    },
-    {
-      name: 'next',
-      shorthand: null,
-      type: String,
-      argument: 'CURSOR',
-      deprecated: false,
-      description: 'Cursor for the next page of results',
-    },
-    formatOption,
-  ],
-  examples: [
-    {
-      name: 'List Connex clients for the current team',
-      value: `${packageName} connex list`,
-    },
-    {
-      name: 'Limit the number of results',
-      value: `${packageName} connex list --limit 10`,
-    },
-    {
-      name: 'Fetch the next page of results',
-      value: `${packageName} connex list --next <cursor>`,
-    },
-    {
-      name: 'Output as JSON',
-      value: `${packageName} connex list --format=json`,
-    },
-  ],
-} as const;
-
 export const connexCommand = {
   name: 'connex',
   aliases: [],
   description: 'Manage Vercel Connect clients',
   arguments: [],
   options: [],
-  subcommands: [createSubcommand, listSubcommand],
+  subcommands: [createSubcommand],
   examples: [
     {
       name: 'Create a Slack app',
       value: `${packageName} connex create slack`,
-    },
-    {
-      name: 'List Connex clients on the current team',
-      value: `${packageName} connex list`,
     },
   ],
 } as const;
