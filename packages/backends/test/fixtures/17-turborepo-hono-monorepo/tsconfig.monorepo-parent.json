@@ -1,0 +1,14 @@
+{
+  // Monorepo-wide path aliases + Hono JSX (apps/api/tsconfig.json extends this file).
+  "extends": "./tsconfig.monorepo-root.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/api/lib/*"],
+      "@monorepo-parent-echo/*": ["packages/echo-with-dep/src/*"]
+    }
+  }
+}

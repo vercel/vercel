@@ -62,7 +62,7 @@ def handle_queue_callback(
             transport_options if isinstance(transport_options, dict) else {},
         )
 
-        payload, delivery_count, created_at, ticket = queue_callback.receive_message_by_id(
+        payload, delivery_count, created_at, receipt_handle = queue_callback.receive_message_by_id(
             queue_name,
             consumer_group,
             message_id,
@@ -74,7 +74,7 @@ def handle_queue_callback(
             queue_name,
             consumer_group,
             message_id,
-            ticket,
+            receipt_handle,
             visibility_timeout_seconds=cfg.visibility_timeout_seconds,
             refresh_interval_seconds=cfg.visibility_refresh_interval_seconds,
             timeout=cfg.timeout,
@@ -86,7 +86,7 @@ def handle_queue_callback(
         timeout_seconds = outcome.get("timeoutSeconds")
 
         # Ack or delay
-        if ticket:
+        if receipt_handle:
             if timeout_seconds is not None:
                 if extender is not None:
                     extender.finalize(
@@ -94,7 +94,7 @@ def handle_queue_callback(
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             int(timeout_seconds),
                             timeout=cfg.timeout,
                         ),
@@ -104,7 +104,7 @@ def handle_queue_callback(
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         int(timeout_seconds),
                         timeout=cfg.timeout,
                     )
@@ -115,7 +115,7 @@ def handle_queue_callback(
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             timeout=cfg.timeout,
                         ),
                     )
@@ -124,7 +124,7 @@ def handle_queue_callback(
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         timeout=cfg.timeout,
                     )
 

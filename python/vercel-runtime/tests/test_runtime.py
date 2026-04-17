@@ -486,7 +486,9 @@ class TestCronService(_RuntimeTestCase):
         ep_abs, ep_rel, mod = _make_entrypoint(
             "cron_dunder_main.py", self.tmp_path
         )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
         marker_path = self.tmp_path / "cron-auth.marker"
+        routes = json.dumps({cron_path: mod})
         async with _run_runtime(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
@@ -496,6 +498,7 @@ class TestCronService(_RuntimeTestCase):
                 "VERCEL_SERVICE_TYPE": "cron",
                 "CRON_SECRET": "super-secret",
                 "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
             },
         ):
             ss = await self.n1.wait_for_message(
@@ -503,13 +506,13 @@ class TestCronService(_RuntimeTestCase):
             )
             port = ss.payload.http_port
 
-            resp = await _http_get(port, "/run")
+            resp = await _http_get(port, cron_path)
             self.assertEqual(resp.status, 401)
             self.assertEqual(resp.read().decode(), '{"error":"unauthorized"}')
 
             resp = await _http_get(
                 port,
-                "/run",
+                cron_path,
                 headers={"authorization": "Bearer super-secret"},
             )
             self.assertEqual(resp.status, 200)
@@ -523,7 +526,9 @@ class TestCronService(_RuntimeTestCase):
         ep_abs, ep_rel, mod = _make_entrypoint(
             "cron_dunder_main.py", self.tmp_path
         )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
         marker_path = self.tmp_path / "cron-dunder-main.marker"
+        routes = json.dumps({cron_path: mod})
         async with _run_runtime(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
@@ -532,6 +537,7 @@ class TestCronService(_RuntimeTestCase):
             extra_env={
                 "VERCEL_SERVICE_TYPE": "cron",
                 "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
             },
         ):
             ss = await self.n1.wait_for_message(
@@ -539,7 +545,39 @@ class TestCronService(_RuntimeTestCase):
             )
             port = ss.payload.http_port
 
-            resp = await _http_get(port, "/run")
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_dunder_main_entrypoint_for_schedule_job_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
+        marker_path = self.tmp_path / "schedule-job-dunder-main.marker"
+        routes = json.dumps({cron_path: mod})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "job",
+                "VERCEL_SERVICE_TRIGGER": "schedule",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), '{"ok":true}')
             self.assertTrue(marker_path.exists())
@@ -552,7 +590,9 @@ class TestCronService(_RuntimeTestCase):
             "cron_sync_handler.py",
             self.tmp_path,
         )
+        cron_path = "/_svc/cleanup/crons/cron_sync_handler/sync_handler"
         marker_path = self.tmp_path / "cron-sync-handler.marker"
+        routes = json.dumps({cron_path: f"{mod}:sync_handler"})
         async with _run_runtime(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
@@ -561,7 +601,7 @@ class TestCronService(_RuntimeTestCase):
             extra_env={
                 "VERCEL_SERVICE_TYPE": "cron",
                 "CRON_MARKER_FILE": str(marker_path),
-                "__VC_HANDLER_FUNC_NAME": "sync_handler",
+                "__VC_CRON_ROUTES": routes,
             },
         ):
             ss = await self.n1.wait_for_message(
@@ -570,7 +610,7 @@ class TestCronService(_RuntimeTestCase):
             )
             port = ss.payload.http_port
 
-            resp = await _http_get(port, "/run")
+            resp = await _http_get(port, cron_path)
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), '{"ok":true}')
             self.assertTrue(marker_path.exists())
@@ -583,7 +623,9 @@ class TestCronService(_RuntimeTestCase):
             "cron_async_handler.py",
             self.tmp_path,
         )
+        cron_path = "/_svc/cleanup/crons/cron_async_handler/async_handler"
         marker_path = self.tmp_path / "cron-async-handler.marker"
+        routes = json.dumps({cron_path: f"{mod}:async_handler"})
         async with _run_runtime(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
@@ -592,7 +634,7 @@ class TestCronService(_RuntimeTestCase):
             extra_env={
                 "VERCEL_SERVICE_TYPE": "cron",
                 "CRON_MARKER_FILE": str(marker_path),
-                "__VC_HANDLER_FUNC_NAME": "async_handler",
+                "__VC_CRON_ROUTES": routes,
             },
         ):
             ss = await self.n1.wait_for_message(
@@ -601,11 +643,122 @@ class TestCronService(_RuntimeTestCase):
             )
             port = ss.payload.http_port
 
-            resp = await _http_get(port, "/run")
+            resp = await _http_get(port, cron_path)
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), '{"ok":true}')
             self.assertTrue(marker_path.exists())
             self.assertEqual(marker_path.read_text(), "ran-async")
+
+    async def test_multi_cron_routes_dispatches_by_path(self) -> None:
+        # Copy both fixture modules to tmp_path so importlib can find them
+        ep_abs_a, ep_rel_a, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        _make_entrypoint("cron_multi_handler_b.py", self.tmp_path)
+        marker_a = self.tmp_path / "multi-a.marker"
+        marker_b = self.tmp_path / "multi-b.marker"
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+            "/_svc/svc/crons/b/handler_b": "cron_multi_handler_b:handler_b",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs_a,
+            entrypoint_rel=ep_rel_a,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE_A": str(marker_a),
+                "CRON_MARKER_FILE_B": str(marker_b),
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Trigger handler A
+            resp = await _http_post(port, "/_svc/svc/crons/a/handler_a")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker_a.read_text(), "ran-a")
+            self.assertFalse(marker_b.exists())
+
+            # Trigger handler B
+            resp = await _http_post(port, "/_svc/svc/crons/b/handler_b")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker_b.read_text(), "ran-b")
+
+    async def test_multi_cron_routes_returns_404_for_unknown_path(self) -> None:
+        ep_abs, ep_rel, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_post(port, "/unknown/path")
+            self.assertEqual(resp.status, 404)
+
+    async def test_multi_cron_routes_enforces_cron_secret(self) -> None:
+        ep_abs, ep_rel, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        marker = self.tmp_path / "multi-auth.marker"
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE_A": str(marker),
+                "CRON_SECRET": "test-secret",
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # No auth header -> 401
+            resp = await _http_post(port, "/_svc/svc/crons/a/handler_a")
+            self.assertEqual(resp.status, 401)
+            resp.read()
+            self.assertFalse(marker.exists())
+
+            # Correct auth header -> 200
+            resp = await _http_post(
+                port,
+                "/_svc/svc/crons/a/handler_a",
+                headers={"Authorization": "Bearer test-secret"},
+            )
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker.read_text(), "ran-a")
 
 
 class TestLogging(_RuntimeTestCase):

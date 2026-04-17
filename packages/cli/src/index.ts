@@ -41,6 +41,8 @@ import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
+import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
+import { tryOpenApiFallback } from './util/openapi';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -174,6 +176,8 @@ class InMemoryReporter implements Reporter {
 const main = async () => {
   const traceReporter = new InMemoryReporter();
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
+  const isTelemetryFlushCommand =
+    process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
 
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -181,10 +185,8 @@ const main = async () => {
     process.stdin.isTTY = true;
   }
 
-  let parsedArgs;
-
-  try {
-    parsedArgs = parseArguments(
+  const parseInitialArgs = () =>
+    parseArguments(
       process.argv,
       {
         '--version': Boolean,
@@ -193,6 +195,11 @@ const main = async () => {
       },
       { permissive: true }
     );
+
+  let parsedArgs: ReturnType<typeof parseInitialArgs>;
+
+  try {
+    parsedArgs = parseInitialArgs();
     const isDebugging = parsedArgs.flags['--debug'];
     const isNoColor = parsedArgs.flags['--no-color'];
     output.initialize({
@@ -331,6 +338,16 @@ const main = async () => {
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     config: config.telemetry,
+    cliDevice: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-device.json'),
+        },
+    cliSession: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+        },
   });
 
   checkTelemetryStatus({
@@ -350,6 +367,8 @@ const main = async () => {
   });
 
   const { isAgent, agent: detectedAgent } = await determineAgent();
+  telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
+  telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
   telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
@@ -367,6 +386,110 @@ const main = async () => {
   telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
   telemetry.trackCliOptionApi(parsedArgs.flags['--api']);
 
+  let earlyGetUserPromise: Promise<User | undefined> | undefined;
+  let telemetrySaved = false;
+
+  const getStringProperty = (
+    value: unknown,
+    key: string
+  ): string | undefined => {
+    if (typeof value === 'object' && value !== null && key in value) {
+      const property = (value as Record<string, unknown>)[key];
+      if (typeof property === 'string') {
+        return property;
+      }
+    }
+
+    return undefined;
+  };
+
+  const getNumberProperty = (
+    value: unknown,
+    key: string
+  ): number | undefined => {
+    if (typeof value === 'object' && value !== null && key in value) {
+      const property = (value as Record<string, unknown>)[key];
+      if (typeof property === 'number') {
+        return property;
+      }
+    }
+
+    return undefined;
+  };
+
+  const trackAgenticErrorTelemetry = (err: unknown) => {
+    if (!isAgent) {
+      return;
+    }
+
+    telemetry.trackErrorStatus(getNumberProperty(err, 'status'));
+    telemetry.trackErrorCode(getStringProperty(err, 'code'));
+    telemetry.trackErrorSlug(getStringProperty(err, 'slug'));
+    telemetry.trackErrorAction(getStringProperty(err, 'action'));
+
+    const serverMessage =
+      getStringProperty(err, 'serverMessage') ??
+      (isError(err) ? err.message : undefined);
+    telemetry.trackErrorServerMessage(serverMessage);
+  };
+
+  const saveTelemetry = async () => {
+    if (telemetrySaved) {
+      return;
+    }
+
+    const postCommandSpan = rootSpan.child('vc.postCommand');
+
+    telemetryEventStore.updateTeamId(
+      client?.config.currentTeam ?? config.currentTeam
+    );
+    telemetryEventStore.updateUserId(
+      client?.authConfig.userId ?? authConfig.userId
+    );
+    if (!telemetryEventStore.hasUserId) {
+      const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
+      try {
+        const user = await earlyGetUserPromise;
+        if (user) {
+          telemetryEventStore.updateUserId(user.id);
+        }
+      } catch {
+        // best-effort for telemetry
+      } finally {
+        getUserSpan.stop();
+      }
+    }
+
+    try {
+      const envProjectId = getPlatformEnv('PROJECT_ID');
+      if (envProjectId) {
+        telemetryEventStore.updateProjectId(envProjectId);
+      } else {
+        const cwdForProjectId =
+          client?.cwd ||
+          (typeof parsedArgs.flags['--cwd'] === 'string'
+            ? parsedArgs.flags['--cwd']
+            : process.cwd());
+        const link = await getLinkFromDir(getVercelDirectory(cwdForProjectId));
+        if (link) {
+          telemetryEventStore.updateProjectId(link.projectId);
+        }
+      }
+    } catch {
+      // best-effort for telemetry — project may not be linked
+    }
+    telemetry.trackProjectId(telemetryEventStore.currentProjectId);
+
+    await telemetryEventStore.save();
+    postCommandSpan.stop();
+    telemetrySaved = true;
+  };
+
+  const finishWithExitCode = async (code: number) => {
+    await saveTelemetry();
+    return code;
+  };
+
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];
   } else if (config && config.api) {
@@ -377,7 +500,7 @@ const main = async () => {
     new URL(apiUrl);
   } catch (_err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
-    return 1;
+    return finishWithExitCode(1);
   }
 
   // Shared API `Client` instance for all sub-commands to utilize.
@@ -460,6 +583,27 @@ const main = async () => {
       output.debug(
         'user supplied a possible target for deployment or an extension'
       );
+      if (
+        process.env.VERCEL_AUTO_API &&
+        (await matchesCliApiTag(targetOrSubcommand))
+      ) {
+        output.debug(
+          `first token "${targetOrSubcommand}" matches an OpenAPI tag; routing to api`
+        );
+        const tag = targetOrSubcommand;
+        const result = await tryOpenApiFallback(
+          client,
+          parsedArgs.args.slice(3),
+          async () => tag
+        );
+        return finishWithExitCode(result ?? 1);
+      } else if (targetPathExists) {
+        subcommand = 'deploy';
+        userSuppliedSubCommand = targetOrSubcommand;
+        output.debug(
+          `first token "${targetOrSubcommand}" is an existing path; routing to deploy`
+        );
+      }
     }
   } else {
     output.debug('user supplied no target, defaulting to deploy');
@@ -525,10 +669,11 @@ const main = async () => {
       try {
         const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
-        if (result !== 0) return result;
+        if (result !== 0) return finishWithExitCode(result);
       } catch (error) {
         printError(error);
-        return 1;
+        trackAgenticErrorTelemetry(error);
+        return finishWithExitCode(1);
       }
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
@@ -538,10 +683,11 @@ const main = async () => {
       output.log('No existing credentials found. Starting login flow...');
       try {
         const result = await login(client, { shouldParseArgs: false });
-        if (result !== 0) return result;
+        if (result !== 0) return finishWithExitCode(result);
       } catch (error) {
         printError(error);
-        return 1;
+        trackAgenticErrorTelemetry(error);
+        return finishWithExitCode(1);
       }
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
@@ -552,7 +698,7 @@ const main = async () => {
           `${getCommandName('login')} or pass ${param('--token')}`,
         link: 'https://err.sh/vercel/no-credentials-found',
       });
-      return 1;
+      return finishWithExitCode(1);
     }
   }
 
@@ -567,7 +713,7 @@ const main = async () => {
       link: 'https://err.sh/vercel/no-token-allowed',
     });
 
-    return 1;
+    return finishWithExitCode(1);
   }
 
   if (typeof parsedArgs.flags['--token'] === 'string') {
@@ -579,7 +725,7 @@ const main = async () => {
         link: 'https://err.sh/vercel/missing-token-value',
       });
 
-      return 1;
+      return finishWithExitCode(1);
     }
 
     const invalid = token.match(/(\W)/g);
@@ -594,7 +740,7 @@ const main = async () => {
         link: 'https://err.sh/vercel/invalid-token-value',
       });
 
-      return 1;
+      return finishWithExitCode(1);
     }
 
     client.authConfig = { token, skipWrite: true, tokenSource };
@@ -624,8 +770,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'build' &&
-    targetCommand !== 'sandbox' &&
-    !(targetCommand === 'teams' && subSubCommand !== 'invite')
+    targetCommand !== 'sandbox'
   ) {
     let user = null;
 
@@ -643,19 +788,21 @@ const main = async () => {
           link: 'https://err.sh/vercel/scope-not-accessible',
         });
 
-        return 1;
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
       }
 
       output.error(
         `Not able to load user because of unexpected error: ${errorToString(err)}`
       );
-      return 1;
+      trackAgenticErrorTelemetry(err);
+      return finishWithExitCode(1);
     }
 
     if (user.id === scope || user.email === scope || user.username === scope) {
       if (user.version === 'northstar') {
         output.error('You cannot set your Personal Account as the scope.');
-        return 1;
+        return finishWithExitCode(1);
       }
 
       delete client.config.currentTeam;
@@ -671,7 +818,8 @@ const main = async () => {
             link: 'https://err.sh/vercel/scope-not-accessible',
           });
 
-          return 1;
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
         }
 
         if (isErrnoException(err) && err.code === 'rate_limited') {
@@ -680,11 +828,13 @@ const main = async () => {
               'Rate limited. Too many requests to the same endpoint: /teams',
           });
 
-          return 1;
+          trackAgenticErrorTelemetry(err);
+          return finishWithExitCode(1);
         }
 
         output.error('Not able to load teams');
-        return 1;
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
       }
 
       const related =
@@ -696,7 +846,7 @@ const main = async () => {
           link: 'https://err.sh/vercel/scope-not-existent',
         });
 
-        return 1;
+        return finishWithExitCode(1);
       }
 
       client.config.currentTeam = related.id;
@@ -704,7 +854,6 @@ const main = async () => {
   }
 
   let exitCode;
-  let earlyGetUserPromise: Promise<User | undefined> | undefined;
 
   try {
     if (!targetCommand) {
@@ -776,6 +925,10 @@ const main = async () => {
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
           break;
+        case 'ai-gateway':
+          telemetry.trackCliCommandAiGateway(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).aiGateway;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;
@@ -812,6 +965,15 @@ const main = async () => {
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).cache;
           break;
+        case 'connex':
+          if (process.env.FF_CONNEX_ENABLED) {
+            telemetry.trackCliCommandConnex(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).connex;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'contract':
           telemetry.trackCliCommandContract(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).contract;
@@ -832,6 +994,11 @@ const main = async () => {
         case 'dns':
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).dns;
+          break;
+        case 'deploy-hooks':
+        case 'deploy-hook':
+          telemetry.trackCliCommandDeployHooks(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).deployHooks;
           break;
         case 'edge-config':
           telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
@@ -901,17 +1068,16 @@ const main = async () => {
           func = (await import('./commands-bulk.js')).logs;
           break;
         case 'metrics':
-          if (process.env.FF_METRICS) {
-            telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).metrics;
-            break;
-          } else {
-            func = null;
-            break;
-          }
+          telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).metrics;
+          break;
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
+          break;
+        case 'oauth-apps':
+          telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).oauthApps;
           break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
@@ -1025,6 +1191,8 @@ const main = async () => {
         .trace(() => func(client));
     }
   } catch (err: unknown) {
+    trackAgenticErrorTelemetry(err);
+
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
       // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
@@ -1040,7 +1208,7 @@ const main = async () => {
       if (typeof err.stack === 'string') {
         output.debug(err.stack);
       }
-      return 1;
+      return finishWithExitCode(1);
     }
 
     if (isErrnoException(err) && err.code === 'ECONNRESET') {
@@ -1055,7 +1223,7 @@ const main = async () => {
           )} interrupted. Please verify your internet connectivity and DNS configuration.`
         );
       }
-      return 1;
+      return finishWithExitCode(1);
     }
 
     if (
@@ -1063,13 +1231,13 @@ const main = async () => {
       (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
     ) {
       output.prettyError(err);
-      return 1;
+      return finishWithExitCode(1);
     }
 
     if (err instanceof APIError && 400 <= err.status && err.status <= 499) {
       err.message = err.serverMessage;
       output.prettyError(err);
-      return 1;
+      return finishWithExitCode(1);
     }
 
     // If there is a code we should not consider the error unexpected
@@ -1089,44 +1257,10 @@ const main = async () => {
       output.error(`An unexpected error occurred in ${subcommand}: ${err}`);
     }
 
-    return 1;
+    return finishWithExitCode(1);
   }
 
-  const postCommandSpan = rootSpan.child('vc.postCommand');
-
-  telemetryEventStore.updateTeamId(client.config.currentTeam);
-  telemetryEventStore.updateUserId(client.authConfig.userId);
-  if (!telemetryEventStore.hasUserId) {
-    const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
-    try {
-      const user = await earlyGetUserPromise;
-      if (user) {
-        telemetryEventStore.updateUserId(user.id);
-      }
-    } catch {
-      // best-effort for telemetry
-    } finally {
-      getUserSpan.stop();
-    }
-  }
-
-  // Resolve project_id from VERCEL_PROJECT_ID env var or .vercel/project.json
-  try {
-    const envProjectId = getPlatformEnv('PROJECT_ID');
-    if (envProjectId) {
-      telemetryEventStore.updateProjectId(envProjectId);
-    } else {
-      const link = await getLinkFromDir(getVercelDirectory(client.cwd));
-      if (link) {
-        telemetryEventStore.updateProjectId(link.projectId);
-      }
-    }
-  } catch {
-    // best-effort for telemetry — project may not be linked
-  }
-
-  await telemetryEventStore.save();
-  postCommandSpan.stop();
+  await saveTelemetry();
 
   rootSpan.stop();
 

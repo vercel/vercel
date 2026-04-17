@@ -123,6 +123,24 @@ export const inviteSubcommand = {
   ],
 } as const;
 
+export const ssoSubcommand = {
+  name: 'sso',
+  aliases: [],
+  description: 'Show SAML / SSO configuration for the current team',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Human-readable SAML summary',
+      value: `${packageName} teams sso`,
+    },
+    {
+      name: 'JSON',
+      value: `${packageName} teams sso --format json`,
+    },
+  ],
+} as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
@@ -156,6 +174,7 @@ export const teamsCommand = {
     listSubcommand,
     requestSubcommand,
     switchSubcommand,
+    ssoSubcommand,
     membersSubcommand,
   ],
   options: [],

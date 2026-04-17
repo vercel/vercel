@@ -469,9 +469,13 @@ async function maybeGetApiBuilder(
     }
   }
 
-  // For Node.js files, verify they are valid entrypoints before creating a builder
+  // For Node.js files under api/, verify they are valid entrypoints before
+  // creating a builder. This only applies to api/ files — root-level platform
+  // files (middleware.js, proxy.js, etc.) use different export signatures and
+  // must not be filtered by API handler pattern detection.
   const nodeExtensions = ['.js', '.mjs', '.ts', '.tsx'];
   if (
+    fileName.startsWith('api/') &&
     process.env.VERCEL_NODE_FILTER_ENTRYPOINTS === '1' &&
     nodeExtensions.some(ext => fileName.endsWith(ext)) &&
     options.workPath

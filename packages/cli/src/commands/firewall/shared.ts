@@ -10,9 +10,10 @@ import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
-import type { FirewallIpRule } from '../../util/firewall/types';
+import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
+import stamp from '../../util/output/stamp';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -189,7 +190,6 @@ export async function offerAutoPublish(
     );
 
     if (shouldPublish) {
-      const { default: stamp } = await import('../../util/output/stamp');
       const publishStamp = stamp();
       output.spinner('Publishing to production');
 
@@ -236,4 +236,61 @@ export function resolveIpRule(
   // Partial ID match
   const byPartialId = ips.filter(r => r.id.toLowerCase().includes(query));
   return byPartialId;
+}
+
+/**
+ * Resolve a custom rule by name or ID.
+ * Returns all matching rules (caller handles disambiguation).
+ */
+export function resolveRule(
+  rules: FirewallRule[],
+  identifier: string
+): FirewallRule[] {
+  if (!identifier) return [];
+
+  // Exact ID match
+  const byId = rules.find(r => r.id === identifier);
+  if (byId) return [byId];
+
+  // Exact name match (case-insensitive)
+  const query = identifier.toLowerCase();
+  const byName = rules.filter(r => r.name.toLowerCase() === query);
+  if (byName.length > 0) return byName;
+
+  // Partial name match (case-insensitive substring)
+  const byPartialName = rules.filter(r => r.name.toLowerCase().includes(query));
+  if (byPartialName.length > 0) return byPartialName;
+
+  // Partial ID match
+  const byPartialId = rules.filter(r => r.id.toLowerCase().includes(query));
+  return byPartialId;
+}
+
+/**
+ * Print a warning about the potential impact of a rule's action.
+ * Called after staging adds, edits, and enables for deny/challenge/rate_limit actions.
+ */
+export function printActionImpactWarning(action: FirewallRule['action']): void {
+  const actionType = action.mitigate?.action;
+  if (!actionType) return;
+
+  switch (actionType) {
+    case 'deny':
+      output.warn(
+        'This rule will deny matching requests. Legitimate traffic may be blocked if conditions are too broad.'
+      );
+      break;
+    case 'challenge':
+      output.warn(
+        'This rule will challenge matching requests with a verification page. Some legitimate users or automated clients may be unable to complete the challenge.'
+      );
+      break;
+    case 'rate_limit':
+      output.warn(
+        'This rule will rate limit matching requests. Legitimate traffic may be throttled if the limit is too low or keys are too broad.'
+      );
+      break;
+    default:
+      break;
+  }
 }

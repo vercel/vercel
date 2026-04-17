@@ -362,14 +362,6 @@ export class Lambda {
           `${prefix}.consumer cannot be empty`
         );
 
-        // v2beta allows only one trigger per function
-        if (trigger.type === 'queue/v2beta') {
-          assert(
-            experimentalTriggers.length === 1,
-            '"experimentalTriggers" can only have one item for queue/v2beta'
-          );
-        }
-
         // Validate optional queue configuration
         if (trigger.maxDeliveries !== undefined) {
           assert(
@@ -563,6 +555,18 @@ export async function getLambdaOptionsFromFunction({
               return trigger;
             }
           );
+
+        // User-configured functions can only have one v2beta trigger.
+        // Services may attach multiple triggers programmatically.
+        if (
+          experimentalTriggers &&
+          experimentalTriggers.length > 1 &&
+          experimentalTriggers.some(t => t.type === 'queue/v2beta')
+        ) {
+          throw new Error(
+            `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
+          );
+        }
 
         return {
           architecture: fn.architecture,

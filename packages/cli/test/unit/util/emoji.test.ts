@@ -9,4 +9,8 @@ describe('removeEmoji', () => {
   it('preserves a leading newline for multiline messages', () => {
     expect(removeEmoji('\n  ▲ vercel dev')).toBe('\n  ▲ vercel dev');
   });
+
+  it('trims leading whitespace when there is no leading newline', () => {
+    expect(removeEmoji('  no emoji here')).toBe('no emoji here');
+  });
 });

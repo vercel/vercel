@@ -2,18 +2,15 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
-import { FileBlob } from '@vercel/build-utils';
+import { FileBlob, MANIFEST_FILENAME, manifestPath } from '@vercel/build-utils';
 import type {
   DependencyGroupEntry,
   PythonPackage,
 } from '@vercel/python-analysis';
 import type { PythonVersion } from '../src/version';
-import {
-  generateProjectManifest,
-  diagnostics,
-  DIAGNOSTICS_PATH,
-  MANIFEST_FILENAME,
-} from '../src/diagnostics';
+import { generateProjectManifest, diagnostics } from '../src/diagnostics';
+
+const DIAGNOSTICS_PATH = manifestPath('python');
 
 const pythonVersion: PythonVersion = {
   major: 3,

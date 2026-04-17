@@ -1,5 +1,6 @@
 import type { BuildOptions, Files } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
+import { existsSync } from 'node:fs';
 import { readFile, lstat, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNativeError } from 'node:util/types';
@@ -27,7 +28,10 @@ export const nft = async (
           : [args.ignore]
         : []),
     ];
-    const nftResult = await nodeFileTrace(Array.from(args.localBuildFiles), {
+    const traceRoots = Array.from(args.localBuildFiles).filter(p =>
+      existsSync(p)
+    );
+    const nftResult = await nodeFileTrace(traceRoots, {
       base: args.repoRootPath,
       processCwd: args.workPath,
       ts: true,
@@ -59,7 +63,19 @@ export const nft = async (
     });
     for (const file of nftResult.fileList) {
       const absolutePath = join(args.repoRootPath, file);
-      const stats = await lstat(absolutePath);
+      let stats;
+      try {
+        stats = await lstat(absolutePath);
+      } catch (error: unknown) {
+        if (
+          isNativeError(error) &&
+          'code' in error &&
+          error.code === 'ENOENT'
+        ) {
+          continue;
+        }
+        throw error;
+      }
       const outputPath = file;
 
       if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
