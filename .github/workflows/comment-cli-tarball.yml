@@ -13,7 +13,8 @@ concurrency:
 
 jobs:
   comment-cli-tarball:
-    name: Comment CLI Tarball Instructions    runs-on: ubuntu-latest
+    name: Comment CLI Tarball Instructions
+    runs-on: ubuntu-latest
     if: github.event.client_payload.environment == 'preview'
     steps:
       - name: Resolve PR context
