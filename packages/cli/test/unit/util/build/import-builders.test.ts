@@ -1,9 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import { join } from 'path';
-import { ensureDir, remove, outputJSON, writeFile } from 'fs-extra';
+import { ensureDir, realpath, remove, outputJSON, writeFile } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
-import { importBuilders } from '../../../../src/util/build/import-builders';
+import {
+  importBuilders,
+  resolveBuilders,
+  setPeerDependenciesForTesting,
+  resetPeerDependenciesCache,
+} from '../../../../src/util/build/import-builders';
 import * as installBuildersModule from '../../../../src/util/build/install-builders';
 import vercelNextPkg from '@vercel/next/package.json';
 
@@ -231,7 +236,9 @@ describe('importBuilders()', () => {
       throw new Error('Expected `err` to be defined');
     }
     expect(
-      err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
+      err.message.startsWith(
+        'Builder "@vercel/does-not-exist" not found after installation'
+      )
     ).toBe(true);
   });
 
@@ -272,5 +279,196 @@ describe('importBuilders()', () => {
     } finally {
       await remove(cwd);
     }
+  });
+
+  describe('peer dependency resolution', () => {
+    afterEach(() => {
+      resetPeerDependenciesCache();
+    });
+
+    it('should resolve builder from cwd node_modules when peerDep version matches', async () => {
+      // Use realpath to resolve macOS /var -> /private/var symlink
+      const cwd = await realpath(await getWriteableDirectory());
+      const buildersDir = join(cwd, '.vercel', 'builders');
+      const pkgName = 'fake-peer-builder';
+      const peerVersion = '2.0.0';
+
+      // Set up a fake builder in cwd's node_modules
+      const builderDir = join(cwd, 'node_modules', pkgName);
+      await ensureDir(builderDir);
+      await outputJSON(join(builderDir, 'package.json'), {
+        name: pkgName,
+        version: peerVersion,
+        main: 'index.js',
+      });
+      await writeFile(
+        join(builderDir, 'index.js'),
+        `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+      );
+
+      setPeerDependenciesForTesting({ [pkgName]: peerVersion });
+
+      try {
+        const result = await resolveBuilders(
+          cwd,
+          buildersDir,
+          new Set([pkgName])
+        );
+        expect('builders' in result).toBe(true);
+        if ('builders' in result) {
+          expect(result.builders.size).toBe(1);
+          const builder = result.builders.get(pkgName);
+          expect(builder?.pkg.name).toBe(pkgName);
+          expect(builder?.pkg.version).toBe(peerVersion);
+          expect(builder?.pkgPath).toBe(join(builderDir, 'package.json'));
+          expect(builder?.dynamicallyInstalled).toBe(false);
+        }
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should fall through to CLI bundle when peerDep version does not match cwd', async () => {
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
+
+      // Set up @vercel/node in cwd with a WRONG version
+      const builderDir = join(cwd, 'node_modules', '@vercel', 'node');
+      await ensureDir(builderDir);
+      await outputJSON(join(builderDir, 'package.json'), {
+        name: '@vercel/node',
+        version: '0.0.1-wrong',
+        main: 'index.js',
+      });
+      await writeFile(
+        join(builderDir, 'index.js'),
+        `exports.version = 3; exports.build = async function() {};`
+      );
+
+      // peerDeps expect a version that doesn't match what's in cwd
+      setPeerDependenciesForTesting({ '@vercel/node': '99.99.99' });
+
+      try {
+        const result = await resolveBuilders(
+          cwd,
+          buildersDir,
+          new Set(['@vercel/node'])
+        );
+
+        // Should still resolve since @vercel/node is in CLI bundle (step 3)
+        expect('builders' in result).toBe(true);
+        if ('builders' in result) {
+          const builder = result.builders.get('@vercel/node');
+          expect(builder?.pkg.name).toBe('@vercel/node');
+          // Should NOT be the wrong version from cwd
+          expect(builder?.pkg.version).not.toBe('0.0.1-wrong');
+          // Should come from CLI bundle, not cwd
+          expect(builder?.pkgPath).not.toContain(cwd);
+        }
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should resolve from CLI bundle when no peerDeps exist (current behavior)', async () => {
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
+
+      setPeerDependenciesForTesting({});
+
+      try {
+        const result = await resolveBuilders(
+          cwd,
+          buildersDir,
+          new Set(['@vercel/node'])
+        );
+        expect('builders' in result).toBe(true);
+        if ('builders' in result) {
+          const builder = result.builders.get('@vercel/node');
+          expect(builder?.pkg.name).toBe('@vercel/node');
+          expect(builder?.pkg.version).toBe(vercelNodePkg.version);
+        }
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should prefer .vercel/builders cache over CLI bundle when no peerDep specified', async () => {
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
+      const pkgName = 'cached-builder';
+      const cachedVersion = '3.0.0';
+
+      // Set up builder in .vercel/builders cache
+      const cachedBuilderDir = join(buildersDir, 'node_modules', pkgName);
+      await ensureDir(cachedBuilderDir);
+      await outputJSON(join(cachedBuilderDir, 'package.json'), {
+        name: pkgName,
+        version: cachedVersion,
+        main: 'index.js',
+      });
+      await writeFile(
+        join(cachedBuilderDir, 'index.js'),
+        `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+      );
+
+      // No peer deps for this builder
+      setPeerDependenciesForTesting({});
+
+      try {
+        const result = await resolveBuilders(
+          cwd,
+          buildersDir,
+          new Set([pkgName])
+        );
+        expect('builders' in result).toBe(true);
+        if ('builders' in result) {
+          const builder = result.builders.get(pkgName);
+          expect(builder?.pkg.name).toBe(pkgName);
+          expect(builder?.pkg.version).toBe(cachedVersion);
+          expect(builder?.pkgPath).toBe(join(cachedBuilderDir, 'package.json'));
+          expect(builder?.dynamicallyInstalled).toBe(true);
+        }
+      } finally {
+        await remove(cwd);
+      }
+    });
+
+    it('should reinstall when .vercel/builders cache version does not match peerDep', async () => {
+      const cwd = await getWriteableDirectory();
+      const buildersDir = join(cwd, '.vercel', 'builders');
+      const pkgName = 'stale-cached-builder';
+
+      // Set up builder in .vercel/builders cache with old version
+      const cachedBuilderDir = join(buildersDir, 'node_modules', pkgName);
+      await ensureDir(cachedBuilderDir);
+      await outputJSON(join(cachedBuilderDir, 'package.json'), {
+        name: pkgName,
+        version: '1.0.0',
+        main: 'index.js',
+      });
+      await writeFile(
+        join(cachedBuilderDir, 'index.js'),
+        `exports.version = 3; exports.build = async function() {};`
+      );
+
+      // peerDep says we want 2.0.0
+      setPeerDependenciesForTesting({ [pkgName]: '2.0.0' });
+
+      try {
+        const result = await resolveBuilders(
+          cwd,
+          buildersDir,
+          new Set([pkgName])
+        );
+        // Should return buildersToAdd since cached version doesn't match peerDep
+        expect('buildersToAdd' in result).toBe(true);
+        if ('buildersToAdd' in result) {
+          expect(result.buildersToAdd.has(`${pkgName}@2.0.0`)).toBe(true);
+        }
+      } finally {
+        await remove(cwd);
+      }
+    });
   });
 });
