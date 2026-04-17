@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 type SyncCronHandler = Callable[[], None]
 type AsyncCronHandler = Callable[[], Coroutine[Any, Any, None]]
 type CronHandler = SyncCronHandler | AsyncCronHandler
+type ResolvedCronHandler = tuple[CronHandler, bool]
+type CronHandlerResolver = Callable[[str], ResolvedCronHandler | None]
 
 
 def is_cron_service() -> bool:
@@ -33,12 +35,15 @@ def is_cron_service() -> bool:
     return normalized_type == "job" and normalized_trigger == "schedule"
 
 
-def bootstrap_cron_service_app(module: ModuleType) -> ASGI:
+def bootstrap_cron_service_app(_module: ModuleType) -> ASGI:
     command = _resolve_command()
     if command is not None:
-        return _make_cron_asgi_app(
+        command_handler: ResolvedCronHandler = (
             lambda: _run_command(command),
-            is_async=False,
+            False,
+        )
+        return _make_cron_asgi_app(
+            lambda _path: command_handler,
         )
 
     routes_json = os.environ.get("__VC_CRON_ROUTES")
@@ -70,7 +75,7 @@ def _bootstrap_multi_cron(routes_json: str) -> ASGI:
     name (runs the module's ``if __name__ == "__main__"`` block).
     """
     raw: dict[str, str] = json.loads(routes_json)
-    route_table: dict[str, tuple[CronHandler, bool]] = {}
+    route_table: dict[str, ResolvedCronHandler] = {}
     for path, module_function in raw.items():
         if ":" in module_function:
             colon_idx = module_function.index(":")
@@ -105,13 +110,18 @@ def _bootstrap_multi_cron(routes_json: str) -> ASGI:
                 lambda ep=mod_file: run_entrypoint_as_main(ep),
                 False,
             )
-    return _make_multi_cron_asgi_app(route_table)
+    return _make_cron_asgi_app(
+        route_table.get,
+        not_found_error=lambda path: f"no cron handler for path: {path}",
+    )
 
 
-def _make_multi_cron_asgi_app(
-    routes: dict[str, tuple[CronHandler, bool]],
+def _make_cron_asgi_app(
+    resolve_handler: CronHandlerResolver,
+    *,
+    not_found_error: Callable[[str], str] | None = None,
 ) -> ASGI:
-    """ASGI app that dispatches to different handlers based on request path."""
+    """Build an ASGI app that resolves and runs cron handlers."""
 
     async def app(
         scope: dict[str, Any],
@@ -151,79 +161,16 @@ def _make_multi_cron_asgi_app(
                 return
 
         path = str(scope.get("path") or "/")
-        route = routes.get(path)
-        if route is None:
+        resolved = resolve_handler(path)
+        if resolved is None:
             await drain_body(receive)
-            await send_json_response(
-                send, 404, {"error": f"no cron handler for path: {path}"}
-            )
-            return
-
-        run_job, is_async = route
-        await drain_body(receive)
-
-        try:
-            if is_async:
-                await cast("AsyncCronHandler", run_job)()
+            if not_found_error is None:
+                await send_json_response(send, 404, {"error": "not found"})
             else:
-                await asyncio.to_thread(cast("SyncCronHandler", run_job))
-        except Exception:
-            traceback.print_exc()
-            await send_json_response(send, 500, {"error": "internal"})
+                await send_json_response(send, 404, {"error": not_found_error(path)})
             return
 
-        await send_json_response(send, 200, {"ok": True})
-
-    return app
-
-
-def _make_cron_asgi_app(
-    run_job: CronHandler,
-    *,
-    is_async: bool,
-) -> ASGI:
-    """Build an ASGI app that runs a single handler on any request.
-
-    Used for command-backed crons which do not dispatch by path.
-    """
-
-    async def app(
-        scope: dict[str, Any],
-        receive: Callable[[], Awaitable[dict[str, Any]]],
-        send: Callable[[dict[str, Any]], Awaitable[None]],
-    ) -> None:
-        scope_type = scope.get("type")
-
-        if scope_type == "lifespan":
-            while True:
-                message = await receive()
-                message_type = message.get("type")
-                if message_type == "lifespan.startup":
-                    await send({"type": "lifespan.startup.complete"})
-                elif message_type == "lifespan.shutdown":
-                    await send({"type": "lifespan.shutdown.complete"})
-                    return
-
-        if scope_type != "http":
-            return
-
-        method = str(scope.get("method") or "GET").upper()
-        if method not in ("GET", "POST"):
-            await drain_body(receive)
-            await send_json_response(send, 405, {"error": "method not allowed"})
-            return
-
-        cron_secret = os.environ.get("CRON_SECRET")
-        if cron_secret:
-            authorization = get_header(scope, "authorization")
-            expected = f"Bearer {cron_secret}"
-            if not authorization or not hmac.compare_digest(
-                authorization, expected
-            ):
-                await drain_body(receive)
-                await send_json_response(send, 401, {"error": "unauthorized"})
-                return
-
+        run_job, is_async = resolved
         await drain_body(receive)
 
         try:
