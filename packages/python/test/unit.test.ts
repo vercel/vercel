@@ -42,21 +42,33 @@ vi.mock('../src/django', () => ({
   runDjangoCollectStatic: vi.fn(async () => null),
 }));
 
+vi.mock('execa', () => ({
+  default: vi.fn(),
+}));
+
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
   resolvePythonVersion,
   DEFAULT_PYTHON_VERSION_STRING,
   resetInstalledPythonsCache,
+  getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build } from '../src/index';
+import { build, prepareCache } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import {
+  UV_PYTHON_DOWNLOADS_MODE,
+  getProtectedUvEnv,
+  getUvCacheDir,
+  findUvOnBuildImage,
+} from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob, download } from '@vercel/build-utils';
+import { getServiceCrons } from '../src/crons';
+import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(2);
@@ -175,6 +187,107 @@ afterEach(() => {
   if (fs.existsSync(tmpPythonDir)) {
     fs.removeSync(tmpPythonDir);
   }
+});
+
+describe('prepareCache()', () => {
+  const origPrepareCacheEnv = process.env.VERCEL_PYTHON_PREPARE_CACHE;
+
+  afterEach(() => {
+    if (origPrepareCacheEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    } else {
+      process.env.VERCEL_PYTHON_PREPARE_CACHE = origPrepareCacheEnv;
+    }
+  });
+
+  it('returns empty object when VERCEL_PYTHON_PREPARE_CACHE is not set', async () => {
+    delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(Object.keys(files)).toHaveLength(0);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('caches uv cache and the venv, excludes bytecode and user source when enabled', async () => {
+    process.env.VERCEL_PYTHON_PREPARE_CACHE = '1';
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    // Create a fake uv cache with some files
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.tar.gz'),
+      ''
+    );
+    // Create a .pyc file that should be excluded
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.pyc'),
+      ''
+    );
+    // Create venv files that should be included
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'home = /usr/bin\n'
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/lib/site-packages/pkg/mod.py'),
+      ''
+    );
+    // Create a user source file that should NOT be included
+    await fs.outputFile(path.join(workPath, 'app.py'), 'print("hello")\n');
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      // uv cache files should be present (minus .pyc)
+      expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
+      expect(files['.vercel/python/cache/uv/archive/foo.tar.gz']).toBeDefined();
+
+      // .pyc in uv cache should be excluded
+      expect(files['.vercel/python/cache/uv/archive/foo.pyc']).toBeUndefined();
+
+      // venv files should be cached (uv sync prunes stale packages)
+      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
+      expect(
+        files['.vercel/python/.venv/lib/site-packages/pkg/mod.py']
+      ).toBeDefined();
+
+      // user source files should NOT be cached
+      expect(files['app.py']).toBeUndefined();
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
@@ -431,6 +544,94 @@ describe('default Python version behavior', () => {
 
   it('DEFAULT_PYTHON_VERSION_STRING constant is exported and has expected value', () => {
     expect(DEFAULT_PYTHON_VERSION_STRING).toBe('3.12');
+  });
+});
+
+describe('getInstalledPythonsFromFilesystem', () => {
+  it('detects installed Pythons from filesystem bin directory', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12', '3.13']));
+  });
+
+  it('returns empty set when no Pythons are installed', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-empty');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set());
+  });
+
+  it('ignores Python versions not in allOptions', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-extra');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    // 3.99 does not exist in allOptions
+    fs.writeFileSync(path.join(binDir, 'python3.99'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12']));
+  });
+
+  it('uses filesystem fast path when VERCEL_BUILD_IMAGE is set', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-integration');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.14'), '');
+
+    const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    try {
+      resetInstalledPythonsCache();
+      const result = getInstalledPythonsFromFilesystem(basePath);
+      expect(result).toEqual(new Set(['3.12', '3.13', '3.14']));
+    } finally {
+      if (origBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+      }
+    }
+  });
+});
+
+describe('findUvOnBuildImage', () => {
+  const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+
+  afterEach(() => {
+    if (origBuildImage === undefined) {
+      delete process.env.VERCEL_BUILD_IMAGE;
+    } else {
+      process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+    }
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is not set', () => {
+    delete process.env.VERCEL_BUILD_IMAGE;
+    expect(findUvOnBuildImage()).toBeNull();
+  });
+
+  it('returns the known path when VERCEL_BUILD_IMAGE is set and file exists', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const mockUvPath = path.join(tmpPythonDir, 'mock-uv');
+    fs.mkdirSync(tmpPythonDir, { recursive: true });
+    fs.writeFileSync(mockUvPath, '');
+
+    expect(findUvOnBuildImage(mockUvPath)).toBe(mockUvPath);
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is set but file does not exist', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    expect(findUvOnBuildImage('/nonexistent/path/uv')).toBeNull();
   });
 });
 
@@ -1592,6 +1793,80 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 });
 
+describe('vercel.json entrypoint configuration', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(
+      tmpdir(),
+      `python-vercel-json-entrypoint-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('errors when the configured entrypoint file does not exist', async () => {
+    await expect(
+      build({
+        workPath,
+        files: {},
+        entrypoint: 'nonexistent.py',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: workPath,
+      })
+    ).rejects.toThrow(/ENOENT/);
+  });
+
+  it('detects the variable automatically when no variable is specified', async () => {
+    const files = {
+      'app/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'app/wsgi.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) throw new Error('handler not found');
+    const content = handler.data.toString();
+    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "application"');
+  });
+
+  it('errors when no standard callable is found in the configured entrypoint', async () => {
+    const files = {
+      'myapp.py': new FileBlob({ data: 'print("hello")\n' }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    await expect(
+      build({
+        workPath,
+        files,
+        entrypoint: 'myapp.py',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: workPath,
+      })
+    ).rejects.toThrow(
+      /Could not find a top-level "app", "application", or "handler" in "myapp\.py"/
+    );
+  });
+});
+
 describe('handlerFunction validation', () => {
   let mockWorkPath: string;
 
@@ -1624,16 +1899,10 @@ describe('handlerFunction validation', () => {
       meta: { isDev: false },
       config: { handlerFunction: 'sync_handler' },
       repoRootPath: mockWorkPath,
-      service: { type: 'cron' },
+      service: { type: 'job', trigger: 'schedule' },
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
-    if (!handler || !('data' in handler)) {
-      throw new Error('handler bootstrap not found');
-    }
-    const content = handler.data.toString();
-    expect(content).toContain('__VC_HANDLER_FUNC_NAME');
-    expect(content).toContain('sync_handler');
+    expect(result).toBeDefined();
   });
 
   it('builds successfully when handlerFunction exists as an async function', async () => {
@@ -1653,16 +1922,10 @@ describe('handlerFunction validation', () => {
       meta: { isDev: false },
       config: { handlerFunction: 'async_handler' },
       repoRootPath: mockWorkPath,
-      service: { type: 'cron' },
+      service: { type: 'job', trigger: 'schedule' },
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
-    if (!handler || !('data' in handler)) {
-      throw new Error('handler bootstrap not found');
-    }
-    const content = handler.data.toString();
-    expect(content).toContain('__VC_HANDLER_FUNC_NAME');
-    expect(content).toContain('async_handler');
+    expect(result).toBeDefined();
   });
 
   it('throws PYTHON_HANDLER_NOT_FOUND when handlerFunction does not exist', async () => {
@@ -1683,7 +1946,7 @@ describe('handlerFunction validation', () => {
         meta: { isDev: false },
         config: { handlerFunction: 'nonexistent_handler' },
         repoRootPath: mockWorkPath,
-        service: { type: 'cron' },
+        service: { type: 'job', trigger: 'schedule' },
       })
     ).rejects.toThrow(/Handler function "nonexistent_handler" not found/);
   });
@@ -1706,12 +1969,189 @@ describe('handlerFunction validation', () => {
         meta: { isDev: false },
         config: { handlerFunction: 'cleanup' },
         repoRootPath: mockWorkPath,
-        service: { type: 'cron' },
+        service: { type: 'job', trigger: 'schedule' },
       })
     ).rejects.toThrow(/Handler function "cleanup" not found/);
   });
 
-  it('does not set __VC_HANDLER_FUNC_NAME when handlerFunction is not configured', async () => {
+  it('uses handlerFunction as variable name for web services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'flask_app = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: true },
+      config: { handlerFunction: 'flask_app', framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "flask_app"');
+  });
+
+  it('errors when handlerFunction variable does not exist for web services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'other_var = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: true },
+        config: { handlerFunction: 'flask_app', framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Handler function "flask_app" not found in app\.py/);
+  });
+});
+
+describe('cron service build result', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-cron-result-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('returns crons with correct path and schedule', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+  });
+
+  it('does not emit routes (handled by generateServicesRoutes)', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.routes).toBeUndefined();
+  });
+
+  it('uses default handler name "cron" when no handlerFunction', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def handler():\n    pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '*/5 * * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/cron',
+        schedule: '*/5 * * * *',
+        resolvedHandler: 'jobs.cleanup',
+      },
+    ]);
+  });
+
+  it('does not return crons for non-cron services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'app = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'web', name: 'api' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toBeUndefined();
+  });
+
+  it('does not set __VC_CRON_ROUTES when not a cron service', async () => {
     const files = {
       'handler.py': new FileBlob({
         data: 'def app(environ, start_response): pass',
@@ -1735,7 +2175,181 @@ describe('handlerFunction validation', () => {
       throw new Error('handler bootstrap not found');
     }
     const content = handler.data.toString();
-    expect(content).not.toContain('__VC_HANDLER_FUNC_NAME');
+    expect(content).not.toContain('__VC_CRON_ROUTES');
+  });
+});
+
+describe('dynamic cron detection', () => {
+  const mockedExeca = vi.mocked(execa);
+
+  afterEach(() => {
+    mockedExeca.mockReset();
+  });
+
+  it('returns undefined for non-cron services', async () => {
+    const result = await getServiceCrons({
+      service: { type: 'web', name: 'api' },
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('returns static cron for non-dynamic schedule', async () => {
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'sync_handler',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+  });
+
+  it('calls python and returns dynamic cron entry', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [
+          {
+            module_function: 'jobs.cleanup:sync_handler',
+            schedule: '0 0 * * *',
+          },
+        ],
+      }),
+    } as any);
+
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'get_crons',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+
+    // Verify execa was called with the right args
+    expect(mockedExeca).toHaveBeenCalledWith(
+      '/usr/bin/python3',
+      ['-c', expect.any(String), 'jobs.cleanup', 'get_crons'],
+      { env: {}, cwd: '/tmp/test' }
+    );
+  });
+
+  it('throws if dynamic returns 0 entries', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({ entries: [] }),
+    } as any);
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/returned no entries/);
+  });
+
+  it('returns multiple dynamic cron entries', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [
+          { module_function: 'jobs.cleanup:sync', schedule: '0 0 * * *' },
+          { module_function: 'jobs.cleanup:daily', schedule: '0 6 * * *' },
+        ],
+      }),
+    } as any);
+
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'get_crons',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync',
+      },
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/daily',
+        schedule: '0 6 * * *',
+        resolvedHandler: 'jobs.cleanup:daily',
+      },
+    ]);
+  });
+
+  it('throws if handlerFunction is missing for dynamic', async () => {
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/get_crons/);
+  });
+
+  it('throws with structured error when python fails', async () => {
+    mockedExeca.mockRejectedValueOnce({
+      stdout: JSON.stringify({
+        error: "Failed to import module 'jobs.cleanup': No module named 'jobs'",
+      }),
+      stderr: '',
+    });
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/Failed to import module/);
+  });
+
+  it('throws if module:function lacks colon', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [{ module_function: 'no_colon_here', schedule: '0 0 * * *' }],
+      }),
+    } as any);
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/module:function/);
   });
 });
 
@@ -1828,6 +2442,121 @@ describe('command-backed cron services', () => {
     if (!syntheticEntrypoint || !('data' in syntheticEntrypoint)) {
       throw new Error('synthetic cron entrypoint not found');
     }
+  });
+});
+
+describe('non-web services should not generate catch-all routes', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-service-routes-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('cron service returns V2 with no routes', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'if __name__ == "__main__":\n    print("cleanup done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'my-cron' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-cron/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
+  });
+
+  it('worker service returns V2 with no routes', async () => {
+    const files = {
+      'worker/broker.py': new FileBlob({
+        data: [
+          'import dramatiq',
+          'from vercel.workers.dramatiq import VercelQueuesBroker',
+          '',
+          'broker = VercelQueuesBroker()',
+          'dramatiq.set_broker(broker)',
+        ].join('\n'),
+      }),
+      'worker/tasks.py': new FileBlob({
+        data: [
+          'import dramatiq',
+          '',
+          "@dramatiq.actor(queue_name='jobs')",
+          'def process_job(payload: dict):',
+          "    return {'ok': True, 'payload': payload}",
+        ].join('\n'),
+      }),
+      'worker/run.py': new FileBlob({
+        data: [
+          'from worker.broker import broker',
+          'from worker import tasks',
+          '',
+          "__all__ = ['broker', 'tasks']",
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "my-worker"\nversion = "0.0.1"\ndependencies = ["dramatiq", "vercel-workers"]\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'worker/run.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'worker', name: 'my-worker' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-worker/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
+  });
+
+  it('web service returns V2 with no routes', async () => {
+    const files = {
+      'main.py': new FileBlob({
+        data: 'from fastapi import FastAPI; app = FastAPI()',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "my-api"\nversion = "0.0.1"\ndependencies = ["fastapi"]\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'main.py',
+      meta: { isDev: false },
+      config: { framework: 'fastapi' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'web', name: 'my-api' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-api/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
   });
 });
 
@@ -2376,7 +3105,11 @@ describe('custom install hooks', () => {
       'echo custom-install',
       expect.objectContaining({
         cwd: workPath,
-        env: expect.any(Object),
+        env: expect.objectContaining({
+          VIRTUAL_ENV: expect.any(String),
+          UV_PROJECT_ENVIRONMENT: expect.any(String),
+          UV_NO_DEV: 'true',
+        }),
       })
     );
   });
@@ -2723,19 +3456,40 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.HOME).toBe('/home/user');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
+
+    it('sets UV_CACHE_DIR when provided', () => {
+      const cacheDir = '/tmp/project/.vercel/python/cache/uv';
+      const env = getProtectedUvEnv({}, cacheDir);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
+    });
+
+    it('does not set UV_CACHE_DIR when not provided', () => {
+      const env = getProtectedUvEnv({});
+      expect(env.UV_CACHE_DIR).toBeUndefined();
+    });
+  });
+
+  describe('getUvCacheDir', () => {
+    it('returns the correct cache directory path', () => {
+      expect(getUvCacheDir('/repo')).toBe('/repo/.vercel/python/cache/uv');
+    });
   });
 
   describe('createVenvEnv', () => {
-    it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
+    it('sets VIRTUAL_ENV and PATH correctly while protecting uv env', () => {
       process.env.UV_PYTHON_DOWNLOADS = 'manual';
       process.env.PATH = '/usr/bin';
       const venvPath = '/path/to/venv';
-      const env = createVenvEnv(venvPath);
+      const cacheDir = getUvCacheDir('/repo');
+      const env = createVenvEnv(venvPath, process.env, cacheDir);
 
       expect(env.VIRTUAL_ENV).toBe(venvPath);
+      expect(env.UV_PROJECT_ENVIRONMENT).toBe(venvPath);
+      expect(env.UV_NO_DEV).toBe('true');
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
     });
   });
 });

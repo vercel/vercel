@@ -167,7 +167,9 @@ def _make_cron_asgi_app(
             if not_found_error is None:
                 await send_json_response(send, 404, {"error": "not found"})
             else:
-                await send_json_response(send, 404, {"error": not_found_error(path)})
+                await send_json_response(
+                    send, 404, {"error": not_found_error(path)}
+                )
             return
 
         run_job, is_async = resolved
