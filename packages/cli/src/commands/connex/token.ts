@@ -196,10 +196,52 @@ function printTokenResult(
 ): number {
   if (asJson) {
     client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
-  } else {
-    client.stdout.write(`${data.token}\n`);
+    return 0;
   }
+
+  const rows: Array<[string, string]> = [
+    ['Token', data.token],
+    ['Expires', formatExpiresAt(data.expiresAt)],
+  ];
+  if (data.installationId) {
+    rows.push(['Installation', data.installationId]);
+  }
+  if (data.tenantId) {
+    rows.push(['Tenant', data.tenantId]);
+  }
+  if (data.externalSubject) {
+    rows.push(['Subject', data.externalSubject]);
+  }
+  if (data.name) {
+    rows.push(['Name', data.name]);
+  }
+
+  const labelWidth = Math.max(...rows.map(([label]) => label.length));
+  const lines = rows
+    .map(([label, value]) => `${label.padEnd(labelWidth)}  ${value}`)
+    .join('\n');
+  client.stdout.write(`${lines}\n`);
   return 0;
+}
+
+function formatExpiresAt(expiresAt: number): string {
+  // API returns seconds (matches frontend convention)
+  const date = new Date(expiresAt * 1000);
+  const iso = date.toISOString();
+  const deltaMs = date.getTime() - Date.now();
+  if (deltaMs <= 0) {
+    return `${iso} (expired)`;
+  }
+  const minutes = Math.round(deltaMs / 60000);
+  if (minutes < 60) {
+    return `${iso} (in ${minutes}m)`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${iso} (in ${hours}h ${minutes % 60}m)`;
+  }
+  const days = Math.floor(hours / 24);
+  return `${iso} (in ${days}d)`;
 }
 
 type TokenResult =

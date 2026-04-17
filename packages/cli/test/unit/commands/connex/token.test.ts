@@ -34,7 +34,7 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should return token on success', async () => {
+  it('should return token on success with labeled fields', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.json({
         token: 'xoxb-test-token-123',
@@ -48,7 +48,7 @@ describe('connex token', () => {
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(0);
-    await expect(client.stdout).toOutput('xoxb-test-token-123');
+    await expect(client.stdout).toOutput('Token         xoxb-test-token-123');
   });
 
   it('should output JSON when --format=json is used', async () => {
