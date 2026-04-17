@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import ms from 'ms';
 import output from '../../output-manager';
 import formatDate from '../format-date';
 import { getFlagDashboardUrl } from './dashboard-url';
@@ -8,6 +9,7 @@ import type {
   FlagCondition,
   FlagEnvironmentConfig,
   FlagOutcome,
+  FlagRolloutOutcome,
   FlagSettings,
   FlagSplitOutcome,
   FlagVariant,
@@ -157,6 +159,13 @@ export function printFlagEnvironmentDetails(
             flag.variants
           );
           output.print(`      ${chalk.dim('Default split:')} ${weights}\n`);
+        } else if (fallthrough.type === 'rollout') {
+          output.print(
+            `      ${chalk.dim('Rollout:')} ${formatRolloutOutcome(
+              fallthrough,
+              flag.variants
+            )}\n`
+          );
         }
       }
     } else {
@@ -231,12 +240,13 @@ function hasCustomConfigurationEnabled(
   return (
     Boolean(envConfig.targets && Object.keys(envConfig.targets).length > 0) ||
     envConfig.rules.length > 0 ||
-    envConfig.fallthrough.type === 'split'
+    envConfig.fallthrough.type === 'split' ||
+    envConfig.fallthrough.type === 'rollout'
   );
 }
 
 function formatEnvironmentOutcome(
-  outcome: FlagOutcome | FlagSplitOutcome,
+  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome,
   variants: FlagVariant[]
 ): string {
   if (outcome.type === 'variant') {
@@ -247,6 +257,10 @@ function formatEnvironmentOutcome(
   if (outcome.type === 'split') {
     const weights = formatSplitWeights(outcome.weights, variants);
     return `split (${weights})`;
+  }
+
+  if (outcome.type === 'rollout') {
+    return formatRolloutOutcome(outcome, variants);
   }
 
   return 'unknown';
@@ -287,6 +301,35 @@ function formatEnvironmentVariantSummary(
   return chalk.bold(formatVariantValue(variant.value));
 }
 
+function formatRolloutOutcome(
+  outcome: FlagRolloutOutcome,
+  variants: FlagVariant[]
+): string {
+  const fromVariant = variants.find(v => v.id === outcome.rollFromVariantId);
+  const toVariant = variants.find(v => v.id === outcome.rollToVariantId);
+  const defaultVariant = variants.find(v => v.id === outcome.defaultVariantId);
+  const stages = outcome.slots
+    .map(slot => {
+      const percentage = slot.promille / 1000;
+      const formattedPercentage = Number.isInteger(percentage)
+        ? String(percentage)
+        : String(Number(percentage.toFixed(3)));
+      return `${formattedPercentage}% for ${ms(slot.durationMs, { long: true })}`;
+    })
+    .join(', ');
+
+  return `${formatEnvironmentVariantSummary(
+    fromVariant,
+    outcome.rollFromVariantId
+  )} -> ${formatEnvironmentVariantSummary(
+    toVariant,
+    outcome.rollToVariantId
+  )}; ${stages}; then 100%; Fallback: ${formatEnvironmentVariantSummary(
+    defaultVariant,
+    outcome.defaultVariantId
+  )}`;
+}
+
 function formatVariantListSummary(variant: FlagVariant): string {
   const value = formatVariantValue(variant.value);
   if (!variant.label) {
@@ -307,14 +350,17 @@ function formatCondition(
     lhs = `${condition.lhs.kind}.${condition.lhs.attribute}`;
   }
 
-  const cmp = chalk.dim(formatComparison(condition.cmp));
+  const cmp = chalk.dim(formatComparison(condition));
 
   if (condition.rhs === undefined || condition.rhs === null) {
     return { text: `${lhs} ${cmp}` };
   }
 
   if (typeof condition.rhs === 'object') {
-    if (condition.rhs.type === 'list' && Array.isArray(condition.rhs.items)) {
+    if (
+      (condition.rhs.type === 'list' || condition.rhs.type === 'list/inline') &&
+      Array.isArray(condition.rhs.items)
+    ) {
       const items = condition.rhs.items.map(item => {
         const itemValue =
           typeof item === 'object' && item !== null && 'value' in item
@@ -358,7 +404,7 @@ function formatCondition(
   return { text: `${lhs} ${cmp} ${rhs}` };
 }
 
-function formatComparison(cmp: string): string {
+function formatComparison(condition: FlagCondition): string {
   const operators: Record<string, string> = {
     eq: 'is',
     oneOf: 'is in',
@@ -374,5 +420,11 @@ function formatComparison(cmp: string): string {
     containsAllOf: 'contains all of',
     containsNoneOf: 'contains none of',
   };
-  return operators[cmp] || cmp;
+  const label = operators[condition.cmp] || condition.cmp;
+
+  if (condition.cmpOptions?.ignoreCase) {
+    return `${label} (case-insensitive)`;
+  }
+
+  return label;
 }

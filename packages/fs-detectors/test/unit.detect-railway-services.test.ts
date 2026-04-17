@@ -204,8 +204,8 @@ describe('detectRailwayServices', () => {
     });
   });
 
-  describe('cron hints', () => {
-    it('should skip cron services and emit a hint with schedule and command', async () => {
+  describe('schedule-triggered job hints', () => {
+    it('should skip Railway scheduled jobs and emit a schedule-triggered job hint', async () => {
       const fs = new VirtualFilesystem({
         'web/railway.json': JSON.stringify({}),
         'web/package.json': JSON.stringify({
@@ -232,7 +232,8 @@ describe('detectRailwayServices', () => {
       const hint = result.warnings.find(w => w.code === 'RAILWAY_CRON_HINT');
       expect(hint).toBeDefined();
       expect(hint!.message).toContain('0 0 * * *');
-      expect(hint!.message).toContain('"type": "cron"');
+      expect(hint!.message).toContain('"type": "job"');
+      expect(hint!.message).toContain('"trigger": "schedule"');
       expect(hint!.message).toContain('"runtime": "python"');
     });
 

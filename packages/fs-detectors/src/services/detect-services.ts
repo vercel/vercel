@@ -1,5 +1,9 @@
 import type { HasField, Route } from '@vercel/routing-utils';
 import {
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
+} from '@vercel/build-utils';
+import {
   getOwnershipGuard,
   normalizeRoutePrefix,
   scopeRouteSourceToOwnership,
@@ -14,7 +18,7 @@ import {
   type ServicesRoutes,
 } from './types';
 import {
-  getInternalServiceCronPath,
+  getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
   isFrontendFramework,
@@ -264,11 +268,11 @@ export async function detectServices(
  * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
- * - Worker services:
+ * - Worker and queue-triggered job services:
  *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  *
- * - Cron services:
+ * - Schedule-triggered job services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
@@ -368,7 +372,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     }
   }
 
-  const workerServices = services.filter(s => s.type === 'worker');
+  const workerServices = services.filter(isQueueTriggeredService);
   for (const service of workerServices) {
     const workerEntrypoint =
       service.entrypoint || service.builder.src || 'index';
@@ -384,21 +388,17 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     });
   }
 
-  const cronServices = services.filter(s => s.type === 'cron');
+  const cronServices = services.filter(isScheduleTriggeredService);
   for (const service of cronServices) {
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    const cronPath = getInternalServiceCronPath(
-      service.name,
-      cronEntrypoint,
-      service.handlerFunction || 'cron'
-    );
+    const cronPrefix = getInternalServiceCronPathPrefix(service.name);
     const functionPath = getInternalServiceFunctionPath(service.name);
     crons.push({
-      src: `^${escapeRegex(cronPath)}$`,
+      src: `^${escapeRegex(cronPrefix)}/.*$`,
       dest: functionPath,
       check: true,
     });
   }
+
   return { hostRewrites, rewrites, defaults, crons, workers };
 }
 

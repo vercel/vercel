@@ -2,6 +2,12 @@ import {
   isBackendFramework,
   isPythonFramework,
 } from '@vercel/build-utils/dist/framework-helpers';
+import {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+} from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,
@@ -16,6 +22,13 @@ import {
   ROUTE_OWNING_BUILDERS,
 } from './types';
 
+export {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+};
+
 export async function hasFile(
   fs: DetectorFilesystem,
   filePath: string
@@ -28,18 +41,9 @@ export async function hasFile(
 }
 
 /**
- * Reserved internal namespace used by services routing/runtime plumbing.
- */
-export const INTERNAL_SERVICE_PREFIX = '/_svc';
-
-/**
  * Reserved internal namespace used by the dev queue proxy.
  */
 export const INTERNAL_QUEUES_PREFIX = '/_svc/_queues';
-
-export function getInternalServiceFunctionPath(serviceName: string): string {
-  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
-}
 
 function normalizeInternalServiceEntrypoint(entrypoint: string): string {
   const normalized = entrypoint
@@ -55,10 +59,6 @@ export function getInternalServiceWorkerPathPrefix(
   return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
 }
 
-export function getInternalServiceCronPathPrefix(serviceName: string): string {
-  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/crons`;
-}
-
 export function getInternalServiceWorkerPath(
   serviceName: string,
   entrypoint: string,
@@ -68,14 +68,6 @@ export function getInternalServiceWorkerPath(
   return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
 
-export function getInternalServiceCronPath(
-  serviceName: string,
-  entrypoint: string,
-  handler = 'cron'
-): string {
-  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
-  return `${getInternalServiceCronPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
-}
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {

@@ -1,8 +1,9 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import query from '../../../../src/commands/metrics/query';
+import { MetricsTelemetryClient } from '../../../../src/util/telemetry/commands/metrics';
 import * as linkModule from '../../../../src/util/projects/link';
-import * as getScopeModule from '../../../../src/util/get-scope';
+import getScope from '../../../../src/util/get-scope';
 import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
 
 vi.mock('../../../../src/util/projects/link');
@@ -10,8 +11,17 @@ vi.mock('../../../../src/util/get-scope');
 vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
-const mockedGetScope = vi.mocked(getScopeModule.default);
+const mockedGetScope = vi.mocked(getScope);
 const mockedGetProjectByNameOrId = vi.mocked(getProjectByNameOrId);
+type ScopeResult = Awaited<ReturnType<typeof getScope>>;
+type ProjectLookupResult = Awaited<ReturnType<typeof getProjectByNameOrId>>;
+let postedBody: Record<string, unknown> | undefined;
+
+class MockTelemetry extends MetricsTelemetryClient {
+  constructor() {
+    super({ opts: { store: client.telemetryEventStore } });
+  }
+}
 
 function mockLinkedProject() {
   mockedGetLinkedProject.mockResolvedValue({
@@ -30,9 +40,17 @@ function mockLinkedProject() {
 function mockTeamScope(teamSlug = 'my-team') {
   mockedGetScope.mockResolvedValue({
     contextName: teamSlug,
-    team: { id: 'team_dummy', slug: teamSlug } as any,
-    user: { id: 'user_dummy' } as any,
-  });
+    team: { id: 'team_dummy', slug: teamSlug },
+    user: { id: 'user_dummy' },
+  } as ScopeResult);
+}
+
+function mockUserScope() {
+  mockedGetScope.mockResolvedValue({
+    contextName: 'user',
+    team: null,
+    user: { id: 'user_dummy' },
+  } as ScopeResult);
 }
 
 function mockProjectLookup(projectName = 'other-app', projectId = 'prj_other') {
@@ -40,11 +58,54 @@ function mockProjectLookup(projectName = 'other-app', projectId = 'prj_other') {
     id: projectId,
     name: projectName,
     accountId: 'team_dummy',
-  } as any);
+  } as ProjectLookupResult);
 }
 
-function mockApiSuccess(data: any[] = [], summary: any[] = []) {
-  client.scenario.post('/v1/observability/query', (_req, res) => {
+function mockMetricDetail(
+  metricId = 'vercel.request.count',
+  overrides: Partial<{
+    description: string;
+    unit: string;
+    aggregations: string[];
+    defaultAggregation: string;
+    dimensions: Array<{ name: string; label: string }>;
+  }> = {}
+) {
+  client.scenario.get(
+    `/v2/observability/schema/${encodeURIComponent(metricId)}`,
+    (_req, res) => {
+      res.json([
+        {
+          id: metricId,
+          description: overrides.description ?? 'Count',
+          dimensions: overrides.dimensions ?? [
+            { name: 'http_status', label: 'HTTP Status' },
+            { name: 'route', label: 'Route' },
+            { name: 'request_path', label: 'Request Path' },
+          ],
+          unit: overrides.unit ?? 'count',
+          aggregations: overrides.aggregations ?? [
+            'sum',
+            'persecond',
+            'percent',
+            'unique',
+          ],
+          defaultAggregation: overrides.defaultAggregation ?? 'sum',
+        },
+      ]);
+    }
+  );
+}
+
+function mockApiSuccess(
+  data: Record<string, unknown>[] = [],
+  summary: Record<string, unknown>[] = []
+) {
+  client.scenario.post('/v2/observability/query', (req, res) => {
+    postedBody =
+      typeof req.body === 'string'
+        ? JSON.parse(req.body)
+        : (req.body as Record<string, unknown>);
     res.json({
       data,
       summary,
@@ -53,271 +114,233 @@ function mockApiSuccess(data: any[] = [], summary: any[] = []) {
   });
 }
 
-function mockSchemaApi() {
-  client.scenario.get('/v1/observability/schema', (_req, res) => {
-    res.json({
-      events: [
-        { name: 'incomingRequest', description: 'Edge Requests' },
-        { name: 'functionExecution', description: 'Functions' },
-      ],
-    });
-  });
-
-  client.scenario.get(
-    '/v1/observability/schema/incomingRequest',
-    (_req, res) => {
-      res.json({
-        name: 'incomingRequest',
-        description: 'Edge Requests',
-        dimensions: [
-          { name: 'httpStatus', label: 'HTTP Status' },
-          { name: 'route', label: 'Route' },
-        ],
-        measures: [
-          {
-            name: 'count',
-            label: 'Count',
-            unit: 'count',
-            aggregations: ['sum', 'persecond', 'percent'],
-            defaultAggregation: 'sum',
-          },
-          {
-            name: 'requestDurationMs',
-            label: 'Request Duration',
-            unit: 'milliseconds',
-            aggregations: ['avg', 'min', 'max', 'p95'],
-            defaultAggregation: 'avg',
-          },
-          {
-            name: 'fdtOutBytes',
-            label: 'Bandwidth',
-            unit: 'bytes',
-            aggregations: ['sum', 'avg'],
-            defaultAggregation: 'sum',
-          },
-        ],
-      });
-    }
-  );
-
-  client.scenario.get(
-    '/v1/observability/schema/functionExecution',
-    (_req, res) => {
-      res.json({
-        name: 'functionExecution',
-        description: 'Functions',
-        dimensions: [{ name: 'route', label: 'Route' }],
-        measures: [
-          {
-            name: 'count',
-            label: 'Count',
-            unit: 'count',
-            aggregations: ['sum'],
-            defaultAggregation: 'sum',
-          },
-          {
-            name: 'requestDurationMs',
-            label: 'Request Duration',
-            unit: 'milliseconds',
-            aggregations: ['avg', 'p95'],
-            defaultAggregation: 'avg',
-          },
-        ],
-      });
-    }
-  );
-}
-
-describe('query', () => {
+describe('metrics query v2', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+    postedBody = undefined;
     mockedGetProjectByNameOrId.mockReset();
-    mockSchemaApi();
+    mockLinkedProject();
+    mockTeamScope();
   });
 
-  describe('missing --event', () => {
+  describe('missing metric', () => {
     it('should return error with schema suggestion', async () => {
-      mockLinkedProject();
       client.setArgv('metrics');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('Missing required flag');
+      expect(client.stderr.getFullOutput()).toContain(
+        'Missing required metric'
+      );
     });
   });
 
-  describe('unknown event', () => {
-    it('should return error with available events', async () => {
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'bogus');
+  describe('positional metric', () => {
+    it('should accept a positional metric id', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--since', '1h');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.metric).toBe('vercel.request.count');
+    });
+  });
+
+  describe('metric validation', () => {
+    it('should return error with available metrics', async () => {
+      client.scenario.get('/v2/observability/schema/bogus', (_req, res) => {
+        res.status(400).json({
+          error: {
+            code: 'unknown_metric',
+            message: 'Unknown metric "bogus".',
+            allowedValues: ['vercel.request.count'],
+          },
+        });
+      });
+      client.setArgv('metrics', 'bogus');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('Unknown event "bogus"');
+      expect(client.stderr.getFullOutput()).toContain('Unknown metric "bogus"');
+      expect(client.stderr.getFullOutput()).toContain(
+        'Available values: vercel.request.count'
+      );
     });
 
     it('should return JSON error with --format=json', async () => {
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'bogus', '--format=json');
+      client.scenario.get('/v2/observability/schema/bogus', (_req, res) => {
+        res.status(400).json({
+          error: {
+            code: 'unknown_metric',
+            message: 'Unknown metric "bogus".',
+            allowedValues: ['vercel.request.count'],
+          },
+        });
+      });
+      client.setArgv('metrics', 'bogus', '--format=json');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
-      expect(parsed.error.code).toBe('UNKNOWN_EVENT');
-      expect(parsed.error.allowedValues).toContain('edgeRequest');
+      expect(parsed.error.code).toBe('unknown_metric');
+      expect(parsed.error.allowedValues).toContain('vercel.request.count');
     });
-  });
 
-  describe('unknown measure', () => {
-    it('should return error with available measures', async () => {
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--measure',
-        'bogus'
+    it('should return error for a non-queryable metric with available values', async () => {
+      client.scenario.get(
+        '/v2/observability/schema/vercel.request',
+        (_req, res) => {
+          res.json([
+            {
+              id: 'vercel.request.count',
+              description: 'Count',
+              dimensions: [{ name: 'route', label: 'Route' }],
+              unit: 'count',
+              aggregations: ['sum'],
+              defaultAggregation: 'sum',
+            },
+          ]);
+        }
       );
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(400).json({
+          error: {
+            code: 'metric_not_queryable',
+            message: 'Metric "vercel.request" is not directly queryable.',
+            allowedValues: ['vercel.request.count'],
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain('not directly queryable');
       expect(client.stderr.getFullOutput()).toContain(
-        'Measure "bogus" is not available'
+        'Available values: vercel.request.count'
       );
     });
   });
 
-  describe('invalid aggregation', () => {
-    it('should return error with valid aggregations', async () => {
-      mockLinkedProject();
+  describe('default aggregation', () => {
+    it('should default to sum for count metrics', async () => {
+      mockMetricDetail('vercel.request.count', {
+        unit: 'count',
+        defaultAggregation: 'sum',
+      });
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.metric).toBe('vercel.request.count');
+      expect(postedBody?.aggregation).toBe('sum');
+    });
+
+    it('should default to avg for duration metrics', async () => {
+      mockMetricDetail('vercel.function_invocation.request_duration_ms', {
+        description: 'Request Duration',
+        unit: 'milliseconds',
+        aggregations: ['avg', 'p95'],
+        defaultAggregation: 'avg',
+      });
+      mockApiSuccess();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--measure',
-        'count',
-        '--aggregation',
-        'p95'
+        'vercel.function_invocation.request_duration_ms'
       );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.aggregation).toBe('avg');
+    });
+
+    it('should default to sum for byte metrics', async () => {
+      mockMetricDetail('vercel.request.fdt_out_bytes', {
+        description: 'Bandwidth',
+        unit: 'bytes',
+        aggregations: ['sum', 'avg'],
+        defaultAggregation: 'sum',
+      });
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.fdt_out_bytes');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.aggregation).toBe('sum');
+    });
+  });
+
+  describe('API validation errors', () => {
+    it('should show available aggregations when the API rejects an aggregation', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(400).json({
+          error: {
+            code: 'invalid_aggregation',
+            message:
+              'Aggregation "median" is not valid for metric "vercel.request.count".',
+            allowedValues: ['sum'],
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count', '-a', 'median');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Aggregation "p95" is not valid'
-      );
-    });
-  });
-
-  describe('default measure and aggregation', () => {
-    it('should default to count/sum', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
-
-      const exitCode = await query(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      expect(requestBody.rollups.count_sum.measure).toBe('count');
-      expect(requestBody.rollups.count_sum.aggregation).toBe('sum');
+      expect(client.stderr.getFullOutput()).toContain('Available values: sum');
     });
 
-    it('should default to avg for duration measures', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
+    it('should show available dimensions when the API rejects a groupBy dimension', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(400).json({
+          error: {
+            code: 'invalid_dimension',
+            message:
+              'Group by uses invalid dimension "not_a_dimension" for metric "vercel.request.count".',
+            allowedValues: ['route', 'request_path'],
+          },
+        });
       });
-      mockLinkedProject();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'functionExecution',
-        '--measure',
-        'requestDurationMs'
-      );
-
-      const exitCode = await query(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      expect(requestBody.rollups.requestDurationMs_avg.measure).toBe(
-        'requestDurationMs'
-      );
-      expect(requestBody.rollups.requestDurationMs_avg.aggregation).toBe('avg');
-    });
-
-    it('should default to sum for byte measures', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--measure',
-        'fdtOutBytes'
-      );
-
-      const exitCode = await query(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      expect(requestBody.rollups.fdtOutBytes_sum.measure).toBe('fdtOutBytes');
-      expect(requestBody.rollups.fdtOutBytes_sum.aggregation).toBe('sum');
-    });
-  });
-
-  describe('unknown dimension', () => {
-    it('should return error with --group-by bogus', async () => {
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--group-by',
-        'bogus'
+        'not_a_dimension'
       );
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
       expect(client.stderr.getFullOutput()).toContain(
-        'Dimension "bogus" is not available'
+        'Available values: route, request_path'
       );
     });
   });
 
   describe('scope resolution', () => {
     it('should use linked project by default', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.scope).toEqual({
+      expect(postedBody?.scope).toEqual({
         type: 'project',
         ownerId: 'team_dummy',
         projectIds: ['prj_metricstest'],
@@ -325,18 +348,13 @@ describe('query', () => {
     });
 
     it('should use --project with team context', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
+      mockMetricDetail();
       mockTeamScope('my-team');
       mockProjectLookup('other-app');
+      mockApiSuccess();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--project',
         'other-app'
       );
@@ -344,7 +362,7 @@ describe('query', () => {
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.scope).toEqual({
+      expect(postedBody?.scope).toEqual({
         type: 'project',
         ownerId: 'team_dummy',
         projectIds: ['prj_other'],
@@ -352,22 +370,17 @@ describe('query', () => {
     });
 
     it('should resolve a project ID passed to --project', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
+      mockMetricDetail();
       mockTeamScope('my-team');
       mockedGetProjectByNameOrId.mockResolvedValue({
         id: 'prj_direct',
         name: 'other-app',
         accountId: 'team_dummy',
-      } as any);
+      } as ProjectLookupResult);
+      mockApiSuccess();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--project',
         'prj_direct'
       );
@@ -380,7 +393,7 @@ describe('query', () => {
         'prj_direct',
         'team_dummy'
       );
-      expect(requestBody.scope).toEqual({
+      expect(postedBody?.scope).toEqual({
         type: 'project',
         ownerId: 'team_dummy',
         projectIds: ['prj_direct'],
@@ -388,18 +401,15 @@ describe('query', () => {
     });
 
     it('should use --all with team context', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
+      mockMetricDetail();
       mockTeamScope('my-team');
-      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.scope).toEqual({
+      expect(postedBody?.scope).toEqual({
         type: 'owner',
         ownerId: 'team_dummy',
       });
@@ -408,9 +418,7 @@ describe('query', () => {
     it('should error when both --all and --project', async () => {
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--all',
         '--project',
         'my-app'
@@ -427,10 +435,10 @@ describe('query', () => {
     it('should error when not linked and no project flag', async () => {
       mockedGetLinkedProject.mockResolvedValue({
         status: 'not_linked',
-        org: null as any,
-        project: null as any,
+        org: null,
+        project: null,
       });
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -443,7 +451,7 @@ describe('query', () => {
         status: 'error',
         exitCode: 1,
       });
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -451,12 +459,8 @@ describe('query', () => {
     });
 
     it('should error when no team context with --all', async () => {
-      mockedGetScope.mockResolvedValue({
-        contextName: 'user',
-        team: null,
-        user: { id: 'user_dummy' } as any,
-      });
-      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
+      mockUserScope();
+      client.setArgv('metrics', 'vercel.request.count', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -465,19 +469,8 @@ describe('query', () => {
     });
 
     it('should error when no team context with --project', async () => {
-      mockedGetScope.mockResolvedValue({
-        contextName: 'user',
-        team: null,
-        user: { id: 'user_dummy' } as any,
-      });
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--project',
-        'my-app'
-      );
+      mockUserScope();
+      client.setArgv('metrics', 'vercel.request.count', '--project', 'my-app');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -486,23 +479,18 @@ describe('query', () => {
     });
 
     it('should use getScope team for --project even when linked to a different team', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject(); // linked to 'my-team'
-      mockTeamScope('other-team'); // getScope returns 'other-team'
+      mockMetricDetail();
+      mockLinkedProject();
+      mockTeamScope('other-team');
       mockedGetProjectByNameOrId.mockResolvedValue({
         id: 'prj_other_team',
         name: 'other-app',
         accountId: 'team_dummy',
-      } as any);
+      } as ProjectLookupResult);
+      mockApiSuccess();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--project',
         'other-app'
       );
@@ -510,7 +498,7 @@ describe('query', () => {
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.scope).toEqual({
+      expect(postedBody?.scope).toEqual({
         type: 'project',
         ownerId: 'team_dummy',
         projectIds: ['prj_other_team'],
@@ -520,18 +508,24 @@ describe('query', () => {
 
   describe('text output', () => {
     it('should output ungrouped text', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res.json({
           data: [
-            { timestamp: '2025-01-15T10:00:00Z', count_sum: 89 },
-            { timestamp: '2025-01-15T10:05:00Z', count_sum: 102 },
+            {
+              timestamp: '2025-01-15T10:00:00Z',
+              vercel_request_count_sum: 89,
+            },
+            {
+              timestamp: '2025-01-15T10:05:00Z',
+              vercel_request_count_sum: 102,
+            },
           ],
-          summary: [{ count_sum: 191 }],
+          summary: [{ vercel_request_count_sum: 191 }],
           statistics: { rowsRead: 100 },
         });
       });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -542,49 +536,47 @@ describe('query', () => {
     });
 
     it('should output grouped text', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res.json({
           data: [
             {
               timestamp: '2025-01-15T10:00:00Z',
-              httpStatus: '200',
-              count_sum: 4520,
+              http_status: '200',
+              vercel_request_count_sum: 4520,
             },
             {
               timestamp: '2025-01-15T10:00:00Z',
-              httpStatus: '500',
-              count_sum: 89,
+              http_status: '500',
+              vercel_request_count_sum: 89,
             },
           ],
           summary: [],
           statistics: { rowsRead: 100 },
         });
       });
-      mockLinkedProject();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--group-by',
-        'httpStatus'
+        'http_status'
       );
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('httpStatus');
+      expect(output).toContain('http_status');
       expect(output).toContain('sparklines:');
       expect(output).toContain('> Groups:');
     });
 
     it('should output no-data message for empty data', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res.json({ data: [], summary: [], statistics: {} });
       });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -598,28 +590,22 @@ describe('query', () => {
 
   describe('JSON output', () => {
     it('should output full JSON structure with --format=json', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res.json({
           data: [{ timestamp: '2025-01-15T10:00:00Z', value: 42 }],
           summary: [{ value: 42 }],
           statistics: { rowsRead: 100 },
         });
       });
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--format=json'
-      );
+      client.setArgv('metrics', 'vercel.request.count', '--format=json');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
-      expect(parsed.query.event).toBe('edgeRequest');
+      expect(parsed.query.metric).toBe('vercel.request.count');
       expect(parsed.data).toHaveLength(1);
       expect(parsed.summary).toHaveLength(1);
       expect(parsed.statistics).toBeDefined();
@@ -628,59 +614,48 @@ describe('query', () => {
 
   describe('--limit flag', () => {
     it('should send custom limit to API', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--limit',
-        '50'
-      );
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--limit', '50');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.limit).toBe(50);
+      expect(postedBody?.limit).toBe(50);
     });
   });
 
   describe('--filter flag', () => {
     it('should pass filter string to API', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject();
+      mockMetricDetail();
+      mockApiSuccess();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--filter',
-        'httpStatus ge 500'
+        'http_status ge 500'
       );
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.filter).toBe('httpStatus ge 500');
+      expect(postedBody?.filter).toBe('http_status ge 500');
     });
   });
 
   describe('API errors', () => {
     it('should handle 402 payment required', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
-        res.status(402).json({ error: { code: 'PAYMENT_REQUIRED' } });
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'PAYMENT_REQUIRED',
+            message:
+              'This feature requires an Observability Plus subscription. Upgrade at https://vercel.com/dashboard/settings/billing',
+          },
+        });
       });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -690,12 +665,33 @@ describe('query', () => {
       );
     });
 
+    it('should surface the API quota message for 402 responses', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'payment_required',
+            message:
+              'You have reached the daily observability metrics query limit for your team. Request a higher usage limit from your Vercel account team.',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'You have reached the daily observability metrics query limit'
+      );
+    });
+
     it('should handle 403 forbidden', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res.status(403).json({ error: { code: 'FORBIDDEN' } });
       });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -704,11 +700,11 @@ describe('query', () => {
     });
 
     it('should handle 500 internal error', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
       });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -717,13 +713,13 @@ describe('query', () => {
     });
 
     it('should handle 400 bad request', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res
           .status(400)
           .json({ error: { code: 'BAD_REQUEST', message: 'Invalid query' } });
       });
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -731,18 +727,33 @@ describe('query', () => {
       expect(client.stderr.getFullOutput()).toContain('Invalid query');
     });
 
+    it('should show a friendly message for 429 responses', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(429).json({
+          error: {
+            code: 'rate_limited',
+            message:
+              'Too many requests. Please wait and try again. If you need a higher limit, request one from your Vercel account team.',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Too many requests. Please wait and try again.'
+      );
+    });
+
     it('should handle API error in JSON mode', async () => {
-      client.scenario.post('/v1/observability/query', (_req, res) => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
         res.status(402).json({ error: { code: 'PAYMENT_REQUIRED' } });
       });
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--format=json'
-      );
+      client.setArgv('metrics', 'vercel.request.count', '--format=json');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -754,190 +765,131 @@ describe('query', () => {
   });
 
   describe('telemetry', () => {
-    it('should track event option', async () => {
+    it('should track metric argument', async () => {
+      mockMetricDetail();
       mockApiSuccess();
-      mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'vercel.request.count');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
-      ]);
-    });
-
-    it('should track measure option', async () => {
-      mockApiSuccess();
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--measure',
-        'requestDurationMs'
-      );
-
-      await query(client, new MockTelemetry());
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
-        { key: 'option:measure', value: 'requestDurationMs' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
       ]);
     });
 
     it('should track aggregation option', async () => {
+      mockMetricDetail();
       mockApiSuccess();
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--measure',
-        'requestDurationMs',
-        '--aggregation',
-        'p95'
-      );
+      client.setArgv('metrics', 'vercel.request.count', '--aggregation', 'p95');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
-        { key: 'option:measure', value: 'requestDurationMs' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:aggregation', value: 'p95' },
       ]);
     });
 
     it('should track group-by option', async () => {
+      mockMetricDetail();
       mockApiSuccess();
-      mockLinkedProject();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--group-by',
-        'httpStatus'
+        'http_status'
       );
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
-        { key: 'option:group-by', value: 'httpStatus' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:group-by', value: 'http_status' },
       ]);
     });
 
     it('should track limit option as redacted', async () => {
+      mockMetricDetail();
       mockApiSuccess();
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--limit',
-        '50'
-      );
+      client.setArgv('metrics', 'vercel.request.count', '--limit', '50');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:limit', value: '[REDACTED]' },
       ]);
     });
 
     it('should track filter option as redacted', async () => {
+      mockMetricDetail();
       mockApiSuccess();
-      mockLinkedProject();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
+        'vercel.request.count',
         '--filter',
-        'httpStatus ge 500'
+        'http_status ge 500'
       );
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:filter', value: '[REDACTED]' },
       ]);
     });
 
     it('should track --all flag', async () => {
+      mockMetricDetail();
       mockApiSuccess();
       mockTeamScope();
-      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
+      client.setArgv('metrics', 'vercel.request.count', '--all');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'flag:all', value: 'TRUE' },
       ]);
     });
 
     it('should track format option', async () => {
+      mockMetricDetail();
       mockApiSuccess();
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--format=json'
-      );
+      client.setArgv('metrics', 'vercel.request.count', '--format=json');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:format', value: 'json' },
       ]);
     });
 
     it('should track granularity option', async () => {
+      mockMetricDetail();
       mockApiSuccess();
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--granularity',
-        '5m'
-      );
+      client.setArgv('metrics', 'vercel.request.count', '--granularity', '5m');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:granularity', value: '5m' },
       ]);
     });
 
     it('should track project option as redacted', async () => {
+      mockMetricDetail();
       mockApiSuccess();
       mockTeamScope();
       mockProjectLookup('my-app', 'prj_my_app');
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--project',
-        'my-app'
-      );
+      client.setArgv('metrics', 'vercel.request.count', '--project', 'my-app');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:project', value: '[REDACTED]' },
       ]);
     });
@@ -945,23 +897,20 @@ describe('query', () => {
 
   describe('request body', () => {
     it('should send correct request structure', async () => {
-      let requestBody: any;
-      client.scenario.post('/v1/observability/query', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
+        description: 'Request Duration',
+        unit: 'milliseconds',
+        aggregations: ['avg', 'p95'],
+        defaultAggregation: 'avg',
       });
-      mockLinkedProject();
+      mockApiSuccess();
       client.setArgv(
         'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--measure',
-        'requestDurationMs',
+        'vercel.request.route_cpu_duration_ms',
         '--aggregation',
         'p95',
         '--group-by',
-        'httpStatus',
+        'http_status',
         '--since',
         '2025-01-15T00:00:00Z',
         '--until',
@@ -973,27 +922,10 @@ describe('query', () => {
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.reason).toBe('agent');
-      expect(requestBody.event).toBe('incomingRequest');
-      expect(requestBody.rollups.requestDurationMs_p95.measure).toBe(
-        'requestDurationMs'
-      );
-      expect(requestBody.rollups.requestDurationMs_p95.aggregation).toBe('p95');
-      expect(requestBody.groupBy).toEqual(['httpStatus']);
-      expect(requestBody.granularity).toEqual({ minutes: 15 });
+      expect(postedBody?.metric).toBe('vercel.request.route_cpu_duration_ms');
+      expect(postedBody?.aggregation).toBe('p95');
+      expect(postedBody?.groupBy).toEqual(['http_status']);
+      expect(postedBody?.granularity).toEqual({ minutes: 15 });
     });
   });
 });
-
-// Minimal mock telemetry client for testing
-import { MetricsTelemetryClient } from '../../../../src/util/telemetry/commands/metrics';
-
-class MockTelemetry extends MetricsTelemetryClient {
-  constructor() {
-    super({
-      opts: {
-        store: client.telemetryEventStore,
-      },
-    });
-  }
-}

@@ -6,6 +6,7 @@ import {
   Lambda,
   TriggerEvent,
   sanitizeConsumerName,
+  getLambdaOptionsFromFunction,
 } from '../src/lambda';
 import type { Files } from '../src/types';
 import { FileBlob, glob, spawnAsync } from '../src';
@@ -270,28 +271,50 @@ describe('Lambda', () => {
         expect(lambda.experimentalTriggers![0].maxConcurrency).toBe(5);
       });
 
-      it('should throw error when v2beta has multiple triggers', () => {
-        expect(
-          () =>
-            new Lambda({
-              files,
-              handler: 'index.handler',
-              runtime: 'nodejs22.x',
-              experimentalTriggers: [
-                {
-                  type: 'queue/v2beta',
-                  topic: 'test-topic-1',
-                  consumer: 'consumer-1',
+      it('should allow when v2beta has multiple triggers', () => {
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs22.x',
+          experimentalTriggers: [
+            {
+              type: 'queue/v2beta',
+              topic: 'test-topic-1',
+              consumer: 'consumer-1',
+            },
+            {
+              type: 'queue/v2beta',
+              topic: 'test-topic-2',
+              consumer: 'consumer-2',
+            },
+          ],
+        });
+
+        expect(lambda.experimentalTriggers![0].type).toBe('queue/v2beta');
+        expect(lambda.experimentalTriggers![0].topic).toBe('test-topic-1');
+        expect(lambda.experimentalTriggers![0].consumer).toBe('consumer-1');
+        expect(lambda.experimentalTriggers![1].type).toBe('queue/v2beta');
+        expect(lambda.experimentalTriggers![1].topic).toBe('test-topic-2');
+        expect(lambda.experimentalTriggers![1].consumer).toBe('consumer-2');
+      });
+
+      it('should reject multiple v2beta triggers from functions config', async () => {
+        await expect(
+          getLambdaOptionsFromFunction({
+            sourceFile: 'api/handler.js',
+            config: {
+              functions: {
+                'api/handler.js': {
+                  experimentalTriggers: [
+                    { type: 'queue/v2beta', topic: 'topic-1' },
+                    { type: 'queue/v2beta', topic: 'topic-2' },
+                  ],
                 },
-                {
-                  type: 'queue/v2beta',
-                  topic: 'test-topic-2',
-                  consumer: 'consumer-2',
-                },
-              ],
-            })
-        ).toThrow(
-          '"experimentalTriggers" can only have one item for queue/v2beta'
+              },
+            },
+          })
+        ).rejects.toThrow(
+          'functions["api/handler.js"].experimentalTriggers can only have one item for queue/v2beta'
         );
       });
     });

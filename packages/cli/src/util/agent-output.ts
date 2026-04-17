@@ -5,8 +5,8 @@ import { packageName } from './pkg-name';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
- * When client.nonInteractive, commands output this as JSON and exit so agents
- * can parse and suggest the next command.
+ * In non-interactive mode (`client.nonInteractive` or `--non-interactive`),
+ * commands output this as JSON and exit so agents can parse and suggest the next command.
  */
 export interface ActionRequiredPayload {
   status: 'action_required';
@@ -21,6 +21,12 @@ export interface ActionRequiredPayload {
   /** Hint for agents: run one of the commands in next[] to complete without prompting. */
   hint?: string;
   verification_uri?: string;
+  /** Legal / policy URLs (e.g. marketplace addendum, integration EULA). */
+  policy_links?: {
+    marketplace_addendum?: string;
+    integration_privacy_policy?: string;
+    integration_eula?: string;
+  };
   choices?: Array<{ id: string; name: string }>;
   next?: Array<{ command: string; when?: string }>;
   /** When reason is 'missing_requirements', list of required items (e.g. 'missing_name', 'missing_value', 'git_branch_required') */
@@ -60,6 +66,16 @@ export interface AgentErrorPayload {
   userActionRequired?: boolean;
   /** Dashboard or docs URL for agents that key off a dedicated field (optional). */
   verification_uri?: string;
+  /** Legal / policy URLs when the error is policy-related. */
+  policy_links?: {
+    marketplace_addendum?: string;
+    integration_privacy_policy?: string;
+    integration_eula?: string;
+  };
+  /** ACL action the caller lacks permission for (e.g. "read", "create", "delete"). Present on 403 when the API provides it. */
+  action?: string;
+  /** ACL resource the permission applies to (e.g. "project", "deployment"). Present on 403 when the API provides it. */
+  resource?: string;
 }
 
 /**
@@ -90,6 +106,9 @@ const GLOBAL_FLAG_NAMES = new Set([
   '--token',
 ]);
 
+/** Boolean globals: the next argv token is never their value (avoids eating a subcommand like `oauth-apps`). */
+const BOOLEAN_GLOBAL_FLAG_NAMES = new Set(['--yes', '-y', '--non-interactive']);
+
 /**
  * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
  */
@@ -101,11 +120,12 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
     const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
     if (GLOBAL_FLAG_NAMES.has(name)) {
       out.push(arg);
-      if (
+      const takesSeparateValue =
+        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
         !arg.includes('=') &&
         i + 1 < args.length &&
-        !args[i + 1].startsWith('-')
-      ) {
+        !args[i + 1].startsWith('-');
+      if (takesSeparateValue) {
         out.push(args[i + 1]);
         i++;
       }
@@ -115,11 +135,50 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
 }
 
 /**
+ * Removes global CLI flags from a token list (e.g. to build a subcommand template
+ * for {@link buildCommandWithGlobalFlags} without duplicating `--cwd`, etc.).
+ */
+export function omitGlobalFlagsFromArgs(args: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
+    if (GLOBAL_FLAG_NAMES.has(name)) {
+      const skipSeparateValue =
+        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
+        !arg.includes('=') &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-');
+      if (skipSeparateValue) {
+        i++;
+      }
+      continue;
+    }
+    out.push(arg);
+  }
+  return out;
+}
+
+/**
+ * Returns the `integration …` argv tail without global flags, for suggested retry commands.
+ */
+export function buildIntegrationCommandTailFromArgv(argv: string[]): string {
+  const args = argv.slice(2);
+  const idx = args.indexOf('integration');
+  if (idx === -1) {
+    return 'integration';
+  }
+  return omitGlobalFlagsFromArgs(args.slice(idx)).join(' ');
+}
+
+/**
  * Options for buildCommandWithGlobalFlags.
  * excludeFlags: flag names to omit from the suggested command (e.g. ['--non-interactive'] for login).
  */
 export interface BuildCommandWithGlobalFlagsOptions {
   excludeFlags?: string[];
+  /** Place preserved flags after `vercel` and before the subcommand (recommended for copy-paste). */
+  prependGlobalFlags?: boolean;
 }
 
 /**
@@ -155,7 +214,12 @@ export function buildCommandWithGlobalFlags(
     preserved = out;
   }
   const base = `${pkgName} ${commandTemplate}`;
-  if (preserved.length === 0) return base;
+  if (preserved.length === 0) {
+    return base;
+  }
+  if (options?.prependGlobalFlags) {
+    return `${pkgName} ${preserved.join(' ')} ${commandTemplate}`;
+  }
   return `${base} ${preserved.join(' ')}`;
 }
 
@@ -362,9 +426,10 @@ export function enrichActionRequiredWithInvokingCommand(
 }
 
 /**
- * When client.nonInteractive, writes the action_required payload as a single
- * JSON line to stdout and exits with exitCode (default 1).
- * The payload's next[] is enriched with both link commands and the invoking command with --scope.
+ * When non-interactive (`client.nonInteractive` or `--non-interactive` on argv),
+ * writes the action_required payload as JSON to stdout and exits with exitCode (default 1).
+ * The payload's next[] is enriched with both link commands and the invoking command with --scope
+ * when `choices` is set.
  * In interactive mode, does nothing (caller should show prompts or errors as usual).
  */
 export function outputActionRequired(
@@ -372,7 +437,7 @@ export function outputActionRequired(
   payload: ActionRequiredPayload,
   exitCode: number = 1
 ): void {
-  if (!client.nonInteractive) {
+  if (!shouldEmitNonInteractiveCommandError(client)) {
     return;
   }
   const enriched = enrichActionRequiredWithInvokingCommand(
@@ -660,6 +725,8 @@ export function exitWithNonInteractiveError(
         status: 'error',
         reason,
         message,
+        ...(err.action && { action: err.action }),
+        ...(err.resource && { resource: err.resource }),
       },
       exitCode,
       variant
