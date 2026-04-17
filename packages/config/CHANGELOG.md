@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
 ## 0.2.0
 
 ### Minor Changes

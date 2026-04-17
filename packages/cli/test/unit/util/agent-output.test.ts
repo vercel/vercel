@@ -540,6 +540,97 @@ describe('exitWithNonInteractiveError', () => {
 
     vi.restoreAllMocks();
   });
+
+  it('includes action and resource from a 403 APIError', async () => {
+    const { Response } = await import('node-fetch');
+    const res = new Response(
+      JSON.stringify({
+        error: {
+          code: 'forbidden',
+          message: "You don't have permission to read the project.",
+          action: 'read',
+          resource: 'project',
+        },
+      }),
+      { status: 403 }
+    );
+    const err = new APIError(
+      "You don't have permission to read the project.",
+      res,
+      { action: 'read', resource: 'project' }
+    );
+
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: true,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() => exitWithNonInteractiveError(client, err, 1)).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'forbidden',
+      message: "You don't have permission to read the project.",
+      action: 'read',
+      resource: 'project',
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it('omits action and resource from a 404 APIError', async () => {
+    const { Response } = await import('node-fetch');
+    const res = new Response(
+      JSON.stringify({
+        error: { code: 'not_found', message: 'Not found.' },
+      }),
+      { status: 404 }
+    );
+    const err = new APIError('Not found.', res);
+
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: true,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() => exitWithNonInteractiveError(client, err, 1)).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'project_not_found',
+      message: 'Not found.',
+    });
+    expect(payload).not.toHaveProperty('action');
+    expect(payload).not.toHaveProperty('resource');
+
+    vi.restoreAllMocks();
+  });
 });
 
 describe('getGlobalFlagsFromArgv', () => {

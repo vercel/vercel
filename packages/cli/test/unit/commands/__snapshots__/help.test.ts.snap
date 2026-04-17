@@ -805,6 +805,7 @@ exports[`help command > connex help output snapshots > connex help column width 
   Commands:
 
   create  type  Create a new Connex client                              
+  list          List Connex clients for the current team                
 
 
   Global Options:
@@ -828,6 +829,58 @@ exports[`help command > connex help output snapshots > connex help column width 
   - Create a Slack app
 
     $ vercel connex create slack
+
+  - List Connex clients on the current team
+
+    $ vercel connex list
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex list subcommand > connex list subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex list [options]
+
+  List Connex clients for the current team                                                                              
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <COUNT>    Number of clients to return per page                                                          
+       --next <CURSOR>    Cursor for the next page of results                                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List Connex clients for the current team
+
+    $ vercel connex list
+
+  - Limit the number of results
+
+    $ vercel connex list --limit 10
+
+  - Fetch the next page of results
+
+    $ vercel connex list --next <cursor>
+
+  - Output as JSON
+
+    $ vercel connex list --format=json
 
 "
 `;

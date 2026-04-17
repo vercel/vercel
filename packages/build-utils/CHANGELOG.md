@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 13.18.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 13.17.2
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 13.17.1
+
+### Patch Changes
+
+- Align deserialize logic with existing callers. ([#16002](https://github.com/vercel/vercel/pull/16002))
+
 ## 13.17.0
 
 ### Minor Changes

@@ -132,6 +132,7 @@ export { getOsRelease, getProvidedRuntime } from './os';
 
 export * from './should-serve';
 export * from './schemas';
+export * from './package-manifest';
 export * from './types';
 export * from './errors';
 

@@ -4,7 +4,7 @@ import * as open from 'open';
 import { eraseLines } from 'ansi-escapes';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
-import { autoInstallAgentTooling } from '../../util/agent/auto-install-agentic';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import { printError } from '../../util/error';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import getGlobalPathConfig from '../../util/config/global-path';
@@ -239,7 +239,7 @@ export async function login(
 
   telemetry.trackState('success');
 
-  await autoInstallAgentTooling(client);
+  await autoInstallVercelPlugin(client);
 
   return 0;
 }

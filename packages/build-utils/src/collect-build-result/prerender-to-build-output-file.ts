@@ -47,6 +47,9 @@ export interface ExtendedPayload {
 
 const CRLF = '\r\n';
 const MULTIPART_HEADER = 'multipart/x-nextjs-extended-payload';
+// Keep a single boundary per process to preserve existing callers'
+// prerender fallback digests and headers.
+const boundary = randomBytes(8).toString('hex');
 
 function getExtendedPayload({
   initialHeaders,
@@ -56,7 +59,6 @@ function getExtendedPayload({
     return { initialHeaders: undefined, fallback, extendedBody: undefined };
   }
 
-  const boundary = randomBytes(8).toString('hex');
   return {
     initialHeaders: {
       ...(fallback ? {} : { 'x-vercel-empty-fallback': 'true' }),
