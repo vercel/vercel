@@ -3,14 +3,17 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import connex from '../../../../src/commands/connex';
+import * as configFilesUtil from '../../../../src/util/config/files';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 
 describe('connex create', () => {
   let team: { id: string; slug: string };
+  const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
   beforeEach(() => {
     client.reset();
+    writeConfigSpy.mockClear();
     useUser();
     team = useTeam();
     client.config.currentTeam = team.id;
@@ -196,6 +199,53 @@ describe('connex create', () => {
 
     await expect(client.stderr).toOutput('Slack API error');
     expect(exitCode).toBe(1);
+  });
+
+  it('should persist team to config after interactive selection', async () => {
+    delete client.config.currentTeam;
+
+    client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
+      res.writeHead(302, {
+        Location: 'https://vercel.com/test/~/connex/create?type=slack',
+      });
+      res.end();
+    });
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+      res.json({ status: 'success', data: { clientId: 'scl_persist' } });
+    });
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCodePromise = connex(client);
+
+    await expect(client.stderr).toOutput(
+      'Select the team where you want to create this client'
+    );
+    // Arrow down past the personal account to select the team.
+    client.stdin.write('\u001b[B\n');
+
+    expect(await exitCodePromise).toBe(0);
+    expect(client.config.currentTeam).toBe(team.id);
+    expect(writeConfigSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ currentTeam: team.id })
+    );
+  });
+
+  it('should not rewrite config when team is already set', async () => {
+    client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
+      res.writeHead(302, {
+        Location: 'https://vercel.com/test/~/connex/create?type=slack',
+      });
+      res.end();
+    });
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+      res.json({ status: 'success', data: { clientId: 'scl_noop' } });
+    });
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(writeConfigSpy).not.toHaveBeenCalled();
   });
 
   it('should tolerate early 404s during polling', async () => {
