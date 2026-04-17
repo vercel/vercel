@@ -22,6 +22,81 @@ from .exceptions import (
     UnauthorizedError,
 )
 
+CLOUD_EVENT_TYPE_V2BETA = "com.vercel.queue.v2beta"
+
+
+def _get_environ_header(environ: dict[str, Any], name: str, default: str = "") -> str:
+    # WSGI (PEP 3333) stores most HTTP headers with an HTTP_ prefix, but
+    # Content-Type and Content-Length are special: they are stored without the
+    # prefix as CONTENT_TYPE and CONTENT_LENGTH respectively.
+    key = "HTTP_" + name.upper().replace("-", "_")
+    value = environ.get(key)
+    if value is None:
+        # Fall back to the non-prefixed key for Content-Type / Content-Length
+        wsgi_key = name.upper().replace("-", "_")
+        value = environ.get(wsgi_key)
+    if value is None:
+        return default
+    if isinstance(value, bytes):
+        return value.decode("latin1")
+    return str(value)
+
+
+class ParsedV2BetaCallback(TypedDict):
+    queueName: str
+    consumerGroup: str
+    messageId: str
+    receiptHandle: str
+    deliveryCount: int
+    createdAt: str
+    payload: Any
+
+
+def is_v2beta_callback(environ: dict[str, Any]) -> bool:
+    return _get_environ_header(environ, "Ce-Type") == CLOUD_EVENT_TYPE_V2BETA
+
+
+def parse_v2beta_callback(
+    raw_body: bytes,
+    environ: dict[str, Any],
+) -> ParsedV2BetaCallback:
+    """Parse a v2beta binary content mode callback."""
+    queue_name = _get_environ_header(environ, "Ce-Vqsqueuename")
+    consumer_group = _get_environ_header(environ, "Ce-Vqsconsumergroup")
+    message_id = _get_environ_header(environ, "Ce-Vqsmessageid")
+    receipt_handle = _get_environ_header(environ, "Ce-Vqsreceipthandle")
+
+    if not queue_name or not consumer_group or not message_id:
+        raise ValueError("missing required ce-vqs* headers")
+
+    delivery_count_raw = _get_environ_header(environ, "Ce-Vqsdeliverycount", "1")
+    try:
+        delivery_count = int(delivery_count_raw)
+    except ValueError:
+        delivery_count = 1
+
+    created_at = _get_environ_header(environ, "Ce-Vqscreatedat")
+
+    content_type = _get_environ_header(environ, "Content-Type")
+    payload: Any
+    if "application/json" in content_type.lower():
+        try:
+            payload = json.loads(raw_body.decode("utf-8"))
+        except Exception:  # noqa: BLE001
+            payload = raw_body
+    else:
+        payload = raw_body
+
+    return {
+        "queueName": queue_name,
+        "consumerGroup": consumer_group,
+        "messageId": message_id,
+        "receiptHandle": receipt_handle,
+        "deliveryCount": delivery_count,
+        "createdAt": created_at,
+        "payload": payload,
+    }
+
 
 class CloudEventData(TypedDict):
     messageId: str

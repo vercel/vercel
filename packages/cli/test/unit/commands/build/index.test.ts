@@ -1176,9 +1176,9 @@ describe.skipIf(flakey)('build', () => {
     );
     expect(vcConfig.experimentalTriggers).toEqual([
       {
-        type: 'queue/v1beta',
+        type: 'queue/v2beta',
         topic: 'orders',
-        consumer: 'default',
+        consumer: '_S__svc_Sprocessor_Sindex',
         retryAfterSeconds: 10,
         initialDelaySeconds: 5,
       },

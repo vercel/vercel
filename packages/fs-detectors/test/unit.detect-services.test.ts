@@ -928,7 +928,7 @@ describe('detectServices', () => {
       expect(result.services[0].builder.config?.framework).toBe('express');
     });
 
-    it('should default topics and consumer to "default" for workers', async () => {
+    it('should default topics to ["default"] for workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -945,7 +945,6 @@ describe('detectServices', () => {
       expect(result.services[0]).toMatchObject({
         type: 'worker',
         topics: ['default'],
-        consumer: 'default',
       });
     });
 
@@ -970,7 +969,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should not set topics/consumer defaults for non-workers', async () => {
+    it('should not set topics defaults for non-workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -986,7 +985,6 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services[0].topics).toBeUndefined();
-      expect(result.services[0].consumer).toBeUndefined();
     });
 
     it.each([
@@ -1873,7 +1871,7 @@ describe('detectServices', () => {
   });
 
   describe('worker services', () => {
-    it('should generate internal worker callback routes', async () => {
+    it('should not generate public routes for worker services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1890,12 +1888,7 @@ describe('detectServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(1);
-      expect(result.routes.workers).toHaveLength(1);
-      expect(result.routes.workers[0]).toEqual({
-        src: '^/_svc/processor/workers/worker/processor/worker$',
-        dest: '/_svc/processor/index',
-        check: true,
-      });
+      expect(result.routes.workers).toHaveLength(0);
     });
 
     it('should error if worker service has routePrefix', async () => {
@@ -1959,12 +1952,8 @@ describe('detectServices', () => {
           },
         ],
       });
-      expect(result.routes.workers).toHaveLength(1);
-      expect(result.routes.workers[0]).toEqual({
-        src: '^/_svc/processor/workers/worker/processor/worker$',
-        dest: '/_svc/processor/index',
-        check: true,
-      });
+      // Queue-triggered services use private path routing; no synthetic worker routes.
+      expect(result.routes.workers).toHaveLength(0);
     });
 
     it('should detect a workflow-triggered job service without synthetic routes', async () => {

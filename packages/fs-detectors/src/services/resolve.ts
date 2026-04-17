@@ -873,8 +873,6 @@ export async function resolveConfiguredService(
       : trigger === 'queue'
         ? config.topics
         : undefined;
-  const consumer =
-    type === 'worker' ? config.consumer || 'default' : config.consumer;
 
   let builderUse: string;
   let builderSrc: string;
@@ -1004,7 +1002,6 @@ export async function resolveConfiguredService(
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    consumer,
     envPrefix: config.envPrefix,
   };
 }

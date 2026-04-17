@@ -35,12 +35,14 @@ import {
   glob,
   type Service,
   getInternalServiceCronPath,
+  getInternalServiceFunctionPath,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
   isQueueTriggeredService,
   isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
+  sanitizeConsumerName,
   downloadFile,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
@@ -2064,11 +2066,19 @@ function attachQueueServiceTrigger(
   service: Service
 ): void {
   const topics = getServiceQueueTopicConfigs(service);
-  const consumer = service.consumer || 'default';
+  const consumer = sanitizeConsumerName(
+    getInternalServiceFunctionPath(service.name)
+  );
+
+  if (service.builder.use !== '@vercel/python' && topics.length > 1) {
+    throw new Error(
+      `Worker service "${service.name}" has ${topics.length} topics, but multiple topics are only supported for Python workers.`
+    );
+  }
 
   for (const topicConfig of topics) {
     const trigger: TriggerEvent = {
-      type: 'queue/v1beta',
+      type: 'queue/v2beta',
       topic: topicConfig.topic,
       consumer,
     };
