@@ -1,0 +1,158 @@
+name: Comment CLI Tarball Instructions (v2)
+
+on:
+  repository_dispatch:
+    types:
+      - vercel.project.QmcQ2AGNAWeR6ZJCWAhqhbixxvWbgvsR2LMT4fzmTfY9SK.deployment.ready
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.client_payload.git.ref }}
+  cancel-in-progress: ${{ github.event.client_payload.git.ref != 'refs/heads/main' }}
+
+jobs:
+  comment-cli-tarball:
+    name: Comment CLI Tarball Instructions (v2)
+    runs-on: ubuntu-latest
+    if: github.event.client_payload.environment == 'preview'
+    steps:
+      - name: Resolve PR context
+        id: pr-context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.event.client_payload.git.sha }}"
+          PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" --jq '.[0]')
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')
+          echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "prTitle=$PR_TITLE" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+        if: steps.pr-context.outputs.prTitle != 'Version Packages'
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
+
+      - name: Discover Python packages
+        if: steps.pr-context.outputs.prTitle != 'Version Packages'
+        id: discoverPythonPackages
+        run: |
+          PACKAGES="$(node utils/get-python-packages.js)"
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+          echo "Discovered Python packages: $PACKAGES"
+
+      - name: Comment PR with CLI tarball instructions
+        if: steps.pr-context.outputs.prTitle != 'Version Packages'
+        uses: actions/github-script@v7
+        env:
+          PYTHON_PACKAGES: ${{ steps.discoverPythonPackages.outputs.packages }}
+        with:
+          script: |
+            const deploymentUrl = '${{ github.event.client_payload.url }}';
+            const prNumber = ${{ steps.pr-context.outputs.prNumber }};
+
+            if (!deploymentUrl || deploymentUrl === '') {
+              console.log('No deployment URL available, skipping comment');
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pythonPackages = JSON.parse(process.env.PYTHON_PACKAGES || '[]');
+            if (!Array.isArray(pythonPackages)) {
+              throw new Error('PYTHON_PACKAGES must be a JSON array');
+            }
+            for (const pkg of pythonPackages) {
+              if (
+                !pkg ||
+                typeof pkg.packageDir !== 'string' ||
+                typeof pkg.packageName !== 'string' ||
+                typeof pkg.title !== 'string'
+              ) {
+                throw new Error(
+                  `Invalid PYTHON_PACKAGES entry: ${JSON.stringify(pkg)}`
+                );
+              }
+            }
+
+            function toPythonEnvVar(packageName) {
+              return `${packageName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_PYTHON`;
+            }
+
+            let message = '## 📦 CLI Tarball Ready (v2)\n\n';
+            message += 'The Vercel CLI tarball for this PR is now available!\n\n';
+            message += '### Quick Test\n\n';
+            message += 'You can test this PR\'s CLI directly by running:\n\n';
+            message += '```bash\n';
+            message += `npx ${deploymentUrl}/tarballs/vercel.tgz --help\n`;
+            message += '```\n\n';
+            message += '### Use in vercel.json\n\n';
+            message += 'To use this CLI version in your project builds, add to your `vercel.json`:\n\n';
+            message += '```json\n';
+            message += '{\n';
+            message += '  "build": {\n';
+            message += '    "env": {\n';
+            message += `      "VERCEL_CLI_VERSION": "vercel@${deploymentUrl}/tarballs/vercel.tgz"\n`;
+            message += '    }\n';
+            message += '  }\n';
+            message += '}\n';
+            message += '```\n';
+
+            for (const { packageDir, packageName, title } of pythonPackages) {
+              try {
+                const resp = await fetch(
+                  `${deploymentUrl}/tarballs/${packageDir}-wheel.json`
+                );
+                if (!resp.ok) {
+                  continue;
+                }
+
+                const { filename } = await resp.json();
+                if (!filename) {
+                  continue;
+                }
+
+                const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
+                const envVar = toPythonEnvVar(packageName);
+
+                message += `\n### Python ${title} Wheel\n\n`;
+                message += `A \`${packageName}\` wheel was also built for this PR.\n`;
+                message += 'To use in your Python project builds, also set this environment variable:\n\n';
+                message += '```\n';
+                message += `${envVar}="${packageName} @ ${wheelUrl}"\n`;
+                message += '```\n';
+              } catch {
+                // No wheel available for this package, skip.
+              }
+            }
+
+            message += '\n---\n*This comment is from the v2 workflow (repository_dispatch)*';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: prNumber,
+            });
+
+            const existingComment = comments.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
+              comment.body.includes('## 📦 CLI Tarball Ready (v2)')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+                body: message
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: message
+              });
+            }

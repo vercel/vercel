@@ -72,6 +72,10 @@ export interface AgentErrorPayload {
     integration_privacy_policy?: string;
     integration_eula?: string;
   };
+  /** ACL action the caller lacks permission for (e.g. "read", "create", "delete"). Present on 403 when the API provides it. */
+  action?: string;
+  /** ACL resource the permission applies to (e.g. "project", "deployment"). Present on 403 when the API provides it. */
+  resource?: string;
 }
 
 /**
@@ -102,8 +106,8 @@ const GLOBAL_FLAG_NAMES = new Set([
   '--token',
 ]);
 
-/** Global flags that never consume a separate argv token as their value (unlike `--cwd path`). */
-const GLOBAL_FLAGS_BOOLEAN = new Set(['--yes', '-y', '--non-interactive']);
+/** Boolean globals: the next argv token is never their value (avoids eating a subcommand like `oauth-apps`). */
+const BOOLEAN_GLOBAL_FLAG_NAMES = new Set(['--yes', '-y', '--non-interactive']);
 
 /**
  * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
@@ -117,7 +121,7 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
     if (GLOBAL_FLAG_NAMES.has(name)) {
       out.push(arg);
       const takesSeparateValue =
-        !GLOBAL_FLAGS_BOOLEAN.has(name) &&
+        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
         !arg.includes('=') &&
         i + 1 < args.length &&
         !args[i + 1].startsWith('-');
@@ -141,7 +145,7 @@ export function omitGlobalFlagsFromArgs(args: string[]): string[] {
     const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
     if (GLOBAL_FLAG_NAMES.has(name)) {
       const skipSeparateValue =
-        !GLOBAL_FLAGS_BOOLEAN.has(name) &&
+        !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
         !arg.includes('=') &&
         i + 1 < args.length &&
         !args[i + 1].startsWith('-');
@@ -721,6 +725,8 @@ export function exitWithNonInteractiveError(
         status: 'error',
         reason,
         message,
+        ...(err.action && { action: err.action }),
+        ...(err.resource && { resource: err.resource }),
       },
       exitCode,
       variant

@@ -155,104 +155,262 @@ const cronsSchema = {
   },
 };
 
-const serviceConfigSchema = {
+const serviceMountSchema = {
+  oneOf: [
+    {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        path: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 512,
+        },
+        subdomain: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 63,
+        },
+      },
+      anyOf: [{ required: ['path'] }, { required: ['subdomain'] }],
+    },
+  ],
+};
+
+const serviceScheduleSchema = {
+  type: 'string',
+  minLength: 9,
+  maxLength: 256,
+};
+
+const serviceQueueTopicSchema = {
   type: 'object',
   additionalProperties: false,
+  required: ['topic'],
   properties: {
-    type: {
-      enum: ['web', 'cron', 'worker'],
-    },
-    entrypoint: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
-    routePrefix: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
-    subdomain: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 63,
-    },
-    framework: {
+    topic: {
       type: 'string',
       minLength: 1,
       maxLength: 256,
     },
-    builder: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
-    },
-    runtime: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
-    },
-    buildCommand: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 2048,
-    },
-    installCommand: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 2048,
-    },
-    memory: {
+    retryAfterSeconds: {
       type: 'integer',
-      minimum: 128,
-      maximum: 10240,
+      minimum: 1,
+      maximum: 86400,
     },
-    maxDuration: {
-      oneOf: [
-        { type: 'integer', minimum: 1, maximum: 900 },
-        { type: 'string', enum: ['max'] },
-      ],
+    initialDelaySeconds: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 86400,
     },
-    includeFiles: {
-      oneOf: [
-        { type: 'string', minLength: 1 },
-        {
-          type: 'array',
-          items: { type: 'string', minLength: 1 },
-        },
-      ],
-    },
-    excludeFiles: {
-      oneOf: [
-        { type: 'string', minLength: 1 },
-        {
-          type: 'array',
-          items: { type: 'string', minLength: 1 },
-        },
-      ],
-    },
-    // Cron-specific
-    schedule: {
-      type: 'string',
-      minLength: 9,
-      maxLength: 256,
-    },
-    // Worker-specific
-    topics: {
+  },
+};
+
+const serviceTopicsSchema = {
+  oneOf: [
+    {
       type: 'array',
+      minItems: 1,
       items: {
         type: 'string',
         minLength: 1,
         maxLength: 256,
       },
+    },
+    {
+      type: 'array',
       minItems: 1,
+      items: serviceQueueTopicSchema,
     },
-    consumer: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
-    },
+  ],
+};
+
+const serviceCommonProperties = {
+  root: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
   },
+  entrypoint: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
+  framework: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 256,
+  },
+  builder: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 256,
+  },
+  runtime: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 256,
+  },
+  buildCommand: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 2048,
+  },
+  installCommand: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 2048,
+  },
+  memory: {
+    type: 'integer',
+    minimum: 128,
+    maximum: 10240,
+  },
+  maxDuration: {
+    oneOf: [
+      { type: 'integer', minimum: 1, maximum: 900 },
+      { type: 'string', enum: ['max'] },
+    ],
+  },
+  includeFiles: {
+    oneOf: [
+      { type: 'string', minLength: 1 },
+      {
+        type: 'array',
+        items: { type: 'string', minLength: 1 },
+      },
+    ],
+  },
+  excludeFiles: {
+    oneOf: [
+      { type: 'string', minLength: 1 },
+      {
+        type: 'array',
+        items: { type: 'string', minLength: 1 },
+      },
+    ],
+  },
+};
+
+const serviceRoutableProperties = {
+  mount: serviceMountSchema,
+  routePrefix: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
+  subdomain: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 63,
+  },
+};
+
+const serviceConfigSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        ...serviceCommonProperties,
+        ...serviceRoutableProperties,
+        type: {
+          enum: ['web'],
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'trigger', 'schedule'],
+      properties: {
+        ...serviceCommonProperties,
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'schedule',
+        },
+        schedule: serviceScheduleSchema,
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'trigger', 'topics'],
+      properties: {
+        ...serviceCommonProperties,
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'queue',
+        },
+        topics: serviceTopicsSchema,
+        consumer: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 256,
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'trigger', 'entrypoint'],
+      properties: {
+        ...serviceCommonProperties,
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'workflow',
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type'],
+      properties: {
+        ...serviceCommonProperties,
+        type: {
+          const: 'worker',
+        },
+        topics: {
+          type: 'array',
+          items: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 256,
+          },
+          minItems: 1,
+        },
+        consumer: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 256,
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'schedule'],
+      properties: {
+        ...serviceCommonProperties,
+        type: {
+          const: 'cron',
+        },
+        schedule: serviceScheduleSchema,
+      },
+    },
+  ],
 };
 
 /**

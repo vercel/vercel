@@ -37,6 +37,7 @@ export interface ParsedFlags {
   '--refresh'?: boolean;
   '--generate'?: string;
   '--format'?: string;
+  '--dangerously-skip-permissions'?: boolean;
 }
 
 export interface SelectedEndpoint {

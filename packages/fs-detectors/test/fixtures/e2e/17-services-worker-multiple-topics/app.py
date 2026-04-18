@@ -14,7 +14,7 @@ INDEX_HTML = """
 <html>
   <body>
     <h1>Hello from Flask web service (multiple topics)</h1>
-    <button id="enqueue-btn" type="button">Enqueue Order</button>
+    <button id="enqueue-btn" type="button">Enqueue Jobs</button>
     <p id="status"></p>
 
     <script>
@@ -28,13 +28,13 @@ INDEX_HTML = """
           const response = await fetch('/enqueue', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ orderId: '12345', action: 'ship' }),
+            body: JSON.stringify({ orderId: '12345', eventId: '54321', action: 'ship' }),
           });
           const data = await response.json();
           if (!response.ok || !data.ok) {
             throw new Error(data.error || String(response.status));
           }
-          status.textContent = `Job id: ${data.jobId}`;
+          status.textContent = `Job IDs: ${data.jobs[0].jobId}, ${data.jobs[1].jobId}`;
         } catch (error) {
           status.textContent = `Failed: ${String(error)}`;
         } finally {
@@ -56,11 +56,20 @@ def root():
 def enqueue():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
-        payload = {}
+        payload = {
+          'orderId': 42,
+          'eventId': 24,
+          'action': 'test'
+        }
 
     try:
-        order_msg = process_order.send(payload)
-        event_msg = process_event.send(payload)
+        order_payload = payload.copy()
+        order_payload.pop('eventId', 0)
+        order_msg = process_order.send(order_payload)
+
+        event_payload = payload.copy()
+        event_payload.pop('orderId', 0)
+        event_msg = process_event.send(event_payload)
     except Exception as exc:
         logger.error(f"Failed to enqueue job: {exc}")
         return jsonify({"ok": False, "error": str(exc)}), 500

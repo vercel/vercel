@@ -177,6 +177,12 @@ export interface CronJob {
   path: string;
 }
 
+export interface ServiceQueueTopic {
+  topic: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+}
+
 export interface GitDeploymentConfig {
   [branch: string]: boolean;
 }
@@ -563,17 +569,37 @@ export interface VercelConfig {
     string,
     {
       /**
-       * Service type: web, cron, or worker. Defaults to web.
+       * Service type: web, worker, or job. Defaults to web.
        */
-      type?: 'web' | 'cron' | 'worker';
+      type?: 'web' | 'cron' | 'worker' | 'job';
       /**
-       * Entry file for the service, relative to the workspace directory.
+       * Trigger for job services.
+       */
+      trigger?: 'queue' | 'schedule' | 'workflow';
+      /**
+       * Path to the service's root directory relative to the project root.
+       * Should contain a manifest file (package.json, pyproject.toml, etc.).
+       * Defaults to ".".
+       */
+      root?: string;
+      /**
+       * Entry file for the service, relative to the service root directory.
        */
       entrypoint?: string;
       /**
        * Path to the directory containing the service manifest file (package.json, pyproject.toml, etc.). Defaults to "." (project root).
+       * @deprecated Use `root` instead.
        */
       workspace?: string;
+      /**
+       * Preferred routing config alias for routePrefix/subdomain.
+       */
+      mount?:
+        | string
+        | {
+            path?: string;
+            subdomain?: string;
+          };
       /**
        * URL prefix for routing (web services only).
        */
@@ -619,17 +645,13 @@ export interface VercelConfig {
        */
       excludeFiles?: string | string[];
       /**
-       * Cron schedule expression (e.g., "0 0 * * *"). Required for cron services.
+       * Cron schedule expression(s) (e.g., "0 0 * * *"). Required for schedule-triggered job services.
        */
       schedule?: string;
       /**
-       * Topic names for worker subscription.
+       * Topic names or queue topic configs for worker and queue-triggered job services.
        */
-      topics?: string[];
-      /**
-       * Consumer group name for worker subscription.
-       */
-      consumer?: string;
+      topics?: string[] | ServiceQueueTopic[];
       /**
        * Custom prefix to use to inject service URL env vars.
        */
