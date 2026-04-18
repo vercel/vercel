@@ -517,6 +517,34 @@ describe('env add', () => {
     });
 
     describe('non-interactive mode', () => {
+      it('strips a trailing newline from single-line stdin values', async () => {
+        const cwd = setupUnitFixture('vercel-env-pull');
+        client.cwd = cwd;
+        client.stdin.isTTY = false;
+        const envName = 'STDIN_SINGLE_LINE_TRIMMED';
+
+        try {
+          client.setArgv('env', 'add', envName, 'production');
+          const exitCodePromise = env(client);
+          setImmediate(() => client.stdin.emit('data', 'my-api-key\n'));
+
+          await expect(client.stderr).toOutput(
+            'Removed trailing newline from stdin input'
+          );
+          await expect(exitCodePromise).resolves.toBe(0);
+
+          const savedEnv = envs.find(currentEnv => currentEnv.key === envName);
+          expect(savedEnv?.value).toBe('my-api-key');
+        } finally {
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
       it('outputs action_required when name is missing', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
