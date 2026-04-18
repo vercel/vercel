@@ -85,7 +85,8 @@ export const listSubcommand = {
 export const tokenSubcommand = {
   name: 'token',
   aliases: [],
-  description: 'Get a token for a Connex client',
+  description:
+    'Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)',
   arguments: [
     {
       name: 'clientIdOrUid',
