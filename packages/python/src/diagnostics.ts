@@ -88,7 +88,7 @@ export async function generateProjectManifest({
   pythonVersion: PythonVersion;
   uvLockPath: string;
 }): Promise<void> {
-  const resolved = pythonVersionString(pythonVersion);
+  const resolved = pythonVersionString(pythonVersion) ?? '';
   const constraint = pythonPackage.requiresPython?.[0];
   const requested = constraint?.specifier;
 

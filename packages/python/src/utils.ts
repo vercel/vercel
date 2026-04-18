@@ -134,12 +134,7 @@ export async function ensureVenv({
     // --seed installs pip into the venv so custom install commands can use it
     const args = ['venv', venvPath, '--allow-existing', '--seed'];
     if (pythonVersion.major != null && pythonVersion.minor != null) {
-      // dev python passes 3.0 which uv interprets as python3.0, so pass "python3" instead of "python3.0" in that case
-      if (pythonVersion.minor < 0) {
-        args.push('--python', `python${pythonVersion.major}`);
-      } else {
-        args.push('--python', `${pythonVersion.major}.${pythonVersion.minor}`);
-      }
+      args.push('--python', `${pythonVersion.major}.${pythonVersion.minor}`);
     }
     await execa(uvPath, args, {
       env: getProtectedUvEnv(process.env, uvCacheDir),

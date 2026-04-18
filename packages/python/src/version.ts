@@ -7,8 +7,9 @@ import { UvRunner, findUvInPath, UV_PYTHON_PATH_PREFIX } from './uv';
 import { detectPlatform } from './utils';
 
 export interface PythonVersion {
-  major: number;
-  minor: number;
+  // Undefined in `vercel dev` where we defer to the system `python3`.
+  major?: number;
+  minor?: number;
   pipPath: string;
   pythonPath: string;
   runtime: string;
@@ -29,14 +30,15 @@ export interface PythonVersionResolution {
   pinVersionFilePath?: string;
 }
 
-export function pythonVersionString(pv: PythonVersion): string {
+export function pythonVersionString(pv: PythonVersion): string | undefined {
+  if (pv.major === undefined || pv.minor === undefined) return undefined;
   return `${pv.major}.${pv.minor}`;
 }
 
 const DEFAULT_PYTHON_VERSION: PythonVersion = makePythonVersion(3, 12);
-export const DEFAULT_PYTHON_VERSION_STRING = pythonVersionString(
+export const DEFAULT_PYTHON_VERSION_STRING: string = pythonVersionString(
   DEFAULT_PYTHON_VERSION
-);
+)!;
 
 function makePythonVersion(
   major: number,
@@ -65,11 +67,10 @@ const allOptions: PythonVersion[] = [
 ];
 
 function getDevPythonVersion(): PythonVersion {
-  // Use the system-installed version of `python3` when running `vercel dev`.
-  // minor is set to 0 as a placeholder — it is not used in dev mode.
+  // Omitting major/minor lets uv resolve the interpreter via its own
+  // chain (`.python-version`, managed default, system `python3`) instead
+  // of the old `--python 3.0` placeholder that uv >= 0.10.11 rejects.
   return {
-    major: 3,
-    minor: -1,
     pipPath: 'pip3',
     pythonPath: 'python3',
     runtime: 'python3',
@@ -113,14 +114,18 @@ function versionsEqual(a: PythonVersion, b: PythonVersion): boolean {
 }
 
 function versionLessOrEqual(a: PythonVersion, b: PythonVersion): boolean {
-  if (a.major !== b.major) return a.major < b.major;
-  return a.minor <= b.minor;
+  const am = a.major ?? 0;
+  const bm = b.major ?? 0;
+  if (am !== bm) return am < bm;
+  return (a.minor ?? 0) <= (b.minor ?? 0);
 }
 
-/**
- * Convert a local PythonVersion entry to a python-analysis PythonBuild.
- */
 function toPythonBuild(opt: PythonVersion): PythonBuild {
+  if (opt.major === undefined || opt.minor === undefined) {
+    throw new Error(
+      'toPythonBuild called with PythonVersion missing `major`/`minor`; this is a bug.'
+    );
+  }
   const platform = detectPlatform();
   return {
     version: { major: opt.major, minor: opt.minor },
@@ -334,9 +339,11 @@ export function getInstalledPythonsFromFilesystem(
 ): Set<string> {
   const result = new Set<string>();
   for (const opt of allOptions) {
-    const binPath = join(basePath, 'bin', `python${opt.major}.${opt.minor}`);
+    const version = pythonVersionString(opt);
+    if (!version) continue;
+    const binPath = join(basePath, 'bin', `python${version}`);
     if (existsSync(binPath)) {
-      result.add(pythonVersionString(opt));
+      result.add(version);
     }
   }
   return result;
@@ -377,7 +384,9 @@ export function resetInstalledPythonsCache(): void {
 function isInstalled(pv: PythonVersion): boolean {
   try {
     const installed = getInstalledPythons();
-    return installed.has(pythonVersionString(pv));
+    const version = pythonVersionString(pv);
+    if (!version) return false;
+    return installed.has(version);
   } catch (err) {
     throw new NowBuildError({
       code: 'UV_ERROR',
