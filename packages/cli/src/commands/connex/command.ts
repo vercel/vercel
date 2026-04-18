@@ -89,7 +89,7 @@ export const tokenSubcommand = {
     'Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)',
   arguments: [
     {
-      name: 'clientIdOrUid',
+      name: 'id',
       required: true,
     },
   ],

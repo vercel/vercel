@@ -43,9 +43,7 @@ export async function token(
 
   const clientId = args[0];
   if (!clientId) {
-    output.error(
-      'Missing client ID or UID. Usage: vercel connex token <clientIdOrUid>'
-    );
+    output.error('Missing client ID or UID. Usage: vercel connex token <id>');
     return 1;
   }
 
@@ -113,10 +111,9 @@ export async function token(
       ? 'authorization'
       : 'installation';
 
-  // Treat the session as interactive only if BOTH stdin and stdout are TTYs.
-  // `TOKEN=$(vc connex token ...)` leaves stdin as a TTY but captures stdout,
-  // so checking stdout too avoids blocking on a prompt in that case.
   const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  // Only open a browser + poll when the user asked for it (--yes) or when
+  // we're clearly in a human-driven session — otherwise fail fast.
   const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
 
   if (!attemptRecovery) {
@@ -215,8 +212,6 @@ function printTokenResult(
   if (asJson) {
     client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
   } else {
-    // Default output is the raw token value, safe for `TOKEN=$(vc connex token ...)`.
-    // Use --format=json to get structured metadata (expiresAt, installationId, etc.).
     client.stdout.write(`${data.token}\n`);
   }
   return 0;
