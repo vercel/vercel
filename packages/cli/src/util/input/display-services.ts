@@ -168,8 +168,12 @@ export function displayDetectedServices(services: Service[]): void {
   output.print(`${tableOutput}\n`);
 }
 
-export function displayServicesConfigNote(): void {
-  output.print(`\n${chalk.dim('Services are configured via vercel.json.')}\n`);
+export function displayServicesConfigNote(
+  configFileName = 'vercel.json'
+): void {
+  output.print(
+    `\n${chalk.dim(`Services are configured via ${configFileName}.`)}\n`
+  );
 }
 
 export function displayServiceErrors(errors: ServiceDetectionError[]): void {

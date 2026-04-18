@@ -59,7 +59,8 @@ export async function getServicesSetupState(
 }
 
 export function displayConfiguredServicesSetup(
-  detectServicesResult: DetectServicesResult
+  detectServicesResult: DetectServicesResult,
+  configFileName = 'vercel.json'
 ): void {
   if (detectServicesResult.services.length > 0) {
     displayDetectedServices(detectServicesResult.services);
@@ -67,7 +68,7 @@ export function displayConfiguredServicesSetup(
   if (detectServicesResult.errors.length > 0) {
     displayServiceErrors(detectServicesResult.errors);
   }
-  displayServicesConfigNote();
+  displayServicesConfigNote(configFileName);
 }
 
 function formatDetectedServicesSummary(services: Service[]): string {

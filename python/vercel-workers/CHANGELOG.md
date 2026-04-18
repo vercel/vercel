@@ -1,5 +1,11 @@
 # vercel-workers
 
+## 0.0.17
+
+### Patch Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
 ## 0.0.16
 
 ### Patch Changes
