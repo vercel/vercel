@@ -260,6 +260,15 @@ export const addStoreSubcommand = {
         'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
       argument: 'STRING',
     },
+    {
+      name: 'project',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Project ID or name to link the blob store to (required in non-interactive mode)',
+      argument: 'ID_OR_NAME',
+    },
     yesOption,
     environmentOption,
   ],
@@ -275,6 +284,10 @@ export const addStoreSubcommand = {
     {
       name: 'Create a private blob store',
       value: 'vercel blob store add my-private-store --access private',
+    },
+    {
+      name: 'Create a blob store linked to a specific project',
+      value: 'vercel blob store add my-store --project my-project',
     },
   ],
 } as const;
@@ -424,6 +437,16 @@ export const listStoresSubcommand = {
       value: 'vercel blob list-stores --all --json',
     },
   ],
+} as const;
+
+export const storeSubcommand = {
+  name: 'store',
+  aliases: [],
+  description: 'Manage or create a Blob store',
+  arguments: [],
+  subcommands: [addStoreSubcommand, removeStoreSubcommand, getStoreSubcommand],
+  options: [],
+  examples: [],
 } as const;
 
 export const blobCommand = {
