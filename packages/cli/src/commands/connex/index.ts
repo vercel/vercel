@@ -112,11 +112,7 @@ export default async function connex(client: Client): Promise<number> {
 
         const tokenFlagsSpec = getFlagsSpecification(tokenSubcommand.options);
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
-        return await token(
-          client,
-          tokenParsedArgs.args,
-          tokenParsedArgs.flags
-        );
+        return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
       }
       default: {
         const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');
