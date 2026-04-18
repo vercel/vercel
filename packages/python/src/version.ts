@@ -69,7 +69,7 @@ function getDevPythonVersion(): PythonVersion {
   // minor is set to 0 as a placeholder — it is not used in dev mode.
   return {
     major: 3,
-    minor: 0,
+    minor: -1,
     pipPath: 'pip3',
     pythonPath: 'python3',
     runtime: 'python3',

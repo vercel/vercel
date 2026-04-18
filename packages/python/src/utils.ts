@@ -135,7 +135,7 @@ export async function ensureVenv({
     const args = ['venv', venvPath, '--allow-existing', '--seed'];
     if (pythonVersion.major != null && pythonVersion.minor != null) {
       // dev python passes 3.0 which uv interprets as python3.0, so pass "python3" instead of "python3.0" in that case
-      if (pythonVersion.minor === 0) {
+      if (pythonVersion.minor < 0) {
         args.push('--python', `python${pythonVersion.major}`);
       } else {
         args.push('--python', `${pythonVersion.major}.${pythonVersion.minor}`);
