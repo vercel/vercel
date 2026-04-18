@@ -43,7 +43,9 @@ export async function token(
 
   const clientId = args[0];
   if (!clientId) {
-    output.error('Missing client ID. Usage: vercel connex token <clientId>');
+    output.error(
+      'Missing client ID or UID. Usage: vercel connex token <clientIdOrUid>'
+    );
     return 1;
   }
 
@@ -59,17 +61,15 @@ export async function token(
   if (subject === 'app') {
     body.subject = { type: 'app' };
   } else if (subject === 'user') {
-    const userId = client.authConfig.userId;
-    if (userId) {
-      body.subject = { type: 'user', id: userId };
-    }
-    // If userId is not available, omit subject and let the API default.
+    // selectConnexTeam → selectOrg → getUser populates authConfig.userId, so
+    // it's reliably available here for authenticated callers.
+    body.subject = { type: 'user', id: client.authConfig.userId };
   }
   if (flags['--installation-id']) {
     body.installationId = flags['--installation-id'];
   }
   if (flags['--scopes']) {
-    body.scopes = flags['--scopes'].split(',').map(s => s.trim());
+    body.scopes = parseScopes(flags['--scopes']);
   }
 
   output.spinner('Fetching token...');
@@ -113,19 +113,23 @@ export async function token(
       ? 'authorization'
       : 'installation';
 
-  // Non-TTY: print URL and exit — can't open a browser interactively in CI
-  if (!client.stdin.isTTY) {
+  // Treat the session as interactive only if BOTH stdin and stdout are TTYs.
+  // `TOKEN=$(vc connex token ...)` leaves stdin as a TTY but captures stdout,
+  // so checking stdout too avoids blocking on a prompt in that case.
+  const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
+
+  if (!attemptRecovery) {
     const { hash } = generateRequestCode();
     const actionUrl = buildActionUrl(errorCode, clientId, teamId, hash);
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
-      `Or run \`vercel connex token ${clientId}\` in an interactive terminal.`
+      `Or re-run with --yes to open the browser automatically: vercel connex token ${clientId} --yes`
     );
     return 1;
   }
 
-  // TTY: show error, prompt to open browser (Enter = yes)
   output.error(errorMessage);
   if (!flags['--yes']) {
     const confirmed = await client.input.confirm(
@@ -154,7 +158,6 @@ export async function token(
     return 1;
   }
 
-  // Carry forward installationId if returned by the install flow
   const retryBody = { ...body };
   if (pollData.installationId && !retryBody.installationId) {
     retryBody.installationId = pollData.installationId as string;
@@ -172,6 +175,15 @@ export async function token(
     retryResult.errorMessage ?? `Failed to get token after ${actionLabel}`
   );
   return 1;
+}
+
+function parseScopes(raw: string): string[] {
+  // Accept either commas or whitespace as separators so users can paste
+  // scopes directly from provider docs (e.g., Slack uses space-separated).
+  return raw
+    .split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
 }
 
 function isActionable(code: string | undefined): code is ActionableErrorCode {
@@ -202,52 +214,12 @@ function printTokenResult(
 ): number {
   if (asJson) {
     client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
-    return 0;
+  } else {
+    // Default output is the raw token value, safe for `TOKEN=$(vc connex token ...)`.
+    // Use --format=json to get structured metadata (expiresAt, installationId, etc.).
+    client.stdout.write(`${data.token}\n`);
   }
-
-  const rows: Array<[string, string]> = [
-    ['Token', data.token],
-    ['Expires', formatExpiresAt(data.expiresAt)],
-  ];
-  if (data.installationId) {
-    rows.push(['Installation ID', data.installationId]);
-  }
-  if (data.tenantId) {
-    rows.push(['Tenant ID', data.tenantId]);
-  }
-  if (data.externalSubject) {
-    rows.push(['External ID', data.externalSubject]);
-  }
-  if (data.name) {
-    rows.push(['Name', data.name]);
-  }
-
-  const labelWidth = Math.max(...rows.map(([label]) => label.length));
-  const lines = rows
-    .map(([label, value]) => `${label.padEnd(labelWidth)}  ${value}`)
-    .join('\n');
-  client.stdout.write(`${lines}\n`);
   return 0;
-}
-
-function formatExpiresAt(expiresAt: number): string {
-  // API returns seconds (matches frontend convention)
-  const date = new Date(expiresAt * 1000);
-  const iso = date.toISOString();
-  const deltaMs = date.getTime() - Date.now();
-  if (deltaMs <= 0) {
-    return `${iso} (expired)`;
-  }
-  const minutes = Math.round(deltaMs / 60000);
-  if (minutes < 60) {
-    return `${iso} (in ${minutes}m)`;
-  }
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    return `${iso} (in ${hours}h ${minutes % 60}m)`;
-  }
-  const days = Math.floor(hours / 24);
-  return `${iso} (in ${days}d)`;
 }
 
 type TokenResult =

@@ -88,7 +88,7 @@ export const tokenSubcommand = {
   description: 'Get a token for a Connex client',
   arguments: [
     {
-      name: 'clientId',
+      name: 'clientIdOrUid',
       required: true,
     },
   ],
@@ -117,15 +117,19 @@ export const tokenSubcommand = {
       type: String,
       argument: 'SCOPES',
       deprecated: false,
-      description: 'Comma-separated scopes',
+      description: 'Scopes (comma- or space-separated)',
     },
     yesOption,
     formatOption,
   ],
   examples: [
     {
-      name: 'Get a user token for the current user (default)',
+      name: 'Get a user token by client ID',
       value: `${packageName} connex token scl_abc123`,
+    },
+    {
+      name: 'Get a token by client UID',
+      value: `${packageName} connex token slack/my-bot`,
     },
     {
       name: 'Get an app token (default installation)',
@@ -136,7 +140,11 @@ export const tokenSubcommand = {
       value: `${packageName} connex token scl_abc123 --subject app --installation-id inst_1`,
     },
     {
-      name: 'Output as JSON',
+      name: 'Open the browser automatically if authorization/installation is required',
+      value: `${packageName} connex token scl_abc123 --yes`,
+    },
+    {
+      name: 'Output as JSON (includes expiresAt, installationId, etc.)',
       value: `${packageName} connex token scl_abc123 --format=json`,
     },
   ],

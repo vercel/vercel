@@ -22,7 +22,7 @@ describe('connex token', () => {
 
     const exitCode = await connex(client);
 
-    await expect(client.stderr).toOutput('Missing client ID');
+    await expect(client.stderr).toOutput('Missing client ID or UID');
     expect(exitCode).toBe(1);
   });
 
@@ -35,7 +35,7 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should return token on success with labeled fields', async () => {
+  it('should print the raw token value in plain mode', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.json({
         token: 'xoxb-test-token-123',
@@ -49,9 +49,7 @@ describe('connex token', () => {
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(0);
-    await expect(client.stdout).toOutput(
-      `${'Token'.padEnd(15)}  xoxb-test-token-123`
-    );
+    await expect(client.stdout).toOutput('xoxb-test-token-123\n');
   });
 
   it('should output JSON when --format=json is used', async () => {
@@ -129,7 +127,7 @@ describe('connex token', () => {
     expect(requestBody.subject).toBeUndefined();
   });
 
-  it('should pass scopes in request body', async () => {
+  it('should accept comma-separated scopes', async () => {
     let requestBody: Record<string, unknown> = {};
     client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
       requestBody = req.body;
@@ -142,6 +140,27 @@ describe('connex token', () => {
       'scl_abc123',
       '--scopes',
       'chat:write,channels:read'
+    );
+
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestBody.scopes).toEqual(['chat:write', 'channels:read']);
+  });
+
+  it('should accept space-separated scopes', async () => {
+    let requestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'xoxb-scoped', expiresAt: 1712345678 });
+    });
+
+    client.setArgv(
+      'connex',
+      'token',
+      'scl_abc123',
+      '--scopes',
+      'chat:write channels:read'
     );
 
     const exitCode = await connex(client);
@@ -183,7 +202,7 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should print authorize URL in non-TTY mode', async () => {
+  it('should fail fast and print authorize URL when stdout is not a TTY', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
@@ -195,7 +214,8 @@ describe('connex token', () => {
     });
 
     client.setArgv('connex', 'token', 'scl_abc123');
-    (client.stdin as any).isTTY = false;
+    // Simulate `TOKEN=$(vc connex token ...)` — stdout captured, stdin is still a TTY
+    (client.stdout as any).isTTY = false;
 
     const exitCode = await connex(client);
 
@@ -205,7 +225,7 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should print install URL in non-TTY mode', async () => {
+  it('should fail fast and print install URL when stdin is not a TTY', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
@@ -303,7 +323,7 @@ describe('connex token', () => {
     await expect(client.stdout).toOutput('xoxb-after-install');
   });
 
-  it('should abort cleanly when user declines the prompt', async () => {
+  it('should prompt in fully interactive mode and abort cleanly when user declines', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
