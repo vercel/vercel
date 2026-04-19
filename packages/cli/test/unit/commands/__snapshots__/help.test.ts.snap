@@ -2092,7 +2092,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
        --force          Force overwrites when a command would normally fail                                                  
        --guidance       Receive command suggestions once command is complete                                                 
-       --no-sensitive   Add a regular (non-sensitive) Environment Variable whose value remains readable later                
+       --sensitive      Add a sensitive Environment Variable                                                                 
        --value <VALUE>  Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.               
   -y,  --yes            Skip the confirmation prompt when adding an Environment Variable                                     
 
@@ -2127,9 +2127,9 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
     $ vercel env add API_TOKEN --force
 
-  - Add a non-sensitive Environment Variable (readable later)
+  - Add a sensitive Environment Variable
 
-    $ vercel env add API_TOKEN --no-sensitive
+    $ vercel env add API_TOKEN --sensitive
 
   - Add a new Environment Variable for a specific Environment and Git Branch
 

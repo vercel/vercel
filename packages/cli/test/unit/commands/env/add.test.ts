@@ -94,43 +94,10 @@ describe('env add', () => {
           },
         ]);
       });
-
-      it('prints a deprecation warning but still creates the variable as sensitive', async () => {
-        const addEnvRecordModule = await import(
-          '../../../../src/util/env/add-env-record'
-        );
-        const spy = vi
-          .spyOn(addEnvRecordModule, 'default')
-          .mockResolvedValue(undefined);
-
-        client.setArgv(
-          'env',
-          'add',
-          'DEPRECATED_FLAG',
-          'preview',
-          'branchName',
-          '--sensitive'
-        );
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput(
-          'The --sensitive flag is deprecated'
-        );
-        await expect(client.stderr).toOutput(
-          "What's the value of DEPRECATED_FLAG?"
-        );
-        client.stdin.write('testvalue\n');
-        await expect(exitCodePromise).resolves.toBe(0);
-
-        expect(spy).toHaveBeenCalled();
-        const type = spy.mock.calls[0][3];
-        expect(type).toBe('sensitive');
-
-        spy.mockRestore();
-      });
     });
 
-    describe('default type', () => {
-      it('adds as sensitive by default when the user keeps it sensitive at the prompt', async () => {
+    describe('sensitive prompt', () => {
+      it('creates the variable as sensitive when the user keeps it at the prompt', async () => {
         const addEnvRecordModule = await import(
           '../../../../src/util/env/add-env-record'
         );
@@ -152,9 +119,6 @@ describe('env add', () => {
           "What's the value of DEFAULT_SENSITIVE?"
         );
         client.stdin.write('testvalue\n');
-        await expect(client.stderr).toOutput(
-          'Variable is sensitive and cannot be retrieved later'
-        );
         await expect(exitCodePromise).resolves.toBe(0);
 
         expect(spy).toHaveBeenCalled();
@@ -196,72 +160,6 @@ describe('env add', () => {
       });
     });
 
-    describe('--no-sensitive', () => {
-      it('skips the sensitivity prompt and creates the variable as encrypted', async () => {
-        const addEnvRecordModule = await import(
-          '../../../../src/util/env/add-env-record'
-        );
-        const spy = vi
-          .spyOn(addEnvRecordModule, 'default')
-          .mockResolvedValue(undefined);
-
-        client.setArgv(
-          'env',
-          'add',
-          'PLAIN_VAR',
-          'preview',
-          'branchName',
-          '--no-sensitive'
-        );
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput("What's the value of PLAIN_VAR?");
-        client.stdin.write('testvalue\n');
-        await expect(exitCodePromise).resolves.toBe(0);
-
-        expect(spy).toHaveBeenCalled();
-        const type = spy.mock.calls[0][3];
-        expect(type).toBe('encrypted');
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          { key: `subcommand:add`, value: 'add' },
-          { key: `argument:name`, value: '[REDACTED]' },
-          { key: `argument:environment`, value: 'preview' },
-          { key: `argument:git-branch`, value: '[REDACTED]' },
-          { key: `flag:no-sensitive`, value: 'TRUE' },
-        ]);
-
-        spy.mockRestore();
-      });
-
-      it('wins when both --sensitive and --no-sensitive are passed', async () => {
-        const addEnvRecordModule = await import(
-          '../../../../src/util/env/add-env-record'
-        );
-        const spy = vi
-          .spyOn(addEnvRecordModule, 'default')
-          .mockResolvedValue(undefined);
-
-        client.setArgv(
-          'env',
-          'add',
-          'BOTH_FLAGS',
-          'preview',
-          'branchName',
-          '--sensitive',
-          '--no-sensitive'
-        );
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput("What's the value of BOTH_FLAGS?");
-        client.stdin.write('testvalue\n');
-        await expect(exitCodePromise).resolves.toBe(0);
-
-        expect(spy).toHaveBeenCalled();
-        const type = spy.mock.calls[0][3];
-        expect(type).toBe('encrypted');
-
-        spy.mockRestore();
-      });
-    });
     describe('--force', () => {
       it('tracks flag', async () => {
         client.setArgv(

@@ -52,16 +52,7 @@ export const addSubcommand = {
   options: [
     {
       name: 'sensitive',
-      description:
-        'Deprecated. Environment Variables are sensitive by default. Use --no-sensitive to opt out.',
-      shorthand: null,
-      type: Boolean,
-      deprecated: true,
-    },
-    {
-      name: 'no-sensitive',
-      description:
-        'Add a regular (non-sensitive) Environment Variable whose value remains readable later',
+      description: 'Add a sensitive Environment Variable',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -113,8 +104,8 @@ export const addSubcommand = {
       value: `${packageName} env add API_TOKEN --force`,
     },
     {
-      name: 'Add a non-sensitive Environment Variable (readable later)',
-      value: `${packageName} env add API_TOKEN --no-sensitive`,
+      name: 'Add a sensitive Environment Variable',
+      value: `${packageName} env add API_TOKEN --sensitive`,
     },
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
