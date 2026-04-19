@@ -548,11 +548,11 @@ export default async function add(client: Client, argv: string[]) {
       output.log(
         `Sensitive values cannot be retrieved later from the dashboard or CLI.`
       );
-      const keepSensitive = await client.input.confirm(
-        `Keep it sensitive?`,
+      const makeSensitive = await client.input.confirm(
+        `Make it sensitive?`,
         true
       );
-      if (keepSensitive) {
+      if (makeSensitive) {
         type = 'sensitive';
       }
     }

@@ -321,7 +321,7 @@ describe('env pull', () => {
       client.setArgv('env', 'add', 'NEW_VAR');
       const addPromise = env(client);
 
-      await expect(client.stderr).toOutput('Keep it sensitive?');
+      await expect(client.stderr).toOutput('Make it sensitive?');
       client.stdin.write('n\n');
       await expect(client.stderr).toOutput("What's the value of NEW_VAR?");
       client.stdin.write('testvalue\n');
