@@ -94,6 +94,173 @@ describe('env add', () => {
           },
         ]);
       });
+
+      it('prints a deprecation warning but still creates the variable as sensitive', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'DEPRECATED_FLAG',
+          'preview',
+          'branchName',
+          '--sensitive'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          'The --sensitive flag is deprecated'
+        );
+        await expect(client.stderr).toOutput(
+          "What's the value of DEPRECATED_FLAG?"
+        );
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(spy).toHaveBeenCalled();
+        const type = spy.mock.calls[0][3];
+        expect(type).toBe('sensitive');
+
+        spy.mockRestore();
+      });
+    });
+
+    describe('default type', () => {
+      it('adds as sensitive by default when the user keeps it sensitive at the prompt', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'DEFAULT_SENSITIVE',
+          'preview',
+          'branchName'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('Keep it sensitive?');
+        client.stdin.write('y\n');
+        await expect(client.stderr).toOutput(
+          "What's the value of DEFAULT_SENSITIVE?"
+        );
+        client.stdin.write('testvalue\n');
+        await expect(client.stderr).toOutput(
+          'Variable is sensitive and cannot be retrieved later'
+        );
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(spy).toHaveBeenCalled();
+        const type = spy.mock.calls[0][3];
+        expect(type).toBe('sensitive');
+
+        spy.mockRestore();
+      });
+
+      it('falls back to encrypted when the user declines at the prompt', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'DECLINED_SENSITIVE',
+          'preview',
+          'branchName'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput('Keep it sensitive?');
+        client.stdin.write('n\n');
+        await expect(client.stderr).toOutput(
+          "What's the value of DECLINED_SENSITIVE?"
+        );
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(spy).toHaveBeenCalled();
+        const type = spy.mock.calls[0][3];
+        expect(type).toBe('encrypted');
+
+        spy.mockRestore();
+      });
+    });
+
+    describe('--no-sensitive', () => {
+      it('skips the sensitivity prompt and creates the variable as encrypted', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'PLAIN_VAR',
+          'preview',
+          'branchName',
+          '--no-sensitive'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput("What's the value of PLAIN_VAR?");
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(spy).toHaveBeenCalled();
+        const type = spy.mock.calls[0][3];
+        expect(type).toBe('encrypted');
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          { key: `subcommand:add`, value: 'add' },
+          { key: `argument:name`, value: '[REDACTED]' },
+          { key: `argument:environment`, value: 'preview' },
+          { key: `argument:git-branch`, value: '[REDACTED]' },
+          { key: `flag:no-sensitive`, value: 'TRUE' },
+        ]);
+
+        spy.mockRestore();
+      });
+
+      it('wins when both --sensitive and --no-sensitive are passed', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'BOTH_FLAGS',
+          'preview',
+          'branchName',
+          '--sensitive',
+          '--no-sensitive'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput("What's the value of BOTH_FLAGS?");
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(spy).toHaveBeenCalled();
+        const type = spy.mock.calls[0][3];
+        expect(type).toBe('encrypted');
+
+        spy.mockRestore();
+      });
     });
     describe('--force', () => {
       it('tracks flag', async () => {
@@ -106,7 +273,7 @@ describe('env add', () => {
           '--force'
         );
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput("What's the value of FORCE_FLAG?");
         client.stdin.write('testvalue\n');
@@ -149,7 +316,7 @@ describe('env add', () => {
           '--guidance'
         );
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput("What's the value of FORCE_FLAG?");
         client.stdin.write('testvalue\n');
@@ -195,7 +362,7 @@ describe('env add', () => {
           '--yes'
         );
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of TEST_YES_FLAG?"
@@ -237,7 +404,7 @@ describe('env add', () => {
           '--yes'
         );
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of EMPTY_VALUE_YES?"
@@ -263,7 +430,7 @@ describe('env add', () => {
         await expect(client.stderr).toOutput(
           'NEXT_PUBLIC_ variables can be seen by anyone visiting your site'
         );
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of NEXT_PUBLIC_TEST?"
@@ -287,7 +454,7 @@ describe('env add', () => {
         );
         await expect(client.stderr).toOutput('How to proceed?');
         client.stdin.write('\n'); // Select "Leave as is"
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of NEXT_PUBLIC_API_KEY?"
@@ -312,7 +479,7 @@ describe('env add', () => {
         // Select "Rename to SECRET" (second option)
         client.stdin.write('\x1B[B\n');
         await expect(client.stderr).toOutput('Renamed to SECRET');
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput("What's the value of SECRET?");
         client.stdin.write('testvalue\n');
@@ -322,7 +489,7 @@ describe('env add', () => {
       it('warns for quoted value and allows continue', async () => {
         client.setArgv('env', 'add', 'QUOTED_VALUE', 'preview', 'branchName');
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of QUOTED_VALUE?"
@@ -337,7 +504,7 @@ describe('env add', () => {
       it('allows re-entering value when warned', async () => {
         client.setArgv('env', 'add', 'REENTER_VALUE', 'preview', 'branchName');
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of REENTER_VALUE?"
@@ -362,7 +529,7 @@ describe('env add', () => {
           'branchName'
         );
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of WHITESPACE_VALUE?"
@@ -378,7 +545,7 @@ describe('env add', () => {
       it('re-validates trimmed value when it becomes empty', async () => {
         client.setArgv('env', 'add', 'TRIMMED_EMPTY', 'preview', 'branchName');
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of TRIMMED_EMPTY?"
@@ -418,7 +585,7 @@ describe('env add', () => {
         await expect(client.stderr).toOutput('How to proceed?');
         client.stdin.write('\x1B[B\n'); // Rename again to SECRET
         await expect(client.stderr).toOutput('Renamed to SECRET');
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput("What's the value of SECRET?");
         client.stdin.write('testvalue\n');
@@ -430,7 +597,7 @@ describe('env add', () => {
       it('should redact custom [environment] values', async () => {
         client.setArgv('env', 'add', 'environment-variable', 'custom-env-name');
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput('Mark as sensitive?');
+        await expect(client.stderr).toOutput('Keep it sensitive?');
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput(
           "What's the value of environment-variable?"
@@ -464,7 +631,7 @@ describe('env add', () => {
             'branchName'
           );
           const exitCodePromise = env(client);
-          await expect(client.stderr).toOutput('Mark as sensitive?');
+          await expect(client.stderr).toOutput('Keep it sensitive?');
           client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
             "What's the value of REDIS_CONNECTION_STRING?"
@@ -486,7 +653,7 @@ describe('env add', () => {
             'branchName'
           );
           const exitCodePromise = env(client);
-          await expect(client.stderr).toOutput('Mark as sensitive?');
+          await expect(client.stderr).toOutput('Keep it sensitive?');
           client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
             "What's the value of TELEMETRY_EVENTS?"

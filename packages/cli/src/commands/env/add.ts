@@ -108,6 +108,7 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliOptionValue(opts['--value']);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
+  telemetryClient.trackCliFlagNoSensitive(opts['--no-sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
@@ -518,9 +519,15 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  let type: 'encrypted' | 'sensitive' = opts['--sensitive']
-    ? 'sensitive'
-    : 'encrypted';
+  if (opts['--sensitive'] && !opts['--no-sensitive']) {
+    output.warn(
+      'The --sensitive flag is deprecated. Environment Variables are sensitive by default. Use --no-sensitive to opt out.'
+    );
+  }
+
+  let type: 'encrypted' | 'sensitive' = opts['--no-sensitive']
+    ? 'encrypted'
+    : 'sensitive';
   let envValue: string;
 
   if (stdInput) {
@@ -544,13 +551,20 @@ export default async function add(client: Client, argv: string[]) {
         ],
       });
     }
-    if (type === 'encrypted') {
-      const isSensitive = await client.input.confirm(
-        `Your value will be encrypted. Mark as sensitive?`,
-        false
+    if (
+      type === 'sensitive' &&
+      !opts['--no-sensitive'] &&
+      !opts['--sensitive']
+    ) {
+      output.log(
+        `Sensitive values cannot be retrieved later. Use --no-sensitive to opt out.`
       );
-      if (isSensitive) {
-        type = 'sensitive';
+      const keepSensitive = await client.input.confirm(
+        `Keep it sensitive?`,
+        true
+      );
+      if (!keepSensitive) {
+        type = 'encrypted';
       }
     }
     envValue = await client.input.password({
@@ -692,6 +706,12 @@ export default async function add(client: Client, argv: string[]) {
       emoji('success')
     )}\n`
   );
+
+  if (type === 'sensitive') {
+    output.log(
+      `Variable is sensitive and cannot be retrieved later. Use --no-sensitive next time if you need to view the value after creation.`
+    );
+  }
 
   const { isAgent } = await determineAgent();
   const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
