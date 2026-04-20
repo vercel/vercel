@@ -86,7 +86,7 @@ export async function token(
     return 1;
   }
 
-  if (errorCode === 'no_token') {
+  if (errorCode === 'unresolved_token') {
     output.error(
       `${errorMessage} This client does not support getting a token for the requested subject.`
     );
@@ -112,13 +112,14 @@ export async function token(
       : 'installation';
 
   const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
-  // Only open a browser + poll when the user asked for it (--yes) or when
-  // we're clearly in a human-driven session — otherwise fail fast.
-  const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
+  // The recovery flow opens a browser a human must complete, so skip it
+  // whenever we don't have (or shouldn't assume) a human at the terminal.
+  const attemptRecovery =
+    !client.nonInteractive && (Boolean(flags['--yes']) || isInteractive);
 
   if (!attemptRecovery) {
-    const { hash } = generateRequestCode();
-    const actionUrl = buildActionUrl(errorCode, clientId, teamId, hash);
+    const { requestCode } = generateRequestCode();
+    const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode);
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
@@ -138,8 +139,8 @@ export async function token(
     }
   }
 
-  const { original, hash } = generateRequestCode();
-  const actionUrl = buildActionUrl(errorCode, clientId, teamId, hash);
+  const { verifier, requestCode } = generateRequestCode();
+  const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode);
 
   output.log(`Opening browser for ${actionLabel}...`);
   output.log(`If the browser doesn't open, visit:\n${actionUrl}`);
@@ -148,7 +149,7 @@ export async function token(
   );
 
   output.spinner(`Waiting for ${actionLabel} to complete in the browser...`);
-  const pollData = await awaitConnexResult(client, original);
+  const pollData = await awaitConnexResult(client, verifier);
   output.stopSpinner();
 
   if (!pollData) {
@@ -194,12 +195,12 @@ function buildActionUrl(
   code: ActionableErrorCode,
   clientId: string,
   teamId: string,
-  requestCodeHash: string
+  requestCode: string
 ): string {
   const path = code === 'user_authorization_required' ? 'authorize' : 'install';
   const params = new URLSearchParams({
     teamId,
-    request_code: requestCodeHash,
+    request_code: requestCode,
   });
   return `https://vercel.com/api/v1/connex/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }

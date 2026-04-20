@@ -183,12 +183,12 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should handle no_token as terminal error', async () => {
+  it('should handle unresolved_token as terminal error', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
-          code: 'no_token',
+          code: 'unresolved_token',
           message: 'No token available',
         },
       });
@@ -243,6 +243,28 @@ describe('connex token', () => {
 
     await expect(client.stderr).toOutput(
       'https://vercel.com/api/v1/connex/install/scl_abc123'
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('should fail fast when client.nonInteractive is true, even with --yes', async () => {
+    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+      res.statusCode = 422;
+      res.json({
+        error: {
+          code: 'user_authorization_required',
+          message: 'User authorization required',
+        },
+      });
+    });
+
+    client.nonInteractive = true;
+    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
+
+    const exitCode = await connex(client);
+
+    await expect(client.stderr).toOutput(
+      'https://vercel.com/api/v1/connex/authorize/scl_abc123'
     );
     expect(exitCode).toBe(1);
   });
