@@ -38,9 +38,9 @@ while IFS=$'\t' read -r name pkg_path; do
 
   echo "publishing: $name@$version"
 
-  # pnpm pack resolves workspace:* to real versions in the tarball
+  # pnpm pack resolves workspace:* to real versions and outputs the full path
   tarball=$(pnpm pack --pack-destination="$TARBALL_DIR" -C "$pkg_path" 2>/dev/null | tail -1)
-  npm publish "$TARBALL_DIR/$tarball" --access public --provenance
+  npm publish "$tarball" --access public --provenance
 
   published=$((published + 1))
 done <<< "$packages"
