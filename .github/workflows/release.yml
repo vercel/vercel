@@ -75,6 +75,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
+          # Still needed for `pnpm dist-tag` in update-canary-tags.mjs
+          # (npm OIDC does not yet support dist-tag operations)
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Trigger Update (if a Publish Happened)
