@@ -5,6 +5,7 @@ describe('index', () => {
     expect(commands).toEqual(
       new Map([
         ['agent', 'agent'],
+        ['ai-gateway', 'ai-gateway'],
         ['alerts', 'alerts'],
         ['alias', 'alias'],
         ['aliases', 'alias'],
@@ -22,6 +23,8 @@ describe('index', () => {
         ['crons', 'crons'],
         ['curl', 'curl'],
         ['deploy', 'deploy'],
+        ['deploy-hooks', 'deploy-hooks'],
+        ['deploy-hook', 'deploy-hooks'],
         ['dev', 'dev'],
         ['develop', 'dev'],
         ['dns', 'dns'],
@@ -51,7 +54,9 @@ describe('index', () => {
         ['ls', 'list'],
         ['mcp', 'mcp'],
         ['mf', 'microfrontends'],
+        ['metrics', 'metrics'],
         ['microfrontends', 'microfrontends'],
+        ['oauth-apps', 'oauth-apps'],
         ['open', 'open'],
         ['project', 'project'],
         ['projects', 'project'],

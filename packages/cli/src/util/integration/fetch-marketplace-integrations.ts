@@ -1,7 +1,10 @@
 import type Client from '../client';
 import type { Configuration } from './types';
 
-async function fetchMarketplaceIntegrations(client: Client, slug: string) {
+export async function fetchMarketplaceIntegrations(
+  client: Client,
+  slug: string
+) {
   const searchParams = new URLSearchParams();
   searchParams.set('view', 'account');
   searchParams.set('installationType', 'marketplace');

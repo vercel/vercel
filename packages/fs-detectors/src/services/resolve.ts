@@ -6,7 +6,11 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
-import { getWorkerTopics } from '@vercel/build-utils';
+import {
+  getServiceQueueTopics,
+  JOB_TRIGGERS,
+  JobTrigger,
+} from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -58,6 +62,41 @@ interface ResolvedEntrypointPath {
   isDirectory: boolean;
 }
 
+async function getServiceFs(
+  fs: DetectorFilesystem,
+  serviceName: string,
+  root?: string
+): Promise<{
+  fs: DetectorFilesystem;
+  error?: ServiceDetectionError;
+}> {
+  if (!root) {
+    return { fs };
+  }
+  const normalizedRoot = posixPath.normalize(root);
+  if (!(await fs.hasPath(normalizedRoot))) {
+    return {
+      fs,
+      error: {
+        code: 'ROOT_NOT_FOUND',
+        message: `Service "${serviceName}" has root "${root}" but that directory does not exist.`,
+        serviceName,
+      },
+    };
+  }
+  if (await fs.isFile(normalizedRoot)) {
+    return {
+      fs,
+      error: {
+        code: 'ROOT_NOT_DIRECTORY',
+        message: `Service "${serviceName}" has root "${root}" but that path is a file, not a directory.`,
+        serviceName,
+      },
+    };
+  }
+  return { fs: fs.chdir(normalizedRoot) };
+}
+
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
@@ -100,7 +139,9 @@ type RoutePrefixSource = 'configured' | 'generated';
 interface ResolveConfiguredServiceOptions {
   name: string;
   config: ExperimentalServiceConfig;
-  fs: DetectorFilesystem;
+  /** Filesystem scoped to the service root (via chdir) when root is set, otherwise the project-level fs. */
+  serviceFs: DetectorFilesystem;
+  root?: string;
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
   routePrefixSource?: RoutePrefixSource;
@@ -219,6 +260,112 @@ function isReservedServiceRoutePrefix(routePrefix: string): boolean {
   );
 }
 
+interface ResolvedServiceRoutingConfig {
+  routePrefix?: string;
+  subdomain?: string;
+  routePrefixConfigured: boolean;
+}
+
+function resolveServiceRoutingConfig(
+  name: string,
+  config: ExperimentalServiceConfig
+): {
+  routing?: ResolvedServiceRoutingConfig;
+  error?: ServiceDetectionError;
+} {
+  const hasLegacyRoutePrefix = typeof config.routePrefix === 'string';
+  const hasLegacySubdomain = typeof config.subdomain === 'string';
+
+  if (config.mount === undefined) {
+    return {
+      routing: {
+        routePrefix: config.routePrefix,
+        subdomain: config.subdomain,
+        routePrefixConfigured: hasLegacyRoutePrefix,
+      },
+    };
+  }
+
+  if (hasLegacyRoutePrefix || hasLegacySubdomain) {
+    return {
+      error: {
+        code: 'CONFLICTING_MOUNT_CONFIG',
+        message: `Service "${name}" cannot mix "mount" with "routePrefix" or "subdomain". Use only one routing configuration style.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  if (typeof config.mount === 'string') {
+    return {
+      routing: {
+        routePrefix: config.mount,
+        routePrefixConfigured: true,
+      },
+    };
+  }
+
+  if (
+    !config.mount ||
+    typeof config.mount !== 'object' ||
+    Array.isArray(config.mount)
+  ) {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. Use a string path such as "/api" or an object like { path: "/api", subdomain: "api" }.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const hasInvalidMountKeys = Object.keys(config.mount).some(
+    key => key !== 'path' && key !== 'subdomain'
+  );
+  if (hasInvalidMountKeys) {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. Only "path" and "subdomain" are supported.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const mountPath = config.mount.path;
+  const mountSubdomain = config.mount.subdomain;
+  if (
+    (mountPath !== undefined && typeof mountPath !== 'string') ||
+    (mountSubdomain !== undefined && typeof mountSubdomain !== 'string')
+  ) {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. "path" and "subdomain" must be strings when provided.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  if (typeof mountPath !== 'string' && typeof mountSubdomain !== 'string') {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. Specify at least one of "mount.path" or "mount.subdomain".`,
+        serviceName: name,
+      },
+    };
+  }
+
+  return {
+    routing: {
+      routePrefix: mountPath,
+      subdomain: mountSubdomain,
+      routePrefixConfigured: typeof mountPath === 'string',
+    },
+  };
+}
+
 /**
  * Validate a service configuration from vercel.json experimentalServices.
  */
@@ -241,13 +388,32 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
-  const hasRoutePrefix = typeof config.routePrefix === 'string';
-  const hasSubdomain = typeof config.subdomain === 'string';
+  const isJobService = serviceType === 'job' || serviceType === 'cron';
+  const isScheduleJobService =
+    serviceType === 'cron' ||
+    (serviceType === 'job' && config.trigger === 'schedule');
+  const isQueueJobService = serviceType === 'job' && config.trigger === 'queue';
+  const isWorkflowService =
+    serviceType === 'job' && config.trigger === 'workflow';
+  const isNonWebService = serviceType === 'worker' || isJobService;
+  const serviceTypeLabel = isJobService
+    ? 'Job'
+    : serviceType === 'worker'
+      ? 'Worker'
+      : 'Web';
+  const routingResult = resolveServiceRoutingConfig(name, config);
+  if (routingResult.error) {
+    return routingResult.error;
+  }
+  const configuredRoutePrefix = routingResult.routing?.routePrefix;
+  const configuredSubdomain = routingResult.routing?.subdomain;
+  const hasRoutePrefix = typeof configuredRoutePrefix === 'string';
+  const hasSubdomain = typeof configuredSubdomain === 'string';
 
-  if (hasSubdomain && !DNS_LABEL_RE.test(config.subdomain!)) {
+  if (hasSubdomain && !DNS_LABEL_RE.test(configuredSubdomain!)) {
     return {
       code: 'INVALID_SUBDOMAIN',
-      message: `Web service "${name}" has invalid subdomain "${config.subdomain}". Use a single DNS label such as "api".`,
+      message: `Web service "${name}" has invalid subdomain "${configuredSubdomain}". Use a single DNS label such as "api".`,
       serviceName: name,
     };
   }
@@ -255,44 +421,96 @@ export function validateServiceConfig(
   if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
-      message: `Web service "${name}" must specify at least one of "routePrefix" or "subdomain".`,
+      message: `Web service "${name}" must specify at least one of "mount", "routePrefix", or "subdomain".`,
       serviceName: name,
     };
   }
   if (
     serviceType === 'web' &&
-    config.routePrefix &&
-    isReservedServiceRoutePrefix(config.routePrefix)
+    configuredRoutePrefix &&
+    isReservedServiceRoutePrefix(configuredRoutePrefix)
   ) {
     return {
       code: 'RESERVED_ROUTE_PREFIX',
-      message: `Web service "${name}" cannot use routePrefix "${config.routePrefix}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
+      message: `Web service "${name}" cannot use routePrefix "${configuredRoutePrefix}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
+      serviceName: name,
+    };
+  }
+  if (isNonWebService && configuredRoutePrefix) {
+    return {
+      code: 'INVALID_ROUTE_PREFIX',
+      message: `${serviceTypeLabel} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
+      serviceName: name,
+    };
+  }
+  if (isNonWebService && hasSubdomain) {
+    return {
+      code: 'INVALID_HOST_ROUTING_CONFIG',
+      message: `${serviceTypeLabel} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
+      serviceName: name,
+    };
+  }
+  if (serviceType === 'job' && config.trigger === undefined) {
+    return {
+      code: 'MISSING_JOB_TRIGGER',
+      message: `Job service "${name}" is missing required "trigger" field.`,
       serviceName: name,
     };
   }
   if (
-    (serviceType === 'worker' || serviceType === 'cron') &&
-    config.routePrefix
+    serviceType === 'job' &&
+    config.trigger &&
+    !JOB_TRIGGERS.includes(config.trigger)
   ) {
     return {
-      code: 'INVALID_ROUTE_PREFIX',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
+      code: 'INVALID_JOB_TRIGGER',
+      message: `Job service "${name}" has invalid trigger "${config.trigger}". Expected ${JOB_TRIGGERS.map((t: JobTrigger) => `"${t}"`).join(', ')}.`,
       serviceName: name,
     };
   }
-  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+  if (isScheduleJobService && !config.schedule) {
     return {
-      code: 'INVALID_HOST_ROUTING_CONFIG',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain". Only web services should specify subdomain routing.`,
+      code:
+        serviceType === 'cron'
+          ? 'MISSING_CRON_SCHEDULE'
+          : 'MISSING_JOB_SCHEDULE',
+      message: `${serviceTypeLabel} service "${name}" is missing required "schedule" field.`,
       serviceName: name,
     };
   }
-  if (serviceType === 'cron' && !config.schedule) {
+  if (
+    isQueueJobService &&
+    (!Array.isArray(config.topics) || config.topics.length === 0)
+  ) {
     return {
-      code: 'MISSING_CRON_SCHEDULE',
-      message: `Cron service "${name}" is missing required "schedule" field.`,
+      code: 'MISSING_QUEUE_TOPICS',
+      message: `${serviceTypeLabel} service "${name}" is missing required "topics" field.`,
       serviceName: name,
     };
+  }
+  if (isWorkflowService && typeof config.entrypoint !== 'string') {
+    return {
+      code: 'MISSING_ENTRYPOINT',
+      message: `Job service "${name}" with "workflow" trigger must specify "entrypoint".`,
+      serviceName: name,
+    };
+  }
+  if (config.root !== undefined) {
+    const normalizedRoot = posixPath.normalize(config.root);
+    if (normalizedRoot.startsWith('/')) {
+      return {
+        code: 'INVALID_ROOT',
+        message: `Service "${name}" has invalid "root" "${config.root}". Must be a relative path.`,
+        serviceName: name,
+      };
+    }
+    if (normalizedRoot === '..' || normalizedRoot.startsWith('../')) {
+      return {
+        code: 'INVALID_ROOT',
+        message: `Service "${name}" has invalid "root" "${config.root}". Must not escape the project root.`,
+        serviceName: name,
+      };
+    }
   }
   if (config.envPrefix !== undefined) {
     if (!ENV_PREFIX_RE.test(config.envPrefix)) {
@@ -390,18 +608,29 @@ export async function resolveConfiguredService(
   const {
     name,
     config,
-    fs,
+    serviceFs,
+    root,
     group,
     resolvedEntrypoint,
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
+  const trigger =
+    type === 'cron' ? 'schedule' : type === 'job' ? config.trigger : undefined;
   const rawEntrypoint = config.entrypoint;
 
   const moduleAttrParsed =
-    typeof rawEntrypoint === 'string' && type === 'cron'
+    typeof rawEntrypoint === 'string'
       ? parsePyModuleAttrEntrypoint(rawEntrypoint)
       : null;
+  const routingResult = resolveServiceRoutingConfig(name, config);
+  if (routingResult.error) {
+    throw new Error(routingResult.error.message);
+  }
+  const configuredRoutePrefix = routingResult.routing?.routePrefix;
+  const configuredSubdomain = routingResult.routing?.subdomain;
+  const routePrefixWasConfigured =
+    routingResult.routing?.routePrefixConfigured ?? false;
 
   let resolvedEntrypointPath = resolvedEntrypoint;
   if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
@@ -409,7 +638,7 @@ export async function resolveConfiguredService(
       ? moduleAttrParsed.filePath
       : rawEntrypoint;
     const resolved = await resolveEntrypointPath({
-      fs,
+      fs: serviceFs,
       serviceName: name,
       entrypoint: entrypointToResolve,
     });
@@ -439,7 +668,7 @@ export async function resolveConfiguredService(
   } else {
     // File entrypoints infer workspace from nearest runtime manifest.
     const inferredWorkspace = await inferWorkspaceFromNearestManifest({
-      fs,
+      fs: serviceFs,
       entrypoint: resolvedEntrypointFile,
       runtime: inferredRuntime,
     });
@@ -454,9 +683,23 @@ export async function resolveConfiguredService(
     }
   }
 
-  const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
-  const consumer =
-    type === 'worker' ? config.consumer || 'default' : config.consumer;
+  // When root is provided, prefix workspace to make it project-root-relative.
+  if (root) {
+    const normalizedRoot = posixPath.normalize(root);
+    if (normalizedRoot !== '.') {
+      workspace =
+        workspace === '.'
+          ? normalizedRoot
+          : posixPath.join(normalizedRoot, workspace);
+    }
+  }
+
+  const topics =
+    type === 'worker'
+      ? getServiceQueueTopics({ type, topics: config.topics })
+      : trigger === 'queue'
+        ? config.topics
+        : undefined;
 
   let builderUse: string;
   let builderSrc: string;
@@ -498,21 +741,21 @@ export async function resolveConfiguredService(
   }
 
   const normalizedSubdomain =
-    type === 'web' && typeof config.subdomain === 'string'
-      ? config.subdomain.toLowerCase()
+    type === 'web' && typeof configuredSubdomain === 'string'
+      ? configuredSubdomain.toLowerCase()
       : undefined;
   const defaultRoutePrefix =
     type === 'web' && normalizedSubdomain ? `/_/${name}` : undefined;
   // routePrefix defaults to /_/serviceName for subdomain-mounted web services.
   const routePrefix =
-    type === 'web' && (config.routePrefix || defaultRoutePrefix)
-      ? (config.routePrefix || defaultRoutePrefix)!.startsWith('/')
-        ? (config.routePrefix || defaultRoutePrefix)!
-        : `/${config.routePrefix || defaultRoutePrefix}`
+    type === 'web' && (configuredRoutePrefix || defaultRoutePrefix)
+      ? (configuredRoutePrefix || defaultRoutePrefix)!.startsWith('/')
+        ? (configuredRoutePrefix || defaultRoutePrefix)!
+        : `/${configuredRoutePrefix || defaultRoutePrefix}`
       : undefined;
   const resolvedRoutePrefixSource =
     type === 'web' && typeof routePrefix === 'string'
-      ? config.routePrefix
+      ? routePrefixWasConfigured
         ? routePrefixSource
         : 'generated'
       : undefined;
@@ -562,6 +805,7 @@ export async function resolveConfiguredService(
   return {
     name,
     type,
+    trigger,
     group,
     workspace,
     entrypoint: resolvedEntrypointFile,
@@ -580,7 +824,6 @@ export async function resolveConfiguredService(
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    consumer,
     envPrefix: config.envPrefix,
   };
 }
@@ -610,18 +853,22 @@ export async function resolveAllConfiguredServices(
       continue;
     }
 
+    // Scope filesystem to root if specified
+    const root = serviceConfig.root;
+    const serviceFsResult = await getServiceFs(fs, name, root);
+    if (serviceFsResult.error) {
+      errors.push(serviceFsResult.error);
+      continue;
+    }
+    const serviceFs = serviceFsResult.fs;
+
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    const serviceType = serviceConfig.type || 'web';
     if (typeof serviceConfig.entrypoint === 'string') {
-      const moduleAttr =
-        serviceType === 'cron'
-          ? parsePyModuleAttrEntrypoint(serviceConfig.entrypoint)
-          : null;
-      const entrypointToResolve = moduleAttr
-        ? moduleAttr.filePath
-        : serviceConfig.entrypoint;
+      const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
+      const entrypointToResolve =
+        moduleAttr?.filePath ?? serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
-        fs,
+        fs: serviceFs,
         serviceName: name,
         entrypoint: entrypointToResolve,
       });
@@ -652,7 +899,7 @@ export async function resolveAllConfiguredServices(
         });
         const workspace = resolvedEntrypoint.normalized;
         const { framework, error } = await detectFrameworkFromWorkspace({
-          fs,
+          fs: serviceFs,
           workspace,
           runtime: inferredRuntime,
           serviceName: name,
@@ -681,7 +928,7 @@ export async function resolveAllConfiguredServices(
 
         if (inferredRuntime) {
           const inferredWorkspace = await inferWorkspaceFromNearestManifest({
-            fs,
+            fs: serviceFs,
             entrypoint: resolvedEntrypoint.normalized,
             runtime: inferredRuntime,
           });
@@ -689,7 +936,7 @@ export async function resolveAllConfiguredServices(
             inferredWorkspace ??
             posixPath.dirname(resolvedEntrypoint.normalized);
           const detection = await detectFrameworkFromWorkspace({
-            fs,
+            fs: serviceFs,
             workspace,
             serviceName: name,
             runtime: inferredRuntime,
@@ -707,7 +954,8 @@ export async function resolveAllConfiguredServices(
     const service = await resolveConfiguredService({
       name,
       config: resolvedConfig,
-      fs,
+      serviceFs,
+      root,
       resolvedEntrypoint,
       routePrefixSource,
     });

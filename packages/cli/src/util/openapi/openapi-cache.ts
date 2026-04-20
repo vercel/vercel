@@ -157,6 +157,47 @@ export class OpenApiCache {
     return fields;
   }
 
+  /**
+   * Extract `x-vercel-cli.displayColumns` from the 200 response schema of an
+   * endpoint.  Returns `null` when the spec has no display hint.
+   */
+  getDisplayColumns(endpoint: EndpointInfo): Record<string, string> | null {
+    this.ensureLoaded();
+
+    const pathItem = this.spec!.paths[endpoint.path];
+    if (!pathItem) return null;
+
+    const operation = pathItem[endpoint.method.toLowerCase() as 'get'];
+    if (!operation?.responses) return null;
+
+    const ok = operation.responses['200'] || operation.responses['201'];
+    if (!ok) return null;
+
+    const jsonContent = ok.content?.['application/json'];
+    if (!jsonContent?.schema) return null;
+
+    return this.findDisplayColumns(jsonContent.schema);
+  }
+
+  private findDisplayColumns(schema: Schema): Record<string, string> | null {
+    const xCli = (schema as Record<string, unknown>)['x-vercel-cli'] as
+      | { displayColumns?: Record<string, string> }
+      | undefined;
+    if (xCli?.displayColumns) return xCli.displayColumns;
+
+    for (const key of ['oneOf', 'allOf', 'anyOf'] as const) {
+      const variants = (schema as Record<string, Schema[]>)[key];
+      if (variants) {
+        for (const sub of variants) {
+          const found = this.findDisplayColumns(sub);
+          if (found) return found;
+        }
+      }
+    }
+
+    return null;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Private methods
   // ─────────────────────────────────────────────────────────────────────────────

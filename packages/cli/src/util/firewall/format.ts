@@ -108,7 +108,7 @@ export function formatStatusOutput(
     );
   }
   lines.push(
-    `  ${chalk.bold('System Mitigations:')}  ${formatMitigationsStatus(bypass)}`
+    `  ${chalk.bold('System Mitigations:')}   ${formatMitigationsStatus(bypass)}`
   );
 
   if (draft && draft.changes.length > 0) {
@@ -116,7 +116,8 @@ export function formatStatusOutput(
     lines.push(
       `  ${chalk.bold('Pending Draft:')}        ${chalk.yellow(`${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`)}`
     );
-    lines.push(formatDiffOutput(draft.changes));
+    const activeRulesMap = new Map((active?.rules || []).map(r => [r.id, r]));
+    lines.push(formatDiffOutput(draft.changes, activeRulesMap));
   }
 
   return lines.join('\n');
@@ -273,7 +274,10 @@ export function getDiffSymbol(action: FirewallChangeAction): {
   return { symbol: '~', color: chalk.yellow };
 }
 
-export function formatChangeDescription(change: FirewallConfigChange): string {
+export function formatChangeDescription(
+  change: FirewallConfigChange,
+  activeRules?: Map<string, FirewallRule>
+): string {
   const { action, id, value } = change;
 
   switch (action) {
@@ -282,8 +286,45 @@ export function formatChangeDescription(change: FirewallConfigChange): string {
       return `Added rule "${rule?.name || id || 'unknown'}"`;
     }
     case 'rules.update': {
-      const rule = value as { name?: string } | undefined;
-      return `Modified rule "${rule?.name || id || 'unknown'}"`;
+      const draft = value as
+        | {
+            name?: string;
+            active?: boolean;
+            conditionGroup?: FirewallConditionGroup[];
+            action?: FirewallRuleAction;
+            description?: string;
+          }
+        | undefined;
+      const ruleName = draft?.name || id || 'unknown';
+
+      // Detect enable/disable-only changes by comparing against active rule
+      if (activeRules && id && draft && typeof draft.active === 'boolean') {
+        const activeRule = activeRules.get(id);
+        if (activeRule && activeRule.active !== draft.active) {
+          // Check if other fields are unchanged
+          const nameUnchanged = activeRule.name === draft.name;
+          const conditionsUnchanged =
+            JSON.stringify(activeRule.conditionGroup) ===
+            JSON.stringify(draft.conditionGroup);
+          const actionUnchanged =
+            JSON.stringify(activeRule.action) === JSON.stringify(draft.action);
+          const descriptionUnchanged =
+            (activeRule.description || '') === (draft.description || '');
+
+          if (
+            nameUnchanged &&
+            conditionsUnchanged &&
+            actionUnchanged &&
+            descriptionUnchanged
+          ) {
+            return draft.active
+              ? `Enabled rule "${ruleName}"`
+              : `Disabled rule "${ruleName}"`;
+          }
+        }
+      }
+
+      return `Modified rule "${ruleName}"`;
     }
     case 'rules.remove':
       return `Removed rule "${id || 'unknown'}"`;
@@ -324,13 +365,127 @@ export function formatChangeDescription(change: FirewallConfigChange): string {
   }
 }
 
-export function formatDiffOutput(changes: FirewallConfigChange[]): string {
+/**
+ * Generate field-level diff lines for a rules.update change.
+ * Compares the active rule against the draft value and returns
+ * indented sub-lines showing what changed.
+ */
+export function formatRuleFieldDiff(
+  activeRule: FirewallRule,
+  draftValue: {
+    name?: string;
+    conditionGroup?: FirewallConditionGroup[];
+    action?: FirewallRuleAction;
+  }
+): string[] {
   const lines: string[] = [];
 
-  for (const change of changes) {
+  // Name change
+  if (draftValue.name && activeRule.name !== draftValue.name) {
+    lines.push(
+      chalk.yellow(`      ~ Name: "${activeRule.name}" → "${draftValue.name}"`)
+    );
+  }
+
+  // Action change
+  if (
+    draftValue.action &&
+    JSON.stringify(activeRule.action) !== JSON.stringify(draftValue.action)
+  ) {
+    const oldAction = formatActionDisplay(activeRule.action);
+    const newAction = formatActionDisplay(draftValue.action);
+    lines.push(chalk.yellow(`      ~ Action: ${oldAction} → ${newAction}`));
+  }
+
+  // Condition changes — flat set comparison using formatConditionCompact
+  if (
+    draftValue.conditionGroup &&
+    JSON.stringify(activeRule.conditionGroup) !==
+      JSON.stringify(draftValue.conditionGroup)
+  ) {
+    const oldConditions = new Set(
+      activeRule.conditionGroup.flatMap(g =>
+        g.conditions.map(c => formatConditionCompact(c))
+      )
+    );
+    const newConditions = new Set(
+      draftValue.conditionGroup.flatMap(g =>
+        g.conditions.map(c => formatConditionCompact(c))
+      )
+    );
+
+    const added = [...newConditions].filter(c => !oldConditions.has(c));
+    const removed = [...oldConditions].filter(c => !newConditions.has(c));
+
+    for (const c of added) {
+      lines.push(chalk.green(`      + Condition: ${c}`));
+    }
+    for (const c of removed) {
+      lines.push(chalk.red(`      - Condition: ${c}`));
+    }
+
+    // If no individual conditions changed but the grouping (AND/OR structure) did
+    if (added.length === 0 && removed.length === 0) {
+      lines.push(chalk.yellow('      ~ Condition groups restructured'));
+    }
+  }
+
+  return lines;
+}
+
+// Sort order for diff change actions — most impactful first
+const CHANGE_ACTION_ORDER: Record<string, number> = {
+  firewallEnabled: 0,
+  'rules.insert': 1,
+  'rules.update': 2,
+  'rules.remove': 3,
+  'rules.priority': 4,
+  'ip.insert': 5,
+  'ip.update': 6,
+  'ip.remove': 7,
+  'crs.update': 8,
+  'crs.disable': 9,
+  'managedRules.update': 10,
+  'managedRuleGroup.update': 11,
+  'botId.toggle': 12,
+  ja3Enabled: 13,
+  ja4Enabled: 14,
+  'logHeaders.update': 15,
+};
+
+export function formatDiffOutput(
+  changes: FirewallConfigChange[],
+  activeRules?: Map<string, FirewallRule>
+): string {
+  const lines: string[] = [];
+
+  // Sort changes: firewall toggle first, then rules, IPs, system config
+  const sorted = [...changes].sort(
+    (a, b) =>
+      (CHANGE_ACTION_ORDER[a.action] ?? 99) -
+      (CHANGE_ACTION_ORDER[b.action] ?? 99)
+  );
+
+  for (const change of sorted) {
     const { symbol, color } = getDiffSymbol(change.action);
-    const description = formatChangeDescription(change);
+    const description = formatChangeDescription(change, activeRules);
     lines.push(color(`  ${symbol} ${description}`));
+
+    // For rules.update, show field-level diff sub-lines
+    if (change.action === 'rules.update' && activeRules && change.id) {
+      const activeRule = activeRules.get(change.id);
+      if (activeRule && change.value) {
+        const subLines = formatRuleFieldDiff(
+          activeRule,
+          change.value as {
+            name?: string;
+            conditionGroup?: FirewallConditionGroup[];
+            action?: FirewallRuleAction;
+          }
+        );
+        lines.push(...subLines);
+      }
+    }
   }
 
   return lines.join('\n');
@@ -374,27 +529,32 @@ const NEGATED_OPERATOR_LABELS: Record<string, string> = {
 
 const CONDITION_TYPE_LABELS: Record<string, string> = {
   path: 'path',
+  raw_path: 'raw path',
+  target_path: 'target path',
+  route: 'route',
+  server_action: 'server action',
   method: 'method',
   host: 'host',
+  protocol: 'protocol',
+  scheme: 'scheme',
+  environment: 'environment',
+  region: 'region',
   ip_address: 'IP address',
   user_agent: 'user agent',
+  geo_country: 'geo country',
+  geo_continent: 'geo continent',
+  geo_country_region: 'state/region',
+  geo_city: 'geo city',
+  geo_as_number: 'geo AS number',
   header: 'header',
   cookie: 'cookie',
   query: 'query string',
   ja3_digest: 'JA3 digest',
   ja4_digest: 'JA4 digest',
-  geo_country: 'geo country',
-  geo_city: 'geo city',
-  geo_as_number: 'geo AS number',
-  geo_continent: 'geo continent',
-  geo_region: 'geo region',
-  protocol: 'protocol',
-  scheme: 'scheme',
   request_body: 'request body',
-  target_path: 'target path',
-  region: 'region',
-  environment: 'environment',
-  ssl: 'SSL',
+  rate_limit_api_id: 'rate limit API ID',
+  bot_name: 'bot name',
+  bot_category: 'bot category',
 };
 
 function getConditionTypeLabel(type: string, key?: string): string {
@@ -544,31 +704,21 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
     'Name'.length,
     ...annotated.map(a => a.rule.name.length)
   );
-  const statusWidth = Math.max(
-    'Status'.length,
-    ...annotated.map(a => (a.rule.active ? 'Active' : 'Inactive').length)
-  );
   const actionTexts = annotated.map(a => formatActionDisplay(a.rule.action));
   const actionWidth = Math.max(
     'Action'.length,
     ...actionTexts.map(t => t.length)
   );
-
-  // Header
+  // Header — Action before Status
   lines.push(
-    `  ${' '.repeat(prefixWidth)}${chalk.dim('#'.padEnd(numWidth + gap))}${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Status'.padEnd(statusWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Description')}`
+    `  ${' '.repeat(prefixWidth)}${chalk.dim('#'.padEnd(numWidth + gap))}${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Status')}`
   );
 
   for (let i = 0; i < annotated.length; i++) {
     const { rule, status } = annotated[i];
     const num = String(i + 1).padEnd(numWidth + gap);
     const name = rule.name.padEnd(nameWidth + gap);
-    const activeStatus = (rule.active ? 'Active' : 'Inactive').padEnd(
-      statusWidth + gap
-    );
     const actionText = actionTexts[i].padEnd(actionWidth + gap);
-    const description = rule.description || '';
-
     let prefix = '  ';
     let colorFn: (s: string) => string = (s: string) => s;
 
@@ -583,11 +733,20 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
       colorFn = chalk.yellow;
     }
 
-    lines.push(
-      colorFn(
-        `  ${prefix}${num}${name}${activeStatus}${actionText}${description}`
-      )
-    );
+    // For removed rules, dim the status; otherwise color it normally
+    const activeStatusText = rule.active ? 'Enabled' : 'Disabled';
+    const activeStatus =
+      status === 'removed'
+        ? chalk.dim(activeStatusText)
+        : rule.active
+          ? chalk.green(activeStatusText)
+          : chalk.red(activeStatusText);
+
+    // Line 1: #, Name, Action, Status
+    lines.push(colorFn(`  ${prefix}${num}${name}${actionText}${activeStatus}`));
+    // Line 2: ID (dimmed, indented under Name column, inherits status color)
+    const idIndent = ' '.repeat(prefixWidth + numWidth + gap);
+    lines.push(colorFn(`  ${idIndent}${chalk.dim(rule.id)}`));
   }
 
   return lines.join('\n');
@@ -616,7 +775,7 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   const lines: string[] = [];
 
   const prefix = index !== undefined ? `${index + 1}. ` : '';
-  const status = rule.active ? 'Active' : chalk.dim('Inactive');
+  const status = rule.active ? chalk.green('Enabled') : chalk.red('Disabled');
   const action = formatActionDisplay(rule.action);
 
   lines.push(`  ${prefix}${chalk.bold(rule.name)} [${status}]`);
@@ -648,9 +807,9 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   lines.push('');
   lines.push(`     ${chalk.dim('Action:')} ${action}`);
 
-  // Duration
+  // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
   const duration = rule.action.mitigate?.actionDuration;
-  if (duration) {
+  if (duration && rule.action.mitigate?.action !== 'rate_limit') {
     lines.push(`     ${chalk.dim('Duration:')} ${duration}`);
   }
 
@@ -662,7 +821,8 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
     );
     lines.push(`     ${chalk.dim('Keys:')} ${rl.keys.join(', ')}`);
     if (rl.action) {
-      lines.push(`     ${chalk.dim('Sub-action:')} ${rl.action}`);
+      const exceeded = duration ? `${rl.action} (${duration})` : rl.action;
+      lines.push(`     ${chalk.dim('If exceeded:')} ${exceeded}`);
     }
   }
 
@@ -687,7 +847,7 @@ export function formatRuleDetail(rule: FirewallRule): string {
   lines.push(`  ${chalk.bold('Rule:')}        ${rule.name}`);
   lines.push(`  ${chalk.bold('ID:')}          ${chalk.dim(rule.id)}`);
   lines.push(
-    `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Active') : chalk.dim('Inactive')}`
+    `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Enabled') : chalk.red('Disabled')}`
   );
   if (rule.description) {
     lines.push(`  ${chalk.bold('Description:')} ${rule.description}`);
@@ -720,8 +880,9 @@ export function formatRuleDetail(rule: FirewallRule): string {
     `  ${chalk.bold('Action:')}      ${formatActionDisplay(rule.action)}`
   );
 
+  // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
   const duration = rule.action.mitigate?.actionDuration;
-  if (duration) {
+  if (duration && rule.action.mitigate?.action !== 'rate_limit') {
     lines.push(`  ${chalk.bold('Duration:')}    ${duration}`);
   }
 
@@ -729,12 +890,13 @@ export function formatRuleDetail(rule: FirewallRule): string {
   const rl = rule.action.mitigate?.rateLimit;
   if (rl) {
     lines.push(`  ${chalk.bold('Rate Limit:')}`);
-    lines.push(`    Algorithm:  ${rl.algo}`);
-    lines.push(`    Window:     ${rl.window}s`);
-    lines.push(`    Limit:      ${rl.limit} requests`);
-    lines.push(`    Keys:       ${rl.keys.join(', ')}`);
+    lines.push(`    Algorithm:    ${rl.algo}`);
+    lines.push(`    Window:       ${rl.window}s`);
+    lines.push(`    Limit:        ${rl.limit} requests`);
+    lines.push(`    Keys:         ${rl.keys.join(', ')}`);
     if (rl.action) {
-      lines.push(`    Sub-action: ${rl.action}`);
+      const exceeded = duration ? `${rl.action} (${duration})` : rl.action;
+      lines.push(`    If exceeded:  ${exceeded}`);
     }
   }
 

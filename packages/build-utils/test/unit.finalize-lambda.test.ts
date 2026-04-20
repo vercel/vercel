@@ -47,6 +47,7 @@ describe('finalizeLambda()', () => {
 
     expect(result.buffer).toBeInstanceOf(Buffer);
     expect(result.buffer.length).toBeGreaterThan(0);
+    expect(result.zipPath).toBeNull();
     expect(result.digest).toEqual(sha256(result.buffer));
     expect(result.uncompressedBytes).toEqual(0);
   });
@@ -120,8 +121,7 @@ describe('finalizeLambda()', () => {
     expect(lambda.supportsResponseStreaming).toEqual(true);
   });
 
-  it('returns streamingError instead of logging', async () => {
-    // Lambda with a handler file that will cause a parse error
+  it('enables streaming for Nodejs lambdas regardless of handler', async () => {
     const lambda = new Lambda({
       files: {
         'index.js': new FileBlob({ data: 'exports.handler = () => {};' }),
@@ -129,7 +129,6 @@ describe('finalizeLambda()', () => {
       handler: 'missing-handler.js',
       runtime: 'nodejs20.x',
     });
-    // Force NodejsLambda-like shape to trigger handler parsing path
     (lambda as any).launcherType = 'Nodejs';
 
     const result = await finalizeLambda({
@@ -138,9 +137,8 @@ describe('finalizeLambda()', () => {
       forceStreamingRuntime: false,
     });
 
-    // Should not have logged anything
     expect(result.streamingError).toBeUndefined();
-    expect(lambda.supportsResponseStreaming).toBeUndefined();
+    expect(lambda.supportsResponseStreaming).toEqual(true);
   });
 
   it('collects uncompressed size when flag is enabled', async () => {
@@ -208,5 +206,25 @@ describe('finalizeLambda()', () => {
     });
 
     expect(result.buffer).toBeInstanceOf(Buffer);
+  });
+
+  it('returns a zipPath for custom createZip strategies', async () => {
+    const lambda = createBasicLambda();
+    const result = await finalizeLambda({
+      lambda,
+      bytecodeCachingOptions: NO_BYTECODE,
+      forceStreamingRuntime: false,
+      createZip: async () => ({
+        buffer: null,
+        zipPath: '/tmp/lambda.zip',
+        digest: 'abc123',
+        size: 123,
+      }),
+    });
+
+    expect(result.buffer).toBeNull();
+    expect(result.zipPath).toEqual('/tmp/lambda.zip');
+    expect(result.digest).toEqual('abc123');
+    expect(result.size).toEqual(123);
   });
 });

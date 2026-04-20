@@ -753,6 +753,204 @@ exports[`help command > certs help output snapshots > certs remove help output s
 "
 `;
 
+exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex create type [options]
+
+  Create a new Connex client                                                                                            
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -n,  --name <NAME>      Name of the Connex client                                                                     
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Create a Slack app
+
+    $ vercel connex create slack
+
+  - Create with a custom name
+
+    $ vercel connex create slack --name my-bot
+
+  - Output as JSON
+
+    $ vercel connex create slack --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex help column width 80 1`] = `
+"
+  ▲ vercel connex command
+
+  Manage Vercel Connect clients                                                 
+
+  Commands:
+
+  create  type  Create a new Connex client                              
+  list          List Connex clients for the current team                
+  token   id    Get a token for a Connex client (accepts a client ID    
+                like scl_abc or a UID like slack/my-bot)                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+       --non-interactive      Run without interactive prompts; when an agent is 
+                              detected this is the default                      
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+  - Create a Slack app
+
+    $ vercel connex create slack
+
+  - List Connex clients on the current team
+
+    $ vercel connex list
+
+  - Get a token
+
+    $ vercel connex token scl_abc123
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex list subcommand > connex list subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex list [options]
+
+  List Connex clients for the current team                                                                              
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <COUNT>    Number of clients to return per page                                                          
+       --next <CURSOR>    Cursor for the next page of results                                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List Connex clients for the current team
+
+    $ vercel connex list
+
+  - Limit the number of results
+
+    $ vercel connex list --limit 10
+
+  - Fetch the next page of results
+
+    $ vercel connex list --next <cursor>
+
+  - Output as JSON
+
+    $ vercel connex list --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex token subcommand > connex token subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex token id [options]
+
+  Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)                         
+
+  Options:
+
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the client's      
+                               default installation)                                                                         
+       --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
+  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the client's default     
+                               installation)                                                                                 
+  -y,  --yes                   Accept default value for all prompts                                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Get a user token by client ID
+
+    $ vercel connex token scl_abc123
+
+  - Get a token by client UID
+
+    $ vercel connex token slack/my-bot
+
+  - Get an app token (default installation)
+
+    $ vercel connex token scl_abc123 --subject app
+
+  - Get an app token for a specific installation
+
+    $ vercel connex token scl_abc123 --subject app --installation-id inst_1
+
+  - Open the browser automatically if authorization/installation is required
+
+    $ vercel connex token scl_abc123 --yes
+
+  - Output as JSON (includes expiresAt, installationId, etc.)
+
+    $ vercel connex token scl_abc123 --format=json
+
+"
+`;
+
 exports[`help command > deploy help output snapshots > deploy help column width 40 1`] = `
 "
   ▲ vercel deploy [project-path] [options]
@@ -1624,6 +1822,13 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    ano…
                                    Ver…
                                    Team
+  price        domain              Show
+                                   reg…
+                                   pri…
+                                   quo…
+                                   for 
+                                   a   
+                                   dom…
   transfer-in  domain              Tra…
                                    in a
                                    dom…
@@ -1707,6 +1912,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   buy          domain              Purchase a new domain name                  
   move         domain destination  Move ownership of a domain name to another  
                                    Vercel Team                                 
+  price        domain              Show registrar price quote for a domain     
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
@@ -1744,6 +1950,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   add          domain project      Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
+  price        domain              Show registrar price quote for a domain                                             
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
@@ -1852,6 +2059,44 @@ exports[`help command > domains help output snapshots > domains move help output
 "
 `;
 
+exports[`help command > domains help output snapshots > domains price help output snapshots > domains price help column width 120 1`] = `
+"
+  ▲ vercel domains price domain [options]
+
+  Show registrar price quote for a domain                                                                               
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Price quote for a domain
+
+    $ vercel domains price example.com
+
+  - JSON output
+
+    $ vercel domains price example.com --format json
+
+"
+`;
+
 exports[`help command > domains help output snapshots > domains remove help output snapshots > domains remove help column width 120 1`] = `
 "
   ▲ vercel domains remove domain [options]
@@ -1913,7 +2158,9 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
        --force          Force overwrites when a command would normally fail                                                  
        --guidance       Receive command suggestions once command is complete                                                 
-       --sensitive      Add a sensitive Environment Variable                                                                 
+       --no-sensitive   Opt out of the sensitive default on Production and Preview; value remains readable later             
+       --sensitive      Force the Environment Variable to be sensitive, even when adding to Development (will fail           
+                        server-side)                                                                                         
        --value <VALUE>  Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.               
   -y,  --yes            Skip the confirmation prompt when adding an Environment Variable                                     
 
@@ -1948,9 +2195,9 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
     $ vercel env add API_TOKEN --force
 
-  - Add a sensitive Environment Variable
+  - Add a regular (non-sensitive) Environment Variable that remains readable later
 
-    $ vercel env add API_TOKEN --sensitive
+    $ vercel env add API_TOKEN --no-sensitive
 
   - Add a new Environment Variable for a specific Environment and Git Branch
 
@@ -2893,6 +3140,52 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 "
 `;
 
+exports[`help command > integration help output snapshots > integration accept-terms subcommand > integration accept-terms subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration accept-terms integration [options]
+
+  Accept marketplace legal terms for an integration and install it on the current team (installation only; no product   
+  resource). Does not replace integrations that require a browser or device attestation.                                
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Non-interactive only: confirm acceptance of the Vercel Marketplace End User Addendum and this 
+                          integration's privacy policy / EULA when applicable                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Accept terms interactively, then install on the team
+
+    $ vercel integration accept-terms <integration>
+    $ vercel integration accept-terms neon
+
+  - Accept terms in CI (you must have read the linked policies)
+
+    $ vercel integration accept-terms neon --yes --non-interactive
+
+  - Output result as JSON
+
+    $ vercel integration accept-terms neon --yes --format=json
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
 "
   ▲ vercel integration balance integration [options]
@@ -3035,59 +3328,198 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration      Instal…
-                             a      
-                             market…
-                             integr…
-  balance   integration      Shows  
-                             the    
-                             balanc…
-                             and    
-                             thresh…
-                             of a   
-                             specif…
-                             market…
-                             integr…
-  discover  [query]          Discov…
-                             availa…
-                             market…
-                             integr…
-  guide     integration      Show   
-                             getting
-                             started
-                             guides 
-                             and    
-                             code   
-                             snippe…
-                             for a  
-                             market…
-                             integr…
-  list      [project]        List   
-                             resour…
-                             from   
-                             market…
-                             integr…
-                             for the
-                             current
-                             project
-  open      name [resource]  Opens a
-                             market…
-                             integr…
-                             or     
-                             resour…
-                             dashbo…
-                             via SSO
-  remove    integration      Uninst…
-                             a      
-                             market…
-                             integr…
-                             Resour…
-                             must be
-                             removed
-                             first  
-                             using  
-                             \`integ…
-                             remove…
+  add            integration      In…
+                                  a  
+                                  ma…
+                                  in…
+  accept-terms   integration      Ac…
+                                  ma…
+                                  le…
+                                  te…
+                                  for
+                                  an 
+                                  in…
+                                  and
+                                  in…
+                                  it 
+                                  on 
+                                  the
+                                  cu…
+                                  te…
+                                  (i…
+                                  on…
+                                  no 
+                                  pr…
+                                  re…
+                                  Do…
+                                  not
+                                  re…
+                                  in…
+                                  th…
+                                  re…
+                                  a  
+                                  br…
+                                  or 
+                                  de…
+                                  at…
+  balance        integration      Sh…
+                                  the
+                                  ba…
+                                  and
+                                  th…
+                                  of 
+                                  a  
+                                  sp…
+                                  ma…
+                                  in…
+  discover       [query]          Di…
+                                  av…
+                                  ma…
+                                  in…
+  guide          integration      Sh…
+                                  ge…
+                                  st…
+                                  gu…
+                                  and
+                                  co…
+                                  sn…
+                                  for
+                                  a  
+                                  ma…
+                                  in…
+  installations                   Li…
+                                  ma…
+                                  in…
+                                  in…
+                                  for
+                                  the
+                                  cu…
+                                  te…
+                                  (a…
+                                  sc…
+  list           [project]        Li…
+                                  re…
+                                  fr…
+                                  ma…
+                                  in…
+                                  for
+                                  the
+                                  cu…
+                                  pr…
+  open           name [resource]  Op…
+                                  a  
+                                  ma…
+                                  in…
+                                  or 
+                                  re…
+                                  da…
+                                  via
+                                  SSO
+  update         integration      Up…
+                                  a  
+                                  ma…
+                                  in…
+                                  in…
+                                  (b…
+                                  pl…
+                                  or 
+                                  wh…
+                                  pr…
+                                  can
+                                  ac…
+                                  it…
+                                  In…
+                                  re…
+                                  and
+                                  co…
+                                  fl…
+                                  are
+                                  se…
+                                  (i…
+                                  ad…
+                                  in…
+                                  re…
+                                  in…
+                                  env
+                                  pu…
+                                  et…
+                                  —  
+                                  not
+                                  pa…
+                                  of 
+                                  up…
+                                  UI…
+                                  fl…
+                                  (O…
+                                  in 
+                                  a  
+                                  br…
+                                  co…
+                                  sc…
+                                  ma…
+                                  pu…
+                                  may
+                                  not
+                                  map
+                                  on…
+                                  to 
+                                  a  
+                                  si…
+                                  CLI
+                                  fl…
+                                  pa…
+                                  --…
+                                  and
+                                  --…
+                                  wh…
+                                  the
+                                  pr…
+                                  re…
+                                  th…
+                                  for
+                                  bi…
+                                  ch…
+                                  Any
+                                  ex…
+                                  fi…
+                                  on 
+                                  the
+                                  co…
+                                  re…
+                                  th…
+                                  the
+                                  API
+                                  ex…
+                                  but
+                                  th…
+                                  co…
+                                  PA…
+                                  bo…
+                                  do…
+                                  not
+                                  se…
+                                  are
+                                  not
+                                  co…
+                                  un…
+                                  the
+                                  API
+                                  and
+                                  CLI
+                                  su…
+                                  th…
+  remove         integration      Un…
+                                  a  
+                                  ma…
+                                  in…
+                                  Re…
+                                  mu…
+                                  be 
+                                  re…
+                                  fi…
+                                  us…
+                                  \`i…
+                                  re…
 
 
   Global Options:
@@ -3156,19 +3588,43 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration      Installs a marketplace integration             
-  balance   integration      Shows the balances and thresholds of a         
-                             specified marketplace integration              
-  discover  [query]          Discover available marketplace integrations    
-  guide     integration      Show getting started guides and code snippets  
-                             for a marketplace integration                  
-  list      [project]        List resources from marketplace integrations   
-                             for the current project                        
-  open      name [resource]  Opens a marketplace integration's or resource's
-                             dashboard via SSO                              
-  remove    integration      Uninstalls a marketplace integration. Resources
-                             must be removed first using                    
-                             \`integration-resource remove\`.                 
+  add            integration      Installs a marketplace integration         
+  accept-terms   integration      Accept marketplace legal terms for an      
+                                  integration and install it on the current  
+                                  team (installation only; no product        
+                                  resource). Does not replace integrations   
+                                  that require a browser or device           
+                                  attestation.                               
+  balance        integration      Shows the balances and thresholds of a     
+                                  specified marketplace integration          
+  discover       [query]          Discover available marketplace integrations
+  guide          integration      Show getting started guides and code       
+                                  snippets for a marketplace integration     
+  installations                   List marketplace integration installations 
+                                  for the current team (account scope)       
+  list           [project]        List resources from marketplace            
+                                  integrations for the current project       
+  open           name [resource]  Opens a marketplace integration's or       
+                                  resource's dashboard via SSO               
+  update         integration      Update a marketplace integration           
+                                  installation (billing plan or which        
+                                  projects can access it). Install, remove,  
+                                  and connect flows are separate (integration
+                                  add, integration remove,                   
+                                  integration-resource, env pull, etc.) — not
+                                  part of update. UI-only flows (OAuth in a  
+                                  browser, consent screens, marketplace      
+                                  purchase) may not map one-to-one to a      
+                                  single CLI flag; pass --plan and           
+                                  --authorization-id when the product        
+                                  requires them for billing changes. Any     
+                                  extra fields on the configuration resource 
+                                  that the API exposes but this command PATCH
+                                  body does not send are not covered until   
+                                  the API and CLI support them.              
+  remove         integration      Uninstalls a marketplace integration.      
+                                  Resources must be removed first using      
+                                  \`integration-resource remove\`.             
 
 
   Global Options:
@@ -3204,14 +3660,26 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration      Installs a marketplace integration                                                     
-  balance   integration      Shows the balances and thresholds of a specified marketplace integration               
-  discover  [query]          Discover available marketplace integrations                                            
-  guide     integration      Show getting started guides and code snippets for a marketplace integration            
-  list      [project]        List resources from marketplace integrations for the current project                   
-  open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
-  remove    integration      Uninstalls a marketplace integration. Resources must be removed first using            
-                             \`integration-resource remove\`.                                                         
+  add            integration      Installs a marketplace integration                                                 
+  accept-terms   integration      Accept marketplace legal terms for an integration and install it on the current    
+                                  team (installation only; no product resource). Does not replace integrations that  
+                                  require a browser or device attestation.                                           
+  balance        integration      Shows the balances and thresholds of a specified marketplace integration           
+  discover       [query]          Discover available marketplace integrations                                        
+  guide          integration      Show getting started guides and code snippets for a marketplace integration        
+  installations                   List marketplace integration installations for the current team (account scope)    
+  list           [project]        List resources from marketplace integrations for the current project               
+  open           name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                  
+  update         integration      Update a marketplace integration installation (billing plan or which projects can  
+                                  access it). Install, remove, and connect flows are separate (integration add,      
+                                  integration remove, integration-resource, env pull, etc.) — not part of update.    
+                                  UI-only flows (OAuth in a browser, consent screens, marketplace purchase) may not  
+                                  map one-to-one to a single CLI flag; pass --plan and --authorization-id when the   
+                                  product requires them for billing changes. Any extra fields on the configuration   
+                                  resource that the API exposes but this command PATCH body does not send are not    
+                                  covered until the API and CLI support them.                                        
+  remove         integration      Uninstalls a marketplace integration. Resources must be removed first using        
+                                  \`integration-resource remove\`.                                                     
 
 
   Global Options:
@@ -3233,6 +3701,49 @@ exports[`help command > integration help output snapshots > integration help col
   - Install a specific product from an integration
 
     $ vercel integration add acme/acme-redis
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration installations subcommand > integration installations subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration installations [options]
+
+  List marketplace integration installations for the current team (account scope)                                       
+
+  Options:
+
+  -F,  --format <FORMAT>           Specify the output format (json)                                                     
+  -i,  --integration <SLUG_OR_ID>  Limit to installations of this integration (slug or id)                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List all marketplace installations for the team
+
+    $ vercel integration installations
+
+  - Filter by integration slug
+
+    $ vercel integration installations --integration neon
+
+  - JSON output
+
+    $ vercel integration installations --format json
 
 "
 `;
@@ -3328,6 +3839,70 @@ exports[`help command > integration help output snapshots > integration remove s
   - Output as JSON
 
     $ vercel integration remove acme --format=json --yes
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration update subcommand > integration update subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration update integration [options]
+
+  Update a marketplace integration installation (billing plan or which projects can access it). Install, remove, and    
+  connect flows are separate (integration add, integration remove, integration-resource, env pull, etc.) — not part of  
+  update. UI-only flows (OAuth in a browser, consent screens, marketplace purchase) may not map one-to-one to a single  
+  CLI flag; pass --plan and --authorization-id when the product requires them for billing changes. Any extra fields on  
+  the configuration resource that the API exposes but this command PATCH body does not send are not covered until the   
+  API and CLI support them.                                                                                             
+
+  Options:
+
+       --authorization-id <ID>  Billing authorization ID when the platform requires it for plan changes                      
+  -F,  --format <FORMAT>        Specify the output format (json)                                                             
+       --installation-id <ID>   Configuration ID when multiple marketplace installations exist for this integration          
+  -p,  --plan <PLAN_ID>         Billing plan ID for integrations that support installation-level billing plans               
+       --projects <PROJECT>     Project ID allowed to use this installation, or "all" for all projects (repeatable)          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Grant all team projects access to the integration
+
+    $ vercel integration update <integration> --projects all
+    $ vercel integration update neon --projects all
+
+  - Limit access to specific projects
+
+    $ vercel integration update neon --projects prj_abc --projects prj_def
+
+  - Change installation billing plan
+
+    $ vercel integration update acme --plan pro
+
+  - Select installation when several exist
+
+    $ vercel integration update neon --installation-id icfg_xxx --projects all
+
+  - Output result as JSON
+
+    $ vercel integration update neon --projects all --format=json
+
+  - Non-interactive (JSON success and errors on stdout)
+
+    $ vercel integration update neon --projects all --non-interactive
 
 "
 `;
@@ -4400,6 +4975,9 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    a
                                    …
+  rename          name new-name    …
+                                   a
+                                   …
   remove          name             …
                                    a
                                    …
@@ -4488,6 +5066,7 @@ exports[`help command > project help output snapshots > project help column widt
                                    settings for a project                   
   web-analytics   [name]           Enable Web Analytics for a project       
   speed-insights  [name]           Enable Speed Insights for a project      
+  rename          name new-name    Rename a project                         
   remove          name             Delete a project                         
   token           [name]           Get a development OIDC token for a       
                                    project                                  
@@ -4532,6 +5111,7 @@ exports[`help command > project help output snapshots > project help column widt
   protection      [action] [name]  Show or toggle deployment protection settings for a project                      
   web-analytics   [name]           Enable Web Analytics for a project                                               
   speed-insights  [name]           Enable Speed Insights for a project                                              
+  rename          name new-name    Rename a project                                                                 
   remove          name             Delete a project                                                                 
   token           [name]           Get a development OIDC token for a project                                       
 
@@ -4650,6 +5230,35 @@ exports[`help command > project help output snapshots > project remove help outp
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+"
+`;
+
+exports[`help command > project help output snapshots > project rename help output snapshots > project rename help column width 120 1`] = `
+"
+  ▲ vercel project rename name new-name
+
+  Rename a project                                                                                                      
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Rename a project
+
+    $ vercel project rename my-project my-renamed-project
 
 "
 `;
@@ -5829,6 +6438,12 @@ exports[`help command > teams help output snapshots > teams help column width 40
   switch   [name]    Switch to a
                      different  
                      team       
+  sso                Show SAML /
+                     SSO        
+                     configurat…
+                     for the    
+                     current    
+                     team       
   members            List       
                      members for
                      the        
@@ -5901,6 +6516,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
   request  [userId]  Show join-request status for the current team      
                      (defaults to the authenticated user)               
   switch   [name]    Switch to a different team                         
+  sso                Show SAML / SSO configuration for the current team 
   members            List members for the currently scoped team         
 
 
@@ -5936,6 +6552,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
   list               Show all teams that you're a member of                                                     
   request  [userId]  Show join-request status for the current team (defaults to the authenticated user)         
   switch   [name]    Switch to a different team                                                                 
+  sso                Show SAML / SSO configuration for the current team                                         
   members            List members for the currently scoped team                                                 
 
 

@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -259,6 +259,7 @@ jobs:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           FORCE_COLOR: '1'
       - name: 'Determine Turbo HIT or MISS'

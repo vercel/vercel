@@ -541,6 +541,68 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
+    it('should emit action_required JSON and not wait for terms when non-interactive', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+      });
+
+      // No TTY triggers browser terms flow (same as CI / piped stdin)
+      client.stdin.isTTY = false;
+      client.isAgent = false;
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/proj'
+      );
+
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringMatching(/\/integrations\/accept-terms\/acme/)
+      );
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('integration_terms_acceptance_required');
+      expect(payload.verification_uri).toMatch(
+        /\/integrations\/accept-terms\/acme/
+      );
+      expect(payload.userActionRequired).toBe(true);
+      expect(payload.policy_links?.marketplace_addendum).toMatch(
+        /vercel\.com\/legal\/integration-marketplace-end-users-addendum/
+      );
+      expect(payload.policy_links?.integration_privacy_policy).toMatch(
+        /example\.com\/privacy/
+      );
+      expect(payload.policy_links?.integration_eula).toMatch(
+        /example\.com\/eula/
+      );
+      expect(payload.next?.[0]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/proj integration add acme'
+      );
+      expect(payload.next?.[1]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/proj integration accept-terms acme --yes'
+      );
+
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Terms accepted in browser.'
+      );
+    });
+
     it('should exit with code 1 on browser terms timeout', async () => {
       client.reset();
       useUser();
@@ -1443,6 +1505,51 @@ describe('integration add (auto-provision)', () => {
   describe('errors', () => {
     beforeEach(() => {
       useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('should error when no integration argument was passed', async () => {
+      client.setArgv('integration', 'add');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode, 'exit code for "integration"').toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: You must pass an integration slug'
+      );
+    });
+
+    it('writes structured JSON when non-interactive and integration slug is missing', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'add',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/example'
+      );
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'You must pass an integration slug',
+      });
+      expect(payload.next?.[0]?.command).toMatch(
+        /vercel --non-interactive --cwd \/tmp\/example integration discover$/
+      );
+      expect(payload.next?.[1]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/example integration add neon'
+      );
+    });
+
+    it('should error when more than one integration argument was passed', async () => {
+      client.setArgv('integration', 'add', 'acme', 'acme-two');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Cannot install more than one integration at a time'
+      );
     });
 
     it('should error when team not found', async () => {

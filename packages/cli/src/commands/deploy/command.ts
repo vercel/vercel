@@ -108,6 +108,20 @@ export const initSubcommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    {
+      name: 'functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
+    {
+      name: 'no-functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
   ],
   examples: [
     {
@@ -308,6 +322,20 @@ export const deployCommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    {
+      name: 'functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
+    {
+      name: 'no-functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
   ],
   examples: [
     {

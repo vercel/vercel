@@ -2,6 +2,7 @@ import {
   getPrettyError,
   getSupportedNodeVersion,
   scanParentDirs,
+  PYTHON_FRAMEWORKS,
 } from '@vercel/build-utils';
 import {
   fileNameSymbol,
@@ -25,6 +26,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-runs';
+import { getDeploymentCheckRunLogs } from '../../util/deploy/get-deployment-check-run-logs';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
@@ -83,7 +85,10 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
-import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
+import {
+  FunctionsSizeLimitError,
+  UploadErrorMissingArchive,
+} from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
 import { validateJsonOutput } from '../../util/output-format';
@@ -176,6 +181,23 @@ async function handleInitDeployment(
 
   telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetryClient.trackCliFlagFunctionsBeta(
+    parsedArguments.flags['--functions-beta']
+  );
+  telemetryClient.trackCliFlagNoFunctionsBeta(
+    parsedArguments.flags['--no-functions-beta']
+  );
+
+  const functionsBeta = parsedArguments.flags['--functions-beta'];
+  const noFunctionsBeta = parsedArguments.flags['--no-functions-beta'];
+
+  // Validate mutual exclusivity
+  if (functionsBeta && noFunctionsBeta) {
+    output.error(
+      'Cannot use --functions-beta and --no-functions-beta together'
+    );
+    return 1;
+  }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
@@ -289,6 +311,20 @@ async function handleInitDeployment(
 
   const contextName = org.slug;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  // #region Functions Beta toggle
+  if (functionsBeta || noFunctionsBeta) {
+    const toggleResult = await applyFunctionsBetaToggle(
+      client,
+      project,
+      functionsBeta,
+      noFunctionsBeta
+    );
+    if (toggleResult.error) {
+      return toggleResult.exitCode;
+    }
+  }
+  // #endregion
 
   if (
     rootDirectory &&
@@ -452,6 +488,7 @@ async function handleInitDeployment(
       autoAssignCustomDomains,
       manual: true,
       jsonOutput: asJson,
+      functionsBeta: functionsBeta || undefined,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -696,6 +733,15 @@ async function handleInitDeployment(
       debug(`Error: ${err}\n${err.stack}`);
     }
 
+    if (err instanceof FunctionsSizeLimitError) {
+      output.prettyError(err);
+      output.log(
+        'Run "vercel deploy --functions-beta" to retry with extended function limits.'
+      );
+      output.log(`Learn More: ${err.link}`);
+      return 1;
+    }
+
     if (err instanceof UploadErrorMissingArchive) {
       output.prettyError(err);
       return 1;
@@ -921,6 +967,23 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagWithCache(parsedArguments.flags['--with-cache']);
   telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetryClient.trackCliFlagFunctionsBeta(
+    parsedArguments.flags['--functions-beta']
+  );
+  telemetryClient.trackCliFlagNoFunctionsBeta(
+    parsedArguments.flags['--no-functions-beta']
+  );
+
+  const functionsBeta = parsedArguments.flags['--functions-beta'];
+  const noFunctionsBeta = parsedArguments.flags['--no-functions-beta'];
+
+  // Validate mutual exclusivity
+  if (functionsBeta && noFunctionsBeta) {
+    output.error(
+      'Cannot use --functions-beta and --no-functions-beta together'
+    );
+    return 1;
+  }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
@@ -1144,6 +1207,20 @@ async function handleDefaultDeploy(
   const contextName = org.slug;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
+  // #region Functions Beta toggle
+  if (functionsBeta || noFunctionsBeta) {
+    const toggleResult = await applyFunctionsBetaToggle(
+      client,
+      project,
+      functionsBeta,
+      noFunctionsBeta
+    );
+    if (toggleResult.error) {
+      return toggleResult.exitCode;
+    }
+  }
+  // #endregion
+
   if (
     rootDirectory &&
     (await validateRootDirectory(
@@ -1314,6 +1391,7 @@ async function handleDefaultDeploy(
       autoAssignCustomDomains,
       agentName: client.agentName,
       jsonOutput: asJson,
+      functionsBeta: functionsBeta || undefined,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1532,6 +1610,38 @@ async function handleDefaultDeploy(
   } catch (err: unknown) {
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
+    }
+
+    if (err instanceof FunctionsSizeLimitError) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: AGENT_STATUS.ERROR,
+              reason: 'function_size_exceeded',
+              message: err.message,
+              next: [
+                {
+                  command: getCommandNameWithGlobalFlags(
+                    'deploy --functions-beta',
+                    client.argv
+                  ),
+                  when: 'retry deploy with extended function limits',
+                },
+              ],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
+
+      output.prettyError(err);
+      log(
+        'Run "vercel deploy --functions-beta" to retry with extended function limits.'
+      );
+      log(`Learn More: ${err.link}`);
+      return 1;
     }
 
     if (err instanceof UploadErrorMissingArchive) {
@@ -2108,11 +2218,17 @@ async function handleFailedCheckRuns(
 
   const message = `Running Checks: ${counterList}`;
 
-  const getSourceKind = (run: { source: { kind: string } | string }) =>
-    typeof run.source === 'object' ? run.source.kind : run.source;
-  const getJobName = (run: {
-    source: { kind: string; jobName?: string } | string;
-  }) => (typeof run.source === 'object' ? run.source.jobName : undefined);
+  const getCheckRunUrl = (run: {
+    id: string;
+    externalUrl?: string | null;
+    detailsUrl?: string | null;
+  }) => {
+    if (run.externalUrl) return run.externalUrl;
+    if (run.detailsUrl) return run.detailsUrl;
+    return deployment.inspectorUrl
+      ? `${deployment.inspectorUrl}?checkRunLog=${encodeURIComponent(run.id)}`
+      : null;
+  };
 
   if (asJson) {
     output.stopSpinner();
@@ -2120,36 +2236,55 @@ async function handleFailedCheckRuns(
       name: 'CHECKS_FAILED',
       message,
     });
-    const payload = client.nonInteractive
-      ? {
-          status: AGENT_STATUS.ERROR,
-          reason: 'checks_failed',
-          message,
-          deployment: deploymentJson,
-          failedCheckRuns: failedRuns.map(run => ({
+
+    let payload;
+    if (client.nonInteractive) {
+      const failedCheckRunsWithLogs = await Promise.all(
+        failedRuns.map(async run => {
+          let logs: { level: string; timestamp: number; message: string }[] =
+            [];
+          try {
+            logs = await getDeploymentCheckRunLogs(
+              client,
+              deployment.id,
+              run.id
+            );
+          } catch {
+            // best-effort: if log fetching fails, continue without logs
+          }
+          return {
             id: run.id,
             name: run.name,
             conclusion: run.conclusion,
             source: run.source,
-            logsEndpoint: `/v2/deployments/${deployment.id}/check-runs/${run.id}/logs${client.config.currentTeam ? `?teamId=${client.config.currentTeam}` : ''}`,
-          })),
-          next: [
-            {
-              command: getCommandNameWithGlobalFlags('deploy', client.argv),
-              when: 'retry deploy after fixing check failures',
-            },
-          ],
-        }
-      : deploymentJson;
+            url: getCheckRunUrl(run),
+            logs,
+          };
+        })
+      );
+
+      payload = {
+        status: AGENT_STATUS.ERROR,
+        reason: 'checks_failed',
+        message,
+        deployment: deploymentJson,
+        failedCheckRuns: failedCheckRunsWithLogs,
+        next: [
+          {
+            command: getCommandNameWithGlobalFlags('deploy', client.argv),
+            when: 'retry deploy after fixing check failures',
+          },
+        ],
+      };
+    } else {
+      payload = deploymentJson;
+    }
+
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   } else {
     output.error(message);
     for (const run of failedRuns) {
-      const jobName = getJobName(run);
-      const dashboardUrl =
-        getSourceKind(run) === 'vercel' && deployment.inspectorUrl && jobName
-          ? `${deployment.inspectorUrl}?logsTab=${encodeURIComponent(jobName)}`
-          : (deployment.inspectorUrl ?? null);
+      const dashboardUrl = getCheckRunUrl(run);
       const label = dashboardUrl
         ? output.link(run.name, dashboardUrl)
         : run.name;
@@ -2158,4 +2293,53 @@ async function handleFailedCheckRuns(
   }
 
   return 1;
+}
+
+/**
+ * Validate the project framework and PATCH the project to toggle
+ * `enableFunctionsBeta`. Shared between `handleInitDeployment` and
+ * `handleDefaultDeploy` to avoid duplication.
+ */
+async function applyFunctionsBetaToggle(
+  client: Client,
+  project: { id: string; framework?: string | null },
+  functionsBeta: boolean | undefined,
+  noFunctionsBeta: boolean | undefined
+): Promise<{ error: false } | { error: true; exitCode: number }> {
+  if (functionsBeta) {
+    if (
+      project.framework &&
+      !PYTHON_FRAMEWORKS.includes(
+        project.framework as (typeof PYTHON_FRAMEWORKS)[number]
+      )
+    ) {
+      output.error(
+        'Extended function limits are only available for Python projects. ' +
+          `This project uses "${project.framework}".`
+      );
+      return { error: true, exitCode: 1 };
+    }
+    if (!project.framework) {
+      output.warn(
+        'Project framework is not set. Extended function limits are designed for Python projects.'
+      );
+    }
+  }
+
+  await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
+    method: 'PATCH',
+    body: {
+      resourceConfig: {
+        enableFunctionsBeta: !!functionsBeta,
+      },
+    },
+  });
+
+  if (functionsBeta) {
+    output.log('Extended function limits (Beta) enabled for this project.');
+  } else {
+    output.log('Extended function limits (Beta) disabled for this project.');
+  }
+
+  return { error: false };
 }

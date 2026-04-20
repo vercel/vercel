@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0 # Need full history for turbo query to work
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -324,6 +324,11 @@ jobs:
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
 
+      - name: install uv@0.10.11
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
       - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
@@ -382,6 +387,7 @@ jobs:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           FORCE_COLOR: '1'
       - name: 'Determine Turbo HIT or MISS'

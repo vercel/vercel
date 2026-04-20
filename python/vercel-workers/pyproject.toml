@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vercel-workers"
-version = "0.0.13"
+version = "0.0.17"
 description = "Python SDK for Vercel Workers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -15,9 +15,6 @@ dependencies = [
     "python-dotenv",
     "vercel>=0.3.7",
 ]
-
-[project.scripts]
-test = "pytest:main"
 
 [project.optional-dependencies]
 dev = [
