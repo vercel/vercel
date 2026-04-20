@@ -803,6 +803,7 @@ from vercel_runtime.vc_init import vc_handler
         pythonPackage,
         pythonVersion,
         uvLockPath,
+        framework,
       });
     } catch (err) {
       debug(

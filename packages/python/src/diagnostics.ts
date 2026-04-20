@@ -82,11 +82,13 @@ export async function generateProjectManifest({
   pythonPackage,
   pythonVersion,
   uvLockPath,
+  framework,
 }: {
   workPath: string;
   pythonPackage: PythonPackage;
   pythonVersion: PythonVersion;
   uvLockPath: string;
+  framework?: string | null;
 }): Promise<void> {
   const resolved = pythonVersionString(pythonVersion);
   const constraint = pythonPackage.requiresPython?.[0];
@@ -268,6 +270,7 @@ export async function generateProjectManifest({
   const manifest: PackageManifest = {
     version: MANIFEST_VERSION,
     runtime: 'python',
+    ...(framework ? { framework } : {}),
     runtimeVersion: {
       ...(requested ? { requested } : {}),
       ...(constraint?.source ? { requestedSource: constraint.source } : {}),
