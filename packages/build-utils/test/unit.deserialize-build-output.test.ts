@@ -21,6 +21,25 @@ type TestResult = DeserializeBuildOutputResult<
   { hasServerActions?: boolean }
 >;
 
+function normalizeOutputPath(path: string): string {
+  return path.replaceAll('\\', '/');
+}
+
+function getOutputKey(
+  output: Record<string, unknown>,
+  expectedPath: string
+): string {
+  const matchingKey = Object.keys(output).find(
+    path => normalizeOutputPath(path) === expectedPath
+  );
+
+  if (!matchingKey) {
+    throw new Error(`Could not find output path "${expectedPath}"`);
+  }
+
+  return matchingKey;
+}
+
 async function createOutputFixture(config: Partial<TestConfig> = {}) {
   const repoRootPath = await fs.mkdtemp(join(tmpdir(), 'deserialize-build-'));
   const outputDir = join(repoRootPath, '.vercel', 'output');
@@ -135,7 +154,8 @@ describe('deserializeBuildOutput()', () => {
         repoRootPath: fixture.repoRootPath,
         deserializeLambda: async () => createLambda('server-actions.handler'),
         groupLambdas: async () => ({}),
-        inspectSerializedLambda: async path => path === 'api/server-actions',
+        inspectSerializedLambda: async path =>
+          normalizeOutputPath(path) === 'api/server-actions',
         warn,
         includeDeploymentId: true,
         getMeta: hasServerActions => ({ hasServerActions }),
@@ -163,26 +183,33 @@ describe('deserializeBuildOutput()', () => {
       await writeNodeFunction(fixture.outputDir, 'api/prerendered');
       await writePrerenderConfig(fixture.outputDir, 'api/prerendered');
 
+      let plainKey = '';
+      let prerenderedKey = '';
       const result = await deserializeBuildOutput<TestConfig>({
         outputDir: fixture.outputDir,
         repoRootPath: fixture.repoRootPath,
         deserializeLambda: async (_files, _config, _repoRootPath, _cache) =>
           createLambda('original.handler', true),
-        groupLambdas: async lambdas => ({
-          ...lambdas,
-          'api/plain': createLambda('grouped-plain.handler'),
-          'api/prerendered': createLambda('grouped-prerender.handler'),
-        }),
+        groupLambdas: async lambdas => {
+          plainKey = getOutputKey(lambdas, 'api/plain');
+          prerenderedKey = getOutputKey(lambdas, 'api/prerendered');
+
+          return {
+            ...lambdas,
+            [plainKey]: createLambda('grouped-plain.handler'),
+            [prerenderedKey]: createLambda('grouped-prerender.handler'),
+          };
+        },
       });
 
-      expect(result.output['api/plain']).toEqual(
+      expect(result.output[plainKey]).toEqual(
         expect.objectContaining({
           type: 'Lambda',
           handler: 'grouped-plain.handler',
         })
       );
 
-      const prerenderOutput = result.output['api/prerendered'];
+      const prerenderOutput = result.output[prerenderedKey];
       expect(prerenderOutput.type).toBe('Prerender');
       if (prerenderOutput.type !== 'Prerender') {
         throw new Error('Expected prerender output');
@@ -206,6 +233,7 @@ describe('deserializeBuildOutput()', () => {
     try {
       await writeNodeFunction(fixture.outputDir, 'api/custom-lambda');
 
+      let customLambdaKey = '';
       const result = await deserializeBuildOutput<
         TestConfig,
         DeserializeBuildOutputResult,
@@ -221,12 +249,13 @@ describe('deserializeBuildOutput()', () => {
             experimentalAllowBundling: true,
           }),
         groupLambdas: async lambdas => {
-          expect(lambdas['api/custom-lambda']).toBeInstanceOf(TestLambda);
+          customLambdaKey = getOutputKey(lambdas, 'api/custom-lambda');
+          expect(lambdas[customLambdaKey]).toBeInstanceOf(TestLambda);
           return lambdas;
         },
       });
 
-      expect(result.output['api/custom-lambda']).toBeInstanceOf(TestLambda);
+      expect(result.output[customLambdaKey]).toBeInstanceOf(TestLambda);
     } finally {
       await fixture.cleanup();
     }
