@@ -194,6 +194,12 @@ describe('detectServices', () => {
         ],
         check: true,
       });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/internal-api',
+        has: [{ type: 'host', value: { pre: 'api---' } }],
+        check: true,
+      });
     });
 
     it('should support mount object with subdomain only', async () => {
@@ -2116,6 +2122,18 @@ describe('detectServices', () => {
         ],
         check: true,
       });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/api',
+        has: [{ type: 'host', value: { pre: 'api---' } }],
+        check: true,
+      });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/(?!_/api(?:/|$))(.*)$',
+        dest: '/_/api/$1',
+        has: [{ type: 'host', value: { pre: 'api---' } }],
+        check: true,
+      });
     });
 
     it('should preserve explicit service prefixes on another service subdomain', async () => {
@@ -2206,6 +2224,12 @@ describe('detectServices', () => {
           { type: 'host', value: { suf: '.vercel.app' } },
           { type: 'host', value: { suf: '.vercel.dev' } },
         ],
+        check: true,
+      });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/frontend',
+        has: [{ type: 'host', value: { pre: 'app---' } }],
         check: true,
       });
     });

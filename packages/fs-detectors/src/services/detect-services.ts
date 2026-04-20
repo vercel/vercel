@@ -26,7 +26,8 @@ import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 import { detectRailwayServices } from './detect-railway';
 
-// don't apply subdomain rewrites on preview urls
+// Don't apply dot-subdomain rewrites on public preview urls. Custom preview
+// suffixes use the `subdomain---deployment-host` pattern instead.
 const PREVIEW_DOMAIN_MISSING: HasField = [
   { type: 'host', value: { suf: '.vercel.app' } },
   { type: 'host', value: { suf: '.vercel.dev' } },
@@ -295,14 +296,15 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
     const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
-    const hostCondition = getHostCondition(service);
+    const productionHostCondition = getHostCondition(service);
+    const previewHostCondition = getPreviewHostCondition(service);
 
-    if (hostCondition && routePrefix !== '/') {
+    if (productionHostCondition && routePrefix !== '/') {
       const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
       hostRewrites.push({
         src: '^/$',
         dest: normalizedRoutePrefix,
-        has: hostCondition,
+        has: productionHostCondition,
         missing: PREVIEW_DOMAIN_MISSING,
         check: true,
       });
@@ -311,8 +313,24 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         // keep routing to their target service even on another service's host.
         src: `^/${explicitHostPrefixGuard}(.*)$`,
         dest: `${normalizedRoutePrefix}/$1`,
-        has: hostCondition,
+        has: productionHostCondition,
         missing: PREVIEW_DOMAIN_MISSING,
+        check: true,
+      });
+    }
+
+    if (previewHostCondition && routePrefix !== '/') {
+      const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
+      hostRewrites.push({
+        src: '^/$',
+        dest: normalizedRoutePrefix,
+        has: previewHostCondition,
+        check: true,
+      });
+      hostRewrites.push({
+        src: `^/${explicitHostPrefixGuard}(.*)$`,
+        dest: `${normalizedRoutePrefix}/$1`,
+        has: previewHostCondition,
         check: true,
       });
     }
@@ -419,6 +437,16 @@ function getHostCondition(service: Service): HasField | undefined {
   }
   if (typeof service.subdomain === 'string' && service.subdomain.length > 0) {
     return [{ type: 'host', value: { pre: `${service.subdomain}.` } }];
+  }
+  return undefined;
+}
+
+function getPreviewHostCondition(service: Service): HasField | undefined {
+  if (service.type !== 'web') {
+    return undefined;
+  }
+  if (typeof service.subdomain === 'string' && service.subdomain.length > 0) {
+    return [{ type: 'host', value: { pre: `${service.subdomain}---` } }];
   }
   return undefined;
 }

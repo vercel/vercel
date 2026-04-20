@@ -58,6 +58,44 @@ describe('getServiceUrlEnvVars', () => {
     });
   });
 
+  it('uses preview subdomain prefixes for custom preview suffixes', () => {
+    const result = getServiceUrlEnvVars({
+      services: [
+        createService({
+          name: 'api',
+          type: 'web',
+          routePrefix: '/_/api',
+          subdomain: 'api',
+        }),
+      ],
+      frameworkList: [{ slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' }],
+      deploymentUrl: 'project-git-main.preview.example.com',
+    });
+
+    expect(result).toEqual({
+      API_URL: 'https://api---project-git-main.preview.example.com',
+    });
+  });
+
+  it('keeps backing-path URLs on public preview suffixes', () => {
+    const result = getServiceUrlEnvVars({
+      services: [
+        createService({
+          name: 'api',
+          type: 'web',
+          routePrefix: '/_/api',
+          subdomain: 'api',
+        }),
+      ],
+      frameworkList: [{ slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' }],
+      deploymentUrl: 'project-git-main.vercel.app',
+    });
+
+    expect(result).toEqual({
+      API_URL: 'https://project-git-main.vercel.app/_/api',
+    });
+  });
+
   it('generates prefixed env vars for all frontend frameworks in deployment', () => {
     const result = getServiceUrlEnvVars({
       services: [

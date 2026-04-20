@@ -7,6 +7,12 @@ interface FrameworkInfo {
   envPrefix?: string;
 }
 
+const PUBLIC_PREVIEW_DEPLOYMENT_SUFFIXES = [
+  '.vercel.app',
+  '.vercel.dev',
+  '.now.sh',
+];
+
 export interface GetServiceUrlEnvVarsOptions {
   services: Service[];
   frameworkList: readonly FrameworkInfo[];
@@ -42,6 +48,13 @@ function computeServiceUrl(
     ? routePrefix.slice(1)
     : routePrefix;
   return `${baseUrl}/${normalizedPrefix}`;
+}
+
+function supportsPreviewSubdomainPrefixes(deploymentUrl: string): boolean {
+  const normalized = deploymentUrl.trim().toLowerCase();
+  return !PUBLIC_PREVIEW_DEPLOYMENT_SUFFIXES.some(
+    suffix => normalized === suffix.slice(1) || normalized.endsWith(suffix)
+  );
 }
 
 /**
@@ -110,11 +123,14 @@ export function getServiceUrlEnvVars(
     }
 
     const baseEnvVarName = serviceNameToEnvVar(service.name);
-    const absoluteUrl = computeServiceUrl(
-      baseUrl,
-      service.routePrefix,
-      !!origin
-    );
+    const absoluteUrl =
+      !origin &&
+      deploymentUrl &&
+      typeof service.subdomain === 'string' &&
+      service.subdomain.length > 0 &&
+      supportsPreviewSubdomainPrefixes(deploymentUrl)
+        ? `https://${service.subdomain}---${deploymentUrl}`
+        : computeServiceUrl(baseUrl, service.routePrefix, !!origin);
 
     const effectiveBaseEnvVarName = envPrefix
       ? `${envPrefix}${baseEnvVarName}`
