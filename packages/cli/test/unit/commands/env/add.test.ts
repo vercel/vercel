@@ -267,6 +267,48 @@ describe('env add', () => {
       });
     });
 
+    describe('--no-sensitive with team policy on', () => {
+      it('warns that --no-sensitive is ignored and stores as sensitive', async () => {
+        const teamModule = await import(
+          '../../../../src/util/teams/get-team-by-id'
+        );
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+
+        const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+          sensitiveEnvironmentVariablePolicy: 'on',
+          // biome-ignore lint/suspicious/noExplicitAny: partial team shape
+        } as any);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'POLICY_OVERRIDE',
+          'production',
+          '--value',
+          'foo',
+          '--no-sensitive',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          '--no-sensitive is ignored: your team enforces sensitive Environment Variables for Production and Preview.'
+        );
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(addSpy).toHaveBeenCalled();
+        const type = addSpy.mock.calls[0][3];
+        expect(type).toBe('sensitive');
+
+        teamSpy.mockRestore();
+        addSpy.mockRestore();
+      });
+    });
+
     describe('mixed Development + other Environments', () => {
       it('errors when the interactive checkbox picks Development alongside Production/Preview', async () => {
         client.setArgv('env', 'add', 'MIXED_TARGETS');

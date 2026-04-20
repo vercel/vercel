@@ -745,10 +745,20 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  if (policyOn && hasSensitiveCapable && !userWasExplicit) {
-    output.log(
-      `Your team requires sensitive Environment Variables for Production and Preview.`
-    );
+  if (policyOn && hasSensitiveCapable) {
+    if (forceEncrypted) {
+      // User asked for encrypted on Production/Preview, but the team policy
+      // will promote it to sensitive server-side regardless. Surface that so
+      // the user isn't surprised later.
+      output.warn(
+        `--no-sensitive is ignored: your team enforces sensitive Environment Variables for Production and Preview.`
+      );
+      finalType = 'sensitive';
+    } else if (!userWasExplicit) {
+      output.log(
+        `Your team requires sensitive Environment Variables for Production and Preview.`
+      );
+    }
   }
 
   const upsert = opts['--force'] ? 'true' : '';
