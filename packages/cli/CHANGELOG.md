@@ -20,8 +20,6 @@
 
   On teams that enable the "Enforce Sensitive Environment Variables" policy in team settings, the CLI now reads the policy from the team object and notes in the output that the policy is active; the server already promotes Production/Preview variables to sensitive silently, and the CLI's own logs are now honest about it. Passing `--no-sensitive` on a policy-on team for Production/Preview now emits a warning — the flag is a no-op because the server promotes the variable regardless — and the CLI sends `type: 'sensitive'` so its own `--debug` output matches what gets stored.
 
-  The interactive prompt (`Make it sensitive?`) still fires when you don't pass `--sensitive` or `--no-sensitive`, the targets include Production or Preview, and the team policy is not enforcing. It defaults to yes.
-
 ### Patch Changes
 
 - Updated dependencies [[`c1866cf1add2107f91cae8292e38e4854bfe0aca`](https://github.com/vercel/vercel/commit/c1866cf1add2107f91cae8292e38e4854bfe0aca)]:
