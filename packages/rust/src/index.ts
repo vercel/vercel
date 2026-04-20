@@ -26,6 +26,8 @@ import {
 } from './lib/utils';
 
 import { startDevServer as rustStartDevServer } from './lib/start-dev-server';
+import { generateProjectManifest } from './diagnostics';
+export { diagnostics } from './diagnostics';
 
 type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
 
@@ -82,20 +84,19 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
 
   const buildVariant = meta?.isDev ? 'debug' : 'release';
   const buildTarget = cargoBuildConfiguration?.build.target ?? '';
+  const targetTriple =
+    architecture === 'x86_64'
+      ? 'x86_64-unknown-linux-gnu'
+      : 'aarch64-unknown-linux-gnu';
 
   try {
     // If we are not building on Vercel (it means we are building for a prebuilt deployment),
     // We cross-compile it for linux x86_64 using `zigbuild`
     const args = crossCompilationEnabled
-      ? [
-          'zigbuild',
-          '--target',
-          architecture === 'x86_64'
-            ? 'x86_64-unknown-linux-gnu'
-            : 'aarch64-unknown-linux-gnu',
-          '--bin',
-          binaryName,
-        ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
+      ? ['zigbuild', '--target', targetTriple, '--bin', binaryName].concat(
+          BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
+          ['--release']
+        )
       : ['build', '--bin', binaryName].concat(
           BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
           meta?.isDev ? [] : ['--release']
@@ -117,19 +118,15 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
     `Building \`${binaryName}\` for \`${process.platform}\` (\`${architecture}\`) completed`
   );
 
-  let { target_directory: targetDirectory } = await getCargoMetadata({
-    cwd: workPath,
-    env: rustEnv,
-  });
+  const cargoMetadata = await getCargoMetadata(
+    { cwd: workPath, env: rustEnv },
+    targetTriple
+  );
+  let { target_directory: targetDirectory } = cargoMetadata;
 
   // If we are building for a prebuilt deployment, adjust the target directory to the cross compilation dir
   if (crossCompilationEnabled) {
-    targetDirectory = path.join(
-      targetDirectory,
-      architecture === 'x86_64'
-        ? 'x86_64-unknown-linux-gnu'
-        : 'aarch64-unknown-linux-gnu'
-    );
+    targetDirectory = path.join(targetDirectory, targetTriple);
   }
   targetDirectory = path.join(targetDirectory, buildTarget);
 
@@ -154,6 +151,8 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
     runtimeLanguage: 'rust',
   });
   lambda.zipBuffer = await lambda.createZip();
+
+  await generateProjectManifest({ workPath, cargoMetadata });
 
   debug(`generating function for \`${entrypoint}\``);
 
