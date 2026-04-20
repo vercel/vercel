@@ -267,6 +267,35 @@ describe('env add', () => {
       });
     });
 
+    describe('Development with team policy on', () => {
+      it('errors when the target is Development and the team enforces sensitive', async () => {
+        const teamModule = await import(
+          '../../../../src/util/teams/get-team-by-id'
+        );
+        const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+          sensitiveEnvironmentVariablePolicy: 'on',
+          // biome-ignore lint/suspicious/noExplicitAny: partial team shape
+        } as any);
+
+        client.setArgv(
+          'env',
+          'add',
+          'DEV_UNDER_POLICY',
+          'development',
+          '--value',
+          'foo',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          'Your team requires sensitive Environment Variables and the Development Environment does not support sensitive values.'
+        );
+        await expect(exitCodePromise).resolves.toBe(1);
+
+        teamSpy.mockRestore();
+      });
+    });
+
     describe('--no-sensitive with team policy on', () => {
       it('warns that --no-sensitive is ignored and stores as sensitive', async () => {
         const teamModule = await import(

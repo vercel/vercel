@@ -522,14 +522,18 @@ export default async function add(client: Client, argv: string[]) {
       }
     }
   }
-  const choices = [
-    ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
+  const choices: Array<{
+    name: string;
+    value: string;
+    checked?: boolean;
+    disabled?: boolean | string;
+  }> = [
+    ...envTargetChoices
+      .filter(c => !existingTargets.has(c.value))
+      .map(c => ({ name: c.name, value: c.value })),
     ...customEnvironments
       .filter(c => !existingCustomEnvs.has(c.id))
-      .map(c => ({
-        name: c.slug,
-        value: c.id,
-      })),
+      .map(c => ({ name: c.slug, value: c.id })),
   ];
 
   if (!envGitBranch && choices.length === 0 && !opts['--force']) {
@@ -562,6 +566,20 @@ export default async function add(client: Client, argv: string[]) {
       policyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
     } catch {
       // Non-fatal — policy detection is best-effort.
+    }
+  }
+
+  // When policy is on, Development is effectively disallowed because the
+  // team policy requires sensitive Environment Variables and Development
+  // does not support sensitive. Pre-check Production/Preview for the user
+  // and mark Development as disallowed in the interactive checkbox.
+  if (policyOn) {
+    for (const choice of choices) {
+      if (choice.value === 'development') {
+        choice.disabled = '(disallowed)';
+      } else if (choice.value === 'production' || choice.value === 'preview') {
+        choice.checked = true;
+      }
     }
   }
 
@@ -680,6 +698,23 @@ export default async function add(client: Client, argv: string[]) {
 
   const hasDevelopment = envTargets.includes('development');
   const hasSensitiveCapable = envTargets.some(t => t !== 'development');
+
+  if (policyOn && hasDevelopment) {
+    const msg = `Your team requires sensitive Environment Variables and the Development Environment does not support sensitive values.`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'development_disallowed_by_team_policy',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
 
   if (forceSensitive && hasDevelopment) {
     const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
