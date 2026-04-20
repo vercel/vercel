@@ -28,8 +28,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
-import getUser from '../../util/get-user';
-import { performDeviceCodeFlow } from '../login/future';
+import { requireMfaAuth } from '../../util/login/require-mfa-auth';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -112,30 +111,8 @@ export default async function pull(
   );
 
   if (!isAutomatedContext) {
-    const user = await getUser(client);
-    if (!user.mfa?.enabled) {
-      output.error(
-        'Two-factor authentication is required to pull environment variables. Enable it at https://vercel.com/account/security and try again.'
-      );
-      return 1;
-    }
-
-    if (!client.justAuthenticated) {
-      output.log('Re-authentication required. Opening your browser...');
-      const tokens = await performDeviceCodeFlow(client);
-      if (!tokens) {
-        output.error('Authentication was not completed.');
-        return 1;
-      }
-      client.updateAuthConfig({
-        token: tokens.access_token,
-        userId: undefined,
-        expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
-        refreshToken: tokens.refresh_token,
-      });
-      client.writeToAuthConfigFile();
-      client.justAuthenticated = true;
-    }
+    const gate = await requireMfaAuth(client);
+    if (gate !== true) return gate;
   }
 
   const link = await getLinkedProject(client);
