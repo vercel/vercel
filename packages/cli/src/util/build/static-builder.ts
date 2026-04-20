@@ -22,7 +22,8 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
       filename === 'package.json' ||
       filename === 'package-lock.json' ||
       filename === 'yarn.lock' ||
-      filename === 'pnpm-lock.yaml'
+      filename === 'pnpm-lock.yaml' ||
+      filename === 'README.md'
     ) {
       continue;
     }
