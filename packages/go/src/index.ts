@@ -199,6 +199,7 @@ export async function build(options: BuildOptions) {
       entrypoint,
       modulePath: goModPath ? dirname(goModPath) : undefined,
       workPath,
+      isDev: meta.isDev,
     });
 
     // check if package name other than main
@@ -246,6 +247,7 @@ export async function build(options: BuildOptions) {
         env,
       },
       workPath,
+      isDev: meta.isDev,
     });
 
     const outDir = await getWriteableDirectory();
@@ -916,6 +918,7 @@ export async function startDevServer(
     entrypoint: entrypointWithExt,
     modulePath,
     workPath,
+    isDev: meta.isDev,
   });
 
   await Promise.all([
@@ -954,6 +957,7 @@ export async function startDevServer(
       env,
     },
     workPath,
+    isDev: true,
   });
   await go.build('./...', executable);
 

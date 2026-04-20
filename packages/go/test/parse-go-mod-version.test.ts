@@ -82,4 +82,26 @@ describe('parseGoModVersion', function () {
     const version = parseGoModVersion('go 1.26');
     expect(version?.go).toEqual('1.26.1');
   });
+
+  it('accepts the canonical `go` + `rc` toolchain grammar', () => {
+    const version = parseGoModVersion('go 1.21.1\ntoolchain go1.22.0rc1');
+    expect(version?.go).toEqual('1.21.1');
+    expect(version?.toolchain).toEqual('1.22.0rc1');
+  });
+
+  it('rejects toolchain lines with non-grammar suffixes', () => {
+    // A version string like `1.22_evil` used to slip through and flow into
+    // the download URL; the tightened regex should ignore it now.
+    const version = parseGoModVersion('go 1.21.1\ntoolchain go1.22_evil');
+    expect(version?.go).toEqual('1.21.1');
+    expect(version?.toolchain).toBeUndefined();
+  });
+
+  it('rejects toolchain lines with unexpected trailing characters', () => {
+    const version = parseGoModVersion(
+      'go 1.21.1\ntoolchain go1.22.1-attacker-suffix'
+    );
+    expect(version?.go).toEqual('1.21.1');
+    expect(version?.toolchain).toBeUndefined();
+  });
 });
