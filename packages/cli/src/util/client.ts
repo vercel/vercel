@@ -126,6 +126,8 @@ export default class Client extends EventEmitter implements Stdio {
   traceDiagnosticsPath?: string;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
+  /** True when login/device-flow completed during this CLI invocation */
+  justAuthenticated: boolean = false;
 
   constructor(opts: ClientOptions) {
     super();

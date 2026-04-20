@@ -670,6 +670,7 @@ const main = async () => {
         const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
         if (result !== 0) return finishWithExitCode(result);
+        client.justAuthenticated = true;
       } catch (error) {
         printError(error);
         trackAgenticErrorTelemetry(error);
@@ -684,6 +685,7 @@ const main = async () => {
       try {
         const result = await login(client, { shouldParseArgs: false });
         if (result !== 0) return finishWithExitCode(result);
+        client.justAuthenticated = true;
       } catch (error) {
         printError(error);
         trackAgenticErrorTelemetry(error);

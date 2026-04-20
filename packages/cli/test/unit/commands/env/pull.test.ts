@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
@@ -10,6 +10,14 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('env pull', () => {
+  beforeEach(() => {
+    vi.stubEnv('CI', '1');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'env';
@@ -729,28 +737,17 @@ describe('env pull', () => {
 
   describe('mfa pre-flight', () => {
     it('exits 1 when user has no MFA and no VERCEL_TOKEN/CI set', async () => {
-      const previous = {
-        ci: process.env.CI,
-        token: process.env.VERCEL_TOKEN,
-      };
-      delete process.env.CI;
-      delete process.env.VERCEL_TOKEN;
+      vi.stubEnv('CI', '');
+      vi.stubEnv('VERCEL_TOKEN', '');
 
-      try {
-        useUser();
-        client.setArgv('env', 'pull', '--yes');
+      useUser();
+      client.setArgv('env', 'pull', '--yes');
 
-        const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput(
-          'Two-factor authentication is required'
-        );
-        expect(await exitCodePromise).toEqual(1);
-      } finally {
-        if (previous.ci !== undefined) process.env.CI = previous.ci;
-        if (previous.token !== undefined) {
-          process.env.VERCEL_TOKEN = previous.token;
-        }
-      }
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Two-factor authentication is required'
+      );
+      expect(await exitCodePromise).toEqual(1);
     });
   });
 });
