@@ -197,7 +197,7 @@ export const deployCommand = {
       shorthand: 'p',
       type: Boolean,
       deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
+      description: 'Deployment is public (`/_src` is exposed)',
     },
     {
       name: 'env',
