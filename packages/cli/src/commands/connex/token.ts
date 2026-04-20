@@ -111,11 +111,12 @@ export async function token(
       ? 'authorization'
       : 'installation';
 
-  const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
-  // The recovery flow opens a browser a human must complete, so skip it
-  // whenever we don't have (or shouldn't assume) a human at the terminal.
+  // Recovery opens a browser a human must complete. Only attempt it when
+  // the session is fully interactive AND the user hasn't declared
+  // non-interactive mode.
   const attemptRecovery =
-    !client.nonInteractive && (Boolean(flags['--yes']) || isInteractive);
+    !client.nonInteractive &&
+    Boolean(client.stdin.isTTY && client.stdout.isTTY);
 
   if (!attemptRecovery) {
     const { requestCode } = generateRequestCode();
@@ -123,7 +124,7 @@ export async function token(
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
-      `Or re-run with --yes to open the browser automatically: vercel connex token ${clientId} --yes`
+      `Or re-run \`vercel connex token ${clientId}\` in an interactive terminal.`
     );
     return 1;
   }

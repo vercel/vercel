@@ -247,7 +247,7 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should fail fast when client.nonInteractive is true, even with --yes', async () => {
+  it('should fail fast when client.nonInteractive is true', async () => {
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
@@ -259,7 +259,7 @@ describe('connex token', () => {
     });
 
     client.nonInteractive = true;
-    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
+    client.setArgv('connex', 'token', 'scl_abc123');
 
     const exitCode = await connex(client);
 
