@@ -68,7 +68,7 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
+import { setGlobalDispatcher, EnvHttpProxyAgent, Agent } from 'undici';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -520,13 +520,13 @@ const main = async () => {
     `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
-  const agent = hasProxyConfig()
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
+  setGlobalDispatcher(
+    hasProxyConfig()
+      ? new EnvHttpProxyAgent()
+      : new Agent({ keepAliveTimeout: 10_000 })
+  );
 
   client = new Client({
-    agent,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,

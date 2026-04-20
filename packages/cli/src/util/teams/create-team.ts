@@ -13,9 +13,8 @@ export default async function createTeam(
     useCurrentTeam: false,
     bailOn429: true,
   };
-  // node-fetch FetchOptions.signal uses a different AbortSignal type than global; assign via cast.
   if (opts?.signal) {
-    fetchOpts.signal = opts.signal as FetchOptions['signal'];
+    fetchOpts.signal = opts.signal;
   }
   const body = await client.fetch<Team>(`/teams`, fetchOpts);
   return body;
