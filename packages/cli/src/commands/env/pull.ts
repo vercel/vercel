@@ -28,6 +28,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import getUser from '../../util/get-user';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -104,6 +105,20 @@ export default async function pull(
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionId(opts['--id']);
+
+  const isAutomatedContext = Boolean(
+    process.env.VERCEL_TOKEN || process.env.CI
+  );
+
+  if (!isAutomatedContext) {
+    const user = await getUser(client);
+    if (!user.mfa?.enabled) {
+      output.error(
+        'Two-factor authentication is required to pull environment variables. Enable it at https://vercel.com/account/security and try again.'
+      );
+      return 1;
+    }
+  }
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
