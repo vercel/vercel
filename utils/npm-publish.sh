@@ -10,11 +10,6 @@ set -euo pipefail
 #   - npm is used for the actual publish (npm publish) because it supports
 #     OIDC trusted publishing, which eliminates the need for long-lived NPM_TOKEN
 #     secrets. pnpm publish does not support OIDC.
-#
-# For each package, publishes a canary prerelease first (e.g. 1.2.3-canary.0
-# with --tag canary), then restores the real version and publishes as latest.
-# This keeps the @canary dist-tag current without needing a separate dist-tag
-# operation (which npm OIDC does not support).
 
 TARBALL_DIR=$(mktemp -d)
 trap 'rm -rf "$TARBALL_DIR"' EXIT
@@ -32,8 +27,7 @@ published=0
 skipped=0
 
 while IFS=$'\t' read -r name pkg_path; do
-  pkg_json="$pkg_path/package.json"
-  version=$(jq -r '.version' "$pkg_json")
+  version=$(jq -r '.version' "$pkg_path/package.json")
 
   # Check if this exact version is already on npm
   if npm view "$name@$version" version >/dev/null 2>&1; then
@@ -42,22 +36,9 @@ while IFS=$'\t' read -r name pkg_path; do
     continue
   fi
 
-  canary_version="$version-canary.0"
-
-  # --- Publish canary prerelease ---
-  echo "publishing: $name@$canary_version (canary)"
-
-  jq --arg v "$canary_version" '.version = $v' "$pkg_json" > "$pkg_json.tmp" && mv "$pkg_json.tmp" "$pkg_json"
+  echo "publishing: $name@$version"
 
   # pnpm pack resolves workspace:* to real versions in the tarball
-  tarball=$(pnpm pack --pack-destination="$TARBALL_DIR" -C "$pkg_path" 2>/dev/null | tail -1)
-  npm publish "$TARBALL_DIR/$tarball" --access public --provenance --tag canary
-
-  # --- Restore and publish stable release ---
-  echo "publishing: $name@$version (latest)"
-
-  jq --arg v "$version" '.version = $v' "$pkg_json" > "$pkg_json.tmp" && mv "$pkg_json.tmp" "$pkg_json"
-
   tarball=$(pnpm pack --pack-destination="$TARBALL_DIR" -C "$pkg_path" 2>/dev/null | tail -1)
   npm publish "$TARBALL_DIR/$tarball" --access public --provenance
 
