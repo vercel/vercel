@@ -633,14 +633,19 @@ test('whoami with local .vercel scope', async () => {
     JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
   );
 
-  const output = await execCli(binaryPath, ['whoami'], {
+  // Use JSON output so the assertions are structured and don't rely on
+  // matching free-form human-readable text (which may also include the
+  // team slug when a local scope is resolved from `.vercel/project.json`).
+  const output = await execCli(binaryPath, ['whoami', '--format', 'json'], {
     cwd: directory,
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  const user = await userPromise;
-  expect(output.stdout).toContain(user.username);
+  const [user, team] = await Promise.all([userPromise, teamPromise]);
+  const parsed = JSON.parse(output.stdout);
+  expect(parsed.username).toBe(user.username);
+  expect(parsed.team?.id).toBe(team.id);
 
   // clean up
   await remove(path.join(directory, '.vercel'));
