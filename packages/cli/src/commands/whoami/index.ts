@@ -44,7 +44,7 @@ export default async function whoami(client: Client): Promise<number> {
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
   const scope = await getScope(client, { resolveLocalScope: true });
-  const { contextName, user, team, globalTeam } = scope;
+  const { user, team, globalTeam } = scope;
 
   // A local override exists when the effective team (from the linked project)
   // differs from the globally-selected team (from `vc switch`). We only treat
@@ -91,19 +91,21 @@ export default async function whoami(client: Client): Promise<number> {
     }
     if (hasLocalOverride) {
       const globalLabel = globalTeam ? globalTeam.slug : 'Personal Account';
+      const localLabel = team ? team.slug : 'Personal Account';
       output.log(
         `${chalk.yellow('Local override:')} scope is set to ${chalk.bold(
-          contextName
+          localLabel
         )} by the linked project in this directory (globally selected: ${chalk.bold(
           globalLabel
         )}).`
       );
     }
   } else {
-    // If stdout is not a TTY, only print the context name to support piping
+    // If stdout is not a TTY, only print the username to support piping
     // the output to another file / executable. This preserves the previous
-    // behavior for scripts that rely on the username/team slug on stdout.
-    client.stdout.write(`${contextName}\n`);
+    // behavior for scripts that rely on `vc whoami` printing the logged-in
+    // user. Team information is available via `--format json`.
+    client.stdout.write(`${user.username}\n`);
   }
 
   return 0;

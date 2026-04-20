@@ -90,15 +90,18 @@ describe('whoami', () => {
     await expect(client.stdout).toOutput(`${user.username}\n`);
   });
 
-  it('should print the team slug when output is not a TTY and a team is selected', async () => {
-    useUser();
+  it('should print only the Vercel username in non-TTY mode even when a team is selected', async () => {
+    const user = useUser();
     const team = useTeam();
     client.config.currentTeam = team.id;
     client.stdout.isTTY = false;
 
     const exitCode = await whoami(client);
     expect(exitCode).toEqual(0);
-    await expect(client.stdout).toOutput(`${team.slug}\n`);
+    // Non-TTY stdout preserves the legacy behavior of printing the user's
+    // username to support `vc whoami | pbcopy` and similar pipelines.
+    // Team information is available via `--format json`.
+    await expect(client.stdout).toOutput(`${user.username}\n`);
   });
 
   describe('--format', () => {
