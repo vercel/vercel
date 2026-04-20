@@ -11,7 +11,11 @@ import {
   detectApiDirectory,
   detectApiExtensions,
 } from '../src';
-import { REGEX_NON_VERCEL_PLATFORM_FILES } from '../src/detect-builders';
+import {
+  REGEX_NON_VERCEL_PLATFORM_FILES,
+  getNonVercelPlatformFiles,
+  getVercelPlatformFiles,
+} from '../src/detect-builders';
 import type { Options } from '../src/detect-builders';
 
 /**
@@ -287,6 +291,93 @@ describe('Test `detectBuilders`', () => {
     expect(builders[1].use).toBe('@vercel/static');
     expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
+  });
+
+  it.each([
+    {
+      name: 'single file',
+      includeFiles: 'package.json' as string | string[],
+      notExcluded: ['package.json'],
+    },
+    {
+      name: 'multiple files',
+      includeFiles: ['package.json', 'README.md'] as string | string[],
+      notExcluded: ['package.json', 'README.md'],
+    },
+  ])('api + raw static with includeFiles allows $name', async ({
+    includeFiles,
+    notExcluded,
+  }) => {
+    const files = ['api/endpoint.js', 'index.html', ...notExcluded];
+
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      includeFiles,
+    });
+    expect(builders[0].use).toBe('@vercel/node');
+    expect(builders[0].src).toBe('api/endpoint.js');
+    expect(builders[1].use).toBe('@vercel/static');
+    expect(builders[1].src).toBe(getNonVercelPlatformFiles(includeFiles));
+    for (const file of notExcluded) {
+      expect(builders[1].src).not.toContain(file);
+    }
+    expect(builders.length).toBe(2);
+  });
+
+  describe('getVercelPlatformFiles', () => {
+    const defaultExcludedFiles = [
+      'package.json',
+      'package-lock.json',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+      'bun.lock',
+      'bun.lockb',
+      '.gitignore',
+      'README.md',
+    ];
+    const alwaysExcludedFiles = ['api/**', 'node_modules/**'];
+
+    it('without includeFiles excludes all config files', () => {
+      const pattern = getVercelPlatformFiles();
+      for (const file of [...defaultExcludedFiles, ...alwaysExcludedFiles]) {
+        expect(pattern).toContain(file);
+      }
+    });
+
+    it.each([
+      {
+        name: 'single file',
+        includeFiles: 'package.json' as string | string[],
+        notExcluded: ['package.json'],
+        stillExcluded: [
+          'package-lock.json',
+          'yarn.lock',
+          '.gitignore',
+          'README.md',
+        ],
+      },
+      {
+        name: 'glob pattern',
+        includeFiles: '*.json' as string | string[],
+        notExcluded: ['package.json', 'package-lock.json'],
+        stillExcluded: ['yarn.lock', '.gitignore', 'README.md'],
+      },
+    ])('with includeFiles removes $name from exclusions', ({
+      includeFiles,
+      notExcluded,
+      stillExcluded,
+    }) => {
+      const pattern = getVercelPlatformFiles(includeFiles);
+      for (const file of notExcluded) {
+        expect(pattern).not.toContain(file);
+      }
+      for (const file of stillExcluded) {
+        expect(pattern).toContain(file);
+      }
+      // Always excluded files cannot be overridden
+      for (const file of alwaysExcludedFiles) {
+        expect(pattern).toContain(file);
+      }
+    });
   });
 
   it('api + public', async () => {

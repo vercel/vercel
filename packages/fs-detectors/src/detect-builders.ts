@@ -28,15 +28,71 @@ import { getServicesBuilders } from './services/get-services-builders';
 export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
 
 /**
+ * Files that are always excluded from static file serving (cannot be overridden).
+ */
+const ALWAYS_EXCLUDED_FILES = [
+  'api/**',
+  'node_modules/**',
+  REGEX_MIDDLEWARE_FILES,
+];
+
+/**
+ * Files excluded by default but can be included via includeFiles config.
+ */
+const DEFAULT_EXCLUDED_FILES = [
+  'package.json',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lock',
+  'bun.lockb',
+  '.gitignore',
+  'README.md',
+];
+
+/**
+ * Generate the pattern for files excluded from static file serving.
+ * @param includeFiles - Optional glob patterns for files to include (overrides default exclusions)
+ */
+export function getVercelPlatformFiles(
+  includeFiles?: string | string[]
+): string {
+  const patterns = Array.isArray(includeFiles)
+    ? includeFiles
+    : includeFiles
+      ? [includeFiles]
+      : [];
+
+  // Filter out default excluded files that match any includeFiles pattern
+  const effectiveExclusions = DEFAULT_EXCLUDED_FILES.filter(
+    file => !patterns.some(pattern => minimatch(file, pattern, { dot: true }))
+  );
+
+  return [...ALWAYS_EXCLUDED_FILES, ...effectiveExclusions].join(',');
+}
+
+/**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
  * These files are excluded from static file serving.
+ * @deprecated Use getVercelPlatformFiles() for dynamic includeFiles support
  */
-export const REGEX_VERCEL_PLATFORM_FILES = `api/**,package.json,package-lock.json,yarn.lock,pnpm-lock.yaml,node_modules/**,.gitignore,README.md,${REGEX_MIDDLEWARE_FILES}`;
+export const REGEX_VERCEL_PLATFORM_FILES = getVercelPlatformFiles();
 
 /**
  * Pattern for non-Vercel platform files.
+ * @deprecated Use getNonVercelPlatformFiles() for dynamic includeFiles support
  */
 export const REGEX_NON_VERCEL_PLATFORM_FILES = `!{${REGEX_VERCEL_PLATFORM_FILES}}`;
+
+/**
+ * Generate the pattern for files to include in static file serving.
+ * @param includeFiles - Optional glob patterns for files to include (overrides default exclusions)
+ */
+export function getNonVercelPlatformFiles(
+  includeFiles?: string | string[]
+): string {
+  return `!{${getVercelPlatformFiles(includeFiles)}}`;
+}
 
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
@@ -60,6 +116,11 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   workPath?: string;
+  /**
+   * Glob patterns for files to include in static file serving,
+   * overriding default exclusions (e.g., package.json, lock files).
+   */
+  includeFiles?: string | string[];
 }
 
 // We need to sort the file paths by alphabet to make
@@ -321,7 +382,7 @@ export async function detectBuilders(
       // and package.json can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: REGEX_NON_VERCEL_PLATFORM_FILES,
+        src: getNonVercelPlatformFiles(options.includeFiles),
         config: {
           zeroConfig: true,
         },
