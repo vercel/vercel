@@ -47,7 +47,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.client_payload.git.sha }}
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
