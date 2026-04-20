@@ -8,7 +8,10 @@ import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
-import { validateEnvValue } from '../../util/env/validate-env';
+import {
+  normalizeStdinEnvValue,
+  validateEnvValue,
+} from '../../util/env/validate-env';
 import formatEnvironments from '../../util/env/format-environments';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
@@ -354,7 +357,11 @@ export default async function update(client: Client, argv: string[]) {
   let envValue: string;
 
   if (stdInput) {
-    envValue = stdInput;
+    const normalizedStdinValue = normalizeStdinEnvValue(stdInput);
+    envValue = normalizedStdinValue.value;
+    if (normalizedStdinValue.strippedTrailingNewline) {
+      output.log('Removed trailing newline from stdin input');
+    }
   } else if (valueFromFlag !== undefined) {
     envValue = valueFromFlag;
   } else {
