@@ -2274,19 +2274,19 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Sanity (v3)',
-    slug: 'sanity-v3',
-    demo: 'https://sanity-studio-template.vercel.app',
+    name: 'Sanity',
+    slug: 'sanity',
+    demo: 'https://template-studio-clean.sanity.dev',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
-    tagline: 'The structured content platform.',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/sanity-dark.svg',
+    tagline: 'The back-end built for AI content operations. Power web, mobile, and agentic applications at scale.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
     envPrefix: 'SANITY_STUDIO_',
     detectors: {
       some: [
-        {
-          path: 'sanity.json',
-        },
+
         {
           path: 'sanity.config.js',
         },
@@ -2299,12 +2299,16 @@ export const frameworks = [
         {
           path: 'sanity.config.tsx',
         },
+        {
+          path: 'sanity.cli.js',
+        },
+        {
+          path: 'sanity.cli.ts',
+        },
       ],
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sanity":\\s*"\\^?3\\..*"[^}]*}',
+          matchPackage: 'sanity',
         },
       ],
     },
@@ -2324,6 +2328,7 @@ export const frameworks = [
         value: 'dist',
       },
     },
+    dependency: 'sanity',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
@@ -2336,10 +2341,10 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Sanity',
-    slug: 'sanity',
+    name: 'Sanity (v2)',
+    slug: 'sanity-v2',
     demo: 'https://sanity-studio-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity-v2.svg',
     tagline: 'The structured content platform.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
@@ -2349,17 +2354,12 @@ export const frameworks = [
         {
           path: 'sanity.json',
         },
+      ],
+      every: [
         {
-          path: 'sanity.config.js',
-        },
-        {
-          path: 'sanity.config.jsx',
-        },
-        {
-          path: 'sanity.config.ts',
-        },
-        {
-          path: 'sanity.config.tsx',
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sanity/cli":\\s*"\\^?2\\..*"[^}]*}'
         },
       ],
     },
