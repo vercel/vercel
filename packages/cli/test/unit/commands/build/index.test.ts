@@ -395,7 +395,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should pull "preview" env vars by default', async () => {
+  it('should fetch "preview" env vars from API when settings missing', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -404,32 +404,24 @@ describe.skipIf(flakey)('build', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    const envFilePath = join(cwd, '.vercel', '.env.preview.local');
-    const projectJsonPath = join(cwd, '.vercel', 'project.json');
-    const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
-    );
     try {
       client.cwd = cwd;
       client.setArgv('build', '--yes');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      const previewEnv = await fs.readFile(envFilePath, 'utf8');
-      const envFileHasPreviewEnv = previewEnv.includes(
-        'REDIS_CONNECTION_STRING'
-      );
-      expect(envFileHasPreviewEnv).toBeTruthy();
+      // Env vars should NOT be written to disk (fetched into memory instead)
+      const envFilePath = join(cwd, '.vercel', '.env.preview.local');
+      expect(await fs.pathExists(envFilePath)).toBe(false);
     } finally {
-      await fs.remove(envFilePath);
-      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      await fs.remove(join(cwd, '.vercel', 'output'));
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:yes', value: 'TRUE' },
     ]);
   });
 
-  it('should pull "production" env vars with `--prod`', async () => {
+  it('should fetch "production" env vars from API with `--prod`', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -438,29 +430,17 @@ describe.skipIf(flakey)('build', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    const envFilePath = join(cwd, '.vercel', '.env.production.local');
-    const projectJsonPath = join(cwd, '.vercel', 'project.json');
-    const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
-    );
     try {
       client.cwd = cwd;
       client.setArgv('build', '--yes', '--prod');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      const prodEnv = await fs.readFile(envFilePath, 'utf8');
-      const envFileHasProductionEnv1 = prodEnv.includes(
-        'REDIS_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv1).toBeTruthy();
-      const envFileHasProductionEnv2 = prodEnv.includes(
-        'SQL_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv2).toBeTruthy();
+      // Env vars should NOT be written to disk (fetched into memory instead)
+      const envFilePath = join(cwd, '.vercel', '.env.production.local');
+      expect(await fs.pathExists(envFilePath)).toBe(false);
     } finally {
-      await fs.remove(envFilePath);
-      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      await fs.remove(join(cwd, '.vercel', 'output'));
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:prod', value: 'TRUE' },
@@ -468,7 +448,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should pull "production" env vars with `--target production`', async () => {
+  it('should fetch "production" env vars from API with `--target production`', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -477,29 +457,17 @@ describe.skipIf(flakey)('build', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    const envFilePath = join(cwd, '.vercel', '.env.production.local');
-    const projectJsonPath = join(cwd, '.vercel', 'project.json');
-    const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
-    );
     try {
       client.cwd = cwd;
       client.setArgv('build', '--yes', '--target', 'production');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      const prodEnv = await fs.readFile(envFilePath, 'utf8');
-      const envFileHasProductionEnv1 = prodEnv.includes(
-        'REDIS_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv1).toBeTruthy();
-      const envFileHasProductionEnv2 = prodEnv.includes(
-        'SQL_CONNECTION_STRING'
-      );
-      expect(envFileHasProductionEnv2).toBeTruthy();
+      // Env vars should NOT be written to disk (fetched into memory instead)
+      const envFilePath = join(cwd, '.vercel', '.env.production.local');
+      expect(await fs.pathExists(envFilePath)).toBe(false);
     } finally {
-      await fs.remove(envFilePath);
-      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      await fs.remove(join(cwd, '.vercel', 'output'));
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'option:target', value: 'production' },
@@ -2308,41 +2276,37 @@ fs.writeFileSync(
       vi.restoreAllMocks();
     });
 
-    it('outputs error JSON when project settings missing and --yes not set', async () => {
+    it('fetches project settings from API when missing locally', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        framework: null,
+      });
+
+      client.scenario.get('/v3/env/pull/:projectId/:target', (_req, res) => {
+        res.json({ env: {}, buildEnv: {} });
+      });
+
       const projectSettingsModule = await import(
         '../../../../src/util/projects/project-settings'
       );
       vi.spyOn(projectSettingsModule, 'readProjectSettings').mockResolvedValue(
         null
       );
-      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-        throw new Error('exit');
-      }) as () => never);
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const linkModule = await import('../../../../src/util/projects/link');
+      vi.spyOn(linkModule, 'getProjectLink').mockResolvedValue({
+        projectId: defaultProject.id,
+        orgId: 'team_dummy',
+      });
 
       const cwd = fixture('static');
       client.cwd = cwd;
       client.nonInteractive = true;
       client.setArgv('build');
 
-      const exitCodePromise = build(client);
-
-      await expect(exitCodePromise).rejects.toThrow('exit');
-      expect(logSpy).toHaveBeenCalled();
-      const payload = JSON.parse(
-        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
-      );
-      expect(payload).toMatchObject({
-        status: 'error',
-        reason: 'project_settings_required',
-        message: expect.stringMatching(/project settings|pull/),
-        next: expect.any(Array),
-      });
-      expect(
-        payload.next.some((n: { command: string }) =>
-          n.command.includes('pull')
-        )
-      ).toBe(true);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
     });
 
     it('outputs success JSON when build completes', async () => {
