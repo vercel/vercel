@@ -698,17 +698,33 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  // Decide the type for prod/preview/custom targets. Development is always
-  // encrypted and handled separately below.
-  let typeForSensitiveCapable: EnvType = resolveTypeForTarget('production', {
-    forceSensitive,
-    forceEncrypted,
-    policyOn,
-  });
+  if (hasDevelopment && hasSensitiveCapable) {
+    const msg = `Development cannot be combined with other Environments because Development does not support sensitive Environment Variables. Run ${getCommandName(
+      'env add'
+    )} separately for Development.`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'mixed_development_and_sensitive_capable_targets',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
 
-  // When the user didn't explicitly choose, the policy isn't enforcing, and
-  // we have at least one prod/preview/custom target, ask whether to keep it
-  // sensitive. Skips for stdin/--value/-y paths and skips when policy forces.
+  // At this point envTargets is either all-development or all non-development.
+  let finalType: EnvType = resolveTypeForTarget(
+    hasDevelopment ? 'development' : 'production',
+    { forceSensitive, forceEncrypted, policyOn }
+  );
+
+  // Ask whether to keep it sensitive only when the user didn't say, the
+  // policy isn't enforcing, and at least one target would actually use it.
   const userWasExplicit = forceSensitive || forceEncrypted;
   const canPromptForType =
     !client.nonInteractive &&
@@ -725,7 +741,7 @@ export default async function add(client: Client, argv: string[]) {
       true
     );
     if (!keepSensitive) {
-      typeForSensitiveCapable = 'encrypted';
+      finalType = 'encrypted';
     }
   }
 
@@ -735,44 +751,21 @@ export default async function add(client: Client, argv: string[]) {
     );
   }
 
-  // Group targets by the type we need to send. Development always goes in its
-  // own group as `encrypted`; everything else shares `typeForSensitiveCapable`.
-  const groups: Array<{ type: EnvType; targets: string[] }> = [];
-  const nonDevTargets = envTargets.filter(t => t !== 'development');
-  if (nonDevTargets.length > 0) {
-    groups.push({ type: typeForSensitiveCapable, targets: nonDevTargets });
-  }
-  if (hasDevelopment) {
-    groups.push({ type: 'encrypted', targets: ['development'] });
-  }
-
-  if (
-    groups.length > 1 &&
-    typeForSensitiveCapable === 'sensitive' &&
-    !client.nonInteractive
-  ) {
-    output.log(
-      `Development cannot store sensitive values; adding ${envName} as encrypted for Development and sensitive for the remaining environments.`
-    );
-  }
-
   const upsert = opts['--force'] ? 'true' : '';
 
   const addStamp = stamp();
   try {
     output.spinner('Saving');
-    for (const group of groups) {
-      await addEnvRecord(
-        client,
-        project.id,
-        upsert,
-        group.type,
-        envName,
-        finalValue,
-        group.targets,
-        envGitBranch
-      );
-    }
+    await addEnvRecord(
+      client,
+      project.id,
+      upsert,
+      finalType,
+      envName,
+      finalValue,
+      envTargets,
+      envGitBranch
+    );
   } catch (err: unknown) {
     if (client.nonInteractive && isAPIError(err)) {
       const reason =

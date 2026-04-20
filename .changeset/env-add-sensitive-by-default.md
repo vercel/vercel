@@ -8,7 +8,7 @@ Behavior per target:
 
 - **Production** or **Preview**: defaults to `sensitive`. Pass `--no-sensitive` to opt back in to the previous `encrypted` behavior (value remains readable later).
 - **Development**: always stored as `encrypted` (sensitive is not supported by the Vercel API for Development). Passing `--sensitive` alongside a Development target now errors up-front instead of silently falling back.
-- **Mixed selection** (e.g., interactive checkbox picks `production + preview + development`): saved as two records — one `sensitive` for Production/Preview and one `encrypted` for Development.
+- **Mixed selection** (e.g., interactive checkbox picks `production + preview + development`): errors and asks you to run `vercel env add` separately for Development, because Development cannot share a record type with Production/Preview.
 
 Flag summary:
 

@@ -267,6 +267,30 @@ describe('env add', () => {
       });
     });
 
+    describe('mixed Development + other Environments', () => {
+      it('errors when the interactive checkbox picks Development alongside Production/Preview', async () => {
+        client.setArgv('env', 'add', 'MIXED_TARGETS');
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          "What's the value of MIXED_TARGETS?"
+        );
+        client.stdin.write('testvalue\n');
+        await expect(client.stderr).toOutput(
+          'Add MIXED_TARGETS to which Environments (select multiple)?'
+        );
+        // Select Production and Development.
+        client.stdin.write(' '); // toggle Production (first row)
+        client.stdin.write('\x1B[B'); // down to Preview
+        client.stdin.write('\x1B[B'); // down to Development
+        client.stdin.write(' '); // toggle Development
+        client.stdin.write('\r'); // submit
+        await expect(client.stderr).toOutput(
+          'Development cannot be combined with other Environments'
+        );
+        await expect(exitCodePromise).resolves.toBe(1);
+      });
+    });
+
     describe('--force', () => {
       it('tracks flag', async () => {
         client.setArgv(
