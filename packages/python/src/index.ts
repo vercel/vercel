@@ -794,8 +794,9 @@ from vercel_runtime.vc_init import vc_handler
   });
 
   // Write project manifest for diagnostics (best-effort, never fails the build).
-  // Requires uv.lock to resolve versions and dependency graph.
-  if (uvLockPath) {
+  // Requires uv.lock to resolve versions and dependency graph.  Skipped in
+  // `vercel dev` since the CLI only reads the manifest in `vercel build`.
+  if (uvLockPath && !meta.isDev) {
     try {
       await generateProjectManifest({
         workPath,
