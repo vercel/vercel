@@ -11,12 +11,18 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
   for (let [filename, fileFsRef] of Object.entries(files)) {
     if (
       filename.startsWith('.git/') ||
+      filename.startsWith('node_modules/') ||
       filename === 'vercel.json' ||
       filename === 'vercel.toml' ||
       filename === '.vercelignore' ||
       filename === 'now.json' ||
       filename === '.nowignore' ||
-      filename.startsWith('.env')
+      filename.startsWith('.env') ||
+      filename === '.gitignore' ||
+      filename === 'package.json' ||
+      filename === 'package-lock.json' ||
+      filename === 'yarn.lock' ||
+      filename === 'pnpm-lock.yaml'
     ) {
       continue;
     }

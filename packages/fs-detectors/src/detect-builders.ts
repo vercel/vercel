@@ -29,8 +29,9 @@ export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
 
 /**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
+ * These files are excluded from static file serving.
  */
-export const REGEX_VERCEL_PLATFORM_FILES = `api/**,package.json,${REGEX_MIDDLEWARE_FILES}`;
+export const REGEX_VERCEL_PLATFORM_FILES = `api/**,package.json,package-lock.json,yarn.lock,pnpm-lock.yaml,node_modules/**,.gitignore,README.md,${REGEX_MIDDLEWARE_FILES}`;
 
 /**
  * Pattern for non-Vercel platform files.
