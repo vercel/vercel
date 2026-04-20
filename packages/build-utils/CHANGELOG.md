@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.19.1
+
+### Patch Changes
+
+- [build-utils] simplify streaming lambda check ([#15795](https://github.com/vercel/vercel/pull/15795))
+
 ## 13.19.0
 
 ### Minor Changes

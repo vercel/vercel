@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }} # TODO: this secret is deleted, replace with a new bot token or GitHub App
 
       - uses: actions/setup-node@v4
         with:
