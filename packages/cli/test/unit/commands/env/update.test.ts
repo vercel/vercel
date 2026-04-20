@@ -5,6 +5,7 @@ import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import type { ProjectEnvVariable } from '@vercel-internals/types';
 
 describe('env update', () => {
   beforeEach(() => {
@@ -357,6 +358,97 @@ describe('env update', () => {
       await expect(client.stderr).toOutput('Updated Environment Variable');
       const exitCode = await updatePromise;
       expect(exitCode).toBe(0);
+    });
+  });
+
+  describe('Development guards', () => {
+    const devEnv: ProjectEnvVariable = {
+      type: 'encrypted',
+      id: 'test-env-id-dev-123',
+      key: 'TEST_VAR_DEV',
+      value: 'dev-value',
+      target: ['development'],
+      gitBranch: undefined,
+      configurationId: null,
+      updatedAt: 1557241361455,
+      createdAt: 1557241361455,
+      customEnvironmentIds: [],
+    };
+
+    beforeEach(() => {
+      client.reset();
+      useUser();
+      useTeams('team_dummy');
+      useProject(
+        {
+          ...defaultProject,
+          id: 'vercel-env-pull',
+          name: 'vercel-env-pull',
+        },
+        [
+          ...envs,
+          {
+            type: 'encrypted',
+            id: 'test-env-id-123',
+            key: 'TEST_VAR',
+            value: 'test-value',
+            target: ['production'],
+            gitBranch: undefined,
+            configurationId: null,
+            updatedAt: 1557241361455,
+            createdAt: 1557241361455,
+            customEnvironmentIds: [],
+          },
+          devEnv,
+        ]
+      );
+    });
+
+    it('errors when --sensitive is used on a Development record', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv(
+        'env',
+        'update',
+        'TEST_VAR_DEV',
+        '--sensitive',
+        '--value',
+        'new-value',
+        '--yes'
+      );
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        '--sensitive is not allowed with the Development Environment'
+      );
+      await expect(exitCodePromise).resolves.toBe(1);
+    });
+
+    it('errors when the team enforces sensitive and the record targets Development', async () => {
+      const teamModule = await import(
+        '../../../../src/util/teams/get-team-by-id'
+      );
+      const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
+        sensitiveEnvironmentVariablePolicy: 'on',
+        // biome-ignore lint/suspicious/noExplicitAny: partial team shape
+      } as any);
+
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv(
+        'env',
+        'update',
+        'TEST_VAR_DEV',
+        '--value',
+        'new-value',
+        '--yes'
+      );
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values.'
+      );
+      await expect(exitCodePromise).resolves.toBe(1);
+
+      teamSpy.mockRestore();
     });
   });
 });
