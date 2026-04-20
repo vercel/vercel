@@ -2,10 +2,14 @@
 set -euo pipefail
 
 # Publish all public workspace packages whose current version is not yet on npm.
-# Uses pnpm to list/pack packages but npm to publish (for OIDC trusted publishing).
 #
-# pnpm pack is used instead of npm publish <dir> because pnpm resolves
-# workspace:* protocol references to real version numbers in the tarball.
+# Why pnpm AND npm?
+#   - pnpm is used for workspace-aware operations: listing packages (pnpm ls)
+#     and creating tarballs (pnpm pack). pnpm pack resolves workspace:*
+#     protocol references to real version numbers, which npm does not understand.
+#   - npm is used for the actual publish (npm publish) because it supports
+#     OIDC trusted publishing, which eliminates the need for long-lived NPM_TOKEN
+#     secrets. pnpm publish does not support OIDC.
 #
 # For each package, publishes a canary prerelease first (e.g. 1.2.3-canary.0
 # with --tag canary), then restores the real version and publishes as latest.
