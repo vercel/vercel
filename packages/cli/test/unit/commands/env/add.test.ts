@@ -288,7 +288,7 @@ describe('env add', () => {
         );
         const exitCodePromise = env(client);
         await expect(client.stderr).toOutput(
-          'Your team requires sensitive Environment Variables and the Development Environment does not support sensitive values.'
+          'Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values.'
         );
         await expect(exitCodePromise).resolves.toBe(1);
 
