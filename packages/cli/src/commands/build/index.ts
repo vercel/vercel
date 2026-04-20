@@ -2138,7 +2138,7 @@ async function fetchDeploymentBuildEnv(
 
   while (Date.now() < deadline) {
     try {
-      return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
+      return await pullEnvRecords(client, deploymentId, 'vercel-cli:build');
     } catch (err: unknown) {
       // If the API returns integrationsStatus: 'pending', poll until ready
       if (
