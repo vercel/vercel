@@ -188,6 +188,13 @@ export {
 } from './fs/stream-to-digest-async';
 
 export {
+  VerifiedDownloader,
+  type VerifiedDownloaderOptions,
+} from './fs/verified-downloader';
+
+export { extractZip, type ExtractZipOptions } from './fs/extract-zip';
+
+export {
   getBuildResultMetadata,
   type BuildResultMetadata,
 } from './collect-build-result/get-build-result-metadata';
