@@ -700,7 +700,7 @@ export default async function add(client: Client, argv: string[]) {
   const hasSensitiveCapable = envTargets.some(t => t !== 'development');
 
   if (policyOn && hasDevelopment) {
-    const msg = `Your team requires sensitive Environment Variables and the Development Environment does not support sensitive values.`;
+    const msg = `Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values. https://vercel.com/docs/environment-variables/sensitive-environment-variables#environment-variables-policy`;
     if (client.nonInteractive) {
       outputAgentError(
         client,
