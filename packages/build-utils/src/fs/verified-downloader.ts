@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'crypto';
 import { createWriteStream, promises as fs } from 'fs';
 import { dirname } from 'path';
-import nodeFetch from 'node-fetch';
+import nodeFetch, { Response as NodeFetchResponse } from 'node-fetch';
 import { NowBuildError } from '../errors';
 
 /**
@@ -90,11 +90,12 @@ export class VerifiedDownloader {
 
     let streamedBytes = 0;
     let writer: ReturnType<typeof createWriteStream> | undefined;
+    let res: NodeFetchResponse | undefined;
 
     try {
       // The AbortSignal shape on node-fetch's types lags the Node built-in;
       // the runtime accepts either so we cast to satisfy the compiler.
-      const res = await nodeFetch(url, {
+      res = await nodeFetch(url, {
         signal: abortController.signal as unknown as undefined,
       });
       if (!res.ok) {
@@ -139,6 +140,13 @@ export class VerifiedDownloader {
           streamedBytes += chunk.length;
           if (streamedBytes > this.maxBytes) {
             abortController.abort();
+            // Eagerly tear down the write handle so Windows can release the
+            // underlying file lock before the outer `catch` tries to unlink.
+            try {
+              localWriter.destroy();
+            } catch {
+              // ignore
+            }
             onError(
               new NowBuildError({
                 code: 'VERIFIED_DOWNLOADER_TOO_LARGE',
@@ -179,16 +187,79 @@ export class VerifiedDownloader {
       // Atomic publish: rename temp file over the destination.
       await fs.rename(tempFile, destFile);
     } catch (err) {
-      // Best-effort cleanup of the partial temp file. Swallow ENOENT because
-      // the file may never have been created.
+      // Wait for any outstanding file handle / body stream to close before
+      // attempting to remove the partial temp file. On Windows, `fs.rm`
+      // rejects with EPERM when the target is still held open by our own
+      // process, so we must release those handles first.
+      await closeStreamQuietly(writer);
+      await closeStreamQuietly(res?.body);
       try {
-        await fs.rm(tempFile, { force: true });
+        await rmWithRetry(tempFile);
       } catch {
-        // ignore
+        // Leaving the tmp file behind is acceptable — the OS/tmp cleanup
+        // will reclaim it. Never let cleanup mask the original error.
       }
       throw err;
     } finally {
       clearTimeout(timeout);
+    }
+  }
+}
+
+async function closeStreamQuietly(
+  stream: NodeJS.WritableStream | NodeJS.ReadableStream | null | undefined
+): Promise<void> {
+  if (!stream) return;
+  const s = stream as {
+    destroyed?: boolean;
+    destroy?: (err?: Error) => void;
+    once?: (event: string, cb: () => void) => void;
+  };
+  if (s.destroyed) return;
+  await new Promise<void>(resolve => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    try {
+      s.once?.('close', finish);
+      s.once?.('error', finish);
+    } catch {
+      finish();
+      return;
+    }
+    // Hard cap so we never hang if the stream misbehaves.
+    const timer = setTimeout(finish, 250);
+    if (typeof timer.unref === 'function') timer.unref();
+    try {
+      s.destroy?.();
+    } catch {
+      finish();
+    }
+  });
+}
+
+async function rmWithRetry(path: string): Promise<void> {
+  // Windows filesystem handle release can lag a few ms behind `destroy()`.
+  // Retry the unlink a handful of times on transient EPERM/EBUSY before
+  // giving up. The total worst-case delay is 170 ms and only fires on the
+  // already-error path, so happy-path perf is unaffected.
+  const delays = [0, 20, 50, 100];
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i] > 0) {
+      await new Promise(r => setTimeout(r, delays[i]));
+    }
+    try {
+      await fs.rm(path, { force: true });
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') {
+        throw err;
+      }
+      if (i === delays.length - 1) throw err;
     }
   }
 }
