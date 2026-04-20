@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
       - name: install pnpm@8.3.1

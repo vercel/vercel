@@ -108,7 +108,7 @@ jobs:
             packages/cli/package.json
             pnpm-lock.yaml
           body: ${{ steps.pr_body.outputs.body }}
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }} # TODO: this secret is deleted, replace with a new bot token or GitHub App
 
       - name: Approve the Pull Request
         if: steps.pr.outputs.pull-request-number != ''
@@ -120,6 +120,6 @@ jobs:
       - name: Enable auto-merge
         if: steps.pr.outputs.pull-request-number != ''
         env:
-          GH_TOKEN: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }} # TODO: this secret is deleted, replace with a new bot token or GitHub App
         run: |
           gh pr merge ${{ steps.pr.outputs.pull-request-number }} --auto --squash
