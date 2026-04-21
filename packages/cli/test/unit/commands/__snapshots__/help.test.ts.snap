@@ -806,6 +806,8 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   create  type  Create a new Connex client                              
   list          List Connex clients for the current team                
+  token   id    Get a token for a Connex client (accepts a client ID    
+                like scl_abc or a UID like slack/my-bot)                
 
 
   Global Options:
@@ -833,6 +835,10 @@ exports[`help command > connex help output snapshots > connex help column width 
   - List Connex clients on the current team
 
     $ vercel connex list
+
+  - Get a token
+
+    $ vercel connex token scl_abc123
 
 "
 `;
@@ -881,6 +887,66 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
   - Output as JSON
 
     $ vercel connex list --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex token subcommand > connex token subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex token id [options]
+
+  Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)                         
+
+  Options:
+
+  -F,  --format <FORMAT>       Specify the output format (json)                                                              
+       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the client's      
+                               default installation)                                                                         
+       --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
+  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the client's default     
+                               installation)                                                                                 
+  -y,  --yes                   Accept default value for all prompts                                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Get a user token by client ID
+
+    $ vercel connex token scl_abc123
+
+  - Get a token by client UID
+
+    $ vercel connex token slack/my-bot
+
+  - Get an app token (default installation)
+
+    $ vercel connex token scl_abc123 --subject app
+
+  - Get an app token for a specific installation
+
+    $ vercel connex token scl_abc123 --subject app --installation-id inst_1
+
+  - Open the browser automatically if authorization/installation is required
+
+    $ vercel connex token scl_abc123 --yes
+
+  - Output as JSON (includes expiresAt, installationId, etc.)
+
+    $ vercel connex token scl_abc123 --format=json
 
 "
 `;
@@ -2267,6 +2333,12 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                               number    
 
 
+  Examples:
+
+  - Run a command with Environment Variables from the linked Project
+
+    $ vercel env run -- <command>
+
 "
 `;
 
@@ -2311,6 +2383,12 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
+  Examples:
+
+  - Run a command with Environment Variables from the linked Project
+
+    $ vercel env run -- <command>
+
 "
 `;
 
@@ -2345,6 +2423,12 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Run a command with Environment Variables from the linked Project
+
+    $ vercel env run -- <command>
 
 "
 `;

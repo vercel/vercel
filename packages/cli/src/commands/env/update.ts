@@ -23,7 +23,14 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { updateSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
+import getTeamById from '../../util/teams/get-team-by-id';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
+
+function selectedEnvTargetsDevelopment(env: ProjectEnvVariable): boolean {
+  if (typeof env.target === 'string') return env.target === 'development';
+  if (Array.isArray(env.target)) return env.target.includes('development');
+  return false;
+}
 import {
   outputActionRequired,
   outputAgentError,
@@ -352,6 +359,53 @@ export default async function update(client: Client, argv: string[]) {
     });
 
     selectedEnv = matchingEnvs[selectedIndex];
+  }
+
+  // Detect team-level sensitive env var policy. Cached in getTeamById.
+  let policyOn = false;
+  if (link.org.type === 'team') {
+    try {
+      const team = await getTeamById(client, link.org.id);
+      policyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+    } catch {
+      // Non-fatal — policy detection is best-effort.
+    }
+  }
+
+  const selectedIsDevelopment = selectedEnvTargetsDevelopment(selectedEnv);
+
+  if (policyOn && selectedIsDevelopment) {
+    const msg = `Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values. https://vercel.com/docs/environment-variables/sensitive-environment-variables#environment-variables-policy`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'development_disallowed_by_team_policy',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  if (opts['--sensitive'] && selectedIsDevelopment) {
+    const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'sensitive_not_allowed_on_development',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
   }
 
   let envValue: string;

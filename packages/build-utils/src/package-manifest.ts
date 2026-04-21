@@ -16,6 +16,7 @@ export interface PackageManifestDependency {
 export interface PackageManifest {
   version?: string;
   runtime: string;
+  framework?: string;
   runtimeVersion?: {
     requested?: string;
     requestedSource?: string;

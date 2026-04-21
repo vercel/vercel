@@ -7,9 +7,15 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
 import { ConnexTelemetryClient } from '../../util/telemetry/commands/connex';
 import { type Command, help } from '../help';
-import { createSubcommand, listSubcommand, connexCommand } from './command';
+import {
+  createSubcommand,
+  listSubcommand,
+  tokenSubcommand,
+  connexCommand,
+} from './command';
 import { create } from './create';
 import { list } from './list';
+import { token } from './token';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
@@ -20,6 +26,7 @@ import { packageName } from '../../util/pkg-name';
 const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
   list: getCommandAliases(listSubcommand),
+  token: getCommandAliases(tokenSubcommand),
 };
 
 export default async function connex(client: Client): Promise<number> {
@@ -94,6 +101,18 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliOptionNext(listParsedArgs.flags['--next']);
         telemetry.trackCliOptionFormat(listParsedArgs.flags['--format']);
         return await list(client, listParsedArgs.flags);
+      }
+      case 'token': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(tokenSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandToken(subcommandOriginal);
+
+        const tokenFlagsSpec = getFlagsSpecification(tokenSubcommand.options);
+        const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
+        return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
       }
       default: {
         const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');
