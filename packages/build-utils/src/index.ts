@@ -133,6 +133,7 @@ export { getOsRelease, getProvidedRuntime } from './os';
 export * from './should-serve';
 export * from './schemas';
 export * from './package-manifest';
+export { generateProjectManifest } from './node-diagnostics';
 export * from './types';
 export * from './errors';
 
