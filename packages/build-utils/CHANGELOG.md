@@ -1,5 +1,21 @@
 # @vercel/build-utils
 
+## 13.19.1
+
+### Patch Changes
+
+- [build-utils] simplify streaming lambda check ([#15795](https://github.com/vercel/vercel/pull/15795))
+
+## 13.19.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Added a shared build result validation helper in `@vercel/build-utils` for existing callers. ([#16030](https://github.com/vercel/vercel/pull/16030))
+
 ## 13.18.0
 
 ### Minor Changes

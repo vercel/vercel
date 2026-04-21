@@ -1,0 +1,226 @@
+name: E2E Tests (v2)
+
+on:
+  repository_dispatch:
+    types:
+      - vercel.project.QmcQ2AGNAWeR6ZJCWAhqhbixxvWbgvsR2LMT4fzmTfY9SK.deployment.ready
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.client_payload.git.ref }}
+  cancel-in-progress: ${{ github.event.client_payload.git.ref != 'refs/heads/main' }}
+
+jobs:
+  setup:
+    name: Find Changes
+    if: github.event.client_payload.environment == 'preview'
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps['set-tests'].outputs['tests'] }}
+      dplUrl: ${{ github.event.client_payload.url }}
+      baseSha: ${{ steps.pr-context.outputs.baseSha }}
+      headSha: ${{ github.event.client_payload.git.sha }}
+      prNumber: ${{ steps.pr-context.outputs.prNumber }}
+      affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
+      testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
+      affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
+      totalCount: ${{ steps['affected-packages'].outputs['total'] }}
+      allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
+    steps:
+      - name: Resolve PR context
+        id: pr-context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.event.client_payload.git.sha }}"
+          PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" --jq '.[0]')
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          BASE_SHA=$(echo "$PR_JSON" | jq -r '.base.sha')
+          echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.client_payload.git.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      - id: affected-packages
+        run: |
+          export TURBO_BASE_SHA="${{ steps.pr-context.outputs.baseSha }}"
+
+          AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ steps.pr-context.outputs.baseSha }}" 2>&1)
+
+          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
+          TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
+
+          if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
+            STRATEGY="all-e2e"
+          elif echo "$AFFECTED_OUTPUT" | grep -q "test-all result detected"; then
+            STRATEGY="test-all"
+          elif [ "$PACKAGE_COUNT" -gt "0" ]; then
+            STRATEGY="affected-only"
+          else
+            STRATEGY="no-tests"
+          fi
+
+          PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
+
+          ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
+
+          echo "PACKAGE_COUNT=$PACKAGE_COUNT"
+          echo "TOTAL_COUNT=$TOTAL_COUNT"
+          echo "STRATEGY=$STRATEGY"
+
+          echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+          echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+          echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
+      - id: set-tests
+        run: |
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
+          echo "E2E tests to run:"
+          echo "$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+        env:
+          TURBO_BASE_SHA: ${{ steps.pr-context.outputs.baseSha }}
+          TEST_TYPE: e2e
+
+  test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
+    if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      max-parallel: 75
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['tests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - run: pnpm install
+
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: '1'
+      - name: Resolve Python wheel URLs
+        shell: bash
+        run: |
+          DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
+
+          PACKAGES_JSON="$(node utils/get-python-packages.js)"
+          if [ -z "$PACKAGES_JSON" ] || [ "$PACKAGES_JSON" = "[]" ]; then
+            echo "No Python packages discovered; skipping wheel URL resolution."
+            exit 0
+          fi
+
+          echo "$PACKAGES_JSON" | jq -c '.[]' | while IFS= read -r package; do
+            package_slug="$(echo "$package" | jq -r '.packageDir')"
+            package_name="$(echo "$package" | jq -r '.packageName')"
+
+            wheel_name="$(curl -sf "$DEPLOYMENT_URL/tarballs/$package_slug-wheel.json" | jq -r '.filename' || echo "")"
+            if [ -z "$wheel_name" ]; then
+              continue
+            fi
+
+            env_var="$(printf '%s' "$package_name" | tr -c '[:alnum:]' '_' | tr '[:lower:]' '[:upper:]')_PYTHON"
+            echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
+          done
+      - name: Test ${{matrix.packageName}}
+        run: |
+          attempt=1
+          max_attempts=2
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Tests failed after $max_attempts attempts."
+              exit 1
+            fi
+
+            echo "Tests failed; retrying once..."
+            attempt=$((attempt+1))
+          done
+        shell: bash
+        env:
+          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
+          FORCE_COLOR: '1'
+      - name: 'Determine Turbo HIT or MISS'
+        if: ${{ !cancelled() }}
+        id: turbo-summary
+        shell: bash
+        run: |
+          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
+          echo "MISS COUNT: $TURBO_MISS_COUNT"
+          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
+      - name: 'Upload Test Report to Datadog'
+        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
+        run: 'pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports'
+        env:
+          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          DD_ENV: ci
+
+  summary:
+    name: Summary (e2e-v2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - setup
+      - test
+    steps:
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done

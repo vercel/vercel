@@ -743,6 +743,43 @@ describe('generateProjectManifest', () => {
     expect(requests.type).toBe('direct');
     expect(requests.scopes).toEqual(['main', 'test']);
   });
+
+  it('includes framework in manifest when provided', async () => {
+    const pkg = makePackage({ dependencies: ['fastapi'] });
+    const uvLockPath = writeUvLock(tempDir, [
+      { name: 'fastapi', version: '0.115.0', dependencies: [] },
+    ]);
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      pythonPackage: pkg,
+      pythonVersion,
+      uvLockPath,
+      framework: 'fastapi',
+    });
+
+    const manifestPath = path.join(tempDir, DIAGNOSTICS_PATH);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    expect(manifest.framework).toBe('fastapi');
+  });
+
+  it('omits framework from manifest when not provided', async () => {
+    const pkg = makePackage({ dependencies: ['requests'] });
+    const uvLockPath = writeUvLock(tempDir, [
+      { name: 'requests', version: '2.32.0', dependencies: [] },
+    ]);
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      pythonPackage: pkg,
+      pythonVersion,
+      uvLockPath,
+    });
+
+    const manifestPath = path.join(tempDir, DIAGNOSTICS_PATH);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    expect(manifest.framework).toBeUndefined();
+  });
 });
 
 describe('diagnostics callback', () => {

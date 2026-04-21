@@ -142,7 +142,6 @@ Conditions within a group are **AND'd**. Multiple groups (separated by `--or`) a
 | `scheme` | http or https | No |
 | `environment` | preview or production | No |
 | `region` | Vercel edge region | No |
-| `ssl` | SSL/TLS connection (exists only) | No |
 | `rate_limit_api_id` | Rate limit API grouping ID | No |
 | `ip_address` | Client IP or CIDR range | No |
 | `user_agent` | User-Agent string | No |

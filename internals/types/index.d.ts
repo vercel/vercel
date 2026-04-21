@@ -101,6 +101,12 @@ export interface Team {
       state: string;
     };
   };
+  /**
+   * Team-wide policy for enforcing sensitive Environment Variables.
+   * When set to "on", the API silently promotes `encrypted` Production and
+   * Preview Environment Variables to `sensitive` on create.
+   */
+  sensitiveEnvironmentVariablePolicy?: 'default' | 'on' | 'off';
 }
 
 export type Domain = {

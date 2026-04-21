@@ -22,10 +22,10 @@ jobs:
         uses: actions/github-script@v7
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }} # TODO: this secret is deleted, replace with a new bot token or GitHub App
         # See https://github.com/actions/github-script#run-a-separate-file-with-an-async-function
         with:
-          github-token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          github-token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }} # TODO: this secret is deleted, replace with a new bot token or GitHub App
           script: |
             const script = require('./utils/update-turbo.js')
             await script({ github, context })

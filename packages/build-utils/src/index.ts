@@ -191,6 +191,12 @@ export {
   getBuildResultMetadata,
   type BuildResultMetadata,
 } from './collect-build-result/get-build-result-metadata';
+export {
+  validateBuildResult,
+  SUPPORTED_AL2023_RUNTIMES,
+  type ValidateBuildResultParams,
+  type ValidateBuildResultResult,
+} from './collect-build-result/validate-build-result';
 export { getLambdaByOutputPath } from './collect-build-result/get-lambda-by-output-path';
 export { isRouteMiddleware } from './collect-build-result/is-route-middleware';
 export { getPrerenderChain } from './collect-build-result/get-prerender-chain';
@@ -224,6 +230,20 @@ export { validateFrameworkVersion } from './deserialize/validate-framework-versi
 export { hydrateFilesMap } from './deserialize/hydrate-files-map';
 export { createFunctionsIterator } from './deserialize/create-functions-iterator';
 export { maybeReadJSON } from './deserialize/maybe-read-json';
+export {
+  deserializeBuildOutput,
+  validateDeploymentId,
+} from './deserialize/deserialize-build-output';
+export type {
+  DeserializeBuildOutputConfig,
+  DeserializeBuildOutputResult,
+  DeserializeBuildOutputPathOverride,
+  DeserializeBuildOutputOptions,
+  DeserializeBuildOutputLambdaOptions,
+  GroupLambdasOptions,
+  DeserializeBuildOutputSerializedConfig,
+  DeserializeBuildOutputSerializedPrerender,
+} from './deserialize/deserialize-build-output-types';
 
 export {
   deserializeLambda,

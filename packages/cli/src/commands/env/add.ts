@@ -13,6 +13,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import {
   getEnvKeyWarnings,
+  normalizeStdinEnvValue,
   removePublicPrefix,
   validateEnvValue,
 } from '../../util/env/validate-env';
@@ -28,6 +29,7 @@ import { addSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import getTeamById from '../../util/teams/get-team-by-id';
 import {
   outputActionRequired,
   outputAgentError,
@@ -35,6 +37,29 @@ import {
   buildEnvAddCommandWithPreservedArgs,
   getPreservedArgsForEnvAdd,
 } from '../../util/agent-output';
+
+type EnvType = 'encrypted' | 'sensitive';
+
+/**
+ * Per-target type resolution. The server silently promotes encrypted → sensitive
+ * on policy-on teams for Production/Preview, and rejects sensitive on Development.
+ * We mirror that server contract client-side so output and logs are honest.
+ */
+function resolveTypeForTarget(
+  target: string,
+  opts: { forceSensitive: boolean; forceEncrypted: boolean; policyOn: boolean }
+): EnvType {
+  if (target === 'development') {
+    // Development never supports sensitive; caller is expected to have already
+    // rejected --sensitive when only development is selected.
+    return 'encrypted';
+  }
+  if (opts.forceEncrypted) return 'encrypted';
+  if (opts.forceSensitive) return 'sensitive';
+  if (opts.policyOn) return 'sensitive';
+  // Default for Production/Preview/custom environments.
+  return 'sensitive';
+}
 
 /**
  * For use in suggested "next" commands: escapes a value for shell if it contains spaces or quotes.
@@ -108,6 +133,7 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliOptionValue(opts['--value']);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
+  telemetryClient.trackCliFlagNoSensitive(opts['--no-sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
@@ -497,14 +523,18 @@ export default async function add(client: Client, argv: string[]) {
       }
     }
   }
-  const choices = [
-    ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
+  const choices: Array<{
+    name: string;
+    value: string;
+    checked?: boolean;
+    disabled?: boolean | string;
+  }> = [
+    ...envTargetChoices
+      .filter(c => !existingTargets.has(c.value))
+      .map(c => ({ name: c.name, value: c.value })),
     ...customEnvironments
       .filter(c => !existingCustomEnvs.has(c.id))
-      .map(c => ({
-        name: c.slug,
-        value: c.id,
-      })),
+      .map(c => ({ name: c.slug, value: c.id })),
   ];
 
   if (!envGitBranch && choices.length === 0 && !opts['--force']) {
@@ -518,13 +548,50 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  let type: 'encrypted' | 'sensitive' = opts['--sensitive']
-    ? 'sensitive'
-    : 'encrypted';
+  const forceSensitive = Boolean(opts['--sensitive']);
+  const forceEncrypted = Boolean(opts['--no-sensitive']);
+
+  if (forceSensitive && forceEncrypted) {
+    output.error(
+      `--sensitive and --no-sensitive cannot be used together. Pick one.`
+    );
+    return 1;
+  }
+
+  // Detect team-level sensitive env var policy. Reads from the team object
+  // (cached). Only relevant when the linked org is a team.
+  let policyOn = false;
+  if (link.org.type === 'team') {
+    try {
+      const team = await getTeamById(client, link.org.id);
+      policyOn = team?.sensitiveEnvironmentVariablePolicy === 'on';
+    } catch {
+      // Non-fatal — policy detection is best-effort.
+    }
+  }
+
+  // When policy is on, Development is effectively disallowed because the
+  // team policy requires sensitive Environment Variables and Development
+  // does not support sensitive. Pre-check Production/Preview for the user
+  // and mark Development as disallowed in the interactive checkbox.
+  if (policyOn) {
+    for (const choice of choices) {
+      if (choice.value === 'development') {
+        choice.disabled = '(disallowed)';
+      } else if (choice.value === 'production' || choice.value === 'preview') {
+        choice.checked = true;
+      }
+    }
+  }
+
   let envValue: string;
 
   if (stdInput) {
-    envValue = stdInput;
+    const normalizedStdinValue = normalizeStdinEnvValue(stdInput);
+    envValue = normalizedStdinValue.value;
+    if (normalizedStdinValue.strippedTrailingNewline) {
+      output.log('Removed trailing newline from stdin input');
+    }
   } else if (valueFromFlag !== undefined) {
     envValue = valueFromFlag;
   } else {
@@ -543,15 +610,6 @@ export default async function add(client: Client, argv: string[]) {
           },
         ],
       });
-    }
-    if (type === 'encrypted') {
-      const isSensitive = await client.input.confirm(
-        `Your value will be encrypted. Mark as sensitive?`,
-        false
-      );
-      if (isSensitive) {
-        type = 'sensitive';
-      }
     }
     envValue = await client.input.password({
       message: `What's the value of ${envName}?`,
@@ -643,6 +701,106 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
+  const hasDevelopment = envTargets.includes('development');
+  const hasSensitiveCapable = envTargets.some(t => t !== 'development');
+
+  if (policyOn && hasDevelopment) {
+    const msg = `Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values. https://vercel.com/docs/environment-variables/sensitive-environment-variables#environment-variables-policy`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'development_disallowed_by_team_policy',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  if (forceSensitive && hasDevelopment) {
+    const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'sensitive_not_allowed_on_development',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  if (hasDevelopment && hasSensitiveCapable) {
+    const msg = `Development cannot be combined with other Environments because Development does not support sensitive Environment Variables. Run ${getCommandName(
+      'env add'
+    )} separately for Development.`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'mixed_development_and_sensitive_capable_targets',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  // At this point envTargets is either all-development or all non-development.
+  let finalType: EnvType = resolveTypeForTarget(
+    hasDevelopment ? 'development' : 'production',
+    { forceSensitive, forceEncrypted, policyOn }
+  );
+
+  // Ask whether to keep it sensitive only when the user didn't say, the
+  // policy isn't enforcing, and at least one target would actually use it.
+  const userWasExplicit = forceSensitive || forceEncrypted;
+  const canPromptForType =
+    !client.nonInteractive &&
+    !userWasExplicit &&
+    !policyOn &&
+    hasSensitiveCapable &&
+    !skipConfirm;
+  if (canPromptForType) {
+    output.log(
+      `Sensitive values cannot be retrieved later from the dashboard or CLI.`
+    );
+    const keepSensitive = await client.input.confirm(
+      `Make it sensitive?`,
+      true
+    );
+    if (!keepSensitive) {
+      finalType = 'encrypted';
+    }
+  }
+
+  if (policyOn && hasSensitiveCapable) {
+    if (forceEncrypted) {
+      // User asked for encrypted on Production/Preview, but the team policy
+      // will promote it to sensitive server-side regardless. Surface that so
+      // the user isn't surprised later.
+      output.warn(
+        `--no-sensitive is ignored: your team enforces sensitive Environment Variables for Production and Preview.`
+      );
+      finalType = 'sensitive';
+    } else if (!userWasExplicit) {
+      output.log(
+        `Your team requires sensitive Environment Variables for Production and Preview.`
+      );
+    }
+  }
+
   const upsert = opts['--force'] ? 'true' : '';
 
   const addStamp = stamp();
@@ -652,7 +810,7 @@ export default async function add(client: Client, argv: string[]) {
       client,
       project.id,
       upsert,
-      type,
+      finalType,
       envName,
       finalValue,
       envTargets,

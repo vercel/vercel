@@ -37,6 +37,7 @@ import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
+import { findSourceVercelConfigFile } from '../compile-vercel-config';
 import { frameworkList } from '@vercel/frameworks';
 import {
   vercelAuth,
@@ -315,6 +316,8 @@ export default async function setupAndLink(
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
   const rootServicesSetup = await getServicesSetupState(path);
+  const configFileName =
+    (await findSourceVercelConfigFile(path)) ?? 'vercel.json';
 
   try {
     let settings: ProjectSettings = {};
@@ -338,7 +341,10 @@ export default async function setupAndLink(
     // 2. Inferred services layout at the repo root -> prompt for deployment mode.
     // 3. Standard framework setup flow.
     if (rootServicesSetup.hasConfiguredServices) {
-      displayConfiguredServicesSetup(rootServicesSetup.detectServicesResult);
+      displayConfiguredServicesSetup(
+        rootServicesSetup.detectServicesResult,
+        configFileName
+      );
       settings.framework = 'services';
     } else if (rootInferredServicesChoice?.type === 'services') {
       settings.framework = 'services';
@@ -390,7 +396,8 @@ export default async function setupAndLink(
 
       if (selectedRootServicesSetup?.hasConfiguredServices) {
         displayConfiguredServicesSetup(
-          selectedRootServicesSetup.detectServicesResult
+          selectedRootServicesSetup.detectServicesResult,
+          configFileName
         );
         settings.framework = 'services';
       } else if (selectedRootInferredServicesChoice?.type === 'services') {
@@ -444,7 +451,8 @@ export default async function setupAndLink(
             {},
             framework,
             autoConfirm,
-            localConfigurationOverrides
+            localConfigurationOverrides,
+            configFileName
           );
         }
       }
