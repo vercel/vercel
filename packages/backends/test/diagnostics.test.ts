@@ -1485,3 +1485,64 @@ describe('diagnostics callback', () => {
     expect(files).toEqual({});
   });
 });
+
+// ─── framework field ──────────────────────────────────────────────────────────
+
+describe('generateProjectManifest — framework field', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('includes framework in manifest when provided', async () => {
+    writePackageJson(tempDir, { dependencies: { hono: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+      framework: 'hono',
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.framework).toBe('hono');
+  });
+
+  it('omits framework from manifest when not provided', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.framework).toBeUndefined();
+  });
+
+  it('omits framework from manifest when empty string provided', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+      framework: '',
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.framework).toBeUndefined();
+  });
+});
