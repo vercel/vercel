@@ -4531,6 +4531,49 @@ export const frameworks = [
     ],
   },
   {
+    name: '.NET',
+    slug: 'dotnet',
+    experimental: true,
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/dotnet.svg',
+    tagline:
+      '.NET is the free, open-source, cross-platform framework for building modern apps and powerful cloud services.',
+    description: 'A .NET application deployed as a serverless function.',
+    website: 'https://dotnet.microsoft.com',
+    useRuntime: { src: 'Program.cs', use: '@vercel/dotnet' },
+    ignoreRuntimes: ['@vercel/dotnet'],
+    detectors: {
+      every: [{ path: '*.csproj' }],
+      some: [{ path: 'Program.cs' }],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`dotnet restore`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`dotnet run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/Program',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,
