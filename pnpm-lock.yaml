@@ -1280,11 +1280,11 @@ importers:
         specifier: 0.24.6
         version: 0.24.6(typescript@4.9.5)
       typedoc-plugin-markdown:
-        specifier: 4.1.2
-        version: 4.1.2(typedoc@0.24.6)
+        specifier: 3.15.2
+        version: 3.15.2(typedoc@0.24.6)
       typedoc-plugin-mdn-links:
-        specifier: 3.2.3
-        version: 3.2.3(typedoc@0.24.6)
+        specifier: 3.0.3
+        version: 3.0.3(typedoc@0.24.6)
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -1427,11 +1427,11 @@ importers:
         specifier: 0.24.6
         version: 0.24.6(typescript@4.9.5)
       typedoc-plugin-markdown:
-        specifier: 4.1.2
-        version: 4.1.2(typedoc@0.24.6)
+        specifier: 3.15.2
+        version: 3.15.2(typedoc@0.24.6)
       typedoc-plugin-mdn-links:
-        specifier: 3.2.3
-        version: 3.2.3(typedoc@0.24.6)
+        specifier: 3.0.3
+        version: 3.0.3(typedoc@0.24.6)
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -2005,11 +2005,11 @@ importers:
         specifier: 0.24.6
         version: 0.24.6(typescript@4.9.5)
       typedoc-plugin-markdown:
-        specifier: 4.1.2
-        version: 4.1.2(typedoc@0.24.6)
+        specifier: 3.15.2
+        version: 3.15.2(typedoc@0.24.6)
       typedoc-plugin-mdn-links:
-        specifier: 3.2.3
-        version: 3.2.3(typedoc@0.24.6)
+        specifier: 3.0.3
+        version: 3.0.3(typedoc@0.24.6)
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -2036,11 +2036,11 @@ importers:
         specifier: 0.24.6
         version: 0.24.6(typescript@4.9.5)
       typedoc-plugin-markdown:
-        specifier: 4.1.2
-        version: 4.1.2(typedoc@0.24.6)
+        specifier: 3.15.2
+        version: 3.15.2(typedoc@0.24.6)
       typedoc-plugin-mdn-links:
-        specifier: 3.2.3
-        version: 3.2.3(typedoc@0.24.6)
+        specifier: 3.0.3
+        version: 3.0.3(typedoc@0.24.6)
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -20491,15 +20491,6 @@ packages:
       handlebars: 4.7.8
       typedoc: 0.24.6(typescript@4.9.5)
       typedoc-plugin-mdn-links: 3.2.3(typedoc@0.24.6)
-    dev: true
-
-  /typedoc-plugin-markdown@4.1.2(typedoc@0.24.6):
-    resolution: {integrity: sha512-jZt8jmQLbmg9jmFQyfJrjLf6ljRwJ5fKMeqmFr0oPXmeX5ZRYYtCe6y/058vDESE/R+TwEvNua6SuG43UBbszw==}
-    engines: {node: '>= 18'}
-    peerDependencies:
-      typedoc: 0.26.x
-    dependencies:
-      typedoc: 0.24.6(typescript@4.9.5)
     dev: true
 
   /typedoc-plugin-mdn-links@3.0.3(typedoc@0.24.6):

@@ -57,8 +57,8 @@ interface PythonDependencyExternalizerOptions {
   uvLockPath: string | null;
   uvProjectDir: string | null;
   projectName: string | undefined;
-  pythonMajor: number;
-  pythonMinor: number;
+  pythonMajor: number | undefined;
+  pythonMinor: number | undefined;
   pythonPath: string;
   hasCustomCommand: boolean;
   alwaysBundlePackages?: string[];
@@ -77,8 +77,8 @@ export class PythonDependencyExternalizer {
   private uvLockPath: string | null;
   private uvProjectDir: string | null;
   private projectName: string | undefined;
-  private pythonMajor: number;
-  private pythonMinor: number;
+  private pythonMajor: number | undefined;
+  private pythonMinor: number | undefined;
   private pythonPath: string;
   private hasCustomCommand: boolean;
   private alwaysBundlePackages: string[];
@@ -541,6 +541,12 @@ export class PythonDependencyExternalizer {
     publicPackageNames: string[]
   ): Promise<string[]> {
     const platform = detectPlatform();
+
+    // Skip wheel-compat filtering in dev; the bundle isn't deployed.
+    if (this.pythonMajor === undefined || this.pythonMinor === undefined) {
+      debug('Skipping wheel compatibility check: dev mode');
+      return [];
+    }
 
     // Determine which packages are actually reachable on the target platform
     // by traversing the dependency graph and evaluating environment markers.

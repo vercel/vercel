@@ -53,13 +53,13 @@ export async function create(
   }
 
   // Generate request code and attempt to create the managed client directly
-  const { original, hash } = generateRequestCode();
+  const { verifier, requestCode } = generateRequestCode();
   const link = await getProjectLink(client, client.cwd);
 
   const body: JSONObject = {
     service: serviceType,
     name,
-    request_code: hash,
+    request_code: requestCode,
   };
   if (link?.projectId) {
     body.projectId = link.projectId;
@@ -101,7 +101,7 @@ export async function create(
     );
 
     output.spinner('Waiting for you to complete setup in the browser...');
-    const resultFromBrowser = await awaitConnexResult(client, original);
+    const resultFromBrowser = await awaitConnexResult(client, verifier);
     output.stopSpinner();
 
     if (
