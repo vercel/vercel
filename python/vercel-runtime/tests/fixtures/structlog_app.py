@@ -9,6 +9,11 @@ async def app(scope, receive, send):
 
     if scope.get("path") == "/log-structlog":
         log.info("structlog info message", user={"id": 1, "username": "alice"})
+    elif scope.get("path") == "/log-structlog-exc":
+        try:
+            raise ValueError("something went wrong")
+        except ValueError:
+            log.exception("structlog exc message")
 
     await send(
         {
