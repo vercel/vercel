@@ -7,6 +7,11 @@ async def app(scope, receive, send):
 
     if scope.get("path") == "/log-loguru":
         logger.info("loguru info message", user={"id": 1, "username": "alice"})
+    elif scope.get("path") == "/log-loguru-exc":
+        try:
+            raise ValueError("something went wrong")
+        except ValueError:
+            logger.exception("loguru exc message")
 
     await send(
         {
