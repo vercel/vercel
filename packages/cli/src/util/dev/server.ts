@@ -186,10 +186,7 @@ export default class DevServer {
     if (!this.services || this.services.length === 0) {
       return false;
     }
-    if (this.services.length > 1) {
-      return true;
-    }
-    return this.services[0].type !== 'web';
+    return true;
   }
 
   constructor(cwd: string, options: DevServerOptions) {
