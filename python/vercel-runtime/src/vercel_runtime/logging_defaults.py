@@ -63,6 +63,15 @@ def configure_structlog() -> None:
             processors=[
                 _structlog_mod.contextvars.merge_contextvars,
                 _structlog_mod.processors.add_log_level,
+                _structlog_mod.processors.CallsiteParameterAdder(
+                    [
+                        _structlog_mod.processors.CallsiteParameter.MODULE,
+                        _structlog_mod.processors.CallsiteParameter.FILENAME,
+                        _structlog_mod.processors.CallsiteParameter.LINENO,
+                        _structlog_mod.processors.CallsiteParameter.FUNC_NAME,
+                    ],
+                    additional_ignores=["vercel_runtime"],
+                ),
                 _structlog_mod.processors.StackInfoRenderer(),
                 _structlog_mod.processors.ExceptionRenderer(),
                 _structlog_mod.processors.TimeStamper(fmt="iso"),
