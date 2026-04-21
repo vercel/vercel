@@ -14,14 +14,21 @@ const BUN_VERSION = '1.1.38';
 
 type BunTargetTriple =
   | 'linux-x64'
+  | 'linux-x64-baseline'
   | 'linux-aarch64'
   | 'darwin-x64'
   | 'darwin-aarch64'
   | 'windows-x64';
 
 const BUN_SHA256: Record<BunTargetTriple, string> = {
+  // The AVX2 build is kept in the map for reference but is not selected by
+  // default — the baseline build runs on a broader set of Linux x64 CPUs
+  // (including Amazon Linux 2023 / Lambda-class hardware) and is the safer
+  // default when we're the ones installing Bun.
   'linux-x64':
     'a61da5357e28d4977fccd4851fed62ff4da3ea33853005c7dd93dac80bc53932',
+  'linux-x64-baseline':
+    '353e2e6d4086a09eeee984d2ed61736dcd905838ede51b82689fd7b3e95def90',
   'linux-aarch64':
     '3b08fd0b31f745509e1fed9c690c80d1a32ef2b3c8d059583f643f696639bd21',
   'darwin-x64':
@@ -45,7 +52,9 @@ async function spawnAsync(
 function detectBunTriple(): BunTargetTriple {
   const { platform, arch } = process;
   if (platform === 'linux') {
-    if (arch === 'x64') return 'linux-x64';
+    // Prefer the baseline build on Linux x64 for broad CPU compatibility
+    // (AVX2 isn't guaranteed on Amazon Linux 2023 / Lambda-class instances).
+    if (arch === 'x64') return 'linux-x64-baseline';
     if (arch === 'arm64') return 'linux-aarch64';
   } else if (platform === 'darwin') {
     if (arch === 'x64') return 'darwin-x64';
@@ -107,9 +116,15 @@ async function downloadBun(): Promise<string> {
 }
 
 /**
- * Get the name of Bun's binary, installing it if necessary. We check if
- * Bun is available in the system PATH. If not, we download the pinned Bun
- * release and verify its SHA-256 before placing it on disk.
+ * Get the name of Bun's binary, installing it if necessary.
+ *
+ * Probe order:
+ *   1. `bun --version` on PATH — on Vercel's standard build container, Bun
+ *      is pre-installed under `/bun1/bun` which is on PATH, so the probe
+ *      succeeds and no download runs.
+ *   2. `bun --version` at the default install location (`~/.bun/bin/bun`).
+ *   3. Download the pinned Bun release (SHA-256 verified) and extract to
+ *      `~/.bun/bin/`.
  *
  * @returns The name of the Bun binary (either 'bun' or 'bun.exe')
  */

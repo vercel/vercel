@@ -81,7 +81,6 @@ export async function buildStandaloneServer({
     modulePath,
     opts: { cwd: workPath, env },
     workPath,
-    isDev: meta.isDev,
   });
 
   const outDir = await getWriteableDirectory();
@@ -136,7 +135,6 @@ export async function buildStandaloneServer({
       modulePath: bootstrapBuildDir,
       opts: { cwd: bootstrapBuildDir, env },
       workPath: bootstrapBuildDir,
-      isDev: meta.isDev,
     });
 
     await bootstrapGo.build('.', bootstrapPath);

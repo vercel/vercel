@@ -97,11 +97,35 @@ async function downloadRustToolchain(): Promise<void> {
   }
 }
 
+/**
+ * Ensures a usable Rust toolchain is available.
+ *
+ * The builder only needs `cargo` (+ `rustc`) on PATH, so we accept any
+ * image that pre-installs Rust — whether via rustup, distro packages, or a
+ * standalone installer. On Vercel's standard build container, rustup and a
+ * default toolchain are pre-installed under `/rust/bin`; the probe below
+ * finds them and skips the rustup-init download entirely.
+ *
+ * Fallback order (first match wins):
+ *   1. `cargo -V` succeeds → use pre-installed Rust as-is.
+ *   2. `rustup -V` succeeds → use pre-installed rustup.
+ *   3. Download SHA-256-verified `rustup-init` and let it install the
+ *      stable toolchain.
+ */
 export const installRustToolchain = async (): Promise<void> => {
   try {
-    await execa('rustup', ['-V'], { stdio: 'ignore' });
-    debug('Rust Toolchain is already installed, skipping download');
-  } catch (_err) {
-    await downloadRustToolchain();
+    await execa('cargo', ['-V'], { stdio: 'ignore' });
+    debug('Rust: pre-installed cargo detected; skipping rustup-init install');
+    return;
+  } catch {
+    // cargo missing — continue probing for rustup below.
   }
+  try {
+    await execa('rustup', ['-V'], { stdio: 'ignore' });
+    debug('Rust: pre-installed rustup detected; skipping rustup-init install');
+    return;
+  } catch {
+    // rustup missing — fall through to verified download.
+  }
+  await downloadRustToolchain();
 };

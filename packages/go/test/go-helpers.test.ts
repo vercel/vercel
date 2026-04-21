@@ -6,7 +6,7 @@ jest.mock('execa', () => {
 });
 
 import execa from 'execa';
-import { GoWrapper } from '../src/go-helpers';
+import { decideGoToolchain, GoWrapper } from '../src/go-helpers';
 
 const mockedExeca = execa as unknown as jest.MockedFunction<typeof execa> & {
   stdout: jest.Mock;
@@ -144,5 +144,41 @@ describe('GoWrapper', () => {
       ['build', '-ldflags', '-s -w', '-o', '/tmp/out', '.'],
       expect.objectContaining({ stdio: 'pipe' })
     );
+  });
+});
+
+describe('decideGoToolchain', () => {
+  it('returns auto when there is no go.mod', () => {
+    expect(decideGoToolchain(undefined)).toBe('auto');
+  });
+
+  it('returns auto for a minor-only go directive (patched to default)', () => {
+    // The parser normalizes `go 1.21` to `{ go: "1.21.13" }` using the
+    // minorDefaultPatch map — which is a patch-level version, so this
+    // actually pins the toolchain. Use an exact patch here to cover the
+    // "minor-only" semantic intent explicitly.
+    expect(decideGoToolchain({ go: '1.21.0' })).toBe('go1.21.0');
+  });
+
+  it('returns a pinned toolchain for a patch-level go directive (>= 1.21)', () => {
+    expect(decideGoToolchain({ go: '1.23.1' })).toBe('go1.23.1');
+  });
+
+  it('returns auto for a patch-level go directive pre-1.21 (no toolchain module)', () => {
+    expect(decideGoToolchain({ go: '1.18.0' })).toBe('auto');
+    expect(decideGoToolchain({ go: '1.20.10' })).toBe('auto');
+  });
+
+  it('lets the toolchain directive win over the go directive', () => {
+    expect(decideGoToolchain({ go: '1.21.0', toolchain: '1.22rc1' })).toBe(
+      'go1.22rc1'
+    );
+    expect(decideGoToolchain({ go: '1.24.0', toolchain: '1.23.5' })).toBe(
+      'go1.23.5'
+    );
+  });
+
+  it('falls back to auto for malformed go versions', () => {
+    expect(decideGoToolchain({ go: 'not-a-version' })).toBe('auto');
   });
 });

@@ -47,13 +47,36 @@ beforeEach(() => {
 });
 
 describe('installRustToolchain', () => {
-  it('skips download when system rustup is already installed', async () => {
-    execaMock.mockResolvedValueOnce({ stdout: 'rustup 1.27.1', exitCode: 0 });
+  it('skips download when cargo is already on PATH', async () => {
+    execaMock.mockResolvedValueOnce({ stdout: 'cargo 1.82.0', exitCode: 0 });
 
     await installRustToolchain();
 
     expect(execaMock).toHaveBeenCalledTimes(1);
     expect(execaMock).toHaveBeenCalledWith(
+      'cargo',
+      ['-V'],
+      expect.objectContaining({ stdio: 'ignore' })
+    );
+    expect(buildUtilsMock.__mocks.downloadTo).not.toHaveBeenCalled();
+  });
+
+  it('skips download when rustup is installed but cargo is not on PATH', async () => {
+    execaMock
+      .mockRejectedValueOnce(new Error('cargo not found'))
+      .mockResolvedValueOnce({ stdout: 'rustup 1.27.1', exitCode: 0 });
+
+    await installRustToolchain();
+
+    expect(execaMock).toHaveBeenCalledTimes(2);
+    expect(execaMock).toHaveBeenNthCalledWith(
+      1,
+      'cargo',
+      ['-V'],
+      expect.objectContaining({ stdio: 'ignore' })
+    );
+    expect(execaMock).toHaveBeenNthCalledWith(
+      2,
       'rustup',
       ['-V'],
       expect.objectContaining({ stdio: 'ignore' })
@@ -61,15 +84,16 @@ describe('installRustToolchain', () => {
     expect(buildUtilsMock.__mocks.downloadTo).not.toHaveBeenCalled();
   });
 
-  it('downloads rustup-init with SHA-256 verification when rustup is missing', async () => {
+  it('downloads rustup-init with SHA-256 verification when neither cargo nor rustup is present', async () => {
     execaMock
+      .mockRejectedValueOnce(new Error('cargo not found'))
       .mockRejectedValueOnce(new Error('rustup not found'))
       .mockResolvedValueOnce({ stdout: 'info: installed', exitCode: 0 });
 
     await installRustToolchain();
 
-    // First call: probe for system rustup. Second call: rustup-init binary.
-    expect(execaMock).toHaveBeenCalledTimes(2);
+    // cargo probe, rustup probe, rustup-init execution = 3 execa calls.
+    expect(execaMock).toHaveBeenCalledTimes(3);
     expect(buildUtilsMock.__mocks.downloadTo).toHaveBeenCalledTimes(1);
 
     const [url, destFile] = buildUtilsMock.__mocks.downloadTo.mock.calls[0];
@@ -79,7 +103,9 @@ describe('installRustToolchain', () => {
   });
 
   it('wraps download errors in a helpful message', async () => {
-    execaMock.mockRejectedValueOnce(new Error('rustup not found'));
+    execaMock
+      .mockRejectedValueOnce(new Error('cargo not found'))
+      .mockRejectedValueOnce(new Error('rustup not found'));
     buildUtilsMock.__mocks.downloadTo.mockRejectedValueOnce(
       new Error('sha mismatch')
     );
