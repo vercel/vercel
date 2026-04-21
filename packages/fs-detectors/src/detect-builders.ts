@@ -59,6 +59,7 @@ export interface Options {
   featHandleMiss?: boolean;
   bunVersion?: string;
   workPath?: string;
+  target?: string;
 }
 
 // We need to sort the file paths by alphabet to make
@@ -133,6 +134,7 @@ export async function detectBuilders(
   if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
+      target: options.target,
     });
   }
 

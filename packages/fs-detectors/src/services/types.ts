@@ -32,6 +32,11 @@ export interface DetectServicesOptions {
    * If provided, vercel.json is read from this path.
    */
   workPath?: string;
+  /**
+   * Deployment target/environment the generated routes are for.
+   * Preview-only service aliases are emitted only for non-production targets.
+   */
+  target?: string;
 }
 
 export interface ServicesRoutes {

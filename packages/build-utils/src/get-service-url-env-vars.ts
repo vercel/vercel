@@ -20,6 +20,7 @@ export interface GetServiceUrlEnvVarsOptions {
   deploymentUrl?: string;
   origin?: string;
   envPrefix?: string;
+  target?: string;
 }
 
 /**
@@ -55,6 +56,23 @@ function supportsPreviewSubdomainPrefixes(deploymentUrl: string): boolean {
   return !PUBLIC_PREVIEW_DEPLOYMENT_SUFFIXES.some(
     suffix => normalized === suffix.slice(1) || normalized.endsWith(suffix)
   );
+}
+
+function isPreviewTarget(target?: string): boolean {
+  return typeof target === 'string' && target !== 'production';
+}
+
+function isGeneratedSubdomainMount(service: Service): boolean {
+  return (
+    service.type === 'web' &&
+    typeof service.subdomain === 'string' &&
+    service.subdomain.length > 0 &&
+    service.routePrefixSource === 'generated'
+  );
+}
+
+function getPreviewAliasPath(service: Service): string {
+  return `/__preview/${service.subdomain}`;
 }
 
 /**
@@ -96,6 +114,7 @@ export function getServiceUrlEnvVars(
     deploymentUrl,
     origin,
     envPrefix,
+    target,
   } = options;
 
   const baseUrl = origin || deploymentUrl;
@@ -123,14 +142,19 @@ export function getServiceUrlEnvVars(
     }
 
     const baseEnvVarName = serviceNameToEnvVar(service.name);
+    const isPreviewSubdomainMount =
+      isPreviewTarget(target) && isGeneratedSubdomainMount(service);
+    const previewAliasPath = isPreviewSubdomainMount
+      ? getPreviewAliasPath(service)
+      : undefined;
+    const publicRoutePath = previewAliasPath || service.routePrefix;
     const absoluteUrl =
+      isPreviewSubdomainMount &&
       !origin &&
       deploymentUrl &&
-      typeof service.subdomain === 'string' &&
-      service.subdomain.length > 0 &&
       supportsPreviewSubdomainPrefixes(deploymentUrl)
         ? `https://${service.subdomain}---${deploymentUrl}`
-        : computeServiceUrl(baseUrl, service.routePrefix, !!origin);
+        : computeServiceUrl(baseUrl, publicRoutePath, !!origin);
 
     const effectiveBaseEnvVarName = envPrefix
       ? `${envPrefix}${baseEnvVarName}`
@@ -152,7 +176,7 @@ export function getServiceUrlEnvVars(
         ? `${prefix}${envPrefix}${baseEnvVarName}`
         : `${prefix}${baseEnvVarName}`;
       if (!(prefixedEnvVarName in currentEnv)) {
-        envVars[prefixedEnvVarName] = service.routePrefix;
+        envVars[prefixedEnvVarName] = publicRoutePath;
       }
     }
   }

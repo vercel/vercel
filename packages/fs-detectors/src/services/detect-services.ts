@@ -100,7 +100,7 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
 export async function detectServices(
   options: DetectServicesOptions
 ): Promise<DetectServicesResult> {
-  const { fs, workPath } = options;
+  const { fs, workPath, target } = options;
 
   // Scope filesystem to workPath if provided
   const scopedFs = workPath ? fs.chdir(workPath) : fs;
@@ -175,7 +175,7 @@ export async function detectServices(
         scopedFs,
         'generated'
       );
-      const routes = generateServicesRoutes(result.services);
+      const routes = generateServicesRoutes(result.services, target);
       const resolved: ResolvedServicesResult = {
         services: result.services,
         source: 'auto-detected',
@@ -234,7 +234,7 @@ export async function detectServices(
   );
 
   // Generate routes
-  const routes = generateServicesRoutes(result.services);
+  const routes = generateServicesRoutes(result.services, target);
 
   return withResolvedResult({
     services: result.services,
@@ -272,7 +272,10 @@ export async function detectServices(
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
-export function generateServicesRoutes(services: Service[]): ServicesRoutes {
+export function generateServicesRoutes(
+  services: Service[],
+  target?: string
+): ServicesRoutes {
   const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
@@ -296,8 +299,9 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
     const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
-    const productionHostCondition = getHostCondition(service);
-    const previewHostCondition = getPreviewHostCondition(service);
+    const productionHostCondition = getHostCondition(service, target);
+    const previewHostCondition = getPreviewHostCondition(service, target);
+    const previewAliasPath = getPreviewAliasPath(service, target);
 
     if (productionHostCondition && routePrefix !== '/') {
       const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
@@ -331,6 +335,21 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         src: `^/${explicitHostPrefixGuard}(.*)$`,
         dest: `${normalizedRoutePrefix}/$1`,
         has: previewHostCondition,
+        check: true,
+      });
+    }
+
+    if (previewAliasPath && routePrefix !== '/') {
+      const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
+      const escapedPreviewAliasPath = escapeRegex(previewAliasPath);
+      rewrites.push({
+        src: `^${escapedPreviewAliasPath}/?$`,
+        dest: normalizedRoutePrefix,
+        check: true,
+      });
+      rewrites.push({
+        src: `^${escapedPreviewAliasPath}/(.*)$`,
+        dest: `${normalizedRoutePrefix}/$1`,
         check: true,
       });
     }
@@ -431,8 +450,27 @@ function getExplicitHostPrefixNegativeLookahead(
   return `(?!(?:${explicitPrefixes.join('|')})(?:/|$))`;
 }
 
-function getHostCondition(service: Service): HasField | undefined {
+function isPreviewTarget(target?: string): boolean {
+  return typeof target === 'string' && target !== 'production';
+}
+
+function isGeneratedSubdomainMount(service: Service): boolean {
+  return (
+    service.type === 'web' &&
+    typeof service.subdomain === 'string' &&
+    service.subdomain.length > 0 &&
+    service.routePrefixSource === 'generated'
+  );
+}
+
+function getHostCondition(
+  service: Service,
+  target?: string
+): HasField | undefined {
   if (service.type !== 'web') {
+    return undefined;
+  }
+  if (isPreviewTarget(target)) {
     return undefined;
   }
   if (typeof service.subdomain === 'string' && service.subdomain.length > 0) {
@@ -441,12 +479,22 @@ function getHostCondition(service: Service): HasField | undefined {
   return undefined;
 }
 
-function getPreviewHostCondition(service: Service): HasField | undefined {
-  if (service.type !== 'web') {
+function getPreviewHostCondition(
+  service: Service,
+  target?: string
+): HasField | undefined {
+  if (!isPreviewTarget(target) || !isGeneratedSubdomainMount(service)) {
     return undefined;
   }
-  if (typeof service.subdomain === 'string' && service.subdomain.length > 0) {
-    return [{ type: 'host', value: { pre: `${service.subdomain}---` } }];
+  return [{ type: 'host', value: { pre: `${service.subdomain}---` } }];
+}
+
+function getPreviewAliasPath(
+  service: Service,
+  target?: string
+): string | undefined {
+  if (!isPreviewTarget(target) || !isGeneratedSubdomainMount(service)) {
+    return undefined;
   }
-  return undefined;
+  return `/__preview/${service.subdomain}`;
 }

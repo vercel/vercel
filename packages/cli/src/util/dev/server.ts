@@ -622,6 +622,7 @@ export default class DevServer {
         cleanUrls,
         trailingSlash,
         workPath: this.cwd,
+        target: 'preview',
       });
       let {
         builders,
