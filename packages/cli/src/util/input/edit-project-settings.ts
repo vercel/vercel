@@ -28,7 +28,8 @@ export async function editProjectSettings(
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
-  localConfigurationOverrides: PartialProjectSettings | null
+  localConfigurationOverrides: PartialProjectSettings | null,
+  configFileName = 'vercel.json'
 ): Promise<ProjectSettings> {
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
@@ -55,7 +56,7 @@ export async function editProjectSettings(
       if (localConfigValue) settings[setting] = localConfigValue;
     }
 
-    output.print('Local settings detected in vercel.json:\n');
+    output.print(`Local settings detected in ${configFileName}:\n`);
 
     // Print provided overrides including framework
     for (const setting of settingKeys) {

@@ -27,7 +27,7 @@ export default async function discard(client: Client, argv: string[]) {
   output.spinner(`Fetching draft changes for ${chalk.bold(project.name)}`);
 
   try {
-    const { draft } = await listFirewallConfigs(client, project.id, {
+    const { active, draft } = await listFirewallConfigs(client, project.id, {
       teamId,
     });
 
@@ -36,10 +36,12 @@ export default async function discard(client: Client, argv: string[]) {
       return 0;
     }
 
+    const activeRulesMap = new Map((active?.rules || []).map(r => [r.id, r]));
+
     output.print(
       `\n${chalk.bold(`Changes to be discarded (${draft.changes.length}):`)}\n\n`
     );
-    output.print(formatDiffOutput(draft.changes));
+    output.print(formatDiffOutput(draft.changes, activeRulesMap));
     output.print('\n\n');
 
     const confirmed = await confirmAction(

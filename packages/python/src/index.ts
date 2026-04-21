@@ -265,9 +265,13 @@ export const build: BuildVX = async ({
       entrypoint
         ? {
             filePath: entrypoint,
-            // For cron services, the WSGI variable is always 'app' (created dynamically).
+            // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
             // For other services, handlerFunction is used as the entrypoint variable name.
-            varName: service?.type === 'cron' ? undefined : handlerFunction,
+            varName:
+              service?.type === 'cron' ||
+              (service?.type === 'job' && service.trigger === 'schedule')
+                ? undefined
+                : handlerFunction,
           }
         : undefined,
       service
@@ -799,6 +803,7 @@ from vercel_runtime.vc_init import vc_handler
         pythonPackage,
         pythonVersion,
         uvLockPath,
+        framework,
       });
     } catch (err) {
       debug(

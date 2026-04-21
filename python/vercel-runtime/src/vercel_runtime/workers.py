@@ -33,7 +33,13 @@ VERCEL_CELERY_BROKER_URL = "vercel://"
 
 def is_worker_service() -> bool:
     svc_type = os.environ.get("VERCEL_SERVICE_TYPE") or ""
-    return svc_type.strip().lower() == "worker"
+    normalized_type = svc_type.strip().lower()
+    if normalized_type == "worker":
+        return True
+
+    svc_trigger = os.environ.get("VERCEL_SERVICE_TRIGGER") or ""
+    normalized_trigger = svc_trigger.strip().lower()
+    return normalized_type == "job" and normalized_trigger == "queue"
 
 
 def has_worker_services() -> bool:

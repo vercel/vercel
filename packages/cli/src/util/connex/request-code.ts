@@ -14,14 +14,22 @@ const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 30 * 60 * 1000;
 const MAX_EARLY_404_COUNT = 3;
 
-export function generateRequestCode(): { original: string; hash: string } {
-  const original = randomBytes(37).toString('base64url');
-  const hash = createHash('sha256').update(original).digest('base64url');
-  return { original, hash };
+/**
+ * Generates a PKCE-like pair: `verifier` is the random secret kept by the
+ * CLI and used to poll for the result; `requestCode` is its SHA-256 hash
+ * sent to the API and used as the Redis lookup key.
+ */
+export function generateRequestCode(): {
+  verifier: string;
+  requestCode: string;
+} {
+  const verifier = randomBytes(37).toString('base64url');
+  const requestCode = createHash('sha256').update(verifier).digest('base64url');
+  return { verifier, requestCode };
 }
 
 /**
- * Polls `GET /v1/connex/result/{code}` until the request code resolves
+ * Polls `GET /v1/connex/result/{verifier}` until the request code resolves
  * to success or error, or the timeout is reached.
  *
  * Returns the result data on success, or null on failure (error is
@@ -29,7 +37,7 @@ export function generateRequestCode(): { original: string; hash: string } {
  */
 export async function awaitConnexResult(
   client: Client,
-  originalCode: string
+  verifier: string
 ): Promise<Record<string, unknown> | null> {
   const deadline = Date.now() + MAX_POLL_DURATION_MS;
   let early404Count = 0;
@@ -39,7 +47,7 @@ export async function awaitConnexResult(
     await sleep(POLL_INTERVAL_MS);
     try {
       const result = await client.fetch<ConnexResult>(
-        `/v1/connex/result/${encodeURIComponent(originalCode)}`
+        `/v1/connex/result/${encodeURIComponent(verifier)}`
       );
 
       if (result.status === 'success' && result.data) {

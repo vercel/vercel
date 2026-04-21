@@ -173,6 +173,10 @@ export const packageManifestSchema = {
       type: 'string',
       description: 'Runtime identifier, e.g. "python", "node".',
     },
+    framework: {
+      type: 'string',
+      description: 'Detected framework slug, e.g. "fastapi", "flask", "hono".',
+    },
     runtimeVersion: {
       type: 'object',
       additionalProperties: false,

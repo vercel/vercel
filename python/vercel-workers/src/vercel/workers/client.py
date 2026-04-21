@@ -279,7 +279,10 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
     return {"messageId": message_id}
 
 
-def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], bytes]:
+def handle_queue_callback(
+    raw_body: bytes,
+    environ: dict[str, Any] | None = None,
+) -> tuple[int, list[tuple[str, str]], bytes]:
     """
     Core callback handler used by both WSGI/ASGI wrappers.
 
@@ -295,7 +298,19 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
         visibility_timeout_seconds = int(os.environ.get("VQS_VISIBILITY_TIMEOUT", "30"))
         refresh_interval_seconds = float(os.environ.get("VQS_VISIBILITY_REFRESH_INTERVAL", "10"))
 
-        queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
+        is_v2beta = callback.is_v2beta_callback(environ or {})
+
+        if is_v2beta:
+            v2 = callback.parse_v2beta_callback(raw_body, environ or {})
+            queue_name = v2["queueName"]
+            consumer_group = v2["consumerGroup"]
+            message_id = v2["messageId"]
+            receipt_handle = v2["receiptHandle"]
+            delivery_count = v2["deliveryCount"]
+            created_at = v2["createdAt"]
+            payload: Any = v2["payload"]
+        else:
+            queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
 
         # Fail fast if no workers match this topic/consumer.
         if not _select_subscriptions(queue_name, consumer_group):
@@ -308,12 +323,13 @@ def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], 
                 },
             )
 
-        payload, delivery_count, created_at, receipt_handle = callback.receive_message_by_id(
-            queue_name,
-            consumer_group,
-            message_id,
-            visibility_timeout_seconds=visibility_timeout_seconds,
-        )
+        if not is_v2beta:
+            payload, delivery_count, created_at, receipt_handle = callback.receive_message_by_id(
+                queue_name,
+                consumer_group,
+                message_id,
+                visibility_timeout_seconds=visibility_timeout_seconds,
+            )
 
         metadata: MessageMetadata = {
             "messageId": message_id,
@@ -414,9 +430,19 @@ def get_queue_base_url() -> str:
 
     Mirrors the JS client behaviour:
       - VERCEL_QUEUE_BASE_URL environment variable
-      - default to "https://vercel-queue.com"
+      - if VERCEL_REGION environment variable is set then routes to
+        region specific endpoint, e.g. "https://iad1.vercel-queue.com"
+      - otherwise to "https://vercel-queue.com"
     """
-    return os.environ.get("VERCEL_QUEUE_BASE_URL", "https://vercel-queue.com").rstrip("/")
+    base_url = os.environ.get("VERCEL_QUEUE_BASE_URL")
+    if base_url:
+        return base_url.rstrip("/")
+
+    region = os.environ.get("VERCEL_REGION")
+    if region:
+        return f"https://{region}.vercel-queue.com"
+    else:
+        return "https://vercel-queue.com"
 
 
 def get_queue_base_path() -> str:

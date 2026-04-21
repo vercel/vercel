@@ -131,9 +131,7 @@ if (process.env.FF_GUIDANCE_MODE) {
   commandsStructs.push(guidanceCommand);
 }
 
-if (process.env.FF_METRICS) {
-  commandsStructs.push(metricsCommand);
-}
+commandsStructs.push(metricsCommand);
 
 if (process.env.FF_CONNEX_ENABLED) {
   commandsStructs.push(connexCommand);

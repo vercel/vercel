@@ -1,5 +1,201 @@
 # vercel
 
+## 51.8.0
+
+### Minor Changes
+
+- `vercel env add` now defaults Environment Variables to **sensitive** on Production and Preview. Sensitive values are encrypted at rest and cannot be retrieved later via the dashboard or CLI; they are still resolved for builds, deployments, `vercel env pull`, and runtime. ([#16041](https://github.com/vercel/vercel/pull/16041))
+
+  Behavior per target:
+
+  - **Production** or **Preview**: defaults to `sensitive`. Pass `--no-sensitive` to opt back in to the previous `encrypted` behavior (value remains readable later).
+  - **Development**: always stored as `encrypted` (sensitive is not supported by the Vercel API for Development). Passing `--sensitive` alongside a Development target now errors up-front instead of silently falling back.
+  - **Mixed selection** (e.g., interactive checkbox picks `production + preview + development`): errors and asks you to run `vercel env add` separately for Development, because Development cannot share a record type with Production/Preview.
+
+  Flag summary:
+
+  - `--sensitive`: unchanged in meaning (request a sensitive variable); now errors when combined with Development.
+  - `--no-sensitive`: new; opt out of the new default for Production/Preview.
+  - `--sensitive --no-sensitive` together: errors.
+
+  On teams that enable the "Enforce Sensitive Environment Variables" policy in team settings, the CLI now reads the policy from the team object and notes in the output that the policy is active; the server already promotes Production/Preview variables to sensitive silently, and the CLI's own logs are now honest about it. Passing `--no-sensitive` on a policy-on team for Production/Preview now emits a warning — the flag is a no-op because the server promotes the variable regardless — and the CLI sends `type: 'sensitive'` so its own `--debug` output matches what gets stored.
+
+### Patch Changes
+
+- Updated dependencies [[`c1866cf1add2107f91cae8292e38e4854bfe0aca`](https://github.com/vercel/vercel/commit/c1866cf1add2107f91cae8292e38e4854bfe0aca)]:
+  - @vercel/build-utils@13.19.1
+  - @vercel/backends@0.1.2
+  - @vercel/elysia@0.1.70
+  - @vercel/express@0.1.80
+  - @vercel/fastify@0.1.73
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.79
+  - @vercel/hono@0.2.73
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.53
+  - @vercel/nestjs@0.2.74
+  - @vercel/next@4.16.8
+  - @vercel/node@5.7.12
+  - @vercel/python@6.35.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.1
+  - @vercel/static-build@2.9.20
+
+## 51.7.0
+
+### Minor Changes
+
+- [detect-services] If a vercel.toml exists, update the vercel.toml ([#15895](https://github.com/vercel/vercel/pull/15895))
+
+- Use correct filename in messages when config file is not vercel.json ([#15893](https://github.com/vercel/vercel/pull/15893))
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Include `action` and `resource` fields from API 403 responses in non-interactive agent error payloads. ([#15940](https://github.com/vercel/vercel/pull/15940))
+
+- Use POST for `vercel connex create` with a browser registration fallback. ([#16026](https://github.com/vercel/vercel/pull/16026))
+
+- Add table formatting for OpenAPI CLI responses. ([#16011](https://github.com/vercel/vercel/pull/16011))
+
+  Renders API JSON responses as CLI tables and cards with relative timestamp formatting, null/undefined display as `--`, human-readable column headers, and configurable display columns via `VercelCliTableDisplay`.
+
+- Updated dependencies [[`93be6d188176cdd4451a6c62155f3ccd7dfa89e1`](https://github.com/vercel/vercel/commit/93be6d188176cdd4451a6c62155f3ccd7dfa89e1), [`0793b7d31e4ff21dd12ff727f2906be2fd63fe3e`](https://github.com/vercel/vercel/commit/0793b7d31e4ff21dd12ff727f2906be2fd63fe3e)]:
+  - @vercel/build-utils@13.19.0
+  - @vercel/python@6.35.0
+  - @vercel/backends@0.1.1
+  - @vercel/elysia@0.1.69
+  - @vercel/express@0.1.79
+  - @vercel/fastify@0.1.72
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.78
+  - @vercel/hono@0.2.72
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.52
+  - @vercel/nestjs@0.2.73
+  - @vercel/next@4.16.8
+  - @vercel/node@5.7.11
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.1
+  - @vercel/static-build@2.9.19
+
+## 51.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`055f6239a4fe763b9f3b33cfbb5baa2e0e214767`](https://github.com/vercel/vercel/commit/055f6239a4fe763b9f3b33cfbb5baa2e0e214767)]:
+  - @vercel/build-utils@13.18.0
+  - @vercel/backends@0.1.0
+  - @vercel/python@6.34.0
+  - @vercel/elysia@0.1.68
+  - @vercel/express@0.1.78
+  - @vercel/fastify@0.1.71
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.77
+  - @vercel/hono@0.2.71
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.51
+  - @vercel/nestjs@0.2.72
+  - @vercel/next@4.16.8
+  - @vercel/node@5.7.10
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.1
+  - @vercel/static-build@2.9.18
+
+## 51.6.0
+
+### Minor Changes
+
+- Add `vercel connex list` command ([#16018](https://github.com/vercel/vercel/pull/16018))
+
+### Patch Changes
+
+- Add OpenAPI-driven subcommand fallback behind `VERCEL_AUTO_API=1`. ([#15989](https://github.com/vercel/vercel/pull/15989))
+
+  When the env var is set, unrecognized CLI tokens are matched against OpenAPI tags and operation IDs from `openapi.vercel.sh`. This enables `vercel <tag> <operationId>` (e.g. `vercel user getAuthUser`) at the top level, and per-command fallthrough (e.g. `vercel projects getProject`) when a token doesn't match a native subcommand.
+
+  When `x-vercel-cli.displayColumns` is present in the OpenAPI response schema, results render as a card (single object) or table (array) instead of raw JSON.
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+- Add naming and formatting utilities for OpenAPI CLI integration. ([#16010](https://github.com/vercel/vercel/pull/16010))
+
+  Introduces `foldNamingStyle` for case-insensitive matching across camelCase/kebab-case/snake_case, `humanReadableColumnLabel` for converting schema property paths to readable headers, and `inferCliSubcommandAliases` for auto-generating CLI aliases from HTTP methods.
+
+- Updated dependencies [[`44d519b8660185754d8280517adbe0ab7268f540`](https://github.com/vercel/vercel/commit/44d519b8660185754d8280517adbe0ab7268f540), [`2a6344e205910dafc05cb74a80f98165d95322d7`](https://github.com/vercel/vercel/commit/2a6344e205910dafc05cb74a80f98165d95322d7)]:
+  - @vercel/detect-agent@1.2.3
+  - @vercel/build-utils@13.17.2
+  - @vercel/python@6.33.3
+  - @vercel/backends@0.0.64
+  - @vercel/elysia@0.1.67
+  - @vercel/express@0.1.77
+  - @vercel/fastify@0.1.70
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.76
+  - @vercel/hono@0.2.70
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.50
+  - @vercel/nestjs@0.2.71
+  - @vercel/next@4.16.8
+  - @vercel/node@5.7.9
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.1
+  - @vercel/static-build@2.9.17
+
+## 51.5.1
+
+### Patch Changes
+
+- Improve Claude Code Vercel plugin install and update prompts across CLI commands. ([#15921](https://github.com/vercel/vercel/pull/15921))
+
+- Updated dependencies [[`5219572d21a2ba4b49cc1c27d244c1ff5d76c591`](https://github.com/vercel/vercel/commit/5219572d21a2ba4b49cc1c27d244c1ff5d76c591), [`2babfa22946d80a92f1307a8d860a9039d695b09`](https://github.com/vercel/vercel/commit/2babfa22946d80a92f1307a8d860a9039d695b09), [`2babfa22946d80a92f1307a8d860a9039d695b09`](https://github.com/vercel/vercel/commit/2babfa22946d80a92f1307a8d860a9039d695b09), [`adbe6f0a0152136aa26aa1277458f4578f62beeb`](https://github.com/vercel/vercel/commit/adbe6f0a0152136aa26aa1277458f4578f62beeb)]:
+  - @vercel/build-utils@13.17.1
+  - @vercel/backends@0.0.63
+  - @vercel/python@6.33.2
+  - @vercel/elysia@0.1.66
+  - @vercel/express@0.1.76
+  - @vercel/fastify@0.1.69
+  - @vercel/go@3.5.0
+  - @vercel/h3@0.1.75
+  - @vercel/hono@0.2.69
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.49
+  - @vercel/nestjs@0.2.70
+  - @vercel/next@4.16.8
+  - @vercel/node@5.7.8
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.1
+  - @vercel/static-build@2.9.16
+
+## 51.5.0
+
+### Minor Changes
+
+- Add `vercel connex create` command ([#15988](https://github.com/vercel/vercel/pull/15988))
+
+- Add `vercel deploy-hooks` command to create, list, and remove deploy hooks. ([#15935](https://github.com/vercel/vercel/pull/15935))
+
+### Patch Changes
+
+- Enable functions beta hint when flag is true ([#15965](https://github.com/vercel/vercel/pull/15965))
+
+- Improve the `vercel metrics` CLI by making it generally available, simplifying metric selection, and cleaning up schema output. ([#15904](https://github.com/vercel/vercel/pull/15904))
+
+- Updated dependencies [[`bb834e53bca374d44f86bda3892e77ded226a26a`](https://github.com/vercel/vercel/commit/bb834e53bca374d44f86bda3892e77ded226a26a), [`bab75d7ff6b7a188167bbd7583a8b36d9d250d5a`](https://github.com/vercel/vercel/commit/bab75d7ff6b7a188167bbd7583a8b36d9d250d5a), [`2243233194c6e38d75ed2a1ca040acaaf3b2e686`](https://github.com/vercel/vercel/commit/2243233194c6e38d75ed2a1ca040acaaf3b2e686), [`232b45fd82adf4a8d538a853bfc1df7a5d16f4c9`](https://github.com/vercel/vercel/commit/232b45fd82adf4a8d538a853bfc1df7a5d16f4c9)]:
+  - @vercel/python@6.33.1
+  - @vercel/rust@1.1.1
+
 ## 51.4.0
 
 ### Minor Changes

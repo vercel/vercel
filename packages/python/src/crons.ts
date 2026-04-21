@@ -63,7 +63,12 @@ export function buildCronRouteTable(
  * For "<dynamic>" schedules, calls a Python function via subprocess.
  */
 export async function getServiceCrons(opts: {
-  service?: { type?: string; name?: string; schedule?: string };
+  service?: {
+    type?: string;
+    trigger?: string;
+    name?: string;
+    schedule?: string;
+  };
   entrypoint?: string;
   rawEntrypoint?: string;
   handlerFunction?: string;
@@ -72,9 +77,12 @@ export async function getServiceCrons(opts: {
   workPath: string;
 }): Promise<ServiceCronEntry[] | undefined> {
   const { service, entrypoint, rawEntrypoint, handlerFunction } = opts;
+  const isScheduledService =
+    service?.type === 'cron' ||
+    (service?.type === 'job' && service.trigger === 'schedule');
 
   if (
-    service?.type !== 'cron' ||
+    !isScheduledService ||
     !service.name ||
     typeof service.schedule !== 'string'
   ) {
