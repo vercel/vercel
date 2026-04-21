@@ -148,8 +148,10 @@ describe('GoWrapper', () => {
 });
 
 describe('decideGoToolchain', () => {
-  it('returns auto when there is no go.mod', () => {
-    expect(decideGoToolchain(undefined)).toBe('auto');
+  it('defaults to the newest supported version when there is no go.mod', () => {
+    // Matches pre-GOTOOLCHAIN behavior: projects without go.mod get the
+    // newest version from minorDefaultPatch.
+    expect(decideGoToolchain(undefined)).toBe('go1.26.1');
   });
 
   it('pins the toolchain for patch-level post-1.21 directives', () => {

@@ -343,7 +343,13 @@ type CreateGoOptions = {
  *     as it satisfies the `go` directive's minimum.
  */
 export function decideGoToolchain(goMod: GoVersions | undefined): string {
-  if (!goMod) return 'auto';
+  if (!goMod) {
+    // No go.mod — default to the newest supported version. This matches the
+    // pre-GOTOOLCHAIN behavior where the builder downloaded the first entry
+    // from the version map for projects that don't specify a Go version.
+    const defaultVersion = Array.from(minorDefaultPatch.values())[0];
+    return `go${defaultVersion}`;
+  }
   if (goMod.toolchain) {
     return `go${goMod.toolchain}`;
   }
@@ -503,8 +509,17 @@ export async function createGo({
 }
 
 function applyGoToolchainEnv(env: Env, goMod: GoVersions | undefined): void {
-  env.GOTOOLCHAIN = decideGoToolchain(goMod);
-  debug(`Set GOTOOLCHAIN to ${env.GOTOOLCHAIN}`);
+  const toolchain = decideGoToolchain(goMod);
+  env.GOTOOLCHAIN = toolchain;
+  debug(`Set GOTOOLCHAIN to ${toolchain}`);
+  // When GOTOOLCHAIN triggers a re-exec into a different Go version (any
+  // value other than 'auto'), the re-exec'd binary must discover its own
+  // GOROOT. If we leave the bootstrap's GOROOT in the env, the re-exec'd
+  // (possibly older) Go will use the wrong stdlib, causing build failures
+  // like "no Go source files". Clearing GOROOT lets Go auto-detect it.
+  if (toolchain !== 'auto') {
+    delete env.GOROOT;
+  }
 }
 
 /**
