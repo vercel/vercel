@@ -331,9 +331,14 @@ type CreateGoOptions = {
  *
  * Rules:
  *   - A `toolchain goX.Y.Z` directive always wins (explicit intent).
- *   - A patch-level `go X.Y.Z` directive with minor ≥ 1.21 forces that
- *     toolchain (toolchain modules exist only from 1.21 onwards).
- *   - Anything else (no go.mod, minor-only, or pre-1.21 pin) defers to
+ *   - A patch-level `go X.Y.Z` (either explicit in go.mod, or resolved via
+ *     {@link minorDefaultPatch} from a minor-only directive) pins the
+ *     toolchain. proxy.golang.org hosts toolchain modules for every
+ *     `golang.org/toolchain v0.0.1-goX.Y.Z.<platform>` we care about —
+ *     including pre-1.21 releases — so setting `GOTOOLCHAIN=goX.Y.Z`
+ *     triggers a verified download and re-exec regardless of the bootstrap
+ *     toolchain's own version.
+ *   - Anything else (no go.mod, unparseable version) defers to
  *     `GOTOOLCHAIN=auto`, which lets Go use the running toolchain as long
  *     as it satisfies the `go` directive's minimum.
  */
@@ -342,14 +347,7 @@ export function decideGoToolchain(goMod: GoVersions | undefined): string {
   if (goMod.toolchain) {
     return `go${goMod.toolchain}`;
   }
-  const m = /^(\d+)\.(\d+)\.(\d+)(.*)$/.exec(goMod.go);
-  if (!m) return 'auto';
-  const major = Number.parseInt(m[1], 10);
-  const minor = Number.parseInt(m[2], 10);
-  // Only treat a patch-level `go` directive as a toolchain pin when the minor
-  // is ≥ 1.21 — earlier releases don't have toolchain modules, so asking Go
-  // to fetch one would fail.
-  if (major === 1 && minor >= 21) {
+  if (/^\d+\.\d+\.\d+/.test(goMod.go)) {
     return `go${goMod.go}`;
   }
   return 'auto';

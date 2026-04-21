@@ -152,21 +152,20 @@ describe('decideGoToolchain', () => {
     expect(decideGoToolchain(undefined)).toBe('auto');
   });
 
-  it('returns auto for a minor-only go directive (patched to default)', () => {
-    // The parser normalizes `go 1.21` to `{ go: "1.21.13" }` using the
-    // minorDefaultPatch map — which is a patch-level version, so this
-    // actually pins the toolchain. Use an exact patch here to cover the
-    // "minor-only" semantic intent explicitly.
+  it('pins the toolchain for patch-level post-1.21 directives', () => {
     expect(decideGoToolchain({ go: '1.21.0' })).toBe('go1.21.0');
-  });
-
-  it('returns a pinned toolchain for a patch-level go directive (>= 1.21)', () => {
     expect(decideGoToolchain({ go: '1.23.1' })).toBe('go1.23.1');
   });
 
-  it('returns auto for a patch-level go directive pre-1.21 (no toolchain module)', () => {
-    expect(decideGoToolchain({ go: '1.18.0' })).toBe('auto');
-    expect(decideGoToolchain({ go: '1.20.10' })).toBe('auto');
+  it('pins the toolchain for pre-1.21 patch versions (modules exist retroactively)', () => {
+    // proxy.golang.org publishes toolchain modules for every supported
+    // release — verified via the info endpoint for v0.0.1-goX.Y.Z.<platform>.
+    // Setting GOTOOLCHAIN to a pre-1.21 version causes the bootstrap Go to
+    // download and re-exec into that version, matching the pre-PR behavior
+    // where the builder itself downloaded the specific version.
+    expect(decideGoToolchain({ go: '1.18.10' })).toBe('go1.18.10');
+    expect(decideGoToolchain({ go: '1.20.14' })).toBe('go1.20.14');
+    expect(decideGoToolchain({ go: '1.13.15' })).toBe('go1.13.15');
   });
 
   it('lets the toolchain directive win over the go directive', () => {
