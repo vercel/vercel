@@ -30,7 +30,6 @@ from vercel_runtime.headers import (
     set_vercel_headers_from_asgi_pairs,
     set_vercel_headers_from_http_headers,
 )
-from vercel_runtime.logging_defaults import configure_logging_defaults
 from vercel_runtime.resolver import (
     detect_app_type,
     import_module,
@@ -467,7 +466,9 @@ _extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
 if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
-configure_logging_defaults()
+__import__(
+    "vercel_runtime.logging_defaults"
+).logging_defaults.configure_logging_defaults()
 
 try:
     prepare_celery_environment()
