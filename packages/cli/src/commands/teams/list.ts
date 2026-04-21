@@ -17,6 +17,15 @@ import output from '../../output-manager';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
 
+type TeamListEntry = {
+  id: string;
+  name: string;
+  value: string;
+  isCurrent: boolean;
+  plan: string | null;
+  type: 'team' | 'user';
+};
+
 export default async function list(
   client: Client,
   argv: string[]
@@ -93,12 +102,16 @@ export default async function list(
     currentTeam = user.id;
   }
 
-  const teamList = teams.map(({ id, slug, name }) => ({
-    id,
-    name,
-    value: slug,
-    isCurrent: id === currentTeam,
-  }));
+  const teamList: TeamListEntry[] = teams.map(
+    ({ id, slug, name, billing }) => ({
+      id,
+      name,
+      value: slug,
+      isCurrent: id === currentTeam,
+      plan: billing?.plan ?? null,
+      type: 'team',
+    })
+  );
 
   if (user.version !== 'northstar') {
     teamList.unshift({
@@ -106,6 +119,8 @@ export default async function list(
       name: user.email,
       value: user.username || user.email,
       isCurrent: accountIsCurrent,
+      plan: user.billing?.plan ?? null,
+      type: 'user',
     });
   }
 
@@ -125,6 +140,8 @@ export default async function list(
         slug: team.value,
         name: team.name,
         current: team.isCurrent,
+        plan: team.plan,
+        type: team.type,
       })),
       pagination,
     };
@@ -134,8 +151,8 @@ export default async function list(
 
     const teamTable = table(
       [
-        ['id', 'Team name'].map(str => gray(str)),
-        ...teamList.map(team => [team.value, team.name]),
+        ['id', 'Team name', 'Plan'].map(str => gray(str)),
+        ...teamList.map(team => [team.value, team.name, team.plan ?? '-']),
       ],
       { hsep: 5 }
     );

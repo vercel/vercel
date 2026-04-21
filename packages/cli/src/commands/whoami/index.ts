@@ -9,6 +9,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
+import { APIError } from '../../util/errors-ts';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -43,21 +44,48 @@ export default async function whoami(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const { contextName, user } = await getScope(client, { getTeam: false });
+  const scope = await getScope(client).catch(async error => {
+    // Preserve whoami as a resilient informational command when currentTeam is stale.
+    // Any client error (4xx) from the team lookup means the team is inaccessible
+    // (deleted, unauthorized, forbidden, etc.) — fall back to the personal scope.
+    if (
+      error instanceof APIError &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
+      return getScope(client, { getTeam: false });
+    }
+    throw error;
+  });
+  const { contextName, team, user } = scope;
+  const plan = team?.billing.plan ?? user.billing?.plan ?? null;
+  const userIdentifier = user.username || user.email;
 
   if (asJson) {
     const jsonOutput = {
       username: user.username,
       email: user.email,
       name: user.name,
+      plan,
+      scope: {
+        type: team ? 'team' : 'user',
+        name: contextName,
+      },
+      team: team
+        ? {
+            id: team.id,
+            slug: team.slug,
+            name: team.name,
+          }
+        : null,
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else if (client.stdout.isTTY) {
-    output.log(contextName);
+    output.log(plan ? `${contextName} (${plan})` : contextName);
   } else {
-    // If stdout is not a TTY, then only print the username
+    // If stdout is not a TTY, then only print the current user identifier
     // to support piping the output to another file / exe
-    client.stdout.write(`${contextName}\n`);
+    client.stdout.write(`${userIdentifier}\n`);
   }
 
   return 0;
