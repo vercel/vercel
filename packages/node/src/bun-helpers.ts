@@ -1,43 +1,18 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { chmod, mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawn, SpawnOptions } from 'node:child_process';
+import { spawn, SpawnOptions, execFileSync } from 'node:child_process';
 import once from '@tootallnate/once';
 import { debug, extractZip, VerifiedDownloader } from '@vercel/build-utils';
 
 /**
- * Pinned Bun release. When bumping this version, refresh every entry in
- * {@link BUN_SHA256} with the values from the corresponding
- * `SHASUMS256.txt` on the GitHub release page.
+ * Pinned Bun release. The SHA-256 for the per-platform zip is fetched
+ * dynamically from the vendor's `SHASUMS256.txt` sidecar on each GitHub
+ * release, so bumping this version does not require updating any hashes
+ * in source.
  */
 const BUN_VERSION = '1.1.38';
-
-type BunTargetTriple =
-  | 'linux-x64'
-  | 'linux-x64-baseline'
-  | 'linux-aarch64'
-  | 'darwin-x64'
-  | 'darwin-aarch64'
-  | 'windows-x64';
-
-const BUN_SHA256: Record<BunTargetTriple, string> = {
-  // The AVX2 build is kept in the map for reference but is not selected by
-  // default — the baseline build runs on a broader set of Linux x64 CPUs
-  // (including Amazon Linux 2023 / Lambda-class hardware) and is the safer
-  // default when we're the ones installing Bun.
-  'linux-x64':
-    'a61da5357e28d4977fccd4851fed62ff4da3ea33853005c7dd93dac80bc53932',
-  'linux-x64-baseline':
-    '353e2e6d4086a09eeee984d2ed61736dcd905838ede51b82689fd7b3e95def90',
-  'linux-aarch64':
-    '3b08fd0b31f745509e1fed9c690c80d1a32ef2b3c8d059583f643f696639bd21',
-  'darwin-x64':
-    '4e9814c9b2e64f9166ed8fc2a48f905a2195ea599b7ceda7ac821688520428a5',
-  'darwin-aarch64':
-    'bbc6fb0e7bb99e7e95001ba05105cf09d0b79c06941d9f6ee3d0b34dc1541590',
-  'windows-x64':
-    '52d6c588237c5a1071839dc20dc96f19ca9f8021b7757fa096d22927b0a44a8b',
-};
 
 async function spawnAsync(
   command: string,
@@ -49,37 +24,107 @@ async function spawnAsync(
   return exitCode;
 }
 
-function detectBunTriple(): BunTargetTriple {
+/**
+ * Returns the Bun release platform tag for the current host, matching the
+ * upstream naming convention used in
+ * `https://github.com/oven-sh/bun/releases/.../bun-<platform>.zip` and in
+ * the `SHASUMS256.txt` sidecar. Mirrors the detection logic in
+ * `https://bun.sh/install`:
+ *
+ *   - musl detection: `/etc/alpine-release` exists → append `-musl`.
+ *   - AVX2 detection on x64: `/proc/cpuinfo` (Linux), `sysctl` (macOS).
+ *     CPUs without AVX2 → append `-baseline`.
+ *   - Windows x64: Node.js cannot introspect CPU features reliably, so we
+ *     default to the `-baseline` build for broad compatibility.
+ */
+function detectBunPlatform(): string {
   const { platform, arch } = process;
+  let tag: string;
+
   if (platform === 'linux') {
-    // Prefer the baseline build on Linux x64 for broad CPU compatibility
-    // (AVX2 isn't guaranteed on Amazon Linux 2023 / Lambda-class instances).
-    if (arch === 'x64') return 'linux-x64-baseline';
-    if (arch === 'arm64') return 'linux-aarch64';
+    tag = arch === 'arm64' ? 'linux-aarch64' : 'linux-x64';
   } else if (platform === 'darwin') {
-    if (arch === 'x64') return 'darwin-x64';
-    if (arch === 'arm64') return 'darwin-aarch64';
+    tag = arch === 'arm64' ? 'darwin-aarch64' : 'darwin-x64';
   } else if (platform === 'win32') {
-    if (arch === 'x64') return 'windows-x64';
+    tag = arch === 'arm64' ? 'windows-aarch64' : 'windows-x64';
+  } else {
+    throw new Error(
+      `Unsupported host platform for Bun: ${platform}-${arch}. Install Bun manually and ensure \`bun\` is available on PATH.`
+    );
   }
-  throw new Error(
-    `Unsupported host platform for Bun: ${platform}-${arch}. Install Bun manually and ensure \`bun\` is available on PATH.`
-  );
+
+  // musl detection (matches upstream bun.sh/install)
+  if (platform === 'linux' && existsSync('/etc/alpine-release')) {
+    tag += '-musl';
+  }
+
+  // AVX2 detection — use baseline variant on CPUs without AVX2
+  if (tag.startsWith('linux-x64')) {
+    try {
+      if (!readFileSync('/proc/cpuinfo', 'utf8').includes('avx2')) {
+        tag += '-baseline';
+      }
+    } catch {
+      tag += '-baseline';
+    }
+  } else if (tag === 'darwin-x64') {
+    try {
+      const features = execFileSync(
+        'sysctl',
+        ['-n', 'machdep.cpu.leaf7_features'],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+      );
+      if (!features.includes('AVX2')) {
+        tag += '-baseline';
+      }
+    } catch {
+      tag += '-baseline';
+    }
+  } else if (tag === 'windows-x64') {
+    // Node.js on Windows exposes no reliable CPU feature probe, and
+    // running `wmic` / PowerShell during a build is heavyweight. Default
+    // to the baseline variant so older CPUs don't crash at startup.
+    tag += '-baseline';
+  }
+
+  return tag;
+}
+
+/**
+ * Parses Bun's `SHASUMS256.txt` sidecar and returns the digest for the
+ * given artifact name (e.g. `bun-linux-x64-baseline.zip`). Each line uses
+ * the standard shasum format: `<64-hex>  <filename>`.
+ */
+function makeParseBunSha256(
+  zipName: string
+): (body: string) => string | undefined {
+  return body => {
+    for (const line of body.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const match = /^([0-9a-f]{64})\s+(.+)$/.exec(trimmed);
+      if (match && match[2] === zipName) return match[1];
+    }
+    return undefined;
+  };
 }
 
 /**
  * Downloads and installs a pinned Bun release into `~/.bun/bin/bun`.
  * Replaces the upstream `curl https://bun.sh/install | bash` pipeline,
  * which offered no integrity guarantees against CDN / network compromise.
+ * The expected SHA-256 is fetched from the release's `SHASUMS256.txt`
+ * sidecar at download time rather than being hard-coded.
  */
 async function downloadBun(): Promise<string> {
-  const triple = detectBunTriple();
-  const sha256 = BUN_SHA256[triple];
+  const platformTag = detectBunPlatform();
   const isWindows = process.platform === 'win32';
   const bunBinaryName = isWindows ? 'bun.exe' : 'bun';
 
-  const zipName = `bun-${triple}.zip`;
-  const url = `https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/${zipName}`;
+  const zipName = `bun-${platformTag}.zip`;
+  const releaseBase = `https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}`;
+  const url = `${releaseBase}/${zipName}`;
+  const sha256Url = `${releaseBase}/SHASUMS256.txt`;
 
   const staging = await mkdtemp(join(tmpdir(), 'bun-install-'));
   const zipPath = join(staging, zipName);
@@ -89,8 +134,11 @@ async function downloadBun(): Promise<string> {
   const finalPath = join(installDir, bunBinaryName);
 
   try {
-    debug(`Downloading Bun ${BUN_VERSION} (${triple})`);
-    await new VerifiedDownloader({ sha256 }).downloadTo(url, zipPath);
+    debug(`Downloading Bun ${BUN_VERSION} (${platformTag})`);
+    await new VerifiedDownloader({
+      sha256Url,
+      parseSha256: makeParseBunSha256(zipName),
+    }).downloadTo(url, zipPath);
 
     await mkdir(extractDir, { recursive: true });
     // Bun release zips contain a single top-level directory (e.g.
@@ -123,8 +171,8 @@ async function downloadBun(): Promise<string> {
  *      is pre-installed under `/bun1/bun` which is on PATH, so the probe
  *      succeeds and no download runs.
  *   2. `bun --version` at the default install location (`~/.bun/bin/bun`).
- *   3. Download the pinned Bun release (SHA-256 verified) and extract to
- *      `~/.bun/bin/`.
+ *   3. Download the pinned Bun release (SHA-256 verified against the
+ *      vendor's `SHASUMS256.txt`) and extract to `~/.bun/bin/`.
  *
  * @returns The name of the Bun binary (either 'bun' or 'bun.exe')
  */

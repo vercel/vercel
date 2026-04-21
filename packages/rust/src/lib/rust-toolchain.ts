@@ -5,40 +5,18 @@ import { debug, VerifiedDownloader } from '@vercel/build-utils';
 import execa from 'execa';
 
 /**
- * Pinned rustup-init release. When bumping this version, refresh every
- * SHA-256 entry in {@link RUSTUP_INIT_SHA256} with the values published at
- * `https://static.rust-lang.org/rustup/archive/<version>/<triple>/rustup-init.sha256`.
+ * Pinned rustup-init release. The SHA-256 of each per-platform binary is
+ * fetched from the vendor's sidecar file at
+ * `https://static.rust-lang.org/rustup/archive/<version>/<platform>/rustup-init.sha256`,
+ * so bumping this version does not require updating any hashes in source.
  */
 const RUSTUP_INIT_VERSION = '1.27.1';
 
 /**
- * Host triples supported by this builder. The mapping back to
- * `${process.platform}-${process.arch}` is done in {@link detectHostTriple}.
+ * Returns the Rust target platform for the current host, matching the
+ * directory names published at `https://static.rust-lang.org/rustup/archive/`.
  */
-type RustupHostTriple =
-  | 'x86_64-unknown-linux-gnu'
-  | 'aarch64-unknown-linux-gnu'
-  | 'x86_64-apple-darwin'
-  | 'aarch64-apple-darwin'
-  | 'x86_64-pc-windows-msvc'
-  | 'aarch64-pc-windows-msvc';
-
-const RUSTUP_INIT_SHA256: Record<RustupHostTriple, string> = {
-  'x86_64-unknown-linux-gnu':
-    '6aeece6993e902708983b209d04c0d1dbb14ebb405ddb87def578d41f920f56d',
-  'aarch64-unknown-linux-gnu':
-    '1cffbf51e63e634c746f741de50649bbbcbd9dbe1de363c9ecef64e278dba2b2',
-  'x86_64-apple-darwin':
-    'f547d77c32d50d82b8228899b936bf2b3c72ce0a70fb3b364e7fba8891eba781',
-  'aarch64-apple-darwin':
-    '760b18611021deee1a859c345d17200e0087d47f68dfe58278c57abe3a0d3dd0',
-  'x86_64-pc-windows-msvc':
-    '193d6c727e18734edbf7303180657e96e9d5a08432002b4e6c5bbe77c60cb3e8',
-  'aarch64-pc-windows-msvc':
-    '5f4697ee3ea5d4592bffdbe9dc32d6a8865762821b14fdd1cf870e585083a2f0',
-};
-
-function detectHostTriple(): RustupHostTriple {
+function detectRustPlatform(): string {
   const { platform, arch } = process;
   if (platform === 'linux') {
     if (arch === 'x64') return 'x86_64-unknown-linux-gnu';
@@ -56,23 +34,27 @@ function detectHostTriple(): RustupHostTriple {
 }
 
 /**
- * Downloads a pinned `rustup-init` binary, verifies it against a hard-coded
- * SHA-256, and executes it to install the stable Rust toolchain. Replaces
- * the former `curl | sh` pipeline which offered no integrity guarantees.
+ * Downloads the pinned `rustup-init` binary, verifies it against the SHA-256
+ * published by the Rust project as a sidecar file, and executes it to
+ * install the stable Rust toolchain. Replaces the former `curl | sh`
+ * pipeline which offered no integrity guarantees.
  */
 async function downloadRustToolchain(): Promise<void> {
-  const triple = detectHostTriple();
-  const sha256 = RUSTUP_INIT_SHA256[triple];
+  const rustPlatform = detectRustPlatform();
   const isWindows = process.platform === 'win32';
   const fileName = isWindows ? 'rustup-init.exe' : 'rustup-init';
-  const url = `https://static.rust-lang.org/rustup/archive/${RUSTUP_INIT_VERSION}/${triple}/${fileName}`;
+  const url = `https://static.rust-lang.org/rustup/archive/${RUSTUP_INIT_VERSION}/${rustPlatform}/${fileName}`;
+  const sha256Url = `${url}.sha256`;
 
   const staging = await mkdtemp(join(tmpdir(), 'rustup-init-'));
   const destFile = join(staging, fileName);
 
   try {
-    debug(`Downloading rustup-init ${RUSTUP_INIT_VERSION} (${triple})`);
-    await new VerifiedDownloader({ sha256 }).downloadTo(url, destFile);
+    debug(`Downloading rustup-init ${RUSTUP_INIT_VERSION} (${rustPlatform})`);
+    await new VerifiedDownloader({
+      sha256Url,
+      parseSha256: parseRustupSha256,
+    }).downloadTo(url, destFile);
     if (!isWindows) {
       await chmod(destFile, 0o755);
     }
@@ -98,6 +80,15 @@ async function downloadRustToolchain(): Promise<void> {
 }
 
 /**
+ * Parses the rustup-init sidecar SHA-256 file. The upstream format is a
+ * single line: `<hex>  rustup-init`. We accept any leading hex token.
+ */
+function parseRustupSha256(body: string): string | undefined {
+  const first = body.trim().split(/\s+/)[0];
+  return first || undefined;
+}
+
+/**
  * Ensures a usable Rust toolchain is available.
  *
  * The builder only needs `cargo` (+ `rustc`) on PATH, so we accept any
@@ -109,8 +100,8 @@ async function downloadRustToolchain(): Promise<void> {
  * Fallback order (first match wins):
  *   1. `cargo -V` succeeds → use pre-installed Rust as-is.
  *   2. `rustup -V` succeeds → use pre-installed rustup.
- *   3. Download SHA-256-verified `rustup-init` and let it install the
- *      stable toolchain.
+ *   3. Download `rustup-init` (SHA-256 verified against the vendor's
+ *      sidecar file) and let it install the stable toolchain.
  */
 export const installRustToolchain = async (): Promise<void> => {
   try {

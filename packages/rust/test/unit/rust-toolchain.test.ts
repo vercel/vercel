@@ -10,10 +10,10 @@ jest.mock('execa', () => {
 
 jest.mock('@vercel/build-utils', () => {
   const downloadTo = jest.fn().mockResolvedValue(undefined);
+  const constructed = jest.fn();
   class VerifiedDownloader {
-    sha256: string;
-    constructor(options: { sha256: string }) {
-      this.sha256 = options.sha256;
+    constructor(options: unknown) {
+      constructed(options);
     }
     downloadTo(...args: unknown[]) {
       return downloadTo(...args);
@@ -25,6 +25,7 @@ jest.mock('@vercel/build-utils', () => {
     debug: () => {},
     __mocks: {
       downloadTo,
+      constructed,
     },
   };
 });
@@ -37,13 +38,14 @@ jest.mock('node:fs/promises', () => ({
 
 const execaMock = jest.requireMock('execa').default as jest.Mock;
 const buildUtilsMock = jest.requireMock('@vercel/build-utils') as {
-  __mocks: { downloadTo: jest.Mock };
+  __mocks: { downloadTo: jest.Mock; constructed: jest.Mock };
 };
 
 beforeEach(() => {
   execaMock.mockReset();
   buildUtilsMock.__mocks.downloadTo.mockReset();
   buildUtilsMock.__mocks.downloadTo.mockResolvedValue(undefined);
+  buildUtilsMock.__mocks.constructed.mockReset();
 });
 
 describe('installRustToolchain', () => {
@@ -84,7 +86,7 @@ describe('installRustToolchain', () => {
     expect(buildUtilsMock.__mocks.downloadTo).not.toHaveBeenCalled();
   });
 
-  it('downloads rustup-init with SHA-256 verification when neither cargo nor rustup is present', async () => {
+  it('downloads rustup-init with remote SHA-256 verification when neither cargo nor rustup is present', async () => {
     execaMock
       .mockRejectedValueOnce(new Error('cargo not found'))
       .mockRejectedValueOnce(new Error('rustup not found'))
@@ -100,6 +102,23 @@ describe('installRustToolchain', () => {
     expect(typeof url).toBe('string');
     expect(url).toMatch(/^https:\/\/static\.rust-lang\.org\/rustup\/archive\//);
     expect(destFile).toEqual(expect.stringContaining('rustup-init'));
+
+    // VerifiedDownloader should have been constructed with a remote SHA
+    // source (sha256Url + parseSha256), not a hard-coded digest.
+    expect(buildUtilsMock.__mocks.constructed).toHaveBeenCalledTimes(1);
+    const opts = buildUtilsMock.__mocks.constructed.mock.calls[0][0] as {
+      sha256?: string;
+      sha256Url?: string;
+      parseSha256?: (body: string) => string | undefined;
+    };
+    expect(opts.sha256).toBeUndefined();
+    expect(opts.sha256Url).toMatch(
+      /^https:\/\/static\.rust-lang\.org\/rustup\/archive\/.+\/rustup-init(\.exe)?\.sha256$/
+    );
+    expect(typeof opts.parseSha256).toBe('function');
+    // The parser should extract the leading hex token from a sidecar body.
+    expect(opts.parseSha256!('deadbeef  rustup-init\n')).toBe('deadbeef');
+    expect(opts.parseSha256!('')).toBeUndefined();
   });
 
   it('wraps download errors in a helpful message', async () => {

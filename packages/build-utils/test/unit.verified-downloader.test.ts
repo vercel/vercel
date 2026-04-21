@@ -64,6 +64,30 @@ describe('VerifiedDownloader', () => {
     ).toThrow(NowBuildError);
   });
 
+  it('rejects construction when neither sha256 nor sha256Url is provided', () => {
+    expect(() => new VerifiedDownloader({})).toThrow(NowBuildError);
+  });
+
+  it('rejects construction when both sha256 and sha256Url are provided', () => {
+    expect(
+      () =>
+        new VerifiedDownloader({
+          sha256: PAYLOAD_SHA256,
+          sha256Url: 'http://example.com/sha',
+          parseSha256: () => undefined,
+        })
+    ).toThrow(NowBuildError);
+  });
+
+  it('rejects construction when sha256Url is provided without parseSha256', () => {
+    expect(
+      () =>
+        new VerifiedDownloader({
+          sha256Url: 'http://example.com/sha',
+        })
+    ).toThrow(NowBuildError);
+  });
+
   it('rejects non-positive maxBytes / timeoutMs', () => {
     expect(
       () => new VerifiedDownloader({ sha256: PAYLOAD_SHA256, maxBytes: 0 })
@@ -154,5 +178,92 @@ describe('VerifiedDownloader', () => {
     await expect(
       downloader.downloadTo(`${handle.baseUrl}/stream-big`, dest)
     ).rejects.toBeDefined();
+  });
+
+  it('fetches the SHA-256 dynamically from sha256Url and downloads successfully', async () => {
+    // Serve both the shasums file and the binary from one responder,
+    // dispatching by request URL.
+    setResponder((req: any, res: any) => {
+      if (req.url.endsWith('/SHASUMS256.txt')) {
+        const body =
+          `deadbeef${'0'.repeat(56)}  other-file.zip\n` +
+          `${PAYLOAD_SHA256}  binary.zip\n`;
+        res.writeHead(200, { 'content-type': 'text/plain' });
+        res.end(body);
+        return;
+      }
+      res.writeHead(200, { 'content-length': String(PAYLOAD.length) });
+      res.end(PAYLOAD);
+    });
+
+    const dest = join(tmpDir, 'remote-sha-ok.bin');
+    const downloader = new VerifiedDownloader({
+      sha256Url: `${handle.baseUrl}/SHASUMS256.txt`,
+      parseSha256: body => {
+        for (const line of body.split('\n')) {
+          const [sha, name] = line.trim().split(/\s+/);
+          if (name === 'binary.zip') return sha;
+        }
+        return undefined;
+      },
+    });
+    await downloader.downloadTo(`${handle.baseUrl}/binary.zip`, dest);
+
+    const written = await fs.readFile(dest);
+    expect(written.equals(PAYLOAD)).toBe(true);
+  });
+
+  it('throws VERIFIED_DOWNLOADER_SHA256_NOT_FOUND when parseSha256 returns undefined', async () => {
+    setResponder((_req: any, res: any) => {
+      res.writeHead(200, { 'content-type': 'text/plain' });
+      res.end('nothing matching here\n');
+    });
+
+    const dest = join(tmpDir, 'remote-sha-missing.bin');
+    const downloader = new VerifiedDownloader({
+      sha256Url: `${handle.baseUrl}/SHASUMS256.txt`,
+      parseSha256: () => undefined,
+    });
+    await expect(
+      downloader.downloadTo(`${handle.baseUrl}/binary.zip`, dest)
+    ).rejects.toMatchObject({
+      code: 'VERIFIED_DOWNLOADER_SHA256_NOT_FOUND',
+    });
+  });
+
+  it('throws VERIFIED_DOWNLOADER_SHA256_NOT_FOUND when parseSha256 returns a malformed value', async () => {
+    setResponder((_req: any, res: any) => {
+      res.writeHead(200);
+      res.end('some content');
+    });
+
+    const dest = join(tmpDir, 'remote-sha-bad.bin');
+    const downloader = new VerifiedDownloader({
+      sha256Url: `${handle.baseUrl}/SHASUMS256.txt`,
+      parseSha256: () => 'not-a-valid-hex-digest',
+    });
+    await expect(
+      downloader.downloadTo(`${handle.baseUrl}/binary.zip`, dest)
+    ).rejects.toMatchObject({
+      code: 'VERIFIED_DOWNLOADER_SHA256_NOT_FOUND',
+    });
+  });
+
+  it('throws VERIFIED_DOWNLOADER_SHA256_FETCH_FAILED when sha256Url returns non-2xx', async () => {
+    setResponder((_req: any, res: any) => {
+      res.writeHead(500, 'Server Error');
+      res.end('boom');
+    });
+
+    const dest = join(tmpDir, 'remote-sha-500.bin');
+    const downloader = new VerifiedDownloader({
+      sha256Url: `${handle.baseUrl}/SHASUMS256.txt`,
+      parseSha256: () => PAYLOAD_SHA256,
+    });
+    await expect(
+      downloader.downloadTo(`${handle.baseUrl}/binary.zip`, dest)
+    ).rejects.toMatchObject({
+      code: 'VERIFIED_DOWNLOADER_SHA256_FETCH_FAILED',
+    });
   });
 });

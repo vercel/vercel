@@ -9,6 +9,7 @@ const renameMock = vi.fn();
 const mkdirMock = vi.fn();
 const mkdtempMock = vi.fn();
 const rmMock = vi.fn();
+const verifiedDownloaderConstructorMock = vi.fn();
 
 vi.mock('node:child_process', () => {
   return {
@@ -18,14 +19,14 @@ vi.mock('node:child_process', () => {
       queueMicrotask(() => child.emit('close', currentExitCode, null));
       return child;
     },
+    execFileSync: () => '',
   };
 });
 
 vi.mock('@vercel/build-utils', () => {
   class VerifiedDownloader {
-    sha256: string;
-    constructor(options: { sha256: string }) {
-      this.sha256 = options.sha256;
+    constructor(options: unknown) {
+      verifiedDownloaderConstructorMock(options);
     }
     downloadTo(url: string, destFile: string) {
       return downloadToMock(url, destFile);
@@ -58,6 +59,7 @@ beforeEach(async () => {
   mkdirMock.mockReset();
   mkdtempMock.mockReset();
   rmMock.mockReset();
+  verifiedDownloaderConstructorMock.mockReset();
 
   downloadToMock.mockResolvedValue(undefined);
   extractZipMock.mockResolvedValue(undefined);
@@ -83,7 +85,7 @@ describe('getOrCreateBunBinary', () => {
     expect(extractZipMock).not.toHaveBeenCalled();
   });
 
-  test('downloads, verifies, and extracts Bun when not found on PATH', async () => {
+  test('downloads, verifies (via remote SHA), and extracts Bun when not found on PATH', async () => {
     // First two spawn calls are --version probes that fail; third is the final
     // probe that succeeds.
     const exits = [1, 1, 0];
@@ -107,6 +109,32 @@ describe('getOrCreateBunBinary', () => {
 
     expect(renameMock).toHaveBeenCalled();
     expect(result).toContain('.bun');
+
+    // VerifiedDownloader must be constructed with remote SHA source, not
+    // a hard-coded digest.
+    expect(verifiedDownloaderConstructorMock).toHaveBeenCalledTimes(1);
+    const opts = verifiedDownloaderConstructorMock.mock.calls[0][0] as {
+      sha256?: string;
+      sha256Url?: string;
+      parseSha256?: (body: string) => string | undefined;
+    };
+    expect(opts.sha256).toBeUndefined();
+    expect(opts.sha256Url).toMatch(
+      /^https:\/\/github\.com\/oven-sh\/bun\/releases\/download\/bun-v[^/]+\/SHASUMS256\.txt$/
+    );
+    expect(typeof opts.parseSha256).toBe('function');
+
+    // Parser should find the line for our zip in a standard shasums body
+    // and ignore unrelated entries.
+    const zipMatch = /bun-[A-Za-z0-9_.-]+\.zip/.exec(url as string);
+    expect(zipMatch).not.toBeNull();
+    const zipName = zipMatch![0];
+    const goodSha = 'a'.repeat(64);
+    const body =
+      `deadbeef${'0'.repeat(56)}  some-other-file.zip\n` +
+      `${goodSha}  ${zipName}\n`;
+    expect(opts.parseSha256!(body)).toBe(goodSha);
+    expect(opts.parseSha256!('not shasum output')).toBeUndefined();
   });
 
   test('throws a clear error when the download fails', async () => {

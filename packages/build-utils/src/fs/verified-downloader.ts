@@ -6,12 +6,34 @@ import { NowBuildError } from '../errors';
 
 /**
  * Options for creating a {@link VerifiedDownloader}.
+ *
+ * Provide exactly one of:
+ *   - `sha256` — a pre-known hex digest (strongest: no network trust at
+ *     verification time).
+ *   - `sha256Url` + `parseSha256` — a URL hosting the expected digest. The
+ *     file is fetched, then `parseSha256` extracts the hex value from the
+ *     response body. Useful when upstream vendors publish sidecar checksum
+ *     files (e.g. `SHASUMS256.txt` or `.sha256` files) and you don't want
+ *     to hard-code hashes per version/platform.
  */
 export interface VerifiedDownloaderOptions {
   /**
-   * The expected SHA-256 of the remote resource, as lowercase hex (64 chars).
+   * The expected SHA-256 of the remote resource, as lowercase hex (64
+   * chars). Mutually exclusive with `sha256Url`.
    */
-  sha256: string;
+  sha256?: string;
+  /**
+   * URL of a remote file containing one or more SHA-256 digests. Mutually
+   * exclusive with `sha256`. Requires `parseSha256`.
+   */
+  sha256Url?: string;
+  /**
+   * Extracts the expected SHA-256 hex digest from the fetched `sha256Url`
+   * response body. Must return a 64-char lowercase hex string or
+   * `undefined` if the digest cannot be found. Required when `sha256Url`
+   * is set.
+   */
+  parseSha256?: (body: string) => string | undefined;
   /**
    * Maximum allowed response body size in bytes. Defaults to 500 MB. The
    * download is aborted with an error if the streamed bytes exceed this cap.
@@ -36,22 +58,52 @@ const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
  * where integrity cannot be enforced by TLS alone.
  */
 export class VerifiedDownloader {
-  private readonly expectedSha256: string;
+  private readonly expectedSha256: string | undefined;
+  private readonly sha256Url: string | undefined;
+  private readonly parseSha256:
+    | ((body: string) => string | undefined)
+    | undefined;
   private readonly maxBytes: number;
   private readonly timeoutMs: number;
 
   constructor(options: VerifiedDownloaderOptions) {
     const {
       sha256,
+      sha256Url,
+      parseSha256,
       maxBytes = DEFAULT_MAX_BYTES,
       timeoutMs = DEFAULT_TIMEOUT_MS,
     } = options;
 
-    if (typeof sha256 !== 'string' || !SHA256_HEX_RE.test(sha256)) {
+    const hasStatic = typeof sha256 === 'string';
+    const hasRemote = typeof sha256Url === 'string';
+
+    if (hasStatic && hasRemote) {
+      throw new NowBuildError({
+        code: 'VERIFIED_DOWNLOADER_INVALID_OPTIONS',
+        message:
+          'VerifiedDownloader accepts either `sha256` or `sha256Url`, not both.',
+      });
+    }
+    if (!hasStatic && !hasRemote) {
+      throw new NowBuildError({
+        code: 'VERIFIED_DOWNLOADER_INVALID_OPTIONS',
+        message:
+          'VerifiedDownloader requires either `sha256` or `sha256Url` + `parseSha256`.',
+      });
+    }
+    if (hasStatic && !SHA256_HEX_RE.test(sha256 as string)) {
       throw new NowBuildError({
         code: 'VERIFIED_DOWNLOADER_INVALID_SHA256',
         message:
           'VerifiedDownloader requires a lowercase 64-character hex SHA-256 digest.',
+      });
+    }
+    if (hasRemote && typeof parseSha256 !== 'function') {
+      throw new NowBuildError({
+        code: 'VERIFIED_DOWNLOADER_INVALID_OPTIONS',
+        message:
+          'VerifiedDownloader requires a `parseSha256` function when `sha256Url` is set.',
       });
     }
     if (!Number.isFinite(maxBytes) || maxBytes <= 0) {
@@ -68,8 +120,55 @@ export class VerifiedDownloader {
     }
 
     this.expectedSha256 = sha256;
+    this.sha256Url = sha256Url;
+    this.parseSha256 = parseSha256;
     this.maxBytes = maxBytes;
     this.timeoutMs = timeoutMs;
+  }
+
+  /**
+   * Resolves the expected SHA-256 digest for this downloader. When a static
+   * `sha256` was provided at construction, returns it directly. Otherwise,
+   * fetches `sha256Url` and runs `parseSha256` over the response body.
+   */
+  private async resolveSha256(): Promise<string> {
+    if (this.expectedSha256) return this.expectedSha256;
+
+    const url = this.sha256Url as string;
+    const parse = this.parseSha256 as (body: string) => string | undefined;
+
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => abortController.abort(), this.timeoutMs);
+
+    let res: NodeFetchResponse | undefined;
+    try {
+      res = await nodeFetch(url, {
+        signal: abortController.signal as unknown as undefined,
+      });
+      if (!res.ok) {
+        throw new NowBuildError({
+          code: 'VERIFIED_DOWNLOADER_SHA256_FETCH_FAILED',
+          message: `Failed to fetch SHA-256 sums from ${url}: ${res.status} ${res.statusText}`,
+        });
+      }
+      const body = await res.text();
+      const sha = parse(body);
+      if (!sha) {
+        throw new NowBuildError({
+          code: 'VERIFIED_DOWNLOADER_SHA256_NOT_FOUND',
+          message: `No SHA-256 digest found in ${url}.`,
+        });
+      }
+      if (!SHA256_HEX_RE.test(sha)) {
+        throw new NowBuildError({
+          code: 'VERIFIED_DOWNLOADER_SHA256_NOT_FOUND',
+          message: `Parser returned an invalid SHA-256 digest for ${url}: ${sha}`,
+        });
+      }
+      return sha;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   /**
@@ -82,6 +181,10 @@ export class VerifiedDownloader {
    * @param destFile  The absolute path to write to on success.
    */
   async downloadTo(url: string, destFile: string): Promise<void> {
+    // Resolve the expected digest first so a fetch/parse failure is surfaced
+    // before we start streaming the (potentially large) binary artifact.
+    const expectedSha256 = await this.resolveSha256();
+
     await fs.mkdir(dirname(destFile), { recursive: true });
     const tempFile = `${destFile}.${process.pid}.${Date.now()}.tmp`;
 
@@ -171,14 +274,14 @@ export class VerifiedDownloader {
       });
 
       const actualDigest = hash.digest();
-      const expectedDigest = Buffer.from(this.expectedSha256, 'hex');
+      const expectedDigest = Buffer.from(expectedSha256, 'hex');
       if (
         actualDigest.length !== expectedDigest.length ||
         !timingSafeEqual(actualDigest, expectedDigest)
       ) {
         throw new NowBuildError({
           code: 'VERIFIED_DOWNLOADER_SHA256_MISMATCH',
-          message: `SHA-256 mismatch downloading ${url}. Expected ${this.expectedSha256} but got ${actualDigest.toString(
+          message: `SHA-256 mismatch downloading ${url}. Expected ${expectedSha256} but got ${actualDigest.toString(
             'hex'
           )}.`,
         });
