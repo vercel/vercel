@@ -372,5 +372,10 @@ export const envCommand = {
     updateSubcommand,
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Run a command with Environment Variables from the linked Project',
+      value: `${packageName} env run -- <command>`,
+    },
+  ],
 } as const;
