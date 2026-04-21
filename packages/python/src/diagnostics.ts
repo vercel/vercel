@@ -1,10 +1,10 @@
 import fs from 'fs';
-import { join, dirname } from 'path';
 import {
-  FileBlob,
-  debug,
-  type BuildOptions,
-  type Files,
+  writeProjectManifest,
+  createDiagnostics,
+  MANIFEST_VERSION,
+  type PackageManifest,
+  type PackageManifestDependency,
 } from '@vercel/build-utils';
 import {
   parseUvLock,
@@ -17,33 +17,6 @@ import {
 } from '@vercel/python-analysis';
 import type { PythonVersion } from './version';
 import { pythonVersionString } from './version';
-
-export const MANIFEST_FILENAME = 'package-manifest.json';
-
-export const DIAGNOSTICS_PATH = join('.vercel', 'python', MANIFEST_FILENAME);
-
-interface DependencyEntry {
-  name: string;
-  type: 'direct' | 'transitive';
-  scopes: string[];
-  requested?: string;
-  resolved?: string;
-  source?: string;
-  sourceUrl?: string;
-}
-
-const MANIFEST_VERSION = '20260304';
-
-interface ProjectManifest {
-  version: string;
-  runtime: string;
-  runtimeVersion: {
-    requested?: string;
-    requestedSource?: string;
-    resolved: string;
-  };
-  dependencies: DependencyEntry[];
-}
 
 function isDependencyGroupInclude(
   entry: DependencyGroupEntry
@@ -109,13 +82,15 @@ export async function generateProjectManifest({
   pythonPackage,
   pythonVersion,
   uvLockPath,
+  framework,
 }: {
   workPath: string;
   pythonPackage: PythonPackage;
   pythonVersion: PythonVersion;
   uvLockPath: string;
+  framework?: string | null;
 }): Promise<void> {
-  const resolved = pythonVersionString(pythonVersion);
+  const resolved = pythonVersionString(pythonVersion) ?? '';
   const constraint = pythonPackage.requiresPython?.[0];
   const requested = constraint?.specifier;
 
@@ -190,8 +165,8 @@ export async function generateProjectManifest({
   }
 
   // Resolve versions and source info from the lock file
-  const directEntries: DependencyEntry[] = [];
-  const transitiveEntries: DependencyEntry[] = [];
+  const directEntries: PackageManifestDependency[] = [];
+  const transitiveEntries: PackageManifestDependency[] = [];
 
   {
     const content = await fs.promises.readFile(uvLockPath, 'utf-8');
@@ -260,14 +235,14 @@ export async function generateProjectManifest({
     // Build direct entries
     for (const [name, scopes] of directScopesMap) {
       const info = lockMap.get(name);
-      const entry: DependencyEntry = {
+      const entry: PackageManifestDependency = {
         name,
         type: 'direct',
         scopes: [...scopes].sort(),
         requested: directRequested.get(name),
+        resolved: info?.version ?? '',
       };
       if (info) {
-        entry.resolved = info.version;
         const src = mapSource(info.source);
         if (src.source) entry.source = src.source;
         if (src.sourceUrl) entry.sourceUrl = src.sourceUrl;
@@ -292,9 +267,10 @@ export async function generateProjectManifest({
     }
   }
 
-  const manifest: ProjectManifest = {
+  const manifest: PackageManifest = {
     version: MANIFEST_VERSION,
     runtime: 'python',
+    ...(framework ? { framework } : {}),
     runtimeVersion: {
       ...(requested ? { requested } : {}),
       ...(constraint?.source ? { requestedSource: constraint.source } : {}),
@@ -306,27 +282,7 @@ export async function generateProjectManifest({
     ],
   };
 
-  const outPath = join(workPath, DIAGNOSTICS_PATH);
-  await fs.promises.mkdir(dirname(outPath), { recursive: true });
-  await fs.promises.writeFile(outPath, JSON.stringify(manifest, null, 2));
+  await writeProjectManifest(manifest, workPath, 'python');
 }
 
-/**
- * Diagnostics callback — returns the project manifest cached during build().
- */
-export const diagnostics = async ({
-  workPath,
-}: BuildOptions): Promise<Files> => {
-  try {
-    const manifestPath = join(workPath, DIAGNOSTICS_PATH);
-    const data = await fs.promises.readFile(manifestPath, 'utf-8');
-    return {
-      [MANIFEST_FILENAME]: new FileBlob({ data }),
-    };
-  } catch (err) {
-    debug(
-      `Diagnostics: no cached manifest found: ${err instanceof Error ? err.message : String(err)}`
-    );
-    return {};
-  }
-};
+export const diagnostics = createDiagnostics('python');

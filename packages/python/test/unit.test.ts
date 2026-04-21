@@ -298,25 +298,23 @@ it('should only match supported versions, otherwise throw an error', () => {
   expect(result).toHaveProperty('runtime', 'python3.9');
 });
 
-it('should ignore minor version in vercel dev', () => {
-  expect(
-    selectVersion({
-      constraints: [makeConstraint('3.9', 'Pipfile.lock')],
+it('defers to system python3 in vercel dev, regardless of declared version', () => {
+  for (const constraint of ['3.9', '3.6', '999']) {
+    const { pythonVersion } = selectVersion({
+      constraints: [makeConstraint(constraint, 'Pipfile.lock')],
       isDev: true,
-    }).pythonVersion
-  ).toHaveProperty('runtime', 'python3');
-  expect(
-    selectVersion({
-      constraints: [makeConstraint('3.6', 'Pipfile.lock')],
-      isDev: true,
-    }).pythonVersion
-  ).toHaveProperty('runtime', 'python3');
-  expect(
-    selectVersion({
-      constraints: [makeConstraint('999', 'Pipfile.lock')],
-      isDev: true,
-    }).pythonVersion
-  ).toHaveProperty('runtime', 'python3');
+    });
+    expect(pythonVersion).toMatchObject({
+      runtime: 'python3',
+      pythonPath: 'python3',
+      pipPath: 'pip3',
+    });
+    // Dev mode must leave `major` and `minor` undefined so every
+    // downstream `!= null` guard (ensureVenv, ensureUvProject, cached-
+    // venv invalidation) correctly skips version-sensitive logic.
+    expect(pythonVersion.major).toBeUndefined();
+    expect(pythonVersion.minor).toBeUndefined();
+  }
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -1899,7 +1897,7 @@ describe('handlerFunction validation', () => {
       meta: { isDev: false },
       config: { handlerFunction: 'sync_handler' },
       repoRootPath: mockWorkPath,
-      service: { type: 'cron' },
+      service: { type: 'job', trigger: 'schedule' },
     });
 
     expect(result).toBeDefined();
@@ -1922,7 +1920,7 @@ describe('handlerFunction validation', () => {
       meta: { isDev: false },
       config: { handlerFunction: 'async_handler' },
       repoRootPath: mockWorkPath,
-      service: { type: 'cron' },
+      service: { type: 'job', trigger: 'schedule' },
     });
 
     expect(result).toBeDefined();
@@ -1946,7 +1944,7 @@ describe('handlerFunction validation', () => {
         meta: { isDev: false },
         config: { handlerFunction: 'nonexistent_handler' },
         repoRootPath: mockWorkPath,
-        service: { type: 'cron' },
+        service: { type: 'job', trigger: 'schedule' },
       })
     ).rejects.toThrow(/Handler function "nonexistent_handler" not found/);
   });
@@ -1969,7 +1967,7 @@ describe('handlerFunction validation', () => {
         meta: { isDev: false },
         config: { handlerFunction: 'cleanup' },
         repoRootPath: mockWorkPath,
-        service: { type: 'cron' },
+        service: { type: 'job', trigger: 'schedule' },
       })
     ).rejects.toThrow(/Handler function "cleanup" not found/);
   });
@@ -3399,5 +3397,76 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
       expect(env.UV_CACHE_DIR).toBe(cacheDir);
     });
+  });
+});
+
+describe('ensureVenv uv invocation', () => {
+  // The top-level `vi.mock('../src/utils', ...)` replaces `ensureVenv` with
+  // a no-op for build-pipeline tests.  This suite needs the real
+  // implementation, so it resets modules and unmocks `../src/utils` before
+  // re-importing.
+  let mockExeca: ReturnType<typeof vi.fn>;
+  let ensureVenvReal: typeof import('../src/utils').ensureVenv;
+  let venvDir: string;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    mockExeca = vi.fn(async () => ({ stdout: '' }) as any);
+    vi.doMock('execa', () => ({ default: mockExeca }));
+    vi.doUnmock('../src/utils');
+    ({ ensureVenv: ensureVenvReal } = await import('../src/utils'));
+    venvDir = path.join(
+      tmpdir(),
+      `vc-test-ensure-venv-${Math.floor(Math.random() * 1e6)}`
+    );
+  });
+
+  afterEach(() => {
+    vi.doUnmock('execa');
+    if (fs.existsSync(venvDir)) {
+      fs.removeSync(venvDir);
+    }
+  });
+
+  it('omits --python when major/minor are undefined (vercel dev)', async () => {
+    // Simulates `getDevPythonVersion()` which now leaves major/minor
+    // undefined so uv resolves the interpreter via its own chain
+    // (`.python-version`, managed default, system `python3`).  uv >= 0.10.11
+    // rejects `--python 3.0`, so passing no `--python` here is required.
+    await ensureVenvReal({
+      pythonVersion: { pythonPath: 'python3' },
+      venvPath: venvDir,
+      uvPath: '/mock/uv',
+    });
+
+    expect(mockExeca).toHaveBeenCalledTimes(1);
+    const [cmd, args] = mockExeca.mock.calls[0];
+    expect(cmd).toBe('/mock/uv');
+    expect(args).toEqual(['venv', venvDir, '--allow-existing', '--seed']);
+    expect(args).not.toContain('--python');
+  });
+
+  it('passes --python <major>.<minor> for a pinned production version', async () => {
+    await ensureVenvReal({
+      pythonVersion: {
+        pythonPath: 'python3.12',
+        major: 3,
+        minor: 12,
+      },
+      venvPath: venvDir,
+      uvPath: '/mock/uv',
+    });
+
+    expect(mockExeca).toHaveBeenCalledTimes(1);
+    const [cmd, args] = mockExeca.mock.calls[0];
+    expect(cmd).toBe('/mock/uv');
+    expect(args).toEqual([
+      'venv',
+      venvDir,
+      '--allow-existing',
+      '--seed',
+      '--python',
+      '3.12',
+    ]);
   });
 });

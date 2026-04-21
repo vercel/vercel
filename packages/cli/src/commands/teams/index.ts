@@ -24,6 +24,8 @@ import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 import output from '../../output-manager';
 import getSubcommand from '../../util/get-subcommand';
 import type Client from '../../util/client';
+import { tryOpenApiFallback } from '../../util/openapi';
+import { resolveOpenApiTagForTeamsCli } from '../../util/openapi/matches-cli-api-tag';
 
 const COMMAND_CONFIG = {
   list: ['ls', 'list'],
@@ -152,6 +154,14 @@ export default async function teams(client: Client) {
       return members(client, args);
     }
     default: {
+      const fallback = await tryOpenApiFallback(
+        client,
+        parsedArgs.args.slice(1),
+        resolveOpenApiTagForTeamsCli
+      );
+      if (fallback !== null) {
+        return fallback;
+      }
       output.error(
         'Please specify a valid subcommand: add | ls | switch | invite | request | sso | members'
       );
