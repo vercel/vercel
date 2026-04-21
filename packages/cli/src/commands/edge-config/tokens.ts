@@ -21,6 +21,7 @@ interface TokenRow {
   id?: string;
   label?: string;
   token?: string;
+  partialToken?: string;
   createdAt?: number;
 }
 
@@ -227,10 +228,11 @@ export default async function tokensCmd(
     }
 
     const tableRows = [
-      ['id', 'label', 'created'].map(h => gray(h)),
+      ['id', 'label', 'value', 'created'].map(h => gray(h)),
       ...rows.map(t => [
         t.id ?? '',
         t.label ?? '',
+        t.partialToken ?? '',
         t.createdAt != null ? new Date(t.createdAt).toISOString() : '',
       ]),
     ];
