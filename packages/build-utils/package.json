@@ -41,6 +41,7 @@
     "@types/yazl": "2.4.2",
     "@vercel/error-utils": "workspace:*",
     "@vercel/routing-utils": "workspace:*",
+    "@yarnpkg/parsers": "^3.0.0",
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
@@ -62,6 +63,7 @@
     "semver": "6.3.1",
     "smol-toml": "1.5.2",
     "vitest": "2.0.1",
+    "typescript": "4.9.5",
     "yazl": "2.5.1"
   }
 }

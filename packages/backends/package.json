@@ -33,8 +33,6 @@
   ],
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
-    "@yarnpkg/parsers": "^3.0.0",
-    "js-yaml": "^3.13.1",
     "@vercel/nft": "1.5.0",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
