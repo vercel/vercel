@@ -24,7 +24,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           # Necessary for the publish step to work since it uses HEAD^ to determine if the version has changed
           fetch-depth: 2
 
@@ -34,7 +34,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
@@ -52,8 +52,8 @@ jobs:
         with:
           version: '0.10.11'
 
-      - name: install npm@9
-        run: npm i -g npm@9
+      - name: install npm@11
+        run: npm i -g npm@11
 
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
@@ -71,30 +71,30 @@ jobs:
         uses: changesets/action@v1
         with:
           version: pnpm ci:version
-          publish: pnpm ci:publish
+          publish: pnpm ci:publish # npm publish
         env:
-          GITHUB_TOKEN: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-      - name: Trigger Update (if a Publish Happened)
-        if: steps.changesets.outputs.published == 'true'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
-          script: |
-            const script = require('./utils/trigger-update-workflow.js')
-            await script({ github, context })
+      # TODO: re-enable with a new bot token or GitHub App
+      # - name: Trigger Update (if a Publish Happened)
+      #   if: steps.changesets.outputs.published == 'true'
+      #   uses: actions/github-script@v7
+      #   with:
+      #     github-token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+      #     script: |
+      #       const script = require('./utils/trigger-update-workflow.js')
+      #       await script({ github, context })
 
-      - name: Set latest Release to `vercel` (if a Publish Happened)
-        if: steps.changesets.outputs.published == 'true'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
-          script: |
-            const script = require('./utils/update-latest-release.js')
-            await script({ github, context })
+      # - name: Set latest Release to `vercel` (if a Publish Happened)
+      #   if: steps.changesets.outputs.published == 'true'
+      #   uses: actions/github-script@v7
+      #   with:
+      #     github-token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+      #     script: |
+      #       const script = require('./utils/update-latest-release.js')
+      #       await script({ github, context })
 
   summary:
     name: Summary (release)

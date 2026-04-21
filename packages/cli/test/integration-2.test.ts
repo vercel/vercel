@@ -550,6 +550,8 @@ test('add a sensitive env var', async () => {
   expect(output.stderr).toContain(
     'Added Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('override an existing env var', async () => {
@@ -612,6 +614,8 @@ test('override an existing env var', async () => {
   expect(outputOverride.stderr).toContain(
     'Overrode Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {

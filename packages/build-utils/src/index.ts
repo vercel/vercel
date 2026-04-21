@@ -230,6 +230,20 @@ export { validateFrameworkVersion } from './deserialize/validate-framework-versi
 export { hydrateFilesMap } from './deserialize/hydrate-files-map';
 export { createFunctionsIterator } from './deserialize/create-functions-iterator';
 export { maybeReadJSON } from './deserialize/maybe-read-json';
+export {
+  deserializeBuildOutput,
+  validateDeploymentId,
+} from './deserialize/deserialize-build-output';
+export type {
+  DeserializeBuildOutputConfig,
+  DeserializeBuildOutputResult,
+  DeserializeBuildOutputPathOverride,
+  DeserializeBuildOutputOptions,
+  DeserializeBuildOutputLambdaOptions,
+  GroupLambdasOptions,
+  DeserializeBuildOutputSerializedConfig,
+  DeserializeBuildOutputSerializedPrerender,
+} from './deserialize/deserialize-build-output-types';
 
 export {
   deserializeLambda,
