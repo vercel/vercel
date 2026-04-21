@@ -93,26 +93,28 @@ async function resolveModuleAttrEntrypoint(
   return null;
 }
 
-export async function getPyprojectEntrypoint(
+export async function getVercelToolsEntrypoint(
   workPath: string
 ): Promise<PythonEntrypoint | null> {
   const pyprojectData = await readConfigFile<{
-    project?: { scripts?: Record<string, unknown> };
     tool?: { vercel?: { entrypoint?: unknown } };
   }>(join(workPath, 'pyproject.toml'));
   if (!pyprojectData) return null;
 
-  // Prefer `[tool.vercel] entrypoint = "module:attr"` if present.
   const vercelEntrypoint = pyprojectData.tool?.vercel?.entrypoint;
-  if (typeof vercelEntrypoint === 'string') {
-    const resolved = await resolveModuleAttrEntrypoint(
-      workPath,
-      vercelEntrypoint
-    );
-    if (resolved) return resolved;
-  }
+  if (typeof vercelEntrypoint !== 'string') return null;
+  return resolveModuleAttrEntrypoint(workPath, vercelEntrypoint);
+}
 
-  // Fall back to `[project.scripts] app = "module:attr"`.
+// Legacy: kept for compatibility. Prefer tool.vercel.entrypoint.
+export async function getPyprojectScriptsEntrypoint(
+  workPath: string
+): Promise<PythonEntrypoint | null> {
+  const pyprojectData = await readConfigFile<{
+    project?: { scripts?: Record<string, unknown> };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return null;
+
   const scripts = pyprojectData.project?.scripts as
     | Record<string, unknown>
     | undefined;
@@ -279,14 +281,20 @@ export async function detectPythonEntrypoint(
     return null;
   }
 
-  // Otherwise do a search
+  // Check `tool.vercel.entrypoint` in pyproject.toml first.
+  const vercelEntry = await getVercelToolsEntrypoint(workPath);
+  if (vercelEntry) return { entrypoint: vercelEntry };
+
+  // Then do a framework-specific search.
   const result =
     framework === 'django'
       ? await detectDjangoPythonEntrypoint(workPath)
       : await detectGenericPythonEntrypoint(workPath);
   if (result) return result;
-  const pyprojectEntry = await getPyprojectEntrypoint(workPath);
-  return pyprojectEntry
-    ? { entrypoint: pyprojectEntry }
+
+  // Fall back to `project.scripts.app` in pyproject.toml.
+  const scriptsEntry = await getPyprojectScriptsEntrypoint(workPath);
+  return scriptsEntry
+    ? { entrypoint: scriptsEntry }
     : { error: makeDetectError(framework) };
 }
