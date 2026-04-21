@@ -1,0 +1,24 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "nextjs",
+      "mount": "/"
+    },
+    "parent-api": {
+      "entrypoint": "services/parent-api/main.py",
+      "routing": {
+        "paths": ["/api/parent", "/api/parent/child/legacy"]
+      }
+    },
+    "child-api": {
+      "entrypoint": "services/child-api/main.py",
+      "routing": {
+        "paths": ["/api/parent/child"]
+      }
+    }
+  }
+}

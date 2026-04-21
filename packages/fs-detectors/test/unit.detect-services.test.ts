@@ -1068,6 +1068,150 @@ describe('detectServices', () => {
       });
     });
 
+    it('should support routing paths for non-route-owning backend services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            docs: {
+              entrypoint: 'services/docs/main.py',
+              framework: 'fastapi',
+              routing: {
+                paths: ['/docs', '/docs/new-product/legacy'],
+              },
+            },
+            'new-product-docs': {
+              entrypoint: 'services/new-product/main.py',
+              framework: 'fastapi',
+              routing: {
+                paths: ['/docs/new-product'],
+              },
+            },
+          },
+        }),
+        'services/docs/main.py': 'from fastapi import FastAPI',
+        'services/new-product/main.py': 'from fastapi import FastAPI',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(2);
+
+      const docs = result.services.find(s => s.name === 'docs');
+      const newProductDocs = result.services.find(
+        s => s.name === 'new-product-docs'
+      );
+
+      expect(docs).toMatchObject({
+        routePrefix: undefined,
+        routingPaths: ['/docs', '/docs/new-product/legacy'],
+        stripRoutePrefix: false,
+      });
+      expect(newProductDocs).toMatchObject({
+        routePrefix: undefined,
+        routingPaths: ['/docs/new-product'],
+        stripRoutePrefix: false,
+      });
+
+      expect(result.routes.rewrites).toHaveLength(3);
+      expect(
+        findMatchingRoute(result.routes.rewrites, '/docs/getting-started')
+      ).toMatchObject({
+        dest: '/_svc/docs/index',
+        check: true,
+      });
+      expect(
+        findMatchingRoute(result.routes.rewrites, '/docs/new-product/overview')
+      ).toMatchObject({
+        dest: '/_svc/new-product-docs/index',
+        check: true,
+      });
+      expect(
+        findMatchingRoute(
+          result.routes.rewrites,
+          '/docs/new-product/legacy/changelog'
+        )
+      ).toMatchObject({
+        dest: '/_svc/docs/index',
+        check: true,
+      });
+    });
+
+    it('should error when routing is mixed with legacy routing keys', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.py',
+              framework: 'fastapi',
+              routePrefix: '/api',
+              routing: {
+                paths: ['/api'],
+              },
+            },
+          },
+        }),
+        'api/index.py': 'from fastapi import FastAPI',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'CONFLICTING_ROUTING_CONFIG',
+        serviceName: 'api',
+      });
+    });
+
+    it('should error when routing uses unsupported dynamic patterns', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            products: {
+              entrypoint: 'services/products/main.py',
+              framework: 'fastapi',
+              routing: {
+                paths: ['/products/:id'],
+              },
+            },
+          },
+        }),
+        'services/products/main.py': 'from fastapi import FastAPI',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'UNSUPPORTED_ROUTING_PATTERN',
+        serviceName: 'products',
+      });
+    });
+
+    it('should error when static frontend uses routing instead of mount', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            docs: {
+              entrypoint: 'apps/docs',
+              framework: 'vite',
+              routing: {
+                paths: ['/docs'],
+              },
+            },
+          },
+        }),
+        'apps/docs/package.json': JSON.stringify({ name: 'docs' }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'UNSUPPORTED_ROUTING_BUILDER',
+        serviceName: 'docs',
+      });
+    });
+
     it('should derive routePrefix from subdomain using /_/serviceName', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

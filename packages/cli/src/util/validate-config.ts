@@ -182,6 +182,24 @@ const serviceMountSchema = {
   ],
 };
 
+const serviceRoutingSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['paths'],
+  properties: {
+    paths: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 64,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 512,
+      },
+    },
+  },
+};
+
 const serviceScheduleSchema = {
   type: 'string',
   minLength: 9,
@@ -299,6 +317,7 @@ const serviceCommonProperties = {
 
 const serviceRoutableProperties = {
   mount: serviceMountSchema,
+  routing: serviceRoutingSchema,
   routePrefix: {
     type: 'string',
     minLength: 1,
