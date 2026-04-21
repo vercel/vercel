@@ -14,6 +14,8 @@ async def app(scope, receive, send):
             raise ValueError("something went wrong")
         except ValueError:
             log.exception("structlog exc message")
+    elif scope.get("path") == "/log-structlog-stack":
+        log.info("structlog stack message", stack_info=True)
 
     await send(
         {
