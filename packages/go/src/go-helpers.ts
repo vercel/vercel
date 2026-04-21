@@ -1,8 +1,9 @@
 import { createHash } from 'crypto';
 import { extract } from 'tar';
 import execa from 'execa';
+import nodeFetch from 'node-fetch';
 import {
-  createReadStream,
+  createWriteStream,
   mkdirp,
   pathExists,
   readFile,
@@ -11,63 +12,17 @@ import {
 } from 'fs-extra';
 import { delimiter, dirname, join } from 'path';
 import stringArgv from 'string-argv';
-import {
-  cloneEnv,
-  debug,
-  extractZip,
-  VerifiedDownloader,
-} from '@vercel/build-utils';
+import { cloneEnv, debug } from '@vercel/build-utils';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
 import { tmpdir } from 'os';
+import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
 
 const streamPipeline = promisify(pipeline);
 
-/**
- * Pinned Go bootstrap release. The builder installs this version — with
- * SHA-256 verification — only when no compatible system Go is available. Once
- * a bootstrap (or a pre-installed Go) is on PATH, the Go command itself
- * handles toolchain resolution per the customer's `go.mod` via the standard
- * `GOTOOLCHAIN` mechanism (added in Go 1.21), using `sum.golang.org` for
- * integrity verification.
- */
-const BOOTSTRAP_GO_VERSION = '1.23.12';
-
-/**
- * Minimum Go minor version accepted from system/cache before we decide to
- * download the bootstrap. 1.21 is the earliest release that implements the
- * `GOTOOLCHAIN` resolution we rely on.
- */
-const BOOTSTRAP_GO_MIN_MINOR = 21;
-
-/**
- * SHA-256 of each platform's Go 1.23.12 archive, published at
- * https://go.dev/dl/?mode=json. Bumping {@link BOOTSTRAP_GO_VERSION} requires
- * refreshing every entry in this map.
- */
-const BOOTSTRAP_GO_SHA256: Record<string, string> = {
-  'linux-amd64':
-    'd3847fef834e9db11bf64e3fb34db9c04db14e068eeb064f49af747010454f90',
-  'linux-arm64':
-    '52ce172f96e21da53b1ae9079808560d49b02ac86cecfa457217597f9bc28ab3',
-  'darwin-amd64':
-    '0f6efdc3ffc6f03b230016acca0aef43c229de022d0ff401e7aa4ad4862eca8e',
-  'darwin-arm64':
-    '5bfa117e401ae64e7ffb960243c448b535fe007e682a13ff6c7371f4a6f0ccaa',
-  'windows-amd64':
-    '07c35866cdd864b81bb6f1cfbf25ac7f87ddc3a976ede1bf5112acbb12dfe6dc',
-};
-
-/**
- * Minor-version allowlist used only by {@link parseGoModVersion} to resolve
- * minor-only `go 1.X` directives to a default patch release. Actual toolchain
- * selection at runtime is delegated to the Go command via `GOTOOLCHAIN`, so
- * keys that are absent here never prevent a user from pinning a specific
- * patch via `go X.Y.Z` or `toolchain goX.Y.Z`.
- */
-const minorDefaultPatch = new Map<string, string>([
+const versionMap = new Map([
   ['1.26', '1.26.1'],
   ['1.25', '1.25.8'],
   ['1.24', '1.24.13'],
@@ -83,7 +38,6 @@ const minorDefaultPatch = new Map<string, string>([
   ['1.14', '1.14.15'],
   ['1.13', '1.13.15'],
 ]);
-
 const archMap = new Map([
   ['x64', 'amd64'],
   ['x86', '386'],
@@ -96,18 +50,30 @@ const GO_MIN_MAJOR_VERSION = 1;
 const GO_MIN_MINOR_VERSION = 13;
 
 /**
- * Determines the URL to download the bootstrap Golang SDK.
+ * Determines the URL to download the Golang SDK.
+ * @param version The desireed Go version
+ * @returns The Go download URL
  */
-function getGoUrl() {
+function getGoUrl(version: string) {
   const { arch, platform } = process;
   const ext = platform === 'win32' ? 'zip' : 'tar.gz';
   const goPlatform = platformMap.get(platform) || platform;
-  const goArch = archMap.get(arch) || arch;
-  const filename = `go${BOOTSTRAP_GO_VERSION}.${goPlatform}-${goArch}.${ext}`;
+  let goArch = archMap.get(arch) || arch;
+
+  // Go 1.16 was the first version to support arm64, so if the version is younger
+  // we need to download the amd64 version
+  if (
+    platform === 'darwin' &&
+    goArch === 'arm64' &&
+    parseInt((/^\d+.(\d+)/.exec(version) as string[])[1], 10) < 16
+  ) {
+    goArch = 'amd64';
+  }
+
+  const filename = `go${version}.${goPlatform}-${goArch}.${ext}`;
   return {
     filename,
     url: `https://dl.google.com/go/${filename}`,
-    platformKey: `${goPlatform}-${goArch}`,
   };
 }
 
@@ -253,7 +219,6 @@ export class GoWrapper {
     );
     debug(`  CWD=${opts.cwd}`);
     debug(`  GOROOT=${(env || opts.env).GOROOT}`);
-    debug(`  GOTOOLCHAIN=${(env || opts.env).GOTOOLCHAIN}`);
     debug(`  GO_BUILD_FLAGS=${(env || opts.env).GO_BUILD_FLAGS}`);
 
     const captureAndForwardOutput =
@@ -321,60 +286,22 @@ type CreateGoOptions = {
 };
 
 /**
- * Computes the GOTOOLCHAIN value to export for a given parsed `go.mod`.
- *
- * The Go command (>= 1.21) resolves its own toolchain at runtime based on
- * `GOTOOLCHAIN`. When we pin an exact toolchain here, Go downloads and
- * verifies that exact version via `sum.golang.org` — guaranteeing fixtures
- * like `go 1.23.1` resolve to exactly `go1.23.1` regardless of which Go
- * binary initiated the build.
- *
- * Rules:
- *   - A `toolchain goX.Y.Z` directive always wins (explicit intent).
- *   - A patch-level `go X.Y.Z` (either explicit in go.mod, or resolved via
- *     {@link minorDefaultPatch} from a minor-only directive) pins the
- *     toolchain. proxy.golang.org hosts toolchain modules for every
- *     `golang.org/toolchain v0.0.1-goX.Y.Z.<platform>` we care about —
- *     including pre-1.21 releases — so setting `GOTOOLCHAIN=goX.Y.Z`
- *     triggers a verified download and re-exec regardless of the bootstrap
- *     toolchain's own version.
- *   - Anything else (no go.mod, unparseable version) defers to
- *     `GOTOOLCHAIN=auto`, which lets Go use the running toolchain as long
- *     as it satisfies the `go` directive's minimum.
- */
-export function decideGoToolchain(goMod: GoVersions | undefined): string {
-  if (!goMod) {
-    // No go.mod — default to the newest supported version. This matches the
-    // pre-GOTOOLCHAIN behavior where the builder downloaded the first entry
-    // from the version map for projects that don't specify a Go version.
-    const defaultVersion = Array.from(minorDefaultPatch.values())[0];
-    return `go${defaultVersion}`;
-  }
-  if (goMod.toolchain) {
-    return `go${goMod.toolchain}`;
-  }
-  if (/^\d+\.\d+\.\d+/.test(goMod.go)) {
-    return `go${goMod.go}`;
-  }
-  return 'auto';
-}
-
-/**
  * Initializes a `GoWrapper` instance.
  *
- * The builder delegates version resolution to Go's own toolchain mechanism:
- *   1. Probe the local cache, global cache, and system PATH for any Go
- *      binary that supports `GOTOOLCHAIN` (i.e. version ≥ 1.21).
- *   2. If none is available, install a pinned bootstrap (currently Go
- *      {@link BOOTSTRAP_GO_VERSION}) via {@link VerifiedDownloader} using
- *      the SHA-256 digest from {@link BOOTSTRAP_GO_SHA256}.
- *   3. Compute `GOTOOLCHAIN` via {@link decideGoToolchain} so Go itself
- *      fetches and verifies any customer-pinned toolchain via
- *      `sum.golang.org`.
+ * This function determines the Go version to use by first looking in the
+ * `go.mod`, if exists, otherwise uses the latest version from the version
+ * map.
  *
- * On Vercel's standard build container, Go will be pre-installed on PATH
- * once shipped; this probe finds it and skips the bootstrap download
- * entirely.
+ * Next it will attempt to find the desired Go version by checking the
+ * following locations:
+ *   1. The "local" project cache directory (e.g. `.vercel/cache/golang`)
+ *   2. The "global" cache directory (e.g. `~/.cache/com.vercel.com/golang`)
+ *   3. The system PATH
+ *
+ * If the Go version is not found, it's downloaded and installed in the
+ * global cache directory so it can be shared across projects. When using
+ * Linux or macOS, it creates a symlink from the global cache to the local
+ * cache directory so that `prepareCache` will persist it.
  *
  * @param modulePath The path possibly containing a `go.mod` file
  * @param opts `execa` options (`cwd`, `env`, `stdio`, etc)
@@ -386,32 +313,37 @@ export async function createGo({
   opts = {},
   workPath,
 }: CreateGoOptions): Promise<GoWrapper> {
-  // parse the `go.mod`, if exists, so we can compute GOTOOLCHAIN
+  // parse the `go.mod`, if exists
   let goPreferredVersion: GoVersions | undefined;
   if (modulePath) {
     goPreferredVersion = await parseGoModVersionFromModule(modulePath);
   }
+
+  // default to newest (first) supported go version
+  const goSelectedVersion = goPreferredVersion
+    ? goPreferredVersion.toolchain || goPreferredVersion.go
+    : Array.from(versionMap.values())[0];
 
   const env = cloneEnv(process.env, opts.env);
   const { PATH } = env;
   const { platform } = process;
   const goGlobalCacheDir = join(
     goGlobalCachePath,
-    `bootstrap-${BOOTSTRAP_GO_VERSION}_${platform}_${process.arch}`
+    `${goSelectedVersion}_${platform}_${process.arch}`
   );
   const goCacheDir = join(workPath, localCacheDir);
 
   if (goPreferredVersion) {
-    debug(
-      `Preferred go version from go.mod: ${goPreferredVersion.toolchain ?? goPreferredVersion.go}`
-    );
+    debug(`Preferred go version ${goSelectedVersion} (from go.mod)`);
     env.GO111MODULE = 'on';
+  } else {
+    debug(
+      `Preferred go version ${goSelectedVersion} (latest from version map)`
+    );
   }
 
   const setGoEnv = async (goDir: string | null) => {
     if (!goDir) {
-      // Using system Go — leave GOROOT/PATH untouched and skip our cache
-      // symlink wiring. The image's GOMODCACHE/GOCACHE (if set) are honored.
       env.GOROOT = undefined;
       env.PATH = PATH;
       return;
@@ -464,11 +396,11 @@ export async function createGo({
     env.PATH = `${join(goDir, 'bin')}${delimiter}${PATH}`;
   };
 
-  // Accept any Go ≥ 1.21 from local cache, global cache, or system PATH.
+  // try each of these Go directories looking for the version we need
   const goDirs = {
     'local cache': goCacheDir,
     'global cache': goGlobalCacheDir,
-    'system PATH': null as string | null,
+    'system PATH': null,
   };
 
   for (const [label, goDir] of Object.entries(goDirs)) {
@@ -483,85 +415,97 @@ export async function createGo({
       env.PATH = goBinDir || PATH;
 
       const { stdout } = await execa('go', ['version'], { env });
-      const { major, minor, version } = parseGoVersionString(stdout);
+      const { major, minor, short, version } = parseGoVersionString(stdout);
 
-      if (major < 1 || (major === 1 && minor < BOOTSTRAP_GO_MIN_MINOR)) {
-        debug(
-          `Found go ${version} in ${label}, but < 1.${BOOTSTRAP_GO_MIN_MINOR} (GOTOOLCHAIN unsupported); trying next source`
-        );
-        continue;
+      if (
+        major < GO_MIN_MAJOR_VERSION ||
+        (major === GO_MIN_MAJOR_VERSION && minor < GO_MIN_MINOR_VERSION)
+      ) {
+        debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
+      if (version === goSelectedVersion || short === goSelectedVersion) {
+        debug(`Selected go ${version} (from ${label})`);
 
-      debug(`Using go ${version} from ${label}`);
-      await setGoEnv(goDir);
-      applyGoToolchainEnv(env, goPreferredVersion);
-      return new GoWrapper(env, opts);
+        await setGoEnv(goDir);
+        return new GoWrapper(env, opts);
+      } else {
+        debug(`Found go ${version} in ${label}, but need ${goSelectedVersion}`);
+      }
     } catch {
       debug(`Go not found in ${label}`);
     }
   }
 
-  // No compatible Go found — download the pinned bootstrap.
-  await downloadBootstrap({ dest: goGlobalCacheDir });
+  // we need to download and cache the desired `go` version
+  await download({
+    dest: goGlobalCacheDir,
+    version: goSelectedVersion,
+  });
+
   await setGoEnv(goGlobalCacheDir);
-  applyGoToolchainEnv(env, goPreferredVersion);
   return new GoWrapper(env, opts);
 }
 
-function applyGoToolchainEnv(env: Env, goMod: GoVersions | undefined): void {
-  const toolchain = decideGoToolchain(goMod);
-  env.GOTOOLCHAIN = toolchain;
-  debug(`Set GOTOOLCHAIN to ${toolchain}`);
-  // When GOTOOLCHAIN triggers a re-exec into a different Go version (any
-  // value other than 'auto'), the re-exec'd binary must discover its own
-  // GOROOT. If we leave the bootstrap's GOROOT in the env, the re-exec'd
-  // (possibly older) Go will use the wrong stdlib, causing build failures
-  // like "no Go source files". Clearing GOROOT lets Go auto-detect it.
-  if (toolchain !== 'auto') {
-    delete env.GOROOT;
-  }
-}
-
 /**
- * Downloads and installs the pinned bootstrap Go distribution with
- * SHA-256 verification.
+ * Download and installs the Go distribution.
+ *
+ * @param dest The directory to install Go into. If directory exists, it is
+ * first deleted before installing.
+ * @param version The Go version to download
  */
-async function downloadBootstrap({ dest }: { dest: string }) {
-  const { filename, url, platformKey } = getGoUrl();
-  const sha256 = BOOTSTRAP_GO_SHA256[platformKey];
-  if (!sha256) {
-    throw new GoError(
-      `No pinned bootstrap Go SHA-256 for ${platformKey}. ` +
-        `Supported platforms: ${Object.keys(BOOTSTRAP_GO_SHA256).join(', ')}.`
-    );
+async function download({ dest, version }: { dest: string; version: string }) {
+  const { filename, url } = getGoUrl(version);
+  console.log(`Downloading go: ${url}`);
+  const res = await nodeFetch(url);
+
+  if (!res.ok) {
+    throw new Error(`Failed to download: ${url} (${res.status})`);
   }
 
-  console.log(`Downloading Go bootstrap ${BOOTSTRAP_GO_VERSION}: ${url}`);
+  debug(`Installing go ${version} to ${dest}`);
 
-  const stagingDir = join(tmpdir(), `vercel-go-download-${process.pid}`);
-  await mkdirp(stagingDir);
-  const archivePath = join(stagingDir, filename);
+  await remove(dest);
+  await mkdirp(dest);
 
-  try {
-    await new VerifiedDownloader({ sha256 }).downloadTo(url, archivePath);
+  if (/\.zip$/.test(filename)) {
+    const zipFile = join(tmpdir(), filename);
+    try {
+      await streamPipeline(res.body, createWriteStream(zipFile));
+      const zip = await yauzl.open(zipFile);
+      let entry = await zip.readEntry();
+      while (entry) {
+        const fileName = entry.fileName.split('/').slice(1).join('/');
 
-    debug(`Installing Go ${BOOTSTRAP_GO_VERSION} to ${dest}`);
+        if (fileName) {
+          const destPath = join(dest, fileName);
 
-    await remove(dest);
-    await mkdirp(dest);
+          if (/\/$/.test(fileName)) {
+            await mkdirp(destPath);
+          } else {
+            const [entryStream] = await Promise.all([
+              entry.openReadStream(),
+              mkdirp(dirname(destPath)),
+            ]);
+            const out = createWriteStream(destPath);
+            await streamPipeline(entryStream, out);
+          }
+        }
 
-    if (/\.zip$/.test(filename)) {
-      await extractZip(archivePath, dest, { strip: 1 });
-      return;
+        entry = await zip.readEntry();
+      }
+    } finally {
+      await remove(zipFile);
     }
-
-    await streamPipeline(
-      createReadStream(archivePath),
-      extract({ cwd: dest, strip: 1 })
-    );
-  } finally {
-    await remove(stagingDir);
+    return;
   }
+
+  await new Promise((resolve, reject) => {
+    res.body
+      .on('error', reject)
+      .pipe(extract({ cwd: dest, strip: 1 }))
+      .on('error', reject)
+      .on('finish', resolve);
+  });
 }
 
 const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;
@@ -589,7 +533,7 @@ class GoError extends Error {
   code: string | undefined;
 }
 
-export interface GoVersions {
+interface GoVersions {
   go: string;
   toolchain?: string;
 }
@@ -641,13 +585,8 @@ export function parseGoModVersion(content: string): GoVersions | undefined {
   const major = parseInt(goMatches[1], 10);
   const minor = parseInt(goMatches[2], 10);
   const patch = goMatches[3] && parseInt(goMatches[3], 10);
-  // Accept stable `1.X[.Y]` versions and optional `rcN` / `betaN` pre-release
-  // suffixes, matching the official Go toolchain version grammar. Anything
-  // else (arbitrary suffixes like `_foo` or URL-unsafe characters) is rejected
-  // so the resolved version cannot be attacker-shaped into a GOTOOLCHAIN
-  // value that re-execs into a crafted path.
   const toolchainMatches =
-    /^\s*toolchain\s+go((\d+)\.(\d+)(?:\.(\d+))?(?:rc\d+|beta\d+)?)\s*(?:\/\/.*)?$/gm.exec(
+    /^\s*toolchain\s+go((\d+)\.(\d+)(?:\.(\d+)|\w+\d+)?)\s*(?:\/\/.*)?$/gm.exec(
       content
     );
   const toolchain = toolchainMatches ? toolchainMatches[1] : undefined;
@@ -659,7 +598,7 @@ export function parseGoModVersion(content: string): GoVersions | undefined {
         toolchain,
       };
     }
-    const full = minorDefaultPatch.get(`${major}.${minor}`);
+    const full = versionMap.get(`${major}.${minor}`);
     if (full) {
       return {
         go: full,

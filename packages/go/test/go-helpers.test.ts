@@ -6,7 +6,7 @@ jest.mock('execa', () => {
 });
 
 import execa from 'execa';
-import { decideGoToolchain, GoWrapper } from '../src/go-helpers';
+import { GoWrapper } from '../src/go-helpers';
 
 const mockedExeca = execa as unknown as jest.MockedFunction<typeof execa> & {
   stdout: jest.Mock;
@@ -144,42 +144,5 @@ describe('GoWrapper', () => {
       ['build', '-ldflags', '-s -w', '-o', '/tmp/out', '.'],
       expect.objectContaining({ stdio: 'pipe' })
     );
-  });
-});
-
-describe('decideGoToolchain', () => {
-  it('defaults to the newest supported version when there is no go.mod', () => {
-    // Matches pre-GOTOOLCHAIN behavior: projects without go.mod get the
-    // newest version from minorDefaultPatch.
-    expect(decideGoToolchain(undefined)).toBe('go1.26.1');
-  });
-
-  it('pins the toolchain for patch-level post-1.21 directives', () => {
-    expect(decideGoToolchain({ go: '1.21.0' })).toBe('go1.21.0');
-    expect(decideGoToolchain({ go: '1.23.1' })).toBe('go1.23.1');
-  });
-
-  it('pins the toolchain for pre-1.21 patch versions (modules exist retroactively)', () => {
-    // proxy.golang.org publishes toolchain modules for every supported
-    // release — verified via the info endpoint for v0.0.1-goX.Y.Z.<platform>.
-    // Setting GOTOOLCHAIN to a pre-1.21 version causes the bootstrap Go to
-    // download and re-exec into that version, matching the pre-PR behavior
-    // where the builder itself downloaded the specific version.
-    expect(decideGoToolchain({ go: '1.18.10' })).toBe('go1.18.10');
-    expect(decideGoToolchain({ go: '1.20.14' })).toBe('go1.20.14');
-    expect(decideGoToolchain({ go: '1.13.15' })).toBe('go1.13.15');
-  });
-
-  it('lets the toolchain directive win over the go directive', () => {
-    expect(decideGoToolchain({ go: '1.21.0', toolchain: '1.22rc1' })).toBe(
-      'go1.22rc1'
-    );
-    expect(decideGoToolchain({ go: '1.24.0', toolchain: '1.23.5' })).toBe(
-      'go1.23.5'
-    );
-  });
-
-  it('falls back to auto for malformed go versions', () => {
-    expect(decideGoToolchain({ go: 'not-a-version' })).toBe('auto');
   });
 });
