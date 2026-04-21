@@ -66,8 +66,7 @@ import {
 
 import output from '../../output-manager';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
-import { outputAgentError } from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -83,7 +82,7 @@ import {
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { printError, toEnumerableError } from '../../util/error';
-import { CantParseJSONFile } from '../../util/errors-ts';
+import { CantParseJSONFile, ProjectNotFound } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { staticFiles as getFiles } from '../../util/get-files';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -96,9 +95,11 @@ import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
+  projectToSettings,
   readProjectSettings,
   type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
+import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
@@ -110,7 +111,6 @@ import {
   DEFAULT_VERCEL_CONFIG_FILENAME,
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
-import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
@@ -230,8 +230,6 @@ export default async function main(client: Client): Promise<number> {
       flags: parsedArgs.flags,
     }) || 'preview';
 
-  const yes = Boolean(parsedArgs.flags['--yes']);
-
   // Check for deprecated env var
   const hasDeprecatedEnvVar =
     process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
@@ -262,88 +260,67 @@ export default async function main(client: Client): Promise<number> {
     cwd = client.cwd = link.repoRoot;
   }
 
-  // TODO: read project settings from the API, fall back to local `project.json` if that fails
+  const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
-  // Read project settings, and pull them from Vercel if necessary
+  // Read project settings from disk, falling back to the API when not found locally
   const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
   let project = await rootSpan
     .child('vc.readProjectSettings')
     .trace(() => readProjectSettings(vercelDir));
-  const isTTY = process.stdin.isTTY;
-  while (!project?.settings) {
-    let confirmed = yes;
-    if (!confirmed) {
-      if (client.nonInteractive) {
-        outputAgentError(
-          client,
-          {
-            status: AGENT_STATUS.ERROR,
-            reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
-            message:
-              'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  `pull --yes --environment ${target}`,
-                  client.argv
-                ),
-                when: 'retrieve project settings',
-              },
-              {
-                command: buildCommandWithGlobalFlags(
-                  'build --yes',
-                  client.argv
-                ),
-                when: 're-run build after pull',
-              },
-            ],
-          },
-          1
-        );
-        return 1;
-      }
-      if (!isTTY) {
-        output.print(
-          `No Project Settings found locally. Run ${cli.getCommandName(
-            'pull --yes'
-          )} to retrieve them. In non-interactive mode, set VERCEL_TOKEN for authentication.`
-        );
-        return 1;
-      }
-
-      confirmed = await client.input.confirm(
+  let envFetchedFromApi = false;
+  if (!project?.settings) {
+    if (!link) {
+      output.error(
         `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull'
-        )} for retrieving them?`,
-        true
+          'link'
+        )} to link your project, then run ${cli.getCommandName('build')} again.`
       );
+      return 1;
     }
-    if (!confirmed) {
-      if (!client.nonInteractive)
-        output.print(`Canceled. No Project Settings retrieved.\n`);
-      return 0;
+
+    output.debug('No local project settings found, fetching from API...');
+    if (link.orgId?.startsWith('team_')) {
+      client.config.currentTeam = link.orgId;
     }
-    const { argv: originalArgv } = client;
-    client.cwd = join(cwd, projectRootDirectory);
-    client.argv = [
-      ...originalArgv.slice(0, 2),
-      'pull',
-      `--environment`,
-      target,
-    ];
-    const result = await pullCommandLogic(
-      client,
-      client.cwd,
-      Boolean(parsedArgs.flags['--yes']),
-      target,
-      parsedArgs.flags
+    const apiProject = await rootSpan
+      .child('vc.fetchProjectSettings')
+      .trace(() => getProjectByIdOrName(client, link.projectId, link.orgId));
+    if (!apiProject || apiProject instanceof ProjectNotFound) {
+      output.error(
+        `Project not found. Run ${cli.getCommandName(
+          'link'
+        )} to re-link your project.`
+      );
+      return 1;
+    }
+    project = projectToSettings(apiProject);
+
+    // Also fetch env vars from the API since there's no local .env file either
+    output.debug(
+      `Fetching "${target}" environment variables for project "${apiProject.name}"...`
     );
-    if (result !== 0) {
-      return result;
+    try {
+      const result = await pullEnvRecords(
+        client,
+        apiProject.id,
+        'vercel-cli:build',
+        { target }
+      );
+      // Prefer buildEnv (build-specific vars) when available, fall back to env
+      const envVars = result?.buildEnv ?? result?.env;
+      if (envVars) {
+        for (const [key, value] of Object.entries(envVars)) {
+          envToUnset.add(key);
+          process.env[key] = value;
+        }
+        output.debug(
+          `Loaded ${Object.keys(envVars).length} environment variables from API`
+        );
+      }
+    } catch (err) {
+      output.debug(`Failed to fetch environment variables from API: ${err}`);
     }
-    client.cwd = cwd;
-    client.argv = originalArgv;
-    project = await readProjectSettings(vercelDir);
+    envFetchedFromApi = true;
   }
 
   // Delete output directory from potential previous build
@@ -373,23 +350,26 @@ export default async function main(client: Client): Promise<number> {
 
   const deploymentId = parsedArgs.flags['--id'];
 
-  // When --id is provided, system env vars are fetched from the deployment,
-  // so the warning about missing system env vars does not apply.
+  // When env vars were fetched from the API (either via --id or because no
+  // local project settings existed), the warning does not apply.
   if (
     !process.env.VERCEL_BUILD_IMAGE &&
     !deploymentId &&
+    !envFetchedFromApi &&
     !client.nonInteractive
   ) {
     output.warn(
       'Build not running on Vercel. System environment variables will not be available.'
     );
   }
-  const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
-
   try {
     const loadEnvSpan = rootSpan.child('vc.loadEnv');
     try {
-      if (deploymentId) {
+      if (envFetchedFromApi) {
+        output.debug(
+          'Skipping local env file loading (already fetched from API)'
+        );
+      } else if (deploymentId) {
         // Set the team context so API calls include the teamId query param.
         // Without this, the API can't find the deployment.
         if (link?.orgId?.startsWith('team_')) {
@@ -419,7 +399,6 @@ export default async function main(client: Client): Promise<number> {
           VERCEL_DIR,
           `.env.${target}.local`
         );
-        // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
         const dotenvResult = dotenv.config({
           path: envPath,
           debug: output.isDebugEnabled(),

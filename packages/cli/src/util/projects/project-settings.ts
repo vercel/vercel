@@ -63,6 +63,33 @@ export async function writeProjectSettings(
   });
 }
 
+export function projectToSettings(project: Project): ProjectLinkAndSettings {
+  let analyticsId: string | undefined;
+  if (
+    project.analytics?.id &&
+    (!project.analytics.disabledAt ||
+      (project.analytics.enabledAt &&
+        project.analytics.enabledAt > project.analytics.disabledAt))
+  ) {
+    analyticsId = project.analytics.id;
+  }
+
+  return {
+    settings: {
+      createdAt: project.createdAt,
+      framework: project.framework,
+      devCommand: project.devCommand,
+      installCommand: project.installCommand,
+      buildCommand: project.buildCommand,
+      outputDirectory: project.outputDirectory,
+      rootDirectory: project.rootDirectory,
+      directoryListing: project.directoryListing,
+      nodeVersion: project.nodeVersion,
+      analyticsId,
+    },
+  };
+}
+
 export async function readProjectSettings(vercelDir: string) {
   try {
     return JSON.parse(
