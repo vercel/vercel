@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, nextOption } from '../../util/arg-common';
+import { formatOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const requestSubcommand = {
   name: 'request',
@@ -21,6 +21,37 @@ export const requestSubcommand = {
     {
       name: 'Status for another user id',
       value: `${packageName} teams request user_abc123`,
+    },
+  ],
+} as const;
+
+export const requestsSubcommand = {
+  name: 'requests',
+  aliases: [],
+  description: 'Manage pending team access requests',
+  arguments: [
+    {
+      name: 'action',
+      required: false,
+    },
+    {
+      name: 'userId',
+      required: false,
+    },
+  ],
+  options: [formatOption, yesOption],
+  examples: [
+    {
+      name: 'List pending access requests for the current team',
+      value: `${packageName} teams requests ls`,
+    },
+    {
+      name: 'Approve a pending request',
+      value: `${packageName} teams requests approve user_abc123`,
+    },
+    {
+      name: 'Reject a pending request in CI',
+      value: `${packageName} teams requests reject user_abc123 --yes --non-interactive`,
     },
   ],
 } as const;
@@ -173,6 +204,7 @@ export const teamsCommand = {
     inviteSubcommand,
     listSubcommand,
     requestSubcommand,
+    requestsSubcommand,
     switchSubcommand,
     ssoSubcommand,
     membersSubcommand,

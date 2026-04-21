@@ -51,6 +51,15 @@ export class TeamsTelemetryClient
     }
   }
 
+  trackCliSubcommandRequests(actual?: string) {
+    if (actual) {
+      this.trackCliSubcommand({
+        subcommand: 'requests',
+        value: actual,
+      });
+    }
+  }
+
   trackCliSubcommandSso(actual?: string) {
     if (actual) {
       this.trackCliSubcommand({
