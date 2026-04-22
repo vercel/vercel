@@ -1546,3 +1546,62 @@ describe('generateProjectManifest — framework field', () => {
     expect(manifest.framework).toBeUndefined();
   });
 });
+
+describe('generateProjectManifest — serviceType field', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('includes serviceType in manifest when provided', async () => {
+    writePackageJson(tempDir, { dependencies: { hono: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+      serviceType: 'worker',
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.serviceType).toBe('worker');
+  });
+
+  it('omits serviceType from manifest when not provided', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.serviceType).toBeUndefined();
+  });
+
+  it('omits serviceType from manifest when empty string provided', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+      serviceType: '',
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.serviceType).toBeUndefined();
+  });
+});
