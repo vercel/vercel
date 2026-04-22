@@ -1,16 +1,38 @@
-import {
+import { getVercelDataDir } from './token-util';
+
+// @vercel/oidc emits declarations with the repo's older TypeScript toolchain.
+// Importing cli-auth's generated types pulls in zod v4 declarations that this
+// build cannot parse, so keep the runtime dependency here untyped.
+const {
   clearAllCredentialsStrict,
   hasCredentials,
   readCredentials,
   writeCredentials,
-  type Credentials,
-} from '@vercel/cli-auth/credentials-store.js';
-import { getVercelDataDir } from './token-util';
+}: {
+  clearAllCredentialsStrict: (dir: string) => void;
+  hasCredentials: (credentials: Partial<AuthConfig>) => boolean;
+  readCredentials: (dir: string) => AuthConfig;
+  writeCredentials: (dir: string, credentials: Partial<AuthConfig>) => void;
+} = require('@vercel/cli-auth/credentials-store.js');
 
 /**
  * Auth configuration stored in ~/.../com.vercel.cli/auth.json or OS keyring
  */
-export type AuthConfig = Credentials;
+export interface AuthConfig {
+  '// Note'?: string;
+  '// Docs'?: string;
+  /** An `access_token` obtained using the OAuth Device Authorization flow. */
+  token?: string;
+  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
+  refreshToken?: string;
+  /**
+   * The absolute time (seconds) when the token expires.
+   * Used to optimistically check if the token is still valid.
+   */
+  expiresAt?: number;
+  /** Whether to skip writing this config to disk. */
+  skipWrite?: boolean;
+}
 
 /**
  * Get the path to the auth config directory
