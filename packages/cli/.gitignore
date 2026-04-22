@@ -2,3 +2,6 @@
 !test/dev/fixtures/**/.now
 !test/dev/fixtures/**/.vercel
 .env*.local
+
+# Binary build artifacts (bun/yao-pkg output, esbuild bundles, sidecars)
+dist-bin/
