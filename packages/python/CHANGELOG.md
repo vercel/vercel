@@ -1,5 +1,15 @@
 # @vercel/python
 
+## 6.36.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Don't pass --python 3.0 to uv venv when running vc dev ([#16072](https://github.com/vercel/vercel/pull/16072))
+
 ## 6.35.0
 
 ### Minor Changes
