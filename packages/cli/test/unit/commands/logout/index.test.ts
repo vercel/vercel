@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import logout from '../../../../src/commands/logout';
 import { client } from '../../../mocks/client';
 import {
-  writeToAuthConfigFile,
+  persistAuthConfig,
   writeToConfigFile,
 } from '../../../../src/util/config/files';
 
@@ -11,7 +11,7 @@ vi.mock('../../../../src/util/config/files', async () => {
 
   return {
     ...actual,
-    writeToAuthConfigFile: vi.fn(),
+    persistAuthConfig: vi.fn(),
     writeToConfigFile: vi.fn(),
   };
 });
@@ -54,7 +54,7 @@ describe('logout', () => {
 
     expect(exitCode).toBe(0);
     expect(writeToConfigFile).toHaveBeenCalledWith({});
-    expect(writeToAuthConfigFile).toHaveBeenCalledWith({}, {});
+    expect(persistAuthConfig).toHaveBeenCalledWith({}, {});
   });
 
   it('fails logout when clearing persisted auth state fails', async () => {
@@ -62,7 +62,7 @@ describe('logout', () => {
       res.status(200).json({});
     });
 
-    vi.mocked(writeToAuthConfigFile).mockImplementation(() => {
+    vi.mocked(persistAuthConfig).mockImplementation(() => {
       throw new Error('keyring delete failed');
     });
 
@@ -101,6 +101,6 @@ describe('logout', () => {
 
     expect(exitCode).toBe(0);
     expect(writeToConfigFile).not.toHaveBeenCalled();
-    expect(writeToAuthConfigFile).not.toHaveBeenCalled();
+    expect(persistAuthConfig).not.toHaveBeenCalled();
   });
 });

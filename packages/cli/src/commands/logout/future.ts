@@ -38,7 +38,7 @@ export async function logout(client: Client): Promise<number> {
 
     if (!skipWrite) {
       client.writeToConfigFile();
-      client.writeToAuthConfigFile();
+      client.persistAuthConfig();
     }
     o.debug('Configuration has been deleted');
 

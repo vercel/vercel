@@ -90,7 +90,7 @@ export const readAuthConfigFile = (config: GlobalConfig): AuthConfig => {
   };
 };
 
-export const writeToAuthConfigFile = (
+export const persistAuthConfig = (
   authConfig: AuthConfig,
   config: GlobalConfig
 ) => {
