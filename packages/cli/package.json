@@ -153,7 +153,6 @@
     "find-up": "4.1.0",
     "fs-extra": "10.0.0",
     "get-port": "5.1.1",
-    "git-last-commit": "1.0.1",
     "http-proxy-node16": "1.0.6",
     "ini": "3.0.0",
     "is-docker": "2.2.1",
