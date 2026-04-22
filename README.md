@@ -162,9 +162,9 @@ Sometimes you want to test changes to a Builder against an existing project, may
 
 1. Change directory to the desired Builder `cd ./packages/node`
 2. Run `pnpm build` to compile typescript and other build steps
-3. Run `npm pack` to create a tarball file. It is imporant to not use `pnpm pack` because it will not preserve the file permissions
+3. Run `npm pack` to create a tarball file. It is important to not use `pnpm pack` because it will not preserve the file permissions
 4. Move the resulting tarball to a directory
-5. Run `vercel <directory>` to upload the tarball file and get a URL. Remember to append `/<tarball name>` to then end of your URL
+5. Run `vercel <directory>` to upload the tarball file and get a URL. Remember to append `/<tarball name>` to the end of your URL
 6. Edit any existing `vercel.json` project and replace `use` with the URL
 7. Run `vercel` or `vercel dev` to deploy with the experimental Builder
 
