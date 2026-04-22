@@ -111,12 +111,11 @@ export async function token(
       ? 'authorization'
       : 'installation';
 
-  // Recovery opens a browser a human must complete. Only attempt it when
-  // the session is fully interactive AND the user hasn't declared
-  // non-interactive mode.
-  const attemptRecovery =
-    !client.nonInteractive &&
-    Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  // Attempt recovery when explicitly opted in (--yes) or when we're in a
+  // fully interactive TTY. In any other context (pipe, script, agent)
+  // we fail fast so `TOKEN=$(vc connex token ...)` stays safe.
+  const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
 
   if (!attemptRecovery) {
     const { requestCode } = generateRequestCode();
@@ -124,13 +123,16 @@ export async function token(
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
-      `Or re-run \`vercel connex token ${clientId}\` in an interactive terminal.`
+      `Or re-run with --yes to open the browser automatically: vercel connex token ${clientId} --yes`
     );
     return 1;
   }
 
   output.error(errorMessage);
-  if (!flags['--yes']) {
+  // Only prompt when we have a real TTY and the user hasn't pre-approved.
+  // Agents/scripts that reach this branch did so via --yes, so they
+  // skip straight to the browser + poll.
+  if (!flags['--yes'] && isInteractive) {
     const confirmed = await client.input.confirm(
       `Open browser to ${actionLabel}?`,
       true
