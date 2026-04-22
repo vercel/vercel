@@ -58,6 +58,8 @@ import {
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
 import { isDynamicRoute } from './is-dynamic-route';
+import { compile as compileRex } from '@vercel/rex';
+import { createRexRoute, isRexRoute } from './rex';
 
 type stringMap = { [key: string]: string };
 
@@ -499,6 +501,7 @@ export async function getDynamicRoutes({
             override: true,
           });
         }
+        // console.log('manifest', routesManifest);
 
         for (const dynamicRoute of routesManifest.dynamicRoutes) {
           if (!canUsePreviewMode && omittedRoutes?.has(dynamicRoute.page)) {
@@ -627,6 +630,7 @@ export async function getDynamicRoutes({
               check: true,
               override: true,
             });
+            // console.log('segment route', routes[routes.length - 1]);
           } else {
             routes.push({
               ...route,
@@ -3605,7 +3609,7 @@ export function updateRouteSrc(
   index: number,
   manifestItems: Array<{ regex: string }>
 ) {
-  if (route.src) {
+  if (route.src && !isRexRoute(route)) {
     route.src = manifestItems[index].regex;
   }
   return route;
@@ -4647,7 +4651,7 @@ export async function getServerActionMetaRoutes(
       edge?: Record<string, ActionItem>;
     };
 
-    const routes: Route[] = [];
+    const actionNameById: Record<string, string> = {};
 
     // Process both node and edge entries
     for (const runtimeType of ['node', 'edge'] as const) {
@@ -4660,36 +4664,30 @@ export async function getServerActionMetaRoutes(
 
         let exportedName = entry.exportedName;
 
-        if (exportedName === '$$RSC_SERVER_ACTION_0') {
-          exportedName = 'anonymous_fn';
-        }
+        // TODO(rex): this is broken anyway
+        // if (exportedName === '$$RSC_SERVER_ACTION_0') {
+        //   exportedName = 'anonymous_fn';
+        // }
 
-        const route: Route = {
-          src: '/(.*)',
-          has: [
-            {
-              type: 'header',
-              key: 'next-action',
-              value: id,
-            },
-          ],
-          transforms: [
-            {
-              type: 'request.headers',
-              op: 'append',
-              target: {
-                key: 'x-server-action-name',
-              },
-              args: `${entry.filename}#${exportedName}`,
-            },
-          ],
-        };
-
-        routes.push(route);
+        const actionName = `${entry.filename}#${exportedName}`;
+        actionNameById[id] = actionName;
       }
     }
 
-    return routes;
+    const code = compileRex(`
+      action-names-by-id = {
+        ${Object.entries(actionNameById)
+          .map(([id, actionName]) => `"${id}": "${actionName}",`)
+          .join('\n')} 
+      }
+      when action-name = action-names-by-id.(req.headers.next-action) do
+        req.headers.x-server-action-name = action-name
+        // TODO(rex): demo only
+        res.headers.x-server-action-name = action-name
+      end
+    `);
+    const route = createRexRoute(code);
+    return [route];
   } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];

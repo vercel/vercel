@@ -1739,6 +1739,9 @@ importers:
         specifier: 1.5.0
         version: 1.5.0
     devDependencies:
+      '@vercel/rex':
+        specifier: workspace:*
+        version: link:../rex-lang
       '@next-community/adapter-vercel':
         specifier: 0.0.1-beta.19
         version: 0.0.1-beta.19(next@16.1.6)
@@ -2305,6 +2308,16 @@ importers:
       vitest:
         specifier: 2.0.1
         version: 2.0.1(@types/node@20.11.0)
+
+  packages/rex-lang:
+    dependencies:
+      ohm-js:
+        specifier: ^17.1.0
+        version: 17.2.1
+    devDependencies:
+      '@ohm-js/cli':
+        specifier: ^2.0.1
+        version: 2.0.1(ohm-js@17.2.1)
 
   packages/routing-utils:
     dependencies:
@@ -6749,6 +6762,17 @@ packages:
       widest-line: 3.1.0
       wordwrap: 1.0.0
       wrap-ansi: 7.0.0
+    dev: true
+
+  /@ohm-js/cli@2.0.1(ohm-js@17.2.1):
+    resolution: {integrity: sha512-LKU5hGd/vmgsoZaWA9cEn7R84jRYg/2nUmHnozVGq0zIM++n9JPXvHBSJM8MHJIKm+RSDd19oKTbNs8nmio1nw==}
+    hasBin: true
+    peerDependencies:
+      ohm-js: ^17.0.0
+    dependencies:
+      commander: 8.3.0
+      fast-glob: 3.3.3
+      ohm-js: 17.2.1
     dev: true
 
   /@opentelemetry/api@1.9.0:
@@ -12022,6 +12046,11 @@ packages:
     engines: {node: '>= 6'}
     dev: true
 
+  /commander@8.3.0:
+    resolution: {integrity: sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==}
+    engines: {node: '>= 12'}
+    dev: true
+
   /concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
@@ -17194,7 +17223,6 @@ packages:
   /ohm-js@17.2.1:
     resolution: {integrity: sha512-4cXF0G09fAYU9z61kTfkNbKK1Kz/sGEZ5NbVWHoe9Qi7VB7y+Spwk051CpUTfUENdlIr+vt8tMV4/LosTE2cDQ==}
     engines: {node: '>=0.12.1'}
-    dev: true
 
   /on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}

@@ -1,0 +1,466 @@
+Rex {
+  space += comment
+
+  Program
+    = Expr*
+
+  Expr
+    = AssignExpr
+
+  AssignExpr
+    = Place AssignOp AssignExpr      -- assign
+    | ExistenceExpr                  -- value
+
+  ExistenceExpr
+    = ExistenceExpr AndKw BitExpr    -- and
+    | ExistenceExpr OrKw BitExpr     -- or
+    | ExistenceExpr NorKw BitExpr    -- nor
+    | BitExpr                        -- value
+
+  BitExpr
+    = BitExpr "&" CompareExpr        -- and
+    | BitExpr "^" CompareExpr        -- xor
+    | BitExpr "|" CompareExpr        -- or
+    | CompareExpr                    -- value
+
+  CompareExpr
+    = RangeExpr CompareOp RangeExpr  -- binary
+    | RangeExpr                      -- value
+
+  RangeExpr
+    = AddExpr ".." AddExpr           -- range
+    | AddExpr                        -- value
+
+  AddExpr
+    = AddExpr "+" MulExpr            -- add
+    | AddExpr "-" MulExpr            -- sub
+    | MulExpr                        -- value
+
+  MulExpr
+    = MulExpr "*" UnaryExpr          -- mul
+    | MulExpr "/" UnaryExpr          -- div
+    | MulExpr "%" UnaryExpr          -- mod
+    | UnaryExpr                      -- value
+
+  UnaryExpr
+    = "-" ~digit ~infTok UnaryExpr    -- neg
+    | "~" UnaryExpr                  -- not
+    | NotKw UnaryExpr                -- logicalNot
+    | DeleteKw Place                 -- delete
+    | PostfixExpr                    -- value
+
+  PostfixExpr
+    = PrimaryExpr PostfixTail*       -- chain
+
+  PostfixTail
+    = "." navKey                     -- navStatic
+    | ".(" Expr ")"                 -- navDynamic
+    | "(" ")"                      -- callEmpty
+    | "(" Elements<Expr> ")"        -- call
+
+  PrimaryExpr
+    = ConditionalExpr
+    | ForExpr
+    | WhileExpr
+    | BreakKw                        -- break
+    | ContinueKw                     -- continue
+    | Array
+    | Object
+    | String
+    | Number
+    | StringKw                       -- stringPred
+    | NumberKw                       -- numberPred
+    | ObjectKw                       -- objectPred
+    | ArrayKw                        -- arrayPred
+    | BooleanKw                      -- booleanPred
+    | TrueKw                         -- true
+    | FalseKw                        -- false
+    | NullKw                         -- null
+    | UndefinedKw                    -- undefined
+    | SelfExpr                       -- self
+    | identifier                     -- identifier
+    | "(" Expr ")"                  -- group
+
+  SelfExpr
+    = SelfKw "@" Number             -- depth
+    | SelfKw                         -- plain
+
+  Place
+    = PlaceBase PlaceTail*
+
+  PlaceBase
+    = identifier
+    | SelfKw
+
+  PlaceTail
+    = "." navKey                     -- navStatic
+    | ".(" Expr ")"                 -- navDynamic
+
+  ConditionalExpr
+    = ConditionalHead Expr DoKw Block ConditionalElse? EndKw
+
+  ConditionalHead
+    = WhenKw
+    | UnlessKw
+
+  ConditionalElse
+    = ElseKw ConditionalHead Expr DoKw Block ConditionalElse?  -- elseChain
+    | ElseKw Block                                               -- else
+
+  ForExpr
+    = ForKw IterBinding DoKw Block EndKw
+
+  WhileExpr
+    = WhileKw Expr DoKw Block EndKw
+
+  IterBinding
+    = identifier "," identifier inTok Expr   -- keyValueIn
+    | identifier inTok Expr                  -- valueIn
+    | identifier ofTok Expr                  -- keyOf
+    | inTok Expr                             -- bareIn
+    | ofTok Expr                             -- bareOf
+
+  IterBindingComprehension
+    = identifier "," identifier inTok Expr   -- keyValueIn
+    | identifier inTok Expr                  -- valueIn
+    | identifier ofTok Expr                  -- keyOf
+
+  Block
+    = Expr*
+
+  Array
+    = "[" "]"                                              -- empty
+    | "[" Expr ForKw IterBindingComprehension "]"          -- forComprehension
+    | "[" Expr WhileKw Expr "]"                            -- whileComprehension
+    | "[" Expr inTok Expr "]"                              -- inComprehension
+    | "[" Expr ofTok Expr "]"                              -- ofComprehension
+    | "[" Elements<Expr> "]"                               -- values
+
+  Object
+    = "{" "}"                                              -- empty
+    | "{" ObjKey ":" Expr ForKw IterBindingComprehension "}" -- forComprehension
+    | "{" ObjKey ":" Expr WhileKw Expr "}"                 -- whileComprehension
+    | "{" ObjKey ":" Expr inTok Expr "}"                   -- inComprehension
+    | "{" ObjKey ":" Expr ofTok Expr "}"                   -- ofComprehension
+    | "{" Elements<Pair> "}"                               -- pairs
+
+  Pair
+    = ObjKey ":" Expr
+
+  ObjKey
+    = keyName                        -- bare
+    | Number                         -- number
+    | String                         -- string
+    | "(" Expr ")"                  -- computed
+
+  navKey
+    = keyName
+    | digit+
+
+  keyName
+    = nameHead nameTail*
+
+  CompareOp
+    = "=="
+    | "!="
+    | ">="
+    | ">"
+    | "<="
+    | "<"
+
+  AssignOp
+    = ":="
+    | "="
+    | "+="
+    | "-="
+    | "*="
+    | "/="
+    | "%="
+    | "&="
+    | "|="
+    | "^="
+
+  Elements<item>
+    = item (","? item)* ","?
+
+  identifier
+    = ~reserved nameHead nameTail*
+
+  nameHead
+    = letter
+    | "_"
+
+  nameTail
+    = letter
+    | digit
+    | "_"
+    | "-"
+
+  reserved
+    = trueTok
+    | falseTok
+    | nullTok
+    | undefinedTok
+    | nanTok
+    | infTok
+    | selfTok
+    | whenTok
+    | unlessTok
+    | forTok
+    | whileTok
+    | inTok
+    | ofTok
+    | doTok
+    | elseTok
+    | endTok
+    | breakTok
+    | continueTok
+    | andTok
+    | orTok
+    | norTok
+    | notTok
+    | deleteTok
+    | stringTok
+    | numberTok
+    | objectTok
+    | arrayTok
+    | booleanTok
+
+  TrueKw
+    = trueTok
+
+  FalseKw
+    = falseTok
+
+  NullKw
+    = nullTok
+
+  UndefinedKw
+    = undefinedTok
+
+  SelfKw
+    = selfTok
+
+  WhenKw
+    = whenTok
+
+  UnlessKw
+    = unlessTok
+
+  WhileKw
+    = whileTok
+
+  ForKw
+    = forTok
+
+  DoKw
+    = doTok
+
+  ElseKw
+    = elseTok
+
+  EndKw
+    = endTok
+
+  BreakKw
+    = breakTok
+
+  ContinueKw
+    = continueTok
+
+  AndKw
+    = andTok
+
+  OrKw
+    = orTok
+
+  NorKw
+    = norTok
+
+  NotKw
+    = notTok
+
+  DeleteKw
+    = deleteTok
+
+  StringKw
+    = stringTok
+
+  NumberKw
+    = numberTok
+
+  ObjectKw
+    = objectTok
+
+  ArrayKw
+    = arrayTok
+
+  BooleanKw
+    = booleanTok
+
+
+  trueTok
+    = "true" ~nameTail
+
+  falseTok
+    = "false" ~nameTail
+
+  nullTok
+    = "null" ~nameTail
+
+  undefinedTok
+    = "undefined" ~nameTail
+
+  nanTok
+    = "nan" ~nameTail
+
+  infTok
+    = "inf" ~nameTail
+
+  selfTok
+    = "self" ~nameTail
+
+  whenTok
+    = "when" ~nameTail
+
+  unlessTok
+    = "unless" ~nameTail
+
+  whileTok
+    = "while" ~nameTail
+
+  forTok
+    = "for" ~nameTail
+
+  inTok
+    = "in" ~nameTail
+
+  ofTok
+    = "of" ~nameTail
+
+  doTok
+    = "do" ~nameTail
+
+  elseTok
+    = "else" ~nameTail
+
+  endTok
+    = "end" ~nameTail
+
+  breakTok
+    = "break" ~nameTail
+
+  continueTok
+    = "continue" ~nameTail
+
+  andTok
+    = "and" ~nameTail
+
+  orTok
+    = "or" ~nameTail
+
+  norTok
+    = "nor" ~nameTail
+
+  notTok
+    = "not" ~nameTail
+
+  deleteTok
+    = "delete" ~nameTail
+
+  stringTok
+    = "string" ~nameTail
+
+  numberTok
+    = "number" ~nameTail
+
+  objectTok
+    = "object" ~nameTail
+
+  arrayTok
+    = "array" ~nameTail
+
+  booleanTok
+    = "boolean" ~nameTail
+
+
+  String
+    = DQuotedString
+    | SQuotedString
+
+  DQuotedString
+    = "\"" dStringChar* "\""
+
+  dStringChar
+    = ~("\"" | "\\") any
+    | escape
+
+  SQuotedString
+    = "'" sStringChar* "'"
+
+  sStringChar
+    = ~("'" | "\\") any
+    | escape
+
+  escape
+    = "\\" (escapeChar | hexEscape | unicodeEscape)
+
+  escapeChar
+    = "\"" | "'" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "0"
+
+  hexEscape
+    = "x" hex hex
+
+  unicodeEscape
+    = "u" hex hex hex hex
+
+  hex
+    = digit
+    | "A".."F"
+    | "a".."f"
+
+  Number
+    = hexNumber
+    | binaryNumber
+    | infLiteral
+    | nanLiteral
+    | decimalNumber
+
+  infLiteral
+    = "-"? infTok
+
+  nanLiteral
+    = nanTok
+
+  hexNumber
+    = "-"? "0x" hex+
+
+  binaryNumber
+    = "-"? "0b" bit+
+
+  decimalNumber
+    = "-"? decimalInteger ("." digit+)? exponent?
+
+  decimalInteger
+    = nonZeroDigit digit*  -- nonZero
+    | "0"                  -- zero
+
+  bit
+    = "0" | "1"
+
+  exponent
+    = ("e" | "E") ("+" | "-")? digit+
+
+  nonZeroDigit
+    = "1".."9"
+
+  comment
+    = lineComment
+    | blockComment
+
+  lineComment
+    = "//" (~"\n" any)* "\n"?
+
+  blockComment
+    = "/*" (~"*/" any)* "*/"
+}

@@ -1,0 +1,471 @@
+import { compile, parse, parseToIR, stringify, grammar } from './rex';
+import { evaluateRexc, evaluateSource } from './rexc-interpreter';
+import {
+  highlightLine,
+  highlightJSON,
+  highlightAuto,
+  setColorEnabled,
+} from './rex-repl';
+import { dirname, resolve } from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
+
+type SourceSegment =
+  | { type: 'expr'; value: string }
+  | { type: 'file'; path: string };
+
+type CliOptions = {
+  sources: SourceSegment[];
+  out?: string;
+  compile: boolean;
+  ir: boolean;
+  minifyNames: boolean;
+  dedupeValues: boolean;
+  dedupeMinBytes?: number;
+  help: boolean;
+  cat: boolean;
+  showSource: boolean;
+  showExpr: boolean;
+  showIR: boolean;
+  showRexc: boolean;
+  showVars: boolean;
+  color: boolean;
+  colorExplicit: boolean;
+  showExprExplicit: boolean;
+  format: 'rex' | 'json';
+};
+
+function parseArgs(argv: string[]): CliOptions {
+  const options: CliOptions = {
+    sources: [],
+    compile: false,
+    ir: false,
+    minifyNames: false,
+    dedupeValues: false,
+    help: false,
+    cat: false,
+    showSource: false,
+    showExpr: true,
+    showIR: false,
+    showRexc: false,
+    showVars: false,
+    color: process.stdout.isTTY,
+    colorExplicit: false,
+    showExprExplicit: false,
+    format: 'rex',
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (!arg) continue;
+    if (arg === '--help' || arg === '-h') {
+      options.help = true;
+      continue;
+    }
+    if (arg === '--cat') {
+      options.cat = true;
+      continue;
+    }
+    if (arg === '--show-source') {
+      options.showSource = true;
+      continue;
+    }
+    if (arg === '--show-expr') {
+      options.showExpr = true;
+      options.showExprExplicit = true;
+      continue;
+    }
+    if (arg === '--no-expr') {
+      options.showExpr = false;
+      options.showExprExplicit = true;
+      continue;
+    }
+    if (arg === '--show-ir') {
+      options.showIR = true;
+      continue;
+    }
+    if (arg === '--show-rexc') {
+      options.showRexc = true;
+      continue;
+    }
+    if (arg === '--show-vars') {
+      options.showVars = true;
+      continue;
+    }
+    if (arg === '--json') {
+      options.format = 'json';
+      continue;
+    }
+    if (arg === '--format') {
+      const value = argv[index + 1];
+      if (!value) throw new Error('Missing value for --format');
+      if (value !== 'rex' && value !== 'json')
+        throw new Error("--format must be 'rex' or 'json'");
+      options.format = value;
+      index += 1;
+      continue;
+    }
+    if (arg === '--color') {
+      options.color = true;
+      options.colorExplicit = true;
+      continue;
+    }
+    if (arg === '--no-color') {
+      options.color = false;
+      options.colorExplicit = true;
+      continue;
+    }
+    if (arg === '--compile' || arg === '-c') {
+      options.compile = true;
+      continue;
+    }
+    if (arg === '--ir') {
+      options.ir = true;
+      continue;
+    }
+    if (arg === '--minify-names' || arg === '-m') {
+      options.minifyNames = true;
+      continue;
+    }
+    if (arg === '--dedupe-values') {
+      options.dedupeValues = true;
+      continue;
+    }
+    if (arg === '--dedupe-min-bytes') {
+      const value = argv[index + 1];
+      if (!value) throw new Error('Missing value for --dedupe-min-bytes');
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed < 1)
+        throw new Error('--dedupe-min-bytes must be a positive integer');
+      options.dedupeMinBytes = parsed;
+      index += 1;
+      continue;
+    }
+    if (arg === '--expr' || arg === '-e') {
+      const value = argv[index + 1];
+      if (!value) throw new Error('Missing value for --expr');
+      options.sources.push({ type: 'expr', value });
+      index += 1;
+      continue;
+    }
+    if (arg === '--file' || arg === '-f') {
+      const value = argv[index + 1];
+      if (!value) throw new Error('Missing value for --file');
+      options.sources.push({ type: 'file', path: value });
+      index += 1;
+      continue;
+    }
+    if (arg === '--out' || arg === '-o') {
+      const value = argv[index + 1];
+      if (!value) throw new Error('Missing value for --out');
+      options.out = value;
+      index += 1;
+      continue;
+    }
+    // Positional argument = file path
+    if (!arg.startsWith('-')) {
+      options.sources.push({ type: 'file', path: arg });
+      continue;
+    }
+    throw new Error(`Unknown option: ${arg}`);
+  }
+  return options;
+}
+
+function usage() {
+  return [
+    'Rex expression language CLI.',
+    '',
+    'Usage:',
+    '  rex                            Start interactive REPL',
+    '  rex input.rex                  Evaluate a Rex script (JSON output)',
+    "  rex --expr '1 + 2'             Evaluate an inline expression",
+    '  cat input.rex | rex            Evaluate from stdin',
+    '  rex -c input.rex               Compile to rexc bytecode',
+    '',
+    '  Sources are concatenated in order, so flags and files can be mixed:',
+    "  rex -e 'max = 200' primes.rex  Set max before running script",
+    "  rex primes.rex -e '42'         Run script, then evaluate 42",
+    '',
+    'Input:',
+    '  <file>                Evaluate/compile a Rex source file',
+    '  -e, --expr <source>   Evaluate/compile an inline expression',
+    '  -f, --file <path>     Evaluate/compile source from a file',
+    '',
+    '  Multiple -e and -f flags (and positional files) can be combined.',
+    '  They are concatenated in the order they appear on the command line.',
+    '',
+    'Output mode:',
+    '  (default)             Evaluate and output result',
+    '  -c, --compile         Show rexc only (same as --show-rexc --no-expr)',
+    '      --ir              Show IR only (same as --show-ir --no-expr)',
+    '      --cat             Print input with Rex highlighting',
+    '      --show-source     Show input source text',
+    '      --show-expr       Show expression result',
+    '      --no-expr         Hide expression result',
+    '      --show-ir         Show IR JSON',
+    '      --show-rexc       Show rexc bytecode',
+    '      --show-vars       Show variable state',
+    '',
+    'Output formatting:',
+    '      --format <type>   Output format: rex|json (default: rex)',
+    '      --json            Shortcut for --format json',
+    '      --color           Force color output',
+    '      --no-color        Disable color output',
+    '',
+    'TTY vs non-TTY:',
+    '  TTY output prints labeled blocks when multiple outputs are selected.',
+    '  Non-TTY output emits a single value (object if multiple outputs).',
+    '',
+    'Compile options:',
+    '  -m, --minify-names    Minify local variable names',
+    '      --dedupe-values   Deduplicate large repeated values',
+    '      --dedupe-min-bytes <n>  Minimum bytes for dedupe (default: 4)',
+    '',
+    'General:',
+    '  -o, --out <path>      Write output to file instead of stdout',
+    '  -h, --help            Show this message',
+  ].join('\n');
+}
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function resolveSource(options: CliOptions): Promise<string> {
+  if (options.sources.length > 0) {
+    const parts: string[] = [];
+    for (const seg of options.sources) {
+      if (seg.type === 'expr') parts.push(seg.value);
+      else parts.push(await readFile(seg.path, 'utf8'));
+    }
+    return parts.join('\n');
+  }
+  if (!process.stdin.isTTY) {
+    const piped = await readStdin();
+    if (piped.trim().length > 0) return piped;
+  }
+  throw new Error(
+    'No input provided. Use a file path, --expr, or pipe source via stdin.'
+  );
+}
+
+function findFirstFilePath(sources: SourceSegment[]): string | undefined {
+  for (const seg of sources) {
+    if (seg.type === 'file') return seg.path;
+  }
+  return undefined;
+}
+
+async function loadDomainConfigFromFolder(
+  folderPath: string
+): Promise<unknown | undefined> {
+  const configPath = resolve(folderPath, '.config.rex');
+  try {
+    return parse(await readFile(configPath, 'utf8'));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+async function resolveDomainConfig(
+  options: CliOptions
+): Promise<unknown | undefined> {
+  const filePath = findFirstFilePath(options.sources);
+  const baseFolder = filePath ? dirname(resolve(filePath)) : process.cwd();
+  return loadDomainConfigFromFolder(baseFolder);
+}
+
+function formatJson(value: unknown, indent = 2): string {
+  const normalized = normalizeJsonValue(value, false);
+  const text = JSON.stringify(normalized, null, indent);
+  return text ?? 'null';
+}
+
+function normalizeJsonValue(value: unknown, inArray: boolean): unknown {
+  if (value === undefined) return inArray ? null : undefined;
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    return value.map(item => normalizeJsonValue(item, true));
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    const normalized = normalizeJsonValue(val, false);
+    if (normalized !== undefined) out[key] = normalized;
+  }
+  return out;
+}
+
+function isRexSource(source: string): boolean {
+  try {
+    return grammar.match(source).succeeded();
+  } catch {
+    return false;
+  }
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(usage());
+    return;
+  }
+  setColorEnabled(options.color);
+  if (options.cat) {
+    const source = await resolveSource(options);
+    const hasRexc = options.sources.some(
+      seg => seg.type === 'file' && seg.path.endsWith('.rexc')
+    );
+    const hasRex = options.sources.some(
+      seg => seg.type === 'file' && seg.path.endsWith('.rex')
+    );
+    const hint =
+      hasRexc && !hasRex ? 'rexc' : hasRex && !hasRexc ? 'rex' : undefined;
+    const output =
+      process.stdout.isTTY && options.color
+        ? highlightAuto(source, hint)
+        : source;
+    if (options.out) {
+      await writeFile(options.out, `${output}\n`, 'utf8');
+      return;
+    }
+    console.log(output);
+    return;
+  }
+
+  // No source provided on a TTY → launch interactive REPL
+  const hasSource = options.sources.length > 0 || !process.stdin.isTTY;
+  if (!hasSource && !options.compile && !options.ir) {
+    const { startRepl } = await import('./rex-repl');
+    await startRepl();
+    return;
+  }
+
+  const source = await resolveSource(options);
+  const sourceIsRex = isRexSource(source);
+
+  if (options.compile) {
+    if (!sourceIsRex) throw new Error('--compile requires Rex source');
+    options.showRexc = true;
+    if (!options.showExprExplicit) options.showExpr = false;
+  }
+  if (options.ir) {
+    if (!sourceIsRex) throw new Error('--ir requires Rex source');
+    options.showIR = true;
+    if (!options.showExprExplicit) options.showExpr = false;
+  }
+
+  const outputFlags = [
+    options.showSource,
+    options.showExpr,
+    options.showIR,
+    options.showRexc,
+    options.showVars,
+  ].filter(Boolean).length;
+  if (outputFlags === 0) {
+    throw new Error(
+      'No output selected. Use --show-source, --show-expr, --show-ir, --show-rexc, or --show-vars.'
+    );
+  }
+  const humanMode = process.stdout.isTTY && options.color;
+  type OutputKey = 'source' | 'ir' | 'rexc' | 'vars' | 'result';
+  const outputs: Partial<Record<OutputKey, unknown>> = {};
+  if (options.showSource) outputs.source = source;
+  if (!sourceIsRex && options.showIR) {
+    throw new Error('--show-ir is only available for Rex source');
+  }
+
+  if (options.showIR) {
+    outputs.ir = parseToIR(source);
+  }
+
+  if (options.showRexc) {
+    const domainConfig = await resolveDomainConfig(options);
+    outputs.rexc = sourceIsRex
+      ? compile(source, {
+          minifyNames: options.minifyNames,
+          dedupeValues: options.dedupeValues,
+          dedupeMinBytes: options.dedupeMinBytes,
+          domainConfig,
+        })
+      : source;
+  }
+
+  if (options.showExpr || options.showVars) {
+    const result = sourceIsRex ? evaluateSource(source) : evaluateRexc(source);
+    if (options.showExpr) outputs.result = result.value;
+    if (options.showVars) outputs.vars = result.state.vars;
+  }
+
+  const order: OutputKey[] = ['source', 'ir', 'rexc', 'vars', 'result'];
+  const selected = order.filter(key => outputs[key] !== undefined);
+
+  function formatValue(value: unknown, kind: OutputKey): string {
+    if (kind === 'source') {
+      const raw = String(value ?? '');
+      if (options.format === 'json') {
+        const json = formatJson(raw, 2);
+        return humanMode && options.color ? highlightJSON(json) : json;
+      }
+      return humanMode && options.color ? highlightAuto(raw) : raw;
+    }
+    if (kind === 'rexc' && humanMode) {
+      const raw = String(value ?? '');
+      return options.color ? highlightAuto(raw, 'rexc') : raw;
+    }
+    if (options.format === 'json') {
+      const raw = formatJson(value, 2);
+      return humanMode && options.color ? highlightJSON(raw) : raw;
+    }
+    if (kind === 'rexc') {
+      const raw = stringify(String(value ?? ''));
+      return humanMode && options.color ? highlightLine(raw) : raw;
+    }
+    const raw = stringify(value);
+    return humanMode && options.color ? highlightLine(raw) : raw;
+  }
+
+  let output: string;
+  if (humanMode) {
+    const header = options.color ? '\x1b[90m' : '';
+    const reset = options.color ? '\x1b[0m' : '';
+    const lines: string[] = [];
+    for (const key of order) {
+      const value = outputs[key];
+      if (value === undefined) continue;
+      lines.push(`${header}${key}:${reset} ${formatValue(value, key)}`);
+    }
+    output = lines.join('\n');
+  } else {
+    let value: unknown;
+    if (selected.length === 1) {
+      const only = selected[0];
+      if (!only) throw new Error('No output selected.');
+      value = outputs[only];
+    } else {
+      const out: Record<string, unknown> = {};
+      for (const key of order) {
+        const v = outputs[key];
+        if (v !== undefined) out[key] = v;
+      }
+      value = out;
+    }
+    output =
+      options.format === 'json' ? formatJson(value, 2) : stringify(value);
+  }
+
+  if (options.out) {
+    await writeFile(options.out, `${output}\n`, 'utf8');
+    return;
+  }
+  console.log(output);
+}
+
+main().catch(error => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`rex: ${message}`);
+  process.exit(1);
+});

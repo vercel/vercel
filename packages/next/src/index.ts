@@ -32,7 +32,12 @@ import {
   BUILDER_COMPILE_STEP,
   type TriggerEvent,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
+import {
+  Rewrite,
+  Route,
+  RouteWithHandle,
+  RouteWithSrc,
+} from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -101,13 +106,15 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { compile as compileRex } from '@vercel/rex';
 import { getAppRouterPathnameFilesMap } from './metadata';
+import { createRexRoute } from './rex';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
 const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
 // related PR: https://github.com/vercel/next.js/pull/25418
-const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
+// const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 // related PR: https://github.com/vercel/next.js/pull/27143
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
 // related PR: https://github.com/vercel/next.js/pull/84643
@@ -439,10 +446,10 @@ export const build: BuildV2 = async buildOptions => {
     !(config.framework === 'blitzjs') &&
     semver.gte(nextVersion, SERVER_BUILD_MINIMUM_NEXT_VERSION);
 
-  const beforeFilesShouldContinue = semver.gte(
-    nextVersion,
-    BEFORE_FILES_CONTINUE_NEXT_VERSION
-  );
+  // const beforeFilesShouldContinue = semver.gte(
+  //   nextVersion,
+  //   BEFORE_FILES_CONTINUE_NEXT_VERSION
+  // );
   const isCorrectLocaleAPIRoutes = semver.gte(nextVersion, 'v11.0.2-canary.3');
 
   if (isServerMode) {
@@ -773,26 +780,113 @@ export const build: BuildV2 = async buildOptions => {
             )
           );
         } else {
-          beforeFilesRewrites.push(
-            ...convertRewrites(routesManifest.rewrites.beforeFiles).map(r => {
-              if ('check' in r) {
-                if (beforeFilesShouldContinue) {
-                  delete r.check;
-                  r.continue = true;
+          console.log('beforeFilesRewrites', beforeFilesRewrites);
+          const convertRewritesToRex = (rewrites: Rewrite[]) => {
+            const compileRexAndLog = (source: string) => {
+              console.log('#################################');
+              console.log('Rex rewrite');
+              console.log(rewrites);
+              console.log('------------------');
+              console.log(source);
+              console.log('------------------');
+              console.log('#################################');
+              return compileRex(source);
+            };
+            let code: string;
+            if (rewrites.some(rewrite => !!rewrite.has)) {
+              // "has" config
+              code = compileRexAndLog(`
+                rewrites = {
+                  ${rewrites.map(rewrite => `"${rewrite.source}": { path: ${JSON.stringify(rewrite.destination)}, has: ${JSON.stringify(rewrite.has)} },`).join('\n')}
                 }
-                // override: true helps maintain order so that redirects don't
-                // come after beforeFiles rewrites
-                r.override = true;
-              }
-              return r;
-            })
-          );
-          afterFilesRewrites.push(
-            ...convertRewrites(routesManifest.rewrites.afterFiles)
-          );
-          fallbackRewrites.push(
-            ...convertRewrites(routesManifest.rewrites.fallback)
-          );
+                when destination = rewrites.(req.path) do
+                  when has-configs = destination.has do
+                    // "has" config
+                    for has-config in has-configs do
+                      when has-config.type == "header" do
+                        when has-value = has-config.value do
+                          // header present + value match
+                          when req.headers.(has-config.key) = has-value do
+                            req.path = destination.path // match
+                            break
+                          end
+                        else when req.headers.(has-config.key) do
+                          // header present
+                          req.path = destination.path // match
+                          break
+                        end
+                      else when has-config.type == "query" do
+                        when has-value = has-config.value do
+                          // query param present + value match
+                          when req.query.(has-config.key) = has-value do
+                            req.path = destination.path // match
+                            break
+                          end
+                        else when req.query.(has-config.key) do
+                          // query param present
+                          req.path = destination.path // match
+                          break
+                        end
+                      else when has-config.type == "cookie" do
+                        // TODO
+                      end
+                    end
+                  else
+                    // no "has"
+                    req.path = destination.path
+                  end
+                end
+              `);
+            } else {
+              // no "has"
+              code = compileRexAndLog(`
+                rewrites = {
+                  ${rewrites.map(rewrite => `"${rewrite.source}": ${JSON.stringify(rewrite.destination)},`).join('\n')}
+                }
+                when destination = rewrites.(req.path) do
+                  req.path = destination
+                end
+              `);
+            }
+
+            return createRexRoute(code);
+          };
+          if (routesManifest.rewrites.beforeFiles.length > 0) {
+            beforeFilesRewrites.push(
+              convertRewritesToRex(routesManifest.rewrites.beforeFiles)
+            );
+          }
+          if (routesManifest.rewrites.afterFiles.length > 0) {
+            afterFilesRewrites.push(
+              convertRewritesToRex(routesManifest.rewrites.afterFiles)
+            );
+          }
+          if (routesManifest.rewrites.fallback.length > 0) {
+            fallbackRewrites.push(
+              convertRewritesToRex(routesManifest.rewrites.fallback)
+            );
+          }
+
+          // beforeFilesRewrites.push(
+          //   ...convertRewrites(routesManifest.rewrites.beforeFiles).map(r => {
+          //     if ('check' in r) {
+          //       if (beforeFilesShouldContinue) {
+          //         delete r.check;
+          //         r.continue = true;
+          //       }
+          //       // override: true helps maintain order so that redirects don't
+          //       // come after beforeFiles rewrites
+          //       r.override = true;
+          //     }
+          //     return r;
+          //   })
+          // );
+          // afterFilesRewrites.push(
+          //   ...convertRewrites(routesManifest.rewrites.afterFiles)
+          // );
+          // fallbackRewrites.push(
+          //   ...convertRewrites(routesManifest.rewrites.fallback)
+          // );
         }
 
         if (routesManifest.headers) {

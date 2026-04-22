@@ -1,0 +1,998 @@
+import * as readline from 'node:readline';
+// import { createRequire } from 'node:module';
+import { readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve, dirname, basename } from 'node:path';
+import { homedir } from 'node:os';
+import {
+  grammar,
+  stringify,
+  parseToIR,
+  optimizeIR,
+  compile,
+  formatParseError,
+} from './rex';
+import { evaluateRexc } from './rexc-interpreter';
+
+// const req = createRequire(import.meta.url);
+const { version } = require('./package.json');
+
+// ── ANSI helpers ──────────────────────────────────────────────
+
+function createColors(enabled: boolean) {
+  if (!enabled) {
+    return {
+      reset: '',
+      bold: '',
+      dim: '',
+      red: '',
+      green: '',
+      yellow: '',
+      blue: '',
+      magenta: '',
+      cyan: '',
+      gray: '',
+      keyword: '',
+    };
+  }
+  return {
+    reset: '\x1b[0m',
+    bold: '\x1b[1m',
+    dim: '\x1b[2m',
+    red: '\x1b[38;5;203m',
+    green: '\x1b[38;5;114m',
+    yellow: '\x1b[38;5;179m',
+    blue: '\x1b[38;5;75m',
+    magenta: '\x1b[38;5;141m',
+    cyan: '\x1b[38;5;81m',
+    gray: '\x1b[38;5;245m',
+    keyword: '\x1b[1;38;5;208m',
+  };
+}
+
+let colorEnabled = process.stdout.isTTY;
+let C = createColors(colorEnabled);
+
+export function setColorEnabled(enabled: boolean) {
+  colorEnabled = enabled;
+  C = createColors(enabled);
+}
+
+type OutputFormat = 'rex' | 'json';
+
+function formatJson(value: unknown, indent = 2): string {
+  const normalized = normalizeJsonValue(value, false);
+  const text = JSON.stringify(normalized, null, indent);
+  return text ?? 'null';
+}
+
+function normalizeJsonValue(value: unknown, inArray: boolean): unknown {
+  if (value === undefined) return inArray ? null : undefined;
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value))
+    return value.map(item => normalizeJsonValue(item, true));
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    const normalized = normalizeJsonValue(val, false);
+    if (normalized !== undefined) out[key] = normalized;
+  }
+  return out;
+}
+
+// ── Syntax highlighting ───────────────────────────────────────
+
+const TOKEN_RE =
+  /(?<blockComment>\/\*[\s\S]*?(?:\*\/|$))|(?<lineComment>\/\/[^\n]*)|(?<dstring>"(?:[^"\\]|\\.)*"?)|(?<sstring>'(?:[^'\\]|\\.)*'?)|(?<objKey>\b[A-Za-z_][A-Za-z0-9_-]*\b)(?=\s*:)|(?<keyword>\b(?:when|unless|while|for|do|end|in|of|and|or|nor|else|break|continue|delete|self)(?![a-zA-Z0-9_-]))|(?<literal>\b(?:true|false|null|undefined|nan)(?![a-zA-Z0-9_-])|-?\binf\b)|(?<typePred>\b(?:string|number|object|array|boolean)(?![a-zA-Z0-9_-]))|(?<num>\b(?:0x[0-9a-fA-F]+|0b[01]+|(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)\b)|(?<identifier>\b[A-Za-z_][A-Za-z0-9_.-]*\b)/g;
+
+export function highlightLine(line: string): string {
+  let result = '';
+  let lastIndex = 0;
+  TOKEN_RE.lastIndex = 0;
+
+  for (const m of line.matchAll(TOKEN_RE)) {
+    result += line.slice(lastIndex, m.index);
+    const text = m[0];
+    const g = m.groups!;
+    if (g.blockComment || g.lineComment) {
+      result += C.gray + text + C.reset;
+    } else if (g.dstring || g.sstring) {
+      result += C.green + text + C.reset;
+    } else if (g.objKey) {
+      result += C.magenta + text + C.reset;
+    } else if (g.keyword) {
+      result += C.keyword + text + C.reset;
+    } else if (g.literal) {
+      result += C.yellow + text + C.reset;
+    } else if (g.typePred) {
+      result += C.cyan + text + C.reset;
+    } else if (g.num) {
+      result += C.cyan + text + C.reset;
+    } else if (g.identifier) {
+      result += C.blue + text + C.reset;
+    } else {
+      result += text;
+    }
+    lastIndex = m.index! + text.length;
+  }
+  result += line.slice(lastIndex);
+  return result;
+}
+
+// ── Rexc highlighting ────────────────────────────────────────
+
+const REXC_DIGITS = new Set(
+  '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'
+);
+
+export function highlightRexc(text: string): string {
+  let out = '';
+  let i = 0;
+
+  function readPrefix(): string {
+    const start = i;
+    while (i < text.length && REXC_DIGITS.has(text[i]!)) i++;
+    return text.slice(start, i);
+  }
+
+  while (i < text.length) {
+    const ch = text[i]!;
+
+    // Whitespace — pass through
+    if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
+      out += ch;
+      i++;
+      continue;
+    }
+
+    // Line comments
+    if (ch === '/' && text[i + 1] === '/') {
+      const start = i;
+      i += 2;
+      while (i < text.length && text[i] !== '\n') i++;
+      out += C.gray + text.slice(start, i) + C.reset;
+      continue;
+    }
+
+    // Block comments
+    if (ch === '/' && text[i + 1] === '*') {
+      const start = i;
+      i += 2;
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i++;
+      if (i < text.length) i += 2;
+      out += C.gray + text.slice(start, i) + C.reset;
+      continue;
+    }
+
+    // Prefix digits
+    const prefix = readPrefix();
+    if (i >= text.length) {
+      out += prefix;
+      break;
+    }
+    const tag = text[i]!;
+
+    switch (tag) {
+      case '+': // integer
+      case '*': // decimal (significand follows)
+        out += C.cyan + prefix + tag + C.reset;
+        i++;
+        break;
+      case ':': // symbol/key
+        out += C.dim + prefix + tag + C.reset;
+        i++;
+        break;
+      case '%': // opcode
+        out += C.keyword + prefix + tag + C.reset;
+        i++;
+        break;
+      case '$': // variable
+        out += C.yellow + prefix + tag + C.reset;
+        i++;
+        break;
+      case '@': // self
+        out += C.yellow + prefix + tag + C.reset;
+        i++;
+        break;
+      case "'": // ref
+        out += C.dim + prefix + tag + C.reset;
+        i++;
+        break;
+      case ',': {
+        // string container
+        i++;
+        let len = 0;
+        for (const ch of prefix)
+          len =
+            len * 64 +
+            (REXC_DIGITS.has(ch)
+              ? '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'.indexOf(
+                  ch
+                )
+              : 0);
+        const content = text.slice(i, i + len);
+        i += len;
+        out += C.green + prefix + ',' + content + C.reset;
+        break;
+      }
+      case '=': // assignment
+      case '/': // swap-assign
+      case '~': // delete
+        out += C.red + prefix + tag + C.reset;
+        i++;
+        break;
+      case '?': // when
+      case '!': // unless
+      case '|': // or-chain
+      case '&': // and-chain
+      case '>': // for
+      case '<': // for-keys
+      case '#': // while
+        out += C.keyword + prefix + tag + C.reset;
+        i++;
+        break;
+      case ';': // break/continue
+        out += C.keyword + prefix + tag + C.reset;
+        i++;
+        break;
+      case '^': // pointer
+        out += C.dim + prefix + tag + C.reset;
+        i++;
+        break;
+      case '(':
+      case ')':
+      case '[':
+      case ']':
+      case '{':
+      case '}':
+        out += C.dim + prefix + C.reset + tag;
+        i++;
+        break;
+      default:
+        out += prefix + tag;
+        i++;
+        break;
+    }
+  }
+  return out;
+}
+
+export function highlightAuto(text: string, hint?: 'rex' | 'rexc'): string {
+  if (hint === 'rexc') return highlightRexc(text);
+  if (hint === 'rex')
+    return text
+      .split('\n')
+      .map(line => highlightLine(line))
+      .join('\n');
+  try {
+    const match = grammar.match(text);
+    if (match.succeeded()) {
+      return text
+        .split('\n')
+        .map(line => highlightLine(line))
+        .join('\n');
+    }
+  } catch {
+    // fall through
+  }
+  return highlightRexc(text);
+}
+
+// ── JSON IR highlighting ─────────────────────────────────────
+
+const JSON_TOKEN_RE =
+  /(?<key>"(?:[^"\\]|\\.)*")\s*:|(?<string>"(?:[^"\\]|\\.)*")|(?<number>-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|(?<bool>true|false)|(?<null>null)|(?<brace>[{}[\]])|(?<punct>[:,])/g;
+
+export function highlightJSON(json: string): string {
+  let result = '';
+  let lastIndex = 0;
+  JSON_TOKEN_RE.lastIndex = 0;
+
+  for (const m of json.matchAll(JSON_TOKEN_RE)) {
+    result += json.slice(lastIndex, m.index);
+    const text = m[0];
+    const g = m.groups!;
+    if (g.key) {
+      result += C.cyan + g.key + C.reset + ':';
+    } else if (g.string) {
+      result += C.green + text + C.reset;
+    } else if (g.number) {
+      result += C.yellow + text + C.reset;
+    } else if (g.bool) {
+      result += C.yellow + text + C.reset;
+    } else if (g.null) {
+      result += C.dim + text + C.reset;
+    } else {
+      result += text;
+    }
+    lastIndex = m.index! + text.length;
+  }
+  result += json.slice(lastIndex);
+  return result;
+}
+
+// ── Multi-line detection ──────────────────────────────────────
+
+/** Strip string literals and comments, replacing them with spaces. */
+function stripStringsAndComments(source: string): string {
+  return source.replace(
+    /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g,
+    m => ' '.repeat(m.length)
+  );
+}
+
+function countWord(text: string, word: string): number {
+  const re = new RegExp(`\\b${word}(?![a-zA-Z0-9_-])`, 'g');
+  return (text.match(re) || []).length;
+}
+
+export function isIncomplete(buffer: string): boolean {
+  // If the grammar accepts it, it's complete.
+  try {
+    if (grammar.match(buffer).succeeded()) return false;
+  } catch {
+    // match itself shouldn't throw, but be safe
+  }
+
+  const stripped = stripStringsAndComments(buffer);
+
+  // Unmatched brackets
+  let parens = 0,
+    brackets = 0,
+    braces = 0;
+  for (const ch of stripped) {
+    if (ch === '(') parens++;
+    else if (ch === ')') parens--;
+    else if (ch === '[') brackets++;
+    else if (ch === ']') brackets--;
+    else if (ch === '{') braces++;
+    else if (ch === '}') braces--;
+  }
+  if (parens > 0 || brackets > 0 || braces > 0) return true;
+
+  // Unmatched do/end or when/unless/for without end
+  const doCount = countWord(stripped, 'do');
+  const endCount = countWord(stripped, 'end');
+  if (doCount > endCount) return true;
+
+  // Trailing binary operator or keyword suggests continuation
+  const trimmed = buffer.trimEnd();
+  if (/[+\-*/%&|^=<>]$/.test(trimmed)) return true;
+  if (/\b(?:and|or|nor|do|in|of)\s*$/.test(trimmed)) return true;
+
+  return false;
+}
+
+// ── Result & state formatting ─────────────────────────────────
+
+function formatResult(value: unknown, format: OutputFormat): string {
+  let text: string;
+  try {
+    text =
+      format === 'json'
+        ? formatJson(value, 2)
+        : stringify(value, { maxWidth: 60 });
+  } catch {
+    text = String(value);
+  }
+  const rendered =
+    format === 'json' ? highlightJSON(text) : highlightLine(text);
+  return `${C.gray}→${C.reset} ${rendered}`;
+}
+
+export function formatVarState(
+  vars: Record<string, unknown>,
+  format: OutputFormat
+): string {
+  const entries = Object.entries(vars);
+  if (entries.length === 0) return '';
+  if (format === 'json') {
+    const rendered = highlightJSON(formatJson(vars, 2));
+    return `${C.dim}  vars:${C.reset} ${rendered}`;
+  }
+
+  const MAX_LINE = 70;
+  const MAX_VALUE = 30;
+  const parts: string[] = [];
+  let totalLen = 0;
+
+  for (const [key, val] of entries) {
+    let valStr: string;
+    try {
+      valStr = stringify(val, { maxWidth: MAX_VALUE });
+    } catch {
+      valStr = String(val);
+    }
+    if (valStr.length > MAX_VALUE) {
+      valStr = valStr.slice(0, MAX_VALUE - 1) + '\u2026';
+    }
+    const part = `${key} = ${valStr}`;
+    if (totalLen + part.length + 2 > MAX_LINE && parts.length > 0) {
+      parts.push('\u2026');
+      break;
+    }
+    parts.push(part);
+    totalLen += part.length + 2;
+  }
+
+  return `${C.dim}  ${parts.join(', ')}${C.reset}`;
+}
+
+function renderValue(
+  value: unknown,
+  format: OutputFormat,
+  kind: OutputKey
+): string {
+  if (format === 'json') {
+    return highlightJSON(formatJson(value, 2));
+  }
+  if (kind === 'source') {
+    return highlightAuto(String(value ?? ''));
+  }
+  if (kind === 'rexc') {
+    return highlightRexc(String(value ?? ''));
+  }
+  return highlightLine(stringify(value, { maxWidth: 120 }));
+}
+
+// ── Tab completion ────────────────────────────────────────────
+
+const KEYWORDS = [
+  'when',
+  'unless',
+  'while',
+  'for',
+  'do',
+  'end',
+  'in',
+  'of',
+  'and',
+  'or',
+  'nor',
+  'else',
+  'break',
+  'continue',
+  'delete',
+  'self',
+  'true',
+  'false',
+  'null',
+  'undefined',
+  'nan',
+  'inf',
+  'string',
+  'number',
+  'object',
+  'array',
+  'boolean',
+];
+
+const DOT_COMMANDS = [
+  '.help',
+  '.file',
+  '.cat',
+  '.expr',
+  '.source',
+  '.vars',
+  '.vars!',
+  '.clear',
+  '.ir',
+  '.rexc',
+  '.opt',
+  '.json',
+  '.color',
+  '.exit',
+];
+
+function completer(state: ReplState): (line: string) => [string[], string] {
+  return (line: string) => {
+    if (line.startsWith('.file ')) {
+      return completeFilePath(line, 6);
+    }
+    if (line.startsWith('.cat ')) {
+      return completeFilePath(line, 5);
+    }
+    if (line.startsWith('.') && !line.includes(' ')) {
+      const partial = line.trim();
+      const matches = DOT_COMMANDS.filter(cmd => cmd.startsWith(partial));
+      return [matches, line];
+    }
+    const match = line.match(/[a-zA-Z_][a-zA-Z0-9_.-]*$/);
+    const partial = match ? match[0] : '';
+    if (!partial) return [[], ''];
+
+    const varNames = Object.keys(state.vars);
+    const all = [...new Set([...KEYWORDS, ...varNames])];
+    const hits = all.filter(w => w.startsWith(partial));
+    return [hits, partial];
+  };
+}
+
+function completeFilePath(
+  line: string,
+  prefixLength: number
+): [string[], string] {
+  const raw = line.slice(prefixLength);
+  const trimmed = raw.trimStart();
+  const quote =
+    trimmed.startsWith('"') || trimmed.startsWith("'") ? trimmed[0]! : '';
+  const pathPart = quote ? trimmed.slice(1) : trimmed;
+  const endsWithSlash = pathPart.endsWith('/');
+  const rawDir = endsWithSlash ? pathPart.slice(0, -1) : pathPart;
+  const baseName = endsWithSlash
+    ? ''
+    : rawDir.includes('/')
+      ? basename(rawDir)
+      : rawDir;
+  const dirPart = endsWithSlash
+    ? rawDir || '.'
+    : rawDir.includes('/')
+      ? dirname(rawDir)
+      : '.';
+  const dirPath = resolve(dirPart);
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(dirPath);
+  } catch {
+    return [[], ''];
+  }
+  const prefix = dirPart === '.' ? '' : `${dirPart}/`;
+  const matches = entries
+    .filter(entry => entry.startsWith(baseName))
+    .map(entry => {
+      const fullPath = resolve(dirPath, entry);
+      let suffix = '';
+      try {
+        if (statSync(fullPath).isDirectory()) suffix = '/';
+      } catch {
+        suffix = '';
+      }
+      return `${quote}${prefix}${entry}${suffix}`;
+    });
+  return [matches, trimmed];
+}
+
+// ── Dot commands ──────────────────────────────────────────────
+
+function stripQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+type DotCommandResult = 'handled' | 'handled-noprompt' | 'unhandled';
+
+async function handleDotCommand(
+  cmd: string,
+  state: ReplState,
+  rl: readline.Interface,
+  runSource: (source: string) => void,
+  updatePromptStyles: () => void
+): Promise<DotCommandResult> {
+  function toggleLabel(on: boolean): string {
+    return on ? `${C.green}on${C.reset}` : `${C.dim}off${C.reset}`;
+  }
+
+  switch (cmd) {
+    case '.help':
+      console.log(
+        [
+          `${C.keyword}Rex REPL Commands:${C.reset}`,
+          '  .help         Show this help message',
+          '  .file <path>  Load and execute a Rex file',
+          '  .cat <path>   Print a Rex/rexc file with highlighting',
+          '  .expr         Toggle showing expression results',
+          '  .source       Toggle showing input source',
+          '  .vars         Toggle showing variable summary',
+          '  .vars!        Show all current variables',
+          '  .clear        Clear all variables',
+          '  .ir           Toggle showing IR JSON after parsing',
+          '  .rexc         Toggle showing compiled rexc before execution',
+          '  .opt          Toggle IR optimizations',
+          '  .json         Toggle JSON output format',
+          '  .color        Toggle ANSI color output',
+          '  .exit         Exit the REPL',
+          '',
+          'Enter Rex expressions to evaluate them.',
+          'Multi-line: open brackets or do/end blocks continue on the next line.',
+          'Ctrl-C cancels multi-line input.',
+          'Ctrl-D exits.',
+          '',
+          'Outputs are printed as labeled blocks when enabled.',
+        ].join('\n')
+      );
+      return 'handled';
+
+    case '.expr':
+      state.showExpr = !state.showExpr;
+      console.log(
+        `${C.dim}  Expression output: ${toggleLabel(state.showExpr)}${C.reset}`
+      );
+      return 'handled';
+
+    case '.source':
+      state.showSource = !state.showSource;
+      console.log(
+        `${C.dim}  Source output: ${toggleLabel(state.showSource)}${C.reset}`
+      );
+      return 'handled';
+
+    case '.vars':
+      state.showVars = !state.showVars;
+      console.log(
+        `${C.dim}  Variable summary: ${toggleLabel(state.showVars)}${C.reset}`
+      );
+      return 'handled';
+
+    case '.vars!': {
+      const entries = Object.entries(state.vars);
+      if (entries.length === 0) {
+        console.log(`${C.dim}  (no variables)${C.reset}`);
+      } else if (state.outputFormat === 'json') {
+        console.log(highlightJSON(formatJson(state.vars, 2)));
+      } else {
+        for (const [key, val] of entries) {
+          let valStr: string;
+          try {
+            valStr = stringify(val, { maxWidth: 60 });
+          } catch {
+            valStr = String(val);
+          }
+          console.log(`  ${key} = ${highlightLine(valStr)}`);
+        }
+      }
+      return 'handled';
+    }
+
+    case '.ir':
+      state.showIR = !state.showIR;
+      console.log(
+        `${C.dim}  IR display: ${toggleLabel(state.showIR)}${C.reset}`
+      );
+      return 'handled';
+
+    case '.rexc':
+      state.showRexc = !state.showRexc;
+      console.log(
+        `${C.dim}  Rexc display: ${toggleLabel(state.showRexc)}${C.reset}`
+      );
+      return 'handled';
+
+    case '.opt':
+      state.optimize = !state.optimize;
+      console.log(
+        `${C.dim}  Optimizations: ${toggleLabel(state.optimize)}${C.reset}`
+      );
+      return 'handled';
+
+    case '.json':
+      state.outputFormat = state.outputFormat === 'json' ? 'rex' : 'json';
+      console.log(`${C.dim}  Output format: ${state.outputFormat}${C.reset}`);
+      return 'handled';
+
+    case '.color':
+      setColorEnabled(!colorEnabled);
+      updatePromptStyles();
+      console.log(
+        `${C.dim}  Color output: ${toggleLabel(colorEnabled)}${C.reset}`
+      );
+      return 'handled';
+
+    case '.clear':
+      state.vars = {};
+      state.refs = {};
+      console.log(`${C.dim}  Variables cleared.${C.reset}`);
+      return 'handled';
+
+    case '.exit':
+      rl.close();
+      return 'handled-noprompt';
+
+    default:
+      if (cmd.startsWith('.cat ')) {
+        const rawPath = cmd.slice(5).trim();
+        if (!rawPath) {
+          console.log(
+            `${C.red}  Missing file path. Usage: .cat <path>${C.reset}`
+          );
+          return 'handled';
+        }
+        const filePath = resolve(stripQuotes(rawPath));
+        try {
+          const source = readFileSync(filePath, 'utf8');
+          const hint = filePath.endsWith('.rexc')
+            ? 'rexc'
+            : filePath.endsWith('.rex')
+              ? 'rex'
+              : undefined;
+          console.log(highlightAuto(source, hint));
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.log(`${C.red}  File error: ${message}${C.reset}`);
+        }
+        return 'handled';
+      }
+      if (cmd.startsWith('.file ')) {
+        const rawPath = cmd.slice(6).trim();
+        if (!rawPath) {
+          console.log(
+            `${C.red}  Missing file path. Usage: .file <path>${C.reset}`
+          );
+          return 'handled';
+        }
+        const filePath = resolve(stripQuotes(rawPath));
+        try {
+          const source = readFileSync(filePath, 'utf8');
+          runSource(source);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.log(`${C.red}  File error: ${message}${C.reset}`);
+        }
+        return 'handled';
+      }
+      if (cmd.startsWith('.')) {
+        console.log(
+          `${C.red}  Unknown command: ${cmd}. Type .help for available commands.${C.reset}`
+        );
+        return 'handled';
+      }
+      return 'unhandled';
+  }
+}
+
+// ── REPL state ────────────────────────────────────────────────
+
+type ReplState = {
+  vars: Record<string, unknown>;
+  refs: Partial<Record<number, unknown>>;
+  showIR: boolean;
+  showRexc: boolean;
+  optimize: boolean;
+  showExpr: boolean;
+  showVars: boolean;
+  showSource: boolean;
+  outputFormat: OutputFormat;
+};
+
+type OutputKey = 'source' | 'ir' | 'rexc' | 'vars' | 'result';
+
+// ── Gas limit for loop safety ─────────────────────────────────
+
+const GAS_LIMIT = 10_000_000;
+const HISTORY_LIMIT = 1000;
+const HISTORY_PATH = resolve(homedir(), '.rex_history');
+
+// ── Main REPL entry point ─────────────────────────────────────
+
+export async function startRepl(): Promise<void> {
+  const state: ReplState = {
+    vars: {},
+    refs: {},
+    showIR: false,
+    showRexc: false,
+    optimize: false,
+    showExpr: true,
+    showVars: false,
+    showSource: false,
+    outputFormat: 'rex',
+  };
+  let multiLineBuffer = '';
+
+  const PRIMARY_PROMPT = 'rex> ';
+  const CONT_PROMPT = '...  ';
+
+  let currentPrompt = PRIMARY_PROMPT;
+  let styledPrompt = '';
+  let styledPrimary = '';
+  let styledCont = '';
+
+  function updatePromptStyles() {
+    styledPrimary = `${C.keyword}rex${C.reset}> `;
+    styledCont = `${C.dim}...${C.reset}  `;
+    styledPrompt =
+      currentPrompt === PRIMARY_PROMPT ? styledPrimary : styledCont;
+  }
+
+  updatePromptStyles();
+
+  console.log(
+    `${C.keyword}Rex${C.reset} v${version} — type ${C.dim}.help${C.reset} for commands`
+  );
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: PRIMARY_PROMPT,
+    historySize: HISTORY_LIMIT,
+    completer: completer(state),
+    terminal: true,
+  });
+
+  try {
+    const historyText = readFileSync(HISTORY_PATH, 'utf8');
+    const lines = historyText
+      .split(/\r?\n/)
+      .filter(line => line.trim().length > 0);
+    const recent = lines.slice(-HISTORY_LIMIT);
+    (rl as readline.Interface & { history: string[] }).history =
+      recent.reverse();
+  } catch {
+    // ignore missing history
+  }
+
+  // ── Syntax highlighting via keypress redraw ──
+  process.stdin.on('keypress', () => {
+    process.nextTick(() => {
+      // Guard: if the interface has been closed, skip
+      if (!rl.line && rl.line !== '') return;
+
+      readline.clearLine(process.stdout, 0);
+      readline.cursorTo(process.stdout, 0);
+      process.stdout.write(styledPrompt + highlightLine(rl.line));
+      readline.cursorTo(process.stdout, currentPrompt.length + rl.cursor);
+    });
+  });
+
+  // ── Ctrl-L to clear screen ──
+  process.stdin.on('keypress', (_ch: string, key: readline.Key) => {
+    if (key?.ctrl && key.name === 'l') {
+      readline.cursorTo(process.stdout, 0, 0);
+      readline.clearScreenDown(process.stdout);
+      rl.prompt();
+    }
+  });
+
+  // ── Ctrl-C handling ──
+  rl.on('SIGINT', () => {
+    if (multiLineBuffer) {
+      multiLineBuffer = '';
+      currentPrompt = PRIMARY_PROMPT;
+      styledPrompt = styledPrimary;
+      rl.setPrompt(PRIMARY_PROMPT);
+      process.stdout.write('\n');
+      rl.prompt();
+    } else {
+      console.log();
+      rl.close();
+    }
+  });
+
+  function resetPrompt() {
+    currentPrompt = PRIMARY_PROMPT;
+    styledPrompt = styledPrimary;
+    rl.setPrompt(PRIMARY_PROMPT);
+    rl.prompt();
+  }
+
+  // ── Line handler ──
+  function runSource(source: string) {
+    const match = grammar.match(source);
+    if (!match.succeeded()) {
+      const message = formatParseError(
+        source,
+        match as {
+          message?: string;
+          getRightmostFailurePosition?: () => number;
+        }
+      );
+      console.log(`${C.red}  ${message}${C.reset}`);
+      return;
+    }
+
+    try {
+      const outputs: Partial<Record<OutputKey, unknown>> = {};
+      if (state.showSource) outputs.source = source;
+      const isRex = grammar.match(source).succeeded();
+      if (!isRex && state.showIR) {
+        console.log(
+          `${C.red}  IR output is only available for Rex source.${C.reset}`
+        );
+      }
+      const rexc = isRex
+        ? compile(source, { optimize: state.optimize })
+        : source;
+      if (state.showIR && isRex) {
+        const ir = parseToIR(source);
+        const lowered = state.optimize ? optimizeIR(ir) : ir;
+        outputs.ir = lowered;
+      }
+      if (state.showRexc) outputs.rexc = rexc;
+
+      const result = evaluateRexc(rexc, {
+        vars: { ...state.vars },
+        refs: { ...state.refs },
+        gasLimit: GAS_LIMIT,
+      });
+      state.vars = result.state.vars;
+      state.refs = result.state.refs;
+      if (state.showExpr) outputs.result = result.value;
+      if (state.showVars) outputs.vars = state.vars;
+
+      const order: OutputKey[] = ['source', 'ir', 'rexc', 'vars', 'result'];
+      for (const key of order) {
+        const value = outputs[key];
+        if (value === undefined) continue;
+        console.log(
+          `${C.gray}  ${key}:${C.reset} ${renderValue(value, state.outputFormat, key)}`
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('Gas limit exceeded')) {
+        console.log(`${C.yellow}  ${message}${C.reset}`);
+      } else {
+        console.log(`${C.red}  Error: ${message}${C.reset}`);
+      }
+    }
+  }
+
+  rl.on('line', async (line: string) => {
+    const trimmed = line.trim();
+
+    // Dot commands (only when not accumulating multi-line)
+    if (!multiLineBuffer && trimmed.startsWith('.')) {
+      const result = await handleDotCommand(
+        trimmed,
+        state,
+        rl,
+        runSource,
+        updatePromptStyles
+      );
+      if (result === 'handled') {
+        rl.prompt();
+        return;
+      }
+      if (result === 'handled-noprompt') return;
+    }
+
+    // Accumulate
+    multiLineBuffer += (multiLineBuffer ? '\n' : '') + line;
+
+    // Empty input
+    if (multiLineBuffer.trim() === '') {
+      multiLineBuffer = '';
+      rl.prompt();
+      return;
+    }
+
+    // Check for incomplete expression
+    if (isIncomplete(multiLineBuffer)) {
+      currentPrompt = CONT_PROMPT;
+      styledPrompt = styledCont;
+      rl.setPrompt(CONT_PROMPT);
+      rl.prompt();
+      return;
+    }
+
+    // Try to evaluate
+    const source = multiLineBuffer;
+    multiLineBuffer = '';
+
+    runSource(source);
+
+    resetPrompt();
+  });
+
+  // ── Exit ──
+  rl.on('close', () => {
+    try {
+      const history =
+        (rl as readline.Interface & { history: string[] }).history ?? [];
+      const trimmed = history
+        .slice()
+        .reverse()
+        .filter(line => line.trim().length > 0)
+        .slice(-HISTORY_LIMIT);
+      writeFileSync(HISTORY_PATH, `${trimmed.join('\n')}\n`, 'utf8');
+    } catch {
+      // ignore history write errors
+    }
+    process.exit(0);
+  });
+
+  rl.prompt();
+}
