@@ -164,6 +164,7 @@ export const build: BuildV2 = async args => {
         lockfilePath: downloadResult.lockfilePath,
         lockfileVersion: downloadResult.lockfileVersion,
         framework: rolldownResult.framework.slug || undefined,
+        serviceType: args.service?.type,
       });
     } catch (err) {
       debug(
