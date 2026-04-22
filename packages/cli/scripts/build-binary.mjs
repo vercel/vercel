@@ -47,6 +47,48 @@ const jsoncParserPlugin = {
   },
 };
 
+// Shim `child_process` so every call to `fork()` — no matter which import
+// style the code uses — injects `BUN_BE_BUN=1` into the child env. The banner
+// monkey-patches the module-level export, but static ESM named imports
+// (e.g. `import { fork } from 'child_process'`) capture their binding at
+// import time under Bun's compiled binary and bypass the banner patch.
+// Substituting the module itself at bundle time catches every caller.
+const childProcessShim = {
+  name: 'child-process-shim',
+  setup(build) {
+    build.onResolve({ filter: /^(node:)?child_process$/ }, args => {
+      // Don't recurse when we ourselves import child_process from the shim
+      if (args.pluginData && args.pluginData.shim) return null;
+      return { path: args.path, namespace: 'cp-shim' };
+    });
+    build.onLoad({ filter: /.*/, namespace: 'cp-shim' }, () => ({
+      contents: `
+        import __cp from 'node:child_process';
+        function __patchedFork(modulePath, args, options) {
+          const isBunBinary = process.argv[0] === 'bun';
+          const env = isBunBinary
+            ? { ...process.env, ...(options && options.env), BUN_BE_BUN: '1' }
+            : undefined;
+          const merged = env ? { ...(options || {}), env } : options;
+          return __cp.fork(modulePath, args, merged);
+        }
+        export const fork = __patchedFork;
+        export const spawn = __cp.spawn;
+        export const spawnSync = __cp.spawnSync;
+        export const exec = __cp.exec;
+        export const execSync = __cp.execSync;
+        export const execFile = __cp.execFile;
+        export const execFileSync = __cp.execFileSync;
+        export const ChildProcess = __cp.ChildProcess;
+        export default { ...__cp, fork: __patchedFork };
+      `,
+      loader: 'js',
+      pluginData: { shim: true },
+      resolveDir: process.cwd(),
+    }));
+  },
+};
+
 // Polyfill: @vercel-internals/get-package-json does a stack-trace-based
 // walk-up to find package.json. In Bun's compiled binary virtual FS there
 // is no package.json anywhere, so the walk infinite-loops. Replace it with
@@ -85,6 +127,25 @@ const __vc_isBunBinary = __vc_metaPath.startsWith('/$bunfs/') || __vc_metaPath.i
 const __filename = __vc_isBunBinary ? process.execPath : __vc_metaPath;
 const __dirname = __dirname_(__filename);
 if (process.env.VC_BINARY_DEBUG) { process.stderr.write('[banner] __dirname=' + __dirname + ' isBunBinary=' + __vc_isBunBinary + '\\n'); }
+
+// When running as a Bun-compiled binary, child_process.fork() can't work
+// normally: process.execPath is the binary, not a Node interpreter, so the
+// child is unable to execute an arbitrary .mjs file passed as argv.
+// Bun supports BUN_BE_BUN=1 — when that env var is set, the binary acts as
+// the 'bun' CLI and can run any script path given to it. Patch fork() and
+// spawn() to inject BUN_BE_BUN=1 into the env of children we spawn of
+// ourselves, so forked sidecars like dev-server.mjs run correctly.
+if (__vc_isBunBinary) {
+  // Only patch fork() — spawn() of process.execPath may target the CLI
+  // itself (e.g. telemetry subprocess), and setting BUN_BE_BUN=1 there
+  // makes those children misbehave as bun-CLI invocations.
+  const __vc_cp = require('node:child_process');
+  const __vc_origFork = __vc_cp.fork;
+  __vc_cp.fork = function patchedFork(modulePath, args, options) {
+    const env = { ...process.env, ...(options && options.env), BUN_BE_BUN: '1' };
+    return __vc_origFork.call(this, modulePath, args, { ...(options || {}), env });
+  };
+}
 `.trim(),
 };
 
@@ -125,7 +186,7 @@ const result = await esbuild({
     'pnpapi',
   ],
   banner,
-  plugins: [jsoncParserPlugin, getPackageJsonShim],
+  plugins: [jsoncParserPlugin, getPackageJsonShim, childProcessShim],
   loader: { '.node': 'copy', '.html': 'text' },
   logLevel: 'warning',
   // Keep names so stack traces are useful
@@ -167,7 +228,7 @@ await esbuild({
     'pnpapi',
   ],
   banner,
-  plugins: [jsoncParserPlugin],
+  plugins: [jsoncParserPlugin, childProcessShim],
   loader: { '.node': 'copy', '.html': 'text' },
   logLevel: 'error',
   logOverride: { 'equals-negative-zero': 'silent', 'package.json': 'silent' },
@@ -192,6 +253,21 @@ for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
   if (existsSync(src)) {
     copyFileSync(src, dst);
     console.log(`[sidecar] copied ${sidecar}`);
+  }
+}
+
+// builder-worker.cjs is forked from src/util/dev/builder.ts via
+// `join(__dirname, 'builder-worker.cjs')`. Under the binary __dirname resolves
+// to dist-bin/, so the file needs to live there.
+{
+  const src = path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    '../src/util/dev/builder-worker.cjs'
+  );
+  const dst = join(distBinDir, 'builder-worker.cjs');
+  if (existsSync(src)) {
+    copyFileSync(src, dst);
+    console.log('[sidecar] copied builder-worker.cjs');
   }
 }
 

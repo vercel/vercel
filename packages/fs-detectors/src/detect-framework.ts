@@ -1,5 +1,5 @@
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
-import { spawnSync } from 'child_process';
+import { createRequire } from 'module';
 import { DetectorFilesystem } from './detectors/filesystem';
 
 interface BaseFramework {
@@ -302,21 +302,14 @@ export function detectFrameworkVersion(
     return;
   }
 
-  return lookupInstalledVersion(
-    process.execPath,
-    firstMatchPackage.matchPackage
-  );
+  return lookupInstalledVersion(firstMatchPackage.matchPackage);
 }
 
-function lookupInstalledVersion(
-  cwd: string,
-  packageName: string
-): string | undefined {
+function lookupInstalledVersion(packageName: string): string | undefined {
   try {
-    const script = `require('${packageName}/package.json').version`;
-    return spawnSync(cwd, ['-p', script], {
-      encoding: 'utf-8',
-    }).stdout.trim();
+    const req = createRequire(`${process.cwd()}/package.json`);
+    const pkg = req(`${packageName}/package.json`) as { version?: string };
+    return pkg.version;
   } catch (error) {
     console.debug(
       `Error looking up version of installed package "${packageName}": ${error}`

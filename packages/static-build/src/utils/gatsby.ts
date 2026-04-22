@@ -16,14 +16,9 @@ const GATSBY_NODE_FILE = 'gatsby-node';
 
 const require_ = createRequire(__filename);
 
-const PLUGIN_PATHS: Record<PluginName, string> = {
-  '@vercel/gatsby-plugin-vercel-analytics': path.dirname(
-    require_.resolve(`@vercel/gatsby-plugin-vercel-analytics/package.json`)
-  ),
-  '@vercel/gatsby-plugin-vercel-builder': path.dirname(
-    require_.resolve(`@vercel/gatsby-plugin-vercel-builder/package.json`)
-  ),
-};
+function resolvePluginPath(name: PluginName): string {
+  return path.dirname(require_.resolve(`${name}/package.json`));
+}
 
 let GLOBAL_EXIT_HANDLER: undefined | (() => void);
 
@@ -370,7 +365,7 @@ export async function createPluginSymlinks(dir: string) {
   );
   await Promise.all(
     PLUGINS.map(name =>
-      fs.symlink(PLUGIN_PATHS[name], path.join(nodeModulesDir, name))
+      fs.symlink(resolvePluginPath(name), path.join(nodeModulesDir, name))
     )
   );
 }

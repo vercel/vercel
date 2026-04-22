@@ -55,10 +55,8 @@ const require_ = createRequire(__filename);
 // the CLI's own virtual FS. `require_('@vercel/node')` would go through Bun's
 // createRequire resolver (which trips Bug #2 above); `import('@vercel/node')`
 // is statically analyzed by esbuild and resolved at bundle time.
-// Only include builders with a built `dist/`. Packages like `@vercel/backends`
-// and `@vercel/static-build` are workspace deps that need to be built via
-// `pnpm build` before they're bundle-able. Add them once build ordering is
-// wired into the binary build script.
+// Only include builders with a built `dist/`. `@vercel/backends` is still
+// deferred — its `tsdown` toolchain doesn't build on Node < 22.
 const BUILTIN_BUILDERS: Record<string, () => Promise<unknown>> = {
   '@vercel/go': () => import('@vercel/go'),
   '@vercel/hydrogen': () => import('@vercel/hydrogen'),
@@ -66,8 +64,10 @@ const BUILTIN_BUILDERS: Record<string, () => Promise<unknown>> = {
   '@vercel/node': () => import('@vercel/node'),
   '@vercel/python': () => import('@vercel/python'),
   '@vercel/redwood': () => import('@vercel/redwood'),
+  '@vercel/remix-builder': () => import('@vercel/remix-builder'),
   '@vercel/ruby': () => import('@vercel/ruby'),
   '@vercel/rust': () => import('@vercel/rust'),
+  '@vercel/static-build': () => import('@vercel/static-build'),
 };
 
 function getBuiltinBuilderVersion(): string {
@@ -80,21 +80,23 @@ function getBuiltinBuilderVersion(): string {
 }
 
 function unwrapEsmDefault(mod: unknown): BuilderV2 | BuilderV3 | BuilderVX {
-  // Dynamic import of a CJS module under Node returns a namespace object
-  // whose `.default` is the module.exports. Under Bun it may be the object
-  // directly. Handle both.
+  // A builder exposes at least `build` (V2/V3) and usually `version`.
+  // Depending on how the CJS module surfaced through the importer
+  // (Node native ESM interop, Bun's own ESM interop, esbuild's generated
+  // `__toESM` wrapper, etc.) those entry points may live on the namespace
+  // object itself or on `.default`. Prefer whichever actually carries
+  // `build`.
+  const hasBuild = (v: unknown): boolean =>
+    !!v &&
+    typeof v === 'object' &&
+    typeof (v as Record<string, unknown>).build === 'function';
+
   const m = mod as Record<string, unknown>;
-  if (
-    m &&
-    typeof m === 'object' &&
-    'default' in m &&
-    typeof m.default === 'object'
-  ) {
-    const d = m.default as Record<string, unknown>;
-    // If `default` has `version`, treat it as the builder
-    if ('version' in d) {
-      return d as unknown as BuilderV2 | BuilderV3 | BuilderVX;
-    }
+  if (hasBuild(m)) {
+    return m as unknown as BuilderV2 | BuilderV3 | BuilderVX;
+  }
+  if (m && typeof m === 'object' && hasBuild(m.default)) {
+    return m.default as unknown as BuilderV2 | BuilderV3 | BuilderVX;
   }
   return m as unknown as BuilderV2 | BuilderV3 | BuilderVX;
 }

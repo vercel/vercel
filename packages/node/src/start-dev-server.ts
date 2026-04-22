@@ -192,7 +192,28 @@ export const startDevServer: StartDevServer = async opts => {
     // Otherwise fall back to using the copy that `@vercel/node` uses
     if (!ts) {
       compiler = resolveTypescript(join(__dirname, '..'));
-      ts = requireTypescript(compiler);
+      if (compiler) {
+        ts = requireTypescript(compiler);
+      }
+    }
+
+    // Final fallback: resolve typescript through this module's own require
+    // chain. In bundled contexts (e.g. a compiled binary) esbuild will inline
+    // typescript at bundle time so this succeeds without any on-disk lookup.
+    if (!ts) {
+      try {
+        ts = require('typescript');
+      } catch {
+        // ignored — handled by the error below
+      }
+    }
+
+    if (!ts) {
+      throw new Error(
+        `Could not locate a TypeScript installation for "${entrypoint}". ` +
+          `Install \`typescript\` in your project dependencies, or ensure ` +
+          `\`@vercel/node\` has a bundled copy available next to its own module.`
+      );
     }
 
     if (pathToTsConfig) {
