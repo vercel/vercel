@@ -42,21 +42,9 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
-// Built-in Builders that are bundled into the CLI itself. When the CLI runs
-// as a compiled binary, loading these from disk is impossible (Bun's compiled
-// binary cannot resolve modules whose `main` points into a subdirectory from
-// disk-loaded code), so we prefer the bundled copies. For the npm install
-// path these are identical to what would be on disk anyway, just faster.
-//
-// The version is read from the CLI's own package.json (baked in at bundle
-// time). If a user requests a specific version/range that doesn't satisfy,
-// we still fall through to the install-to-`.vercel/builders` path.
-// Use dynamic `import()` so esbuild inlines each module at bundle time into
-// the CLI's own virtual FS. `require_('@vercel/node')` would go through Bun's
-// createRequire resolver (which trips Bug #2 above); `import('@vercel/node')`
-// is statically analyzed by esbuild and resolved at bundle time.
-// Only include builders with a built `dist/`. `@vercel/backends` is still
-// deferred — its `tsdown` toolchain doesn't build on Node < 22.
+// Builders bundled into the CLI itself. The compiled-binary distribution
+// cannot resolve modules from disk, so bundled copies are preferred.
+// Only include builders whose `dist/` is present at build time.
 const BUILTIN_BUILDERS: Record<string, () => Promise<unknown>> = {
   '@vercel/go': () => import('@vercel/go'),
   '@vercel/hydrogen': () => import('@vercel/hydrogen'),
@@ -80,12 +68,8 @@ function getBuiltinBuilderVersion(): string {
 }
 
 function unwrapEsmDefault(mod: unknown): BuilderV2 | BuilderV3 | BuilderVX {
-  // A builder exposes at least `build` (V2/V3) and usually `version`.
-  // Depending on how the CJS module surfaced through the importer
-  // (Node native ESM interop, Bun's own ESM interop, esbuild's generated
-  // `__toESM` wrapper, etc.) those entry points may live on the namespace
-  // object itself or on `.default`. Prefer whichever actually carries
-  // `build`.
+  // ESM/CJS interop: builder entry points may live on the namespace or on
+  // `.default` depending on loader. Prefer whichever has `build`.
   const hasBuild = (v: unknown): boolean =>
     !!v &&
     typeof v === 'object' &&

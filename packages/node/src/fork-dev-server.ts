@@ -79,17 +79,13 @@ export async function forkDevServer(options: {
       nodeOptions += ' --no-warnings';
     }
 
-    // Resolve tsx: prefer the caller's createRequire chain, fall back to
-    // this module's own require (which in bundled contexts inlines tsx).
     let tsxResolved: string | undefined;
     try {
       tsxResolved = options.require_.resolve('tsx');
     } catch {
       try {
         tsxResolved = require.resolve('tsx');
-      } catch {
-        // leave undefined — handled below
-      }
+      } catch {}
     }
 
     if (options.maybeTranspile) {

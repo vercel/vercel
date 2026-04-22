@@ -197,15 +197,10 @@ export const startDevServer: StartDevServer = async opts => {
       }
     }
 
-    // Final fallback: resolve typescript through this module's own require
-    // chain. In bundled contexts (e.g. a compiled binary) esbuild will inline
-    // typescript at bundle time so this succeeds without any on-disk lookup.
     if (!ts) {
       try {
         ts = require('typescript');
-      } catch {
-        // ignored — handled by the error below
-      }
+      } catch {}
     }
 
     if (!ts) {

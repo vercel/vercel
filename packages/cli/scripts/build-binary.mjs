@@ -47,17 +47,13 @@ const jsoncParserPlugin = {
   },
 };
 
-// Shim `child_process` so every call to `fork()` — no matter which import
-// style the code uses — injects `BUN_BE_BUN=1` into the child env. The banner
-// monkey-patches the module-level export, but static ESM named imports
-// (e.g. `import { fork } from 'child_process'`) capture their binding at
-// import time under Bun's compiled binary and bypass the banner patch.
-// Substituting the module itself at bundle time catches every caller.
+// Replace `child_process` imports with a shim whose `fork()` injects
+// BUN_BE_BUN=1, so every fork caller (named or namespace import) lands on
+// the patched version.
 const childProcessShim = {
   name: 'child-process-shim',
   setup(build) {
     build.onResolve({ filter: /^(node:)?child_process$/ }, args => {
-      // Don't recurse when we ourselves import child_process from the shim
       if (args.pluginData && args.pluginData.shim) return null;
       return { path: args.path, namespace: 'cp-shim' };
     });
@@ -89,10 +85,9 @@ const childProcessShim = {
   },
 };
 
-// Polyfill: @vercel-internals/get-package-json does a stack-trace-based
-// walk-up to find package.json. In Bun's compiled binary virtual FS there
-// is no package.json anywhere, so the walk infinite-loops. Replace it with
-// a module that returns the CLI package.json baked in at build time.
+// @vercel-internals/get-package-json walks the disk looking for package.json;
+// under the binary's virtual FS that loops forever. Return the CLI's own
+// package.json, baked in at build time.
 const cliPkgJson = JSON.parse(readFileSync(new URL('package.json', repoRoot), 'utf8'));
 const getPackageJsonShim = {
   name: 'get-package-json-shim',
@@ -111,11 +106,11 @@ export default { getPackageJSON };`,
   },
 };
 
-// Under Bun's compiled binary, import.meta.url resolves to /$bunfs/root/...
-// (the virtual FS). Sidecar files shipped next to the binary (dev-server.mjs,
-// edge-handler-template.js, etc.) live at `dirname(process.execPath)`. Detect
-// the compiled-binary case and redirect __dirname / __filename to the real
-// on-disk binary location so bundled builders find their sidecars.
+// Under the Bun binary `import.meta.url` lives in `/$bunfs/`; redirect
+// __dirname / __filename to the on-disk binary location so sidecars shipped
+// alongside (dev-server.mjs, builder-worker.cjs, templates) are resolvable.
+// Also patches `require('child_process').fork` as a fallback for any caller
+// that bypasses the child-process shim.
 const banner = {
   js: `
 import { createRequire as __createRequire } from 'node:module';
@@ -123,22 +118,11 @@ import { fileURLToPath as __fileURLToPath } from 'node:url';
 import { dirname as __dirname_ } from 'node:path';
 const require = __createRequire(import.meta.url);
 const __vc_metaPath = __fileURLToPath(import.meta.url);
-const __vc_isBunBinary = __vc_metaPath.startsWith('/$bunfs/') || __vc_metaPath.includes('/$bunfs/');
+const __vc_isBunBinary = __vc_metaPath.includes('/$bunfs/');
 const __filename = __vc_isBunBinary ? process.execPath : __vc_metaPath;
 const __dirname = __dirname_(__filename);
 if (process.env.VC_BINARY_DEBUG) { process.stderr.write('[banner] __dirname=' + __dirname + ' isBunBinary=' + __vc_isBunBinary + '\\n'); }
-
-// When running as a Bun-compiled binary, child_process.fork() can't work
-// normally: process.execPath is the binary, not a Node interpreter, so the
-// child is unable to execute an arbitrary .mjs file passed as argv.
-// Bun supports BUN_BE_BUN=1 — when that env var is set, the binary acts as
-// the 'bun' CLI and can run any script path given to it. Patch fork() and
-// spawn() to inject BUN_BE_BUN=1 into the env of children we spawn of
-// ourselves, so forked sidecars like dev-server.mjs run correctly.
 if (__vc_isBunBinary) {
-  // Only patch fork() — spawn() of process.execPath may target the CLI
-  // itself (e.g. telemetry subprocess), and setting BUN_BE_BUN=1 there
-  // makes those children misbehave as bun-CLI invocations.
   const __vc_cp = require('node:child_process');
   const __vc_origFork = __vc_cp.fork;
   __vc_cp.fork = function patchedFork(modulePath, args, options) {
@@ -152,8 +136,7 @@ if (__vc_isBunBinary) {
 const distBinDir = join(cwd, 'dist-bin');
 if (!existsSync(distBinDir)) mkdirSync(distBinDir, { recursive: true });
 
-// Write the bin wrapper: fast paths for --version / --help, then dispatch.
-// This mirrors src/vc.js but with a statically-known version (no version.mjs import).
+// Bin wrapper: fast path for --version, then dispatch into the bundle.
 const wrapperSrc = `
 // Auto-generated binary entry wrapper
 if (process.argv.length === 3 && (process.argv[2] === '--version' || process.argv[2] === '-v')) {
@@ -175,8 +158,7 @@ const result = await esbuild({
   format: 'esm',
   splitting: false,
   outfile: join(distBinDir, 'index-bundled.js'),
-  // Bundle everything except optional deps that @mapbox/node-pre-gyp references
-  // but we don't actually use (they get tree-shaken at runtime via dynamic require)
+  // Optional peers that @mapbox/node-pre-gyp references but we don't use.
   external: [
     'mock-aws-s3',
     'aws-sdk',
@@ -189,7 +171,6 @@ const result = await esbuild({
   plugins: [jsoncParserPlugin, getPackageJsonShim, childProcessShim],
   loader: { '.node': 'copy', '.html': 'text' },
   logLevel: 'warning',
-  // Keep names so stack traces are useful
   keepNames: true,
   logOverride: {
     'equals-negative-zero': 'silent',
@@ -200,12 +181,9 @@ const result = await esbuild({
 const size = require('node:fs').statSync(join(distBinDir, 'index-bundled.js')).size;
 console.log(`[bundle] done. ${(size / 1024 / 1024).toFixed(1)}MB`);
 
-// @vercel/node ships a sidecar `dev-server.mjs` that it forks for function
-// invocation. When @vercel/node is bundled into our CLI, __dirname resolution
-// points to our dist-bin/ rather than @vercel/node's own dist/, and the sidecar
-// is missing. Bundle it as a self-contained file next to our CLI bundle so
-// `fork(join(__dirname, 'dev-server.mjs'))` from inside the bundled builder
-// finds a working sidecar with all its deps inlined.
+// @vercel/node forks a `dev-server.mjs` sidecar. Bundle a self-contained
+// copy alongside the binary so `fork(join(__dirname, 'dev-server.mjs'))`
+// resolves at runtime.
 console.log('[sidecar] bundling @vercel/node dev-server.mjs...');
 await esbuild({
   entryPoints: [
@@ -240,9 +218,7 @@ console.log(
   `[sidecar] done. ${(sidecarSize / 1024 / 1024).toFixed(1)}MB`
 );
 
-// Copy @vercel/node's remaining sidecars (templates loaded via readFileSync).
-// These are small files, loaded via `join(__dirname, filename)` from inside
-// the bundled builder.
+// @vercel/node template files, loaded at runtime via readFileSync.
 const vercelNodeDist = path.join(
   path.dirname(new URL(import.meta.url).pathname),
   '../../../packages/node/dist'
@@ -256,9 +232,7 @@ for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
   }
 }
 
-// builder-worker.cjs is forked from src/util/dev/builder.ts via
-// `join(__dirname, 'builder-worker.cjs')`. Under the binary __dirname resolves
-// to dist-bin/, so the file needs to live there.
+// Forked by dev/builder.ts via `join(__dirname, 'builder-worker.cjs')`.
 {
   const src = path.join(
     path.dirname(new URL(import.meta.url).pathname),
