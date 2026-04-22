@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 
 const frameworks = [
   'express',
@@ -36,16 +36,41 @@ const createFrameworkRegex = (framework: string) =>
 export const findEntrypoint = async (
   cwd: string
 ): Promise<string | undefined> => {
-  let framework: string | undefined;
+  let packageJsonObject: {
+    main?: string;
+    dependencies?: Record<string, string>;
+  } | null = null;
   try {
-    // Original behavior: check for framework imports
     const packageJson = await readFile(join(cwd, 'package.json'), 'utf-8');
-    const packageJsonObject = JSON.parse(packageJson);
-    framework = frameworks.find(
-      framework => packageJsonObject.dependencies?.[framework]
-    );
+    packageJsonObject = JSON.parse(packageJson);
   } catch (_) {
     // ignore
+  }
+
+  if (packageJsonObject) {
+    const main =
+      typeof packageJsonObject.main === 'string'
+        ? packageJsonObject.main.trim()
+        : '';
+    if (main) {
+      const abs = resolve(cwd, main);
+      const rel = relative(cwd, abs);
+      if (!rel.startsWith('..') && rel !== '') {
+        try {
+          await readFile(abs, 'utf-8');
+          return rel.split(sep).join('/');
+        } catch {
+          // main missing or unreadable; fall through to filename heuristics
+        }
+      }
+    }
+  }
+
+  let framework: string | undefined;
+  if (packageJsonObject) {
+    framework = frameworks.find(
+      framework => packageJsonObject!.dependencies?.[framework]
+    );
   }
 
   if (!framework) {
@@ -82,7 +107,7 @@ export const findEntrypointOrThrow = async (cwd: string): Promise<string> => {
   const entrypoint = await findEntrypoint(cwd);
   if (!entrypoint) {
     throw new Error(
-      `No entrypoint found in "${cwd}". Expected one of: ${entrypoints.join(', ')}`
+      `No entrypoint found in "${cwd}". Set package.json "main" to a server file, or add one of: ${entrypoints.join(', ')}`
     );
   }
   return entrypoint;

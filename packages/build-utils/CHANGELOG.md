@@ -1,5 +1,49 @@
 # @vercel/build-utils
 
+## 13.20.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Add shared build output deserialization helpers for existing callers. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 13.19.1
+
+### Patch Changes
+
+- [build-utils] simplify streaming lambda check ([#15795](https://github.com/vercel/vercel/pull/15795))
+
+## 13.19.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Added a shared build result validation helper in `@vercel/build-utils` for existing callers. ([#16030](https://github.com/vercel/vercel/pull/16030))
+
+## 13.18.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 13.17.2
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 13.17.1
+
+### Patch Changes
+
+- Align deserialize logic with existing callers. ([#16002](https://github.com/vercel/vercel/pull/16002))
+
 ## 13.17.0
 
 ### Minor Changes

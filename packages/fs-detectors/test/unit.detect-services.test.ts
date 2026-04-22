@@ -928,7 +928,7 @@ describe('detectServices', () => {
       expect(result.services[0].builder.config?.framework).toBe('express');
     });
 
-    it('should default topics and consumer to "default" for workers', async () => {
+    it('should default topics to ["default"] for workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -945,7 +945,6 @@ describe('detectServices', () => {
       expect(result.services[0]).toMatchObject({
         type: 'worker',
         topics: ['default'],
-        consumer: 'default',
       });
     });
 
@@ -970,7 +969,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should not set topics/consumer defaults for non-workers', async () => {
+    it('should not set topics defaults for non-workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -986,7 +985,6 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services[0].topics).toBeUndefined();
-      expect(result.services[0].consumer).toBeUndefined();
     });
 
     it.each([
@@ -1099,7 +1097,8 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             cleanup: {
-              type: 'cron',
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'cron/cleanup.py',
               schedule: '0 0 * * *',
               subdomain: 'jobs',
@@ -1437,8 +1436,8 @@ describe('detectServices', () => {
     });
   });
 
-  describe('cron services', () => {
-    it('should detect a cron service with schedule', async () => {
+  describe('schedule-triggered job services', () => {
+    it('should detect a legacy cron service and treat it as a schedule-triggered job', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1453,21 +1452,75 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
+      expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(1);
       expect(result.services[0]).toMatchObject({
         name: 'cleanup',
         type: 'cron',
+        trigger: 'schedule',
+        entrypoint: 'cron/cleanup.py',
         schedule: '0 0 * * *',
       });
-      expect(result.errors).toEqual([]);
+      expect(result.routes.crons).toHaveLength(1);
     });
 
-    it('should generate a cron prefix route for cron services', async () => {
+    it('should return error for legacy cron service without schedule', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             cleanup: {
               type: 'cron',
+              entrypoint: 'cron/cleanup.py',
+            },
+          },
+        }),
+        'cron/cleanup.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'MISSING_CRON_SCHEDULE',
+        serviceName: 'cleanup',
+      });
+    });
+
+    it('should detect a schedule-triggered job service', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'job',
+              trigger: 'schedule',
+              entrypoint: 'cron/cleanup.py',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'cron/cleanup.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'cleanup',
+        type: 'job',
+        trigger: 'schedule',
+        entrypoint: 'cron/cleanup.py',
+        schedule: '0 0 * * *',
+      });
+      expect(result.routes.crons).toHaveLength(1);
+    });
+
+    it('should generate internal callback routes for schedule-triggered jobs', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'cron/cleanup.py',
               schedule: '0 0 * * *',
             },
@@ -1487,12 +1540,13 @@ describe('detectServices', () => {
       });
     });
 
-    it('should return error for cron without schedule', async () => {
+    it('should return error for a schedule-triggered job without schedule', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             cleanup: {
-              type: 'cron',
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'cron/cleanup.py',
             },
           },
@@ -1503,17 +1557,18 @@ describe('detectServices', () => {
       expect(result.services).toHaveLength(0);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toMatchObject({
-        code: 'MISSING_CRON_SCHEDULE',
+        code: 'MISSING_JOB_SCHEDULE',
         serviceName: 'cleanup',
       });
     });
 
-    it('should error if cron service has routePrefix', async () => {
+    it('should error if a schedule-triggered job has routePrefix', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             cleanup: {
-              type: 'cron',
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'cron/cleanup.py',
               schedule: '0 0 * * *',
               routePrefix: '/cron',
@@ -1531,17 +1586,19 @@ describe('detectServices', () => {
       });
     });
 
-    it('should detect a cron service with module:function entrypoint', async () => {
+    it('should detect a schedule-triggered job with module:function entrypoint', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             'sync-cleanup': {
-              type: 'cron',
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'jobs.cleanup:sync_handler',
               schedule: '0 0 * * *',
             },
             'async-cleanup': {
-              type: 'cron',
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'jobs.cleanup:async_handler',
               schedule: '0 6 * * *',
             },
@@ -1556,26 +1613,29 @@ describe('detectServices', () => {
       expect(result.services).toHaveLength(2);
       expect(result.services[0]).toMatchObject({
         name: 'sync-cleanup',
-        type: 'cron',
+        type: 'job',
+        trigger: 'schedule',
         entrypoint: 'jobs/cleanup.py',
         handlerFunction: 'sync_handler',
         schedule: '0 0 * * *',
       });
       expect(result.services[1]).toMatchObject({
         name: 'async-cleanup',
-        type: 'cron',
+        type: 'job',
+        trigger: 'schedule',
         entrypoint: 'jobs/cleanup.py',
         handlerFunction: 'async_handler',
         schedule: '0 6 * * *',
       });
     });
 
-    it('should generate cron prefix route for module:function entrypoints', async () => {
+    it('should generate schedule job routes with function name as handler', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             'sync-cleanup': {
-              type: 'cron',
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'jobs.cleanup:sync_handler',
               schedule: '0 0 * * *',
             },
@@ -1647,7 +1707,8 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             cleanup: {
-              type: 'cron',
+              type: 'job',
+              trigger: 'schedule',
               entrypoint: 'nonexistent.module:handler',
               schedule: '0 0 * * *',
             },
@@ -1666,7 +1727,7 @@ describe('detectServices', () => {
   });
 
   describe('worker services', () => {
-    it('should generate internal worker callback routes', async () => {
+    it('should not generate public routes for worker services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1683,12 +1744,7 @@ describe('detectServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(1);
-      expect(result.routes.workers).toHaveLength(1);
-      expect(result.routes.workers[0]).toEqual({
-        src: '^/_svc/processor/workers/worker/processor/worker$',
-        dest: '/_svc/processor/index',
-        check: true,
-      });
+      expect(result.routes.workers).toHaveLength(0);
     });
 
     it('should error if worker service has routePrefix', async () => {
@@ -1712,6 +1768,76 @@ describe('detectServices', () => {
         code: 'INVALID_ROUTE_PREFIX',
         serviceName: 'processor',
       });
+    });
+  });
+
+  describe('job services', () => {
+    it('should detect a queue-triggered job service with topic objects', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            processor: {
+              type: 'job',
+              trigger: 'queue',
+              entrypoint: 'worker/processor.py',
+              topics: [
+                {
+                  topic: 'jobs',
+                  retryAfterSeconds: 30,
+                  initialDelaySeconds: 5,
+                },
+              ],
+            },
+          },
+        }),
+        'worker/processor.py': 'def handler(event): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'processor',
+        type: 'job',
+        trigger: 'queue',
+        topics: [
+          {
+            topic: 'jobs',
+            retryAfterSeconds: 30,
+            initialDelaySeconds: 5,
+          },
+        ],
+      });
+      // Queue-triggered services use private path routing; no synthetic worker routes.
+      expect(result.routes.workers).toHaveLength(0);
+    });
+
+    it('should detect a workflow-triggered job service without synthetic routes', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            orchestrator: {
+              type: 'job',
+              trigger: 'workflow',
+              entrypoint: 'workflow/index.ts',
+            },
+          },
+        }),
+        'workflow/index.ts': 'export const workflow = {};',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'orchestrator',
+        type: 'job',
+        trigger: 'workflow',
+      });
+      expect(result.routes.crons).toHaveLength(0);
+      expect(result.routes.workers).toHaveLength(0);
+      expect(result.routes.rewrites).toHaveLength(0);
+      expect(result.routes.defaults).toHaveLength(0);
     });
   });
 

@@ -41,6 +41,8 @@ import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
 import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
+import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
+import { tryOpenApiFallback } from './util/openapi';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -581,6 +583,27 @@ const main = async () => {
       output.debug(
         'user supplied a possible target for deployment or an extension'
       );
+      if (
+        process.env.VERCEL_AUTO_API &&
+        (await matchesCliApiTag(targetOrSubcommand))
+      ) {
+        output.debug(
+          `first token "${targetOrSubcommand}" matches an OpenAPI tag; routing to api`
+        );
+        const tag = targetOrSubcommand;
+        const result = await tryOpenApiFallback(
+          client,
+          parsedArgs.args.slice(3),
+          async () => tag
+        );
+        return finishWithExitCode(result ?? 1);
+      } else if (targetPathExists) {
+        subcommand = 'deploy';
+        userSuppliedSubCommand = targetOrSubcommand;
+        output.debug(
+          `first token "${targetOrSubcommand}" is an existing path; routing to deploy`
+        );
+      }
     }
   } else {
     output.debug('user supplied no target, defaulting to deploy');
@@ -1045,14 +1068,9 @@ const main = async () => {
           func = (await import('./commands-bulk.js')).logs;
           break;
         case 'metrics':
-          if (process.env.FF_METRICS) {
-            telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).metrics;
-            break;
-          } else {
-            func = null;
-            break;
-          }
+          telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).metrics;
+          break;
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;

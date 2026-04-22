@@ -30,6 +30,24 @@ function makeWorkerService(
   } as Service;
 }
 
+function makeQueueJobService(
+  name: string,
+  topics: Array<{
+    topic: string;
+    retryAfterSeconds?: number;
+    initialDelaySeconds?: number;
+  }>
+): Service {
+  return {
+    name,
+    type: 'job',
+    trigger: 'queue',
+    workspace: '.',
+    builder: { src: 'index.ts', use: '@vercel/node' },
+    topics,
+  } as Service;
+}
+
 function makeWebService(name: string): Service {
   return {
     name,
@@ -40,11 +58,11 @@ function makeWebService(name: string): Service {
   } as Service;
 }
 
-/** Parse the CloudEvent JSON body from a specific mockFetch call. */
-function findCloudEvent(index?: number): any {
+/** Extract headers from a specific mockFetch call (defaults to the last one). */
+function callHeaders(index?: number): Record<string, string> {
   const i = index ?? mockFetch.mock.calls.length - 1;
   const call = mockFetch.mock.calls[i];
-  return JSON.parse((call[1] as any).body);
+  return (call[1] as any).headers;
 }
 
 describe('topicPatternToRegex', () => {
@@ -149,17 +167,13 @@ describe('QueueBroker', () => {
       expect(url).toBe('http://localhost:3001/');
       expect((opts as any).method).toBe('POST');
 
-      expect((opts as any).headers['Content-Type']).toBe(
-        'application/cloudevents+json'
-      );
-
-      const body = findCloudEvent();
-      expect(body.type).toBe('com.vercel.queue.v1beta');
-      expect(body.data).toMatchObject({
-        queueName: 'orders',
-        consumerGroup: 'worker-a',
-        messageId,
-      });
+      const headers = callHeaders();
+      expect(headers['ce-type']).toBe('com.vercel.queue.v2beta');
+      expect(headers['ce-vqsqueuename']).toBe('orders');
+      expect(headers['ce-vqsconsumergroup']).toBe('worker-a');
+      expect(headers['ce-vqsmessageid']).toBe(messageId);
+      expect(headers['ce-vqsreceipthandle']).toBeTruthy();
+      expect(headers['content-type']).toBe('application/json');
     });
 
     it('dispatches to multiple matching consumer groups', async () => {
@@ -189,8 +203,8 @@ describe('QueueBroker', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
 
-      expect(findCloudEvent(0).data.queueName).toBe('orders');
-      expect(findCloudEvent(1).data.queueName).toBe('events');
+      expect(callHeaders(0)['ce-vqsqueuename']).toBe('orders');
+      expect(callHeaders(1)['ce-vqsqueuename']).toBe('events');
     });
 
     it('does not cross-dispatch across topics during tick()', async () => {
@@ -253,6 +267,29 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('dispatches queue-triggered job services and respects topic timing config', async () => {
+      broker = new QueueBroker(
+        [
+          makeQueueJobService('processor', [
+            {
+              topic: 'orders',
+              retryAfterSeconds: 30,
+              initialDelaySeconds: 5,
+            },
+          ]),
+        ],
+        getServiceOrigin
+      );
+
+      broker.enqueue('orders', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      expect(callHeaders()['ce-vqsconsumergroup']).toBe('processor');
     });
 
     it('does not dispatch delayed messages immediately', async () => {

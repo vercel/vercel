@@ -72,6 +72,10 @@ export interface AgentErrorPayload {
     integration_privacy_policy?: string;
     integration_eula?: string;
   };
+  /** ACL action the caller lacks permission for (e.g. "read", "create", "delete"). Present on 403 when the API provides it. */
+  action?: string;
+  /** ACL resource the permission applies to (e.g. "project", "deployment"). Present on 403 when the API provides it. */
+  resource?: string;
 }
 
 /**
@@ -721,6 +725,8 @@ export function exitWithNonInteractiveError(
         status: 'error',
         reason,
         message,
+        ...(err.action && { action: err.action }),
+        ...(err.resource && { resource: err.resource }),
       },
       exitCode,
       variant

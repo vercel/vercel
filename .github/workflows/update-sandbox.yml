@@ -1,0 +1,125 @@
+name: Update Sandbox
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Sandbox CLI version to sync into packages/cli'
+        required: true
+        type: string
+      source_repository:
+        description: 'Repository that triggered the sync'
+        required: false
+        type: string
+      source_run_id:
+        description: 'GitHub Actions run ID that triggered the sync'
+        required: false
+        type: string
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enable corepack
+        run: corepack enable pnpm
+
+      - name: Get current sandbox version
+        id: current_version
+        run: |
+          VERSION=$(node -p "require('./packages/cli/package.json').dependencies.sandbox")
+          echo "Current sandbox version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if update is needed
+        id: needs_update
+        run: |
+          if [ "${{ steps.current_version.outputs.version }}" = "${{ inputs.version }}" ]; then
+            echo "Sandbox is already up to date, skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update sandbox dependency
+        if: steps.needs_update.outputs.skip != 'true'
+        run: |
+          node -e "const fs=require('fs'); const path='packages/cli/package.json'; const pkg=JSON.parse(fs.readFileSync(path,'utf8')); pkg.dependencies.sandbox='${{ inputs.version }}'; fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');"
+
+      - name: Add changeset
+        if: steps.needs_update.outputs.skip != 'true'
+        run: |
+          cat > ".changeset/update-sandbox-${{ inputs.version }}.md" <<'EOF'
+          ---
+          'vercel': patch
+          ---
+
+          Update the bundled Sandbox CLI dependency to ${{ inputs.version }}.
+          EOF
+
+      - name: Update lockfile
+        if: steps.needs_update.outputs.skip != 'true'
+        run: pnpm install --lockfile-only
+
+      - name: Check for changes
+        id: git_status
+        if: steps.needs_update.outputs.skip != 'true'
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build PR body
+        id: pr_body
+        if: steps.git_status.outputs.changes_detected == 'true'
+        env:
+          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          {
+            echo "body<<EOF"
+            echo "Automated PR to upgrade \`sandbox\` to version \`${{ inputs.version }}\`."
+            echo
+            if [ -n "$SOURCE_REPOSITORY" ] && [ -n "$SOURCE_RUN_ID" ]; then
+              echo "Triggered by: [$SOURCE_REPOSITORY action run](https://github.com/$SOURCE_REPOSITORY/actions/runs/$SOURCE_RUN_ID)"
+              echo
+            fi
+            echo "[Action run](https://github.com/vercel/vercel/actions/runs/${{ github.run_id }})"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        id: pr
+        if: steps.git_status.outputs.changes_detected == 'true'
+        with:
+          title: '[cli] upgrade sandbox to ${{ inputs.version }}'
+          commit-message: '[cli] upgrade sandbox to ${{ inputs.version }}'
+          branch: 'update-sandbox-${{ inputs.version }}'
+          delete-branch: true
+          add-paths: |
+            .changeset/update-sandbox-${{ inputs.version }}.md
+            packages/cli/package.json
+            pnpm-lock.yaml
+          body: ${{ steps.pr_body.outputs.body }}
+          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }} # TODO: this secret is deleted, replace with a new bot token or GitHub App
+
+      - name: Approve the Pull Request
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.VERCEL_CLI_APPROVER_BOT_TOKEN }}
+        run: |
+          gh pr review ${{ steps.pr.outputs.pull-request-number }} --approve
+
+      - name: Enable auto-merge
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }} # TODO: this secret is deleted, replace with a new bot token or GitHub App
+        run: |
+          gh pr merge ${{ steps.pr.outputs.pull-request-number }} --auto --squash

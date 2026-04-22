@@ -1,5 +1,49 @@
 # @vercel/python
 
+## 6.36.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Don't pass --python 3.0 to uv venv when running vc dev ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 6.35.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+## 6.34.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 6.33.3
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 6.33.2
+
+### Patch Changes
+
+- Update the error for custom installCommand builds >250MB. ([#15946](https://github.com/vercel/vercel/pull/15946))
+
+## 6.33.1
+
+### Patch Changes
+
+- Enable functions beta hint when flag is true ([#15965](https://github.com/vercel/vercel/pull/15965))
+
+- [services] don't catch all routes for non-web Python services ([#15960](https://github.com/vercel/vercel/pull/15960))
+
+- Remove duplicated error message. ([#16000](https://github.com/vercel/vercel/pull/16000))
+
 ## 6.33.0
 
 ### Minor Changes
