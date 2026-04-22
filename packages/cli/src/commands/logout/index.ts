@@ -81,8 +81,10 @@ export default async function logout(client: Client): Promise<number> {
   delete authConfig.userId;
 
   try {
-    writeToConfigFile(config);
-    writeToAuthConfigFile(authConfig);
+    if (!authConfig.skipWrite) {
+      writeToConfigFile(config);
+      writeToAuthConfigFile(authConfig, config);
+    }
     output.debug('Configuration has been deleted');
   } catch (err: unknown) {
     output.debug(errorToString(err));

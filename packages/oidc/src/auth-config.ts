@@ -1,35 +1,29 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import {
+  clearAllCredentialsStrict,
+  hasCredentials,
+  readCredentials,
+  writeCredentials,
+  type Credentials,
+} from '@vercel/cli-auth/credentials-store.js';
 import { getVercelDataDir } from './token-util';
 
 /**
- * Auth configuration stored in ~/.../com.vercel.cli/auth.json
+ * Auth configuration stored in ~/.../com.vercel.cli/auth.json or OS keyring
  */
-export interface AuthConfig {
-  /** An `access_token` obtained using the OAuth Device Authorization flow. */
-  token?: string;
-  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
-  refreshToken?: string;
-  /**
-   * The absolute time (seconds) when the token expires.
-   * Used to optimistically check if the token is still valid.
-   */
-  expiresAt?: number;
-  /** Whether to skip writing this config to disk. */
-  skipWrite?: boolean;
-}
+export type AuthConfig = Credentials;
 
 /**
- * Get the path to the auth config file
+ * Get the path to the auth config directory
  */
-function getAuthConfigPath(): string {
+function getAuthConfigDir(): string {
   const dataDir = getVercelDataDir();
   if (!dataDir) {
     throw new Error(
       `Unable to find Vercel CLI data directory. Your platform: ${process.platform}. Supported: darwin, linux, win32.`
     );
   }
-  return path.join(dataDir, 'auth.json');
+
+  return dataDir;
 }
 
 /**
@@ -38,15 +32,7 @@ function getAuthConfigPath(): string {
  */
 export function readAuthConfig(): AuthConfig | null {
   try {
-    const authPath = getAuthConfigPath();
-    if (!fs.existsSync(authPath)) {
-      return null;
-    }
-    const content = fs.readFileSync(authPath, 'utf8');
-    if (!content) {
-      return null;
-    }
-    return JSON.parse(content) as AuthConfig;
+    return readCredentials(getAuthConfigDir());
   } catch (_error) {
     return null;
   }
@@ -56,16 +42,12 @@ export function readAuthConfig(): AuthConfig | null {
  * Write the auth config to disk with proper permissions
  */
 export function writeAuthConfig(config: AuthConfig): void {
-  const authPath = getAuthConfigPath();
-  const authDir = path.dirname(authPath);
-
-  // Ensure directory exists with proper permissions
-  if (!fs.existsSync(authDir)) {
-    fs.mkdirSync(authDir, { mode: 0o770, recursive: true });
+  if (hasCredentials(config)) {
+    writeCredentials(getAuthConfigDir(), config);
+    return;
   }
 
-  // Write file with restrictive permissions (owner read/write only)
-  fs.writeFileSync(authPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+  clearAllCredentialsStrict(getAuthConfigDir());
 }
 
 /**
