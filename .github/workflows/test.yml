@@ -344,14 +344,40 @@ jobs:
     needs:
       - setup
       - test
+    permissions:
+      statuses: write
     steps:
       - name: Check All
+        id: check-all
+        continue-on-error: true
         run: |-
           for status in ${{ join(needs.*.result, ' ') }}
           do
             if [ "$status" != "success" ] && [ "$status" != "skipped" ]
             then
               echo "Some checks failed"
+              echo "state=failure" >> $GITHUB_OUTPUT
               exit 1
             fi
           done
+          echo "state=success" >> $GITHUB_OUTPUT
+      - name: Report status to PR commit
+        if: ${{ always() && github.event.client_payload.git.sha }}
+        uses: actions/github-script@v7
+        env:
+          CHECK_STATE: ${{ steps.check-all.outputs.state }}
+        with:
+          script: |
+            const state = process.env.CHECK_STATE === 'success' ? 'success' : 'failure';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state,
+              context: 'Summary',
+              target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+              description: state === 'success' ? 'All checks passed' : 'Some checks failed',
+            });
+      - name: Fail the job if Check All failed
+        if: ${{ steps.check-all.outcome == 'failure' }}
+        run: exit 1
