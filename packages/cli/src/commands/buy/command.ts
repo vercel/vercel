@@ -49,12 +49,13 @@ export const creditsSubcommand = {
 } as const;
 
 // TODO(mingchungx): Add other addons
-export const SUPPORTED_ADDON_ALIASES = ['siem'] as const;
+export const SUPPORTED_ADDON_ALIASES = ['siem', 'flagsExplorer'] as const;
 export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
 
 // TODO(mingchungx): Add other labels
 export const ADDON_LABELS: Record<AddonAlias, string> = {
   siem: 'SIEM',
+  flagsExplorer: 'Flags Explorer - Unlimited Overrides',
 };
 
 export const addonSubcommand = {
