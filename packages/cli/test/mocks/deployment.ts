@@ -20,6 +20,7 @@ export function useDeployment({
   createdAt,
   project = defaultProject,
   target = 'production',
+  meta = {},
 }: {
   creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
   state?:
@@ -32,6 +33,7 @@ export function useDeployment({
   createdAt?: number;
   project?: any; // FIX ME: Use `Project` once PR #9956 is merged
   target?: Deployment['target'];
+  meta?: Deployment['meta'];
 }) {
   setupDeploymentEndpoints();
 
@@ -55,7 +57,7 @@ export function useDeployment({
     env: [],
     id,
     inspectorUrl: `https://vercel.com/${creator.name}/${id}`,
-    meta: {},
+    meta,
     name,
     ownerId: creator.id,
     plan: 'hobby',
@@ -190,12 +192,29 @@ function setupDeploymentEndpoints(): void {
       }
     );
 
+    const projectIdFilter = req.query.projectId;
+    if (typeof projectIdFilter === 'string') {
+      currentDeployments = currentDeployments.filter(
+        deployment => deployment.projectId === projectIdFilter
+      );
+    }
+
     // Filter by state if provided
     const stateFilter = req.query.state;
     if (stateFilter && typeof stateFilter === 'string') {
       const allowedStates = stateFilter.split(',').map(s => s.trim());
       currentDeployments = currentDeployments.filter(deployment =>
         allowedStates.includes(deployment.readyState || '')
+      );
+    }
+
+    for (const [key, value] of Object.entries(req.query)) {
+      if (!key.startsWith('meta-') || typeof value !== 'string') {
+        continue;
+      }
+      const metaKey = key.slice(5);
+      currentDeployments = currentDeployments.filter(
+        deployment => deployment.meta?.[metaKey] === value
       );
     }
 
