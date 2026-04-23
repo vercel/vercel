@@ -67,6 +67,31 @@ describe('teams invite', () => {
       expect(exitCode).toBe(0);
     });
 
+    it('passes role in the invite request body when provided', async () => {
+      client.nonInteractive = true;
+      client.config = { currentTeam: currentTeamId };
+      let requestBody: { email: string; role?: string } | undefined;
+      client.scenario.post(`/teams/${currentTeamId}/members`, (req, res) => {
+        requestBody = req.body as { email: string; role?: string };
+        return res.json({ username: 'person1' });
+      });
+
+      client.setArgv(
+        'teams',
+        'invite',
+        'me@example.com',
+        '--role',
+        'developer'
+      );
+      const exitCode = await teams(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestBody).toEqual({
+        email: 'me@example.com',
+        role: 'DEVELOPER',
+      });
+    });
+
     it('outputs team_scope_required with global flags in next when no team scope', async () => {
       client.nonInteractive = true;
       // No currentTeam so invite cannot determine which team to invite to
@@ -134,6 +159,67 @@ describe('teams invite', () => {
       exitSpy.mockRestore();
       client.nonInteractive = false;
     });
+
+    it('preserves --role in retry suggestions when the invite fails', async () => {
+      client.nonInteractive = true;
+      client.config = { currentTeam: currentTeamId };
+      client.scenario.post(`/teams/${currentTeamId}/members`, (_req, res) => {
+        res.statusCode = 404;
+        return res.json({
+          error: {
+            code: 'user_not_found',
+            message: 'User not found',
+          },
+        });
+      });
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv(
+        'teams',
+        'invite',
+        'nobody@example.com',
+        '--role',
+        'DEVELOPER'
+      );
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.next[0].command).toContain('--role');
+      expect(payload.next[0].command).toContain('DEVELOPER');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('outputs error JSON when role is invalid', async () => {
+      client.nonInteractive = true;
+      client.config = { currentTeam: currentTeamId };
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('teams', 'invite', 'me@example.com', '--role', 'invalid');
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_role');
+      expect(payload.message).toContain('Invalid --role');
+      expect(payload.message).toContain('DEVELOPER');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
   });
 
   describe('[email]', () => {
@@ -162,6 +248,27 @@ describe('teams invite', () => {
           {
             key: 'argument:email',
             value: 'ONE',
+          },
+        ]);
+      });
+
+      it('tracks the role option telemetry event', async () => {
+        client.setArgv('teams', 'invite', 'me@example.com', '--role', 'viewer');
+        const exitCode = await teams(client);
+        expect(exitCode, 'exit code for "teams"').toEqual(0);
+
+        await expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:invite',
+            value: 'invite',
+          },
+          {
+            key: 'argument:email',
+            value: 'ONE',
+          },
+          {
+            key: 'option:role',
+            value: 'VIEWER',
           },
         ]);
       });

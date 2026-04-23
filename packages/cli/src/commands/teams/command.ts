@@ -1,5 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { formatOption, nextOption } from '../../util/arg-common';
+import { TEAM_MEMBER_ROLE_LIST } from '../../util/teams/team-member-roles';
 
 export const requestSubcommand = {
   name: 'request',
@@ -110,7 +111,16 @@ export const inviteSubcommand = {
       multiple: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'role',
+      shorthand: null,
+      type: String,
+      argument: 'ROLE',
+      deprecated: false,
+      description: `Role to assign to the invited team member (${TEAM_MEMBER_ROLE_LIST})`,
+    },
+  ],
   examples: [
     {
       name: 'Invite new members (interactively)',
@@ -119,6 +129,10 @@ export const inviteSubcommand = {
     {
       name: 'Invite multiple members (required in non-interactive mode)',
       value: `${packageName} teams invite abc@vercel.com xyz@vercel.com`,
+    },
+    {
+      name: 'Invite a member with a specific role',
+      value: `${packageName} teams invite abc@vercel.com --role DEVELOPER`,
     },
   ],
 } as const;
