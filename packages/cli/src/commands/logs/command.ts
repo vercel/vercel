@@ -110,7 +110,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Advanced search query (supports filter syntax, e.g. "status:500 error")',
+        'Advanced search query (supports filter syntax, e.g. "status:500 error", "workflowRunId:run_xxxxx")',
     },
     {
       name: 'search',
@@ -202,6 +202,10 @@ export const logsCommand = {
     {
       name: 'Display logs for all branches (disable auto-detection)',
       value: `${packageName} logs --no-branch`,
+    },
+    {
+      name: 'Display logs for a specific workflow run',
+      value: `${packageName} logs --query 'workflowRunId:run_xxxxx' --json`,
     },
   ],
 } as const;
