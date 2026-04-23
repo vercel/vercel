@@ -228,6 +228,67 @@ describe('edge-config', () => {
     expect(out).toEqual({ status: 'ok', revoked: 2 });
   });
 
+  it('does not emit plaintext `token` in --format json list output', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_list_tokens', slug: 's' }]);
+    });
+    // Simulate a mixed-version window where the API still returns plaintext
+    // `token` on the list endpoint (pre-FLA-2777). The CLI must strip it from
+    // JSON output regardless.
+    client.scenario.get(
+      '/v1/edge-config/ecfg_list_tokens/tokens',
+      (_req, res) => {
+        res.json([
+          {
+            id: 'tokid_a',
+            label: 'prod',
+            partialToken: 'aaaa********',
+            token: 'plaintext_leak_a',
+            createdAt: 1_700_000_000_000,
+          },
+          {
+            id: 'tokid_b',
+            label: 'dev',
+            partialToken: 'bbbb********',
+            token: 'plaintext_leak_b',
+            createdAt: 1_700_000_001_000,
+          },
+        ]);
+      }
+    );
+
+    client.setArgv(
+      'edge-config',
+      'tokens',
+      'ecfg_list_tokens',
+      '--format',
+      'json'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    const raw = client.stdout.getFullOutput();
+    expect(raw).not.toContain('plaintext_leak_a');
+    expect(raw).not.toContain('plaintext_leak_b');
+    const out = JSON.parse(raw.trim());
+    expect(out).toEqual([
+      {
+        id: 'tokid_a',
+        label: 'prod',
+        partialToken: 'aaaa********',
+        createdAt: 1_700_000_000_000,
+      },
+      {
+        id: 'tokid_b',
+        label: 'dev',
+        partialToken: 'bbbb********',
+        createdAt: 1_700_000_001_000,
+      },
+    ]);
+    for (const row of out) {
+      expect(row).not.toHaveProperty('token');
+    }
+  });
+
   it('validates --patch before slug rename when both --slug and --patch are provided', async () => {
     let putCalled = false;
     client.scenario.put('/v1/edge-config/ecfg_update_order', (_req, res) => {

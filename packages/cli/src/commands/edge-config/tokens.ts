@@ -20,7 +20,7 @@ import { resolveEdgeConfigId } from './resolve-edge-config-id';
 interface TokenRow {
   id?: string;
   label?: string;
-  token?: string;
+  partialToken?: string;
   createdAt?: number;
 }
 
@@ -217,7 +217,17 @@ export default async function tokensCmd(
 
     const rows = await client.fetch<TokenRow[]>(`${base}/tokens`);
     if (asJson) {
-      client.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      // Pick an explicit allowlist of fields so we never forward a plaintext
+      // `token` in `--format json`, even if an older API deploy still returns
+      // it during FLA-2777 rollout. `--add` output is unchanged and still
+      // reveals the token once on creation.
+      const sanitized = rows.map(row => ({
+        id: row.id,
+        label: row.label,
+        partialToken: row.partialToken,
+        createdAt: row.createdAt,
+      }));
+      client.stdout.write(`${JSON.stringify(sanitized, null, 2)}\n`);
       return 0;
     }
 
