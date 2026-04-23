@@ -11,6 +11,7 @@ import os
 import pathlib
 import shutil
 import socket
+import struct
 import sys
 import tempfile
 import unittest
@@ -236,6 +237,154 @@ async def _http_post(
     return await asyncio.to_thread(
         _http_request, port, "POST", path, body, headers
     )
+
+
+class _SocketBuffer:
+    def __init__(self, sock: socket.socket) -> None:
+        self._sock = sock
+        self._buffer = bytearray()
+
+    def read_until(self, marker: bytes) -> bytes:
+        while marker not in self._buffer:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        end = self._buffer.index(marker) + len(marker)
+        data = bytes(self._buffer[:end])
+        del self._buffer[:end]
+        return data
+
+    def read_exact(self, size: int) -> bytes:
+        while len(self._buffer) < size:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        data = bytes(self._buffer[:size])
+        del self._buffer[:size]
+        return data
+
+
+def _encode_client_ws_frame(opcode: int, payload: bytes = b"") -> bytes:
+    frame = bytearray([0x80 | opcode])
+    payload_length = len(payload)
+
+    if payload_length < 126:
+        frame.append(0x80 | payload_length)
+    elif payload_length < 1 << 16:
+        frame.append(0x80 | 126)
+        frame.extend(struct.pack("!H", payload_length))
+    else:
+        frame.append(0x80 | 127)
+        frame.extend(struct.pack("!Q", payload_length))
+
+    mask = os.urandom(4)
+    frame.extend(mask)
+    frame.extend(byte ^ mask[index % 4] for index, byte in enumerate(payload))
+    return bytes(frame)
+
+
+def _read_ws_frame(reader: _SocketBuffer) -> tuple[int, bytes]:
+    first, second = reader.read_exact(2)
+    opcode = first & 0x0F
+    payload_length = second & 0x7F
+    has_mask = bool(second & 0x80)
+
+    if payload_length == 126:
+        payload_length = struct.unpack("!H", reader.read_exact(2))[0]
+    elif payload_length == 127:
+        payload_length = struct.unpack("!Q", reader.read_exact(8))[0]
+
+    mask = reader.read_exact(4) if has_mask else b""
+    payload = reader.read_exact(payload_length) if payload_length else b""
+
+    if has_mask:
+        payload = bytes(
+            byte ^ mask[index % 4] for index, byte in enumerate(payload)
+        )
+
+    return opcode, payload
+
+
+def _build_websocket_request(
+    port: int,
+    path: str = "/ws",
+    headers: dict[str, str] | None = None,
+) -> bytes:
+    key = base64.b64encode(os.urandom(16)).decode("ascii")
+    request_headers = {
+        "Host": f"127.0.0.1:{port}",
+        "Upgrade": "websocket",
+        "Connection": "Upgrade",
+        "Sec-WebSocket-Key": key,
+        "Sec-WebSocket-Version": "13",
+        **(headers or {}),
+    }
+
+    request_lines = [f"GET {path} HTTP/1.1"]
+    request_lines.extend(
+        f"{name}: {value}" for name, value in request_headers.items()
+    )
+    return ("\r\n".join([*request_lines, "", ""])).encode("ascii")
+
+
+class _WebSocketClient:
+    def __init__(self, sock: socket.socket, reader: _SocketBuffer) -> None:
+        self._sock = sock
+        self._reader = reader
+
+    @classmethod
+    def connect(
+        cls,
+        port: int,
+        path: str = "/ws",
+        headers: dict[str, str] | None = None,
+    ) -> tuple[_WebSocketClient, str]:
+        sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+        sock.settimeout(5)
+        reader = _SocketBuffer(sock)
+
+        try:
+            sock.sendall(_build_websocket_request(port, path, headers))
+
+            response = reader.read_until(b"\r\n\r\n")
+            if b"sec-websocket-accept:" not in response.lower():
+                raise AssertionError(
+                    "websocket upgrade response missing accept header"
+                )
+
+            status_line = response.split(b"\r\n", maxsplit=1)[0].decode("ascii")
+            return cls(sock, reader), status_line
+        except Exception:
+            sock.close()
+            raise
+
+    def read_text(self) -> str:
+        opcode, payload = _read_ws_frame(self._reader)
+        if opcode != 0x1:
+            raise AssertionError(f"expected text frame, got opcode {opcode}")
+        return payload.decode("utf-8")
+
+    def send_text(self, text: str) -> None:
+        self._sock.sendall(_encode_client_ws_frame(0x1, text.encode("utf-8")))
+
+    def close(self) -> None:
+        if self._sock.fileno() == -1:
+            return
+
+        with contextlib.suppress(OSError):
+            self._sock.sendall(
+                _encode_client_ws_frame(0x8, struct.pack("!H", 1000))
+            )
+
+        with contextlib.suppress(ConnectionError, OSError, socket.timeout):
+            _read_ws_frame(self._reader)
+
+        with contextlib.suppress(OSError):
+            self._sock.close()
 
 
 async def _read_stderr(
@@ -477,6 +626,80 @@ class TestASGIApp(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"200", data)
+
+    async def test_asgi_websocket_ends_request_after_handshake(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_ROUTE_PREFIX_STRIP": "1",
+                "VERCEL_SERVICE_ROUTE_PREFIX": "/_svc/backend",
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/_svc/backend/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-1",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-1",
+                        "x-vercel-internal-trace-id": "trace-1",
+                        "x-vercel-internal-oidc-token": "oidc-secret",
+                    },
+                )
+
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+
+                scope_data = json.loads(
+                    await asyncio.to_thread(client.read_text)
+                )
+                self.assertEqual(scope_data["path"], "/ws")
+                self.assertEqual(scope_data["root_path"], "/_svc/backend")
+                self.assertFalse(scope_data["has_internal_invocation_id"])
+                self.assertFalse(scope_data["has_internal_request_id"])
+                self.assertFalse(scope_data["has_internal_span_id"])
+                self.assertFalse(scope_data["has_internal_trace_id"])
+                self.assertEqual(scope_data["oidc_token"], "oidc-secret")
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertGreater(hs.payload.handler_started_at, 0)
+                self.assertEqual(hs.payload.context.invocation_id, "test-inv-1")
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-1"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The request should be complete at the 101 upgrade boundary
+                # while the upgraded socket remains fully usable.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
 
 
 class TestCronService(_RuntimeTestCase):
