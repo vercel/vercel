@@ -817,6 +817,42 @@ describe('link', () => {
       logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
+
+    it('uses --scope flag when agent detects non-interactive mode', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const secondTeam = createTeam();
+      client.cwd = cwd;
+      client.setArgv('link', '--non-interactive', '--scope', secondTeam.id);
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      // It should NOT fail with missing_scope. It might fail with missing_project or succeed.
+      try {
+        await link(client);
+      } catch (err: any) {
+        if (err.message.includes('process.exit')) {
+          const payloadString = logSpy.mock.calls[0]?.[0];
+          if (payloadString) {
+            const payload = JSON.parse(payloadString);
+            expect(payload.reason).not.toBe('missing_scope');
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
   });
 
   describe('--confirm', () => {
