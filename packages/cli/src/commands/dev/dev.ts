@@ -8,6 +8,7 @@ import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
+import { requireMfaAuth } from '../../util/login/require-mfa-auth';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
@@ -45,6 +46,14 @@ export default async function dev(
   const listen = parseListen(opts['--listen'] || '3000');
 
   cwd = await resolveProjectCwd(cwd);
+
+  const isAutomatedContext = Boolean(
+    process.env.VERCEL_TOKEN || process.env.CI
+  );
+  if (!isAutomatedContext) {
+    const gate = await requireMfaAuth(client);
+    if (gate !== true) return gate;
+  }
 
   // retrieve dev command
   let link = await getLinkedProject(client, cwd);

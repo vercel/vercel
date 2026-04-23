@@ -83,6 +83,7 @@ export type User = {
   limited?: boolean;
   version?: 'northstar';
   defaultTeamId?: string;
+  mfa?: { enabled: boolean; hasTotp?: boolean };
 };
 
 export interface Team {

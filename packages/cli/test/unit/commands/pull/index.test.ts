@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import pull from '../../../../src/commands/pull';
@@ -10,6 +10,14 @@ import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('pull', () => {
+  beforeEach(() => {
+    vi.stubEnv('CI', '1');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe('--non-interactive', () => {
     it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
       const cwd = setupUnitFixture('vercel-pull-unlinked');
