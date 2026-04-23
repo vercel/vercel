@@ -247,26 +247,36 @@ describe('connex token', () => {
     expect(exitCode).toBe(1);
   });
 
-  it('should fail fast when client.nonInteractive is true', async () => {
+  it('should recover when --yes is passed even in non-TTY (agent flow)', async () => {
+    let postCount = 0;
     client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
-      res.statusCode = 422;
-      res.json({
-        error: {
-          code: 'user_authorization_required',
-          message: 'User authorization required',
-        },
-      });
+      postCount++;
+      if (postCount === 1) {
+        res.statusCode = 422;
+        res.json({
+          error: {
+            code: 'user_authorization_required',
+            message: 'User authorization required',
+          },
+        });
+      } else {
+        res.json({ token: 'xoxp-agent-flow', expiresAt: 1712345678 });
+      }
     });
 
-    client.nonInteractive = true;
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+      res.json({ status: 'success', data: { clientId: 'scl_abc123' } });
+    });
+
+    // Simulate an agent/script: stdout not a TTY, but user explicitly opted in
+    (client.stdout as any).isTTY = false;
+    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
 
     const exitCode = await connex(client);
 
-    await expect(client.stderr).toOutput(
-      'https://vercel.com/api/v1/connex/authorize/scl_abc123'
-    );
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(0);
+    expect(postCount).toBe(2);
+    await expect(client.stdout).toOutput('xoxp-agent-flow');
   });
 
   it('should auto-authorize when user_authorization_required and --yes', async () => {
