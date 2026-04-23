@@ -2274,6 +2274,226 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Starlette',
+    slug: 'starlette',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/starlette.svg',
+    tagline:
+      'Starlette is a lightweight ASGI framework/toolkit for building async web services in Python.',
+    description: 'A Starlette app served via the Python Runtime.',
+    website: 'https://starlette.dev',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Ss]tarlette',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Ss]tarlette',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Ss]tarlette',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
+    name: 'Bottle',
+    slug: 'bottle',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/bottle.svg',
+    tagline:
+      'Bottle is a fast, simple and lightweight WSGI micro web-framework for Python.',
+    description: 'A Bottle app served via the Python Runtime.',
+    website: 'https://bottlepy.org',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Bb]ottle',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Bb]ottle',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Bb]ottle',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
+    name: 'Falcon',
+    slug: 'falcon',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/falcon.svg',
+    tagline:
+      'Falcon is a minimalist WSGI/ASGI framework for building reliable, high-performance REST APIs in Python.',
+    description: 'A Falcon app served via the Python Runtime.',
+    website: 'https://falconframework.org',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Ff]alcon',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Ff]alcon',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Ff]alcon',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
+    name: 'Sanic',
+    slug: 'sanic',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/sanic.svg',
+    tagline:
+      'Sanic is a Python web server and framework that allows fast HTTP responses via asynchronous request handling.',
+    description: 'A Sanic app served via the Python Runtime.',
+    website: 'https://sanic.dev',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Ss]anic',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Ss]anic',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Ss]anic',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Sanity (v3)',
     slug: 'sanity-v3',
     demo: 'https://sanity-studio-template.vercel.app',

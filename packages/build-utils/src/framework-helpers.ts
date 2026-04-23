@@ -17,6 +17,10 @@ export const PYTHON_FRAMEWORKS = [
   'fastapi',
   'flask',
   'django',
+  'starlette',
+  'bottle',
+  'falcon',
+  'sanic',
   'python', // Generic Python framework preset
   'fasthtml',
 ] as const;
