@@ -1,5 +1,5 @@
 ---
-'vercel': minor
+'vercel': major
 ---
 
 `vercel edge-config tokens <id-or-slug> --format json` no longer emits a plaintext `token` field for each listed token. The JSON payload now only contains `id`, `label`, `partialToken`, and `createdAt` per row.
