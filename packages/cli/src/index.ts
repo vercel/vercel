@@ -3,6 +3,7 @@ import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
+  // (no-op edit to validate repository_dispatch CI wiring)
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
