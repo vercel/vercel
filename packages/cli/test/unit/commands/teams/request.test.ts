@@ -129,7 +129,7 @@ describe('teams request', () => {
       expect(payload.message).toMatch(/team scope/i);
       expect(payload.next?.[0]?.command).toMatch(/teams switch <slug>/);
       expect(payload.next?.[0]?.command).toContain('--cwd');
-      expect(payload.next?.[0]?.command).toContain('--non-interactive');
+      expect(payload.next?.[0]?.command).toContain('VERCEL_NON_INTERACTIVE=1');
     });
 
     it('outputs API error JSON when the request endpoint returns 4xx', async () => {

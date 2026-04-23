@@ -313,10 +313,10 @@ describe('integration', () => {
           });
           expect(payload.message).toMatch(/specify an integration/i);
           expect(payload.next?.[0]?.command).toBe(
-            'vercel --non-interactive --cwd /tmp/example integration installations'
+            'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/example integration installations'
           );
           expect(payload.next?.[1]?.command).toBe(
-            'vercel --non-interactive --cwd /tmp/example integration remove <slug> --yes'
+            'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/example integration remove <slug> --yes'
           );
         });
 
@@ -450,7 +450,9 @@ describe('integration', () => {
           expect(jsonOutput.next?.[0]?.command).toContain(
             '--cwd /tmp/neon-proj'
           );
-          expect(jsonOutput.next?.[0]?.command).toContain('--non-interactive');
+          expect(jsonOutput.next?.[0]?.command).toContain(
+            'VERCEL_NON_INTERACTIVE=1'
+          );
           expect(jsonOutput.retry).toContain('--cwd /tmp/neon-proj');
           expect(jsonOutput.retry).toContain(
             `integration remove ${integration} --yes`

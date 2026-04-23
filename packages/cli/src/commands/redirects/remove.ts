@@ -21,6 +21,7 @@ import {
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
+  buildRedirectCommand,
 } from './shared';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import deleteRedirects from '../../util/redirects/delete-redirects';
@@ -40,7 +41,8 @@ export default async function remove(client: Client, argv: string[]) {
         client.argv.slice(2),
         'remove'
       );
-      const cmd = getCommandNamePlain(
+      const cmd = buildRedirectCommand(
+        client.argv,
         `redirects remove <source> ${flagParts.join(' ')}`.trim()
       );
       outputActionRequired(
@@ -81,7 +83,8 @@ export default async function remove(client: Client, argv: string[]) {
         'remove'
       );
       const globalFlags = getRedirectGlobalFlagsOnly(afterRemove);
-      const listCmd = getCommandNamePlain(
+      const listCmd = buildRedirectCommand(
+        client.argv,
         `redirects list ${globalFlags.join(' ')}`.trim()
       );
       outputAgentError(

@@ -284,6 +284,18 @@ describe('buildCommandWithScope', () => {
   });
 });
 
+describe('buildCommandWithGlobalFlags', () => {
+  it('uses VERCEL_NON_INTERACTIVE env prefix instead of preserving the flag', () => {
+    const command = buildCommandWithGlobalFlags(
+      ['/node', '/vc.js', 'env', 'add', '--cwd', '/tmp', '--non-interactive'],
+      'env add SOME_KEY'
+    );
+    expect(command).toBe(
+      'VERCEL_NON_INTERACTIVE=1 vercel env add SOME_KEY --cwd /tmp'
+    );
+  });
+});
+
 describe('enrichActionRequiredWithInvokingCommand', () => {
   it('adds link and invoking command with scope for each choice', () => {
     const payload: ActionRequiredPayload = {
@@ -433,12 +445,7 @@ describe('getGlobalFlagsFromArgv', () => {
       'neon',
       '--yes',
     ];
-    expect(getGlobalFlagsFromArgv(argv)).toEqual([
-      '--cwd',
-      '/tmp/p',
-      '--non-interactive',
-      '--yes',
-    ]);
+    expect(getGlobalFlagsFromArgv(argv)).toEqual(['--cwd', '/tmp/p', '--yes']);
   });
 });
 
@@ -463,7 +470,7 @@ describe('buildCommandWithGlobalFlags', () => {
         { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
       )
     ).toBe(
-      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
+      'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/p integration-resource remove r1 --disconnect-all --yes'
     );
   });
 });

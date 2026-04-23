@@ -592,10 +592,10 @@ describe('integration add (auto-provision)', () => {
         /example\.com\/eula/
       );
       expect(payload.next?.[0]?.command).toBe(
-        'vercel --non-interactive --cwd /tmp/proj integration add acme'
+        'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/proj integration add acme --non-interactive'
       );
       expect(payload.next?.[1]?.command).toBe(
-        'vercel --non-interactive --cwd /tmp/proj integration accept-terms acme --yes'
+        'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/proj integration accept-terms acme --yes'
       );
 
       expect(client.stderr.getFullOutput()).not.toContain(
@@ -1536,10 +1536,10 @@ describe('integration add (auto-provision)', () => {
         message: 'You must pass an integration slug',
       });
       expect(payload.next?.[0]?.command).toMatch(
-        /vercel --non-interactive --cwd \/tmp\/example integration discover$/
+        /VERCEL_NON_INTERACTIVE=1 vercel --cwd \/tmp\/example integration discover$/
       );
       expect(payload.next?.[1]?.command).toBe(
-        'vercel --non-interactive --cwd /tmp/example integration add neon'
+        'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/example integration add neon'
       );
     });
 

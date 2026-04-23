@@ -263,7 +263,7 @@ describe('flags sdk-keys', () => {
       expect(parsed.next[0].command).toContain('flags sdk-keys rm');
       expect(parsed.next[0].command).toContain('<hashKey>');
       expect(parsed.next[0].command).toContain('--cwd');
-      expect(parsed.next[0].command).toContain('--non-interactive');
+      expect(parsed.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
       exitSpy.mockRestore();
       client.nonInteractive = false;
     });
@@ -297,7 +297,7 @@ describe('flags sdk-keys', () => {
       expect(parsed.next[0].command).toContain('flags sdk-keys add');
       expect(parsed.next[0].command).toContain('--type');
       expect(parsed.next[0].command).toContain('--cwd');
-      expect(parsed.next[0].command).toContain('--non-interactive');
+      expect(parsed.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
       exitSpy.mockRestore();
       client.nonInteractive = false;
     });

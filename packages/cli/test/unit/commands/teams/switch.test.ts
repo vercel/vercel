@@ -205,14 +205,14 @@ describe('teams switch', () => {
         n.command.includes('teams list')
       );
       expect(listNext).toBeDefined();
-      expect(listNext.command).toContain('--non-interactive');
+      expect(listNext.command).toContain('VERCEL_NON_INTERACTIVE=1');
       const loginNext = payload.next.find(
         (n: { command: string }) =>
           n.command.includes('login') && !n.command.includes('teams')
       );
       expect(loginNext).toBeDefined();
       expect(loginNext.command).toContain('login');
-      expect(loginNext.command).toContain('--non-interactive');
+      expect(loginNext.command).toContain('VERCEL_NON_INTERACTIVE=1');
 
       logSpy.mockRestore();
       exitSpy.mockRestore();

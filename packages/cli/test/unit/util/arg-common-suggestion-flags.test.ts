@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getCommandNameWithGlobalFlags,
   getGlobalFlagsOnlyFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../../src/util/arg-common';
@@ -40,5 +41,38 @@ describe('getGlobalFlagsOnlyFromArgs', () => {
     expect(out).not.toContain('acme');
     expect(out).not.toContain('--status');
     expect(out).not.toContain('301');
+  });
+
+  it('does not preserve --non-interactive as a global flag', () => {
+    const out = getGlobalFlagsOnlyFromArgs([
+      '--cwd',
+      '/tmp',
+      '--non-interactive',
+    ]);
+    expect(out).toEqual(['--cwd', '/tmp']);
+  });
+});
+
+describe('getCommandNameWithGlobalFlags', () => {
+  it('converts --non-interactive to VERCEL_NON_INTERACTIVE=1 prefix', () => {
+    const out = getCommandNameWithGlobalFlags('deploy', [
+      'node',
+      'vc',
+      'deploy',
+      '--cwd',
+      '/tmp',
+      '--non-interactive',
+    ]);
+    expect(out).toBe('VERCEL_NON_INTERACTIVE=1 vercel deploy --cwd /tmp');
+  });
+
+  it('converts --non-interactive=false to VERCEL_NON_INTERACTIVE=0 prefix', () => {
+    const out = getCommandNameWithGlobalFlags('deploy', [
+      'node',
+      'vc',
+      'deploy',
+      '--non-interactive=false',
+    ]);
+    expect(out).toBe('VERCEL_NON_INTERACTIVE=0 vercel deploy');
   });
 });

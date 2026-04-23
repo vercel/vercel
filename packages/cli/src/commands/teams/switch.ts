@@ -18,15 +18,14 @@ import {
   outputAgentError,
 } from '../../util/agent-output';
 import {
-  getGlobalFlagsOnlyFromArgs,
+  getCommandNameWithGlobalFlags,
   getSameSubcommandSuggestionFlags,
 } from '../../util/arg-common';
 import { getLinkFromDir, getVercelDirectory } from '../../util/projects/link';
 
-/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
+/** Append global argv flags (--cwd, etc.) so agents can re-run with same context. */
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlags(commandTemplate, client.argv);
 }
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {

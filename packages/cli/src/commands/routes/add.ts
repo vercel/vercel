@@ -23,10 +23,10 @@ import {
 } from '../../util/routes/ai-transform';
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
   MAX_NAME_LENGTH,
@@ -52,8 +52,7 @@ import type {
 } from '../../util/routes/types';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlags(commandTemplate, client.argv);
 }
 
 /**

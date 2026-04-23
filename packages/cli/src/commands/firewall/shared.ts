@@ -4,11 +4,11 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import type { Command } from '../help';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
@@ -21,14 +21,13 @@ export interface ParsedSubcommand {
 }
 
 /**
- * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
+ * Plain suggested command with global flags from argv (--cwd, etc.).
  */
 export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlags(commandTemplate, client.argv);
 }
 
 export async function parseSubcommandArgs(
@@ -47,7 +46,6 @@ export async function parseSubcommandArgs(
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
       outputAgentError(
         client,
         {
@@ -56,8 +54,9 @@ export async function parseSubcommandArgs(
           message: rawMessage,
           next: [
             {
-              command: getCommandNamePlain(
-                `firewall ${fullPath} ${flags.join(' ')}`.trim()
+              command: getCommandNameWithGlobalFlags(
+                `firewall ${fullPath}`,
+                client.argv
               ),
               when: 'fix flags and retry',
             },
@@ -81,8 +80,6 @@ export async function ensureProjectLink(client: Client) {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     if (client.nonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-      const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
       outputAgentError(
         client,
         {
@@ -93,7 +90,7 @@ export async function ensureProjectLink(client: Client) {
             'Your codebase is not linked to a Vercel project. Run link first, then retry firewall commands.',
           next: [
             {
-              command: cmd,
+              command: getCommandNameWithGlobalFlags('link', client.argv),
               when: 'to link this directory to a project',
             },
           ],

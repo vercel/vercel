@@ -7,7 +7,7 @@ import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
 import { removeSubcommand } from './command';
@@ -24,11 +24,10 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlags(commandTemplate, client.argv);
 }
 
 export default async function rm(client: Client, argv: string[]) {
