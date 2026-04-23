@@ -42,30 +42,64 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
+// Static JSON imports so esbuild inlines each builder's version at bundle
+// time. At runtime each map entry is the real published version.
+import goPkg from '@vercel/go/package.json';
+import hydrogenPkg from '@vercel/hydrogen/package.json';
+import nextPkg from '@vercel/next/package.json';
+import nodePkg from '@vercel/node/package.json';
+import pythonPkg from '@vercel/python/package.json';
+import redwoodPkg from '@vercel/redwood/package.json';
+import remixPkg from '@vercel/remix-builder/package.json';
+import rubyPkg from '@vercel/ruby/package.json';
+import rustPkg from '@vercel/rust/package.json';
+import staticBuildPkg from '@vercel/static-build/package.json';
+
 // Builders bundled into the CLI itself. The compiled-binary distribution
 // cannot resolve modules from disk, so bundled copies are preferred.
 // Only include builders whose `dist/` is present at build time.
-const BUILTIN_BUILDERS: Record<string, () => Promise<unknown>> = {
-  '@vercel/go': () => import('@vercel/go'),
-  '@vercel/hydrogen': () => import('@vercel/hydrogen'),
-  '@vercel/next': () => import('@vercel/next'),
-  '@vercel/node': () => import('@vercel/node'),
-  '@vercel/python': () => import('@vercel/python'),
-  '@vercel/redwood': () => import('@vercel/redwood'),
-  '@vercel/remix-builder': () => import('@vercel/remix-builder'),
-  '@vercel/ruby': () => import('@vercel/ruby'),
-  '@vercel/rust': () => import('@vercel/rust'),
-  '@vercel/static-build': () => import('@vercel/static-build'),
+const BUILTIN_BUILDERS: Record<
+  string,
+  { load: () => Promise<unknown>; version: string }
+> = {
+  '@vercel/go': { load: () => import('@vercel/go'), version: goPkg.version },
+  '@vercel/hydrogen': {
+    load: () => import('@vercel/hydrogen'),
+    version: hydrogenPkg.version,
+  },
+  '@vercel/next': {
+    load: () => import('@vercel/next'),
+    version: nextPkg.version,
+  },
+  '@vercel/node': {
+    load: () => import('@vercel/node'),
+    version: nodePkg.version,
+  },
+  '@vercel/python': {
+    load: () => import('@vercel/python'),
+    version: pythonPkg.version,
+  },
+  '@vercel/redwood': {
+    load: () => import('@vercel/redwood'),
+    version: redwoodPkg.version,
+  },
+  '@vercel/remix-builder': {
+    load: () => import('@vercel/remix-builder'),
+    version: remixPkg.version,
+  },
+  '@vercel/ruby': {
+    load: () => import('@vercel/ruby'),
+    version: rubyPkg.version,
+  },
+  '@vercel/rust': {
+    load: () => import('@vercel/rust'),
+    version: rustPkg.version,
+  },
+  '@vercel/static-build': {
+    load: () => import('@vercel/static-build'),
+    version: staticBuildPkg.version,
+  },
 };
-
-function getBuiltinBuilderVersion(): string {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return (require_('../../package.json') as { version: string }).version;
-  } catch {
-    return '0.0.0';
-  }
-}
 
 function unwrapEsmDefault(mod: unknown): BuilderV2 | BuilderV3 | BuilderVX {
   // ESM/CJS interop: builder entry points may live on the namespace or on
@@ -163,7 +197,7 @@ async function resolveBuilders(
     // version constraint is satisfied by the bundled version, skip the
     // disk-install/load flow entirely and return the bundled module.
     if (name in BUILTIN_BUILDERS) {
-      const builtinVersion = getBuiltinBuilderVersion();
+      const builtinVersion = BUILTIN_BUILDERS[name].version;
       const versionOk =
         parsed.type === 'tag' ||
         parsed.type === 'alias' ||
@@ -171,7 +205,7 @@ async function resolveBuilders(
         (parsed.type === 'range' && satisfies(builtinVersion, parsed.rawSpec));
       if (versionOk) {
         try {
-          const mod = await BUILTIN_BUILDERS[name]();
+          const mod = await BUILTIN_BUILDERS[name].load();
           const builder = unwrapEsmDefault(mod);
           builders.set(spec, {
             builder,
