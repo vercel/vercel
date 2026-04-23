@@ -206,7 +206,7 @@ export default class DevServer {
     this.apiExtensions = new Set();
 
     this.proxy = httpProxy.createProxyServer({
-      changeOrigin: true,
+      changeOrigin: false,
       ws: true,
       xfwd: true,
     });
