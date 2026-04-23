@@ -26,6 +26,7 @@ def _import_optional_module(module_name: str) -> object | None:
 CELERY_AVAILABLE = _has_module("celery")
 DRAMATIQ_AVAILABLE = _has_module("dramatiq")
 DJANGO_TASKS_AVAILABLE = _has_module("django.tasks")
+APSCHEDULER_AVAILABLE = _has_module("apscheduler")
 VERCEL_WORKERS_AVAILABLE = _has_module("vercel.workers")
 
 VERCEL_CELERY_BROKER_URL = "vercel://"
@@ -243,6 +244,69 @@ def _bootstrap_django_worker_app(module: object) -> object | None:
     return get_asgi_app_fn()
 
 
+def _find_apscheduler_scheduler(
+    module: object,
+    scheduler_type: type[object],
+) -> object | None:
+    matches: list[object] = []
+
+    for name in dir(module):
+        if name.startswith("_"):
+            continue
+
+        with contextlib.suppress(Exception):
+            candidate = getattr(module, name)
+            if isinstance(candidate, scheduler_type):
+                matches.append(candidate)
+
+    if len(matches) > 1:
+        raise RuntimeError(
+            "Found multiple exported VercelQueueScheduler instances in the worker "
+            "entrypoint. Export exactly one scheduler object.",
+        )
+
+    return matches[0] if matches else None
+
+
+def _bootstrap_apscheduler_worker_app(module: object) -> object | None:
+    if not APSCHEDULER_AVAILABLE:
+        return None
+
+    vercel_apscheduler = _import_optional_module("vercel.workers.apscheduler")
+    if vercel_apscheduler is None:
+        if not VERCEL_WORKERS_AVAILABLE:
+            raise RuntimeError(
+                'APScheduler worker service requires "vercel-workers". '
+                'Install "vercel-workers" and export a scheduler factory such as '
+                '"build_scheduler()".'
+            )
+        raise RuntimeError(
+            "Failed to import APScheduler worker adapter from vercel-workers."
+        )
+
+    scheduler_type = getattr(vercel_apscheduler, "VercelQueueScheduler", None)
+    if not isinstance(scheduler_type, type):
+        raise RuntimeError(
+            "Failed to resolve VercelQueueScheduler from vercel-workers."
+        )
+
+    scheduler = _find_apscheduler_scheduler(module, scheduler_type)
+    if scheduler is None:
+        return None
+
+    get_asgi_app = getattr(vercel_apscheduler, "get_asgi_app", None)
+    if not callable(get_asgi_app):
+        raise RuntimeError(
+            "Failed to resolve APScheduler ASGI adapter from vercel-workers."
+        )
+
+    get_asgi_app_fn = cast(
+        "Callable[[object], object]",
+        get_asgi_app,
+    )
+    return get_asgi_app_fn(scheduler)
+
+
 def _bootstrap_generic_worker_app() -> object | None:
     if not VERCEL_WORKERS_AVAILABLE:
         return None
@@ -297,6 +361,14 @@ def bootstrap_worker_service_app(module: object) -> object:
                 return app
         except Exception as exc:
             raise RuntimeError("Django tasks worker bootstrap failed.") from exc
+
+    if APSCHEDULER_AVAILABLE:
+        try:
+            app = _bootstrap_apscheduler_worker_app(module)
+            if app is not None:
+                return app
+        except Exception as exc:
+            raise RuntimeError("APScheduler worker bootstrap failed.") from exc
 
     app = _bootstrap_generic_worker_app()
     if app is not None:

@@ -35,10 +35,14 @@ django = [
 dramatiq = [
     "dramatiq>=1.14.0",
 ]
+apscheduler = [
+    "APScheduler>=3.10.4,<4",
+]
 examples = [
     "fastapi",
 ]
 all = [
+    "vercel-workers[apscheduler]",
     "vercel-workers[celery]",
     "vercel-workers[django]",
     "vercel-workers[dramatiq]",
@@ -54,6 +58,7 @@ test = [
     "celery>=5.3.0",
     "Django>=6.0.0",
     "dramatiq>=1.14.0",
+    "APScheduler>=3.10.4,<4",
 ]
 
 [tool.uv]
