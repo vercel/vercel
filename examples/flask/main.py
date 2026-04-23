@@ -1,16 +1,19 @@
 from flask import Flask
-from endpoints import api_bp
 
 
-app = Flask(__name__)
+def create_app(test_config=None):
+    app = Flask(__name__)
 
+    if test_config is not None:
+        app.config.from_mapping(test_config)
 
-app.register_blueprint(api_bp)
+    from items import bp
 
+    app.register_blueprint(bp)
 
-@app.get("/")
-def read_root():
-    return """
+    @app.get("/")
+    def read_root():
+        return """
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -100,6 +103,10 @@ def read_root():
     </html>
     """
 
+    return app
+
+
+app = create_app()
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5001)
