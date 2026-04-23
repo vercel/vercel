@@ -56,10 +56,13 @@ jobs:
       - run: pnpm install
       - id: affected-packages
         run: |
+          # Set base SHA for affected package detection
           export TURBO_BASE_SHA="${{ steps.pr-context.outputs.baseSha }}"
 
+          # Get affected packages info for PR comment
           AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ steps.pr-context.outputs.baseSha }}" 2>&1)
 
+          # Extract affected packages count and total packages count
           PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
           TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
 
@@ -73,10 +76,13 @@ jobs:
             STRATEGY="no-tests"
           fi
 
+          # Get the list of affected packages
           PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
 
+          # Get all packages (trim whitespace and newlines)
           ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
 
+          # Debug output
           echo "PACKAGE_COUNT=$PACKAGE_COUNT"
           echo "TOTAL_COUNT=$TOTAL_COUNT"
           echo "STRATEGY=$STRATEGY"
