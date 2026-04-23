@@ -432,6 +432,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandByoc(actual: string) {
+    this.trackCliCommand({
+      command: 'byoc',
+      value: actual,
+    });
+  }
+
   trackCliCommandWebhooks(actual: string) {
     this.trackCliCommand({
       command: 'webhooks',
