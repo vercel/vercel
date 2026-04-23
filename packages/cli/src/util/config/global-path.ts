@@ -9,7 +9,7 @@ export const isDirectory = (path: string): boolean => {
   try {
     return fs.lstatSync(path).isDirectory();
   } catch (_) {
-    // We don't care which kind of error occured, it isn't a directory anyway.
+    // We don't care which kind of error occurred, it isn't a directory anyway.
     return false;
   }
 };
