@@ -658,6 +658,221 @@ export const headersSchema = {
   },
 } as const;
 
+const firewallConditionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'op', 'value'],
+  properties: {
+    type: {
+      description: 'The type of request element to match',
+      type: 'string',
+      enum: [
+        'path',
+        'method',
+        'host',
+        'ip_address',
+        'header',
+        'query',
+        'cookie',
+        'user_agent',
+        'route',
+        'raw_path',
+        'server_action',
+        'protocol',
+        'region',
+        'environment',
+        'geo_continent',
+        'geo_country',
+        'geo_country_region',
+        'geo_city',
+        'geo_as_number',
+        'ja3_digest',
+        'ja4_digest',
+        'rate_limit_api_id',
+        'bot_name',
+        'bot_category',
+      ],
+    },
+    op: {
+      description: 'The comparison operator',
+      type: 'string',
+      enum: [
+        'eq',
+        'neq',
+        'inc',
+        'ninc',
+        'ex',
+        'nex',
+        'gt',
+        'gte',
+        'lt',
+        'lte',
+        're',
+        'sub',
+        'pre',
+        'suf',
+      ],
+    },
+    neg: {
+      description: 'Whether to negate the condition',
+      type: 'boolean',
+    },
+    key: {
+      description:
+        'The key to match on (required for header, query, cookie types)',
+      type: 'string',
+      maxLength: 256,
+    },
+    value: {
+      description: 'The value to match against',
+      anyOf: [
+        { type: 'string', maxLength: 4096 },
+        { type: 'number' },
+        {
+          type: 'array',
+          items: { type: 'string', maxLength: 4096 },
+        },
+      ],
+    },
+  },
+} as const;
+
+const firewallConditionGroupSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['conditions'],
+  properties: {
+    conditions: {
+      description: 'Conditions within the group are OR-ed together',
+      type: 'array',
+      minItems: 1,
+      items: firewallConditionSchema,
+    },
+  },
+} as const;
+
+const firewallRateLimitConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['window', 'limit', 'keys'],
+  properties: {
+    algo: {
+      description: 'Rate limiting algorithm',
+      type: 'string',
+      enum: ['fixed_window', 'token_bucket'],
+    },
+    window: {
+      description: 'Time window for rate limiting',
+      anyOf: [{ type: 'number' }, { type: 'string' }],
+    },
+    limit: {
+      description: 'Request limit per window',
+      anyOf: [{ type: 'number' }, { type: 'string' }],
+    },
+    keys: {
+      description: 'Keys to group rate limits by',
+      type: 'array',
+      items: { type: 'string', maxLength: 256 },
+    },
+    action: {
+      description: 'Action to take when rate limit is exceeded',
+      type: 'string',
+      enum: ['challenge', 'deny', 'log', 'rate_limit'],
+    },
+  },
+} as const;
+
+const firewallRedirectConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['location'],
+  properties: {
+    location: {
+      description: 'URL to redirect to',
+      type: 'string',
+      maxLength: 4096,
+    },
+    permanent: {
+      description: 'Whether the redirect is permanent (301 vs 302)',
+      type: 'boolean',
+    },
+  },
+} as const;
+
+const firewallMitigateActionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['action'],
+  properties: {
+    action: {
+      description: 'The mitigation action to take',
+      type: 'string',
+      enum: ['log', 'deny', 'challenge', 'bypass', 'rate_limit', 'redirect'],
+    },
+    rateLimit: firewallRateLimitConfigSchema,
+    redirect: firewallRedirectConfigSchema,
+    actionDuration: {
+      description: 'Duration for the action (e.g., "1h", "30m")',
+      anyOf: [{ type: 'string', maxLength: 64 }, { type: 'null' }],
+    },
+    attributes: {
+      description: 'Attribute to track for the action',
+      type: 'string',
+      enum: ['ip_address'],
+    },
+    logHeaders: {
+      description: 'Headers to log (* for all, or array of header names)',
+      anyOf: [
+        { type: 'string', enum: ['*'] },
+        { type: 'array', items: { type: 'string', maxLength: 256 } },
+      ],
+    },
+  },
+} as const;
+
+const firewallRuleActionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    mitigate: firewallMitigateActionSchema,
+  },
+} as const;
+
+export const firewallRulesSchema = {
+  description: 'A list of firewall rules.',
+  type: 'array',
+  maxItems: 1024,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['name', 'active', 'conditionGroup', 'action'],
+    properties: {
+      name: {
+        description: 'A human-readable name for the rule',
+        type: 'string',
+        maxLength: 256,
+      },
+      description: {
+        description: 'An optional description of the rule',
+        type: 'string',
+        maxLength: 2048,
+      },
+      active: {
+        description: 'Whether the rule is active',
+        type: 'boolean',
+      },
+      conditionGroup: {
+        description:
+          'Condition groups are AND-ed together; conditions within a group are OR-ed',
+        type: 'array',
+        minItems: 1,
+        items: firewallConditionGroupSchema,
+      },
+      action: firewallRuleActionSchema,
+    },
+  },
+} as const;
+
 export const cleanUrlsSchema = {
   description:
     'When set to `true`, all HTML files and Serverless Functions will have their extension removed. When visiting a path that ends with the extension, a 308 response will redirect the client to the extensionless path.',

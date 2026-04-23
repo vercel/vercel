@@ -16,3 +16,19 @@ export {
   validateStaticStringArray,
   validateStaticFields,
 } from '../utils/validation';
+export { createFirewall, match, Firewall, ConditionExpr } from '../firewall';
+export type {
+  FirewallRule,
+  FirewallCondition,
+  FirewallConditionGroup,
+  FirewallConditionType,
+  FirewallConditionOp,
+  FirewallRuleAction,
+  FirewallMitigateAction,
+  FirewallMitigateActionType,
+  FirewallRateLimitConfig,
+  FirewallRedirectConfig,
+  KeylessMatcher,
+  KeyedMatcher,
+  KeyedOperators,
+} from '../firewall';
