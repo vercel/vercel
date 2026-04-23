@@ -804,6 +804,7 @@ from vercel_runtime.vc_init import vc_handler
         pythonVersion,
         uvLockPath,
         framework,
+        serviceType: service?.type,
       });
     } catch (err) {
       debug(
