@@ -6,10 +6,12 @@ import {
   PythonDependencyExternalizer,
   calculateBundleSize,
   getPackagesReachableOnPlatform,
+  getLambdaEphemeralStorageBytes,
   lambdaKnapsack,
   shouldShowFunctionsBetaHint,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  MAX_EPHEMERAL_STORAGE_BYTES,
   HIVE_LAMBDA_SIZE_BYTES,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
@@ -183,6 +185,93 @@ describe('dependency externalizer support', () => {
 
     it('Hive limit is greater than the ephemeral storage limit', () => {
       expect(HIVE_LAMBDA_SIZE_BYTES).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+
+    it('MAX_EPHEMERAL_STORAGE_BYTES is 1000 MB', () => {
+      expect(MAX_EPHEMERAL_STORAGE_BYTES).toBe(1000 * 1024 * 1024);
+    });
+  });
+
+  describe('getLambdaEphemeralStorageBytes', () => {
+    const originalMaxFuncMb = process.env.VERCEL_PYTHON_MAX_FUNC_MB;
+    const originalMaximiseTmp = process.env.MAXIMISE_TMP_SPACE;
+
+    afterEach(() => {
+      if (originalMaxFuncMb === undefined) {
+        delete process.env.VERCEL_PYTHON_MAX_FUNC_MB;
+      } else {
+        process.env.VERCEL_PYTHON_MAX_FUNC_MB = originalMaxFuncMb;
+      }
+      if (originalMaximiseTmp === undefined) {
+        delete process.env.MAXIMISE_TMP_SPACE;
+      } else {
+        process.env.MAXIMISE_TMP_SPACE = originalMaximiseTmp;
+      }
+    });
+
+    it('returns default 500 MB when VERCEL_PYTHON_MAX_FUNC_MB is not set', () => {
+      delete process.env.VERCEL_PYTHON_MAX_FUNC_MB;
+      expect(getLambdaEphemeralStorageBytes()).toBe(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+
+    it('returns default 500 MB when VERCEL_PYTHON_MAX_FUNC_MB is empty', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = '';
+      expect(getLambdaEphemeralStorageBytes()).toBe(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+
+    it('returns custom value when both VERCEL_PYTHON_MAX_FUNC_MB and MAXIMISE_TMP_SPACE=1 are set', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = '750';
+      process.env.MAXIMISE_TMP_SPACE = '1';
+      expect(getLambdaEphemeralStorageBytes()).toBe(750 * 1024 * 1024);
+    });
+
+    it('returns 1000 MB when set to the maximum', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = '1000';
+      process.env.MAXIMISE_TMP_SPACE = '1';
+      expect(getLambdaEphemeralStorageBytes()).toBe(1000 * 1024 * 1024);
+    });
+
+    it('throws when VERCEL_PYTHON_MAX_FUNC_MB is set but MAXIMISE_TMP_SPACE is not', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = '750';
+      delete process.env.MAXIMISE_TMP_SPACE;
+      expect(() => getLambdaEphemeralStorageBytes()).toThrow(
+        'VERCEL_PYTHON_MAX_FUNC_MB requires MAXIMISE_TMP_SPACE=1 to be set'
+      );
+    });
+
+    it('throws when VERCEL_PYTHON_MAX_FUNC_MB is set but MAXIMISE_TMP_SPACE is not "1"', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = '750';
+      process.env.MAXIMISE_TMP_SPACE = '0';
+      expect(() => getLambdaEphemeralStorageBytes()).toThrow(
+        'VERCEL_PYTHON_MAX_FUNC_MB requires MAXIMISE_TMP_SPACE=1 to be set'
+      );
+    });
+
+    it('throws when VERCEL_PYTHON_MAX_FUNC_MB exceeds 1000', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = '1500';
+      process.env.MAXIMISE_TMP_SPACE = '1';
+      expect(() => getLambdaEphemeralStorageBytes()).toThrow(
+        'VERCEL_PYTHON_MAX_FUNC_MB cannot exceed 1000'
+      );
+    });
+
+    it('throws when VERCEL_PYTHON_MAX_FUNC_MB is not a valid number', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = 'abc';
+      expect(() => getLambdaEphemeralStorageBytes()).toThrow(
+        'VERCEL_PYTHON_MAX_FUNC_MB must be a valid number'
+      );
+    });
+
+    it('falls back to default 500 MB when VERCEL_PYTHON_MAX_FUNC_MB is below 500', () => {
+      process.env.VERCEL_PYTHON_MAX_FUNC_MB = '300';
+      process.env.MAXIMISE_TMP_SPACE = '1';
+      expect(getLambdaEphemeralStorageBytes()).toBe(
         LAMBDA_EPHEMERAL_STORAGE_BYTES
       );
     });
