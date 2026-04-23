@@ -1,37 +1,16 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
+from app.api.main import api_router
+from app.core.config import settings
 
 app = FastAPI(
-    title="Vercel + FastAPI",
-    description="Vercel + FastAPI",
-    version="1.0.0",
+    title=settings.PROJECT_NAME,
+    description=settings.PROJECT_NAME,
+    version=settings.VERSION,
 )
 
-
-@app.get("/api/data")
-def get_sample_data():
-    return {
-        "data": [
-            {"id": 1, "name": "Sample Item 1", "value": 100},
-            {"id": 2, "name": "Sample Item 2", "value": 200},
-            {"id": 3, "name": "Sample Item 3", "value": 300}
-        ],
-        "total": 3,
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
-
-
-@app.get("/api/items/{item_id}")
-def get_item(item_id: int):
-    return {
-        "item": {
-            "id": item_id,
-            "name": "Sample Item " + str(item_id),
-            "value": item_id * 100
-        },
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -306,7 +285,7 @@ def read_root():
                 <a href="/" class="logo">Vercel + FastAPI</a>
                 <div class="nav-links">
                     <a href="/docs">API Docs</a>
-                    <a href="/api/data">API</a>
+                    <a href="/api/v1/items/">API</a>
                 </div>
             </nav>
         </header>
@@ -334,7 +313,7 @@ def read_root():
                 <div class="card">
                     <h3>Sample Data</h3>
                     <p>Access sample JSON data through our REST API. Perfect for testing and development purposes.</p>
-                    <a href="/api/data">Get Data →</a>
+                    <a href="/api/v1/items/">Get Data →</a>
                 </div>
 
             </div>
@@ -346,4 +325,5 @@ def read_root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=5001, reload=True)
+
+    uvicorn.run("app.main:app", host="0.0.0.0", port=5001, reload=True)
