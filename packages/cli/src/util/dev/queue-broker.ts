@@ -6,7 +6,7 @@ import nodeFetch from 'node-fetch';
 import type { Service } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopicConfigs,
-  isQueueTriggeredService,
+  isQueueBackedService,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 
@@ -83,7 +83,7 @@ export class QueueBroker {
     private getServiceOrigin: (name: string) => string | null
   ) {
     for (const service of services) {
-      if (!isQueueTriggeredService(service)) continue;
+      if (!isQueueBackedService(service)) continue;
 
       const topicConfigs = getServiceQueueTopicConfigs(service);
       for (const topicConfig of topicConfigs) {
