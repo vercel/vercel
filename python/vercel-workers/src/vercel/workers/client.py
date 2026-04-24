@@ -94,16 +94,10 @@ class _Subscription:
     func: WorkerCallable
     topic_filter: Callable[[str | None], bool] | None = None
     topic_desc: str | None = None
-    consumer: str | None = None
 
-    def matches(
-        self, topic: str | None, consumer: str | None = None, *, ignore_consumer: bool = False
-    ) -> bool:
+    def matches(self, topic: str | None) -> bool:
         if self.topic_filter is not None:
             if not self.topic_filter(topic):
-                return False
-        if not ignore_consumer and self.consumer is not None:
-            if self.consumer != consumer:
                 return False
         return True
 
@@ -117,9 +111,7 @@ def subscribe(_func: WorkerCallable) -> WorkerCallable: ...
 
 @overload
 def subscribe(
-    *,
-    topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
-    consumer: str | None = None,
+    *, topic: str | tuple[str, Callable[[str | None], bool]] | None = None
 ) -> Callable[[WorkerCallable], WorkerCallable]: ...
 
 
@@ -127,7 +119,6 @@ def subscribe(
     _func: WorkerCallable | None = None,
     *,
     topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
-    consumer: str | None = None,
 ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
     """
     Register a queue worker function.
@@ -137,31 +128,28 @@ def subscribe(
         @subscribe
         def worker(message, metadata): ...
 
-        @subscribe(topic="events", consumer="billing")
+        @subscribe(topic="events")
         def billing_worker(message, metadata): ...
 
         @subscribe(topic=("user-*", lambda t: t.startswith("user-")))
         def user_worker(message, metadata): ...
     """
 
-    topic_filter: Callable[[str | None], bool] | None
+    topic_filter: Callable[[str | None], bool] | None = None
+    topic_desc: str | None = None
     if isinstance(topic, str):
 
-        def topic_filter(t: str | None) -> bool:
+        def exact_topic_filter(t: str | None) -> bool:
             return t == topic
 
+        topic_filter = exact_topic_filter
         topic_desc = topic
     elif isinstance(topic, tuple):
         topic_desc, topic_filter = topic
-    else:
-        topic_filter = None
-        topic_desc = None
 
     def decorator(func: WorkerCallable) -> WorkerCallable:
         _subscriptions.append(
-            _Subscription(
-                func=func, topic_filter=topic_filter, topic_desc=topic_desc, consumer=consumer
-            )
+            _Subscription(func=func, topic_filter=topic_filter, topic_desc=topic_desc)
         )
 
         @wraps(func)
@@ -183,24 +171,13 @@ def has_subscriptions() -> bool:
     return bool(_subscriptions)
 
 
-def _select_subscriptions(
-    topic: str | None,
-    consumer: str | None,
-    *,
-    ignore_consumer: bool = False,
-) -> Iterable[_Subscription]:
-    # Match by topic and consumer (unless consumer is ignored).
-    explicit_matches = [
-        s for s in _subscriptions if s.matches(topic, consumer, ignore_consumer=ignore_consumer)
-    ]
-    return explicit_matches
+def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
+    return [s for s in _subscriptions if s.matches(topic)]
 
 
 def _invoke_subscriptions(
     message: Any,
     metadata: MessageMetadata,
-    *,
-    ignore_consumer: bool = False,
 ) -> int | None:
     """
     Invoke all matching subscriptions and return an optional timeoutSeconds.
@@ -209,10 +186,9 @@ def _invoke_subscriptions(
     will be propagated back to the queue service to delay the next attempt.
     """
     topic = metadata.get("topic")
-    consumer = metadata.get("consumer")
     timeout_seconds: int | None = None
 
-    for sub in _select_subscriptions(topic, consumer, ignore_consumer=ignore_consumer):
+    for sub in _select_subscriptions(topic):
         try:
             result = sub.func(message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
@@ -251,7 +227,7 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
     # In dev mode, surface a clear error when there are worker functions but none of
     # them are subscribed to the requested topic. This helps catch mismatches between
     # the queue name used in send() and the topics configured via @subscribe.
-    matching_for_topic = [s for s in _subscriptions if s.matches(queue_name, ignore_consumer=True)]
+    matching_for_topic = [s for s in _subscriptions if s.matches(queue_name)]
     if not matching_for_topic:
         available_topics = sorted(
             {s.topic_desc for s in _subscriptions if s.topic_desc is not None},
@@ -271,10 +247,9 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
         "topic": queue_name,
     }
 
-    # In dev mode we intentionally ignore consumer-group targeting and deliver
-    # to all handlers that match the topic (or have no explicit topic), similar
-    # to the TypeScript dev.ts behaviour.
-    _invoke_subscriptions(payload, metadata, ignore_consumer=True)
+    # In dev mode we deliver to all handlers that match the topic (or have no
+    # explicit topic), similar to the TypeScript dev.ts behaviour.
+    _invoke_subscriptions(payload, metadata)
 
     return {"messageId": message_id}
 
@@ -312,8 +287,8 @@ def handle_queue_callback(
         else:
             queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
 
-        # Fail fast if no workers match this topic/consumer.
-        if not _select_subscriptions(queue_name, consumer_group):
+        # Fail fast if no workers match this topic.
+        if not _select_subscriptions(queue_name):
             return json_response(
                 500,
                 {
