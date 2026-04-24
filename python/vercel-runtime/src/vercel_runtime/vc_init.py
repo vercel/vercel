@@ -482,6 +482,7 @@ if is_worker_service():
         if worker_app is not None:
             __vc_module.__dict__["app"] = worker_app
             __vc_variables = dir(__vc_module)
+            _entrypoint_varname = "app"
     except Exception:
         _stderr("Error bootstrapping worker service app:")
         _stderr(traceback.format_exc())
@@ -491,6 +492,7 @@ if is_cron_service():
     try:
         __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
         __vc_variables = dir(__vc_module)
+        _entrypoint_varname = "app"
     except Exception:
         _stderr("Error bootstrapping cron service app:")
         _stderr(traceback.format_exc())
