@@ -15,10 +15,11 @@ This example follows the [application factory](https://flask.palletsprojects.com
 ```
 ├── main.py              # Application factory and entry point
 ├── items.py             # Items blueprint with API routes
+├── templates/
+│   └── index.html       # Landing page template
 ├── public/
 │   └── favicon.ico
 ├── pyproject.toml
-├── requirements.txt
 └── README.md
 ```
 

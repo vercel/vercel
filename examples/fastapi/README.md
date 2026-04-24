@@ -16,6 +16,8 @@ This example follows the [larger applications](https://fastapi.tiangolo.com/tuto
 app/
 ├── __init__.py
 ├── main.py              # FastAPI application entry point
+├── templates/
+│   └── index.html       # Landing page template
 ├── api/
 │   ├── __init__.py
 │   ├── main.py          # API router assembly
