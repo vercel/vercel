@@ -508,7 +508,7 @@ export default async function update(client: Client, argv: string[]) {
   const updateStamp = stamp();
   try {
     output.spinner('Updating');
-    const keyToUpdate = selectedEnv.type === 'sensitive' ? undefined : envName;
+    const keyToUpdate = type === 'sensitive' ? undefined : envName;
     await updateEnvRecord(
       client,
       project.id,
