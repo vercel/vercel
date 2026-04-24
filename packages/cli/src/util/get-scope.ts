@@ -14,6 +14,12 @@ export interface ScopeContext {
   contextName: string;
   user: User;
   team: Team | null;
+  /**
+   * The team that's globally selected (via `vc switch` or as the northstar
+   * default), before any local project-link overrides are applied. This will
+   * differ from `team` when a linked project forces a different scope.
+   */
+  globalTeam: Team | null;
   linkedRepo: {
     repoConfig: RepoProjectsConfig;
     rootPath: string;
@@ -77,6 +83,7 @@ export default async function getScope(
 
   const explicitScopeProvided = detectExplicitScope(client);
   const globalTeamId = client.config.currentTeam;
+  const globalTeam = team;
 
   const cwd = client.cwd;
   let projectLink: { orgId: string; projectId: string } | null = null;
@@ -179,6 +186,7 @@ export default async function getScope(
     contextName: resolvedContextName,
     user,
     team: resolvedTeam,
+    globalTeam,
     linkedRepo: linkedRepoResult,
     isCrossTeamRepo,
     scopeMismatch,
