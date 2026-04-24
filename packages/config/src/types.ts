@@ -601,6 +601,12 @@ export interface VercelConfig {
             subdomain?: string;
           };
       /**
+       * Simple subtree ownership rules without mount semantics.
+       */
+      routing?: {
+        paths: string[];
+      };
+      /**
        * URL prefix for routing (web services only).
        */
       routePrefix?: string;

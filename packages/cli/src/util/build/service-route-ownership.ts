@@ -18,8 +18,16 @@ function isWebServiceWithPrefix(
 function getWebRoutePrefixes(services: Service[]): string[] {
   const unique = new Set<string>();
   for (const service of services) {
-    if (!isWebServiceWithPrefix(service)) continue;
-    unique.add(normalizeRoutePrefix(service.routePrefix));
+    if (service.type !== 'web') continue;
+    const ownedPaths =
+      service.routingPaths && service.routingPaths.length > 0
+        ? service.routingPaths
+        : typeof service.routePrefix === 'string'
+          ? [service.routePrefix]
+          : [];
+    for (const ownedPath of ownedPaths) {
+      unique.add(normalizeRoutePrefix(ownedPath));
+    }
   }
   return Array.from(unique);
 }

@@ -3,12 +3,17 @@ import type { Route } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 import { scopeRoutesToServiceOwnership } from '../../../../src/util/build/service-route-ownership';
 
-function createWebService(name: string, routePrefix: string): Service {
+function createWebService(
+  name: string,
+  routePrefix: string,
+  routingPaths?: string[]
+): Service {
   return {
     name,
     type: 'web',
     workspace: '.',
     routePrefix,
+    routingPaths,
     builder: {
       use: '@vercel/next',
       src: 'package.json',
@@ -41,6 +46,21 @@ describe('scopeRoutesToServiceOwnership()', () => {
     expect(regex.test('/docs/')).toBe(true);
     expect(regex.test('/api/fastapi/')).toBe(false);
     expect(regex.test('/api/express/')).toBe(false);
+  });
+
+  test('scopes root service routes to exclude routing-owned service paths', () => {
+    const owner = createWebService('web', '/');
+    const routes: Route[] = [{ src: '^/(.*)$', continue: true }];
+    const scoped = scopeRoutesToServiceOwnership({
+      routes,
+      owner,
+      allServices: [owner, createWebService('api', '/', ['/api'])],
+    });
+
+    const regex = getRegex(scoped[0]);
+    expect(regex.test('/about')).toBe(true);
+    expect(regex.test('/api')).toBe(false);
+    expect(regex.test('/api/users')).toBe(false);
   });
 
   test('scopes parent service routes while excluding descendant prefixes', () => {
