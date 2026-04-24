@@ -279,7 +279,7 @@ describe('connex create', () => {
       'Select the team where you want to create this client'
     );
     // Arrow down past the personal account to select the team.
-    client.stdin.write('[B\n');
+    client.stdin.write('[B\n');
 
     expect(await exitCodePromise).toBe(0);
     expect(client.config.currentTeam).toBe(team.id);
@@ -342,6 +342,73 @@ describe('connex create', () => {
 
     expect(exitCode).toBe(0);
     expect(writeConfigSpy).not.toHaveBeenCalled();
+  });
+
+  describe('--triggers flag (FF_CONNEX_TRIGGERS)', () => {
+    it('should include triggers: { enabled: true } in POST body when FF_CONNEX_TRIGGERS=1 and --triggers is passed', async () => {
+      vi.stubEnv('FF_CONNEX_TRIGGERS', '1');
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(
+          fakeConnexClient({ id: 'scl_triggers1', uid: 'uid_triggers1' })
+        );
+      });
+
+      client.setArgv(
+        'connex',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--triggers'
+      );
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody).toMatchObject({
+        service: 'slack',
+        name: 'my-bot',
+        triggers: { enabled: true },
+      });
+      vi.unstubAllEnvs();
+    });
+
+    it('should not include triggers in POST body when FF_CONNEX_TRIGGERS=1 but --triggers is not passed', async () => {
+      vi.stubEnv('FF_CONNEX_TRIGGERS', '1');
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(fakeConnexClient({ id: 'scl_notrig', uid: 'uid_notrig' }));
+      });
+
+      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody.triggers).toBeUndefined();
+      vi.unstubAllEnvs();
+    });
+
+    it('should reject --triggers as an unknown flag when FF_CONNEX_TRIGGERS is unset', async () => {
+      vi.stubEnv('FF_CONNEX_TRIGGERS', '');
+      client.setArgv(
+        'connex',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--triggers'
+      );
+
+      const exitCode = await connex(client);
+
+      await expect(client.stderr).toOutput('unknown or unexpected option');
+      expect(exitCode).toBe(1);
+      vi.unstubAllEnvs();
+    });
   });
 
   it('should tolerate early 404s during polling after 422', async () => {

@@ -15,7 +15,12 @@ import type { ConnexClient } from './types';
 export async function create(
   client: Client,
   args: string[],
-  flags: { '--name'?: string; '--format'?: string; '--json'?: boolean }
+  flags: {
+    '--name'?: string;
+    '--format'?: string;
+    '--json'?: boolean;
+    '--triggers'?: boolean;
+  }
 ): Promise<number> {
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
@@ -63,6 +68,9 @@ export async function create(
   };
   if (link?.projectId) {
     body.projectId = link.projectId;
+  }
+  if (flags['--triggers'] && process.env.FF_CONNEX_TRIGGERS === '1') {
+    body.triggers = { enabled: true };
   }
 
   output.spinner('Setting up...');
