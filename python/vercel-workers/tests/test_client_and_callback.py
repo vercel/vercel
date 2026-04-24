@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
@@ -28,6 +28,7 @@ class _FakeResponse:
 
 class _FakeHttpxClient:
     captured_bodies: list[bytes] = []
+    captured_headers: list[dict] = []  # pyright: ignore[reportMissingTypeArgument]
 
     def __init__(self, *args, **kwargs):
         self.response = _FakeResponse()
@@ -50,6 +51,8 @@ class _FakeHttpxClient:
     ) -> _FakeResponse:
         if content is not None:
             _FakeHttpxClient.captured_bodies.append(content)
+        if headers is not None:
+            _FakeHttpxClient.captured_headers.append(headers)
         return self.response
 
 
@@ -148,18 +151,20 @@ class TestWorkerJSONEncoder(unittest.TestCase):
 class TestSendWithJSONEncoder(unittest.TestCase):
     def setUp(self) -> None:
         _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
 
     def _send(
         self,
         payload: dict,  # pyright: ignore[reportMissingTypeArgument]
         *,
         json_encoder: type[json.JSONEncoder] | None = None,
+        **kwargs: object,
     ) -> bytes:
         with (
             patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
             patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
         ):
-            queue_client.send("q", payload, json_encoder=json_encoder)
+            queue_client.send("q", payload, json_encoder=json_encoder, **kwargs)
 
         return _FakeHttpxClient.captured_bodies[-1]
 
@@ -190,3 +195,27 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         body = self._send({"tags": {3, 1, 2}}, json_encoder=_CustomEncoder)
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
+
+    def test_send_accepts_timedelta_delay_and_retention(self) -> None:
+        self._send(
+            {"ok": True},
+            json_encoder=None,
+            delay=timedelta(minutes=10),
+            retention=timedelta(hours=6),
+        )
+
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Vqs-Delay-Seconds"], "600")
+        self.assertEqual(headers["Vqs-Retention-Seconds"], "21600")
+
+    def test_send_rejects_duplicate_duration_options(self) -> None:
+        with self.assertRaises(ValueError):
+            self._send(
+                {"ok": True},
+                delay=timedelta(seconds=1),
+                delay_seconds=1,
+            )
+
+    def test_send_rejects_negative_timedelta(self) -> None:
+        with self.assertRaises(ValueError):
+            self._send({"ok": True}, delay=timedelta(seconds=-1))

@@ -6,7 +6,7 @@ import os
 import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from functools import wraps
 from typing import Any, Protocol, TypedDict, overload
@@ -87,6 +87,26 @@ class SendMessageResult(TypedDict):
     """
 
     messageId: str | None
+
+
+def _duration_to_seconds(name: str, value: timedelta | None) -> int | None:
+    if value is None:
+        return None
+    seconds = value.total_seconds()
+    if seconds < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return int(seconds)
+
+
+def _resolve_duration_seconds(
+    name: str,
+    value: timedelta | None,
+    value_seconds: int | None,
+) -> int | None:
+    resolved = _duration_to_seconds(name, value)
+    if resolved is not None and value_seconds is not None:
+        raise ValueError(f"cannot specify both {name} and {name}_seconds")
+    return resolved if resolved is not None else value_seconds
 
 
 @dataclass
@@ -509,7 +529,9 @@ def send(
     payload: Any,
     *,
     idempotency_key: str | None = None,
+    retention: timedelta | None = None,
     retention_seconds: int | None = None,
+    delay: timedelta | None = None,
     delay_seconds: int | None = None,
     deployment_id: str | None = None,
     token: str | None = None,
@@ -535,7 +557,9 @@ def send(
         queue_name: Name of the target queue (equivalent to ``queueName``).
         payload: Message payload. For the default JSON content type this must be JSON-serialisable.
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
+        retention: Optional message retention duration.
         retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
+        delay: Optional duration before the message becomes visible.
         delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
         deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
@@ -556,6 +580,9 @@ def send(
     #   VERCEL_WORKERS_IN_PROCESS=1
     if os.environ.get("VERCEL_WORKERS_IN_PROCESS") in {"1", "true", "TRUE", "yes", "YES"}:
         return _send_in_process(queue_name, payload)
+
+    retention_seconds = _resolve_duration_seconds("retention", retention, retention_seconds)
+    delay_seconds = _resolve_duration_seconds("delay", delay, delay_seconds)
 
     resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
     resolved_base_path = base_path or get_queue_base_path()
@@ -639,7 +666,9 @@ async def send_async(
     payload: Any,
     *,
     idempotency_key: str | None = None,
+    retention: timedelta | None = None,
     retention_seconds: int | None = None,
+    delay: timedelta | None = None,
     delay_seconds: int | None = None,
     deployment_id: str | None = None,
     token: str | None = None,
@@ -658,7 +687,9 @@ async def send_async(
         queue_name: Name of the target queue (equivalent to ``queueName``).
         payload: Message payload. For the default JSON content type this must be JSON-serialisable.
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
+        retention: Optional message retention duration.
         retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
+        delay: Optional duration before the message becomes visible.
         delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
         deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
@@ -673,6 +704,9 @@ async def send_async(
     Returns:
         A dict containing the generated ``messageId``.
     """
+    retention_seconds = _resolve_duration_seconds("retention", retention, retention_seconds)
+    delay_seconds = _resolve_duration_seconds("delay", delay, delay_seconds)
+
     resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
     resolved_base_path = base_path or get_queue_base_path()
 
