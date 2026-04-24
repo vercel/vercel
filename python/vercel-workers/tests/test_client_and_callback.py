@@ -119,6 +119,86 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
 
 
+class TestSubscriptionInvocation(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_invoke_async_subscription_async(self) -> None:
+        calls: list[str] = []
+
+        async def handle_async(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            calls.append("handle_async")
+            return {"timeoutSeconds": 5}
+
+        queue_client.subscribe(topic="a")(handle_async)
+
+        async def run() -> int | None:
+            return await queue_client._invoke_subscriptions_async(
+                {"hello": "world"},
+                {
+                    "messageId": "m",
+                    "deliveryCount": 1,
+                    "createdAt": "now",
+                    "topic": "a",
+                },
+            )
+
+        self.assertEqual(asyncio.run(run()), 5)
+        self.assertEqual(calls, ["handle_async"])
+
+    def test_get_asgi_app_awaits_async_subscription(self) -> None:
+        calls: list[str] = []
+
+        async def handle_async(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            calls.append(message["hello"])
+
+        queue_client.subscribe(topic="a")(handle_async)
+
+        async def run() -> list[dict]:  # pyright: ignore[reportMissingTypeArgument]
+            app = queue_client.get_asgi_app()
+            sent: list[dict] = []  # pyright: ignore[reportMissingTypeArgument]
+            body = b'{"hello":"world"}'
+            received = False
+
+            async def receive() -> dict:  # pyright: ignore[reportMissingTypeArgument]
+                nonlocal received
+                if received:
+                    return {"type": "http.disconnect"}
+                received = True
+                return {"type": "http.request", "body": body, "more_body": False}
+
+            async def send(message: dict) -> None:  # pyright: ignore[reportMissingTypeArgument]
+                sent.append(message)
+
+            await app(
+                {
+                    "type": "http",
+                    "method": "POST",
+                    "path": "/",
+                    "headers": [
+                        (b"content-type", b"application/json"),
+                        (b"ce-type", b"com.vercel.queue.v2beta"),
+                        (b"ce-vqsqueuename", b"a"),
+                        (b"ce-vqsconsumergroup", b"consumer-a"),
+                        (b"ce-vqsmessageid", b"m"),
+                        (b"ce-vqsdeliverycount", b"1"),
+                        (b"ce-vqscreatedat", b"now"),
+                    ],
+                },
+                receive,
+                send,
+            )
+            return sent
+
+        sent = asyncio.run(run())
+
+        self.assertEqual(sent[0]["status"], 200)
+        self.assertEqual(calls, ["world"])
+
+
 class TestWorkerJSONEncoder(unittest.TestCase):
     def test_uuid_serialized_as_string(self) -> None:
         uid = uuid4()

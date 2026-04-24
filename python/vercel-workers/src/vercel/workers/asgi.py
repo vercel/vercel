@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
 ASGI = Callable[
     [
@@ -14,6 +15,9 @@ ASGI = Callable[
 ]
 
 Handler = Callable[[bytes, dict[str, Any]], tuple[int, list[tuple[str, str]], bytes]]
+AsyncHandler = Callable[
+    [bytes, dict[str, Any]], Awaitable[tuple[int, list[tuple[str, str]], bytes]]
+]
 
 
 def _get_header(scope: dict[str, Any], name: str) -> str | None:
@@ -53,7 +57,7 @@ async def _read_body(receive: Callable[[], Awaitable[dict[str, Any]]]) -> bytes:
 
 
 def build_asgi_app(
-    handler: Handler,
+    handler: Handler | AsyncHandler,
     *,
     on_startup: Callable[[], None] | None = None,
     on_shutdown: Callable[[], None] | None = None,
@@ -62,7 +66,7 @@ def build_asgi_app(
     Build an ASGI application that:
       - responds to GET / with "ok" (healthcheck)
       - accepts POST with Content-Type application/cloudevents+json
-      - delegates CloudEvent handling to `handler(raw_body)` on a thread
+      - delegates CloudEvent handling to `handler(raw_body)`
       - fires on_startup/on_shutdown during ASGI lifespan
     """
 
@@ -150,7 +154,14 @@ def build_asgi_app(
                 environ[key] = value
 
             raw_body = await _read_body(receive)
-            status_code, headers, body = await asyncio.to_thread(handler, raw_body, environ)
+            if inspect.iscoroutinefunction(handler):
+                async_handler = cast(AsyncHandler, handler)
+                status_code, headers, body = await async_handler(raw_body, environ)
+            else:
+                sync_handler = cast(Handler, handler)
+                status_code, headers, body = await asyncio.to_thread(
+                    sync_handler, raw_body, environ
+                )
             asgi_headers: list[tuple[bytes, bytes]] = [
                 (k.lower().encode("latin1"), v.encode("latin1")) for (k, v) in headers
             ]
