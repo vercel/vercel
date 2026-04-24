@@ -381,8 +381,13 @@ export async function ensureRepoLink(
       return;
     }
 
+    // Include top-level orgId when all projects share the same org so that
+    // tools reading the deprecated top-level field (e.g. @vercel/toolbar) still
+    // resolve the owner correctly. See https://github.com/vercel/vercel/issues/15286
+    const orgIds = new Set(result.projects.map(p => p.orgId).filter(Boolean));
     repoConfig = {
       remoteName: result.remoteName,
+      ...(orgIds.size === 1 ? { orgId: [...orgIds][0] } : {}),
       projects: result.projects,
     };
     await outputJSON(repoConfigPath, repoConfig, { spaces: 2 });
