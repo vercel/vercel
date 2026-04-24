@@ -259,8 +259,8 @@ describe('connex create', () => {
     expect(exitCode).toBe(1);
   });
 
-  describe('--triggers flag (FF_CONNEX_TRIGGERS)', () => {
-    it('should include triggers: { enabled: true } in POST body when FF_CONNEX_TRIGGERS=1 and --triggers is passed', async () => {
+  describe('FF_CONNEX_TRIGGERS auto-behavior', () => {
+    it('should auto-include triggers: { enabled: true } in POST body when FF_CONNEX_TRIGGERS=1', async () => {
       vi.stubEnv('FF_CONNEX_TRIGGERS', '1');
       let postBody: any;
       client.scenario.post('/v1/connex/clients/managed', (req, res) => {
@@ -270,14 +270,7 @@ describe('connex create', () => {
         );
       });
 
-      client.setArgv(
-        'connex',
-        'create',
-        'slack',
-        '--name',
-        'my-bot',
-        '--triggers'
-      );
+      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
 
       const exitCode = await connex(client);
 
@@ -290,8 +283,8 @@ describe('connex create', () => {
       vi.unstubAllEnvs();
     });
 
-    it('should not include triggers in POST body when FF_CONNEX_TRIGGERS=1 but --triggers is not passed', async () => {
-      vi.stubEnv('FF_CONNEX_TRIGGERS', '1');
+    it('should not include triggers in POST body when FF_CONNEX_TRIGGERS is unset', async () => {
+      vi.stubEnv('FF_CONNEX_TRIGGERS', '');
       let postBody: any;
       client.scenario.post('/v1/connex/clients/managed', (req, res) => {
         postBody = req.body;
@@ -304,24 +297,6 @@ describe('connex create', () => {
 
       expect(exitCode).toBe(0);
       expect(postBody.triggers).toBeUndefined();
-      vi.unstubAllEnvs();
-    });
-
-    it('should reject --triggers as an unknown flag when FF_CONNEX_TRIGGERS is unset', async () => {
-      vi.stubEnv('FF_CONNEX_TRIGGERS', '');
-      client.setArgv(
-        'connex',
-        'create',
-        'slack',
-        '--name',
-        'my-bot',
-        '--triggers'
-      );
-
-      const exitCode = await connex(client);
-
-      await expect(client.stderr).toOutput('unknown or unexpected option');
-      expect(exitCode).toBe(1);
       vi.unstubAllEnvs();
     });
   });
