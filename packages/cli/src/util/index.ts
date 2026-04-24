@@ -1,8 +1,5 @@
-import qs from 'querystring';
-import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import nodeFetch, { Headers } from 'node-fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -358,11 +355,9 @@ export default class Now {
 
   async _fetch(_url: string, opts: FetchOptions = {}) {
     if (opts.useCurrentTeam !== false && this.currentTeam) {
-      const parsedUrl = parseUrl(_url, true);
-      const query = parsedUrl.query;
-
-      query.teamId = this.currentTeam;
-      _url = `${parsedUrl.pathname}?${qs.stringify(query)}`;
+      const parsedUrl = new URL(_url, 'http://n');
+      parsedUrl.searchParams.set('teamId', this.currentTeam);
+      _url = `${parsedUrl.pathname}?${parsedUrl.searchParams}`;
       delete opts.useCurrentTeam;
     }
 
@@ -383,7 +378,7 @@ export default class Now {
 
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      nodeFetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
     printIndications(res);
     return res;

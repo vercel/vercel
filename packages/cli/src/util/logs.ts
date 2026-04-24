@@ -142,7 +142,6 @@ export async function displayRuntimeLogs(
 
   const response = await client.fetch(url, {
     json: false,
-    // @ts-expect-error: typescipt is getting confused with the signal types from node (web & server) and node-fetch (server only)
     signal: abortController.signal,
     retry: {
       retries: 3,
