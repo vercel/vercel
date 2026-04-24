@@ -13,6 +13,7 @@ export interface ErrorResponse {
 
 export interface GetServicesBuildersOptions {
   workPath?: string;
+  target?: string;
 }
 
 export interface ServicesBuildersResult {
@@ -36,7 +37,7 @@ export interface ServicesBuildersResult {
 export async function getServicesBuilders(
   options: GetServicesBuildersOptions
 ): Promise<ServicesBuildersResult> {
-  const { workPath } = options;
+  const { workPath, target } = options;
 
   if (!workPath) {
     return {
@@ -57,7 +58,7 @@ export async function getServicesBuilders(
   }
 
   const fs = new LocalFileSystemDetector(workPath);
-  const result = await detectServices({ fs });
+  const result = await detectServices({ fs, target });
 
   // Transform warnings to ErrorResponse format
   const warningResponses: ErrorResponse[] = result.warnings.map(w => ({

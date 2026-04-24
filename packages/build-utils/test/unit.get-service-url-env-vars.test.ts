@@ -58,6 +58,66 @@ describe('getServiceUrlEnvVars', () => {
     });
   });
 
+  it('uses preview subdomain prefixes for custom preview suffixes', () => {
+    const result = getServiceUrlEnvVars({
+      services: [
+        createService({
+          name: 'web',
+          type: 'web',
+          routePrefix: '/',
+          framework: 'nextjs',
+        }),
+        createService({
+          name: 'api',
+          type: 'web',
+          routePrefix: '/_/api',
+          subdomain: 'api',
+          routePrefixSource: 'generated',
+        }),
+      ],
+      frameworkList: [{ slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' }],
+      deploymentUrl: 'project-git-main.preview.example.com',
+      target: 'preview',
+    });
+
+    expect(result).toEqual({
+      WEB_URL: 'https://project-git-main.preview.example.com',
+      API_URL: 'https://api---project-git-main.preview.example.com',
+      NEXT_PUBLIC_WEB_URL: '/',
+      NEXT_PUBLIC_API_URL: '/__preview/api',
+    });
+  });
+
+  it('uses preview alias URLs on public preview suffixes', () => {
+    const result = getServiceUrlEnvVars({
+      services: [
+        createService({
+          name: 'web',
+          type: 'web',
+          routePrefix: '/',
+          framework: 'nextjs',
+        }),
+        createService({
+          name: 'api',
+          type: 'web',
+          routePrefix: '/_/api',
+          subdomain: 'api',
+          routePrefixSource: 'generated',
+        }),
+      ],
+      frameworkList: [{ slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' }],
+      deploymentUrl: 'project-git-main.vercel.app',
+      target: 'preview',
+    });
+
+    expect(result).toEqual({
+      WEB_URL: 'https://project-git-main.vercel.app',
+      API_URL: 'https://project-git-main.vercel.app/__preview/api',
+      NEXT_PUBLIC_WEB_URL: '/',
+      NEXT_PUBLIC_API_URL: '/__preview/api',
+    });
+  });
+
   it('generates prefixed env vars for all frontend frameworks in deployment', () => {
     const result = getServiceUrlEnvVars({
       services: [
@@ -221,6 +281,36 @@ describe('getServiceUrlEnvVars', () => {
         API_URL: 'http://localhost:3000/_/api',
         NEXT_PUBLIC_FRONTEND_URL: '/',
         NEXT_PUBLIC_API_URL: '/_/api',
+      });
+    });
+
+    it('uses preview aliases in origin mode for generated subdomain mounts', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'frontend',
+            type: 'web',
+            routePrefix: '/',
+            framework: 'nextjs',
+          }),
+          createService({
+            name: 'api',
+            type: 'web',
+            routePrefix: '/_/api',
+            subdomain: 'api',
+            routePrefixSource: 'generated',
+          }),
+        ],
+        frameworkList: [{ slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' }],
+        origin: 'http://localhost:3000',
+        target: 'preview',
+      });
+
+      expect(result).toEqual({
+        FRONTEND_URL: 'http://localhost:3000',
+        API_URL: 'http://localhost:3000/__preview/api',
+        NEXT_PUBLIC_FRONTEND_URL: '/',
+        NEXT_PUBLIC_API_URL: '/__preview/api',
       });
     });
 

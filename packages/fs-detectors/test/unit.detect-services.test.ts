@@ -2075,7 +2075,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should generate host-based rewrites for subdomain-mounted service', async () => {
+    it('should generate production host-based rewrites for subdomain-mounted service', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -2114,6 +2114,50 @@ describe('detectServices', () => {
           { type: 'host', value: { suf: '.vercel.app' } },
           { type: 'host', value: { suf: '.vercel.dev' } },
         ],
+        check: true,
+      });
+    });
+
+    it('should generate preview host and alias rewrites for subdomain-mounted service', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.go',
+              subdomain: 'api',
+            },
+          },
+        }),
+        'api/index.go': 'package main',
+      });
+      const result = await detectServices({ fs, target: 'preview' });
+
+      expect(result.errors).toEqual([]);
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/api',
+        has: [{ type: 'host', value: { pre: 'api---' } }],
+        check: true,
+      });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/(?!_/api(?:/|$))(.*)$',
+        dest: '/_/api/$1',
+        has: [{ type: 'host', value: { pre: 'api---' } }],
+        check: true,
+      });
+      expect(result.routes.hostRewrites).not.toContainEqual(
+        expect.objectContaining({
+          has: [{ type: 'host', value: { pre: 'api.' } }],
+        })
+      );
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/__preview/api/?$',
+        dest: '/_/api',
+        check: true,
+      });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/__preview/api/(.*)$',
+        dest: '/_/api/$1',
         check: true,
       });
     });
@@ -2206,6 +2250,42 @@ describe('detectServices', () => {
           { type: 'host', value: { suf: '.vercel.app' } },
           { type: 'host', value: { suf: '.vercel.dev' } },
         ],
+        check: true,
+      });
+    });
+
+    it('should generate preview host and alias rewrites for route-owning builders', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'nextjs',
+              entrypoint: 'apps/web',
+              subdomain: 'app',
+            },
+          },
+        }),
+        'apps/web/package.json': JSON.stringify({
+          dependencies: { next: '15.0.0' },
+        }),
+      });
+      const result = await detectServices({ fs, target: 'preview' });
+
+      expect(result.errors).toEqual([]);
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/frontend',
+        has: [{ type: 'host', value: { pre: 'app---' } }],
+        check: true,
+      });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/__preview/app/?$',
+        dest: '/_/frontend',
+        check: true,
+      });
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^/__preview/app/(.*)$',
+        dest: '/_/frontend/$1',
         check: true,
       });
     });

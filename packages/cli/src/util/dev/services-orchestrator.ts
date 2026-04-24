@@ -338,6 +338,7 @@ export class ServicesOrchestrator {
       origin: this.proxyOrigin,
       currentEnv: this.env,
       envPrefix: service.envPrefix,
+      target: 'preview',
     });
 
     const env = cloneEnv(
