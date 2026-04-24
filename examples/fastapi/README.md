@@ -30,15 +30,7 @@ app/
 
 ## Getting Started
 
-Install the required dependencies:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install .
-```
-
-Or, if using [uv](https://docs.astral.sh/uv/):
+Install the required dependencies using [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
@@ -46,15 +38,9 @@ uv sync
 
 ## Running Locally
 
-Start the development server on http://0.0.0.0:5001
-
 ```bash
-python -m app.main
-# using uv:
-uv run -m app.main
+vercel dev
 ```
-
-When you make changes to your project, the server will automatically reload.
 
 ## API Endpoints
 

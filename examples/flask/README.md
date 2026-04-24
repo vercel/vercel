@@ -24,15 +24,7 @@ This example follows the [application factory](https://flask.palletsprojects.com
 
 ## Getting Started
 
-Install the required dependencies:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install .
-```
-
-Or, if using [uv](https://docs.astral.sh/uv/):
+Install the required dependencies using [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
@@ -40,21 +32,9 @@ uv sync
 
 ## Running Locally
 
-Start the development server on http://0.0.0.0:5001
-
 ```bash
-python main.py
-# using uv:
-uv run main.py
+vercel dev
 ```
-
-Or using the Flask CLI:
-
-```bash
-flask --app main run --debug
-```
-
-When you make changes to your project, the server will automatically reload.
 
 ## API Endpoints
 
