@@ -38,6 +38,7 @@ __all__ = [
     "WorkerJSONEncoder",
     "WorkerTimeoutResult",
     "subscribe",
+    "get_vercel_queue_subscriptions",
     "get_wsgi_app",
     "get_asgi_app",
     "has_subscriptions",
@@ -89,11 +90,20 @@ class SendMessageResult(TypedDict):
     messageId: str | None
 
 
+class QueueSubscription(TypedDict):
+    """Build-time metadata for a queue subscription."""
+
+    topic: str
+    handler: str
+
+
 @dataclass
 class _Subscription:
     func: WorkerCallable
+    topic: str | None = None
     topic_filter: Callable[[str | None], bool] | None = None
     topic_desc: str | None = None
+    consumer: str | None = None
 
     def matches(self, topic: str | None) -> bool:
         if self.topic_filter is not None:
@@ -103,6 +113,26 @@ class _Subscription:
 
 
 _subscriptions: list[_Subscription] = []
+
+
+def _get_handler_key(func: WorkerCallable) -> str:
+    module = getattr(func, "__module__", "")
+    name = getattr(func, "__name__", "")
+    return f"{module}:{name}"
+
+
+def _get_bound_consumer(func: WorkerCallable) -> str | None:
+    raw = os.environ.get("__VC_QUEUE_SUBSCRIPTIONS")
+    if not raw:
+        return None
+    try:
+        mapping = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(mapping, dict):
+        return None
+    consumer = mapping.get(_get_handler_key(func))
+    return consumer if isinstance(consumer, str) else None
 
 
 @overload
@@ -144,12 +174,22 @@ def subscribe(
 
         topic_filter = exact_topic_filter
         topic_desc = topic
+        topic_exact = topic
     elif isinstance(topic, tuple):
         topic_desc, topic_filter = topic
+        topic_exact = None
+    else:
+        topic_exact = None
 
     def decorator(func: WorkerCallable) -> WorkerCallable:
         _subscriptions.append(
-            _Subscription(func=func, topic_filter=topic_filter, topic_desc=topic_desc)
+            _Subscription(
+                func=func,
+                topic=topic_exact,
+                topic_filter=topic_filter,
+                topic_desc=topic_desc,
+                consumer=_get_bound_consumer(func),
+            )
         )
 
         @wraps(func)
@@ -171,8 +211,37 @@ def has_subscriptions() -> bool:
     return bool(_subscriptions)
 
 
-def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
-    return [s for s in _subscriptions if s.matches(topic)]
+def get_vercel_queue_subscriptions() -> list[QueueSubscription]:
+    """Return serializable metadata for build-time queue trigger generation."""
+    result: list[QueueSubscription] = []
+    for sub in _subscriptions:
+        if sub.topic is None:
+            continue
+        qualname = getattr(sub.func, "__qualname__", "")
+        name = getattr(sub.func, "__name__", "")
+        if qualname != name:
+            raise RuntimeError(
+                f"cannot register {qualname!r}: only module-level functions are supported"
+            )
+        result.append({"topic": sub.topic, "handler": _get_handler_key(sub.func)})
+    return result
+
+
+def _select_subscriptions(
+    topic: str | None, consumer: str | None = None
+) -> Iterable[_Subscription]:
+    matches = [s for s in _subscriptions if s.matches(topic)]
+    if consumer is None:
+        return matches
+
+    consumer_matches = [s for s in matches if s.consumer == consumer]
+    if consumer_matches:
+        return consumer_matches
+
+    if any(s.consumer is not None for s in _subscriptions):
+        return []
+
+    return matches
 
 
 def _invoke_subscriptions(
@@ -186,9 +255,10 @@ def _invoke_subscriptions(
     will be propagated back to the queue service to delay the next attempt.
     """
     topic = metadata.get("topic")
+    consumer = metadata.get("consumer")
     timeout_seconds: int | None = None
 
-    for sub in _select_subscriptions(topic):
+    for sub in _select_subscriptions(topic, consumer):
         try:
             result = sub.func(message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
@@ -287,8 +357,8 @@ def handle_queue_callback(
         else:
             queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
 
-        # Fail fast if no workers match this topic.
-        if not _select_subscriptions(queue_name):
+        # Fail fast if no workers match this topic and consumer.
+        if not _select_subscriptions(queue_name, consumer_group):
             return json_response(
                 500,
                 {

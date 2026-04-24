@@ -2063,6 +2063,13 @@ function attachQueueServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
+  if (
+    service.builder.use === '@vercel/python' &&
+    hasQueueTriggers(buildOutput)
+  ) {
+    return;
+  }
+
   const topics = getServiceQueueTopicConfigs(service);
   const consumer = sanitizeConsumerName(
     getInternalServiceFunctionPath(service.name)
@@ -2097,6 +2104,27 @@ function attachQueueServiceTrigger(
       }
     }
   }
+}
+
+function hasQueueTriggers(
+  buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output']
+): boolean {
+  if (isLambda(buildOutput)) {
+    return (
+      buildOutput.experimentalTriggers?.some(trigger =>
+        trigger.type.startsWith('queue/')
+      ) ?? false
+    );
+  }
+
+  return Object.values(buildOutput).some(
+    output =>
+      isLambda(output) &&
+      (output.experimentalTriggers?.some(trigger =>
+        trigger.type.startsWith('queue/')
+      ) ??
+        false)
+  );
 }
 
 function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {

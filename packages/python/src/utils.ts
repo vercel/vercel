@@ -8,6 +8,17 @@ import { getProtectedUvEnv } from './uv';
 
 const isWin = process.platform === 'win32';
 
+/**
+ * Convert a file-path entrypoint to a dotted Python module name.
+ * e.g. "jobs/cleanup.py" -> "jobs.cleanup"
+ */
+export function entrypointToModule(entrypoint: string): string {
+  return entrypoint
+    .replace(/\\/g, '/')
+    .replace(/\.py$/i, '')
+    .replace(/\//g, '.');
+}
+
 export const isInVirtualEnv = (): string | undefined => {
   return process.env.VIRTUAL_ENV;
 };

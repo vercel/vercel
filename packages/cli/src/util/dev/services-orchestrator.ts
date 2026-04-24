@@ -141,6 +141,13 @@ interface ServiceDevProcess {
   workspace: string;
   logger: ServiceLogger;
   crons?: Cron[];
+  queueSubscriptions?: ServiceQueueSubscription[];
+}
+
+interface ServiceQueueSubscription {
+  topic: string;
+  handler: string;
+  consumer: string;
 }
 
 function getServiceRoutePrefixes(service: Service): string[] {
@@ -320,6 +327,16 @@ export class ServicesOrchestrator {
     return this.managedServices;
   }
 
+  getQueueSubscriptions(): Map<string, ServiceQueueSubscription[]> {
+    const subscriptions = new Map<string, ServiceQueueSubscription[]>();
+    for (const [name, service] of this.managedServices) {
+      if (service.queueSubscriptions?.length) {
+        subscriptions.set(name, service.queueSubscriptions);
+      }
+    }
+    return subscriptions;
+  }
+
   private async startService(
     service: Service,
     colorIndex: number
@@ -480,6 +497,12 @@ export class ServicesOrchestrator {
       const host = await checkForPort(result.port, STARTUP_TIMEOUT);
       output.debug(`Service ${service.name} started on ${host}:${result.port}`);
 
+      const queueSubscriptions = (
+        result as typeof result & {
+          queueSubscriptions?: ServiceQueueSubscription[];
+        }
+      ).queueSubscriptions;
+
       return {
         name: service.name,
         host,
@@ -490,6 +513,7 @@ export class ServicesOrchestrator {
         workspace: service.workspace || '.',
         logger,
         crons: result.crons,
+        queueSubscriptions,
       };
     } catch (err) {
       output.debug(`Failed to use startDevServer for ${service.name}: ${err}`);
