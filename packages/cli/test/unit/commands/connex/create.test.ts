@@ -259,6 +259,48 @@ describe('connex create', () => {
     expect(exitCode).toBe(1);
   });
 
+  describe('FF_CONNEX_TRIGGERS auto-behavior', () => {
+    it('should auto-include triggers: { enabled: true } in POST body when FF_CONNEX_TRIGGERS=1', async () => {
+      vi.stubEnv('FF_CONNEX_TRIGGERS', '1');
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(
+          fakeConnexClient({ id: 'scl_triggers1', uid: 'uid_triggers1' })
+        );
+      });
+
+      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody).toMatchObject({
+        service: 'slack',
+        name: 'my-bot',
+        triggers: { enabled: true },
+      });
+      vi.unstubAllEnvs();
+    });
+
+    it('should not include triggers in POST body when FF_CONNEX_TRIGGERS is unset', async () => {
+      vi.stubEnv('FF_CONNEX_TRIGGERS', '');
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(fakeConnexClient({ id: 'scl_notrig', uid: 'uid_notrig' }));
+      });
+
+      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody.triggers).toBeUndefined();
+      vi.unstubAllEnvs();
+    });
+  });
+
   it('should tolerate early 404s during polling after 422', async () => {
     client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
       res.statusCode = 422;

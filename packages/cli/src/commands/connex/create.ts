@@ -64,6 +64,9 @@ export async function create(
   if (link?.projectId) {
     body.projectId = link.projectId;
   }
+  if (process.env.FF_CONNEX_TRIGGERS === '1') {
+    body.triggers = { enabled: true };
+  }
 
   output.spinner('Setting up...');
   let createdClient: ConnexClient | null = null;
