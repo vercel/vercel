@@ -884,7 +884,9 @@ async function doBuild(
         ? serviceByBuilder.get(build)
         : undefined;
       const stripServiceRoutePrefix =
-        !!service?.routePrefix && service.routePrefix !== '/';
+        !!service?.stripRoutePrefix &&
+        !!service.routePrefix &&
+        service.routePrefix !== '/';
 
       let buildWorkPath = workPath;
       let buildEntrypoint = build.src;
