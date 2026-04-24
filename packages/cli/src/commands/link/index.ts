@@ -127,14 +127,17 @@ export default async function link(client: Client) {
   } else {
     // Prefer the validated team ID set by the global handler (--team/--scope). When it is not set
     // (e.g. no scope passed), currentTeam may be undefined or from saved config. If the user passed
-    // --team to link but currentTeam is still unset, resolve to a team ID and set it so selectOrg
+    // --scope/--team to link but currentTeam is still unset, resolve to a team ID and set it so selectOrg
     // has a default; never set a raw slug (always use team ID).
-    const teamFlag = parsedArgs.flags['--team'];
-    if (typeof teamFlag === 'string' && !client.config.currentTeam) {
+    const explicitScope =
+      typeof parsedArgs.flags['--scope'] === 'string' ||
+      typeof parsedArgs.flags['--team'] === 'string';
+    const scopeFlag = parsedArgs.flags['--scope'] || parsedArgs.flags['--team'];
+    if (typeof scopeFlag === 'string' && !client.config.currentTeam) {
       try {
         const teams = await getTeams(client);
         const related = teams.find(
-          t => t.id === teamFlag || t.slug === teamFlag
+          t => t.id === scopeFlag || t.slug === scopeFlag
         );
         if (related) {
           client.config.currentTeam = related.id;
@@ -154,7 +157,7 @@ export default async function link(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
-      searchAcrossTeams: true,
+      searchAcrossTeams: !explicitScope,
     });
 
     if (typeof link === 'number') {
