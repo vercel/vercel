@@ -1,6 +1,9 @@
 import type { Route } from '@vercel/routing-utils';
 import type {
   ExperimentalServiceConfig,
+  ExperimentalServiceEnvVar,
+  ExperimentalServiceEnvVarRef,
+  ExperimentalServiceEnvVars,
   ExperimentalServiceGroups,
   ExperimentalServices,
   ServiceRuntime,
@@ -12,6 +15,9 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
   ExperimentalServiceConfig,
+  ExperimentalServiceEnvVar,
+  ExperimentalServiceEnvVarRef,
+  ExperimentalServiceEnvVars,
   ExperimentalServiceGroups,
   ExperimentalServices,
   ServiceRuntime,

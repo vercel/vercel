@@ -55,7 +55,7 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
-const ENV_PREFIX_RE = /^[A-Z][A-Z0-9_]*_$/;
+const ENV_VAR_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 interface ResolvedEntrypointPath {
   normalized: string;
@@ -512,13 +512,44 @@ export function validateServiceConfig(
       };
     }
   }
-  if (config.envPrefix !== undefined) {
-    if (!ENV_PREFIX_RE.test(config.envPrefix)) {
+  if (config.envVars !== undefined) {
+    if (typeof config.envVars !== 'object' || Array.isArray(config.envVars)) {
       return {
-        code: 'INVALID_ENV_PREFIX',
-        message: `Service "${name}" has invalid envPrefix "${config.envPrefix}". Must start with an uppercase letter, contain only uppercase letters, digits, and underscores, and end with "_" (e.g., "MY_SERVICE_").`,
+        code: 'INVALID_ENV_VARS',
+        message: `Service "${name}" has invalid "envVars". Must be an object keyed by environment variable name.`,
         serviceName: name,
       };
+    }
+    for (const [envVarName, envVar] of Object.entries(config.envVars)) {
+      if (!ENV_VAR_NAME_RE.test(envVarName)) {
+        return {
+          code: 'INVALID_ENV_VAR_NAME',
+          message: `Service "${name}" has invalid envVars key "${envVarName}". Must match /^[A-Za-z_][A-Za-z0-9_]*$/.`,
+          serviceName: name,
+        };
+      }
+      if (!envVar || typeof envVar !== 'object' || Array.isArray(envVar)) {
+        return {
+          code: 'INVALID_ENV_VAR',
+          message: `Service "${name}" has invalid envVars["${envVarName}"]. Must be an object of shape { ref: { service: string } }.`,
+          serviceName: name,
+        };
+      }
+      const ref = envVar.ref;
+      if (!ref || typeof ref !== 'object' || Array.isArray(ref)) {
+        return {
+          code: 'INVALID_ENV_VAR_REF',
+          message: `Service "${name}" envVars["${envVarName}"] must have a "ref" object.`,
+          serviceName: name,
+        };
+      }
+      if (typeof ref.service !== 'string' || ref.service.length === 0) {
+        return {
+          code: 'INVALID_ENV_VAR_REF',
+          message: `Service "${name}" envVars["${envVarName}"].ref must specify "service" as a non-empty string.`,
+          serviceName: name,
+        };
+      }
     }
   }
   if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
@@ -824,7 +855,7 @@ export async function resolveConfiguredService(
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    envPrefix: config.envPrefix,
+    envVars: config.envVars,
   };
 }
 
@@ -977,6 +1008,32 @@ export async function resolveAllConfiguredServices(
     }
 
     resolved.push(service);
+  }
+
+  const servicesByName = new Map(resolved.map(s => [s.name, s]));
+  for (const service of resolved) {
+    if (!service.envVars) {
+      continue;
+    }
+    for (const [envVarName, envVar] of Object.entries(service.envVars)) {
+      const refName = envVar.ref.service;
+      const target = servicesByName.get(refName);
+      if (!target) {
+        errors.push({
+          code: 'UNKNOWN_SERVICE_REF',
+          message: `Service "${service.name}" envVars["${envVarName}"] references unknown service "${refName}".`,
+          serviceName: service.name,
+        });
+        continue;
+      }
+      if (target.type !== 'web') {
+        errors.push({
+          code: 'INVALID_SERVICE_REF_TYPE',
+          message: `Service "${service.name}" envVars["${envVarName}"] references service "${refName}" which is a ${target.type} service and has no URL. Only web services can be referenced.`,
+          serviceName: service.name,
+        });
+      }
+    }
   }
 
   return { services: resolved, errors };

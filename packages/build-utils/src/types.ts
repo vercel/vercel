@@ -586,6 +586,24 @@ export type ServiceTopics = string[] | ServiceQueueTopic[];
 export const JOB_TRIGGERS = ['queue', 'schedule', 'workflow'] as const;
 export type JobTrigger = (typeof JOB_TRIGGERS)[number];
 
+export interface ServiceEnvVarRef {
+  /** Name of another service in `experimentalServices` whose URL to inject. */
+  service: string;
+}
+
+export interface ServiceEnvVar {
+  ref: ServiceEnvVarRef;
+  /**
+   * When `true`, the resolved value is the target service's route prefix
+   * (e.g. `/api`) which is useful for client bundles that should hit the same
+   * origin to avoid CORS. When omitted or `false`, the
+   * resolved value is the absolute URL (e.g. `https://my-app.vercel.app/api`).
+   */
+  relative?: boolean;
+}
+
+export type ServiceEnvVars = Record<string, ServiceEnvVar>;
+
 export interface Service {
   name: string;
   type: ServiceType;
@@ -608,8 +626,8 @@ export interface Service {
   handlerFunction?: string;
   /* worker/job service config */
   topics?: ServiceTopics;
-  /** custom prefix to inject service URL env vars */
-  envPrefix?: string;
+  /* environment variables declared by the user to be injected into this service. */
+  envVars?: ServiceEnvVars;
 }
 
 export function getServiceQueueTopicConfigs(config: {
@@ -889,8 +907,13 @@ export interface ExperimentalServiceConfig {
   /* Worker/job service config */
   topics?: ServiceTopics;
 
-  /** Custom prefix to use to inject service URL env vars */
-  envPrefix?: string;
+  /**
+   * Environment variables to inject into this service's build and dev
+   * processes. Each value is a reference to another service's URL via
+   * `{ ref: { service } }`. User-supplied env values (vercel env pull,
+   * .env, shell) always take precedence.
+   */
+  envVars?: ServiceEnvVars;
 }
 
 /**

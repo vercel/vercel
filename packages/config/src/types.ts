@@ -653,9 +653,26 @@ export interface VercelConfig {
        */
       topics?: string[] | ServiceQueueTopic[];
       /**
-       * Custom prefix to use to inject service URL env vars.
+       * Environment variables to inject into this service at build and dev
+       * time. Each value references another service's URL via
+       * `{ ref: { service } }`. User-supplied env values always take
+       * precedence over injected ones.
        */
-      envPrefix?: string;
+      envVars?: Record<
+        string,
+        {
+          ref: {
+            /** Name of another service whose URL to inject. */
+            service: string;
+          };
+          /**
+           * When `true`, inject the target's route prefix (e.g. `/api`)
+           * instead of the absolute URL. Useful for client bundles where
+           * same-origin requests avoid CORS. Defaults to `false`.
+           */
+          relative?: boolean;
+        }
+      >;
     }
   >;
   /**

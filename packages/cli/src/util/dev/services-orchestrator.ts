@@ -21,7 +21,7 @@ import {
   spawnCommand,
   NowBuildError,
   runNpmInstall,
-  getServiceUrlEnvVars,
+  resolveServiceEnvVars,
   type BuilderV3,
   type BuilderVX,
   type Config,
@@ -332,12 +332,11 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
-    const serviceUrlEnvVars = getServiceUrlEnvVars({
+    const serviceUrlEnvVars = resolveServiceEnvVars({
+      targetService: service,
       services: this.services,
-      frameworkList: framework ? [framework] : [],
       origin: this.proxyOrigin,
       currentEnv: this.env,
-      envPrefix: service.envPrefix,
     });
 
     const env = cloneEnv(

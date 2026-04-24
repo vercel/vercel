@@ -12,7 +12,7 @@ import {
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
-  getServiceUrlEnvVars,
+  resolveServiceEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -72,6 +72,7 @@ import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { scrubArgv } from '../../util/build/scrub-argv';
+import { getDeploymentBaseUrl } from '../../util/build/get-deployment-base-url';
 import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
@@ -731,26 +732,11 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json
+    // Capture detected services for the config.json. Per-service envVars are
+    // injected into process.env around each builder invocation below so
+    // service code gets exactly what the user declared with no implicit
+    // cross-service defaults.
     detectedServices = detectedBuilders.services;
-
-    // Inject service URL environment variables so they're available during builds.
-    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
-    // these env vars are baked into the client bundle so they can be accessed in the client code.
-    // User-defined env vars take precedence and won't be overwritten.
-    if (detectedServices && detectedServices.length > 0) {
-      const serviceUrlEnvVars = getServiceUrlEnvVars({
-        services: detectedServices,
-        frameworkList,
-        currentEnv: process.env,
-        deploymentUrl: process.env.VERCEL_URL,
-      });
-
-      for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
-        process.env[key] = value;
-        output.debug(`Injected service URL env var: ${key}=${value}`);
-      }
-    }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     const detectedHostRewriteRoutes = (
@@ -1035,6 +1021,25 @@ async function doBuild(
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
+      // Inject per-service envVars into process.env for the duration of this
+      // builder invocation. Frontend frameworks like Next.js read these at
+      // build time and bake them into the client bundle. Any value already
+      // set in process.env (from the user) wins, and we restore the prior
+      // state once the builder returns so later iterations are unaffected.
+      const restoreEnv = new Map<string, string | undefined>();
+      if (service?.envVars && detectedServices) {
+        const injected = resolveServiceEnvVars({
+          targetService: service,
+          services: detectedServices,
+          currentEnv: process.env,
+          deploymentUrl: getDeploymentBaseUrl(process.env),
+        });
+        for (const [key, value] of Object.entries(injected)) {
+          restoreEnv.set(key, process.env[key]);
+          process.env[key] = value;
+          output.debug(`Injected service env var: ${key}=${value}`);
+        }
+      }
       let buildResult: BuildResultV2 | BuildResultV3;
       let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
@@ -1069,6 +1074,15 @@ async function doBuild(
           }
         }
       } finally {
+        // Restore any process.env keys we set from service envVars so the
+        // next builder iteration starts from a clean slate.
+        for (const [key, prior] of restoreEnv) {
+          if (prior === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = prior;
+          }
+        }
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan
