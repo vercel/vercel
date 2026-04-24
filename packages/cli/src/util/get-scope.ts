@@ -212,6 +212,7 @@ function detectExplicitScope(client: Client): boolean {
       arg === '--team' ||
       arg.startsWith('--scope=') ||
       arg.startsWith('--team=') ||
+      arg === '-S' ||
       arg === '-T'
     ) {
       return true;
