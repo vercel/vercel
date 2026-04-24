@@ -13,7 +13,6 @@ import {
   tokenSubcommand,
   removeSubcommand,
   openSubcommand,
-  triggersOption,
   connexCommand,
 } from './command';
 import { create } from './create';
@@ -79,24 +78,15 @@ export default async function connex(client: Client): Promise<number> {
   try {
     switch (subcommand) {
       case 'create': {
-        const triggersEnabled = process.env.FF_CONNEX_TRIGGERS === '1';
-        const createOptions = triggersEnabled
-          ? [...createSubcommand.options, triggersOption]
-          : createSubcommand.options;
         if (needHelp) {
           telemetry.trackCliFlagHelp('connex', subcommandOriginal);
-          printHelp(
-            triggersEnabled
-              ? { ...createSubcommand, options: createOptions }
-              : createSubcommand
-          );
+          printHelp(createSubcommand);
           return 0;
         }
         telemetry.trackCliSubcommandCreate(subcommandOriginal);
 
-        const createFlagsSpec = getFlagsSpecification(createOptions);
+        const createFlagsSpec = getFlagsSpecification(createSubcommand.options);
         const createParsedArgs = parseArguments(subArgs, createFlagsSpec);
-        telemetry.trackCliFlagTriggers(createParsedArgs.flags['--triggers']);
         return await create(
           client,
           createParsedArgs.args,
