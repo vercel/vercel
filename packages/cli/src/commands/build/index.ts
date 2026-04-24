@@ -5,7 +5,6 @@ import minimatch from 'minimatch';
 import { dirname, join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
 import { readdirSync, statSync } from 'fs';
-
 import {
   download,
   FileBlob,
@@ -169,6 +168,143 @@ export interface BuildsManifest {
   };
 }
 
+/**
+ * Narrow view of `Client` - only the fields `doBuild` actually reads.
+ */
+type BuildClient = Pick<Client, 'localConfigPath' | 'nonInteractive'>;
+
+interface PrewarmBuildInput {
+  cwd: string;
+  env: Record<string, string>;
+  outputDir: string;
+  // Intentionally matches the `.vercel/project.json` shape used by `vc pull`
+  // and build-container's `linkProject()` helper.
+  project: ProjectLinkAndSettings;
+  standalone: boolean;
+  target: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function assertOptionalString(value: unknown, key: string): void {
+  if (value !== undefined && typeof value !== 'string') {
+    throw new Error(
+      `[prewarm] Invalid field "${key}" (expected string if provided)`
+    );
+  }
+}
+
+function assertString(value: unknown, key: string): asserts value is string {
+  if (typeof value !== 'string') {
+    throw new Error(
+      `[prewarm] Missing or invalid field "${key}" (expected string)`
+    );
+  }
+}
+
+function assertNonEmptyString(
+  value: unknown,
+  key: string
+): asserts value is string {
+  assertString(value, key);
+  if (value.length === 0) {
+    throw new Error(
+      `[prewarm] Missing or invalid field "${key}" (expected non-empty string)`
+    );
+  }
+}
+
+function assertBoolean(value: unknown, key: string): asserts value is boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error(
+      `[prewarm] Missing or invalid field "${key}" (expected boolean)`
+    );
+  }
+}
+
+function parsePrewarmEnv(value: unknown): Record<string, string> {
+  if (!isRecord(value)) {
+    throw new Error(
+      '[prewarm] Missing or invalid field "env" (expected object)'
+    );
+  }
+
+  for (const [key, envValue] of Object.entries(value)) {
+    if (typeof envValue !== 'string') {
+      throw new Error(`[prewarm] Invalid field "env.${key}" (expected string)`);
+    }
+  }
+
+  return value as Record<string, string>;
+}
+
+function parsePrewarmBuildInput(raw: string): PrewarmBuildInput {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`[prewarm] Invalid JSON on stdin: ${err}`);
+  }
+
+  if (!isRecord(json)) {
+    throw new Error(`[prewarm] Expected JSON object, got ${typeof json}`);
+  }
+
+  const { cwd, env, outputDir, project, standalone, target } = json;
+
+  assertNonEmptyString(cwd, 'cwd');
+  if (!isRecord(project)) {
+    throw new Error(
+      '[prewarm] Missing or invalid field "project" (expected object)'
+    );
+  }
+
+  if (!isRecord(project.settings)) {
+    throw new Error(
+      '[prewarm] Missing or invalid field "project.settings" (expected object)'
+    );
+  }
+
+  assertNonEmptyString(outputDir, 'outputDir');
+  assertNonEmptyString(target, 'target');
+  assertBoolean(standalone, 'standalone');
+  assertOptionalString(project.projectId, 'project.projectId');
+  assertOptionalString(project.orgId, 'project.orgId');
+  assertOptionalString(project.projectName, 'project.projectName');
+
+  return {
+    cwd,
+    env: parsePrewarmEnv(env),
+    outputDir,
+    project: project as PrewarmBuildInput['project'],
+    standalone,
+    target,
+  };
+}
+
+async function readStdin(stdin: Client['stdin']): Promise<string> {
+  if (stdin.isTTY) {
+    throw new Error(
+      '[prewarm] `vercel build --unstable-prewarm` requires build input on stdin'
+    );
+  }
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of stdin) {
+    chunks.push(chunk);
+  }
+
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+function getBuildArgv(argv: string[]): string[] {
+  return argv.filter(
+    arg => arg !== '--unstable-prewarm' && arg !== '--unstable-prewarm=true'
+  );
+}
+
 export default async function main(client: Client): Promise<number> {
   const telemetryClient = new BuildTelemetryClient({
     opts: {
@@ -178,9 +314,6 @@ export default async function main(client: Client): Promise<number> {
 
   // Create build trace span as a child of the CLI-wide root span
   const rootSpan = client.rootSpan?.child('vc') ?? new Span({ name: 'vc' });
-
-  let { cwd } = client;
-  cwd = await resolveProjectCwd(cwd);
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -200,6 +333,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   let parsedArgs = null;
+  let prewarmBuildInput: PrewarmBuildInput | undefined;
 
   const flagsSpecification = getFlagsSpecification(buildCommand.options);
 
@@ -223,17 +357,57 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
+  if (parsedArgs.flags['--unstable-prewarm']) {
+    const conflictingFlags = [
+      ['--output', parsedArgs.flags['--output']],
+      ['--target', parsedArgs.flags['--target']],
+      ['--prod', parsedArgs.flags['--prod']],
+      ['--id', parsedArgs.flags['--id']],
+      ['--standalone', parsedArgs.flags['--standalone']],
+    ]
+      .filter(([, value]) => Boolean(value))
+      .map(([flag]) => cmd(flag));
+
+    if (conflictingFlags.length > 0) {
+      output.error(
+        `[prewarm] ${cmd(
+          `${cli.packageName} build --unstable-prewarm`
+        )} does not accept ${conflictingFlags.join(
+          ', '
+        )}. Pass build input on stdin instead.`
+      );
+      return 1;
+    }
+
+    try {
+      prewarmBuildInput = parsePrewarmBuildInput(await readStdin(client.stdin));
+    } catch (error) {
+      output.prettyError(error);
+      return 1;
+    }
+  }
+
+  let { cwd } = client;
+  if (prewarmBuildInput) {
+    cwd = client.cwd = resolve(prewarmBuildInput.cwd);
+  } else {
+    cwd = await resolveProjectCwd(cwd);
+  }
+
   // Build `target` influences which environment variables will be used
   const target =
+    prewarmBuildInput?.target ||
     parseTarget({
       flagName: 'target',
       flags: parsedArgs.flags,
-    }) || 'preview';
+    }) ||
+    'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);
 
   // Check for deprecated env var
   const hasDeprecatedEnvVar =
+    !prewarmBuildInput &&
     process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
   if (hasDeprecatedEnvVar) {
     output.warn(
@@ -242,9 +416,9 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Use flag first, fall back to deprecated env var
-  const standalone = Boolean(
-    parsedArgs.flags['--standalone'] || hasDeprecatedEnvVar
-  );
+  const standalone = prewarmBuildInput
+    ? prewarmBuildInput.standalone
+    : Boolean(parsedArgs.flags['--standalone'] || hasDeprecatedEnvVar);
 
   try {
     await validateNpmrc(cwd);
@@ -253,104 +427,114 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
-  // If repo linked, update `cwd` to the repo root
-  const link = await rootSpan
-    .child('vc.getProjectLink')
-    .trace(() => getProjectLink(client, cwd));
-  const projectRootDirectory = link?.projectRootDirectory ?? '';
-  if (link?.repoRoot) {
-    cwd = client.cwd = link.repoRoot;
-  }
+  let link = null;
+  let projectRootDirectory = '';
+  let project = prewarmBuildInput?.project;
 
-  // TODO: read project settings from the API, fall back to local `project.json` if that fails
+  if (!prewarmBuildInput) {
+    // If repo linked, update `cwd` to the repo root
+    link = await rootSpan
+      .child('vc.getProjectLink')
+      .trace(() => getProjectLink(client, cwd));
+    projectRootDirectory = link?.projectRootDirectory ?? '';
+    if (link?.repoRoot) {
+      cwd = client.cwd = link.repoRoot;
+    }
 
-  // Read project settings, and pull them from Vercel if necessary
-  const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
-  let project = await rootSpan
-    .child('vc.readProjectSettings')
-    .trace(() => readProjectSettings(vercelDir));
-  const isTTY = process.stdin.isTTY;
-  while (!project?.settings) {
-    let confirmed = yes;
-    if (!confirmed) {
-      if (client.nonInteractive) {
-        outputAgentError(
-          client,
-          {
-            status: AGENT_STATUS.ERROR,
-            reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
-            message:
-              'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  `pull --yes --environment ${target}`,
-                  client.argv
-                ),
-                when: 'retrieve project settings',
-              },
-              {
-                command: buildCommandWithGlobalFlags(
-                  'build --yes',
-                  client.argv
-                ),
-                when: 're-run build after pull',
-              },
-            ],
-          },
-          1
-        );
-        return 1;
-      }
-      if (!isTTY) {
-        output.print(
+    // TODO: read project settings from the API, fall back to local `project.json` if that fails
+
+    // Read project settings, and pull them from Vercel if necessary
+    const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
+    project = await rootSpan
+      .child('vc.readProjectSettings')
+      .trace(() => readProjectSettings(vercelDir));
+    const isTTY = process.stdin.isTTY;
+    while (!project?.settings) {
+      let confirmed = yes;
+      if (!confirmed) {
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: AGENT_STATUS.ERROR,
+              reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
+              message:
+                'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
+              next: [
+                {
+                  command: buildCommandWithGlobalFlags(
+                    `pull --yes --environment ${target}`,
+                    client.argv
+                  ),
+                  when: 'retrieve project settings',
+                },
+                {
+                  command: buildCommandWithGlobalFlags(
+                    'build --yes',
+                    client.argv
+                  ),
+                  when: 're-run build after pull',
+                },
+              ],
+            },
+            1
+          );
+          return 1;
+        }
+        if (!isTTY) {
+          output.print(
+            `No Project Settings found locally. Run ${cli.getCommandName(
+              'pull --yes'
+            )} to retrieve them. In non-interactive mode, set VERCEL_TOKEN for authentication.`
+          );
+          return 1;
+        }
+
+        confirmed = await client.input.confirm(
           `No Project Settings found locally. Run ${cli.getCommandName(
-            'pull --yes'
-          )} to retrieve them. In non-interactive mode, set VERCEL_TOKEN for authentication.`
+            'pull'
+          )} for retrieving them?`,
+          true
         );
-        return 1;
       }
-
-      confirmed = await client.input.confirm(
-        `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull'
-        )} for retrieving them?`,
-        true
+      if (!confirmed) {
+        if (!client.nonInteractive)
+          output.print(`Canceled. No Project Settings retrieved.\n`);
+        return 0;
+      }
+      const { argv: originalArgv } = client;
+      client.cwd = join(cwd, projectRootDirectory);
+      client.argv = [
+        ...originalArgv.slice(0, 2),
+        'pull',
+        `--environment`,
+        target,
+      ];
+      const result = await pullCommandLogic(
+        client,
+        client.cwd,
+        Boolean(parsedArgs.flags['--yes']),
+        target,
+        parsedArgs.flags
       );
+      if (result !== 0) {
+        return result;
+      }
+      client.cwd = cwd;
+      client.argv = originalArgv;
+      project = await readProjectSettings(vercelDir);
     }
-    if (!confirmed) {
-      if (!client.nonInteractive)
-        output.print(`Canceled. No Project Settings retrieved.\n`);
-      return 0;
-    }
-    const { argv: originalArgv } = client;
-    client.cwd = join(cwd, projectRootDirectory);
-    client.argv = [
-      ...originalArgv.slice(0, 2),
-      'pull',
-      `--environment`,
-      target,
-    ];
-    const result = await pullCommandLogic(
-      client,
-      client.cwd,
-      Boolean(parsedArgs.flags['--yes']),
-      target,
-      parsedArgs.flags
-    );
-    if (result !== 0) {
-      return result;
-    }
-    client.cwd = cwd;
-    client.argv = originalArgv;
-    project = await readProjectSettings(vercelDir);
   }
+
+  const resolvedProject = project as ProjectLinkAndSettings;
 
   // Delete output directory from potential previous build
   const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
-  const outputDir = parsedArgs.flags['--output']
-    ? resolve(parsedArgs.flags['--output'])
-    : defaultOutputDir;
+  const outputDir = prewarmBuildInput
+    ? resolve(prewarmBuildInput.outputDir)
+    : parsedArgs.flags['--output']
+      ? resolve(parsedArgs.flags['--output'])
+      : defaultOutputDir;
 
   client.traceDiagnosticsPath = join(
     outputDir,
@@ -367,15 +551,17 @@ export default async function main(client: Client): Promise<number> {
   const buildsJson: BuildsManifest = {
     '//': 'This file was generated by the `vercel build` command. It is not part of the Build Output API.',
     target,
-    argv: scrubArgv(process.argv),
+    argv: scrubArgv(getBuildArgv(client.argv)),
     cliVersion: cliPkg.version,
   };
 
-  const deploymentId = parsedArgs.flags['--id'];
+  const deploymentId = prewarmBuildInput ? undefined : parsedArgs.flags['--id'];
 
-  // When --id is provided, system env vars are fetched from the deployment,
-  // so the warning about missing system env vars does not apply.
+  // When --id is provided, system env vars are fetched from the deployment.
+  // Prewarm mode also bypasses this warning because the parent process owns
+  // environment handoff via stdin.
   if (
+    !prewarmBuildInput &&
     !process.env.VERCEL_BUILD_IMAGE &&
     !deploymentId &&
     !client.nonInteractive
@@ -389,11 +575,17 @@ export default async function main(client: Client): Promise<number> {
   try {
     const loadEnvSpan = rootSpan.child('vc.loadEnv');
     try {
-      if (deploymentId) {
+      if (prewarmBuildInput) {
+        for (const [key, value] of Object.entries(prewarmBuildInput.env)) {
+          envToUnset.add(key);
+          process.env[key] = value;
+        }
+      } else if (deploymentId) {
         // Set the team context so API calls include the teamId query param.
         // Without this, the API can't find the deployment.
-        if (link?.orgId?.startsWith('team_')) {
-          client.config.currentTeam = link.orgId;
+        const orgId = resolvedProject.orgId || link?.orgId;
+        if (orgId?.startsWith('team_')) {
+          client.config.currentTeam = orgId;
         }
 
         // When --id is provided, fetch env vars from the deployment
@@ -440,12 +632,12 @@ export default async function main(client: Client): Promise<number> {
     }
 
     // For legacy Speed Insights
-    if (project.settings.analyticsId) {
+    if (resolvedProject.settings.analyticsId) {
       // we pass the env down to the builder
       // inside the builder we decide if we want to keep it or not
 
       envToUnset.add('VERCEL_ANALYTICS_ID');
-      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+      process.env.VERCEL_ANALYTICS_ID = resolvedProject.settings.analyticsId;
     }
 
     // Some build processes use these env vars to platform detect Vercel
@@ -456,7 +648,15 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
+          doBuild(
+            client,
+            resolvedProject,
+            buildsJson,
+            cwd,
+            outputDir,
+            span,
+            standalone
+          )
         );
     } finally {
       await rootSpan.stop();
@@ -546,7 +746,7 @@ export default async function main(client: Client): Promise<number> {
  * then it will be serialized into the `builds.json` manifest file.
  */
 async function doBuild(
-  client: Client,
+  client: BuildClient,
   project: ProjectLinkAndSettings,
   buildsJson: BuildsManifest,
   cwd: string,

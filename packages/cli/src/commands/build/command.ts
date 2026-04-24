@@ -52,6 +52,12 @@ export const buildCommand = {
       argument: 'ID',
       deprecated: false,
     },
+    {
+      name: 'unstable-prewarm',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {

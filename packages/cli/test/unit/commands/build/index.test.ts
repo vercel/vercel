@@ -14,6 +14,9 @@ import {
   detectBuilders,
   REGEX_NON_VERCEL_PLATFORM_FILES,
 } from '@vercel/fs-detectors';
+import execa from 'execa';
+import formatOutput from '../../../helpers/format-output';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -69,6 +72,125 @@ describe.skipIf(flakey)('build', () => {
         },
       ]);
     });
+
+    it('does not show unstable prewarm in help output', async () => {
+      client.setArgv('build', '--help');
+      const exitCode = await build(client);
+
+      expect(exitCode).toEqual(2);
+      expect(client.getFullOutput()).not.toContain('--unstable-prewarm');
+    });
+  });
+
+  it('should build from stdin when prewarmed', async () => {
+    const cwd = fixture('env-from-vc-pull');
+    const output = join(cwd, '.vercel/output');
+    const project = await fs.readJSON(join(cwd, '.vercel/project.json'));
+    delete project.projectId;
+    delete project.orgId;
+
+    client.cwd = cwd;
+    client.setArgv('build', '--unstable-prewarm');
+    client.stdin.isTTY = false;
+    client.stdin.end(
+      JSON.stringify({
+        cwd,
+        env: {
+          ENV_FILE: 'stdin',
+          PREWARM_ONLY: '1',
+        },
+        outputDir: output,
+        project,
+        standalone: false,
+        target: 'preview',
+      })
+    );
+
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const env = await fs.readJSON(join(output, 'static', 'env.json'));
+    expect(env['ENV_FILE']).toEqual('stdin');
+    expect(process.env.PREWARM_ONLY).toBeUndefined();
+  });
+
+  it('should build from stdin when prewarmed in a real CLI process', async () => {
+    const cwd = setupUnitFixture('commands/build/env-from-vc-pull');
+    const output = join(cwd, '.vercel/output');
+    const project = await fs.readJSON(join(cwd, '.vercel/project.json'));
+    const cliCwd = join(__dirname, '../../../..');
+    const binaryPath = join(cliCwd, 'scripts/start.js');
+
+    const vc = execa(
+      process.execPath,
+      [binaryPath, 'build', '--unstable-prewarm'],
+      {
+        cwd: cliCwd,
+        reject: false,
+        env: {
+          FORCE_COLOR: '0',
+          NO_UPDATE_NOTIFIER: '1',
+          VERCEL_BUILD_IMAGE: '1',
+          VERCEL_TELEMETRY_DISABLED: '1',
+        },
+      }
+    );
+
+    vc.stdin?.end(
+      JSON.stringify({
+        cwd,
+        env: {
+          ENV_FILE: 'stdin',
+        },
+        outputDir: output,
+        project,
+        standalone: false,
+        target: 'preview',
+      })
+    );
+
+    const { exitCode, stdout, stderr } = await vc;
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+    const env = await fs.readJSON(join(output, 'static', 'env.json'));
+    expect(env['ENV_FILE']).toEqual('stdin');
+  });
+
+  it('should reject build-shaping flags when prewarmed', async () => {
+    const cwd = fixture('env-from-vc-pull');
+
+    client.cwd = cwd;
+    client.setArgv('build', '--unstable-prewarm', '--output', '/tmp/output');
+
+    const exitCode = await build(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain('--output');
+  });
+
+  it('should validate stdin payload when prewarmed', async () => {
+    const cwd = fixture('static');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    client.setArgv('build', '--unstable-prewarm');
+    client.stdin.isTTY = false;
+    client.stdin.end(
+      JSON.stringify({
+        cwd,
+        env: {},
+        outputDir: output,
+        project: {},
+        standalone: false,
+        target: 'preview',
+      })
+    );
+
+    const exitCode = await build(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '[prewarm] Missing or invalid field "project.settings"'
+    );
   });
 
   it('should build with `@vercel/static`', async () => {
