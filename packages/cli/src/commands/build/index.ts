@@ -2063,6 +2063,16 @@ function attachQueueServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
+  // Builders may emit queue triggers themselves when they can produce more
+  // precise consumer groups than the service-level `topics` fallback. For
+  // example, Python workers can generate one consumer per detected handler.
+  // In that case the builder output is authoritative; adding the fallback
+  // service consumer here would create an extra consumer group for the same
+  // topic and cause duplicate deliveries.
+  if (hasQueueTriggers(buildOutput)) {
+    return;
+  }
+
   const topics = getServiceQueueTopicConfigs(service);
   const consumer = sanitizeConsumerName(
     getInternalServiceFunctionPath(service.name)
@@ -2097,6 +2107,27 @@ function attachQueueServiceTrigger(
       }
     }
   }
+}
+
+function hasQueueTriggers(
+  buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output']
+): boolean {
+  if (isLambda(buildOutput)) {
+    return (
+      buildOutput.experimentalTriggers?.some(trigger =>
+        trigger.type.startsWith('queue/')
+      ) ?? false
+    );
+  }
+
+  return Object.values(buildOutput).some(
+    output =>
+      isLambda(output) &&
+      (output.experimentalTriggers?.some(trigger =>
+        trigger.type.startsWith('queue/')
+      ) ??
+        false)
+  );
 }
 
 function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {

@@ -5,6 +5,7 @@ import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import { buildCronRouteTable, getServiceCrons } from './crons';
+import { buildQueueConsumerMap, getServiceQueueConsumers } from './queues';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import { detectPythonEntrypoint, type PythonEntrypoint } from './entrypoint';
@@ -946,6 +947,14 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
+    const runtimeDir = join(workPath, '.vercel', 'python');
+    const currentPythonPath = env.PYTHONPATH || '';
+    if (!currentPythonPath.split(delimiter).includes(runtimeDir)) {
+      env.PYTHONPATH = currentPythonPath
+        ? `${runtimeDir}${delimiter}${currentPythonPath}`
+        : runtimeDir;
+    }
+
     // Detect crons before spawning so we can set __VC_CRON_ROUTES.
     // For "<dynamic>" schedules, the entrypoint "module:object" must have
     // a get_crons() method returning (module:function, schedule) pairs.
@@ -961,6 +970,20 @@ export const startDevServer: StartDevServer = async opts => {
 
     if (crons?.length) {
       env.__VC_CRON_ROUTES = JSON.stringify(buildCronRouteTable(crons));
+    }
+
+    const queueConsumers = await getServiceQueueConsumers({
+      service,
+      entrypoint,
+      handlerFunction,
+      pythonBin: spawnCommand,
+      env,
+      workPath,
+    });
+    if (queueConsumers?.length) {
+      env.__VC_QUEUE_SUBSCRIPTIONS = JSON.stringify(
+        buildQueueConsumerMap(queueConsumers)
+      );
     }
 
     const port = typeof meta.port === 'number' ? meta.port : await getPort();
@@ -1059,7 +1082,7 @@ export const startDevServer: StartDevServer = async opts => {
 
     // No-op shutdown so CLI won't kill the server after each request
     const shutdown = async () => {};
-    return { port, pid, shutdown, crons };
+    return { port, pid, shutdown, crons, queueConsumers };
   } catch (err) {
     rejectChildReady(err);
     throw err;

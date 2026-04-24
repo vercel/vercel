@@ -10,6 +10,12 @@ import {
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 
+interface ServiceQueueConsumer {
+  topic: string;
+  handler: string;
+  consumer: string;
+}
+
 interface StoredMessage {
   messageId: string;
   payload: Buffer;
@@ -22,6 +28,7 @@ interface StoredMessage {
 interface ConsumerGroup {
   id: string;
   name: string;
+  serviceName: string;
   topicPattern: string;
   topicRegex: RegExp;
   serviceOriginFn: () => string | null;
@@ -80,18 +87,35 @@ export class QueueBroker {
 
   constructor(
     services: Service[],
-    private getServiceOrigin: (name: string) => string | null
+    private getServiceOrigin: (name: string) => string | null,
+    queueConsumers: Map<string, ServiceQueueConsumer[]> = new Map()
   ) {
     for (const service of services) {
       if (!isQueueTriggeredService(service)) continue;
 
-      const topicConfigs = getServiceQueueTopicConfigs(service);
+      const detectedConsumers = queueConsumers.get(service.name);
+      const topicConfigs =
+        detectedConsumers && detectedConsumers.length > 0
+          ? detectedConsumers.map(consumer => ({
+              topic: consumer.topic,
+              consumer: consumer.consumer,
+              retryAfterSeconds: undefined,
+              initialDelaySeconds: undefined,
+            }))
+          : getServiceQueueTopicConfigs(service).map(topicConfig => ({
+              topic: topicConfig.topic,
+              consumer: service.name,
+              retryAfterSeconds: topicConfig.retryAfterSeconds,
+              initialDelaySeconds: topicConfig.initialDelaySeconds,
+            }));
+
       for (const topicConfig of topicConfigs) {
         const topicPattern = topicConfig.topic;
-        const id = `${service.name}::${topicPattern}`;
+        const id = `${topicConfig.consumer}::${topicPattern}`;
         const group: ConsumerGroup = {
           id,
-          name: service.name,
+          name: topicConfig.consumer,
+          serviceName: service.name,
           topicPattern,
           topicRegex: topicPatternToRegex(topicPattern),
           serviceOriginFn: () => this.getServiceOrigin(service.name),
@@ -378,7 +402,7 @@ export class QueueBroker {
     ).toISOString();
 
     output.debug(
-      `queues: dispatching v2beta callback to worker "${group.name}" at ${upstream}`
+      `queues: dispatching v2beta callback to worker "${group.serviceName}" for consumer "${group.name}" at ${upstream}`
     );
 
     try {

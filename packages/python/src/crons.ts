@@ -6,19 +6,9 @@ import {
   NowBuildError,
   type Cron,
 } from '@vercel/build-utils';
+import { entrypointToModule } from './utils';
 
 const DYNAMIC_SCHEDULE = '<dynamic>';
-
-/**
- * Convert a file-path entrypoint to a dotted Python module name.
- * e.g. "jobs/cleanup.py" -> "jobs.cleanup"
- */
-function entrypointToModule(entrypoint: string): string {
-  return entrypoint
-    .replace(/\\/g, '/')
-    .replace(/\.py$/i, '')
-    .replace(/\//g, '.');
-}
 
 const scriptPath = join(__dirname, '..', 'templates', 'vc_cron_detect.py');
 const script = fs.readFileSync(scriptPath, 'utf-8');

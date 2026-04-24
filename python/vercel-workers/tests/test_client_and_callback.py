@@ -14,6 +14,16 @@ from vercel.workers.client import WorkerJSONEncoder
 from vercel.workers.exceptions import TokenResolutionError
 
 
+def _make_worker(name: str, calls: list[str]):
+    def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+        calls.append(name)
+
+    worker.__name__ = name
+    worker.__qualname__ = name
+    worker.__module__ = "worker"
+    return worker
+
+
 class _FakeResponse:
     status_code = 201
     reason_phrase = "Created"
@@ -117,6 +127,61 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
 
         self.assertIsInstance(err.exception.args[0], str)
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
+
+
+class TestSubscriptions(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_get_vercel_queue_subscriptions_returns_serializable_metadata(self) -> None:
+        calls: list[str] = []
+        handler = _make_worker("handle_a", calls)
+
+        queue_client.subscribe(topic="a")(handler)
+
+        self.assertEqual(
+            queue_client.get_vercel_queue_subscriptions(),
+            [{"topic": "a", "handler": "worker:handle_a"}],
+        )
+
+    def test_get_vercel_queue_subscriptions_skips_dynamic_topic_filters(self) -> None:
+        calls: list[str] = []
+        handler = _make_worker("handle_dynamic", calls)
+
+        queue_client.subscribe(topic=("a-*", lambda topic: topic == "a-1"))(handler)
+
+        self.assertEqual(queue_client.get_vercel_queue_subscriptions(), [])
+
+    def test_invoke_routes_by_bound_consumer(self) -> None:
+        calls: list[str] = []
+        mapping = {
+            "worker:handle_a": "consumer-a",
+            "worker:handle_b": "consumer-b",
+        }
+
+        with patch.dict(
+            queue_client.os.environ,
+            {"__VC_QUEUE_SUBSCRIPTIONS": json.dumps(mapping)},
+            clear=False,
+        ):
+            queue_client.subscribe(topic="a")(_make_worker("handle_a", calls))
+            queue_client.subscribe(topic="a")(_make_worker("handle_b", calls))
+
+        queue_client._invoke_subscriptions(
+            {"hello": "world"},
+            {
+                "messageId": "m",
+                "deliveryCount": 1,
+                "createdAt": "now",
+                "topic": "a",
+                "consumer": "consumer-a",
+            },
+        )
+
+        self.assertEqual(calls, ["handle_a"])
 
 
 class TestWorkerJSONEncoder(unittest.TestCase):
