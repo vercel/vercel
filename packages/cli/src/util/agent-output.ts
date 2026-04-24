@@ -1,6 +1,7 @@
 import { isError } from '@vercel/error-utils';
 import type Client from './client';
 import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
+// v2 workflow validation — safe to remove
 import { packageName } from './pkg-name';
 
 /**
