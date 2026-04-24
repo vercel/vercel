@@ -53,4 +53,10 @@ export class ConnexTelemetryClient
       });
     }
   }
+
+  trackCliFlagTriggers(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('triggers');
+    }
+  }
 }

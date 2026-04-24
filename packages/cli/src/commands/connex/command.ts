@@ -1,6 +1,14 @@
 import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
+export const triggersOption = {
+  name: 'triggers',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Enable incoming webhook triggers for this client',
+} as const;
+
 export const createSubcommand = {
   name: 'create',
   aliases: [],
