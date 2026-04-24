@@ -225,6 +225,10 @@ export default async function update(client: Client, argv: string[]) {
     getEnvRecords(client, project.id, 'vercel-cli:env:update'),
     getCustomEnvironments(client, project.id),
   ]);
+  const customEnvironment = customEnvironments.find(
+    ({ slug, id }) => slug === envTargetArg || id === envTargetArg
+  );
+  const normalizedEnvTargetArg = customEnvironment?.id || envTargetArg;
 
   const matchingEnvs = envs.filter(r => r.key === envName);
 
@@ -256,12 +260,12 @@ export default async function update(client: Client, argv: string[]) {
   if (envTargetArg || envGitBranch) {
     const filteredEnvs = matchingEnvs.filter(env => {
       const matchesTarget =
-        !envTargetArg ||
+        !normalizedEnvTargetArg ||
         (Array.isArray(env.target)
-          ? env.target.includes(envTargetArg as any)
-          : env.target === envTargetArg) ||
+          ? env.target.includes(normalizedEnvTargetArg as any)
+          : env.target === normalizedEnvTargetArg) ||
         (env.customEnvironmentIds &&
-          env.customEnvironmentIds.includes(envTargetArg));
+          env.customEnvironmentIds.includes(normalizedEnvTargetArg));
       const matchesGitBranch = !envGitBranch || env.gitBranch === envGitBranch;
       return matchesTarget && matchesGitBranch;
     });
@@ -504,12 +508,13 @@ export default async function update(client: Client, argv: string[]) {
   const updateStamp = stamp();
   try {
     output.spinner('Updating');
+    const keyToUpdate = selectedEnv.type === 'sensitive' ? undefined : envName;
     await updateEnvRecord(
       client,
       project.id,
       selectedEnv.id,
       type,
-      envName,
+      keyToUpdate,
       finalValue,
       allTargets,
       selectedEnv.gitBranch || ''
