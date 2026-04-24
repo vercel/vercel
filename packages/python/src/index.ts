@@ -47,9 +47,9 @@ import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
 import { buildCronRouteTable, getServiceCrons } from './crons';
 import {
-  buildQueueSubscriptionConsumerMap,
-  buildQueueSubscriptionTriggers,
-  getServiceQueueSubscriptions,
+  buildQueueConsumerMap,
+  buildQueueConsumerTriggers,
+  getServiceQueueConsumers,
 } from './queues';
 import { startDevServer } from './start-dev-server';
 import {
@@ -632,7 +632,7 @@ export const build: BuildVX = async ({
     workPath,
   });
 
-  const queueSubscriptions = await getServiceQueueSubscriptions({
+  const queueConsumers = await getServiceQueueConsumers({
     service,
     entrypoint,
     handlerFunction,
@@ -657,10 +657,8 @@ export const build: BuildVX = async ({
   }
 
   let queueEnvLine = '';
-  if (queueSubscriptions?.length) {
-    const json = JSON.stringify(
-      buildQueueSubscriptionConsumerMap(queueSubscriptions)
-    );
+  if (queueConsumers?.length) {
+    const json = JSON.stringify(buildQueueConsumerMap(queueConsumers));
     assert(
       !json.includes('\\'),
       `backslash in queue subscription map: ${json}`
@@ -816,8 +814,8 @@ from vercel_runtime.vc_init import vc_handler
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
     environment: lambdaEnv,
-    experimentalTriggers: queueSubscriptions?.length
-      ? buildQueueSubscriptionTriggers(queueSubscriptions)
+    experimentalTriggers: queueConsumers?.length
+      ? buildQueueConsumerTriggers(queueConsumers)
       : undefined,
     supportsResponseStreaming: true,
   });

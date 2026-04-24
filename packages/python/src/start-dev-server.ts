@@ -5,10 +5,7 @@ import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import { buildCronRouteTable, getServiceCrons } from './crons';
-import {
-  buildQueueSubscriptionConsumerMap,
-  getServiceQueueSubscriptions,
-} from './queues';
+import { buildQueueConsumerMap, getServiceQueueConsumers } from './queues';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import { detectPythonEntrypoint, type PythonEntrypoint } from './entrypoint';
@@ -975,7 +972,7 @@ export const startDevServer: StartDevServer = async opts => {
       env.__VC_CRON_ROUTES = JSON.stringify(buildCronRouteTable(crons));
     }
 
-    const queueSubscriptions = await getServiceQueueSubscriptions({
+    const queueConsumers = await getServiceQueueConsumers({
       service,
       entrypoint,
       handlerFunction,
@@ -983,9 +980,9 @@ export const startDevServer: StartDevServer = async opts => {
       env,
       workPath,
     });
-    if (queueSubscriptions?.length) {
+    if (queueConsumers?.length) {
       env.__VC_QUEUE_SUBSCRIPTIONS = JSON.stringify(
-        buildQueueSubscriptionConsumerMap(queueSubscriptions)
+        buildQueueConsumerMap(queueConsumers)
       );
     }
 
@@ -1085,7 +1082,7 @@ export const startDevServer: StartDevServer = async opts => {
 
     // No-op shutdown so CLI won't kill the server after each request
     const shutdown = async () => {};
-    return { port, pid, shutdown, crons, queueSubscriptions };
+    return { port, pid, shutdown, crons, queueConsumers };
   } catch (err) {
     rejectChildReady(err);
     throw err;

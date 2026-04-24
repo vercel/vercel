@@ -141,10 +141,10 @@ interface ServiceDevProcess {
   workspace: string;
   logger: ServiceLogger;
   crons?: Cron[];
-  queueSubscriptions?: ServiceQueueSubscription[];
+  queueConsumers?: ServiceQueueConsumer[];
 }
 
-interface ServiceQueueSubscription {
+interface ServiceQueueConsumer {
   topic: string;
   handler: string;
   consumer: string;
@@ -327,14 +327,14 @@ export class ServicesOrchestrator {
     return this.managedServices;
   }
 
-  getQueueSubscriptions(): Map<string, ServiceQueueSubscription[]> {
-    const subscriptions = new Map<string, ServiceQueueSubscription[]>();
+  getQueueConsumers(): Map<string, ServiceQueueConsumer[]> {
+    const consumers = new Map<string, ServiceQueueConsumer[]>();
     for (const [name, service] of this.managedServices) {
-      if (service.queueSubscriptions?.length) {
-        subscriptions.set(name, service.queueSubscriptions);
+      if (service.queueConsumers?.length) {
+        consumers.set(name, service.queueConsumers);
       }
     }
-    return subscriptions;
+    return consumers;
   }
 
   private async startService(
@@ -497,11 +497,11 @@ export class ServicesOrchestrator {
       const host = await checkForPort(result.port, STARTUP_TIMEOUT);
       output.debug(`Service ${service.name} started on ${host}:${result.port}`);
 
-      const queueSubscriptions = (
+      const queueConsumers = (
         result as typeof result & {
-          queueSubscriptions?: ServiceQueueSubscription[];
+          queueConsumers?: ServiceQueueConsumer[];
         }
-      ).queueSubscriptions;
+      ).queueConsumers;
 
       return {
         name: service.name,
@@ -513,7 +513,7 @@ export class ServicesOrchestrator {
         workspace: service.workspace || '.',
         logger,
         crons: result.crons,
-        queueSubscriptions,
+        queueConsumers,
       };
     } catch (err) {
       output.debug(`Failed to use startDevServer for ${service.name}: ${err}`);

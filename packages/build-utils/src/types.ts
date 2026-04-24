@@ -257,10 +257,10 @@ export interface StartDevServerSuccess {
   crons?: Cron[];
 
   /**
-   * Queue subscriptions produced by the builder for this service.
+   * Queue consumers produced by the builder for this service.
    * Used by the dev queue broker to fan out topic deliveries by consumer group.
    */
-  queueSubscriptions?: ServiceQueueSubscription[];
+  queueConsumers?: ServiceQueueConsumer[];
 }
 
 /**
@@ -588,7 +588,7 @@ export interface ServiceQueueTopic {
   initialDelaySeconds?: number;
 }
 
-export interface ServiceQueueSubscription {
+export interface ServiceQueueConsumer {
   topic: string;
   handler: string;
   consumer: string;

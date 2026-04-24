@@ -10,7 +10,7 @@ import {
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 
-interface ServiceQueueSubscription {
+interface ServiceQueueConsumer {
   topic: string;
   handler: string;
   consumer: string;
@@ -88,17 +88,17 @@ export class QueueBroker {
   constructor(
     services: Service[],
     private getServiceOrigin: (name: string) => string | null,
-    queueSubscriptions: Map<string, ServiceQueueSubscription[]> = new Map()
+    queueConsumers: Map<string, ServiceQueueConsumer[]> = new Map()
   ) {
     for (const service of services) {
       if (!isQueueTriggeredService(service)) continue;
 
-      const detectedSubscriptions = queueSubscriptions.get(service.name);
+      const detectedConsumers = queueConsumers.get(service.name);
       const topicConfigs =
-        detectedSubscriptions && detectedSubscriptions.length > 0
-          ? detectedSubscriptions.map(subscription => ({
-              topic: subscription.topic,
-              consumer: subscription.consumer,
+        detectedConsumers && detectedConsumers.length > 0
+          ? detectedConsumers.map(consumer => ({
+              topic: consumer.topic,
+              consumer: consumer.consumer,
               retryAfterSeconds: undefined,
               initialDelaySeconds: undefined,
             }))

@@ -68,7 +68,7 @@ import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob, download } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
-import { getServiceQueueSubscriptions } from '../src/queues';
+import { getServiceQueueConsumers } from '../src/queues';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -2360,7 +2360,7 @@ describe('queue subscription detection', () => {
   });
 
   it('returns undefined for non-worker services', async () => {
-    const result = await getServiceQueueSubscriptions({
+    const result = await getServiceQueueConsumers({
       service: { type: 'web', name: 'api' },
       entrypoint: 'worker.py',
       pythonBin: '/usr/bin/python3',
@@ -2381,7 +2381,7 @@ describe('queue subscription detection', () => {
       }),
     } as any);
 
-    const result = await getServiceQueueSubscriptions({
+    const result = await getServiceQueueConsumers({
       service: { type: 'worker', name: 'emails' },
       entrypoint: 'worker.py',
       pythonBin: '/usr/bin/python3',
@@ -2416,7 +2416,7 @@ describe('queue subscription detection', () => {
       }),
     } as any);
 
-    await getServiceQueueSubscriptions({
+    await getServiceQueueConsumers({
       service: { type: 'worker', name: 'emails' },
       entrypoint: 'worker.py',
       handlerFunction: 'queue',
@@ -2440,7 +2440,7 @@ describe('queue subscription detection', () => {
     });
 
     await expect(
-      getServiceQueueSubscriptions({
+      getServiceQueueConsumers({
         service: { type: 'worker', name: 'emails' },
         entrypoint: 'worker.py',
         pythonBin: '/usr/bin/python3',

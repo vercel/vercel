@@ -1071,7 +1071,7 @@ export default class DevServer {
         this.queueBroker = new QueueBroker(
           this.services || [],
           name => this.orchestrator!.getServiceOrigin(name),
-          this.orchestrator.getQueueSubscriptions()
+          this.orchestrator.getQueueConsumers()
         );
       }
     }

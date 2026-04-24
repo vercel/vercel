@@ -22,11 +22,11 @@ interface QueueDetectionResult {
   error?: string;
 }
 
-export interface ServiceQueueSubscription extends DetectedQueueSubscription {
+export interface ServiceQueueConsumer extends DetectedQueueSubscription {
   consumer: string;
 }
 
-export function buildQueueSubscriptionConsumer(
+export function buildQueueConsumerName(
   serviceName: string,
   handler: string
 ): string {
@@ -35,27 +35,27 @@ export function buildQueueSubscriptionConsumer(
   );
 }
 
-export function buildQueueSubscriptionConsumerMap(
-  subscriptions: ServiceQueueSubscription[]
+export function buildQueueConsumerMap(
+  consumers: ServiceQueueConsumer[]
 ): Record<string, string> {
   const map: Record<string, string> = {};
-  for (const subscription of subscriptions) {
-    map[subscription.handler] = subscription.consumer;
+  for (const consumer of consumers) {
+    map[consumer.handler] = consumer.consumer;
   }
   return map;
 }
 
-export function buildQueueSubscriptionTriggers(
-  subscriptions: ServiceQueueSubscription[]
+export function buildQueueConsumerTriggers(
+  consumers: ServiceQueueConsumer[]
 ): TriggerEvent[] {
-  return subscriptions.map(subscription => ({
+  return consumers.map(consumer => ({
     type: 'queue/v2beta',
-    topic: subscription.topic,
-    consumer: subscription.consumer,
+    topic: consumer.topic,
+    consumer: consumer.consumer,
   }));
 }
 
-export async function getServiceQueueSubscriptions(opts: {
+export async function getServiceQueueConsumers(opts: {
   service?: {
     name?: string;
     type?: string;
@@ -65,7 +65,7 @@ export async function getServiceQueueSubscriptions(opts: {
   pythonBin: string;
   env: NodeJS.ProcessEnv;
   workPath: string;
-}): Promise<ServiceQueueSubscription[] | undefined> {
+}): Promise<ServiceQueueConsumer[] | undefined> {
   const { service, entrypoint } = opts;
   if (!service || service.type !== 'worker' || !service.name || !entrypoint) {
     return undefined;
@@ -86,7 +86,7 @@ export async function getServiceQueueSubscriptions(opts: {
 
   return detected.map(subscription => ({
     ...subscription,
-    consumer: buildQueueSubscriptionConsumer(serviceName, subscription.handler),
+    consumer: buildQueueConsumerName(serviceName, subscription.handler),
   }));
 }
 
