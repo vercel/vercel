@@ -20,7 +20,7 @@ from typing import NoReturn
 
 # The public-facing SDK will move to vercel.queue
 # For now it exists in vercel.workers
-SDK_MODULES = ("vercel.workers")
+SDK_MODULES = ("vercel.workers",)
 HOOK_NAME = "get_vercel_queue_subscriptions"
 
 
