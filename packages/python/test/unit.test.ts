@@ -2371,6 +2371,30 @@ describe('queue subscription detection', () => {
     expect(result).toBeUndefined();
   });
 
+  it('detects subscriptions for queue-triggered job services', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        subscriptions: [{ topic: 'a', handler: 'worker:handle_a' }],
+      }),
+    } as any);
+
+    const result = await getServiceQueueConsumers({
+      service: { type: 'job', trigger: 'queue', name: 'emails' },
+      entrypoint: 'worker.py',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        topic: 'a',
+        handler: 'worker:handle_a',
+        consumer: '_S__svc_Semails_Sindex_23worker_3Ahandle__a',
+      },
+    ]);
+  });
+
   it('calls python and returns subscriptions with generated consumers', async () => {
     mockedExeca.mockResolvedValueOnce({
       stdout: JSON.stringify({

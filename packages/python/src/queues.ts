@@ -59,6 +59,7 @@ export async function getServiceQueueConsumers(opts: {
   service?: {
     name?: string;
     type?: string;
+    trigger?: string;
   };
   entrypoint?: string;
   handlerFunction?: string;
@@ -67,7 +68,10 @@ export async function getServiceQueueConsumers(opts: {
   workPath: string;
 }): Promise<ServiceQueueConsumer[] | undefined> {
   const { service, entrypoint } = opts;
-  if (!service || service.type !== 'worker' || !service.name || !entrypoint) {
+  const isQueueTriggeredService =
+    service?.type === 'worker' ||
+    (service?.type === 'job' && service.trigger === 'queue');
+  if (!isQueueTriggeredService || !service?.name || !entrypoint) {
     return undefined;
   }
   const serviceName = service.name;
