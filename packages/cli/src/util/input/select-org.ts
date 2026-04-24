@@ -41,6 +41,41 @@ export default async function selectOrg(
     config: { currentTeam },
   } = client;
 
+  // Non-interactive fast path: when the scope is already known, try to
+  // resolve from teams alone (skip getUser).  This avoids a redundant
+  // /v2/user round-trip that the global scope resolution in index.ts
+  // already performed.
+  if (client.nonInteractive) {
+    const targetScope = currentTeam || getScopeOrTeamFromArgv(client.argv);
+    if (targetScope) {
+      const teams = await getTeams(client);
+      const teamMatch = teams.find(
+        t => t.id === targetScope || t.slug === targetScope
+      );
+      if (teamMatch) {
+        return { type: 'team', id: teamMatch.id, slug: teamMatch.slug };
+      }
+
+      // Scope didn't match a team — it may be a personal account
+      // (non-northstar).  Fetch user to check before falling through to
+      // the action_required error.
+      const user = await getUser(client);
+      if (
+        user.version !== 'northstar' &&
+        (user.id === targetScope ||
+          user.email === targetScope ||
+          user.username === targetScope)
+      ) {
+        return { type: 'user', id: user.id, slug: user.username };
+      }
+
+      // Scope is invalid — build the full choices list for the error payload
+      const choices = buildChoices(user, teams);
+      outputMissingScopeError(client, choices);
+      process.exit(1);
+    }
+  }
+
   output.spinner('Loading scopes…', 1000);
   let user: User;
   let teams: Team[];
@@ -50,62 +85,16 @@ export default async function selectOrg(
     output.stopSpinner();
   }
 
-  const personalAccountChoice =
-    user.version === 'northstar'
-      ? []
-      : [
-          {
-            name: user.name || user.username,
-            value: { type: 'user', id: user.id, slug: user.username },
-          } as const,
-        ];
-
-  const choices: Choice[] = [
-    ...personalAccountChoice,
-    ...teams
-      .sort(a => (a.id === user.defaultTeamId ? -1 : 1))
-      .map<Choice>(team => ({
-        name: team.name || team.slug,
-        value: { type: 'team', id: team.id, slug: team.slug },
-      })),
-  ];
+  const choices = buildChoices(user, teams);
 
   const defaultChoiceIndex = Math.max(
     choices.findIndex(choice => choice.value.id === currentTeam),
     0
   );
 
-  // Non-interactive: if user already passed --scope/--team (currentTeam set or via argv), use it; otherwise output choices and exit
+  // Non-interactive without a target scope: output choices and exit
   if (client.nonInteractive) {
-    if (currentTeam) {
-      const match = choices.find(c => c.value.id === currentTeam);
-      if (match) return match.value;
-    }
-
-    const explicitScope = getScopeOrTeamFromArgv(client.argv);
-    if (explicitScope) {
-      const match = choices.find(
-        c => c.value.id === explicitScope || c.value.slug === explicitScope
-      );
-      if (match) return match.value;
-    }
-
-    const actionRequired: ActionRequiredPayload = {
-      status: 'action_required',
-      reason: 'missing_scope',
-      message:
-        choices.length > 0
-          ? 'Provide --scope or --team explicitly. No default is applied in non-interactive mode.'
-          : 'No scopes available.',
-      choices: choices.map(c => ({
-        id: c.value.id,
-        name: c.value.slug,
-      })),
-      next: choices.map(c => ({
-        command: `${packageName} link --scope ${c.value.slug}`,
-      })),
-    };
-    outputActionRequired(client, actionRequired);
+    outputMissingScopeError(client, choices);
     process.exit(1);
   }
 
@@ -118,4 +107,45 @@ export default async function selectOrg(
     choices,
     default: choices[defaultChoiceIndex].value,
   });
+}
+
+function buildChoices(user: User, teams: Team[]): Choice[] {
+  const personalAccountChoice =
+    user.version === 'northstar'
+      ? []
+      : [
+          {
+            name: user.name || user.username,
+            value: { type: 'user', id: user.id, slug: user.username },
+          } as const,
+        ];
+
+  return [
+    ...personalAccountChoice,
+    ...teams
+      .sort(a => (a.id === user.defaultTeamId ? -1 : 1))
+      .map<Choice>(team => ({
+        name: team.name || team.slug,
+        value: { type: 'team', id: team.id, slug: team.slug },
+      })),
+  ];
+}
+
+function outputMissingScopeError(client: Client, choices: Choice[]): void {
+  const actionRequired: ActionRequiredPayload = {
+    status: 'action_required',
+    reason: 'missing_scope',
+    message:
+      choices.length > 0
+        ? 'Provide --scope or --team explicitly. No default is applied in non-interactive mode.'
+        : 'No scopes available.',
+    choices: choices.map(c => ({
+      id: c.value.id,
+      name: c.value.slug,
+    })),
+    next: choices.map(c => ({
+      command: `${packageName} link --scope ${c.value.slug}`,
+    })),
+  };
+  outputActionRequired(client, actionRequired);
 }
