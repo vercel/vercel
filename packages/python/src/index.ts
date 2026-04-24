@@ -549,6 +549,8 @@ export const build: BuildVX = async ({
     });
   }
 
+  // force e-2 tests
+
   const djangoStatic: DjangoCollectStaticResult | null =
     (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
 
