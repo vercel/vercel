@@ -5,6 +5,7 @@ import {
   NowBuildError,
   isScheduleTriggeredService,
   isQueueTriggeredService,
+  isWorkflowTriggeredService,
   type ServiceType,
   type JobTrigger,
 } from '@vercel/build-utils';
@@ -241,7 +242,8 @@ export async function detectPythonEntrypoint(
       const needsDynamicApp =
         !!service &&
         (isScheduleTriggeredService(service) ||
-          isQueueTriggeredService(service));
+          isQueueTriggeredService(service) ||
+          isWorkflowTriggeredService(service));
       if (needsDynamicApp) {
         varName = 'app';
       }

@@ -699,7 +699,9 @@ export async function resolveConfiguredService(
       ? getServiceQueueTopics({ type, topics: config.topics })
       : trigger === 'queue'
         ? config.topics
-        : undefined;
+        : trigger === 'workflow'
+          ? ['__wkf_*']
+          : undefined;
 
   let builderUse: string;
   let builderSrc: string;
