@@ -653,9 +653,16 @@ export interface VercelConfig {
        */
       topics?: string[] | ServiceQueueTopic[];
       /**
-       * Custom prefix to use to inject service URL env vars.
+       * Environment variables to inject into this service at build and runtime.
        */
-      envPrefix?: string;
+      envVars?: Record<
+        string,
+        {
+          ref: {
+            service: string;
+          };
+        }
+      >;
     }
   >;
   /**

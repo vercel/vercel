@@ -734,24 +734,6 @@ async function doBuild(
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
 
-    // Inject service URL environment variables so they're available during builds.
-    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
-    // these env vars are baked into the client bundle so they can be accessed in the client code.
-    // User-defined env vars take precedence and won't be overwritten.
-    if (detectedServices && detectedServices.length > 0) {
-      const serviceUrlEnvVars = getServiceUrlEnvVars({
-        services: detectedServices,
-        frameworkList,
-        currentEnv: process.env,
-        deploymentUrl: process.env.VERCEL_URL,
-      });
-
-      for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
-        process.env[key] = value;
-        output.debug(`Injected service URL env var: ${key}=${value}`);
-      }
-    }
-
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     const detectedHostRewriteRoutes = (
       detectedBuilders as typeof detectedBuilders & {
@@ -1035,6 +1017,27 @@ async function doBuild(
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
+
+      // Inject per-service URL environment variables so they're available during builds.
+      // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+      // these env vars are baked into the client bundle so they can be accessed in the client code.
+      // User-defined env vars take precedence and won't be overwritten. The env will be cleared
+      // after the build is complete
+      const restoreEnv = new Map<string, string | undefined>();
+      if (service?.envVars && detectedServices) {
+        const injected = getServiceUrlEnvVars({
+          targetService: service,
+          services: detectedServices,
+          frameworkList,
+          currentEnv: process.env,
+          deploymentUrl: process.env.VERCEL_URL,
+        });
+        for (const [key, value] of Object.entries(injected)) {
+          restoreEnv.set(key, process.env[key]);
+          process.env[key] = value;
+          output.debug(`Injected service URL env var: ${key}=${value}`);
+        }
+      }
       let buildResult: BuildResultV2 | BuildResultV3;
       let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
@@ -1069,6 +1072,15 @@ async function doBuild(
           }
         }
       } finally {
+        // Restore any process.env keys we set from service envVars so the
+        // next builder iteration starts from a clean slate.
+        for (const [key, prior] of restoreEnv) {
+          if (prior === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = prior;
+          }
+        }
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan

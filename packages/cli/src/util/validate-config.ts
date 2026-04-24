@@ -295,6 +295,33 @@ const serviceCommonProperties = {
       },
     ],
   },
+  envVars: {
+    type: 'object',
+    additionalProperties: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['ref'],
+      properties: {
+        ref: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['service'],
+          properties: {
+            service: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 64,
+              pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+            },
+          },
+        },
+      },
+    },
+    propertyNames: {
+      pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+      maxLength: 256,
+    },
+  },
 };
 
 const serviceRoutableProperties = {

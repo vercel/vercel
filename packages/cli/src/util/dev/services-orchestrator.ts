@@ -333,11 +333,11 @@ export class ServicesOrchestrator {
     );
 
     const serviceUrlEnvVars = getServiceUrlEnvVars({
+      targetService: service,
       services: this.services,
-      frameworkList: framework ? [framework] : [],
+      frameworkList,
       origin: this.proxyOrigin,
       currentEnv: this.env,
-      envPrefix: service.envPrefix,
     });
 
     const env = cloneEnv(
