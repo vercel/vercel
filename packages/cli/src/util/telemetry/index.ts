@@ -5,6 +5,8 @@ import output from '../../output-manager';
 import { spawn } from 'node:child_process';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import { cloneEnv } from '@vercel/build-utils';
+import nodeFetch from 'node-fetch';
+import { isBunCompiledBinary } from '../is-bun-binary';
 import {
   getOrCreatePersistedCliDevice,
   getOrCreatePersistedCliSession,
@@ -483,6 +485,16 @@ export class TelemetryEventStore {
    * FIXME: handle max buffer size
    */
   async sendToSubprocess(payload: object, outputDebugEnabled: boolean) {
+    // In a Bun compiled binary `process.execPath` is the binary itself and
+    // `process.argv[0]` is the literal string "bun" — re-spawning ourselves
+    // with a script arg doesn't work. Send the request in-process instead.
+    if (isBunCompiledBinary()) {
+      return this.sendInProcess(
+        payload as { headers: Record<string, string>; body: unknown },
+        outputDebugEnabled
+      );
+    }
+
     const args = [process.execPath, process.argv[0], process.argv[1]];
     if (args[0] === args[1]) {
       args.shift();
@@ -536,5 +548,36 @@ export class TelemetryEventStore {
 
       childProcess.unref();
     }
+  }
+
+  private async sendInProcess(
+    payload: { headers: Record<string, string>; body: unknown },
+    outputDebugEnabled: boolean
+  ) {
+    const url =
+      process.env.VERCEL_TELEMETRY_BRIDGE_URL ||
+      'https://telemetry.vercel.com/api/vercel-cli/v1/events';
+    const timeoutMs = 2000;
+    const fetchPromise = nodeFetch(url, {
+      method: 'POST',
+      headers: payload.headers,
+      body: JSON.stringify(payload.body),
+    })
+      .then(res => {
+        if (outputDebugEnabled) {
+          output.debug(`Telemetry (in-process) status=${res.status}`);
+        }
+      })
+      .catch(err => {
+        if (outputDebugEnabled) {
+          output.debug(
+            `Telemetry (in-process) failed: ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
+      });
+    await Promise.race([
+      fetchPromise,
+      new Promise<void>(resolve => setTimeout(resolve, timeoutMs).unref()),
+    ]);
   }
 }

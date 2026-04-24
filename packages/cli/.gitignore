@@ -2,3 +2,5 @@
 !test/dev/fixtures/**/.now
 !test/dev/fixtures/**/.vercel
 .env*.local
+
+dist-bin/

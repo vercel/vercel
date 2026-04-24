@@ -192,7 +192,23 @@ export const startDevServer: StartDevServer = async opts => {
     // Otherwise fall back to using the copy that `@vercel/node` uses
     if (!ts) {
       compiler = resolveTypescript(join(__dirname, '..'));
-      ts = requireTypescript(compiler);
+      if (compiler) {
+        ts = requireTypescript(compiler);
+      }
+    }
+
+    if (!ts) {
+      try {
+        ts = require('typescript');
+      } catch {}
+    }
+
+    if (!ts) {
+      throw new Error(
+        `Could not locate a TypeScript installation for "${entrypoint}". ` +
+          `Install \`typescript\` in your project dependencies, or ensure ` +
+          `\`@vercel/node\` has a bundled copy available next to its own module.`
+      );
     }
 
     if (pathToTsConfig) {

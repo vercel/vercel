@@ -79,11 +79,25 @@ export async function forkDevServer(options: {
       nodeOptions += ' --no-warnings';
     }
 
-    const tsxPath = pathToFileURL(options.require_.resolve('tsx'));
+    let tsxResolved: string | undefined;
+    try {
+      tsxResolved = options.require_.resolve('tsx');
+    } catch {
+      try {
+        tsxResolved = require.resolve('tsx');
+      } catch {}
+    }
 
     if (options.maybeTranspile) {
       if (options.isTypeScript || !options.isEsm) {
-        nodeOptions = `--import ${tsxPath} ${nodeOptions || ''}`;
+        if (!tsxResolved) {
+          throw new Error(
+            `Could not locate \`tsx\` for transpiling "${options.entrypoint}". ` +
+              `Install \`tsx\` in your project dependencies, or ensure ` +
+              `\`@vercel/node\` has a bundled copy available.`
+          );
+        }
+        nodeOptions = `--import ${pathToFileURL(tsxResolved)} ${nodeOptions || ''}`;
       }
     }
 

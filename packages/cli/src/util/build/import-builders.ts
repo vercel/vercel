@@ -42,6 +42,83 @@ type ResolveBuildersResult =
 // Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
+// Static JSON imports so esbuild inlines each builder's version at bundle
+// time. At runtime each map entry is the real published version.
+import goPkg from '@vercel/go/package.json';
+import hydrogenPkg from '@vercel/hydrogen/package.json';
+import nextPkg from '@vercel/next/package.json';
+import nodePkg from '@vercel/node/package.json';
+import pythonPkg from '@vercel/python/package.json';
+import redwoodPkg from '@vercel/redwood/package.json';
+import remixPkg from '@vercel/remix-builder/package.json';
+import rubyPkg from '@vercel/ruby/package.json';
+import rustPkg from '@vercel/rust/package.json';
+import staticBuildPkg from '@vercel/static-build/package.json';
+
+// Builders bundled into the CLI itself. The compiled-binary distribution
+// cannot resolve modules from disk, so bundled copies are preferred.
+// Only include builders whose `dist/` is present at build time.
+const BUILTIN_BUILDERS: Record<
+  string,
+  { load: () => Promise<unknown>; version: string }
+> = {
+  '@vercel/go': { load: () => import('@vercel/go'), version: goPkg.version },
+  '@vercel/hydrogen': {
+    load: () => import('@vercel/hydrogen'),
+    version: hydrogenPkg.version,
+  },
+  '@vercel/next': {
+    load: () => import('@vercel/next'),
+    version: nextPkg.version,
+  },
+  '@vercel/node': {
+    load: () => import('@vercel/node'),
+    version: nodePkg.version,
+  },
+  '@vercel/python': {
+    load: () => import('@vercel/python'),
+    version: pythonPkg.version,
+  },
+  '@vercel/redwood': {
+    load: () => import('@vercel/redwood'),
+    version: redwoodPkg.version,
+  },
+  '@vercel/remix-builder': {
+    load: () => import('@vercel/remix-builder'),
+    version: remixPkg.version,
+  },
+  '@vercel/ruby': {
+    load: () => import('@vercel/ruby'),
+    version: rubyPkg.version,
+  },
+  '@vercel/rust': {
+    load: () => import('@vercel/rust'),
+    version: rustPkg.version,
+  },
+  '@vercel/static-build': {
+    load: () => import('@vercel/static-build'),
+    version: staticBuildPkg.version,
+  },
+};
+
+function unwrapEsmDefault(mod: unknown): BuilderV2 | BuilderV3 | BuilderVX {
+  // ESM/CJS interop: builder entry points may live on the namespace or on
+  // `.default` depending on loader. Prefer whichever has `build`.
+  const hasBuild = (v: unknown): boolean =>
+    !!v &&
+    typeof v === 'object' &&
+    typeof (v as Record<string, unknown>).build === 'function';
+
+  const m = mod as Record<string, unknown>;
+  if (hasBuild(m)) {
+    return m as unknown as BuilderV2 | BuilderV3 | BuilderVX;
+  }
+  if (m && typeof m === 'object' && hasBuild(m.default)) {
+    return m.default as unknown as BuilderV2 | BuilderV3 | BuilderVX;
+  }
+  return m as unknown as BuilderV2 | BuilderV3 | BuilderVX;
+}
+
 /**
  * Imports the specified Vercel Builders, installing any missing ones
  * into `.vercel/builders` if necessary.
@@ -116,6 +193,40 @@ async function resolveBuilders(
       continue;
     }
 
+    // Check if this builder is bundled into the CLI itself. If the user's
+    // version constraint is satisfied by the bundled version, skip the
+    // disk-install/load flow entirely and return the bundled module.
+    if (name in BUILTIN_BUILDERS) {
+      const builtinVersion = BUILTIN_BUILDERS[name].version;
+      const versionOk =
+        parsed.type === 'tag' ||
+        parsed.type === 'alias' ||
+        (parsed.type === 'version' && parsed.rawSpec === builtinVersion) ||
+        (parsed.type === 'range' && satisfies(builtinVersion, parsed.rawSpec));
+      if (versionOk) {
+        try {
+          const mod = await BUILTIN_BUILDERS[name].load();
+          const builder = unwrapEsmDefault(mod);
+          builders.set(spec, {
+            builder,
+            pkg: { name, version: builtinVersion },
+            path: name,
+            pkgPath: name,
+            dynamicallyInstalled: false,
+          });
+          output.debug(`Imported bundled Builder "${name}@${builtinVersion}"`);
+          continue;
+        } catch (err) {
+          output.debug(
+            `Failed to load bundled Builder "${name}": ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+          // Fall through to disk path
+        }
+      }
+    }
+
     try {
       let pkgPath: string | undefined;
       let builderPkg: PackageJson | undefined;
@@ -178,7 +289,12 @@ async function resolveBuilders(
       // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
 
-      const builder = require_(path);
+      // Use a require bound to the builder's own location so nested requires
+      // (e.g. `require('@vercel/error-utils')` inside @vercel/node) resolve
+      // through the builder's node_modules chain — required for Bun compiled
+      // binaries where __filename points into the virtual FS.
+      const fileRequire = createRequire(path);
+      const builder = fileRequire(path);
 
       const dynamicallyInstalled = pkgPath.startsWith(buildersDir);
 

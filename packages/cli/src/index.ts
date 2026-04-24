@@ -36,6 +36,7 @@ import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import getLatestVersion from './util/get-latest-version';
+import { isBunCompiledBinary } from './util/is-bun-binary';
 import { URL } from 'url';
 import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
@@ -158,9 +159,14 @@ if (process.env.CLAUDECODE) {
   );
 }
 
-// Snapshot before any command has a chance to mutate process.env
+// Snapshot before any command has a chance to mutate process.env. The
+// single-file binary distribution can't self-update via npm, and the notifier
+// spawns `process.execPath [worker.cjs]` which under a Bun compiled binary
+// re-invokes the CLI with a bogus deploy path.
 const SHOULD_CHECK_FOR_UPDATES =
-  !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
+  !process.env.NO_UPDATE_NOTIFIER &&
+  !process.env.VERCEL &&
+  !isBunCompiledBinary();
 
 let { isTTY } = process.stdout;
 
