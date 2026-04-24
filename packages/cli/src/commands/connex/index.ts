@@ -11,11 +11,13 @@ import {
   createSubcommand,
   listSubcommand,
   tokenSubcommand,
+  removeSubcommand,
   connexCommand,
 } from './command';
 import { create } from './create';
 import { list } from './list';
 import { token } from './token';
+import { remove } from './remove';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
@@ -27,6 +29,7 @@ const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
+  remove: getCommandAliases(removeSubcommand),
 };
 
 export default async function connex(client: Client): Promise<number> {
@@ -113,6 +116,28 @@ export default async function connex(client: Client): Promise<number> {
         const tokenFlagsSpec = getFlagsSpecification(tokenSubcommand.options);
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
         return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
+      }
+      case 'remove': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(removeSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandRemove(subcommandOriginal);
+
+        const removeFlagsSpec = getFlagsSpecification(removeSubcommand.options);
+        const removeParsedArgs = parseArguments(subArgs, removeFlagsSpec);
+        telemetry.trackCliArgumentClient(removeParsedArgs.args[0]);
+        telemetry.trackCliFlagYes(removeParsedArgs.flags['--yes']);
+        telemetry.trackCliFlagDisconnectAll(
+          removeParsedArgs.flags['--disconnect-all']
+        );
+        telemetry.trackCliOptionFormat(removeParsedArgs.flags['--format']);
+        return await remove(
+          client,
+          removeParsedArgs.args,
+          removeParsedArgs.flags
+        );
       }
       default: {
         const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');

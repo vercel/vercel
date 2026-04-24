@@ -82,6 +82,57 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Delete a Connex client',
+  arguments: [
+    {
+      name: 'client',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'disconnect-all',
+      description: 'Disconnects all projects from the client before deletion',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting a client',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Delete a Connex client by ID',
+      value: `${packageName} connex remove scl_abc123`,
+    },
+    {
+      name: 'Delete a Connex client by UID',
+      value: `${packageName} connex remove slack/my-bot`,
+    },
+    {
+      name: 'Disconnect all projects from a client, then delete it',
+      value: [
+        `${packageName} connex remove scl_abc123 --disconnect-all`,
+        `${packageName} connex remove slack/my-bot -a`,
+      ],
+    },
+    {
+      name: 'Skip the confirmation prompt',
+      value: `${packageName} connex remove scl_abc123 --yes`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connex remove scl_abc123 --format=json --yes`,
+    },
+  ],
+} as const;
+
 export const tokenSubcommand = {
   name: 'token',
   aliases: [],
@@ -157,7 +208,12 @@ export const connexCommand = {
   description: 'Manage Vercel Connect clients',
   arguments: [],
   options: [],
-  subcommands: [createSubcommand, listSubcommand, tokenSubcommand],
+  subcommands: [
+    createSubcommand,
+    listSubcommand,
+    tokenSubcommand,
+    removeSubcommand,
+  ],
   examples: [
     {
       name: 'Create a Slack app',
