@@ -21,6 +21,7 @@ import {
   getGlobalFlagsOnlyFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../util/arg-common';
+import { getLinkFromDir, getVercelDirectory } from '../../util/projects/link';
 
 /** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -37,6 +38,30 @@ const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
 
   writeToConfigFile(config);
 };
+
+async function warnIfStaleLinkExists(
+  client: Client,
+  newOrgId: string
+): Promise<void> {
+  let link: { orgId: string } | null = null;
+  try {
+    link = await getLinkFromDir<{ orgId: string }>(
+      getVercelDirectory(client.cwd)
+    );
+  } catch (_error) {
+    link = null;
+  }
+
+  if (!link || link.orgId === newOrgId) {
+    return;
+  }
+
+  output.warn(
+    `This directory is linked to a project under a different team/scope. ` +
+      `Commands like \`deploy\` will still use the linked project's team. ` +
+      `Run \`vc link\` to re-link.`
+  );
+}
 
 export default async function change(client: Client, argv: string[]) {
   let parsedArgs;
@@ -108,14 +133,18 @@ export default async function change(client: Client, argv: string[]) {
     },
   });
   telemetry.trackCliArgumentName(desiredSlug);
-  const personalScopeSelected = !config.currentTeam;
 
   output.spinner('Fetching teams information');
   const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
 
-  const currentTeam = personalScopeSelected
-    ? undefined
-    : teams.find(team => team.id === config.currentTeam);
+  const defaultTeamId =
+    user.version === 'northstar' ? user.defaultTeamId : undefined;
+  const currentTeamId = config.currentTeam || defaultTeamId;
+  const personalScopeSelected = !currentTeamId;
+
+  const currentTeam = currentTeamId
+    ? teams.find(team => team.id === currentTeamId)
+    : undefined;
 
   if (!personalScopeSelected && !currentTeam) {
     if (client.nonInteractive) {
@@ -287,6 +316,7 @@ export default async function change(client: Client, argv: string[]) {
     output.success(
       `Your account (${chalk.bold(user.username)}) is now active!`
     );
+    await warnIfStaleLinkExists(client, user.id);
     return 0;
   }
 
@@ -335,5 +365,6 @@ export default async function change(client: Client, argv: string[]) {
   output.success(
     `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`
   );
+  await warnIfStaleLinkExists(client, newTeam.id);
   return 0;
 }

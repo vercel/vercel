@@ -13,7 +13,7 @@ ASGI = Callable[
     Awaitable[None],
 ]
 
-Handler = Callable[[bytes], tuple[int, list[tuple[str, str]], bytes]]
+Handler = Callable[[bytes, dict[str, Any]], tuple[int, list[tuple[str, str]], bytes]]
 
 
 def _get_header(scope: dict[str, Any], name: str) -> str | None:
@@ -52,12 +52,18 @@ async def _read_body(receive: Callable[[], Awaitable[dict[str, Any]]]) -> bytes:
     return b"".join(chunks)
 
 
-def build_asgi_app(handler: Handler) -> ASGI:
+def build_asgi_app(
+    handler: Handler,
+    *,
+    on_startup: Callable[[], None] | None = None,
+    on_shutdown: Callable[[], None] | None = None,
+) -> ASGI:
     """
     Build an ASGI application that:
       - responds to GET / with "ok" (healthcheck)
       - accepts POST with Content-Type application/cloudevents+json
       - delegates CloudEvent handling to `handler(raw_body)` on a thread
+      - fires on_startup/on_shutdown during ASGI lifespan
     """
 
     async def app(
@@ -67,14 +73,17 @@ def build_asgi_app(handler: Handler) -> ASGI:
     ) -> None:
         scope_type = scope.get("type")
 
-        # Minimal lifespan support so ASGI servers don't warn.
         if scope_type == "lifespan":
             while True:
                 message = await receive()
                 msg_type = message.get("type")
                 if msg_type == "lifespan.startup":
+                    if on_startup is not None:
+                        on_startup()
                     await send({"type": "lifespan.startup.complete"})
                 elif msg_type == "lifespan.shutdown":
+                    if on_shutdown is not None:
+                        on_shutdown()
                     await send({"type": "lifespan.shutdown.complete"})
                     return
 
@@ -102,8 +111,11 @@ def build_asgi_app(handler: Handler) -> ASGI:
 
         # Queue callback
         if method == "POST":
-            content_type = _get_header(scope, "content-type")
-            if not content_type or "application/cloudevents+json" not in content_type:
+            content_type = _get_header(scope, "content-type") or ""
+            ce_type = _get_header(scope, "ce-type") or ""
+            is_v1beta = "application/cloudevents+json" in content_type
+            is_v2beta = ce_type == "com.vercel.queue.v2beta"
+            if not is_v1beta and not is_v2beta:
                 body = (
                     b'{"error":"Invalid content type: expected \\"application/cloudevents+json\\""}'
                 )
@@ -120,8 +132,25 @@ def build_asgi_app(handler: Handler) -> ASGI:
                 await send({"type": "http.response.body", "body": body})
                 return
 
+            # Build a WSGI-style environ dict from ASGI scope headers so the
+            # handler can inspect headers uniformly.
+            environ: dict[str, Any] = {
+                "REQUEST_METHOD": scope.get("method", "POST"),
+            }
+            for header_name, header_value in scope.get("headers", []):
+                name = (
+                    header_name.decode("latin1") if isinstance(header_name, bytes) else header_name
+                )
+                value = (
+                    header_value.decode("latin1")
+                    if isinstance(header_value, bytes)
+                    else header_value
+                )
+                key = "HTTP_" + name.upper().replace("-", "_")
+                environ[key] = value
+
             raw_body = await _read_body(receive)
-            status_code, headers, body = await asyncio.to_thread(handler, raw_body)
+            status_code, headers, body = await asyncio.to_thread(handler, raw_body, environ)
             asgi_headers: list[tuple[bytes, bytes]] = [
                 (k.lower().encode("latin1"), v.encode("latin1")) for (k, v) in headers
             ]

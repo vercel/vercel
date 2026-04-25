@@ -1,4 +1,5 @@
 import type { HasField, Route } from '@vercel/routing-utils';
+import { isScheduleTriggeredService } from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -14,9 +15,8 @@ import {
   type ServicesRoutes,
 } from './types';
 import {
-  getInternalServiceCronPath,
+  getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
-  getInternalServiceWorkerPath,
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
@@ -24,6 +24,7 @@ import {
 } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
+import { detectRailwayServices } from './detect-railway';
 
 // don't apply subdomain rewrites on preview urls
 const PREVIEW_DOMAIN_MISSING: HasField = [
@@ -79,6 +80,10 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
       serviceConfig.framework = service.framework;
     }
 
+    if (typeof service.buildCommand === 'string') {
+      serviceConfig.buildCommand = service.buildCommand;
+    }
+
     inferredConfig[name] = serviceConfig;
   }
 
@@ -119,19 +124,51 @@ export async function detectServices(
 
   // Try auto-detection
   if (!hasConfiguredServices) {
-    const autoResult = await autoDetectServices({ fs: scopedFs });
-
-    if (autoResult.errors.length > 0) {
+    // Try Railway config detection first
+    const railwayResult = await detectRailwayServices({ fs: scopedFs });
+    if (railwayResult.errors.length > 0) {
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
         routes: emptyRoutes(),
-        errors: autoResult.errors,
-        warnings: [],
+        errors: railwayResult.errors,
+        warnings: railwayResult.warnings,
       });
     }
+    if (railwayResult.services) {
+      const result = await resolveAllConfiguredServices(
+        railwayResult.services,
+        scopedFs,
+        'generated'
+      );
+      const inferred =
+        result.errors.length === 0 && result.services.length > 0
+          ? {
+              source: 'railway' as const,
+              config: toInferredLayoutConfig(railwayResult.services),
+              services: result.services,
+              warnings: railwayResult.warnings,
+            }
+          : null;
 
-    if (autoResult.services) {
+      // Railway detection is used only for a suggestion to generate vercel.json,
+      // so the .resolved field in the result would be useless, we care only
+      // about the source + inferred config.
+      return withResolvedResult(
+        {
+          services: [],
+          source: 'auto-detected',
+          routes: emptyRoutes(),
+          errors: result.errors,
+          warnings: railwayResult.warnings,
+        },
+        inferred
+      );
+    }
+
+    // Fall back to layout-based auto-detection
+    const autoResult = await autoDetectServices({ fs: scopedFs });
+    if (autoResult.services && autoResult.errors.length === 0) {
       const result = await resolveAllConfiguredServices(
         autoResult.services,
         scopedFs,
@@ -163,6 +200,14 @@ export async function detectServices(
             }
           : null;
       return withResolvedResult(resolved, inferred);
+    } else if (autoResult.errors.length > 0) {
+      return withResolvedResult({
+        services: [],
+        source: 'auto-detected',
+        routes: emptyRoutes(),
+        errors: autoResult.errors,
+        warnings: [],
+      });
     }
 
     return withResolvedResult({
@@ -219,11 +264,10 @@ export async function detectServices(
  * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
- * - Worker services:
- *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
- *   that rewrite to `/_svc/{serviceName}/index`.
+ * - Worker and queue-triggered job services:
+ *   Use private path routing. The generated function is not publicly accessible.
  *
- * - Cron services:
+ * - Schedule-triggered job services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
@@ -320,37 +364,17 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     }
   }
 
-  const workerServices = services.filter(s => s.type === 'worker');
-  for (const service of workerServices) {
-    const workerEntrypoint =
-      service.entrypoint || service.builder.src || 'index';
-    const workerPath = getInternalServiceWorkerPath(
-      service.name,
-      workerEntrypoint
-    );
+  const cronServices = services.filter(isScheduleTriggeredService);
+  for (const service of cronServices) {
+    const cronPrefix = getInternalServiceCronPathPrefix(service.name);
     const functionPath = getInternalServiceFunctionPath(service.name);
-    workers.push({
-      src: `^${escapeRegex(workerPath)}$`,
+    crons.push({
+      src: `^${escapeRegex(cronPrefix)}/.*$`,
       dest: functionPath,
       check: true,
     });
   }
 
-  const cronServices = services.filter(s => s.type === 'cron');
-  for (const service of cronServices) {
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    const cronPath = getInternalServiceCronPath(
-      service.name,
-      cronEntrypoint,
-      service.handlerFunction || 'cron'
-    );
-    const functionPath = getInternalServiceFunctionPath(service.name);
-    crons.push({
-      src: `^${escapeRegex(cronPath)}$`,
-      dest: functionPath,
-      check: true,
-    });
-  }
   return { hostRewrites, rewrites, defaults, crons, workers };
 }
 

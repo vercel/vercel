@@ -12,7 +12,18 @@ import {
   formatOutput,
   generateCurlCommand,
 } from './request-builder';
-import { OpenApiCache } from '../../util/openapi';
+import {
+  buildRequestForResolvedOperation,
+  getMissingRequiredOperationParams,
+  getUnsetOptionalOperationParams,
+  parseOperationKeyValuePairs,
+  GLOBAL_CLI_QUERY_PARAMS,
+} from './operation-request-builder';
+import {
+  OpenApiCache,
+  resolveEndpointByTagAndOperationId,
+  type ResolveByTagOperationResult,
+} from '../../util/openapi';
 import { API_BASE_URL } from './constants';
 import {
   colorizeMethod,
@@ -22,6 +33,8 @@ import {
   formatDescription,
 } from './format-utils';
 import output from '../../output-manager';
+import { renderCard, renderTable, parseArrayColumns } from './display-columns';
+import { packageName } from '../../util/pkg-name';
 import type {
   ParsedFlags,
   EndpointInfo,
@@ -101,13 +114,11 @@ export default async function api(client: Client): Promise<number> {
     client.dangerouslySkipPermissions = true;
   }
 
-  // Get endpoint from args (args[0] is 'api', args[1] is the endpoint)
-  let endpoint = firstArg;
+  let endpoint: string | undefined;
   let selectedMethod: string | undefined;
   let selectedBodyFields: string[] = [];
 
-  if (!endpoint) {
-    // Interactive mode: prompt for endpoint selection
+  if (!firstArg) {
     if (client.stdin.isTTY) {
       const selected = await promptEndpointSelection(
         client,
@@ -123,18 +134,19 @@ export default async function api(client: Client): Promise<number> {
       output.error('Endpoint is required. Usage: vercel api <endpoint>');
       return 1;
     }
+  } else {
+    endpoint = firstArg;
   }
 
-  // Validate endpoint format and prevent SSRF
-  // The URL constructor treats '//host' as protocol-relative, which would
-  // redirect requests to arbitrary hosts. We must validate the resolved URL.
-  if (!endpoint.startsWith('/')) {
-    output.error('Endpoint must start with /');
+  if (endpoint && !endpoint.startsWith('/')) {
+    output.error(
+      `Invalid arguments. Use an API path starting with /, or run \`${packageName} api\` interactively.`
+    );
     return 1;
   }
 
   try {
-    const resolvedUrl = new URL(endpoint, API_BASE_URL);
+    const resolvedUrl = new URL(endpoint!, API_BASE_URL);
     if (resolvedUrl.origin !== API_BASE_URL) {
       output.error(
         'Invalid endpoint: must be a Vercel API path, not an external URL'
@@ -146,8 +158,27 @@ export default async function api(client: Client): Promise<number> {
     return 1;
   }
 
-  // Track telemetry
-  telemetryClient.trackCliArgumentEndpoint(endpoint);
+  const finalFlags = { ...flags } as ParsedFlags;
+  if (selectedMethod && !flags['--method']) {
+    finalFlags['--method'] = selectedMethod;
+  }
+
+  if (selectedBodyFields.length > 0) {
+    const existingFields = finalFlags['--field'] || [];
+    finalFlags['--field'] = [...existingFields, ...selectedBodyFields];
+  }
+
+  let requestConfig: RequestConfig;
+  try {
+    requestConfig = await buildRequest(endpoint!, finalFlags);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  // Track telemetry (tag + operationId path uses {@link runTagOperation})
+  telemetryClient.trackCliArgumentEndpoint(requestConfig.url);
+  telemetryClient.trackCliArgumentOperationId(undefined);
   telemetryClient.trackCliOptionMethod(flags['--method']);
   telemetryClient.trackCliOptionHeader(flags['--header']);
   telemetryClient.trackCliOptionInput(flags['--input']);
@@ -162,54 +193,399 @@ export default async function api(client: Client): Promise<number> {
   if (flags['--dangerously-skip-permissions'])
     telemetryClient.trackCliFlagDangerouslySkipPermissions(true);
 
-  // Use method from interactive selection if not overridden by flag
-  const finalFlags = { ...flags } as ParsedFlags;
-  if (selectedMethod && !flags['--method']) {
-    finalFlags['--method'] = selectedMethod;
-  }
-
-  // Merge body fields from interactive selection with any existing --field flags
-  if (selectedBodyFields.length > 0) {
-    const existingFields = finalFlags['--field'] || [];
-    finalFlags['--field'] = [...existingFields, ...selectedBodyFields];
-  }
-
   // If generate mode, build request config and output in requested format
   if (flags['--generate'] === 'curl') {
-    try {
-      const requestConfig = await buildRequest(endpoint, finalFlags);
-      const curlCmd = generateCurlCommand(
-        requestConfig,
-        'https://api.vercel.com'
-      );
-      output.log('');
-      output.log('Replace <TOKEN> with your auth token:');
-      output.log('');
-      client.stdout.write(curlCmd + '\n');
-      return 0;
-    } catch (err) {
-      printError(err);
-      return 1;
+    const curlCmd = generateCurlCommand(
+      requestConfig,
+      'https://api.vercel.com'
+    );
+    output.log('');
+    output.log('Replace <TOKEN> with your auth token:');
+    output.log('');
+    client.stdout.write(curlCmd + '\n');
+    return 0;
+  }
+
+  return executeApiRequest(client, requestConfig, finalFlags);
+}
+
+export async function printOperationHelpForTagCommand(
+  flags: ParsedFlags,
+  tag: string,
+  operationId: string
+): Promise<number> {
+  const openApi = new OpenApiCache();
+  const loaded = await openApi.loadWithSpinner(flags['--refresh'] ?? false);
+  if (!loaded) {
+    output.error('Could not load API specification');
+    return 1;
+  }
+
+  const allEndpoints = openApi.getEndpoints();
+  const resolved = resolveEndpointByTagAndOperationId(
+    allEndpoints,
+    tag,
+    operationId
+  );
+
+  if (!resolved.ok) {
+    printTagOperationResolveError(resolved, allEndpoints);
+    return 1;
+  }
+
+  const ep = resolved.endpoint;
+  const bodyFields = openApi.getBodyFields(ep);
+  printOperationHelpDetails(ep, bodyFields, tag);
+  return 2;
+}
+
+function printOperationHelpDetails(
+  ep: EndpointInfo,
+  bodyFields: BodyField[],
+  tag: string
+): void {
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(chalk.bold(ep.operationId || '(operation)'));
+  const blurb = ep.summary?.trim() || ep.description?.trim();
+  if (blurb) {
+    lines.push('');
+    lines.push(chalk.dim(blurb));
+  }
+
+  lines.push('');
+  lines.push(chalk.bold('Options'));
+  lines.push('');
+
+  const pathParams = ep.parameters.filter(p => p.in === 'path');
+  const orderedParams: Parameter[] = [
+    ...pathParams,
+    ...ep.parameters.filter(p => p.in === 'query'),
+    ...ep.parameters.filter(p => p.in === 'header'),
+    ...ep.parameters.filter(p => p.in === 'cookie'),
+  ];
+
+  for (const p of orderedParams) {
+    const globalNote =
+      p.in === 'query' && GLOBAL_CLI_QUERY_PARAMS.has(p.name)
+        ? chalk.dim(' (often set via --scope)')
+        : '';
+    let reqLabel: string;
+    if (p.in === 'query') {
+      reqLabel =
+        p.required && !GLOBAL_CLI_QUERY_PARAMS.has(p.name)
+          ? chalk.red('required')
+          : chalk.dim('optional');
+    } else if (p.in === 'path') {
+      reqLabel =
+        p.required !== false ? chalk.red('required') : chalk.dim('optional');
+    } else if (p.in === 'header') {
+      reqLabel = p.required ? chalk.red('required') : chalk.dim('optional');
+    } else {
+      reqLabel = p.required ? chalk.red('required') : chalk.dim('optional');
+    }
+    lines.push(
+      `  ${chalk.cyan(p.name)}  ${reqLabel}${globalNote}${formatDescription(p.description)}`
+    );
+  }
+
+  for (const f of bodyFields) {
+    const req = f.required ? chalk.red('required') : chalk.dim('optional');
+    const typeHint = f.type ? ` ${formatTypeHint(f.type)}` : '';
+    lines.push(
+      `  ${chalk.cyan(f.name)}  ${req}${typeHint}${formatDescription(f.description)}`
+    );
+  }
+
+  if (orderedParams.length === 0 && bodyFields.length === 0) {
+    lines.push(chalk.dim('  (none)'));
+  }
+
+  lines.push('');
+
+  lines.push(chalk.bold('Example'));
+  const exampleSuffix =
+    pathParams.length > 0
+      ? ` ${pathParams.map(p => `${p.name}=<value>`).join(' ')}`
+      : '';
+  lines.push(
+    chalk.dim(`  ${packageName} api ${tag} ${ep.operationId}${exampleSuffix}`)
+  );
+  lines.push('');
+
+  output.print(lines.join('\n'));
+}
+
+/**
+ * Print operations for a tag when the user runs `vercel api <tag>` with no operationId.
+ */
+type MissingOperationBundle = ReturnType<
+  typeof getMissingRequiredOperationParams
+>;
+
+function printMissingOperationParamsHelp(
+  endpoint: EndpointInfo,
+  missing: MissingOperationBundle
+): void {
+  output.error(
+    `Missing required options for operation ${chalk.bold(endpoint.operationId)}.`
+  );
+  output.log(
+    chalk.dim(
+      `Pass each as key=value after the operationId, or use -F key=value. Example: \`${packageName} api ${endpoint.tags[0] ?? 'tag'} ${endpoint.operationId} idOrName=my-project\``
+    )
+  );
+  output.log('');
+  output.log(chalk.bold('Options'));
+  output.log('');
+
+  for (const p of missing.path) {
+    output.log(`  ${chalk.cyan(p.name)}${formatDescription(p.description)}`);
+  }
+  for (const p of missing.header) {
+    output.log(`  ${chalk.cyan(p.name)}${formatDescription(p.description)}`);
+  }
+  for (const p of missing.query) {
+    output.log(`  ${chalk.cyan(p.name)}${formatDescription(p.description)}`);
+  }
+  for (const f of missing.body) {
+    const typeHint = f.type ? ` ${formatTypeHint(f.type)}` : '';
+    output.log(
+      `  ${chalk.cyan(f.name)}${typeHint}${formatDescription(f.description)}`
+    );
+  }
+  output.log('');
+}
+
+async function promptMissingParamsForTagOperation(
+  client: Client,
+  endpoint: EndpointInfo,
+  bodyFields: BodyField[],
+  flags: ParsedFlags,
+  positionalKeyValues: string[]
+): Promise<string[] | null> {
+  const pos = [...positionalKeyValues];
+
+  while (true) {
+    const parsed = await (async () => {
+      try {
+        return await parseOperationKeyValuePairs(
+          endpoint,
+          bodyFields,
+          flags,
+          pos
+        );
+      } catch (err) {
+        printError(err);
+        return null;
+      }
+    })();
+
+    if (parsed === null) {
+      return null;
+    }
+
+    const missing = getMissingRequiredOperationParams(
+      endpoint,
+      bodyFields,
+      parsed,
+      flags
+    );
+
+    if (
+      missing.path.length === 0 &&
+      missing.query.length === 0 &&
+      missing.header.length === 0 &&
+      missing.body.length === 0
+    ) {
+      break;
+    }
+
+    for (const param of missing.path) {
+      const value = await client.input.text({
+        message: `Enter value for ${formatPathParam(param.name)}${formatDescription(param.description)}:`,
+        validate: createRequiredValidator(param.name),
+      });
+      pos.push(`${param.name}=${value}`);
+    }
+
+    for (const param of missing.header) {
+      const value = await client.input.text({
+        message: `Enter value for header ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
+        validate: createRequiredValidator(param.name),
+      });
+      pos.push(`${param.name}=${value}`);
+    }
+
+    for (const param of missing.query) {
+      const value = await client.input.text({
+        message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
+        validate: createRequiredValidator(param.name),
+      });
+      pos.push(`${param.name}=${value}`);
+    }
+
+    for (const field of missing.body) {
+      const value = await promptForBodyField(client, field, true);
+      pos.push(`${field.name}=${value}`);
     }
   }
 
-  return executeApiRequest(client, endpoint, finalFlags);
+  return promptUnsetOptionalParamsForTagOperation(
+    client,
+    endpoint,
+    bodyFields,
+    flags,
+    pos
+  );
+}
+
+async function promptUnsetOptionalParamsForTagOperation(
+  client: Client,
+  endpoint: EndpointInfo,
+  bodyFields: BodyField[],
+  flags: ParsedFlags,
+  positionalKeyValues: string[]
+): Promise<string[] | null> {
+  const pos = [...positionalKeyValues];
+
+  const parsed = await (async () => {
+    try {
+      return await parseOperationKeyValuePairs(
+        endpoint,
+        bodyFields,
+        flags,
+        pos
+      );
+    } catch (err) {
+      printError(err);
+      return null;
+    }
+  })();
+
+  if (parsed === null) {
+    return null;
+  }
+
+  const unset = getUnsetOptionalOperationParams(
+    endpoint,
+    bodyFields,
+    parsed,
+    flags
+  );
+
+  if (
+    unset.query.length === 0 &&
+    unset.header.length === 0 &&
+    unset.body.length === 0
+  ) {
+    return pos;
+  }
+
+  if (unset.query.length > 0) {
+    const selected = await client.input.checkbox<string>({
+      message: 'Select optional query parameters to include:',
+      pageSize: 20,
+      choices: unset.query.map(p => ({
+        name: `${chalk.cyan(p.name)}${
+          GLOBAL_CLI_QUERY_PARAMS.has(p.name)
+            ? chalk.dim(' (team / scope; omit to use CLI default)')
+            : ''
+        }${formatDescription(p.description)}`,
+        value: p.name,
+      })),
+    });
+
+    for (const paramName of selected) {
+      const param = unset.query.find(p => p.name === paramName)!;
+      const value = await client.input.text({
+        message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
+        validate: createRequiredValidator(param.name),
+      });
+      pos.push(`${param.name}=${value}`);
+    }
+  }
+
+  if (unset.header.length > 0) {
+    const selected = await client.input.checkbox<string>({
+      message: 'Select optional header parameters to include:',
+      pageSize: 20,
+      choices: unset.header.map(p => ({
+        name: `${chalk.cyan(p.name)}${formatDescription(p.description)}`,
+        value: p.name,
+      })),
+    });
+
+    for (const paramName of selected) {
+      const param = unset.header.find(p => p.name === paramName)!;
+      const value = await client.input.text({
+        message: `Enter value for header ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
+        validate: createRequiredValidator(param.name),
+      });
+      pos.push(`${param.name}=${value}`);
+    }
+  }
+
+  if (unset.body.length > 0) {
+    const selected = await client.input.checkbox<string>({
+      message: 'Select optional body fields to include:',
+      pageSize: 20,
+      choices: unset.body.map(f => ({
+        name: `${chalk.cyan(f.name)}${f.type ? ` ${formatTypeHint(f.type)}` : ''}${formatDescription(f.description)}`,
+        value: f.name,
+      })),
+    });
+
+    for (const fieldName of selected) {
+      const field = unset.body.find(f => f.name === fieldName)!;
+      const value = await promptForBodyField(client, field, true);
+      pos.push(`${field.name}=${value}`);
+    }
+  }
+
+  return pos;
+}
+
+function printTagOperationResolveError(
+  result: Extract<ResolveByTagOperationResult, { ok: false }>,
+  allEndpoints: EndpointInfo[]
+): void {
+  if (result.reason === 'no_tag') {
+    const tags = [...new Set(allEndpoints.flatMap(ep => ep.tags || []))].sort();
+    const preview = tags.slice(0, 25).join(', ');
+    output.error(
+      `No operations use tag "${result.tag}".${tags.length > 0 ? ` Example tags: ${preview}${tags.length > 25 ? ', …' : ''}.` : ''} Run \`vercel api ls --format json\` to inspect tags.`
+    );
+    return;
+  }
+
+  if (result.reason === 'no_operation') {
+    const ids = result.tagMatches
+      .map(ep => ep.operationId)
+      .filter(Boolean)
+      .sort();
+    output.error(
+      `No operation matches "${result.operationHint}" under tag "${result.tag}".${ids.length > 0 ? ` Operations include: ${ids.slice(0, 20).join(', ')}${ids.length > 20 ? ', …' : ''}.` : ''}`
+    );
+    return;
+  }
+
+  const lines = result.tagMatches.map(
+    ep => `  ${ep.operationId}  ${ep.method} ${ep.path}`
+  );
+  output.error(
+    `Multiple operations match "${result.operationHint}" under tag "${result.tag}":\n${lines.join('\n')}`
+  );
 }
 
 async function executeApiRequest(
   client: Client,
-  endpoint: string,
-  flags: ParsedFlags
+  requestConfig: RequestConfig,
+  flags: ParsedFlags,
+  displayColumns?: Record<string, string> | null,
+  options?: { tagOperation?: boolean }
 ): Promise<number> {
-  // Build request from flags
-  let requestConfig: RequestConfig;
-  try {
-    requestConfig = await buildRequest(endpoint, flags);
-  } catch (err) {
-    printError(err);
-    return 1;
-  }
-
   // Verbose mode: show request details
   if (flags['--verbose']) {
     output.debug(`Request: ${requestConfig.method} ${requestConfig.url}`);
@@ -228,16 +604,23 @@ async function executeApiRequest(
     return executePaginatedRequest(client, requestConfig, flags);
   }
 
-  return executeSingleRequest(client, requestConfig, flags);
+  return executeSingleRequest(
+    client,
+    requestConfig,
+    flags,
+    displayColumns,
+    options
+  );
 }
 
 async function executeSingleRequest(
   client: Client,
   config: RequestConfig,
-  flags: ParsedFlags
+  flags: ParsedFlags,
+  displayColumns?: Record<string, string> | null,
+  options?: { tagOperation?: boolean }
 ): Promise<number> {
   try {
-    // Check for confirmation before proceeding with DELETE operations
     const confirmed = await client.confirmMutatingOperation(
       config.url,
       config.method
@@ -250,10 +633,17 @@ async function executeSingleRequest(
       method: config.method,
       body: config.body,
       headers: config.headers,
-      json: false, // Get raw response
+      json: false,
     });
 
-    return handleResponse(client, response, flags);
+    return handleResponse(
+      client,
+      response,
+      flags,
+      config.method,
+      displayColumns,
+      options
+    );
   } catch (err) {
     output.prettyError(err);
     return 1;
@@ -319,36 +709,56 @@ function extractPaginatedData(page: Record<string, unknown>): unknown[] {
 async function handleResponse(
   client: Client,
   response: Response,
-  flags: ParsedFlags
+  flags: ParsedFlags,
+  method: string,
+  displayColumns?: Record<string, string> | null,
+  options?: { tagOperation?: boolean }
 ): Promise<number> {
-  // Include headers if requested
   if (flags['--include']) {
     outputHeaders(client, response);
   }
 
-  // Silent mode
   if (flags['--silent']) {
     return response.ok ? 0 : 1;
   }
 
-  // Get response body
   const contentType = response.headers.get('content-type') || '';
+  const isMutation = options?.tagOperation && method !== 'GET';
 
   if (contentType.includes('application/json')) {
     const json = await response.json();
 
-    // Verbose mode: show response details
     if (flags['--verbose']) {
       output.debug(
         `Response status: ${response.status} ${response.statusText}`
       );
     }
 
+    if (displayColumns && response.ok && !flags['--raw']) {
+      return outputWithDisplayColumns(client, json, displayColumns);
+    }
+
+    if (isMutation && !flags['--raw']) {
+      if (!response.ok) {
+        return outputMutationResult(client, response, method, json);
+      }
+      return outputMutationResult(client, response, method);
+    }
+
     return outputResults(client, json, flags);
   }
 
-  // Non-JSON response
   const text = await response.text();
+
+  if (isMutation && !flags['--raw']) {
+    return outputMutationResult(
+      client,
+      response,
+      method,
+      response.ok ? undefined : text
+    );
+  }
+
   client.stdout.write(text);
 
   return response.ok ? 0 : 1;
@@ -360,6 +770,71 @@ function outputHeaders(client: Client, response: Response): void {
     client.stdout.write(`${key}: ${value}\n`);
   });
   client.stdout.write('\n');
+}
+
+function outputWithDisplayColumns(
+  client: Client,
+  data: unknown,
+  columns: Record<string, string>
+): number {
+  const parsed = parseArrayColumns(data, columns);
+  if (parsed) {
+    client.stdout.write(renderTable(parsed.rows, parsed.rowColumns) + '\n');
+    return 0;
+  }
+
+  if (Array.isArray(data)) {
+    client.stdout.write(renderTable(data, columns) + '\n');
+  } else if (data && typeof data === 'object') {
+    client.stdout.write(renderCard(data, columns) + '\n');
+  } else {
+    client.stdout.write(formatOutput(data, {}) + '\n');
+  }
+  return 0;
+}
+
+function outputMutationResult(
+  client: Client,
+  response: Response,
+  method: string,
+  errorBody?: unknown
+): number {
+  const verb =
+    method === 'POST'
+      ? 'Created'
+      : method === 'PATCH' || method === 'PUT'
+        ? 'Updated'
+        : method === 'DELETE'
+          ? 'Deleted'
+          : 'Done';
+
+  if (response.ok) {
+    client.stdout.write(
+      `${chalk.green('Success')}  ${verb} ${chalk.dim(`(${response.status})`)}\n`
+    );
+    return 0;
+  }
+
+  const errorMessage = extractErrorMessage(errorBody);
+  const statusLine = `${chalk.red('Error')}  ${response.status} ${response.statusText}`;
+  client.stdout.write(
+    errorMessage
+      ? `${statusLine}\n${chalk.dim(errorMessage)}\n`
+      : `${statusLine}\n`
+  );
+  return 1;
+}
+
+function extractErrorMessage(body: unknown): string | null {
+  if (!body) return null;
+  if (typeof body === 'string') return body;
+  if (typeof body === 'object' && body !== null) {
+    const obj = body as Record<string, unknown>;
+    if (typeof obj.message === 'string') return obj.message;
+    const err = obj.error as Record<string, unknown> | undefined;
+    if (err && typeof err.message === 'string') return err.message;
+  }
+  return null;
 }
 
 function outputResults(
@@ -725,5 +1200,137 @@ async function promptForBodyField(
   return client.input.text({
     message: `Enter value for ${chalk.cyan(field.name)}${optionalHint}${typeHint}${description}:`,
     validate: required ? createRequiredValidator(field.name) : undefined,
+  });
+}
+
+/**
+ * Shared path for `vercel api <tag> <operationId> …` and for commands that delegate
+ * (e.g. `project`) without mutating `process.argv`.
+ */
+export async function runTagOperation(
+  client: Client,
+  options: {
+    tag: string;
+    operationId: string;
+    flags: ParsedFlags;
+    positionalOperationFields: string[];
+  }
+): Promise<number> {
+  const { tag, operationId, flags, positionalOperationFields } = options;
+  const telemetryClient = new ApiTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
+
+  const finalFlags = { ...flags } as ParsedFlags;
+
+  const openApi = new OpenApiCache();
+  const loaded = await openApi.loadWithSpinner(
+    finalFlags['--refresh'] ?? false
+  );
+  if (!loaded) {
+    output.error('Could not load API specification');
+    return 1;
+  }
+
+  const allEndpoints = openApi.getEndpoints();
+  const resolved = resolveEndpointByTagAndOperationId(
+    allEndpoints,
+    tag,
+    operationId
+  );
+
+  if (!resolved.ok) {
+    printTagOperationResolveError(resolved, allEndpoints);
+    return 1;
+  }
+
+  const bodyFields = openApi.getBodyFields(resolved.endpoint);
+  const displayColumns = openApi.getDisplayColumns(resolved.endpoint);
+  let tagOperationPositional = positionalOperationFields;
+
+  if (client.stdin.isTTY) {
+    const prompted = await promptMissingParamsForTagOperation(
+      client,
+      resolved.endpoint,
+      bodyFields,
+      finalFlags,
+      tagOperationPositional
+    );
+    if (prompted === null) {
+      return 1;
+    }
+    tagOperationPositional = prompted;
+  } else {
+    try {
+      const parsed = await parseOperationKeyValuePairs(
+        resolved.endpoint,
+        bodyFields,
+        finalFlags,
+        tagOperationPositional
+      );
+      const missing = getMissingRequiredOperationParams(
+        resolved.endpoint,
+        bodyFields,
+        parsed,
+        finalFlags
+      );
+      if (
+        missing.path.length > 0 ||
+        missing.query.length > 0 ||
+        missing.header.length > 0 ||
+        missing.body.length > 0
+      ) {
+        printMissingOperationParamsHelp(resolved.endpoint, missing);
+        return 1;
+      }
+    } catch (err) {
+      printError(err);
+      return 1;
+    }
+  }
+
+  let requestConfig: RequestConfig;
+  try {
+    requestConfig = await buildRequestForResolvedOperation(
+      resolved.endpoint,
+      bodyFields,
+      finalFlags,
+      tagOperationPositional
+    );
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  telemetryClient.trackCliArgumentEndpoint(tag);
+  telemetryClient.trackCliArgumentOperationId(operationId);
+  telemetryClient.trackCliOptionMethod(finalFlags['--method']);
+  telemetryClient.trackCliOptionHeader(finalFlags['--header']);
+  telemetryClient.trackCliOptionInput(finalFlags['--input']);
+  if (finalFlags['--paginate']) telemetryClient.trackCliFlagPaginate(true);
+  if (finalFlags['--include']) telemetryClient.trackCliFlagInclude(true);
+  if (finalFlags['--silent']) telemetryClient.trackCliFlagSilent(true);
+  if (finalFlags['--verbose']) telemetryClient.trackCliFlagVerbose(true);
+  if (finalFlags['--raw']) telemetryClient.trackCliFlagRaw(true);
+  if (finalFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+  if (finalFlags['--generate'])
+    telemetryClient.trackCliOptionGenerate(finalFlags['--generate']);
+  if (finalFlags['--dangerously-skip-permissions'])
+    telemetryClient.trackCliFlagDangerouslySkipPermissions(true);
+
+  if (finalFlags['--generate'] === 'curl') {
+    const curlCmd = generateCurlCommand(
+      requestConfig,
+      'https://api.vercel.com'
+    );
+    output.log('');
+    output.log('Replace <TOKEN> with your auth token:');
+    output.log('');
+    client.stdout.write(curlCmd + '\n');
+    return 0;
+  }
+
+  return executeApiRequest(client, requestConfig, finalFlags, displayColumns, {
+    tagOperation: true,
   });
 }

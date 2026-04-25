@@ -45,6 +45,8 @@ Use this to route to the correct reference file:
 - **Logs, debugging, or accessing preview deploys** → `references/monitoring-and-debugging.md`
 - **Blob storage** → `references/storage.md`
 - **Integrations (databases, storage, etc.)** → `references/integrations.md`
+- **Routing rules** → `references/routing.md`
+- **Firewall (WAF rules, IP blocks, rate limiting)** → `references/firewall.md`
 - **Access a preview deployment** → use `vercel curl` (see `references/monitoring-and-debugging.md`)
 - **CLI doesn't have a command for it** → use `vercel api` as a fallback (see `references/advanced.md`)
 - **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`

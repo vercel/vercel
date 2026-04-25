@@ -206,6 +206,37 @@ describe('successful builds', async () => {
   }, 20000);
 });
 
+it.skipIf(process.platform === 'win32')(
+  'does not crash when a workspace dep cannot be resolved',
+  async () => {
+    const fixtureName = '17-turborepo-hono-monorepo';
+    const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+    const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+    // Add an unresolvable workspace dep import to server.ts
+    const serverPath = join(workDir, 'apps/api/server.ts');
+    const serverContent = await readFile(serverPath, 'utf-8');
+    await writeFile(
+      serverPath,
+      `// @ts-expect-error\nimport { MAGIC } from '@repo/unresolvable'\nconsole.log(MAGIC)\n${serverContent}`
+    );
+
+    // The workspace dep has no exports/main, so rolldown can't resolve it.
+    // Before the fix, this caused: "File .../apps/api/@repo/unresolvable does not exist."
+    await expect(
+      build({
+        files: {},
+        workPath: join(workDir, 'apps/api'),
+        config: getFixtureConfig(await loadVercelJson(fixtureSource)),
+        meta,
+        entrypoint: 'package.json',
+        repoRootPath: workDir,
+      })
+    ).resolves.toBeDefined();
+  },
+  30000
+);
+
 it('extractAndExecuteLambda throws with invalid code', async () => {
   const validLambda = new NodejsLambda({
     runtime: 'nodejs22.x',
@@ -293,11 +324,6 @@ it('prefixes emitted service route sources with routePrefix', async () => {
   expect(result.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        src: pathToRegexp('/api/js/user/:id').regexp.source,
-        dest: '/_svc/js-api/index',
-        methods: ['GET'],
-      }),
-      expect.objectContaining({
         src: '^/api/js(?:/(.*))?$',
         dest: '/_svc/js-api/index',
       }),
@@ -365,7 +391,6 @@ it('does not rewrite non-service route outputs', async () => {
   })) as BuildResultV2Typical;
 
   const lambda = result.output.index as unknown as NodejsLambda;
-  expect(result.output['/user/:id']).toBeDefined();
   expect(result.output['_svc/js-api/index']).toBeUndefined();
   expect(lambda.handler).toBe('index.mjs');
 }, 30000);

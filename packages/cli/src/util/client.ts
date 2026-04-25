@@ -26,6 +26,7 @@ import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
+import type { Span } from '@vercel/build-utils';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -119,6 +120,10 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Root trace span for CLI diagnostics */
+  rootSpan?: Span;
+  /** Path to write CLI trace diagnostics. Only set by `vc build`; other commands do not write traces. */
+  traceDiagnosticsPath?: string;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
 
@@ -238,6 +243,8 @@ export default class Client extends EventEmitter implements Stdio {
       return;
     }
 
+    // Token refresh does not change the authenticated user, so the cached
+    // userId is intentionally preserved here.
     this.updateAuthConfig({
       token: tokens.access_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
@@ -266,7 +273,7 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   emptyAuthConfig() {
-    this.authConfig = {};
+    this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
   writeToAuthConfigFile() {
@@ -352,7 +359,11 @@ export default class Client extends EventEmitter implements Stdio {
         } else {
           url.searchParams.delete('teamId');
         }
-      } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
+      } else if (
+        opts.useCurrentTeam !== false &&
+        this.config.currentTeam &&
+        !url.searchParams.has('teamId')
+      ) {
         url.searchParams.set('teamId', this.config.currentTeam);
       }
     }
@@ -401,6 +412,15 @@ export default class Client extends EventEmitter implements Stdio {
       printIndications(res);
 
       if (!res.ok) {
+        // Return 3xx responses directly when manual redirect is requested
+        if (
+          opts.redirect === 'manual' &&
+          res.status >= 300 &&
+          res.status < 400
+        ) {
+          return res;
+        }
+
         const error = await responseError(res);
 
         // we should force reauth only if error has a teamId

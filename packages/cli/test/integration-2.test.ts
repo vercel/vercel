@@ -5,7 +5,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
 import { apiFetch } from './helpers/api-fetch';
-import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
+import fs, { writeFile, readFile, remove, ensureDir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
@@ -550,6 +550,8 @@ test('add a sensitive env var', async () => {
   expect(output.stderr).toContain(
     'Added Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('override an existing env var', async () => {
@@ -612,6 +614,8 @@ test('override an existing env var', async () => {
   expect(outputOverride.stderr).toContain(
     'Overrode Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
@@ -1338,7 +1342,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // Step 1. Create a simple static deployment with no configuration.
   // Deployment should succeed and page should display "0"
 
-  await mkdir(path.join(directory, 'public'));
+  await ensureDir(path.join(directory, 'public'));
   await writeFile(path.join(directory, 'public/index.txt'), '0');
 
   // auto-confirm this deployment
@@ -1369,7 +1373,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   expect(text).toBe('1\n');
 
   // // Step 3. Do a more complex deployment using a framework this time
-  await mkdir(`${directory}/pages`);
+  await ensureDir(`${directory}/pages`);
   await writeFile(
     `${directory}/pages/index.js`,
     `export default () => 'Next.js Test'`

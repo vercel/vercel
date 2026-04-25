@@ -1068,6 +1068,19 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
   }
 }
 
+/** Thrown when a read-only command needs a linked project but none is configured (non-interactive). */
+export class LinkRequiredError extends NowError<'LINK_REQUIRED', {}> {
+  constructor(
+    message: string = 'No project is linked in this directory. Run `vercel link` or pass a project name.'
+  ) {
+    super({
+      code: 'LINK_REQUIRED',
+      meta: {},
+      message,
+    });
+  }
+}
+
 export class AliasDomainConfigured extends NowError<'DOMAIN_CONFIGURED', {}> {
   constructor({ message }: { message: string }) {
     super({

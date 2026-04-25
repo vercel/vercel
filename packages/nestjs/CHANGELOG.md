@@ -1,5 +1,124 @@
 # @vercel/nestjs
 
+## 0.2.75
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.13
+
+## 0.2.74
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.12
+
+## 0.2.73
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.11
+
+## 0.2.72
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.10
+
+## 0.2.71
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.9
+
+## 0.2.70
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.8
+
+## 0.2.69
+
+### Patch Changes
+
+- Updated dependencies [[`16aca7dadcea2f877ffae79afa72c14a95f682e3`](https://github.com/vercel/vercel/commit/16aca7dadcea2f877ffae79afa72c14a95f682e3)]:
+  - @vercel/node@5.7.7
+
+## 0.2.68
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.6
+
+## 0.2.67
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.5
+
+## 0.2.66
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.4
+
+## 0.2.65
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.3
+
+## 0.2.64
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.2
+
+## 0.2.63
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.1
+
+## 0.2.62
+
+### Patch Changes
+
+- Updated dependencies [[`aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9`](https://github.com/vercel/vercel/commit/aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9)]:
+  - @vercel/node@5.7.0
+
+## 0.2.61
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.24
+
+## 0.2.60
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.23
+
+## 0.2.59
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.22
+
 ## 0.2.58
 
 ### Patch Changes

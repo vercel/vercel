@@ -1,5 +1,37 @@
 # @vercel/frameworks
 
+## 3.24.1
+
+### Patch Changes
+
+- Add actix framework preset ([#15752](https://github.com/vercel/vercel/pull/15752))
+
+## 3.24.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+### Patch Changes
+
+- remove experimental flag on node preset ([#15628](https://github.com/vercel/vercel/pull/15628))
+
+## 3.23.0
+
+### Minor Changes
+
+- Add Mastra framework preset ([#15076](https://github.com/vercel/vercel/pull/15076))
+
+## 3.22.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
 ## 3.21.1
 
 ### Patch Changes

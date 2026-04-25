@@ -1,5 +1,21 @@
 # vercel-runtime
 
+## 0.13.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 0.12.0
+
+### Minor Changes
+
+- Fix django static file serving for manifest storage backends. ([#15709](https://github.com/vercel/vercel/pull/15709))
+
+### Patch Changes
+
+- [django] Fix vc dev when staticfiles is not used ([#15772](https://github.com/vercel/vercel/pull/15772))
+
 ## 0.11.0
 
 ### Minor Changes

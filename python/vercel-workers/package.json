@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python-workers",
-  "version": "0.0.13",
+  "version": "0.0.17",
   "private": true,
   "description": "Python workers SDK for Vercel Queues"
 }

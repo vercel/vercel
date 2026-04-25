@@ -1,5 +1,140 @@
 # @vercel/express
 
+## 0.1.81
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.13
+  - @vercel/cervel@0.0.55
+
+## 0.1.80
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.12
+  - @vercel/cervel@0.0.54
+
+## 0.1.79
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.11
+  - @vercel/cervel@0.0.53
+
+## 0.1.78
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.10
+  - @vercel/cervel@0.0.52
+
+## 0.1.77
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.9
+  - @vercel/cervel@0.0.51
+
+## 0.1.76
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.8
+  - @vercel/cervel@0.0.50
+
+## 0.1.75
+
+### Patch Changes
+
+- Updated dependencies [[`16aca7dadcea2f877ffae79afa72c14a95f682e3`](https://github.com/vercel/vercel/commit/16aca7dadcea2f877ffae79afa72c14a95f682e3)]:
+  - @vercel/node@5.7.7
+  - @vercel/cervel@0.0.49
+
+## 0.1.74
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.6
+  - @vercel/cervel@0.0.48
+
+## 0.1.73
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/cervel@0.0.47
+  - @vercel/node@5.7.5
+
+## 0.1.72
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.4
+  - @vercel/cervel@0.0.46
+
+## 0.1.71
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.3
+  - @vercel/cervel@0.0.45
+
+## 0.1.70
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/cervel@0.0.44
+  - @vercel/node@5.7.2
+
+## 0.1.69
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.7.1
+  - @vercel/cervel@0.0.43
+
+## 0.1.68
+
+### Patch Changes
+
+- Updated dependencies [[`aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9`](https://github.com/vercel/vercel/commit/aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9)]:
+  - @vercel/node@5.7.0
+
+## 0.1.67
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.24
+  - @vercel/cervel@0.0.42
+
+## 0.1.66
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.23
+  - @vercel/cervel@0.0.41
+
+## 0.1.65
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.22
+  - @vercel/cervel@0.0.40
+
 ## 0.1.64
 
 ### Patch Changes

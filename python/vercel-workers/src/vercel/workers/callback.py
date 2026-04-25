@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from collections.abc import Callable
 from email.parser import BytesParser
@@ -13,15 +14,88 @@ import httpx
 from . import client as _client
 from .exceptions import (
     BadRequestError,
-    ForbiddenError,
     InternalServerError,
     MessageCorruptedError,
-    MessageLockedError,
     MessageNotAvailableError,
     MessageNotFoundError,
     ThrottledError,
     UnauthorizedError,
 )
+
+CLOUD_EVENT_TYPE_V2BETA = "com.vercel.queue.v2beta"
+
+
+def _get_environ_header(environ: dict[str, Any], name: str, default: str = "") -> str:
+    # WSGI (PEP 3333) stores most HTTP headers with an HTTP_ prefix, but
+    # Content-Type and Content-Length are special: they are stored without the
+    # prefix as CONTENT_TYPE and CONTENT_LENGTH respectively.
+    key = "HTTP_" + name.upper().replace("-", "_")
+    value = environ.get(key)
+    if value is None:
+        # Fall back to the non-prefixed key for Content-Type / Content-Length
+        wsgi_key = name.upper().replace("-", "_")
+        value = environ.get(wsgi_key)
+    if value is None:
+        return default
+    if isinstance(value, bytes):
+        return value.decode("latin1")
+    return str(value)
+
+
+class ParsedV2BetaCallback(TypedDict):
+    queueName: str
+    consumerGroup: str
+    messageId: str
+    receiptHandle: str
+    deliveryCount: int
+    createdAt: str
+    payload: Any
+
+
+def is_v2beta_callback(environ: dict[str, Any]) -> bool:
+    return _get_environ_header(environ, "Ce-Type") == CLOUD_EVENT_TYPE_V2BETA
+
+
+def parse_v2beta_callback(
+    raw_body: bytes,
+    environ: dict[str, Any],
+) -> ParsedV2BetaCallback:
+    """Parse a v2beta binary content mode callback."""
+    queue_name = _get_environ_header(environ, "Ce-Vqsqueuename")
+    consumer_group = _get_environ_header(environ, "Ce-Vqsconsumergroup")
+    message_id = _get_environ_header(environ, "Ce-Vqsmessageid")
+    receipt_handle = _get_environ_header(environ, "Ce-Vqsreceipthandle")
+
+    if not queue_name or not consumer_group or not message_id:
+        raise ValueError("missing required ce-vqs* headers")
+
+    delivery_count_raw = _get_environ_header(environ, "Ce-Vqsdeliverycount", "1")
+    try:
+        delivery_count = int(delivery_count_raw)
+    except ValueError:
+        delivery_count = 1
+
+    created_at = _get_environ_header(environ, "Ce-Vqscreatedat")
+
+    content_type = _get_environ_header(environ, "Content-Type")
+    payload: Any
+    if "application/json" in content_type.lower():
+        try:
+            payload = json.loads(raw_body.decode("utf-8"))
+        except Exception:  # noqa: BLE001
+            payload = raw_body
+    else:
+        payload = raw_body
+
+    return {
+        "queueName": queue_name,
+        "consumerGroup": consumer_group,
+        "messageId": message_id,
+        "receiptHandle": receipt_handle,
+        "deliveryCount": delivery_count,
+        "createdAt": created_at,
+        "payload": payload,
+    }
 
 
 class CloudEventData(TypedDict):
@@ -153,7 +227,7 @@ class ReceivedMessage(TypedDict):
     messageId: str
     deliveryCount: int
     createdAt: str
-    ticket: str
+    receipt_handle: str
     contentType: str
     payload: Any
 
@@ -169,7 +243,7 @@ def receive_messages(
     """
     Receive one or more messages from a queue.
 
-    GET {base_url}{base_path}
+    POST {base_url}{base_path}/{queue_name}/consumer/{consumer_group}
     Accept: multipart/mixed
 
     Returns a list of messages (possibly empty).
@@ -181,19 +255,23 @@ def receive_messages(
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
-        "Vqs-Queue-Name": queue_name,
-        "Vqs-Consumer-Group": consumer_group,
         "Accept": "multipart/mixed",
     }
 
-    if visibility_timeout_seconds is not None:
-        headers["Vqs-Visibility-Timeout"] = str(int(visibility_timeout_seconds))
-    if limit is not None:
-        headers["Vqs-Limit"] = str(int(limit))
+    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
+    if deployment_id:
+        headers["Vqs-Deployment-Id"] = deployment_id
 
-    url = f"{base_url}{base_path}"
+    if visibility_timeout_seconds is not None:
+        headers["Vqs-Visibility-Timeout-Seconds"] = str(int(visibility_timeout_seconds))
+    if limit is not None:
+        headers["Vqs-Max-Messages"] = str(int(limit))
+
+    topic_path = quote(queue_name, safe="")
+    consumer_path = quote(consumer_group, safe="")
+    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}"
     with httpx.Client(timeout=timeout) as client:
-        response = client.get(url, headers=headers)
+        response = client.post(url, headers=headers)
 
     if response.status_code == 204:
         return []
@@ -201,12 +279,8 @@ def receive_messages(
         raise BadRequestError(response.text or "Invalid parameters")
     if response.status_code == 401:
         raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
     if response.status_code == 429:
         raise ThrottledError(parse_retry_after(response))
-    if response.status_code == 423:
-        raise MessageLockedError("next message", parse_retry_after(response))
     if response.status_code >= 500:
         raise InternalServerError(
             response.text or f"Server error: {response.status_code} {response.reason_phrase}"
@@ -217,12 +291,12 @@ def receive_messages(
     messages: list[ReceivedMessage] = []
     for part_headers, payload_bytes in parse_multipart_messages(response):
         message_id = part_headers.get("Vqs-Message-Id")
-        ticket = part_headers.get("Vqs-Ticket")
+        receipt_handle = part_headers.get("Vqs-Receipt-Handle")
         timestamp = part_headers.get("Vqs-Timestamp") or ""
         delivery_count_raw = part_headers.get("Vqs-Delivery-Count") or "0"
         content_type = part_headers.get("Content-Type", "")
 
-        if not message_id or not ticket:
+        if not message_id or not receipt_handle:
             # Skip malformed parts
             continue
 
@@ -246,7 +320,7 @@ def receive_messages(
                 "messageId": str(message_id),
                 "deliveryCount": delivery_count,
                 "createdAt": str(timestamp),
-                "ticket": str(ticket),
+                "receipt_handle": str(receipt_handle),
                 "contentType": str(content_type),
                 "payload": payload,
             }
@@ -266,10 +340,10 @@ def receive_message_by_id(
     """
     Minimal receive-by-id:
 
-      GET {base_url}{base_path}/{messageId}
+      POST {base_url}{base_path}/{queue_name}/consumer/{consumer_group}/id/{messageId}
       Accept: multipart/mixed
 
-    Returns (payload, delivery_count, created_at, ticket).
+    Returns (payload, delivery_count, created_at, receipt_handle).
     """
     base_url = _client.get_queue_base_url().rstrip("/")  # type: ignore[attr-defined]
     base_path = _client.get_queue_base_path()  # type: ignore[attr-defined]
@@ -277,30 +351,35 @@ def receive_message_by_id(
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
-        "Vqs-Queue-Name": queue_name,
-        "Vqs-Consumer-Group": consumer_group,
         "Accept": "multipart/mixed",
     }
 
-    if visibility_timeout_seconds is not None:
-        headers["Vqs-Visibility-Timeout"] = str(int(visibility_timeout_seconds))
+    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
+    if deployment_id:
+        headers["Vqs-Deployment-Id"] = deployment_id
 
-    url = f"{base_url}{base_path}/{quote(message_id, safe='')}"
+    if visibility_timeout_seconds is not None:
+        headers["Vqs-Visibility-Timeout-Seconds"] = str(int(visibility_timeout_seconds))
+
+    topic_path = quote(queue_name, safe="")
+    consumer_path = quote(consumer_group, safe="")
+    message_path = quote(message_id, safe="")
+    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/id/{message_path}"
     with httpx.Client(timeout=timeout) as client:
-        response = client.get(url, headers=headers)
+        response = client.post(url, headers=headers)
 
     if response.status_code == 400:
         raise BadRequestError(response.text or "Invalid parameters")
     if response.status_code == 401:
         raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
     if response.status_code == 404:
         raise MessageNotFoundError(message_id)
-    if response.status_code == 423:
-        raise MessageLockedError(message_id, parse_retry_after(response))
     if response.status_code == 409:
         raise MessageNotAvailableError(message_id)
+    if response.status_code == 410:
+        raise MessageNotFoundError(message_id)
+    if response.status_code == 429:
+        raise ThrottledError(parse_retry_after(response))
     if response.status_code >= 500:
         raise InternalServerError(
             response.text or f"Server error: {response.status_code} {response.reason_phrase}"
@@ -317,12 +396,12 @@ def receive_message_by_id(
         ) from exc
     delivery_count_raw = part_headers.get("Vqs-Delivery-Count") or "0"
     timestamp = part_headers.get("Vqs-Timestamp") or ""
-    ticket = part_headers.get("Vqs-Ticket")
+    receipt_handle = part_headers.get("Vqs-Receipt-Handle")
 
-    if not ticket:
+    if not receipt_handle:
         raise MessageCorruptedError(
             message_id,
-            "Missing required queue header 'Vqs-Ticket' in multipart response",
+            "Missing required queue header 'Vqs-Receipt-Handle' in multipart response",
         )
 
     try:
@@ -340,14 +419,14 @@ def receive_message_by_id(
                 message_id,
                 f"Failed to parse payload as JSON: {exc}",
             ) from exc
-    return payload, delivery_count, timestamp, ticket  # type: ignore[return-value]
+    return payload, delivery_count, timestamp, receipt_handle  # type: ignore[return-value]
 
 
 def delete_message(
     queue_name: str,
     consumer_group: str,
     message_id: str,
-    ticket: str,
+    receipt_handle: str,
     *,
     timeout: float | None = 10.0,
 ) -> None:
@@ -357,25 +436,29 @@ def delete_message(
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
-        "Vqs-Queue-Name": queue_name,
-        "Vqs-Consumer-Group": consumer_group,
-        "Vqs-Ticket": ticket,
     }
 
-    url = f"{base_url}{base_path}/{quote(message_id, safe='')}"
+    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
+    if deployment_id:
+        headers["Vqs-Deployment-Id"] = deployment_id
+
+    topic_path = quote(queue_name, safe="")
+    consumer_path = quote(consumer_group, safe="")
+    handle_path = quote(receipt_handle, safe="")
+    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/lease/{handle_path}"
     with httpx.Client(timeout=timeout) as client:
         response = client.delete(url, headers=headers)
 
     if response.status_code == 400:
-        raise BadRequestError("Missing or invalid ticket")
+        raise BadRequestError("Missing or invalid receipt handle")
     if response.status_code == 401:
         raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
     if response.status_code == 404:
         raise MessageNotFoundError(message_id)
     if response.status_code == 409:
-        raise MessageNotAvailableError(message_id, "not available for deletion")
+        raise MessageNotAvailableError(message_id, "lease expired or receipt handle mismatch")
+    if response.status_code == 429:
+        raise ThrottledError(parse_retry_after(response))
     if response.status_code >= 500:
         raise InternalServerError(
             response.text or f"Server error: {response.status_code} {response.reason_phrase}"
@@ -388,7 +471,7 @@ def change_visibility(
     queue_name: str,
     consumer_group: str,
     message_id: str,
-    ticket: str,
+    receipt_handle: str,
     visibility_timeout_seconds: int,
     *,
     timeout: float | None = 10.0,
@@ -399,26 +482,32 @@ def change_visibility(
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
-        "Vqs-Queue-Name": queue_name,
-        "Vqs-Consumer-Group": consumer_group,
-        "Vqs-Ticket": ticket,
-        "Vqs-Visibility-Timeout": str(visibility_timeout_seconds),
+        "Content-Type": "application/json",
     }
 
-    url = f"{base_url}{base_path}/{quote(message_id, safe='')}"
+    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
+    if deployment_id:
+        headers["Vqs-Deployment-Id"] = deployment_id
+
+    body = json.dumps({"visibilityTimeoutSeconds": visibility_timeout_seconds})
+
+    topic_path = quote(queue_name, safe="")
+    consumer_path = quote(consumer_group, safe="")
+    handle_path = quote(receipt_handle, safe="")
+    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/lease/{handle_path}"
     with httpx.Client(timeout=timeout) as client:
-        response = client.patch(url, headers=headers)
+        response = client.patch(url, content=body.encode("utf-8"), headers=headers)
 
     if response.status_code == 400:
-        raise BadRequestError("Missing ticket or invalid visibility timeout")
+        raise BadRequestError("Missing receipt handle or invalid visibility timeout")
     if response.status_code == 401:
         raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
     if response.status_code == 404:
         raise MessageNotFoundError(message_id)
     if response.status_code == 409:
-        raise MessageNotAvailableError(message_id, "not available for visibility change")
+        raise MessageNotAvailableError(message_id, "lease expired or receipt handle mismatch")
+    if response.status_code == 429:
+        raise ThrottledError(parse_retry_after(response))
     if response.status_code >= 500:
         raise InternalServerError(
             response.text or f"Server error: {response.status_code} {response.reason_phrase}"
@@ -444,7 +533,7 @@ class VisibilityExtender:
         queue_name: str,
         consumer_group: str,
         message_id: str,
-        ticket: str,
+        receipt_handle: str,
         *,
         visibility_timeout_seconds: int,
         refresh_interval_seconds: float,
@@ -454,7 +543,7 @@ class VisibilityExtender:
         self.queue_name = queue_name
         self.consumer_group = consumer_group
         self.message_id = message_id
-        self.ticket = ticket
+        self.receipt_handle = receipt_handle
         self.visibility_timeout_seconds = int(visibility_timeout_seconds)
         self.refresh_interval_seconds = float(refresh_interval_seconds)
         self.timeout = timeout
@@ -497,7 +586,7 @@ class VisibilityExtender:
                         self.queue_name,
                         self.consumer_group,
                         self.message_id,
-                        self.ticket,
+                        self.receipt_handle,
                         int(self.visibility_timeout_seconds),
                         timeout=self.timeout,
                     )

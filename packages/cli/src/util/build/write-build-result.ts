@@ -159,6 +159,9 @@ function injectServiceEnvVars(
   if (service?.type) {
     lambda.environment.VERCEL_SERVICE_TYPE = service.type;
   }
+  if (service?.trigger) {
+    lambda.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
+  }
   if (service?.routePrefix && service.routePrefix !== '/') {
     lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
   }
@@ -509,6 +512,13 @@ async function writeStaticFile(
 
   // if already on disk hard link instead of copying
   if ('fsPath' in file) {
+    // If source and destination resolve to the same path (e.g. local builds
+    // where a builder writes static files directly into outputDir/static/ and
+    // then returns FileFsRef objects pointing to those same paths), the file
+    // is already in place — skip to avoid truncating it via downloadFile.
+    if (resolve(file.fsPath) === resolve(dest)) {
+      return;
+    }
     try {
       return await fs.link(file.fsPath, dest);
     } catch (_) {
