@@ -27,6 +27,34 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliArgumentClient(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'client',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagYes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliFlagDisconnectAll(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('disconnect-all');
+    }
+  }
+
   trackCliOptionLimit(v: number | undefined) {
     if (v !== undefined) {
       this.trackCliOption({
