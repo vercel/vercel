@@ -1059,7 +1059,7 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
-      it('uses --value when provided and reaches next prompt (e.g. git_branch_required)', async () => {
+      it('uses --value and --yes for preview without git branch (all preview branches)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
@@ -1077,23 +1077,18 @@ describe('env add', () => {
         );
         const exitCodePromise = env(client);
 
-        await expect(exitCodePromise).rejects.toThrow('exit');
-        const payload = JSON.parse(
-          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        await expect(exitCodePromise).resolves.toBe(0);
+        expect(exitSpy).not.toHaveBeenCalled();
+        expect(logSpy).not.toHaveBeenCalled();
+        await expect(client.stderr).toOutput(
+          'Added Environment Variable PREVIEW_VAR to Project vercel-env-pull'
         );
-        expect(payload.reason).toBe('git_branch_required');
-        expect(
-          payload.next.some(
-            (n: { command: string }) =>
-              n.command.includes('preview') && n.command.includes('<gitbranch>')
-          )
-        ).toBe(true);
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
       });
 
-      it('outputs action_required when preview target and git branch not passed (no third argument)', async () => {
+      it('uses stdin and --yes --force for preview without git branch (all preview branches)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
@@ -1101,30 +1096,23 @@ describe('env add', () => {
 
         client.nonInteractive = true;
         client.stdin.isTTY = false;
-        client.setArgv('env', 'add', 'PREVIEW_VAR', 'preview', '--yes');
+        client.setArgv(
+          'env',
+          'add',
+          'PREVIEW_VAR',
+          'preview',
+          '--yes',
+          '--force'
+        );
         const exitCodePromise = env(client);
         setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
 
-        await expect(exitCodePromise).rejects.toThrow('exit');
-        expect(logSpy).toHaveBeenCalled();
-        const payload = JSON.parse(
-          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        await expect(exitCodePromise).resolves.toBe(0);
+        expect(exitSpy).not.toHaveBeenCalled();
+        expect(logSpy).not.toHaveBeenCalled();
+        await expect(client.stderr).toOutput(
+          'Added Environment Variable PREVIEW_VAR to Project vercel-env-pull'
         );
-        expect(payload).toMatchObject({
-          status: 'action_required',
-          reason: 'git_branch_required',
-          message: expect.stringMatching(/Git branch|third argument|Preview/),
-          next: expect.any(Array),
-        });
-        expect(payload.next.length).toBeGreaterThanOrEqual(1);
-        expect(
-          payload.next.some(
-            (n: { command: string }) =>
-              n.command.includes('preview') &&
-              (n.command.includes('<gitbranch>') ||
-                n.command.includes('--value'))
-          )
-        ).toBe(true);
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
