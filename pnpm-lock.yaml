@@ -1392,6 +1392,9 @@ importers:
       '@vercel/oidc':
         specifier: workspace:*
         version: link:../oidc
+      ws:
+        specifier: 8.20.0
+        version: 8.20.0
     devDependencies:
       '@aws-sdk/client-s3':
         specifier: 3.609.0
@@ -1405,6 +1408,9 @@ importers:
       '@types/pg':
         specifier: 8.15.5
         version: 8.15.5
+      '@types/ws':
+        specifier: 8.18.1
+        version: 8.18.1
       cassandra-driver:
         specifier: 4.8.0
         version: 4.8.0
@@ -9634,6 +9640,12 @@ packages:
 
   /@types/write-json-file@2.2.1:
     resolution: {integrity: sha512-JdO/UpPm9RrtQBNVcZdt3M7j3mHO/kXaea9LBGx3UgWJd1f9BkIWP7jObLBG6ZtRyqp7KzLFEsaPhWcidVittA==}
+    dev: true
+
+  /@types/ws@8.18.1:
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+    dependencies:
+      '@types/node': 20.11.0
     dev: true
 
   /@types/yargs-parser@21.0.3:
@@ -21346,6 +21358,19 @@ packages:
       sort-keys: 1.1.2
       write-file-atomic: 2.4.3
     dev: true
+
+  /ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+    dev: false
 
   /xdg-app-paths@5.1.0:
     resolution: {integrity: sha512-RAQ3WkPf4KTU1A8RtFx3gWywzVKe00tfOPFfl2NDGqbIFENQO4kqAJp7mhQjNj/33W5x5hiWWUdyfPq/5SU3QA==}

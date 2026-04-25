@@ -9,10 +9,16 @@
 - [PurgeApi](../interfaces/index.PurgeApi.md)
 - [Request](../interfaces/index.Request.md)
 - [RuntimeCache](../interfaces/index.RuntimeCache.md)
+- [WebSocket](../interfaces/index.WebSocket.md)
 
 ### Type Aliases
 
 - [AddCacheTagApi](index.md#addcachetagapi)
+- [WebSocketData](index.md#websocketdata)
+
+### Variables
+
+- [WebSocket](index.md#websocket)
 
 ### Functions
 
@@ -29,6 +35,7 @@
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
+- [upgradeWebSocket](index.md#upgradewebsocket)
 - [waitUntil](index.md#waituntil)
 
 ## Type Aliases
@@ -59,6 +66,30 @@ A promise that resolves when the tag is added.
 #### Defined in
 
 [packages/functions/src/addcachetag/types.ts:8](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/types.ts#L8)
+
+---
+
+### WebSocketData
+
+Ƭ **WebSocketData**: `Buffer` \| [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer) \| `Buffer`[]
+
+Data represents the raw message payload received over the WebSocket.
+
+#### Defined in
+
+node_modules/.pnpm/@types+ws@8.18.1/node_modules/@types/ws/index.d.ts:205
+
+## Variables
+
+### WebSocket
+
+• `Const` **WebSocket**: typeof `WebSocketAlias`
+
+#### Defined in
+
+node_modules/.pnpm/@types+ws@8.18.1/node_modules/@types/ws/index.d.ts:438
+
+node_modules/.pnpm/@types+ws@8.18.1/node_modules/@types/ws/index.d.ts:439
 
 ## Functions
 
@@ -497,6 +528,20 @@ export const config = { matcher: '/api/users/:path*' };
 #### Defined in
 
 [packages/functions/src/middleware.ts:101](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L101)
+
+---
+
+### upgradeWebSocket
+
+▸ **upgradeWebSocket**(): [`WebSocket`](index.md#websocket)
+
+#### Returns
+
+[`WebSocket`](index.md#websocket)
+
+#### Defined in
+
+[packages/functions/src/websocket/index.ts:4](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L4)
 
 ---
 
