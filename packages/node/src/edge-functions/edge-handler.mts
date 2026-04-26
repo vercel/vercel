@@ -35,7 +35,8 @@ const toHeaders = buildToHeaders({ Headers });
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const edgeHandlerTemplate = readFileSync(
-  `${__dirname}/edge-handler-template.js`
+  process.env.VERCEL_NODE_EDGE_HANDLER_TEMPLATE_PATH ||
+    `${__dirname}/edge-handler-template.js`
 );
 
 async function compileUserCode(

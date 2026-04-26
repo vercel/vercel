@@ -614,6 +614,10 @@ export const build = async ({
       !isEdgeFunction;
 
     if (enableBundling) {
+      const bundlingHandlerPath =
+        process.env.VERCEL_NODE_BUNDLING_HANDLER_PATH ||
+        join(dirname(__filename), 'bundling-handler.js');
+
       // All bundleable lambdas share this identical handler file so that
       // groupLambdas can match their handler field and digest, grouping
       // them into a single Lambda. At runtime, the shared handler uses
@@ -621,10 +625,7 @@ export const build = async ({
       const bundledHandlerName = '___vc_bundled_api_handler.js';
       const entrypointPrefix = relative(baseDir, workPath).split(sep).join('/');
       preparedFiles[bundledHandlerName] = new FileBlob({
-        data: readFileSync(
-          join(dirname(__filename), 'bundling-handler.js'),
-          'utf8'
-        ).replace(
+        data: readFileSync(bundlingHandlerPath, 'utf8').replace(
           'process.env.VERCEL_ENTRYPOINT_PREFIX',
           JSON.stringify(entrypointPrefix)
         ),

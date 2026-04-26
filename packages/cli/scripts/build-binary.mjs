@@ -12,6 +12,7 @@ import path from 'node:path';
 import { compileDevTemplates } from './compile-templates.mjs';
 import { build as esbuild } from 'esbuild';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const cwd = process.cwd();
 const repoRoot = new URL('../', import.meta.url);
@@ -90,13 +91,18 @@ const childProcessShim = {
 // under the binary's virtual FS that loops forever. Hardcode the response to
 // the CLI's own package.json, baked in at build time. This shim only serves
 // the CLI package — it is not a general-purpose lookup.
-const cliPkgJson = JSON.parse(readFileSync(new URL('package.json', repoRoot), 'utf8'));
+const cliPkgJson = JSON.parse(
+  readFileSync(new URL('package.json', repoRoot), 'utf8')
+);
 const cliPackageJsonShim = {
   name: 'cli-package-json-shim',
   setup(build) {
-    build.onResolve({ filter: /^@vercel-internals\/get-package-json$/ }, args => {
-      return { path: args.path, namespace: 'cli-package-json-shim' };
-    });
+    build.onResolve(
+      { filter: /^@vercel-internals\/get-package-json$/ },
+      args => {
+        return { path: args.path, namespace: 'cli-package-json-shim' };
+      }
+    );
     build.onLoad({ filter: /.*/, namespace: 'cli-package-json-shim' }, () => {
       return {
         contents: `const pkg = ${JSON.stringify(cliPkgJson)};
@@ -140,20 +146,9 @@ if (__vc_isBunBinary) {
 const distBinDir = join(cwd, 'dist-bin');
 if (!existsSync(distBinDir)) mkdirSync(distBinDir, { recursive: true });
 
-// Bin wrapper: fast path for --version, then dispatch into the bundle.
-const wrapperSrc = `
-// Auto-generated binary entry wrapper
-if (process.argv.length === 3 && (process.argv[2] === '--version' || process.argv[2] === '-v')) {
-  console.error('Vercel CLI ${pkg.version}');
-  console.log('${pkg.version}');
-  process.exit(0);
-}
-await import('./index-bundled.js');
-`.trim();
-
-writeFileSync(join(distBinDir, 'vc-wrapper.mjs'), wrapperSrc, 'utf8');
-
-console.log('[bundle] esbuild: src/index.ts -> dist-bin/index-bundled.js (single file, no splitting)');
+console.log(
+  '[bundle] esbuild: src/index.ts -> dist-bin/index-bundled.js (single file, no splitting)'
+);
 const result = await esbuild({
   entryPoints: [join(cwd, 'src/index.ts')],
   bundle: true,
@@ -182,12 +177,14 @@ const result = await esbuild({
   },
 });
 
-const size = require('node:fs').statSync(join(distBinDir, 'index-bundled.js')).size;
+const size = require('node:fs').statSync(
+  join(distBinDir, 'index-bundled.js')
+).size;
 console.log(`[bundle] done. ${(size / 1024 / 1024).toFixed(1)}MB`);
 
 // @vercel/node forks a `dev-server.mjs` sidecar. Bundle a self-contained
-// copy alongside the binary so `fork(join(__dirname, 'dev-server.mjs'))`
-// resolves at runtime.
+// copy and embed it into the compiled wrapper so it can be extracted to a
+// real filesystem path at runtime.
 console.log('[sidecar] bundling @vercel/node dev-server.mjs...');
 await esbuild({
   entryPoints: [
@@ -218,9 +215,7 @@ await esbuild({
 const sidecarSize = require('node:fs').statSync(
   join(distBinDir, 'dev-server.mjs')
 ).size;
-console.log(
-  `[sidecar] done. ${(sidecarSize / 1024 / 1024).toFixed(1)}MB`
-);
+console.log(`[sidecar] done. ${(sidecarSize / 1024 / 1024).toFixed(1)}MB`);
 
 // @vercel/node template files, loaded at runtime via readFileSync.
 const vercelNodeDist = path.join(
@@ -249,15 +244,73 @@ for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
   }
 }
 
+const sidecarAssets = [
+  'dev-server.mjs',
+  'edge-handler-template.js',
+  'bundling-handler.js',
+  'builder-worker.cjs',
+]
+  .filter(filename => existsSync(join(distBinDir, filename)))
+  .map(filename => ({
+    filename,
+    contents: readFileSync(join(distBinDir, filename), 'utf8'),
+  }));
+const sidecarAssetsDigest = createHash('sha256')
+  .update(JSON.stringify(sidecarAssets))
+  .digest('hex')
+  .slice(0, 16);
+
+writeFileSync(
+  join(distBinDir, 'vc-sidecar-assets.mjs'),
+  `// Auto-generated binary sidecar assets\nexport const sidecarAssets = ${JSON.stringify(
+    sidecarAssets
+  )};\n`,
+  'utf8'
+);
+
+// Bin wrapper: fast path for --version, then extract sidecars and dispatch
+// into the bundle. On Windows, Bun's compiled runtime can report __dirname as
+// B:\\~BUN\\root, so dev-time fork targets must be written to a real path.
+const wrapperSrc = `
+// Auto-generated binary entry wrapper
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { sidecarAssets } from './vc-sidecar-assets.mjs';
+
+if (process.argv.length === 3 && (process.argv[2] === '--version' || process.argv[2] === '-v')) {
+  console.error('Vercel CLI ${pkg.version}');
+  console.log('${pkg.version}');
+  process.exit(0);
+}
+
+const sidecarDir = join(
+  tmpdir(),
+  'vercel-cli-binary-${pkg.version}-${sidecarAssetsDigest}'
+);
+mkdirSync(sidecarDir, { recursive: true });
+for (const asset of sidecarAssets) {
+  const file = join(sidecarDir, asset.filename);
+  if (!existsSync(file) || readFileSync(file, 'utf8') !== asset.contents) {
+    writeFileSync(file, asset.contents, 'utf8');
+  }
+}
+
+process.env.VERCEL_CLI_BINARY_ASSET_DIR = sidecarDir;
+process.env.VERCEL_CLI_BINARY_DEV_SERVER_PATH = join(sidecarDir, 'dev-server.mjs');
+process.env.VERCEL_CLI_BINARY_BUILDER_WORKER_PATH = join(sidecarDir, 'builder-worker.cjs');
+process.env.VERCEL_NODE_BUNDLING_HANDLER_PATH = join(sidecarDir, 'bundling-handler.js');
+process.env.VERCEL_NODE_EDGE_HANDLER_TEMPLATE_PATH = join(sidecarDir, 'edge-handler-template.js');
+
+await import('./index-bundled.js');
+`.trim();
+
+writeFileSync(join(distBinDir, 'vc-wrapper.mjs'), wrapperSrc, 'utf8');
+
 // Supported Bun compile targets. `os` matches process.platform values
 // (darwin/linux/win32). `abi: 'musl'` is for statically-linked Linux
 // binaries that run on Alpine and other musl-based distros.
 //
-// Windows binaries build successfully but `vc dev` (sidecar fork) does not
-// work yet because Bun's Windows runtime returns the virtual `B:\~BUN\root`
-// path for both process.execPath and __dirname (Bun #16010, #25500). Tracked
-// for re-validation once we either land sidecar-extract-to-tempdir or Bun
-// fixes the upstream issue.
 const allTargets = [
   { os: 'darwin', arch: 'arm64' },
   { os: 'darwin', arch: 'x64' },

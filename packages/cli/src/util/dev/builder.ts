@@ -175,7 +175,9 @@ async function createBuildProcess(
 ): Promise<ChildProcess> {
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
-  const builderWorkerPath = join(__dirname, 'builder-worker.cjs');
+  const builderWorkerPath =
+    process.env.VERCEL_CLI_BINARY_BUILDER_WORKER_PATH ||
+    join(__dirname, 'builder-worker.cjs');
 
   // Ensure that `node` is in the builder's `PATH`
   const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;

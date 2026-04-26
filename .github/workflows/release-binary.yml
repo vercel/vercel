@@ -51,16 +51,14 @@ jobs:
             target: bun-linux-x64-musl
             asset: vercel-linux-x64-musl
             ext: ''
-          # Windows disabled until the fork-of-self pattern is verified on
-          # Windows and is-bun-binary.ts also matches `B:/~BUN/`.
-          # - runner: windows-latest
-          #   target: bun-windows-arm64
-          #   asset: vercel-windows-arm64
-          #   ext: '.exe'
-          # - runner: windows-latest
-          #   target: bun-windows-x64
-          #   asset: vercel-windows-x64
-          #   ext: '.exe'
+          - runner: windows-latest
+            target: bun-windows-x64
+            asset: vercel-windows-x64
+            ext: '.exe'
+          - runner: windows-11-arm
+            target: bun-windows-arm64
+            asset: vercel-windows-arm64
+            ext: '.exe'
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout

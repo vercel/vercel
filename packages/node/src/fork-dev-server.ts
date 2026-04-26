@@ -32,7 +32,9 @@ export async function forkDevServer(options: {
   devServerPath?: string;
 }): Promise<ChildProcess> {
   const devServerPath =
-    options.devServerPath || join(__dirname, 'dev-server.mjs');
+    options.devServerPath ||
+    process.env.VERCEL_CLI_BINARY_DEV_SERVER_PATH ||
+    join(__dirname, 'dev-server.mjs');
 
   let child: ChildProcess;
 
