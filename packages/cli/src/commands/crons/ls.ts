@@ -1,7 +1,11 @@
 import chalk from 'chalk';
-import { CronExpressionParser } from 'cron-parser';
 import ms from 'ms';
 import type Client from '../../util/client';
+import {
+  nextFireAfter,
+  parseCronExpression,
+  previousFireBefore,
+} from '../../util/cron-times';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -29,21 +33,15 @@ interface CronTimes {
 
 // Vercel evaluates cron schedules in UTC.
 function computeCronTimes(schedule: string, now: Date): CronTimes {
-  try {
-    const expr = CronExpressionParser.parse(schedule, {
-      currentDate: now,
-      tz: 'UTC',
-    });
-    const next = expr.hasNext() ? expr.next().toDate() : null;
-    expr.reset(now);
-    const previous = expr.hasPrev() ? expr.prev().toDate() : null;
-    return { next, previous };
-  } catch (err) {
-    output.debug(
-      `failed to parse cron schedule "${schedule}": ${(err as Error).message}`
-    );
+  const fields = parseCronExpression(schedule);
+  if (!fields) {
+    output.debug(`failed to parse cron schedule "${schedule}"`);
     return { next: null, previous: null };
   }
+  return {
+    next: nextFireAfter(now, fields),
+    previous: previousFireBefore(now, fields),
+  };
 }
 
 function formatRelative(target: Date | null, now: Date): string {
