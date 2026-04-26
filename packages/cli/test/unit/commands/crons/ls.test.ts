@@ -358,6 +358,72 @@ describe('crons ls', () => {
     });
   });
 
+  // Locks in the rounding/granularity behavior at and beyond the 24h boundary.
+  // The `ms` package (short mode) rounds to whole days for any delta >= 24h
+  // and never escalates to weeks/months/years, so a yearly schedule renders
+  // as e.g. "in 351d". If we ever swap formatters, these assertions will
+  // surface the change.
+  describe('day-and-longer ranges', () => {
+    it.each([
+      {
+        kind: 'weekly',
+        schedule: '15 3 * * 0',
+        next: '2024-01-21T03:15:00.000Z',
+        previous: '2024-01-14T03:15:00.000Z',
+        tableNext: 'in 6d',
+        tablePrevious: '1d ago',
+      },
+      {
+        kind: 'monthly',
+        schedule: '0 0 1 * *',
+        next: '2024-02-01T00:00:00.000Z',
+        previous: '2024-01-01T00:00:00.000Z',
+        tableNext: 'in 16d',
+        tablePrevious: '15d ago',
+      },
+      {
+        kind: 'yearly',
+        schedule: '0 0 1 1 *',
+        next: '2025-01-01T00:00:00.000Z',
+        previous: '2024-01-01T00:00:00.000Z',
+        tableNext: 'in 351d',
+        tablePrevious: '15d ago',
+      },
+    ])('renders $kind schedule with day granularity', async ({
+      schedule,
+      next,
+      previous,
+      tableNext,
+      tablePrevious,
+    }) => {
+      mockLinkedProject();
+      mockProjectWithCrons([
+        { host: 'example.vercel.app', path: '/api/cron', schedule },
+      ]);
+
+      client.setArgv('crons', 'ls', '--format', 'json');
+      expect(await crons(client)).toEqual(0);
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.crons[0].nextRun).toBe(next);
+      expect(parsed.crons[0].previousRun).toBe(previous);
+
+      // Re-run for the human/table view. `client.reset()` clears the mock
+      // server's routes, so re-register them before the second invocation.
+      client.reset();
+      mockedReadLocalConfig.mockReturnValue(undefined);
+      mockLinkedProject();
+      mockProjectWithCrons([
+        { host: 'example.vercel.app', path: '/api/cron', schedule },
+      ]);
+
+      client.setArgv('crons', 'ls');
+      expect(await crons(client)).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(tableNext);
+      expect(stderr).toContain(tablePrevious);
+    });
+  });
+
   describe('extra arguments', () => {
     it('rejects extra arguments', async () => {
       client.setArgv('crons', 'ls', 'extra-arg');
