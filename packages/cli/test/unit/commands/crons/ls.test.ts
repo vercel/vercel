@@ -325,6 +325,39 @@ describe('crons ls', () => {
     });
   });
 
+  // Cron times are computed from absolute epoch deltas with `tz: 'UTC'`, so
+  // the system timezone should not influence the result. This guards against
+  // someone accidentally introducing local-time math (e.g. `getHours()` in
+  // place of `getUTCHours()`) in a future change.
+  describe('timezone independence', () => {
+    it.each([
+      'UTC',
+      'America/New_York',
+      'Asia/Tokyo',
+    ])('computes identical next/previous regardless of system TZ (TZ=%s)', async tz => {
+      const originalTz = process.env.TZ;
+      process.env.TZ = tz;
+      try {
+        mockLinkedProject();
+        mockProjectWithCrons([
+          {
+            host: 'example.vercel.app',
+            path: '/api/hourly',
+            schedule: '0 * * * *',
+          },
+        ]);
+        client.setArgv('crons', 'ls', '--format', 'json');
+        const exitCode = await crons(client);
+        expect(exitCode).toEqual(0);
+        const parsed = JSON.parse(client.stdout.getFullOutput());
+        expect(parsed.crons[0].nextRun).toBe('2024-01-15T13:00:00.000Z');
+        expect(parsed.crons[0].previousRun).toBe('2024-01-15T12:00:00.000Z');
+      } finally {
+        process.env.TZ = originalTz;
+      }
+    });
+  });
+
   describe('extra arguments', () => {
     it('rejects extra arguments', async () => {
       client.setArgv('crons', 'ls', 'extra-arg');
