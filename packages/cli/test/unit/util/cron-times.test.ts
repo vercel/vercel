@@ -86,6 +86,29 @@ describe('nextFireAfter / previousFireBefore', () => {
     });
   });
 
+  // Real `new Date()` always carries milliseconds; only tests pin to whole
+  // minutes. This case caught a regression where `previousFireBefore`
+  // unconditionally subtracted a minute upfront and skipped the current
+  // minute even when `now` was already mid-minute (so the firing at the
+  // start of that minute was strictly in the past and should have matched).
+  describe('sub-minute `now`', () => {
+    it('returns the firing in the current minute when `now` is mid-minute', () => {
+      const midMinute = new Date('2024-01-15T12:30:30.000Z');
+      // `30 * * * *` fires at :30 each hour, so the most recent firing
+      // strictly before 12:30:30 is 12:30:00 — not 11:30:00.
+      expect(prev('30 * * * *', midMinute)).toBe('2024-01-15T12:30:00.000Z');
+      // Sanity: next is one hour later.
+      expect(next('30 * * * *', midMinute)).toBe('2024-01-15T13:30:00.000Z');
+    });
+
+    it('matches whole-minute behavior for non-current-minute firings', () => {
+      const midMinute = new Date('2024-01-15T12:30:30.000Z');
+      // `0 * * * *` doesn't fire in this minute, so prev is still 12:00.
+      expect(prev('0 * * * *', midMinute)).toBe('2024-01-15T12:00:00.000Z');
+      expect(next('0 * * * *', midMinute)).toBe('2024-01-15T13:00:00.000Z');
+    });
+  });
+
   describe('every 5 minutes `*/5 * * * *`', () => {
     it('snaps to the surrounding 5-minute marks', () => {
       expect(next('*/5 * * * *')).toBe('2024-01-15T12:35:00.000Z');

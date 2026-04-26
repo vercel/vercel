@@ -178,7 +178,13 @@ export function previousFireBefore(
   start: Date,
   fields: ExpandedFields
 ): Date | null {
-  let cur = new Date(Math.floor(start.getTime() / 60000) * 60000 - 60000);
+  // Truncate `start` to its enclosing minute. If `start` was mid-minute the
+  // truncated value is already strictly less, so it's a valid candidate; only
+  // subtract another minute when `start` was exactly on a boundary.
+  const truncated = Math.floor(start.getTime() / 60000) * 60000;
+  let cur = new Date(
+    truncated < start.getTime() ? truncated : truncated - 60000
+  );
   const sortedMonths = [...fields.month].sort((a, b) => b - a);
   const sortedHours = [...fields.hour].sort((a, b) => b - a);
   const sortedMinutes = [...fields.minute].sort((a, b) => b - a);
