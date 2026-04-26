@@ -164,6 +164,22 @@ jobs:
             echo "$resp" | grep -q '"hello":"world"' || { echo "::error::missing hello:world in response"; return 1; }
           }
 
+          wait_for_response() {
+            local url="$1"
+            local timeout="$2"
+            local resp=""
+            for i in $(seq 1 "$timeout"); do
+              resp=$(curl -s -m 10 "$url" || true)
+              if echo "$resp" | grep -q '"hello":"world"'; then
+                echo "$resp"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "$resp"
+            return 1
+          }
+
           case "${{ matrix.target }}" in
             bun-darwin-arm64|bun-darwin-x64|bun-linux-x64)
               # Native exec: run on host, curl localhost
@@ -175,7 +191,7 @@ jobs:
                 if grep -q "Ready! Available" /tmp/dev.log 2>/dev/null; then break; fi
                 sleep 1
               done
-              resp=$(curl -s -m 10 http://localhost:4444/api/hello || echo "")
+              resp=$(wait_for_response http://localhost:4444/api/hello 30 || true)
               kill $DEVPID 2>/dev/null || true
               echo "=== dev.log tail ==="
               tail -30 /tmp/dev.log || true
@@ -212,9 +228,11 @@ jobs:
                 fi
                 sleep 1
               done
-              resp=$(curl -s -m 15 http://localhost:4444/api/hello || echo "")
+              # First request compiles the function. Under qemu linux/arm64 this
+              # can take much longer than startup, even after the dev server is ready.
+              resp=$(wait_for_response http://localhost:4444/api/hello 120 || true)
               echo "=== container log tail ==="
-              docker logs --tail 40 vctest 2>&1 || true
+              docker logs --tail 80 vctest 2>&1 || true
               docker rm -f vctest >/dev/null 2>&1 || true
               assert_response "$resp"
               ;;

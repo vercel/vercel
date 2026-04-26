@@ -37,7 +37,10 @@ jobs:
           - runner: windows-latest
             target: bun-windows-x64
             asset: vercel-windows-x64
-          - runner: windows-11-arm
+          # Native Windows ARM cannot install this repo while the dependency
+          # graph includes esbuild@0.11.x, which has no win32-arm64 package.
+          # Build the ARM64 executable from Linux and runtime-smoke x64 on Windows.
+          - runner: ubuntu-latest
             target: bun-windows-arm64
             asset: vercel-windows-arm64
     runs-on: ${{ matrix.runner }}
@@ -86,6 +89,7 @@ jobs:
         run: node scripts/build-binary.mjs
 
       - name: Smoke test (--version)
+        if: matrix.target == 'bun-windows-x64'
         shell: bash
         working-directory: packages/cli
         run: |
@@ -94,6 +98,7 @@ jobs:
           test -n "$out"
 
       - name: Integration smoke (vc dev forks a sidecar)
+        if: matrix.target == 'bun-windows-x64'
         shell: bash
         working-directory: packages/cli
         run: |

@@ -55,7 +55,9 @@ jobs:
             target: bun-windows-x64
             asset: vercel-windows-x64
             ext: '.exe'
-          - runner: windows-11-arm
+          # Native Windows ARM cannot install this repo while the dependency
+          # graph includes esbuild@0.11.x, which has no win32-arm64 package.
+          - runner: ubuntu-latest
             target: bun-windows-arm64
             asset: vercel-windows-arm64
             ext: '.exe'
