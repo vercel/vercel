@@ -149,3 +149,76 @@ jobs:
           path: packages/cli/dist-bin/${{ matrix.asset }}.exe
           retention-days: 3
           if-no-files-found: error
+
+  test-windows-arm64:
+    name: vercel-windows-arm64 runtime
+    needs: build
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vercel-windows-arm64
+          path: dist-bin
+
+      - name: Smoke test (--version)
+        shell: pwsh
+        run: |
+          $out = .\dist-bin\vercel-windows-arm64.exe --version
+          Write-Output $out
+          if (-not $out) { throw "No version output" }
+
+      - name: Integration smoke (vc dev forks a sidecar)
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP "fixture"
+          $api = Join-Path $fixture "api"
+          New-Item -ItemType Directory -Force -Path $api | Out-Null
+          Set-Content -Path (Join-Path $fixture "package.json") -Value '{"name":"win-arm-test","type":"module"}'
+          Set-Content -Path (Join-Path $fixture "vercel.json") -Value '{}'
+          Set-Content -Path (Join-Path $api "hello.js") -Value @'
+          export default function handler(req, res) {
+            res.status(200).json({ hello: "world", platform: process.platform, arch: process.arch });
+          }
+          '@
+
+          $bin = Resolve-Path ".\dist-bin\vercel-windows-arm64.exe"
+          $stdoutLog = Join-Path $env:RUNNER_TEMP "dev-arm64.out.log"
+          $stderrLog = Join-Path $env:RUNNER_TEMP "dev-arm64.err.log"
+          $env:NO_UPDATE_NOTIFIER = "1"
+          $env:VERCEL_TELEMETRY_DISABLED = "1"
+
+          $proc = Start-Process -FilePath $bin -ArgumentList "dev", "-L", "--listen", "4444", "--debug" -WorkingDirectory $fixture -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
+          try {
+            for ($i = 1; $i -le 45; $i++) {
+              if (
+                ((Test-Path $stdoutLog) -and (Select-String -Path $stdoutLog -Pattern "Ready! Available" -Quiet)) -or
+                ((Test-Path $stderrLog) -and (Select-String -Path $stderrLog -Pattern "Ready! Available" -Quiet))
+              ) {
+                Write-Output "dev server ready after ${i}s"
+                break
+              }
+              Start-Sleep -Seconds 1
+            }
+
+            $response = ""
+            for ($i = 1; $i -le 60; $i++) {
+              try {
+                $response = Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri "http://localhost:4444/api/hello" | Select-Object -ExpandProperty Content
+              } catch {
+                $response = ""
+              }
+              if ($response -match '"hello":"world"') { break }
+              Start-Sleep -Seconds 1
+            }
+
+            Write-Output "Response: $response"
+            Write-Output "=== dev stdout tail ==="
+            if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Tail 80 }
+            Write-Output "=== dev stderr tail ==="
+            if (Test-Path $stderrLog) { Get-Content $stderrLog -Tail 80 }
+            if ($response -notmatch '"hello":"world"') { throw "missing hello:world in response" }
+          } finally {
+            if ($proc -and -not $proc.HasExited) {
+              Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            }
+          }
