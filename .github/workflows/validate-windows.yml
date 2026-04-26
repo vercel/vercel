@@ -5,14 +5,22 @@ name: Validate Windows Binary (experimental)
 # the bunfs path detector, the child_process fork shim, and sidecar
 # resolution on Windows. Never uploads.
 #
-# Triggered manually or on push to dedicated branches so it doesn't churn
-# CI on every commit while the Windows path is still experimental.
-
 on:
   push:
     branches:
-      - 'bun/windows-*'
-      - 'melkey/bun-windows-*'
+      - 'melkey/bun-*'
+      - 'bun/**'
+  pull_request:
+    paths:
+      - 'packages/cli/scripts/build-binary.mjs'
+      - 'packages/cli/src/util/build/import-builders.ts'
+      - 'packages/cli/src/util/is-bun-binary.ts'
+      - 'packages/cli/src/util/telemetry/index.ts'
+      - 'packages/node/src/fork-dev-server.ts'
+      - 'packages/node/src/start-dev-server.ts'
+      - 'packages/static-build/src/utils/gatsby.ts'
+      - 'packages/fs-detectors/src/detect-framework.ts'
+      - '.github/workflows/validate-windows.yml'
   workflow_dispatch:
 
 concurrency:
