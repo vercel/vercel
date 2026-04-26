@@ -138,6 +138,88 @@ jobs:
           echo "$out"
           test -n "$out"
 
+      # Full integration smoke: start `vc dev -L`, curl /api/hello, assert
+      # response. Exercises fork-of-self, sidecar resolution, BUILTIN_BUILDERS,
+      # telemetry suppression — all the things that --version doesn't cover.
+      - name: Integration smoke (vc dev -L + curl)
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin_abs="$PWD/dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+
+          # Build a fixture
+          rm -rf /tmp/fixture && mkdir -p /tmp/fixture/api
+          echo '{"name":"smoke","type":"module"}' > /tmp/fixture/package.json
+          echo '{}' > /tmp/fixture/vercel.json
+          cat > /tmp/fixture/api/hello.js <<'JS'
+          export default function handler(req, res) {
+            res.status(200).json({ hello: 'world', platform: process.platform, arch: process.arch });
+          }
+          JS
+
+          assert_response() {
+            local resp="$1"
+            echo "Response: $resp"
+            echo "$resp" | grep -q '"hello":"world"' || { echo "::error::missing hello:world in response"; return 1; }
+          }
+
+          case "${{ matrix.target }}" in
+            bun-darwin-arm64|bun-darwin-x64|bun-linux-x64)
+              # Native exec: run on host, curl localhost
+              cd /tmp/fixture
+              NO_UPDATE_NOTIFIER=1 VERCEL_TELEMETRY_DISABLED=1 \
+                "$bin_abs" dev -L --listen 4444 --debug > /tmp/dev.log 2>&1 &
+              DEVPID=$!
+              for i in $(seq 1 30); do
+                if grep -q "Ready! Available" /tmp/dev.log 2>/dev/null; then break; fi
+                sleep 1
+              done
+              resp=$(curl -s -m 10 http://localhost:4444/api/hello || echo "")
+              kill $DEVPID 2>/dev/null || true
+              echo "=== dev.log tail ==="
+              tail -30 /tmp/dev.log || true
+              assert_response "$resp"
+              ;;
+
+            bun-linux-x64-musl|bun-linux-arm64|bun-linux-arm64-musl)
+              # Docker exec: container starts dev server, host curls mapped port.
+              # Picks image + platform + libstdc++ install based on target.
+              case "${{ matrix.target }}" in
+                bun-linux-x64-musl)
+                  platform=linux/amd64; image=alpine:3.20; install='apk add --no-cache libstdc++' ;;
+                bun-linux-arm64)
+                  platform=linux/arm64; image=ubuntu:24.04; install=':' ;;
+                bun-linux-arm64-musl)
+                  platform=linux/arm64; image=alpine:3.20; install='apk add --no-cache libstdc++' ;;
+              esac
+
+              docker rm -f vctest 2>/dev/null || true
+              docker run -d --name vctest --platform "$platform" \
+                -p 4444:4444 \
+                -v "$PWD/dist-bin:/cli:ro" \
+                -v /tmp/fixture:/app \
+                -w /app \
+                -e NO_UPDATE_NOTIFIER=1 -e VERCEL_TELEMETRY_DISABLED=1 \
+                "$image" \
+                sh -c "$install >/dev/null && /cli/${{ matrix.asset }} dev -L --listen 4444 --debug"
+
+              # Wait up to 90s — qemu emulation makes arm64 noticeably slower
+              for i in $(seq 1 90); do
+                if docker logs vctest 2>&1 | grep -q "Ready! Available"; then
+                  echo "container ready after ${i}s"
+                  break
+                fi
+                sleep 1
+              done
+              resp=$(curl -s -m 15 http://localhost:4444/api/hello || echo "")
+              echo "=== container log tail ==="
+              docker logs --tail 40 vctest 2>&1 || true
+              docker rm -f vctest >/dev/null 2>&1 || true
+              assert_response "$resp"
+              ;;
+          esac
+
       - name: Upload artifact (build inspection only, never released)
         uses: actions/upload-artifact@v4
         with:

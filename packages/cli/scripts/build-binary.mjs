@@ -119,8 +119,10 @@ import { createRequire as __createRequire } from 'node:module';
 import { fileURLToPath as __fileURLToPath } from 'node:url';
 import { dirname as __dirname_ } from 'node:path';
 const require = __createRequire(import.meta.url);
+// Detect against import.meta.url (always forward-slash) — fileURLToPath gives
+// backslashes on Windows, which would otherwise break the B:/~BUN/ check.
+const __vc_isBunBinary = import.meta.url.includes('/$bunfs/') || import.meta.url.includes('B:/~BUN/');
 const __vc_metaPath = __fileURLToPath(import.meta.url);
-const __vc_isBunBinary = __vc_metaPath.includes('/$bunfs/') || __vc_metaPath.includes('B:/~BUN/');
 const __filename = __vc_isBunBinary ? process.execPath : __vc_metaPath;
 const __dirname = __dirname_(__filename);
 if (process.env.VC_BINARY_DEBUG) { process.stderr.write('[banner] __dirname=' + __dirname + ' isBunBinary=' + __vc_isBunBinary + '\\n'); }
