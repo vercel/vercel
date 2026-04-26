@@ -61,6 +61,17 @@ export async function isGlobal() {
       return true;
     }
 
+    if (
+      // Homebrew-managed global npm packages
+      // on Apple Silicon macOS
+      installPath.includes(['', 'opt', 'homebrew', 'lib', ''].join(sep)) ||
+      // on Linux
+      installPath.includes(['', '.linuxbrew', 'lib', ''].join(sep))
+      // on Intel macOS, Homebrew uses /usr/local/lib, detected above as defaultPath
+    ) {
+      return true;
+    }
+
     const prefixPath =
       process.env.PREFIX ||
       process.env.npm_config_prefix ||
