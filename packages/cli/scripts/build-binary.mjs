@@ -7,6 +7,7 @@ import {
   copyFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { compileDevTemplates } from './compile-templates.mjs';
 import { build as esbuild } from 'esbuild';
@@ -189,7 +190,7 @@ console.log('[sidecar] bundling @vercel/node dev-server.mjs...');
 await esbuild({
   entryPoints: [
     path.join(
-      path.dirname(new URL(import.meta.url).pathname),
+      path.dirname(fileURLToPath(import.meta.url)),
       '../../../packages/node/dist/dev-server.mjs'
     ),
   ],
@@ -221,7 +222,7 @@ console.log(
 
 // @vercel/node template files, loaded at runtime via readFileSync.
 const vercelNodeDist = path.join(
-  path.dirname(new URL(import.meta.url).pathname),
+  path.dirname(fileURLToPath(import.meta.url)),
   '../../../packages/node/dist'
 );
 for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
@@ -236,7 +237,7 @@ for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
 // Forked by dev/builder.ts via `join(__dirname, 'builder-worker.cjs')`.
 {
   const src = path.join(
-    path.dirname(new URL(import.meta.url).pathname),
+    path.dirname(fileURLToPath(import.meta.url)),
     '../src/util/dev/builder-worker.cjs'
   );
   const dst = join(distBinDir, 'builder-worker.cjs');

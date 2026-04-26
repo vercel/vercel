@@ -99,15 +99,42 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: node scripts/build-binary.mjs
 
-      - name: Smoke test (--version on native arch)
-        if: |
-          (matrix.target == 'bun-darwin-arm64' && runner.os == 'macOS' && runner.arch == 'ARM64') ||
-          (matrix.target == 'bun-darwin-x64' && runner.os == 'macOS' && runner.arch == 'X64') ||
-          (matrix.target == 'bun-linux-x64' && runner.os == 'Linux' && runner.arch == 'X64')
+      # Set up QEMU only for the cross-arch (linux-arm64*) entries so we can
+      # exec arm64 binaries on the x64 ubuntu-latest runner.
+      - name: Set up QEMU (cross-arch Docker)
+        if: matrix.target == 'bun-linux-arm64' || matrix.target == 'bun-linux-arm64-musl'
+        uses: docker/setup-qemu-action@v3
+
+      # Smoke test --version on every matrix entry. macOS + linux-x64 exec
+      # natively. Cross-arch and musl entries run inside a Docker container
+      # whose libc / arch matches the binary.
+      - name: Smoke test (--version)
+        shell: bash
         working-directory: packages/cli
         run: |
-          chmod +x dist-bin/${{ matrix.asset }}${{ matrix.ext }}
-          out=$(./dist-bin/${{ matrix.asset }}${{ matrix.ext }} --version)
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          chmod +x "$bin" || true
+          case "${{ matrix.target }}" in
+            bun-darwin-arm64|bun-darwin-x64|bun-linux-x64)
+              out=$(./"$bin" --version)
+              ;;
+            bun-linux-x64-musl)
+              out=$(docker run --rm --platform linux/amd64 \
+                -v "$PWD/dist-bin:/cli:ro" alpine:3.20 sh -c \
+                "apk add --no-cache libstdc++ >/dev/null && /cli/${{ matrix.asset }} --version")
+              ;;
+            bun-linux-arm64)
+              out=$(docker run --rm --platform linux/arm64 \
+                -v "$PWD/dist-bin:/cli:ro" ubuntu:24.04 \
+                /cli/${{ matrix.asset }} --version)
+              ;;
+            bun-linux-arm64-musl)
+              out=$(docker run --rm --platform linux/arm64 \
+                -v "$PWD/dist-bin:/cli:ro" alpine:3.20 sh -c \
+                "apk add --no-cache libstdc++ >/dev/null && /cli/${{ matrix.asset }} --version")
+              ;;
+          esac
           echo "$out"
           test -n "$out"
 
