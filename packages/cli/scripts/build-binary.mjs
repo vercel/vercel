@@ -86,16 +86,17 @@ const childProcessShim = {
 };
 
 // @vercel-internals/get-package-json walks the disk looking for package.json;
-// under the binary's virtual FS that loops forever. Return the CLI's own
-// package.json, baked in at build time.
+// under the binary's virtual FS that loops forever. Hardcode the response to
+// the CLI's own package.json, baked in at build time. This shim only serves
+// the CLI package — it is not a general-purpose lookup.
 const cliPkgJson = JSON.parse(readFileSync(new URL('package.json', repoRoot), 'utf8'));
-const getPackageJsonShim = {
-  name: 'get-package-json-shim',
+const cliPackageJsonShim = {
+  name: 'cli-package-json-shim',
   setup(build) {
     build.onResolve({ filter: /^@vercel-internals\/get-package-json$/ }, args => {
-      return { path: args.path, namespace: 'get-package-json-shim' };
+      return { path: args.path, namespace: 'cli-package-json-shim' };
     });
-    build.onLoad({ filter: /.*/, namespace: 'get-package-json-shim' }, () => {
+    build.onLoad({ filter: /.*/, namespace: 'cli-package-json-shim' }, () => {
       return {
         contents: `const pkg = ${JSON.stringify(cliPkgJson)};
 export function getPackageJSON() { return pkg; }
@@ -118,7 +119,7 @@ import { fileURLToPath as __fileURLToPath } from 'node:url';
 import { dirname as __dirname_ } from 'node:path';
 const require = __createRequire(import.meta.url);
 const __vc_metaPath = __fileURLToPath(import.meta.url);
-const __vc_isBunBinary = __vc_metaPath.includes('/$bunfs/');
+const __vc_isBunBinary = __vc_metaPath.includes('/$bunfs/') || __vc_metaPath.includes('B:/~BUN/');
 const __filename = __vc_isBunBinary ? process.execPath : __vc_metaPath;
 const __dirname = __dirname_(__filename);
 if (process.env.VC_BINARY_DEBUG) { process.stderr.write('[banner] __dirname=' + __dirname + ' isBunBinary=' + __vc_isBunBinary + '\\n'); }
@@ -168,7 +169,7 @@ const result = await esbuild({
     'pnpapi',
   ],
   banner,
-  plugins: [jsoncParserPlugin, getPackageJsonShim, childProcessShim],
+  plugins: [jsoncParserPlugin, cliPackageJsonShim, childProcessShim],
   loader: { '.node': 'copy', '.html': 'text' },
   logLevel: 'warning',
   keepNames: true,
@@ -245,28 +246,127 @@ for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
   }
 }
 
-// Now compile with bun
-console.log('[compile] bun build --compile ...');
-const target = process.env.BUN_TARGET || 'bun-darwin-arm64';
-const outfile = process.env.BUN_OUTFILE || join(distBinDir, 'vercel-native');
+// Supported Bun compile targets. `os` matches process.platform values
+// (darwin/linux/win32). `abi: 'musl'` is for statically-linked Linux
+// binaries that run on Alpine and other musl-based distros.
+//
+// Windows is intentionally disabled: our fork-of-self pattern (forking
+// dev-server.mjs / builder-worker.cjs and patching child_process.fork to
+// inject BUN_BE_BUN=1) has not been validated on Windows. Re-enable once
+// `vc dev` is verified end-to-end on a real Windows host and the bunfs
+// path detector is updated to also match `B:/~BUN/` (Bun's Windows VFS).
+const allTargets = [
+  { os: 'darwin', arch: 'arm64' },
+  { os: 'darwin', arch: 'x64' },
+  { os: 'linux', arch: 'arm64' },
+  { os: 'linux', arch: 'x64' },
+  { os: 'linux', arch: 'arm64', abi: 'musl' },
+  { os: 'linux', arch: 'x64', abi: 'musl' },
+  // { os: 'win32', arch: 'arm64' },
+  // { os: 'win32', arch: 'x64' },
+];
 
-const bunResult = spawnSync(
-  'bun',
-  [
-    'build',
-    '--compile',
-    '--target',
-    target,
-    join(distBinDir, 'vc-wrapper.mjs'),
-    '--outfile',
-    outfile,
-  ],
-  { stdio: 'inherit', cwd }
-);
+// Bun's --target uses "windows" rather than the Node "win32".
+const bunTargetOf = t =>
+  `bun-${t.os === 'win32' ? 'windows' : t.os}-${t.arch}${t.abi ? `-${t.abi}` : ''}`;
+const assetNameOf = t => {
+  const os = t.os === 'win32' ? 'windows' : t.os;
+  const abi = t.abi ? `-${t.abi}` : '';
+  const ext = t.os === 'win32' ? '.exe' : '';
+  return `vercel-${os}-${t.arch}${abi}${ext}`;
+};
 
-if (bunResult.status !== 0) {
-  console.error('[compile] bun exited with', bunResult.status);
-  process.exit(bunResult.status ?? 1);
+// Target selection priority:
+//   1. BUN_TARGET env (CI sets this per matrix runner)
+//   2. --all flag (cross-compile every target; used for release bundles)
+//   3. default: current platform only (fastest local iteration)
+const buildAll = process.argv.slice(2).includes('--all');
+let targets;
+if (process.env.BUN_TARGET) {
+  // Parse anything matching `bun-<os>-<arch>[-<abi>]`. We don't gate on
+  // `allTargets` here so validate-only workflows can build experimental
+  // targets (e.g. Windows) without flipping them on for everyone via --all.
+  const m = /^bun-(darwin|linux|windows)-(arm64|x64)(?:-(musl))?$/.exec(
+    process.env.BUN_TARGET
+  );
+  if (!m) {
+    console.error(`[compile] invalid BUN_TARGET: ${process.env.BUN_TARGET}`);
+    console.error(
+      `[compile] expected: bun-(darwin|linux|windows)-(arm64|x64)[-musl]`
+    );
+    process.exit(1);
+  }
+  const os = m[1] === 'windows' ? 'win32' : m[1];
+  const t = { os, arch: m[2] };
+  if (m[3]) t.abi = m[3];
+  targets = [t];
+} else if (buildAll) {
+  targets = allTargets;
+} else {
+  // Default to glibc Linux (no abi) on the host — musl users opt in via --all
+  // or BUN_TARGET. We can't detect glibc vs musl reliably from Node.
+  const current = allTargets.find(
+    t => t.os === process.platform && t.arch === process.arch && !t.abi
+  );
+  if (!current) {
+    console.error(
+      `[compile] no supported target for ${process.platform}/${process.arch}`
+    );
+    console.error(
+      `[compile] supported: ${allTargets.map(bunTargetOf).join(', ')}`
+    );
+    console.error(`[compile] pass --all to cross-compile every target`);
+    process.exit(1);
+  }
+  targets = [current];
 }
 
-console.log(`[compile] done -> ${outfile}`);
+console.log(
+  `[compile] building ${targets.length} target${targets.length > 1 ? 's' : ''}: ${targets
+    .map(assetNameOf)
+    .join(', ')}`
+);
+
+for (const t of targets) {
+  const bunTarget = bunTargetOf(t);
+  const outfile = join(distBinDir, assetNameOf(t));
+
+  console.log(`[compile] ${bunTarget} -> ${outfile}`);
+  const bunResult = spawnSync(
+    'bun',
+    [
+      'build',
+      '--compile',
+      '--target',
+      bunTarget,
+      join(distBinDir, 'vc-wrapper.mjs'),
+      '--outfile',
+      outfile,
+    ],
+    { stdio: 'inherit', cwd }
+  );
+
+  if (bunResult.status !== 0) {
+    console.error(`[compile] bun failed for ${bunTarget}`);
+    process.exit(bunResult.status ?? 1);
+  }
+
+  // Smoke-test only when output matches the host; can't exec cross-compiled
+  // binaries, and musl binaries won't run on glibc hosts.
+  const hostMatches =
+    t.os === process.platform && t.arch === process.arch && !t.abi;
+  if (hostMatches) {
+    const smoke = spawnSync(outfile, ['--version'], {
+      stdio: 'pipe',
+      encoding: 'utf8',
+    });
+    if (smoke.status !== 0) {
+      console.error(`[smoke] ${outfile} --version failed`);
+      console.error(smoke.stderr || smoke.stdout);
+      process.exit(1);
+    }
+    console.log(
+      `[smoke] ok: ${(smoke.stdout || smoke.stderr || '').trim().split('\n')[0]}`
+    );
+  }
+}

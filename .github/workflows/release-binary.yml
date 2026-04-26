@@ -1,0 +1,158 @@
+name: Release Binary
+
+on:
+  push:
+    tags:
+      - 'vercel@*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build (e.g. vercel@52.0.0)
+        required: true
+
+permissions:
+  contents: write
+
+# Per-tag concurrency: a hotfix tag rebuild won't wait on an unrelated tag.
+concurrency:
+  group: release-binary-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    # fail-fast: false + per-matrix upload = one platform failing does not
+    # block siblings. Whatever succeeds gets attached to the release.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: bun-darwin-arm64
+            asset: vercel-darwin-arm64
+            ext: ''
+          - runner: macos-13
+            target: bun-darwin-x64
+            asset: vercel-darwin-x64
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-arm64
+            asset: vercel-linux-arm64
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-x64
+            asset: vercel-linux-x64
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-arm64-musl
+            asset: vercel-linux-arm64-musl
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-x64-musl
+            asset: vercel-linux-x64-musl
+            ext: ''
+          # Windows disabled until the fork-of-self pattern is verified on
+          # Windows and is-bun-binary.ts also matches `B:/~BUN/`.
+          # - runner: windows-latest
+          #   target: bun-windows-arm64
+          #   asset: vercel-windows-arm64
+          #   ext: '.exe'
+          # - runner: windows-latest
+          #   target: bun-windows-x64
+          #   asset: vercel-windows-x64
+          #   ext: '.exe'
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Build binary
+        working-directory: packages/cli
+        env:
+          BUN_TARGET: ${{ matrix.target }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: node scripts/build-binary.mjs
+
+      - name: Compute checksum
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          file="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 "$file" > "$file.sha256"
+          else
+            sha256sum "$file" > "$file.sha256"
+          fi
+          cat "$file.sha256"
+
+      # Wait for the GitHub Release object that changesets creates as part of
+      # `release.yml` to exist. We never want to auto-create an empty release
+      # here — that races against changesets and clobbers the changelog body.
+      - name: Wait for GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          for i in $(seq 1 30); do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release $TAG ready"
+              exit 0
+            fi
+            echo "Waiting for release $TAG to be created ($i/30)..."
+            sleep 10
+          done
+          echo "::error::Timed out waiting for release $TAG after 5 minutes"
+          exit 1
+
+      # `gh release upload` errors if the release does not exist (unlike
+      # softprops/action-gh-release which would auto-create it).
+      - name: Upload to GitHub Release
+        shell: bash
+        working-directory: packages/cli
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          gh release upload "$TAG" \
+            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}" \
+            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

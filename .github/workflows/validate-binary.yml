@@ -1,0 +1,120 @@
+name: Validate Binary
+
+# Pre-merge validation for the Bun-compiled binary. Builds + smoke-tests every
+# Mac/Linux target on real CI runners. Never uploads. Companion to
+# release-binary.yml, which only fires on `vercel@*` tags and does the upload.
+
+on:
+  push:
+    branches:
+      - 'melkey/bun-*'
+      - 'bun/**'
+  pull_request:
+    paths:
+      - 'packages/cli/scripts/build-binary.mjs'
+      - 'packages/cli/src/util/build/import-builders.ts'
+      - 'packages/cli/src/util/is-bun-binary.ts'
+      - 'packages/cli/src/util/telemetry/index.ts'
+      - 'packages/node/src/fork-dev-server.ts'
+      - 'packages/node/src/start-dev-server.ts'
+      - 'packages/static-build/src/utils/gatsby.ts'
+      - 'packages/fs-detectors/src/detect-framework.ts'
+      - '.github/workflows/validate-binary.yml'
+      - '.github/workflows/release-binary.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: validate-binary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: bun-darwin-arm64
+            asset: vercel-darwin-arm64
+            ext: ''
+          - runner: macos-13
+            target: bun-darwin-x64
+            asset: vercel-darwin-x64
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-arm64
+            asset: vercel-linux-arm64
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-x64
+            asset: vercel-linux-x64
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-arm64-musl
+            asset: vercel-linux-arm64-musl
+            ext: ''
+          - runner: ubuntu-latest
+            target: bun-linux-x64-musl
+            asset: vercel-linux-x64-musl
+            ext: ''
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Build binary
+        working-directory: packages/cli
+        env:
+          BUN_TARGET: ${{ matrix.target }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: node scripts/build-binary.mjs
+
+      - name: Smoke test (--version on native arch)
+        if: |
+          (matrix.target == 'bun-darwin-arm64' && runner.os == 'macOS' && runner.arch == 'ARM64') ||
+          (matrix.target == 'bun-darwin-x64' && runner.os == 'macOS' && runner.arch == 'X64') ||
+          (matrix.target == 'bun-linux-x64' && runner.os == 'Linux' && runner.arch == 'X64')
+        working-directory: packages/cli
+        run: |
+          chmod +x dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+          out=$(./dist-bin/${{ matrix.asset }}${{ matrix.ext }} --version)
+          echo "$out"
+          test -n "$out"
+
+      - name: Upload artifact (build inspection only, never released)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: packages/cli/dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+          retention-days: 3
+          if-no-files-found: error

@@ -1,0 +1,140 @@
+name: Validate Windows Binary (experimental)
+
+# Builds the Windows binary on a real Windows runner, smoke-tests --version,
+# then runs `vercel dev -L` and curls a forked function endpoint. Validates
+# the bunfs path detector, the child_process fork shim, and sidecar
+# resolution on Windows. Never uploads.
+#
+# Triggered manually or on push to dedicated branches so it doesn't churn
+# CI on every commit while the Windows path is still experimental.
+
+on:
+  push:
+    branches:
+      - 'bun/windows-*'
+      - 'melkey/bun-windows-*'
+  workflow_dispatch:
+
+concurrency:
+  group: validate-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            target: bun-windows-x64
+            asset: vercel-windows-x64
+          - runner: windows-latest
+            target: bun-windows-arm64
+            asset: vercel-windows-arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Install pnpm
+        shell: bash
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        shell: bash
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Build binary
+        shell: bash
+        working-directory: packages/cli
+        env:
+          BUN_TARGET: ${{ matrix.target }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: node scripts/build-binary.mjs
+
+      - name: Smoke test (--version)
+        if: matrix.target == 'bun-windows-x64'
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          out=$(./dist-bin/${{ matrix.asset }}.exe --version)
+          echo "$out"
+          test -n "$out"
+
+      - name: Integration smoke (vc dev forks a sidecar)
+        if: matrix.target == 'bun-windows-x64'
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          # Build a tiny fixture and run vc dev against it
+          mkdir -p /tmp/fixture/api
+          echo '{"name":"win-test","type":"module"}' > /tmp/fixture/package.json
+          echo '{}' > /tmp/fixture/vercel.json
+          cat > /tmp/fixture/api/hello.js <<'JS'
+          export default function handler(req, res) {
+            res.status(200).json({ hello: "world", platform: process.platform });
+          }
+          JS
+
+          BIN="$PWD/dist-bin/${{ matrix.asset }}.exe"
+          cd /tmp/fixture
+
+          # Start dev server in background
+          NO_UPDATE_NOTIFIER=1 VERCEL_TELEMETRY_DISABLED=1 \
+            "$BIN" dev -L --listen 4444 --debug > /tmp/dev.log 2>&1 &
+          DEVPID=$!
+
+          # Wait up to 30s for "Ready!" line
+          for i in $(seq 1 30); do
+            if grep -q "Ready! Available" /tmp/dev.log 2>/dev/null; then
+              echo "dev server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+
+          # Hit the endpoint
+          response=$(curl -s -m 10 http://localhost:4444/api/hello || true)
+          echo "Response: $response"
+
+          # Kill dev server
+          kill $DEVPID 2>/dev/null || true
+
+          echo "=== dev.log tail ==="
+          tail -40 /tmp/dev.log
+
+          # Assert
+          echo "$response" | grep -q '"hello":"world"'
+
+      - name: Upload artifact (inspection only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: packages/cli/dist-bin/${{ matrix.asset }}.exe
+          retention-days: 3
+          if-no-files-found: error
