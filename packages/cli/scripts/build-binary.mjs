@@ -253,11 +253,11 @@ for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
 // (darwin/linux/win32). `abi: 'musl'` is for statically-linked Linux
 // binaries that run on Alpine and other musl-based distros.
 //
-// Windows is intentionally disabled: our fork-of-self pattern (forking
-// dev-server.mjs / builder-worker.cjs and patching child_process.fork to
-// inject BUN_BE_BUN=1) has not been validated on Windows. Re-enable once
-// `vc dev` is verified end-to-end on a real Windows host and the bunfs
-// path detector is updated to also match `B:/~BUN/` (Bun's Windows VFS).
+// Windows binaries build successfully but `vc dev` (sidecar fork) does not
+// work yet because Bun's Windows runtime returns the virtual `B:\~BUN\root`
+// path for both process.execPath and __dirname (Bun #16010, #25500). Tracked
+// for re-validation once we either land sidecar-extract-to-tempdir or Bun
+// fixes the upstream issue.
 const allTargets = [
   { os: 'darwin', arch: 'arm64' },
   { os: 'darwin', arch: 'x64' },
@@ -265,8 +265,8 @@ const allTargets = [
   { os: 'linux', arch: 'x64' },
   { os: 'linux', arch: 'arm64', abi: 'musl' },
   { os: 'linux', arch: 'x64', abi: 'musl' },
-  // { os: 'win32', arch: 'arm64' },
-  // { os: 'win32', arch: 'x64' },
+  { os: 'win32', arch: 'arm64' },
+  { os: 'win32', arch: 'x64' },
 ];
 
 // Bun's --target uses "windows" rather than the Node "win32".
