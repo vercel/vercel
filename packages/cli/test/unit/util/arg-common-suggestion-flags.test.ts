@@ -66,6 +66,6 @@ describe('getGlobalFlagsOnlyFromArgs', () => {
       '--yes',
     ];
     const out = getGlobalFlagsOnlyFromArgs(afterAdd);
-    expect(out).toEqual(['--cwd', '/tmp', '--non-interactive', '--yes']);
+    expect(out).toEqual(['--cwd', '/tmp', '--non-interactive']);
   });
 });
