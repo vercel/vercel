@@ -6,7 +6,7 @@ from typing import Any
 from vercel.workers import MessageMetadata, WorkerTimeoutResult, subscribe
 
 
-@subscribe(topic="default", consumer="default")
+@subscribe(topic="default")
 def process_message(message: Any, metadata: MessageMetadata) -> WorkerTimeoutResult | None:
     """
     Basic worker that runs whenever a message is delivered to the "default" queue.
