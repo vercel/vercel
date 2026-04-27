@@ -131,6 +131,19 @@ const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
   '--per-page',
 ]);
 
+const SENSITIVE_FLAG_NAMES = new Set(['--token', '-t']);
+
+function normalizeFlagName(flag: string): string {
+  if (flag.includes('=')) {
+    return flag.slice(0, flag.indexOf('='));
+  }
+  return flag;
+}
+
+function isSensitiveFlag(flag: string): boolean {
+  return SENSITIVE_FLAG_NAMES.has(normalizeFlagName(flag));
+}
+
 function suggestionFlagTakesSeparateValue(flagName: string): boolean {
   const name = flagName.includes('=')
     ? flagName.slice(0, flagName.indexOf('='))
@@ -153,6 +166,16 @@ export function getSameSubcommandSuggestionFlags(args: string[]): string[] {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (!a.startsWith('-')) continue;
+    if (isSensitiveFlag(a)) {
+      if (
+        !a.includes('=') &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        i++;
+      }
+      continue;
+    }
     out.push(a);
     if (a.includes('=')) continue;
     const name = a;
@@ -263,6 +286,16 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
   const out: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
+    if (isSensitiveFlag(a)) {
+      if (
+        !a.includes('=') &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        i++;
+      }
+      continue;
+    }
     let opt: GlobalOpt | undefined;
     if (a.startsWith('--') && a.includes('=')) {
       const name = a.slice(2).split('=')[0];
