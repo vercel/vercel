@@ -1,4 +1,5 @@
 ---
+"@vercel/python-workers": patch
 ---
 
-Add Pydantic-backed typed payload validation for Python queue workers.
+[vercel-workers] payload type validation
