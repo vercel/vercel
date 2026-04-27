@@ -237,6 +237,11 @@ describe('buildCommandWithYes', () => {
     expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
   });
 
+  it('removes bare --token value even when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token', '-secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
   it('removes --token=<value> from suggested command', () => {
     const argv = ['/node', '/vc.js', 'deploy', '--token=secret-token'];
     expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
@@ -302,6 +307,13 @@ describe('buildCommandWithScope', () => {
       'secret-token',
       '--yes',
     ];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --yes --scope new-team'
+    );
+  });
+
+  it('strips shorthand token value when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '-t', '-secret-token', '--yes'];
     expect(buildCommandWithScope(argv, 'new-team')).toBe(
       'vercel deploy --yes --scope new-team'
     );

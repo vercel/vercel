@@ -142,7 +142,7 @@ function stripTokenFlagArgs(args: string[]): string[] {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--token' || arg === '-t') {
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+      if (i + 1 < args.length) {
         i++;
       }
       continue;

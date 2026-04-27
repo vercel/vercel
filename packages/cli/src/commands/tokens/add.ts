@@ -53,11 +53,7 @@ function stripSensitiveTokenFlags(args: string[]): string[] {
     const arg = args[i];
     const name = arg.includes('=') ? arg.slice(0, arg.indexOf('=')) : arg;
     if (SENSITIVE_TOKEN_FLAGS.has(name)) {
-      if (
-        !arg.includes('=') &&
-        i + 1 < args.length &&
-        !args[i + 1].startsWith('-')
-      ) {
+      if (!arg.includes('=') && i + 1 < args.length) {
         i++;
       }
       continue;

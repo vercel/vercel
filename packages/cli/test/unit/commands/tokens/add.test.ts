@@ -101,7 +101,7 @@ describe('tokens add', () => {
         'add',
         'my-token',
         '--token',
-        'secret-token',
+        '-secret-token',
         '--non-interactive'
       );
 
@@ -136,7 +136,7 @@ describe('tokens add', () => {
         payload.next.every(
           (n: { command?: string }) =>
             !String(n.command).includes('--token') &&
-            !String(n.command).includes('secret-token')
+            !String(n.command).includes('-secret-token')
         )
       ).toBe(true);
     });

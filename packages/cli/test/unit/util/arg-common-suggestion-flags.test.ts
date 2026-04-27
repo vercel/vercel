@@ -41,6 +41,12 @@ describe('getSameSubcommandSuggestionFlags', () => {
     const out = getSameSubcommandSuggestionFlags(args);
     expect(out).toEqual(['--slug', 'acme', '--yes']);
   });
+
+  it('strips bare --token values that start with a dash', () => {
+    const args = ['--slug', 'acme', '--token', '-secret-token', '--yes'];
+    const out = getSameSubcommandSuggestionFlags(args);
+    expect(out).toEqual(['--slug', 'acme', '--yes']);
+  });
 });
 
 describe('getGlobalFlagsOnlyFromArgs', () => {
@@ -67,5 +73,11 @@ describe('getGlobalFlagsOnlyFromArgs', () => {
     ];
     const out = getGlobalFlagsOnlyFromArgs(afterAdd);
     expect(out).toEqual(['--cwd', '/tmp', '--non-interactive']);
+  });
+
+  it('strips shorthand -t values that start with a dash', () => {
+    const afterAdd = ['--cwd', '/tmp', '-t', '-secret-token', '--yes'];
+    const out = getGlobalFlagsOnlyFromArgs(afterAdd);
+    expect(out).toEqual(['--cwd', '/tmp']);
   });
 });

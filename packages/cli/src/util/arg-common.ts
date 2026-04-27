@@ -167,11 +167,7 @@ export function getSameSubcommandSuggestionFlags(args: string[]): string[] {
     const a = args[i];
     if (!a.startsWith('-')) continue;
     if (isSensitiveFlag(a)) {
-      if (
-        !a.includes('=') &&
-        i + 1 < args.length &&
-        !args[i + 1].startsWith('-')
-      ) {
+      if (!a.includes('=') && i + 1 < args.length) {
         i++;
       }
       continue;
@@ -287,11 +283,7 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (isSensitiveFlag(a)) {
-      if (
-        !a.includes('=') &&
-        i + 1 < args.length &&
-        !args[i + 1].startsWith('-')
-      ) {
+      if (!a.includes('=') && i + 1 < args.length) {
         i++;
       }
       continue;
