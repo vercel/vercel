@@ -6,7 +6,7 @@ import os
 import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from functools import wraps
 from typing import Any, Protocol, TypedDict, overload
@@ -35,6 +35,8 @@ from .wsgi import (
 
 __all__ = [
     "MessageMetadata",
+    "Ack",
+    "RetryAfter",
     "WorkerJSONEncoder",
     "WorkerTimeoutResult",
     "subscribe",
@@ -70,6 +72,29 @@ class MessageMetadata(TypedDict, total=False):
     consumer: str
 
 
+class Ack(Exception):
+    """Directive that acknowledges a message without retrying it."""
+
+    def __init__(self, reason: object | None = None) -> None:
+        self.reason = reason
+        super().__init__(str(reason) if reason is not None else "")
+
+
+class RetryAfter(Exception):
+    """Directive that retries a message after a delay."""
+
+    def __init__(self, delay: int | timedelta, reason: object | None = None) -> None:
+        if isinstance(delay, timedelta):
+            seconds = delay.total_seconds()
+        else:
+            seconds = float(delay)
+        if seconds < 0:
+            raise ValueError("retry delay must be non-negative")
+        self.timeoutSeconds = int(seconds)
+        self.reason = reason
+        super().__init__(str(reason) if reason is not None else "")
+
+
 class WorkerTimeoutResult(TypedDict):
     """Result that instructs the queue to retry the message later."""
 
@@ -103,6 +128,10 @@ class _Subscription:
 
 
 _subscriptions: list[_Subscription] = []
+
+
+async def _await_result(result: Awaitable[Any]) -> Any:
+    return await result
 
 
 @overload
@@ -175,6 +204,18 @@ def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
     return [s for s in _subscriptions if s.matches(topic)]
 
 
+def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
+    if isinstance(result, RetryAfter):
+        return result.timeoutSeconds
+    if isinstance(result, dict) and "timeoutSeconds" in result:
+        try:
+            return int(result["timeoutSeconds"])
+        except (TypeError, ValueError):
+            # Ignore invalid timeout values; continue with previous one if any.
+            return current
+    return current
+
+
 def _invoke_subscriptions(
     message: Any,
     metadata: MessageMetadata,
@@ -192,17 +233,18 @@ def _invoke_subscriptions(
         try:
             result = sub.func(message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-                result = asyncio.run(result)  # type: ignore[arg-type]
+                result = asyncio.run(_await_result(result))
+        except Ack:
+            return None
+        except RetryAfter as directive:
+            return directive.timeoutSeconds
         except Exception:
             # Let the outer WSGI handler respond with 500.
             raise
 
-        if isinstance(result, dict) and "timeoutSeconds" in result:
-            try:
-                timeout_seconds = int(result["timeoutSeconds"])
-            except (TypeError, ValueError):
-                # Ignore invalid timeout values; continue with previous one if any.
-                pass
+        if isinstance(result, Ack):
+            return None
+        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
 
     return timeout_seconds
 
