@@ -14,7 +14,7 @@ from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import httpx
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from . import callback
 from .asgi import ASGI, build_asgi_app
@@ -97,6 +97,10 @@ class SendMessageResult(TypedDict):
     messageId: str | None
 
 
+class _PayloadValidationError(Exception):
+    """Raised when SDK payload validation rejects a queue message."""
+
+
 @dataclass
 class _InvocationPlan:
     payload_adapter: TypeAdapter[Any] | None
@@ -105,7 +109,10 @@ class _InvocationPlan:
     def prepare_payload(self, payload: Any) -> Any:
         if self.payload_adapter is None:
             return payload
-        return self.payload_adapter.validate_python(payload)
+        try:
+            return self.payload_adapter.validate_python(payload)
+        except ValidationError as exc:
+            raise _PayloadValidationError(str(exc)) from exc
 
 
 @dataclass
@@ -276,6 +283,31 @@ def _invoke_subscriptions(
     return timeout_seconds
 
 
+def _delete_message_sync(
+    queue_name: str,
+    consumer_group: str,
+    message_id: str,
+    receipt_handle: str,
+    extender: callback.VisibilityExtender | None,
+) -> None:
+    if extender is not None:
+        extender.finalize(
+            lambda: callback.delete_message(
+                queue_name,
+                consumer_group,
+                message_id,
+                receipt_handle,
+            ),
+        )
+    else:
+        callback.delete_message(
+            queue_name,
+            consumer_group,
+            message_id,
+            receipt_handle,
+        )
+
+
 def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
     """
     Development-only, in-process send implementation.
@@ -395,7 +427,20 @@ def handle_queue_callback(
             extender.start()
 
         # Execute subscribers and ack/delay accordingly.
-        timeout_seconds = _invoke_subscriptions(payload, metadata)
+        try:
+            timeout_seconds = _invoke_subscriptions(payload, metadata)
+        except _PayloadValidationError as exc:
+            print("vercel.workers.handle_queue_callback payload validation error:", str(exc))
+            if receipt_handle:
+                _delete_message_sync(
+                    queue_name,
+                    consumer_group,
+                    message_id,
+                    receipt_handle,
+                    extender,
+                )
+            return json_response(200, {"ok": True, "acknowledged": True})
+
         if receipt_handle:
             if timeout_seconds is not None:
                 if extender is not None:
@@ -417,22 +462,13 @@ def handle_queue_callback(
                         int(timeout_seconds),
                     )
             else:
-                if extender is not None:
-                    extender.finalize(
-                        lambda: callback.delete_message(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            receipt_handle,
-                        ),
-                    )
-                else:
-                    callback.delete_message(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        receipt_handle,
-                    )
+                _delete_message_sync(
+                    queue_name,
+                    consumer_group,
+                    message_id,
+                    receipt_handle,
+                    extender,
+                )
 
         return json_response(200, {"ok": True})
     except ValueError as exc:

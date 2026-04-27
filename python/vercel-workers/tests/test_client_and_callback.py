@@ -10,7 +10,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
@@ -177,17 +177,60 @@ class TestTypedSubscriptions(unittest.TestCase):
 
         self.assertEqual(calls, [EmailPayload(to="a@b.com")])
 
-    def test_invalid_typed_payload_raises_validation_error(self) -> None:
+    def test_invalid_typed_payload_raises_poison_payload_error(self) -> None:
         def handle(payload: CreateUserPayload) -> None:
             pass
 
         queue_client.subscribe(topic="users.create")(handle)
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(queue_client._PayloadValidationError):
             queue_client._invoke_subscriptions(
                 {"email": "a@b.com", "age": "not-an-int"},
                 {"topic": "users.create"},
             )
+
+    def test_callback_acknowledges_invalid_typed_payload(self) -> None:
+        def handle(payload: CreateUserPayload) -> None:
+            pass
+
+        queue_client.subscribe(topic="users.create")(handle)
+
+        raw_body = json.dumps(
+            {
+                "type": "com.vercel.queue.v1beta",
+                "data": {
+                    "queueName": "users.create",
+                    "consumerGroup": "consumer",
+                    "messageId": "m1",
+                },
+            },
+        ).encode()
+
+        with (
+            patch.object(
+                queue_client.callback,
+                "receive_message_by_id",
+                return_value=(
+                    {"email": "a@b.com", "age": "not-an-int"},
+                    1,
+                    "now",
+                    "receipt",
+                ),
+            ),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+        ):
+            status, _headers, body = queue_client.handle_queue_callback(raw_body)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True, "acknowledged": True})
+        delete_message.assert_called_once_with(
+            "users.create",
+            "consumer",
+            "m1",
+            "receipt",
+        )
+        change_visibility.assert_not_called()
 
 
 class TestWorkerJSONEncoder(unittest.TestCase):
