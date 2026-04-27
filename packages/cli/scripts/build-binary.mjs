@@ -1,4 +1,4 @@
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 import {
   readFileSync,
   writeFileSync,
@@ -135,7 +135,7 @@ if (!existsSync(distBinDir)) mkdirSync(distBinDir, { recursive: true });
 console.log(
   '[bundle] esbuild: src/index.ts -> dist-bin/index-bundled.js (single file, no splitting)'
 );
-const result = await esbuild({
+await esbuild({
   entryPoints: [join(cwd, 'src/index.ts')],
   bundle: true,
   platform: 'node',
