@@ -231,6 +231,21 @@ describe('buildCommandWithYes', () => {
     const argv = ['/node', '/vc.js', 'deploy', '-y'];
     expect(buildCommandWithYes(argv)).toBe('vercel deploy -y');
   });
+
+  it('removes --token from suggested command', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token', 'secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
+  it('removes bare --token value even when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token', '-secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
+  it('removes --token=<value> from suggested command', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token=secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
 });
 
 describe('buildCommandWithScope', () => {
@@ -280,6 +295,27 @@ describe('buildCommandWithScope', () => {
     const argv = ['/node', '/vc.js', 'deploy', '-T', 'old-team'];
     expect(buildCommandWithScope(argv, 'new-team')).toBe(
       'vercel deploy --scope new-team'
+    );
+  });
+
+  it('strips token flags before adding scope', () => {
+    const argv = [
+      '/node',
+      '/vc.js',
+      'deploy',
+      '--token',
+      'secret-token',
+      '--yes',
+    ];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --yes --scope new-team'
+    );
+  });
+
+  it('strips shorthand token value when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '-t', '-secret-token', '--yes'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --yes --scope new-team'
     );
   });
 });
@@ -658,6 +694,20 @@ describe('getGlobalFlagsFromArgv', () => {
         '--name',
         'display-name',
         '--cwd=/tmp/proj',
+        '--non-interactive',
+      ])
+    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
+  });
+
+  it('never includes token flags from argv', () => {
+    expect(
+      getGlobalFlagsFromArgv([
+        'node',
+        'vc.js',
+        'deploy',
+        '--cwd=/tmp/proj',
+        '--token',
+        'secret-token',
         '--non-interactive',
       ])
     ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
