@@ -3,15 +3,29 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
+from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
+
+from pydantic import BaseModel, ValidationError
 
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
 from vercel.workers.client import WorkerJSONEncoder
 from vercel.workers.exceptions import TokenResolutionError
+
+
+class CreateUserPayload(BaseModel):
+    email: str
+    age: int
+
+
+@dataclass
+class EmailPayload:
+    to: str
 
 
 class _FakeResponse:
@@ -117,6 +131,63 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
 
         self.assertIsInstance(err.exception.args[0], str)
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
+
+
+class TestTypedSubscriptions(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_payload_only_handler(self) -> None:
+        calls: list[dict[str, Any]] = []
+
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        queue_client.subscribe(topic="a")(handle)
+        queue_client._invoke_subscriptions({"ok": True}, {"topic": "a"})
+
+        self.assertEqual(calls, [{"ok": True}])
+
+    def test_pydantic_payload_annotation(self) -> None:
+        calls: list[tuple[CreateUserPayload, str | None]] = []
+
+        def handle(payload: CreateUserPayload, metadata: queue_client.MessageMetadata) -> None:
+            calls.append((payload, metadata.get("messageId")))
+
+        queue_client.subscribe(topic="users.create")(handle)
+        queue_client._invoke_subscriptions(
+            {"email": "a@b.com", "age": "42"},
+            {"topic": "users.create", "messageId": "m1"},
+        )
+
+        self.assertEqual(calls[0][0], CreateUserPayload(email="a@b.com", age=42))
+        self.assertEqual(calls[0][1], "m1")
+
+    def test_dataclass_payload_annotation(self) -> None:
+        calls: list[EmailPayload] = []
+
+        def handle(payload: EmailPayload) -> None:
+            calls.append(payload)
+
+        queue_client.subscribe(topic="emails")(handle)
+        queue_client._invoke_subscriptions({"to": "a@b.com"}, {"topic": "emails"})
+
+        self.assertEqual(calls, [EmailPayload(to="a@b.com")])
+
+    def test_invalid_typed_payload_raises_validation_error(self) -> None:
+        def handle(payload: CreateUserPayload) -> None:
+            pass
+
+        queue_client.subscribe(topic="users.create")(handle)
+
+        with self.assertRaises(ValidationError):
+            queue_client._invoke_subscriptions(
+                {"email": "a@b.com", "age": "not-an-int"},
+                {"topic": "users.create"},
+            )
 
 
 class TestWorkerJSONEncoder(unittest.TestCase):
