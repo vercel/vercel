@@ -41,8 +41,35 @@ Common cases:
 
 const USER_SCOPE_AGENT_HINT = `Creating a personal token requires a classic token that includes full user account scope. Team-scoped, project-scoped, or narrow product tokens are rejected with HTTP 403. Create a classic personal access token at ${VERCEL_ACCOUNT_TOKENS_URL} with account-level access, set VERCEL_TOKEN or --token, then re-run.`;
 
+const SENSITIVE_TOKEN_FLAGS = new Set(['--token', '-t']);
+
 function normalizeApiMessage(message: string): string {
   return message.replace(/\s*\(\d{3}\)\s*$/, '').trim();
+}
+
+function stripSensitiveTokenFlags(args: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const name = arg.includes('=') ? arg.slice(0, arg.indexOf('=')) : arg;
+    if (SENSITIVE_TOKEN_FLAGS.has(name)) {
+      if (
+        !arg.includes('=') &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        i++;
+      }
+      continue;
+    }
+    out.push(arg);
+  }
+  return out;
+}
+
+function getSanitizedRerunCommand(client: Client): string {
+  const rerunArgs = stripSensitiveTokenFlags(client.argv.slice(2));
+  return getCommandNamePlain(rerunArgs.join(' ').trim());
 }
 
 function isClassicTokenRequiredForCreateError(err: unknown): boolean {
@@ -164,7 +191,7 @@ export default async function add(
   } catch (err: unknown) {
     if (isClassicTokenRequiredForCreateError(err)) {
       await openTokensDashboardInBrowser(client);
-      const rerun = getCommandNamePlain(client.argv.slice(2).join(' ').trim());
+      const rerun = getSanitizedRerunCommand(client);
       if (shouldEmitNonInteractiveCommandError(client)) {
         outputAgentError(
           client,
@@ -190,7 +217,7 @@ export default async function add(
     }
     if (isTokenUserScopeRequiredError(err)) {
       await openTokensDashboardInBrowser(client);
-      const rerun = getCommandNamePlain(client.argv.slice(2).join(' ').trim());
+      const rerun = getSanitizedRerunCommand(client);
       const apiMessage = normalizeApiMessage(
         isAPIError(err) ? err.serverMessage || err.message : String(err)
       );

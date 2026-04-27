@@ -96,7 +96,14 @@ describe('tokens add', () => {
       });
 
       client.nonInteractive = true;
-      client.setArgv('tokens', 'add', 'my-token', '--non-interactive');
+      client.setArgv(
+        'tokens',
+        'add',
+        'my-token',
+        '--token',
+        'secret-token',
+        '--non-interactive'
+      );
 
       await expect(tokens(client)).rejects.toThrow('exit:1');
 
@@ -118,6 +125,18 @@ describe('tokens add', () => {
           (n: { command?: string }) =>
             String(n.command).includes('VERCEL_TOKEN') &&
             String(n.command).includes('<class_access_token>')
+        )
+      ).toBe(true);
+      expect(
+        payload.next.some((n: { command?: string }) =>
+          String(n.command).includes('tokens add my-token')
+        )
+      ).toBe(true);
+      expect(
+        payload.next.every(
+          (n: { command?: string }) =>
+            !String(n.command).includes('--token') &&
+            !String(n.command).includes('secret-token')
         )
       ).toBe(true);
     });
