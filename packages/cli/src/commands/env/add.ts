@@ -13,6 +13,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import {
   getEnvKeyWarnings,
+  normalizeStdinEnvValue,
   removePublicPrefix,
   validateEnvValue,
 } from '../../util/env/validate-env';
@@ -586,7 +587,11 @@ export default async function add(client: Client, argv: string[]) {
   let envValue: string;
 
   if (stdInput) {
-    envValue = stdInput;
+    const normalizedStdinValue = normalizeStdinEnvValue(stdInput);
+    envValue = normalizedStdinValue.value;
+    if (normalizedStdinValue.strippedTrailingNewline) {
+      output.log('Removed trailing newline from stdin input');
+    }
   } else if (valueFromFlag !== undefined) {
     envValue = valueFromFlag;
   } else {

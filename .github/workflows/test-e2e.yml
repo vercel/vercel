@@ -5,7 +5,9 @@ name: E2E Tests
 # cache buster: 2
 
 on:
-  pull_request:
+  repository_dispatch:
+    types:
+      - vercel.project.QmcQ2AGNAWeR6ZJCWAhqhbixxvWbgvsR2LMT4fzmTfY9SK.deployment.ready
 
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
@@ -14,27 +16,41 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: ${{ github.workflow }}-${{ github.event.client_payload.git.ref }}
+  cancel-in-progress: ${{ github.event.client_payload.git.ref != 'refs/heads/main' }}
 
 jobs:
   setup:
     name: Find Changes
+    if: github.event.client_payload.environment == 'preview'
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
-      dplUrl: ${{ steps.resolveTarball.outputs.url }}
+      dplUrl: ${{ github.event.client_payload.url }}
+      baseSha: ${{ steps.pr-context.outputs.baseSha }}
+      headSha: ${{ github.event.client_payload.git.sha }}
+      prNumber: ${{ steps.pr-context.outputs.prNumber }}
       affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
       testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
       affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
       totalCount: ${{ steps['affected-packages'].outputs['total'] }}
       allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
     steps:
+      - name: Resolve PR context
+        id: pr-context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.event.client_payload.git.sha }}"
+          PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" --jq '.[0]')
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          BASE_SHA=$(echo "$PR_JSON" | jq -r '.base.sha')
+          echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Check out the PR commit directly instead of a merge commit.
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.client_payload.git.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
@@ -49,10 +65,13 @@ jobs:
       - run: pnpm install
       - id: affected-packages
         run: |
-          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          # Set base SHA for affected package detection
+          export TURBO_BASE_SHA="${{ steps.pr-context.outputs.baseSha }}"
 
-          AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ github.event.pull_request.base.sha }}" 2>&1)
+          # Get affected packages info for PR comment
+          AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ steps.pr-context.outputs.baseSha }}" 2>&1)
 
+          # Extract affected packages count and total packages count
           PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
           TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
 
@@ -66,10 +85,13 @@ jobs:
             STRATEGY="no-tests"
           fi
 
+          # Get the list of affected packages
           PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
 
+          # Get all packages (trim whitespace and newlines)
           ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
 
+          # Debug output
           echo "PACKAGE_COUNT=$PACKAGE_COUNT"
           echo "TOTAL_COUNT=$TOTAL_COUNT"
           echo "STRATEGY=$STRATEGY"
@@ -86,87 +108,8 @@ jobs:
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
         env:
-          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TURBO_BASE_SHA: ${{ steps.pr-context.outputs.baseSha }}
           TEST_TYPE: e2e
-      - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
-        id: waitForTarball
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          max_timeout: 360
-          check_interval: 5
-      - name: Resolve Vercel tarball URL
-        id: resolveTarball
-        uses: actions/github-script@v7
-        env:
-          WAIT_URL: ${{ steps.waitForTarball.outputs.url }}
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const prNumber =
-              context.payload.pull_request?.number ?? context.issue.number;
-
-            const waitUrl = process.env.WAIT_URL || '';
-            if (waitUrl) {
-              core.info(`Using deployment URL from wait step: ${waitUrl}`);
-              core.setOutput('url', waitUrl);
-              return;
-            }
-
-            core.info(
-              'No deployment found for the current HEAD commit. Falling back to the most recent successful Vercel preview deployment for this PR.'
-            );
-
-            const { data: commits } = await github.rest.pulls.listCommits({
-              owner,
-              repo,
-              pull_number: prNumber,
-              per_page: 100,
-            });
-
-            const shas = commits.map(c => c.sha).reverse();
-
-            for (const sha of shas) {
-              core.info(`Checking deployments for ${sha}...`);
-
-              const { data: deployments } =
-                await github.rest.repos.listDeployments({
-                  owner,
-                  repo,
-                  sha,
-                  environment: 'Preview',
-                  per_page: 5,
-                });
-
-              for (const deployment of deployments) {
-                if (deployment.creator?.login !== 'vercel[bot]') {
-                  continue;
-                }
-
-                const { data: statuses } =
-                  await github.rest.repos.listDeploymentStatuses({
-                    owner,
-                    repo,
-                    deployment_id: deployment.id,
-                    per_page: 10,
-                  });
-
-                const success = statuses.find(
-                  s => s.state === 'success' && s.environment_url
-                );
-
-                if (success?.environment_url) {
-                  core.info(`Resolved deployment URL: ${success.environment_url}`);
-                  core.setOutput('url', success.environment_url);
-                  return;
-                }
-              }
-            }
-
-            core.setFailed(
-              'No Vercel preview deployment found for any commit in this PR.'
-            );
 
   test:
     timeout-minutes: 120
@@ -184,8 +127,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Check out the PR commit directly instead of a merge commit.
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ needs.setup.outputs.headSha }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -260,7 +202,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
-          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
           FORCE_COLOR: '1'
       - name: 'Determine Turbo HIT or MISS'
         if: ${{ !cancelled() }}
@@ -285,14 +227,40 @@ jobs:
     needs:
       - setup
       - test
+    permissions:
+      statuses: write
     steps:
       - name: Check All
+        id: check-all
+        continue-on-error: true
         run: |-
           for status in ${{ join(needs.*.result, ' ') }}
           do
             if [ "$status" != "success" ] && [ "$status" != "skipped" ]
             then
               echo "Some checks failed"
+              echo "state=failure" >> $GITHUB_OUTPUT
               exit 1
             fi
           done
+          echo "state=success" >> $GITHUB_OUTPUT
+      - name: Report status to PR commit
+        if: ${{ always() && github.event.client_payload.git.sha }}
+        uses: actions/github-script@v7
+        env:
+          CHECK_STATE: ${{ steps.check-all.outputs.state }}
+        with:
+          script: |
+            const state = process.env.CHECK_STATE === 'success' ? 'success' : 'failure';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.client_payload.git.sha }}',
+              state,
+              context: 'Summary (e2e)',
+              target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+              description: state === 'success' ? 'All checks passed' : 'Some checks failed',
+            });
+      - name: Fail the job if Check All failed
+        if: ${{ steps.check-all.outcome == 'failure' }}
+        run: exit 1

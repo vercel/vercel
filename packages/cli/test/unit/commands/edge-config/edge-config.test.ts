@@ -110,6 +110,124 @@ describe('edge-config', () => {
     ]);
   });
 
+  it('revokes by id when --remove values match known token ids', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_rm_id', slug: 's' }]);
+    });
+    let listCount = 0;
+    client.scenario.get('/v1/edge-config/ecfg_rm_id/tokens', (_req, res) => {
+      listCount += 1;
+      res.json([
+        { id: 'tokid_a', label: 'prod', partialToken: 'aaaa********' },
+        { id: 'tokid_b', label: 'dev', partialToken: 'bbbb********' },
+      ]);
+    });
+    let deleteBody: unknown;
+    client.scenario.delete('/v1/edge-config/ecfg_rm_id/tokens', (req, res) => {
+      deleteBody = req.body;
+      res.status(204).end();
+    });
+
+    client.setArgv(
+      'edge-config',
+      'tokens',
+      'ecfg_rm_id',
+      '--remove',
+      'tokid_a',
+      '--remove',
+      'tokid_b',
+      '--yes',
+      '--format',
+      'json'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    expect(listCount).toBe(1);
+    expect(deleteBody).toEqual({ ids: ['tokid_a', 'tokid_b'] });
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toEqual({ status: 'ok', revoked: 2 });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:tokens', value: 'tokens' },
+      { key: 'argument:id-or-slug', value: 'ecfg_rm_id' },
+      { key: 'option:remove', value: '[REDACTED]' },
+      { key: 'flag:yes', value: 'TRUE' },
+      { key: 'option:format', value: 'json' },
+    ]);
+  });
+
+  it('revokes by token string when --remove values do not match known ids', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_rm_tok', slug: 's' }]);
+    });
+    client.scenario.get('/v1/edge-config/ecfg_rm_tok/tokens', (_req, res) => {
+      res.json([
+        { id: 'tokid_x', label: 'prod', partialToken: 'xxxx********' },
+      ]);
+    });
+    let deleteBody: unknown;
+    client.scenario.delete('/v1/edge-config/ecfg_rm_tok/tokens', (req, res) => {
+      deleteBody = req.body;
+      res.status(204).end();
+    });
+
+    client.setArgv(
+      'edge-config',
+      'tokens',
+      'ecfg_rm_tok',
+      '--remove',
+      'plaintext_a',
+      '--remove',
+      'plaintext_b',
+      '--yes',
+      '--format',
+      'json'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    expect(deleteBody).toEqual({
+      tokens: ['plaintext_a', 'plaintext_b'],
+    });
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toEqual({ status: 'ok', revoked: 2 });
+  });
+
+  it('splits a mixed --remove list into ids and tokens', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_rm_mix', slug: 's' }]);
+    });
+    client.scenario.get('/v1/edge-config/ecfg_rm_mix/tokens', (_req, res) => {
+      res.json([
+        { id: 'tokid_known', label: 'prod', partialToken: 'kkkk********' },
+      ]);
+    });
+    let deleteBody: unknown;
+    client.scenario.delete('/v1/edge-config/ecfg_rm_mix/tokens', (req, res) => {
+      deleteBody = req.body;
+      res.status(204).end();
+    });
+
+    client.setArgv(
+      'edge-config',
+      'tokens',
+      'ecfg_rm_mix',
+      '--remove',
+      'tokid_known',
+      '--remove',
+      'plaintext_legacy',
+      '--yes',
+      '--format',
+      'json'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    expect(deleteBody).toEqual({
+      tokens: ['plaintext_legacy'],
+      ids: ['tokid_known'],
+    });
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toEqual({ status: 'ok', revoked: 2 });
+  });
+
   it('validates --patch before slug rename when both --slug and --patch are provided', async () => {
     let putCalled = false;
     client.scenario.put('/v1/edge-config/ecfg_update_order', (_req, res) => {
