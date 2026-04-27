@@ -158,9 +158,22 @@ if (process.env.CLAUDECODE) {
   );
 }
 
+function isUnstablePrewarmBuildArgv(argv: string[]): boolean {
+  return (
+    argv[2] === 'build' &&
+    argv.some(
+      arg => arg === '--unstable-prewarm' || arg === '--unstable-prewarm=true'
+    )
+  );
+}
+
+const IS_UNSTABLE_PREWARM_BUILD = isUnstablePrewarmBuildArgv(process.argv);
+
 // Snapshot before any command has a chance to mutate process.env
 const SHOULD_CHECK_FOR_UPDATES =
-  !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
+  !IS_UNSTABLE_PREWARM_BUILD &&
+  !process.env.NO_UPDATE_NOTIFIER &&
+  !process.env.VERCEL;
 
 let { isTTY } = process.stdout;
 
@@ -178,6 +191,8 @@ const main = async () => {
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
   const isTelemetryFlushCommand =
     process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
+  const shouldPersistTelemetry =
+    !IS_UNSTABLE_PREWARM_BUILD && !isTelemetryFlushCommand;
 
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -212,8 +227,9 @@ const main = async () => {
   }
 
   const localConfigPath = parsedArgs.flags['--local-config'];
-  let localConfig: VercelConfig | Error | undefined =
-    await earlyGetConfig(localConfigPath);
+  let localConfig: VercelConfig | Error | undefined = IS_UNSTABLE_PREWARM_BUILD
+    ? undefined
+    : await earlyGetConfig(localConfigPath);
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
@@ -271,93 +287,101 @@ const main = async () => {
     return 0;
   }
 
-  // Ensure that the Vercel global configuration directory exists
-  try {
-    await mkdirp(VERCEL_DIR);
-  } catch (err: unknown) {
-    output.error(
-      `An unexpected error occurred while trying to create the global directory "${hp(
-        VERCEL_DIR
-      )}" ${errorToString(err)}`
-    );
-    return 1;
-  }
-
   let config: GlobalConfig;
-  try {
-    config = configFiles.readConfigFile();
-  } catch (err: unknown) {
-    if (isErrnoException(err) && err.code === 'ENOENT') {
-      config = defaultGlobalConfig;
-      try {
-        configFiles.writeToConfigFile(config);
-      } catch (err: unknown) {
+  let authConfig: AuthConfig;
+
+  if (IS_UNSTABLE_PREWARM_BUILD) {
+    config = defaultGlobalConfig;
+    authConfig = { ...defaultAuthConfig, skipWrite: true };
+  } else {
+    // Ensure that the Vercel global configuration directory exists
+    try {
+      await mkdirp(VERCEL_DIR);
+    } catch (err: unknown) {
+      output.error(
+        `An unexpected error occurred while trying to create the global directory "${hp(
+          VERCEL_DIR
+        )}" ${errorToString(err)}`
+      );
+      return 1;
+    }
+
+    try {
+      config = configFiles.readConfigFile();
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
+        config = defaultGlobalConfig;
+        try {
+          configFiles.writeToConfigFile(config);
+        } catch (err: unknown) {
+          output.error(
+            `An unexpected error occurred while trying to save the config to "${hp(
+              VERCEL_CONFIG_PATH
+            )}" ${errorToString(err)}`
+          );
+          return 1;
+        }
+      } else {
         output.error(
-          `An unexpected error occurred while trying to save the config to "${hp(
+          `An unexpected error occurred while trying to read the config in "${hp(
             VERCEL_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
         return 1;
       }
-    } else {
-      output.error(
-        `An unexpected error occurred while trying to read the config in "${hp(
-          VERCEL_CONFIG_PATH
-        )}" ${errorToString(err)}`
-      );
-      return 1;
     }
-  }
 
-  let authConfig: AuthConfig;
-  try {
-    authConfig = configFiles.readAuthConfigFile();
-  } catch (err: unknown) {
-    if (isErrnoException(err) && err.code === 'ENOENT') {
-      authConfig = defaultAuthConfig;
-      try {
-        configFiles.writeToAuthConfigFile(authConfig);
-      } catch (err: unknown) {
+    try {
+      authConfig = configFiles.readAuthConfigFile();
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
+        authConfig = defaultAuthConfig;
+        try {
+          configFiles.writeToAuthConfigFile(authConfig);
+        } catch (err: unknown) {
+          output.error(
+            `An unexpected error occurred while trying to write the auth config to "${hp(
+              VERCEL_AUTH_CONFIG_PATH
+            )}" ${errorToString(err)}`
+          );
+          return 1;
+        }
+      } else {
         output.error(
-          `An unexpected error occurred while trying to write the auth config to "${hp(
+          `An unexpected error occurred while trying to read the auth config in "${hp(
             VERCEL_AUTH_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
         return 1;
       }
-    } else {
-      output.error(
-        `An unexpected error occurred while trying to read the auth config in "${hp(
-          VERCEL_AUTH_CONFIG_PATH
-        )}" ${errorToString(err)}`
-      );
-      return 1;
     }
   }
 
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     config: config.telemetry,
-    cliDevice: isTelemetryFlushCommand
-      ? undefined
-      : {
+    cliDevice: shouldPersistTelemetry
+      ? {
           filePath: join(VERCEL_DIR, 'telemetry-device.json'),
-        },
-    cliSession: isTelemetryFlushCommand
-      ? undefined
-      : {
+        }
+      : undefined,
+    cliSession: shouldPersistTelemetry
+      ? {
           filePath: join(VERCEL_DIR, 'telemetry-session.json'),
-        },
+        }
+      : undefined,
   });
 
-  checkTelemetryStatus({
-    config,
-  });
-
-  if (process.env.FF_GUIDANCE_MODE) {
-    checkGuidanceStatus({
+  if (!IS_UNSTABLE_PREWARM_BUILD) {
+    checkTelemetryStatus({
       config,
     });
+
+    if (process.env.FF_GUIDANCE_MODE) {
+      checkGuidanceStatus({
+        config,
+      });
+    }
   }
 
   const telemetry = new RootTelemetryClient({

@@ -2,8 +2,17 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs, { existsSync } from 'fs-extra';
 import minimatch from 'minimatch';
-import { dirname, join, normalize, relative, resolve, sep } from 'path';
+import {
+  dirname,
+  isAbsolute,
+  join,
+  normalize,
+  relative,
+  resolve,
+  sep,
+} from 'path';
 import semver from 'semver';
+import { z } from 'zod';
 import { readdirSync, statSync } from 'fs';
 import {
   download,
@@ -184,60 +193,29 @@ interface PrewarmBuildInput {
   target: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
+const absolutePathSchema = z
+  .string()
+  .min(1)
+  .refine(value => isAbsolute(value), 'Expected absolute path');
 
-function assertOptionalString(value: unknown, key: string): void {
-  if (value !== undefined && typeof value !== 'string') {
-    throw new Error(
-      `[prewarm] Invalid field "${key}" (expected string if provided)`
-    );
-  }
-}
+const prewarmBuildInputSchema = z.object({
+  cwd: absolutePathSchema,
+  env: z.record(z.string()),
+  outputDir: absolutePathSchema,
+  project: z
+    .object({
+      orgId: z.string().optional(),
+      projectId: z.string().optional(),
+      projectName: z.string().optional(),
+      settings: z.object({}).passthrough(),
+    })
+    .passthrough(),
+  standalone: z.boolean(),
+  target: z.string().min(1),
+});
 
-function assertString(value: unknown, key: string): asserts value is string {
-  if (typeof value !== 'string') {
-    throw new Error(
-      `[prewarm] Missing or invalid field "${key}" (expected string)`
-    );
-  }
-}
-
-function assertNonEmptyString(
-  value: unknown,
-  key: string
-): asserts value is string {
-  assertString(value, key);
-  if (value.length === 0) {
-    throw new Error(
-      `[prewarm] Missing or invalid field "${key}" (expected non-empty string)`
-    );
-  }
-}
-
-function assertBoolean(value: unknown, key: string): asserts value is boolean {
-  if (typeof value !== 'boolean') {
-    throw new Error(
-      `[prewarm] Missing or invalid field "${key}" (expected boolean)`
-    );
-  }
-}
-
-function parsePrewarmEnv(value: unknown): Record<string, string> {
-  if (!isRecord(value)) {
-    throw new Error(
-      '[prewarm] Missing or invalid field "env" (expected object)'
-    );
-  }
-
-  for (const [key, envValue] of Object.entries(value)) {
-    if (typeof envValue !== 'string') {
-      throw new Error(`[prewarm] Invalid field "env.${key}" (expected string)`);
-    }
-  }
-
-  return value as Record<string, string>;
+function formatZodPath(path: Array<string | number>): string {
+  return path.length > 0 ? path.join('.') : 'payload';
 }
 
 function parsePrewarmBuildInput(raw: string): PrewarmBuildInput {
@@ -245,42 +223,23 @@ function parsePrewarmBuildInput(raw: string): PrewarmBuildInput {
   try {
     json = JSON.parse(raw);
   } catch (err) {
-    throw new Error(`[prewarm] Invalid JSON on stdin: ${err}`);
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[prewarm] Invalid JSON on stdin: ${message}`);
   }
 
-  if (!isRecord(json)) {
-    throw new Error(`[prewarm] Expected JSON object, got ${typeof json}`);
-  }
-
-  const { cwd, env, outputDir, project, standalone, target } = json;
-
-  assertNonEmptyString(cwd, 'cwd');
-  if (!isRecord(project)) {
+  const result = prewarmBuildInputSchema.safeParse(json);
+  if (!result.success) {
+    const issue = result.error.issues[0];
     throw new Error(
-      '[prewarm] Missing or invalid field "project" (expected object)'
+      `[prewarm] Invalid build input at "${formatZodPath(issue.path)}": ${
+        issue.message
+      }`
     );
   }
-
-  if (!isRecord(project.settings)) {
-    throw new Error(
-      '[prewarm] Missing or invalid field "project.settings" (expected object)'
-    );
-  }
-
-  assertNonEmptyString(outputDir, 'outputDir');
-  assertNonEmptyString(target, 'target');
-  assertBoolean(standalone, 'standalone');
-  assertOptionalString(project.projectId, 'project.projectId');
-  assertOptionalString(project.orgId, 'project.orgId');
-  assertOptionalString(project.projectName, 'project.projectName');
 
   return {
-    cwd,
-    env: parsePrewarmEnv(env),
-    outputDir,
-    project: project as PrewarmBuildInput['project'],
-    standalone,
-    target,
+    ...result.data,
+    project: result.data.project as ProjectLinkAndSettings,
   };
 }
 
@@ -293,7 +252,7 @@ async function readStdin(stdin: Client['stdin']): Promise<string> {
 
   const chunks: Buffer[] = [];
   for await (const chunk of stdin) {
-    chunks.push(chunk);
+    chunks.push(Buffer.from(chunk));
   }
 
   return Buffer.concat(chunks).toString('utf8');
@@ -302,6 +261,42 @@ async function readStdin(stdin: Client['stdin']): Promise<string> {
 function getBuildArgv(argv: string[]): string[] {
   return argv.filter(
     arg => arg !== '--unstable-prewarm' && arg !== '--unstable-prewarm=true'
+  );
+}
+
+function replaceProcessEnv(env: Record<string, string>): () => void {
+  const originalEnv = { ...process.env };
+
+  for (const key of Object.keys(process.env)) {
+    if (!Object.prototype.hasOwnProperty.call(env, key)) {
+      delete process.env[key];
+    }
+  }
+
+  for (const [key, value] of Object.entries(env)) {
+    process.env[key] = value;
+  }
+
+  return () => {
+    for (const key of Object.keys(process.env)) {
+      if (!Object.prototype.hasOwnProperty.call(originalEnv, key)) {
+        delete process.env[key];
+      }
+    }
+    Object.assign(process.env, originalEnv);
+  };
+}
+
+function printRecursiveBuildError(): void {
+  output.error(
+    `${cmd(
+      `${cli.packageName} build`
+    )} must not recursively invoke itself. Check the Build Command in the Project Settings or the ${cmd(
+      'build'
+    )} script in ${cmd('package.json')}`
+  );
+  output.error(
+    `Learn More: https://vercel.link/recursive-invocation-of-commands`
   );
 }
 
@@ -317,25 +312,18 @@ export default async function main(client: Client): Promise<number> {
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
-    output.error(
-      `${cmd(
-        `${cli.packageName} build`
-      )} must not recursively invoke itself. Check the Build Command in the Project Settings or the ${cmd(
-        'build'
-      )} script in ${cmd('package.json')}`
-    );
-    output.error(
-      `Learn More: https://vercel.link/recursive-invocation-of-commands`
-    );
+    printRecursiveBuildError();
     return 1;
   } else {
     process.env.__VERCEL_BUILD_RUNNING = '1';
   }
 
-  let parsedArgs = null;
   let prewarmBuildInput: PrewarmBuildInput | undefined;
 
   const flagsSpecification = getFlagsSpecification(buildCommand.options);
+  let parsedArgs:
+    | ReturnType<typeof parseArguments<typeof flagsSpecification>>
+    | undefined;
 
   // Parse CLI args
   try {
@@ -346,8 +334,15 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
+    telemetryClient.trackCliFlagUnstablePrewarm(
+      parsedArgs.flags['--unstable-prewarm']
+    );
   } catch (error) {
     printError(error);
+    return 1;
+  }
+
+  if (!parsedArgs) {
     return 1;
   }
 
@@ -357,22 +352,25 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
-  if (parsedArgs.flags['--unstable-prewarm']) {
-    const conflictingFlags = [
-      ['--output', parsedArgs.flags['--output']],
-      ['--target', parsedArgs.flags['--target']],
-      ['--prod', parsedArgs.flags['--prod']],
-      ['--id', parsedArgs.flags['--id']],
-      ['--standalone', parsedArgs.flags['--standalone']],
-    ]
-      .filter(([, value]) => Boolean(value))
-      .map(([flag]) => cmd(flag));
+  const flags = parsedArgs.flags;
 
-    if (conflictingFlags.length > 0) {
+  if (flags['--unstable-prewarm']) {
+    const conflictingFlags = [
+      '--output',
+      '--target',
+      '--prod',
+      '--id',
+      '--standalone',
+    ];
+    const formattedConflictingFlags = conflictingFlags
+      .filter(flag => Object.prototype.hasOwnProperty.call(flags, flag))
+      .map(flag => cmd(flag));
+
+    if (formattedConflictingFlags.length > 0) {
       output.error(
         `[prewarm] ${cmd(
           `${cli.packageName} build --unstable-prewarm`
-        )} does not accept ${conflictingFlags.join(
+        )} does not accept ${formattedConflictingFlags.join(
           ', '
         )}. Pass build input on stdin instead.`
       );
@@ -383,6 +381,11 @@ export default async function main(client: Client): Promise<number> {
       prewarmBuildInput = parsePrewarmBuildInput(await readStdin(client.stdin));
     } catch (error) {
       output.prettyError(error);
+      return 1;
+    }
+
+    if (prewarmBuildInput.env.__VERCEL_BUILD_RUNNING) {
+      printRecursiveBuildError();
       return 1;
     }
   }
@@ -407,8 +410,9 @@ export default async function main(client: Client): Promise<number> {
 
   // Check for deprecated env var
   const hasDeprecatedEnvVar =
-    !prewarmBuildInput &&
-    process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
+    (prewarmBuildInput
+      ? prewarmBuildInput.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD
+      : process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD) === '1';
   if (hasDeprecatedEnvVar) {
     output.warn(
       'The VERCEL_EXPERIMENTAL_STANDALONE_BUILD environment variable is deprecated. Please use the --standalone flag instead.'
@@ -417,7 +421,7 @@ export default async function main(client: Client): Promise<number> {
 
   // Use flag first, fall back to deprecated env var
   const standalone = prewarmBuildInput
-    ? prewarmBuildInput.standalone
+    ? prewarmBuildInput.standalone || hasDeprecatedEnvVar
     : Boolean(parsedArgs.flags['--standalone'] || hasDeprecatedEnvVar);
 
   try {
@@ -551,7 +555,9 @@ export default async function main(client: Client): Promise<number> {
   const buildsJson: BuildsManifest = {
     '//': 'This file was generated by the `vercel build` command. It is not part of the Build Output API.',
     target,
-    argv: scrubArgv(getBuildArgv(client.argv)),
+    argv: scrubArgv(
+      prewarmBuildInput ? getBuildArgv(client.argv) : process.argv
+    ),
     cliVersion: cliPkg.version,
   };
 
@@ -571,21 +577,22 @@ export default async function main(client: Client): Promise<number> {
     );
   }
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
+  let restorePrewarmEnv: (() => void) | undefined;
 
   try {
     const loadEnvSpan = rootSpan.child('vc.loadEnv');
     try {
       if (prewarmBuildInput) {
-        for (const [key, value] of Object.entries(prewarmBuildInput.env)) {
+        restorePrewarmEnv = replaceProcessEnv(prewarmBuildInput.env);
+        process.env.__VERCEL_BUILD_RUNNING = '1';
+        for (const key of Object.keys(prewarmBuildInput.env)) {
           envToUnset.add(key);
-          process.env[key] = value;
         }
       } else if (deploymentId) {
         // Set the team context so API calls include the teamId query param.
         // Without this, the API can't find the deployment.
-        const orgId = resolvedProject.orgId || link?.orgId;
-        if (orgId?.startsWith('team_')) {
-          client.config.currentTeam = orgId;
+        if (link?.orgId?.startsWith('team_')) {
+          client.config.currentTeam = link.orgId;
         }
 
         // When --id is provided, fetch env vars from the deployment
@@ -732,6 +739,7 @@ export default async function main(client: Client): Promise<number> {
     for (const key of envToUnset) {
       delete process.env[key];
     }
+    restorePrewarmEnv?.();
 
     // Clean up VERCEL_INSTALL_COMPLETED to allow subsequent builds in the same process
     delete process.env.VERCEL_INSTALL_COMPLETED;
