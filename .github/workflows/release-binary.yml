@@ -13,7 +13,6 @@ on:
 permissions:
   contents: write
 
-# Per-tag concurrency: a hotfix tag rebuild won't wait on an unrelated tag.
 concurrency:
   group: release-binary-${{ github.ref }}
   cancel-in-progress: false
@@ -21,8 +20,6 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.asset }}
-    # fail-fast: false + per-matrix upload = one platform failing does not
-    # block siblings. Whatever succeeds gets attached to the release.
     strategy:
       fail-fast: false
       matrix:
@@ -55,8 +52,7 @@ jobs:
             target: bun-windows-x64
             asset: vercel-windows-x64
             ext: '.exe'
-          # Native Windows ARM cannot install this repo while the dependency
-          # graph includes esbuild@0.11.x, which has no win32-arm64 package.
+          # Native Windows ARM cannot install esbuild@0.11.x.
           - runner: ubuntu-latest
             target: bun-windows-arm64
             asset: vercel-windows-arm64
@@ -122,9 +118,7 @@ jobs:
           fi
           cat "$file.sha256"
 
-      # Wait for the GitHub Release object that changesets creates as part of
-      # `release.yml` to exist. We never want to auto-create an empty release
-      # here — that races against changesets and clobbers the changelog body.
+      # Changesets creates the release in release.yml; wait so we don't clobber it.
       - name: Wait for GitHub Release
         shell: bash
         env:
@@ -142,8 +136,6 @@ jobs:
           echo "::error::Timed out waiting for release $TAG after 5 minutes"
           exit 1
 
-      # `gh release upload` errors if the release does not exist (unlike
-      # softprops/action-gh-release which would auto-create it).
       - name: Upload to GitHub Release
         shell: bash
         working-directory: packages/cli

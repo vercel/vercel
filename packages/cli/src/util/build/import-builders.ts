@@ -18,13 +18,7 @@ import output from '../../output-manager';
 import { installBuilders } from './install-builders';
 
 export interface BuilderWithPkg {
-  /**
-   * the absolute path to the entrypoint for this builder (e.g. dist/index.js)
-   */
   path: string;
-  /**
-   * absolute path to the package.json of the builder
-   */
   pkgPath: string;
   builder: BuilderV2 | BuilderV3 | BuilderVX;
   pkg: PackageJson & { name: string };
@@ -39,11 +33,8 @@ type ResolveBuildersResult =
   | { buildersToAdd: Set<string> }
   | { builders: Map<string, BuilderWithPkg> };
 
-// Get a real `require()` reference that esbuild won't mutate
 const require_ = createRequire(__filename);
 
-// Static JSON imports so esbuild inlines each builder's version at bundle
-// time. At runtime each map entry is the real published version.
 import goPkg from '@vercel/go/package.json';
 import hydrogenPkg from '@vercel/hydrogen/package.json';
 import nextPkg from '@vercel/next/package.json';
@@ -55,9 +46,7 @@ import rubyPkg from '@vercel/ruby/package.json';
 import rustPkg from '@vercel/rust/package.json';
 import staticBuildPkg from '@vercel/static-build/package.json';
 
-// Builders bundled into the CLI itself. The compiled-binary distribution
-// cannot resolve modules from disk, so bundled copies are preferred.
-// Only include builders whose `dist/` is present at build time.
+// Compiled binaries cannot rely on resolving bundled builders from disk.
 const BUILTIN_BUILDERS: Record<
   string,
   { load: () => Promise<unknown>; version: string }
@@ -102,8 +91,6 @@ const BUILTIN_BUILDERS: Record<
 };
 
 function unwrapEsmDefault(mod: unknown): BuilderV2 | BuilderV3 | BuilderVX {
-  // ESM/CJS interop: builder entry points may live on the namespace or on
-  // `.default` depending on loader. Prefer whichever has `build`.
   const hasBuild = (v: unknown): boolean =>
     !!v &&
     typeof v === 'object' &&
@@ -151,7 +138,6 @@ export async function importBuilders(
     }
   }
 
-  // Figure out what
   const resolvedBuildersDebug = [];
   for (const [spec, builderSpec] of importResult.builders) {
     resolvedBuildersDebug.push(`${spec} => ${builderSpec.pkg.version}`);
@@ -175,14 +161,11 @@ async function resolveBuilders(
 
     const { name } = parsed;
     if (!name) {
-      // A URL was specified - will need to install it and resolve the
-      // proper package name from the written `package.json` file
       buildersToAdd.add(spec);
       continue;
     }
 
     if (isStaticRuntime(name)) {
-      // `@vercel/static` is a special-case built-in builder
       builders.set(name, {
         builder: staticBuilder,
         pkg: { name },
@@ -193,9 +176,6 @@ async function resolveBuilders(
       continue;
     }
 
-    // Check if this builder is bundled into the CLI itself. If the user's
-    // version constraint is satisfied by the bundled version, skip the
-    // disk-install/load flow entirely and return the bundled module.
     if (name in BUILTIN_BUILDERS) {
       const builtinVersion = BUILTIN_BUILDERS[name].version;
       const versionOk =
@@ -222,7 +202,6 @@ async function resolveBuilders(
               err instanceof Error ? err.message : String(err)
             }`
           );
-          // Fall through to disk path
         }
       }
     }
@@ -232,8 +211,6 @@ async function resolveBuilders(
       let builderPkg: PackageJson | undefined;
 
       try {
-        // First try `.vercel/builders`. The package name should always be available
-        // at the top-level of `node_modules` since CLI is installing those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         builderPkg = await readJSON(pkgPath);
       } catch (error: unknown) {
@@ -244,9 +221,6 @@ async function resolveBuilders(
           throw error;
         }
 
-        // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
-        // dependency. `require.resolve()` will throw if the Builder is not a CLI
-        // dep, in which case we'll install it into `.vercel/builders`.
         pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
         });
@@ -264,8 +238,6 @@ async function resolveBuilders(
       }
 
       if (parsed.type === 'version' && parsed.rawSpec !== builderPkg.version) {
-        // An explicit Builder version was specified but it does
-        // not match the version that is currently installed
         output.debug(
           `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
         );
@@ -277,8 +249,6 @@ async function resolveBuilders(
         parsed.type === 'range' &&
         !satisfies(builderPkg.version, parsed.rawSpec)
       ) {
-        // An explicit Builder range was specified but it is not
-        // compatible with the version that is currently installed
         output.debug(
           `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
         );
@@ -310,9 +280,6 @@ async function resolveBuilders(
       });
       output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
     } catch (err: any) {
-      // `resolvedSpecs` is only passed into this function on the 2nd run,
-      // so if MODULE_NOT_FOUND happens in that case then we don't want to
-      // try to install again. Instead just pass through the error to the user
       if (err.code === 'MODULE_NOT_FOUND' && !resolvedSpecs) {
         output.debug(`Failed to import "${name}": ${err}`);
         buildersToAdd.add(spec);
@@ -323,7 +290,6 @@ async function resolveBuilders(
     }
   }
 
-  // Add any Builders that are not yet present into `.vercel/builders`
   if (buildersToAdd.size > 0) {
     return { buildersToAdd };
   }

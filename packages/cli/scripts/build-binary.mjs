@@ -18,7 +18,6 @@ const cwd = process.cwd();
 const repoRoot = new URL('../', import.meta.url);
 const pkg = JSON.parse(readFileSync(new URL('package.json', repoRoot), 'utf8'));
 
-// Create constants file (same as main build)
 writeFileSync(
   new URL('src/util/constants.ts', repoRoot),
   `// Auto-generated
@@ -32,8 +31,6 @@ await compileDevTemplates();
 
 const require = createRequire(import.meta.url);
 
-// Same jsonc-parser plugin as scripts/build.mjs — otherwise the UMD wrapper
-// fails at runtime with "Cannot find module './impl/format'"
 const jsoncParserPlugin = {
   name: 'jsonc-parser-module-first',
   setup(build) {
@@ -49,9 +46,7 @@ const jsoncParserPlugin = {
   },
 };
 
-// Replace `child_process` imports with a shim whose `fork()` injects
-// BUN_BE_BUN=1, so every fork caller (named or namespace import) lands on
-// the patched version.
+// Ensure forked dev workers run under Bun when launched from a Bun binary.
 const childProcessShim = {
   name: 'child-process-shim',
   setup(build) {
@@ -87,10 +82,6 @@ const childProcessShim = {
   },
 };
 
-// @vercel-internals/get-package-json walks the disk looking for package.json;
-// under the binary's virtual FS that loops forever. Hardcode the response to
-// the CLI's own package.json, baked in at build time. This shim only serves
-// the CLI package — it is not a general-purpose lookup.
 const cliPkgJson = JSON.parse(
   readFileSync(new URL('package.json', repoRoot), 'utf8')
 );
@@ -114,11 +105,6 @@ export default { getPackageJSON };`,
   },
 };
 
-// Under the Bun binary `import.meta.url` lives in `/$bunfs/`; redirect
-// __dirname / __filename to the on-disk binary location so sidecars shipped
-// alongside (dev-server.mjs, builder-worker.cjs, templates) are resolvable.
-// Also patches `require('child_process').fork` as a fallback for any caller
-// that bypasses the child-process shim.
 const banner = {
   js: `
 import { createRequire as __createRequire } from 'node:module';
@@ -157,7 +143,6 @@ const result = await esbuild({
   format: 'esm',
   splitting: false,
   outfile: join(distBinDir, 'index-bundled.js'),
-  // Optional peers that @mapbox/node-pre-gyp references but we don't use.
   external: [
     'mock-aws-s3',
     'aws-sdk',
@@ -217,7 +202,6 @@ const sidecarSize = require('node:fs').statSync(
 ).size;
 console.log(`[sidecar] done. ${(sidecarSize / 1024 / 1024).toFixed(1)}MB`);
 
-// @vercel/node template files, loaded at runtime via readFileSync.
 const vercelNodeDist = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '../../../packages/node/dist'
@@ -231,7 +215,6 @@ for (const sidecar of ['edge-handler-template.js', 'bundling-handler.js']) {
   }
 }
 
-// Forked by dev/builder.ts via `join(__dirname, 'builder-worker.cjs')`.
 {
   const src = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
@@ -307,10 +290,6 @@ await import('./index-bundled.js');
 
 writeFileSync(join(distBinDir, 'vc-wrapper.mjs'), wrapperSrc, 'utf8');
 
-// Supported Bun compile targets. `os` matches process.platform values
-// (darwin/linux/win32). `abi: 'musl'` is for statically-linked Linux
-// binaries that run on Alpine and other musl-based distros.
-//
 const allTargets = [
   { os: 'darwin', arch: 'arm64' },
   { os: 'darwin', arch: 'x64' },
@@ -322,7 +301,6 @@ const allTargets = [
   { os: 'win32', arch: 'x64' },
 ];
 
-// Bun's --target uses "windows" rather than the Node "win32".
 const bunTargetOf = t =>
   `bun-${t.os === 'win32' ? 'windows' : t.os}-${t.arch}${t.abi ? `-${t.abi}` : ''}`;
 const assetNameOf = t => {
@@ -332,16 +310,9 @@ const assetNameOf = t => {
   return `vercel-${os}-${t.arch}${abi}${ext}`;
 };
 
-// Target selection priority:
-//   1. BUN_TARGET env (CI sets this per matrix runner)
-//   2. --all flag (cross-compile every target; used for release bundles)
-//   3. default: current platform only (fastest local iteration)
 const buildAll = process.argv.slice(2).includes('--all');
 let targets;
 if (process.env.BUN_TARGET) {
-  // Parse anything matching `bun-<os>-<arch>[-<abi>]`. We don't gate on
-  // `allTargets` here so validate-only workflows can build experimental
-  // targets (e.g. Windows) without flipping them on for everyone via --all.
   const m = /^bun-(darwin|linux|windows)-(arm64|x64)(?:-(musl))?$/.exec(
     process.env.BUN_TARGET
   );
@@ -359,8 +330,6 @@ if (process.env.BUN_TARGET) {
 } else if (buildAll) {
   targets = allTargets;
 } else {
-  // Default to glibc Linux (no abi) on the host — musl users opt in via --all
-  // or BUN_TARGET. We can't detect glibc vs musl reliably from Node.
   const current = allTargets.find(
     t => t.os === process.platform && t.arch === process.arch && !t.abi
   );
@@ -407,8 +376,6 @@ for (const t of targets) {
     process.exit(bunResult.status ?? 1);
   }
 
-  // Smoke-test only when output matches the host; can't exec cross-compiled
-  // binaries, and musl binaries won't run on glibc hosts.
   const hostMatches =
     t.os === process.platform && t.arch === process.arch && !t.abi;
   if (hostMatches) {
