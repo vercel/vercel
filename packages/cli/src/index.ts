@@ -30,6 +30,8 @@ try {
   };
 }
 
+const bump = true
+
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdirp } from 'fs-extra';
