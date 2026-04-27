@@ -52,8 +52,7 @@ export default async function getOidcToken(client: Client, argv: string[]) {
         },
       }
     );
-    output.print(res.token);
-    output.print('\n');
+    client.stdout.write(`${res.token}\n`);
     return 0;
   } catch (err: unknown) {
     if (isAPIError(err) && err.status === 404) {
