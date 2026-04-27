@@ -15,13 +15,8 @@ import socket
 import sys
 import time
 import traceback
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
-from vercel_runtime.crons import (
-    bootstrap_cron_service_app,
-    is_cron_service,
-)
 from vercel_runtime.headers import (
     clear_vercel_headers_context,
     decode_header_bytes,
@@ -357,6 +352,7 @@ if _ipc_sock is not None:
 # Runtime dependency installation for large Lambda functions
 # The _uv directory is at the Lambda root, two levels up from this file
 # (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
+_runtime_install_duration_ms: int | None = None
 lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
 _uv_dir = os.path.join(lambda_root, "_uv")
 _runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
@@ -430,6 +426,7 @@ if os.path.exists(_runtime_config_path):
                 },
             )
             _install_duration = time.time() - _install_start
+            _runtime_install_duration_ms = int(_install_duration * 1000)
             _stderr(
                 f"Runtime dependencies installed in {_install_duration:.2f}s"
             )
@@ -493,7 +490,20 @@ if is_worker_service():
             _stderr(traceback.format_exc())
             exit(1)
 
-if is_cron_service():
+
+def _is_cron_service() -> bool:
+    svc_type = (os.environ.get("VERCEL_SERVICE_TYPE") or "").strip().lower()
+    if svc_type == "cron":
+        return True
+    svc_trigger = (
+        (os.environ.get("VERCEL_SERVICE_TRIGGER") or "").strip().lower()
+    )
+    return svc_type == "job" and svc_trigger == "schedule"
+
+
+if _is_cron_service():
+    from vercel_runtime.crons import bootstrap_cron_service_app
+
     try:
         __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
         __vc_variables = dir(__vc_module)
@@ -703,6 +713,8 @@ if "VERCEL_IPC_PATH" in os.environ:
         _pool.urlopen = timed_request(_pool.urlopen)  # pyright: ignore[reportUnknownMemberType]
     except Exception:
         pass
+
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
     class BaseHandler(BaseHTTPRequestHandler):
         # Re-implementation of BaseHTTPRequestHandler's log_message method to
@@ -937,14 +949,16 @@ if "VERCEL_IPC_PATH" in os.environ:
             )
             server = uvicorn.Server(config)
 
+            _started_payload: dict[str, Any] = {
+                "initDuration": int((time.time() - start_time) * 1000),
+                "httpPort": http_port,
+            }
+            if _runtime_install_duration_ms is not None:
+                _started_payload["runtimeInstallDurationMs"] = (
+                    _runtime_install_duration_ms
+                )
             send_message(
-                {
-                    "type": "server-started",
-                    "payload": {
-                        "initDuration": int((time.time() - start_time) * 1000),
-                        "httpPort": http_port,
-                    },
-                }
+                {"type": "server-started", "payload": _started_payload}
             )
             _flush_init_log_buf()
 
@@ -955,15 +969,15 @@ if "VERCEL_IPC_PATH" in os.environ:
 
     if "Handler" in locals():
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)  # type: ignore[assignment]
-        send_message(
-            {
-                "type": "server-started",
-                "payload": {
-                    "initDuration": int((time.time() - start_time) * 1000),
-                    "httpPort": server.server_address[1],  # type: ignore[attr-defined]
-                },
-            }
-        )
+        _started_payload = {
+            "initDuration": int((time.time() - start_time) * 1000),
+            "httpPort": server.server_address[1],  # type: ignore[attr-defined]
+        }
+        if _runtime_install_duration_ms is not None:
+            _started_payload["runtimeInstallDurationMs"] = (
+                _runtime_install_duration_ms
+            )
+        send_message({"type": "server-started", "payload": _started_payload})
         _flush_init_log_buf()
         server.serve_forever()  # type: ignore[attr-defined]
 
@@ -974,11 +988,13 @@ try:
 except RuntimeError as exc:
     _fatal(str(exc))
 
-if (
-    app_name.lower() == "handler"
-    and isinstance(app_obj, type)
-    and issubclass(app_obj, BaseHTTPRequestHandler)
-):
+_is_handler = False
+if app_name.lower() == "handler" and isinstance(app_obj, type):
+    from http.server import BaseHTTPRequestHandler
+
+    _is_handler = issubclass(app_obj, BaseHTTPRequestHandler)
+
+if _is_handler:
     _stderr("using HTTP Handler")
     import _thread  # noqa: PLC2701
     import http.client
