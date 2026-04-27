@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import functools
 import os
 from importlib import import_module
 from importlib.util import find_spec
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 
+@functools.cache
 def _has_module(module_name: str) -> bool:
     try:
         return find_spec(module_name) is not None
@@ -22,11 +24,6 @@ def _import_optional_module(module_name: str) -> object | None:
         return import_module(module_name)
     return None
 
-
-CELERY_AVAILABLE = _has_module("celery")
-DRAMATIQ_AVAILABLE = _has_module("dramatiq")
-DJANGO_TASKS_AVAILABLE = _has_module("django.tasks")
-VERCEL_WORKERS_AVAILABLE = _has_module("vercel.workers")
 
 VERCEL_CELERY_BROKER_URL = "vercel://"
 
@@ -117,13 +114,13 @@ def _find_celery_app(module: object) -> object | None:
 
 
 def _bootstrap_dramatiq_worker_app(module: object) -> object | None:
-    if not DRAMATIQ_AVAILABLE:
+    if not _has_module("dramatiq"):
         return None
 
     dramatiq_mod = _import_optional_module("dramatiq")
     vercel_dramatiq = _import_optional_module("vercel.workers.dramatiq")
     if dramatiq_mod is None or vercel_dramatiq is None:
-        if not VERCEL_WORKERS_AVAILABLE:
+        if not _has_module("vercel.workers"):
             raise RuntimeError(
                 "Dramatiq worker service detected, but "
                 '"vercel-workers" is not installed. '
@@ -182,7 +179,7 @@ def _bootstrap_dramatiq_worker_app(module: object) -> object | None:
 
 
 def _bootstrap_celery_worker_app(module: object) -> object | None:
-    if not CELERY_AVAILABLE:
+    if not _has_module("celery"):
         return None
 
     celery_app = _find_celery_app(module)
@@ -191,7 +188,7 @@ def _bootstrap_celery_worker_app(module: object) -> object | None:
 
     vercel_celery = _import_optional_module("vercel.workers.celery")
     if vercel_celery is None:
-        if not VERCEL_WORKERS_AVAILABLE:
+        if not _has_module("vercel.workers"):
             raise RuntimeError(
                 'Celery worker service requires "vercel-workers". '
                 'Install "vercel-workers" and export a Celery app.'
@@ -213,12 +210,12 @@ def _bootstrap_celery_worker_app(module: object) -> object | None:
 
 
 def _bootstrap_django_worker_app(module: object) -> object | None:
-    if not DJANGO_TASKS_AVAILABLE:
+    if not _has_module("django.tasks"):
         return None
 
     vercel_django = _import_optional_module("vercel.workers.django")
     if vercel_django is None:
-        if not VERCEL_WORKERS_AVAILABLE:
+        if not _has_module("vercel.workers"):
             raise RuntimeError(
                 "Django tasks worker service detected, but "
                 '"vercel-workers" is not installed. '
@@ -244,7 +241,7 @@ def _bootstrap_django_worker_app(module: object) -> object | None:
 
 
 def _bootstrap_generic_worker_app() -> object | None:
-    if not VERCEL_WORKERS_AVAILABLE:
+    if not _has_module("vercel.workers"):
         return None
 
     vercel_workers = _import_optional_module("vercel.workers")
@@ -282,7 +279,7 @@ def bootstrap_worker_service_app(module: object) -> object:
         except Exception as exc:
             raise RuntimeError("Celery worker bootstrap failed.") from exc
 
-    if DRAMATIQ_AVAILABLE:
+    if _has_module("dramatiq"):
         try:
             app = _bootstrap_dramatiq_worker_app(module)
             if app is not None:
@@ -290,7 +287,7 @@ def bootstrap_worker_service_app(module: object) -> object:
         except Exception as exc:
             raise RuntimeError("Dramatiq worker bootstrap failed.") from exc
 
-    if DJANGO_TASKS_AVAILABLE:
+    if _has_module("django.tasks"):
         try:
             app = _bootstrap_django_worker_app(module)
             if app is not None:
@@ -302,7 +299,7 @@ def bootstrap_worker_service_app(module: object) -> object:
     if app is not None:
         return app
 
-    if not VERCEL_WORKERS_AVAILABLE:
+    if not _has_module("vercel.workers"):
         raise RuntimeError(
             "Unable to bootstrap worker service because "
             '"vercel-workers" is missing. Install '
