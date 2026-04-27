@@ -32,6 +32,7 @@ import {
 import {
   discoverPackage,
   ensureUvProject,
+  getVenvSitePackagesDirs,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
@@ -593,6 +594,32 @@ export const build: BuildVX = async ({
   if (quirksResult.buildEnv) {
     Object.assign(pythonEnv, quirksResult.buildEnv);
   }
+
+  // Pre-compile vendored runtime bytecode so CPython skips compilation on cold
+  // start.  Only targets vercel_runtime/_vendor (not user packages) to keep the
+  // bundle size delta small and avoid shipping stale .pyc for user code.
+  try {
+    const pythonBin = getVenvPythonBin(venvPath);
+    // Use Python to locate the _vendor directory inside site-packages, then
+    // compile it.  This avoids hardcoding the lib/python3.X/site-packages path.
+    const compileScript = [
+      'import compileall, importlib.util',
+      'spec = importlib.util.find_spec("vercel_runtime._vendor")',
+      'if spec and spec.submodule_search_locations:',
+      '    for p in spec.submodule_search_locations:',
+      '        compileall.compile_dir(p, quiet=1, force=True)',
+    ].join('\n');
+    execSync(`${pythonBin} -c ${JSON.stringify(compileScript)}`, {
+      env: pythonEnv,
+      stdio: 'pipe',
+    });
+    debug('Pre-compiled _vendor .pyc files');
+  } catch (err) {
+    debug(
+      `Failed to pre-compile _vendor .pyc: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
 
@@ -768,6 +795,27 @@ from vercel_runtime.vc_init import vc_handler
         for (const [p, f] of Object.entries(depAnalysis.allVendorFiles)) {
           files[p] = f;
         }
+      }
+
+      // Include pre-compiled .pyc files for the vendored runtime deps.
+      // compileall ran earlier and placed __pycache__/*.pyc files alongside
+      // the .py sources inside vercel_runtime/_vendor.  We add only those
+      // .pyc files so CPython skips bytecode compilation on cold start.
+      try {
+        const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+        for (const spDir of sitePackageDirs) {
+          const vendorPycFiles = await glob(
+            'vercel_runtime/_vendor/**/__pycache__/**/*.pyc',
+            { cwd: spDir }
+          );
+          for (const [relPath, fileRef] of Object.entries(vendorPycFiles)) {
+            files[join(vendorDir, relPath)] = fileRef;
+          }
+        }
+      } catch (err) {
+        debug(
+          `Failed to include _vendor .pyc files: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
     });
 
