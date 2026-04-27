@@ -3470,3 +3470,85 @@ describe('ensureVenv uv invocation', () => {
     ]);
   });
 });
+
+describe('entrypoint diagnostic error messages', () => {
+  // Uses dynamic import to avoid hoisting issues with vi.mock
+  let detectPythonEntrypoint: typeof import('../src/entrypoint').detectPythonEntrypoint;
+
+  beforeEach(async () => {
+    ({ detectPythonEntrypoint } = await import('../src/entrypoint'));
+  });
+
+  it('reports no Python files when directory is empty', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-empty-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(/No fastapi entrypoint found/i);
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports candidate file exists but lacks export', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-noexport-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(path.join(workPath, 'app.py'), 'x = 1\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /Found app\.py but it does not export/i
+    );
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports nearby .py files with non-standard names', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-nearby-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'myapi.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(/Found Python files:.*myapi\.py/i);
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports pyproject.toml scripts.app pointing to missing module', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-scripts-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[project.scripts]\napp = "mymod:app"\n'
+    );
+
+    const result = await detectPythonEntrypoint('flask', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /pyproject\.toml.*defines app.*mymod:app.*not found/i
+    );
+
+    fs.removeSync(workPath);
+  });
+
+  it('missing export error takes priority over nearby files', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-priority-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(path.join(workPath, 'app.py'), 'x = 1\n');
+    fs.writeFileSync(path.join(workPath, 'myapi.py'), 'app = 1\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /Found app\.py but it does not export/i
+    );
+    expect(result!.error!.message).not.toMatch(/Found Python files/i);
+
+    fs.removeSync(workPath);
+  });
+});
