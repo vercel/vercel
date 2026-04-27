@@ -28,6 +28,25 @@ describe('getSameSubcommandSuggestionFlags', () => {
     const out = getSameSubcommandSuggestionFlags(args);
     expect(out).toEqual(['--status', '301', '--yes']);
   });
+
+  it('strips token flags and values', () => {
+    const args = [
+      '--slug',
+      'acme',
+      '--token',
+      'secret-token',
+      '-t=other-secret',
+      '--yes',
+    ];
+    const out = getSameSubcommandSuggestionFlags(args);
+    expect(out).toEqual(['--slug', 'acme', '--yes']);
+  });
+
+  it('strips bare --token values that start with a dash', () => {
+    const args = ['--slug', 'acme', '--token', '-secret-token', '--yes'];
+    const out = getSameSubcommandSuggestionFlags(args);
+    expect(out).toEqual(['--slug', 'acme', '--yes']);
+  });
 });
 
 describe('getGlobalFlagsOnlyFromArgs', () => {
@@ -40,5 +59,25 @@ describe('getGlobalFlagsOnlyFromArgs', () => {
     expect(out).not.toContain('acme');
     expect(out).not.toContain('--status');
     expect(out).not.toContain('301');
+  });
+
+  it('strips token flags from preserved globals', () => {
+    const afterAdd = [
+      '--cwd',
+      '/tmp',
+      '--non-interactive',
+      '--token',
+      'secret-token',
+      '-t=other-secret',
+      '--yes',
+    ];
+    const out = getGlobalFlagsOnlyFromArgs(afterAdd);
+    expect(out).toEqual(['--cwd', '/tmp', '--non-interactive']);
+  });
+
+  it('strips shorthand -t values that start with a dash', () => {
+    const afterAdd = ['--cwd', '/tmp', '-t', '-secret-token', '--yes'];
+    const out = getGlobalFlagsOnlyFromArgs(afterAdd);
+    expect(out).toEqual(['--cwd', '/tmp']);
   });
 });
