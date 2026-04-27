@@ -127,23 +127,19 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client._subscriptions.clear()
 
     def _raw_callback(self) -> bytes:
-        return json.dumps(
-            {
-                "type": "com.vercel.queue.v1beta",
-                "data": {
-                    "queueName": "q",
-                    "consumerGroup": "c",
-                    "messageId": "m",
-                },
-            },
-        ).encode()
+        return b'{"ok":true}'
 
-    def _patch_receive(self):
-        return patch.object(
-            queue_client.callback,
-            "receive_message_by_id",
-            return_value=({"ok": True}, 1, "now", "receipt"),
-        )
+    def _environ(self) -> dict[str, str]:
+        return {
+            "CONTENT_TYPE": "application/json",
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "q",
+            "HTTP_CE_VQSCONSUMERGROUP": "c",
+            "HTTP_CE_VQSMESSAGEID": "m",
+            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "HTTP_CE_VQSCREATEDAT": "now",
+        }
 
     def test_retry_after_return_delays_message(self) -> None:
         def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
@@ -152,11 +148,13 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            self._patch_receive(),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
-            status, _headers, _body = queue_client.handle_queue_callback(self._raw_callback())
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
 
         self.assertEqual(status, 200)
         change_visibility.assert_called_once_with("q", "c", "m", "receipt", 120)
@@ -169,11 +167,13 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            self._patch_receive(),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
-            status, _headers, _body = queue_client.handle_queue_callback(self._raw_callback())
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
 
         self.assertEqual(status, 200)
         change_visibility.assert_called_once_with("q", "c", "m", "receipt", 30)
@@ -186,11 +186,13 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            self._patch_receive(),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
-            status, _headers, _body = queue_client.handle_queue_callback(self._raw_callback())
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
 
         self.assertEqual(status, 200)
         delete_message.assert_called_once_with("q", "c", "m", "receipt")
@@ -203,11 +205,13 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            self._patch_receive(),
             patch.object(queue_client.callback, "change_visibility") as change_visibility,
             patch.object(queue_client.callback, "delete_message") as delete_message,
         ):
-            status, _headers, _body = queue_client.handle_queue_callback(self._raw_callback())
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
 
         self.assertEqual(status, 200)
         delete_message.assert_called_once_with("q", "c", "m", "receipt")
