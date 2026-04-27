@@ -1,5 +1,6 @@
 import { getFlagsSpecification } from './get-flags-specification';
 import { getCommandNamePlain } from './pkg-name';
+import { normalizeFlagName, stripSensitiveAuthArgs } from './redact-args';
 
 export const globalCommandOptions = [
   {
@@ -101,9 +102,7 @@ export const GLOBAL_CLI_FLAG_NAMES: ReadonlySet<string> = (() => {
  * Whether a global CLI flag expects a separate argv token (String type).
  */
 export function globalCliFlagTakesValue(flagName: string): boolean {
-  const normalized = flagName.includes('=')
-    ? flagName.slice(0, flagName.indexOf('='))
-    : flagName;
+  const normalized = normalizeFlagName(flagName);
   for (const opt of globalCommandOptions) {
     if (`--${opt.name}` === normalized) {
       return opt.type === String;
@@ -131,23 +130,8 @@ const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
   '--per-page',
 ]);
 
-const SENSITIVE_FLAG_NAMES = new Set(['--token', '-t']);
-
-function normalizeFlagName(flag: string): string {
-  if (flag.includes('=')) {
-    return flag.slice(0, flag.indexOf('='));
-  }
-  return flag;
-}
-
-function isSensitiveFlag(flag: string): boolean {
-  return SENSITIVE_FLAG_NAMES.has(normalizeFlagName(flag));
-}
-
 function suggestionFlagTakesSeparateValue(flagName: string): boolean {
-  const name = flagName.includes('=')
-    ? flagName.slice(0, flagName.indexOf('='))
-    : flagName;
+  const name = normalizeFlagName(flagName);
   if (globalCliFlagTakesValue(name)) return true;
   return SUBCOMMAND_FLAG_TAKES_VALUE.has(name);
 }
@@ -162,25 +146,20 @@ function suggestionFlagTakesSeparateValue(flagName: string): boolean {
  * getGlobalFlagsOnlyFromArgs so flags that don't apply are not forwarded.
  */
 export function getSameSubcommandSuggestionFlags(args: string[]): string[] {
+  const safeArgs = stripSensitiveAuthArgs(args);
   const out: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
+  for (let i = 0; i < safeArgs.length; i++) {
+    const a = safeArgs[i];
     if (!a.startsWith('-')) continue;
-    if (isSensitiveFlag(a)) {
-      if (!a.includes('=') && i + 1 < args.length) {
-        i++;
-      }
-      continue;
-    }
     out.push(a);
     if (a.includes('=')) continue;
     const name = a;
     if (
       suggestionFlagTakesSeparateValue(name) &&
-      i + 1 < args.length &&
-      !args[i + 1].startsWith('-')
+      i + 1 < safeArgs.length &&
+      !safeArgs[i + 1].startsWith('-')
     ) {
-      out.push(args[++i]);
+      out.push(safeArgs[++i]);
     }
   }
   return out;
@@ -279,15 +258,10 @@ for (const opt of globalCommandOptions) {
  * Collects only global CLI flags from argv for suggested next commands.
  */
 export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
+  const safeArgs = stripSensitiveAuthArgs(args);
   const out: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (isSensitiveFlag(a)) {
-      if (!a.includes('=') && i + 1 < args.length) {
-        i++;
-      }
-      continue;
-    }
+  for (let i = 0; i < safeArgs.length; i++) {
+    const a = safeArgs[i];
     let opt: GlobalOpt | undefined;
     if (a.startsWith('--') && a.includes('=')) {
       const name = a.slice(2).split('=')[0];
@@ -299,7 +273,7 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
     if (!opt) continue;
     out.push(a);
     if (opt.type === String && !a.includes('=')) {
-      const next = args[i + 1];
+      const next = safeArgs[i + 1];
       if (next && !next.startsWith('-')) {
         out.push(next);
         i++;

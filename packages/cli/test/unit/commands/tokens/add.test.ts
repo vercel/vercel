@@ -157,7 +157,14 @@ describe('tokens add', () => {
       });
 
       client.nonInteractive = true;
-      client.setArgv('tokens', 'add', 'my-token', '--non-interactive');
+      client.setArgv(
+        'tokens',
+        'add',
+        'my-token',
+        '--token',
+        '-secret-token',
+        '--non-interactive'
+      );
 
       await expect(tokens(client)).rejects.toThrow('exit:1');
 
@@ -169,6 +176,13 @@ describe('tokens add', () => {
         verification_uri: 'https://vercel.com/account/tokens',
       });
       expect(payload.message).toContain('authenticated to scope');
+      expect(
+        payload.next.every(
+          (n: { command?: string }) =>
+            !String(n.command).includes('--token') &&
+            !String(n.command).includes('-secret-token')
+        )
+      ).toBe(true);
     });
   });
 });
