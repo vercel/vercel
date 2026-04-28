@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       statuses: write
+      checks: write
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ github.event.client_payload.url }}
@@ -37,6 +38,7 @@ jobs:
       affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
       totalCount: ${{ steps['affected-packages'].outputs['total'] }}
       allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
+      checkRuns: ${{ steps['register-check-runs'].outputs['checkRuns'] }}
     steps:
       # The `context` here MUST exactly match the one written by the
       # `Report status to PR commit` step in the `summary` job below.
@@ -131,6 +133,39 @@ jobs:
         env:
           TURBO_BASE_SHA: ${{ steps.pr-context.outputs.baseSha }}
           TEST_TYPE: e2e
+      # Register one queued check run per matrix entry on the PR's head
+      # SHA so that GitHub's PR Checks panel renders them as a single
+      # "Matrix: test" group. Each matrix job will later transition its
+      # own check run to in_progress and then completed.
+      #
+      # The `name` MUST exactly match the matrix job's `name:` field
+      # below so each matrix job can look up its own check_run_id.
+      - id: register-check-runs
+        if: ${{ steps['set-tests'].outputs['tests'] != '[]' && github.event.client_payload.git.sha }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tests = JSON.parse(`${{ steps['set-tests'].outputs['tests'] }}`);
+            const headSha = '${{ github.event.client_payload.git.sha }}';
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const map = {};
+            for (const t of tests) {
+              const name = `${t.scriptName} (${t.packageName}, ${t.chunkNumber}, ${t.runner}, Node v${t.nodeVersion})`;
+              const { data } = await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name,
+                head_sha: headSha,
+                status: 'queued',
+                details_url: runUrl,
+                output: {
+                  title: 'Queued',
+                  summary: 'Waiting for a runner to pick up this matrix job.',
+                },
+              });
+              map[name] = data.id;
+            }
+            core.setOutput('checkRuns', JSON.stringify(map));
 
   test:
     timeout-minutes: 120
@@ -139,12 +174,67 @@ jobs:
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
     needs:
       - setup
+    permissions:
+      checks: write
+      actions: read
     strategy:
       fail-fast: false
       max-parallel: 75
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
+    env:
+      MATRIX_CHECK_NAME: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
     steps:
+      # Mark this matrix job's pre-registered check run as in_progress
+      # and point details_url at this specific job's URL (resolved by
+      # querying the workflow run's job list and matching by name).
+      - name: Start matrix check run
+        if: ${{ needs.setup.outputs.checkRuns && needs.setup.outputs.headSha }}
+        uses: actions/github-script@v7
+        env:
+          CHECK_RUNS: ${{ needs.setup.outputs.checkRuns }}
+        with:
+          script: |
+            const map = JSON.parse(process.env.CHECK_RUNS);
+            const name = process.env.MATRIX_CHECK_NAME;
+            const id = map[name];
+            if (!id) {
+              core.warning(`No pre-registered check run found for "${name}"`);
+              return;
+            }
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            let detailsUrl = runUrl;
+            try {
+              const jobs = await github.paginate(
+                github.rest.actions.listJobsForWorkflowRunAttempt,
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: context.runId,
+                  attempt_number: context.runAttempt ?? 1,
+                  per_page: 100,
+                }
+              );
+              const match = jobs.find(j => j.name === name);
+              if (match?.html_url) {
+                detailsUrl = match.html_url;
+              }
+            } catch (err) {
+              core.warning(`Could not resolve job URL: ${err.message}`);
+            }
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: id,
+              status: 'in_progress',
+              details_url: detailsUrl,
+              output: {
+                title: 'Running',
+                summary: `Running matrix job [${name}](${detailsUrl}).`,
+              },
+            });
+            core.exportVariable('MATRIX_CHECK_RUN_ID', String(id));
+            core.exportVariable('MATRIX_CHECK_DETAILS_URL', detailsUrl);
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -239,6 +329,36 @@ jobs:
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
           DD_ENV: ci
+      # Close out this matrix job's check run with the right conclusion.
+      # `if: always()` ensures we close it even on failure or cancel so
+      # the PR Checks panel doesn't show an orphan in_progress row.
+      - name: Finish matrix check run
+        if: ${{ always() && env.MATRIX_CHECK_RUN_ID }}
+        uses: actions/github-script@v7
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const id = Number(process.env.MATRIX_CHECK_RUN_ID);
+            const detailsUrl = process.env.MATRIX_CHECK_DETAILS_URL;
+            const name = process.env.MATRIX_CHECK_NAME;
+            const status = process.env.JOB_STATUS;
+            const conclusion =
+              status === 'success' ? 'success'
+              : status === 'cancelled' ? 'cancelled'
+              : 'failure';
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: id,
+              status: 'completed',
+              conclusion,
+              details_url: detailsUrl,
+              output: {
+                title: conclusion === 'success' ? 'Passed' : conclusion === 'cancelled' ? 'Cancelled' : 'Failed',
+                summary: `Matrix job [${name}](${detailsUrl}) finished with status \`${status}\`.`,
+              },
+            });
 
   summary:
     name: Summary (e2e)
@@ -250,7 +370,45 @@ jobs:
       - test
     permissions:
       statuses: write
+      checks: write
     steps:
+      # Defensive sweep: if any matrix check runs are still queued or
+      # in_progress (e.g. because the whole workflow run was cancelled
+      # before the matrix job's "Finish matrix check run" step ran),
+      # force-close them as cancelled so the PR Checks panel doesn't
+      # show an orphan row indefinitely.
+      - name: Close orphan matrix check runs
+        if: ${{ always() && needs.setup.outputs.checkRuns }}
+        uses: actions/github-script@v7
+        env:
+          CHECK_RUNS: ${{ needs.setup.outputs.checkRuns }}
+        with:
+          script: |
+            const map = JSON.parse(process.env.CHECK_RUNS);
+            for (const [name, id] of Object.entries(map)) {
+              try {
+                const { data } = await github.rest.checks.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  check_run_id: id,
+                });
+                if (data.status === 'completed') continue;
+                await github.rest.checks.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  check_run_id: id,
+                  status: 'completed',
+                  conclusion: 'cancelled',
+                  output: {
+                    title: 'Cancelled',
+                    summary: `Matrix job "${name}" did not report a final state; closing as cancelled.`,
+                  },
+                });
+                core.info(`Closed orphan check run ${id} (${name}).`);
+              } catch (err) {
+                core.warning(`Failed to reconcile check run ${id} (${name}): ${err.message}`);
+              }
+            }
       - name: Check All
         id: check-all
         continue-on-error: true
