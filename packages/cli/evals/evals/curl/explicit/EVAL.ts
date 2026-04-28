@@ -26,14 +26,17 @@ test('agent ran vc curl', () => {
   expect(
     curlCommands.some(command => /\b(vercel|vc)\s+curl\s+\//.test(command))
   ).toBe(true);
+  expect(
+    curlCommands.some(
+      command => command.includes('--yes') || /\s-y(\s|$)/.test(command)
+    )
+  ).toBe(true);
 });
 
 test('agent deployed and saved curl response', () => {
   const commands = getShellCommands();
   expect(
-    commands.some(command =>
-      /\b(vercel|vc)(\s+deploy\b|\s+(--yes|-y)(\s|$))/.test(command)
-    )
+    commands.some(command => /\b(vercel|vc)\s+deploy\b/.test(command))
   ).toBe(true);
 
   expect(existsSync('curl-deployment-url.txt')).toBe(true);
