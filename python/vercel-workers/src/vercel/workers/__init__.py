@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from .client import (
+    Ack,
     MessageMetadata,
+    RetryAfter,
     WorkerJSONEncoder,
-    WorkerTimeoutResult,
     get_asgi_app,
     get_vercel_queue_subscriptions,
     get_wsgi_app,
@@ -30,8 +31,9 @@ from .exceptions import (
 
 __all__ = [
     "MessageMetadata",
+    "Ack",
+    "RetryAfter",
     "WorkerJSONEncoder",
-    "WorkerTimeoutResult",
     "subscribe",
     "get_vercel_queue_subscriptions",
     "get_wsgi_app",
