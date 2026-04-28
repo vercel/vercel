@@ -76,7 +76,7 @@ export const help = () => `
       upgrade                          Upgrade the Vercel CLI to the latest version
       usage                            Show billing usage for the current billing period
       webhooks             [cmd]       Manages webhooks [beta]
-      whoami                           Shows the username of the currently logged in user
+      whoami                           Shows the current user, scope, and effective plan
 
   ${chalk.dim('Global Options:')}
 

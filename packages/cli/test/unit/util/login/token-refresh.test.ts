@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
 import _fetch, { Request, Response } from 'node-fetch';
@@ -12,7 +12,20 @@ vi.mock('node-fetch', async () => ({
   default: vi.fn(),
 }));
 
+const mockBilling = {
+  addons: [],
+  plan: 'hobby',
+  platform: 'stripe',
+  status: 'active',
+  period: { start: 0, end: 0 },
+  trial: { start: 0, end: 0 },
+};
+
 describe('OAuth Token Refresh', () => {
+  beforeEach(() => {
+    fetch.mockReset();
+  });
+
   it('should refresh the token when it is expired', async () => {
     const refreshToken = randomUUID();
     const accessToken = randomUUID();
@@ -56,7 +69,12 @@ describe('OAuth Token Refresh', () => {
       // Mock the user endpoint, which gets called during client initialization
       if (url.endsWith('/v2/user')) {
         return json({
-          user: { id: randomUUID(), email: Chance().email(), username: name },
+          user: {
+            id: randomUUID(),
+            email: Chance().email(),
+            username: name,
+            billing: mockBilling,
+          },
         });
       }
 
@@ -79,20 +97,25 @@ describe('OAuth Token Refresh', () => {
 
     const name = Chance().name();
 
-    const exitCode = await whoami(client);
-    expect(exitCode).toBe(0);
-
     fetch.mockImplementation(init => {
       const url = init instanceof Request ? init.url : init.toString();
 
       // Mock the user endpoint, which gets called during client initialization
       if (url.endsWith('/v2/user')) {
         return json({
-          user: { id: randomUUID(), email: Chance().email(), username: name },
+          user: {
+            id: randomUUID(),
+            email: Chance().email(),
+            username: name,
+            billing: mockBilling,
+          },
         });
       }
       throw new Error(`Unexpected URL: ${url}`);
     });
+
+    const exitCode = await whoami(client);
+    expect(exitCode).toBe(0);
 
     expect(client.stderr).toOutput(name);
     expect(client.authConfig.token).toBeUndefined();

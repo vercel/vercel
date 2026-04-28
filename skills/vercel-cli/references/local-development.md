@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-1. **Link your project** — `vercel link` or `vercel link --repo` (monorepo). Check your team first with `vercel whoami`.
+1. **Link your project** — `vercel link` or `vercel link --repo` (monorepo). Check your current scope and plan first with `vercel whoami`.
 2. **Pull env vars** — `vercel pull` or `vercel env pull`
 
 ## Usage

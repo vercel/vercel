@@ -11,19 +11,34 @@ export type Team = {
   creatorId: string;
   created: string;
   avatar: null;
+  billing: {
+    addons: string[];
+    plan: string;
+    platform: string;
+    status: 'active';
+    period: { start: number; end: number };
+    trial: { start: number; end: number };
+  };
 };
 
 let teams: Team[] = [];
 
+export interface UseTeamsOptions {
+  failMissingToken?: boolean;
+  failInvalidToken?: boolean;
+  failNoAccess?: boolean;
+  failWithCustom403Code?: boolean;
+  apiVersion?: number;
+}
+
 export function useTeams(
   teamId?: string,
-  options: {
-    failMissingToken?: boolean;
-    failInvalidToken?: boolean;
-    failNoAccess?: boolean;
-    failWithCustom403Code?: boolean;
-    apiVersion?: number;
-  } = {
+  options?: UseTeamsOptions
+): Team[] | { teams: Team[] };
+
+export function useTeams(
+  teamId?: string,
+  options: UseTeamsOptions = {
     failMissingToken: false,
     failInvalidToken: false,
     failNoAccess: false,
@@ -98,13 +113,22 @@ export function createTeam(teamId?: string, slug?: string, name?: string) {
   const id = teamId || chance().guid();
   const teamSlug = slug || chance().string({ length: 5, casing: 'lower' });
   const teamName = name || chance().company();
-  const newTeam = {
+  const now = Date.now();
+  const newTeam: Team = {
     id,
     slug: teamSlug,
     name: teamName,
     creatorId: chance().guid(),
     created: '2017-04-29T17:21:54.514Z',
     avatar: null,
+    billing: {
+      addons: [],
+      plan: 'pro',
+      platform: 'stripe',
+      status: 'active',
+      period: { start: now, end: now + 30 * 24 * 60 * 60 * 1000 },
+      trial: { start: now, end: now + 14 * 24 * 60 * 60 * 1000 },
+    },
   };
   teams.push(newTeam);
   return newTeam;

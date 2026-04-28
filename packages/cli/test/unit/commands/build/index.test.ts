@@ -14,6 +14,7 @@ import {
   detectBuilders,
   REGEX_NON_VERCEL_PLATFORM_FILES,
 } from '@vercel/fs-detectors';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -1622,7 +1623,7 @@ createServer((_req, res) => {
   );
 
   it('should build with `repo.json` link', async () => {
-    const cwd = fixture('../../monorepo-link');
+    const cwd = setupUnitFixture('monorepo-link');
 
     useUser();
     useTeams('team_dummy');

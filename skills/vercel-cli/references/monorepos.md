@@ -130,4 +130,4 @@ export default app;
 - **Using `vercel link` instead of `vercel link --repo`**: Creates `project.json` which only tracks one project. Use `--repo` for monorepos.
 - **Missing `build` task in turbo.json/nx.json**: Vercel requires an explicit build task. Without it, the build fails.
 - **Adding a `build` script to package.json for transpilation**: Vercel handles TypeScript compilation. The turbo.json `build` task is for orchestration, not transpilation.
-- **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
+- **Linking while on the wrong team**: Use `vercel whoami` to check the current scope and plan, `vercel teams switch` to change.
