@@ -24,6 +24,9 @@ test('agent ran vc curl', () => {
     /\b(vercel|vc)\s+curl\b/.test(command)
   );
   expect(curlCommands.length).toBeGreaterThan(0);
+  expect(
+    curlCommands.some(command => /\b(vercel|vc)\s+curl\s+\//.test(command))
+  ).toBe(true);
 });
 
 test('agent verified served traffic and wrote an answer', () => {
@@ -35,4 +38,5 @@ test('agent verified served traffic and wrote an answer', () => {
   const answer = readFileSync('traffic-answer.txt', 'utf-8');
   expect(response).toContain('curl implicit eval fixture');
   expect(/serving|served|traffic|yes|reachable/i.test(answer)).toBe(true);
+  expect(answer).toContain('curl implicit eval fixture');
 });
