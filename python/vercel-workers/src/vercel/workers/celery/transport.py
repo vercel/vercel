@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import Any, Literal, TypeGuard
+from datetime import UTC, datetime
+from typing import Any, Literal
 
-from ..client import send
+from ..client import Duration, is_duration, send
 from .utils import _extract_task_from_kombu_message, _parse_iso_datetime
 
 try:
@@ -19,11 +19,6 @@ except Exception as e:
 
 
 DEFAULT_BROKER_ALIAS = "vercel"
-type Duration = int | float | timedelta
-
-
-def _is_duration(value: object) -> TypeGuard[Duration]:
-    return isinstance(value, (int, float, timedelta)) and not isinstance(value, bool)
 
 
 def install_kombu_transport_alias(alias: str = DEFAULT_BROKER_ALIAS) -> None:
@@ -108,7 +103,7 @@ class TransportConfig:
             cfg.base_path = base_path
 
         retention = options.get("retention")
-        if _is_duration(retention):
+        if is_duration(retention):
             cfg.retention = retention
 
         deployment_id = options.get("deployment_id")

@@ -4,13 +4,13 @@ import copy
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from traceback import format_exception
-from typing import Any, TypedDict, TypeGuard, cast
+from typing import Any, TypedDict, cast
 from uuid import UUID
 
-from ..client import send, send_async
+from ..client import Duration, is_duration, send, send_async
 
 try:
     from django.core.cache import caches  # type: ignore[import-untyped]
@@ -107,11 +107,6 @@ class DjangoTaskEnvelope(TypedDict):
 
 
 StoredTaskRecord = dict[str, Any]
-type Duration = int | float | timedelta
-
-
-def _is_duration(value: object) -> TypeGuard[Duration]:
-    return isinstance(value, (int, float, timedelta)) and not isinstance(value, bool)
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,7 +149,7 @@ class VercelQueuesBackendOptions:
             cfg = replace(cfg, deployment_id=deployment_id)
 
         retention = options.get("retention")
-        if _is_duration(retention):
+        if is_duration(retention):
             cfg = replace(cfg, retention=retention)
 
         timeout = options.get("timeout")

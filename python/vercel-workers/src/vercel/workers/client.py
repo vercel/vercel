@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Protocol, TypedDict, cast, get_type_hints, overload
+from typing import Any, Protocol, TypedDict, TypeGuard, cast, get_type_hints, overload
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -108,6 +108,10 @@ type WorkerCallable = PayloadWorkerCallable | MetadataWorkerCallable
 type Duration = int | float | timedelta
 
 
+def is_duration(value: object) -> TypeGuard[Duration]:
+    return isinstance(value, (int, float, timedelta)) and not isinstance(value, bool)
+
+
 class SendMessageResult(TypedDict):
     """Result of sending a message to the queue.
 
@@ -120,12 +124,12 @@ class SendMessageResult(TypedDict):
 def _duration_to_seconds(name: str, value: object) -> int | None:
     if value is None:
         return None
+    if not is_duration(value):
+        raise TypeError(f"{name} must be a number of seconds or datetime.timedelta")
     if isinstance(value, timedelta):
         seconds = value.total_seconds()
-    elif isinstance(value, (int, float)) and not isinstance(value, bool):
-        seconds = float(value)
     else:
-        raise TypeError(f"{name} must be a number of seconds or datetime.timedelta")
+        seconds = float(value)
     if not math.isfinite(seconds):
         raise ValueError(f"{name} must be finite")
     if seconds < 0:

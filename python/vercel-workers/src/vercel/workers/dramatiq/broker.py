@@ -4,10 +4,9 @@ import json
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from datetime import timedelta
-from typing import Any, TypeGuard
+from typing import Any
 
-from ..client import WorkerJSONEncoder, send
+from ..client import Duration, WorkerJSONEncoder, is_duration, send
 
 try:
     import dramatiq
@@ -28,13 +27,6 @@ __all__ = [
     "VercelQueuesBrokerOptions",
     "DramatiqTaskEnvelope",
 ]
-
-
-type Duration = int | float | timedelta
-
-
-def _is_duration(value: object) -> TypeGuard[Duration]:
-    return isinstance(value, (int, float, timedelta)) and not isinstance(value, bool)
 
 
 class VercelDramatiqEncoder(Encoder):
@@ -103,7 +95,7 @@ class VercelQueuesBrokerOptions:
             cfg = replace(cfg, base_path=base_path)
 
         retention = options.get("retention")
-        if _is_duration(retention):
+        if is_duration(retention):
             cfg = replace(cfg, retention=retention)
 
         deployment_id = options.get("deployment_id")
