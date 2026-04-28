@@ -100,8 +100,7 @@ describe('tokens add', () => {
         'tokens',
         'add',
         'my-token',
-        '--token',
-        '-secret-token',
+        '--token=-secret-token',
         '--non-interactive'
       );
 
@@ -161,8 +160,7 @@ describe('tokens add', () => {
         'tokens',
         'add',
         'my-token',
-        '--token',
-        '-secret-token',
+        '--token=-secret-token',
         '--non-interactive'
       );
 
