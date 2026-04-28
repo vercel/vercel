@@ -55,7 +55,9 @@ import {
   startStandaloneDevServer,
 } from './standalone-server';
 
-export { shouldServe };
+import { generateProjectManifest, diagnostics } from './diagnostics';
+
+export { shouldServe, diagnostics };
 
 // in order to allow the user to have `main.go`,
 // we need our `main.go` to be called something else
@@ -294,6 +296,8 @@ export async function build(options: BuildOptions) {
         });
       });
     }
+
+    await generateProjectManifest({ workPath, goModPath, goVersion: '' });
 
     return {
       output: lambda,
