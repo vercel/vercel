@@ -1,6 +1,10 @@
 import { readFileSync, existsSync } from 'fs';
 import { test, expect } from 'vitest';
 
+type EnvListOutput = {
+  envs?: Array<{ key?: string }>;
+};
+
 function getShellCommands(): string[] {
   const results = JSON.parse(
     readFileSync('__agent_eval__/results.json', 'utf-8')
@@ -51,27 +55,20 @@ test('agent used non-interactive flags for update', () => {
 });
 
 test('agent used EVAL_UPDATE_ prefix for env var name', () => {
-  const commands = getShellCommands();
+  expect(existsSync('env-key-used.txt')).toBe(true);
+  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
+  expect(key).toMatch(/^EVAL_UPDATE_[A-Za-z0-9_]+$/);
+});
 
-  const candidateKeys = new Set<string>();
-  for (const command of commands) {
-    const addMatch = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
-    if (addMatch?.[1]) {
-      candidateKeys.add(addMatch[1]);
-    }
-    const updateMatch = command.match(/\benv\s+update\s+([A-Za-z0-9_]+)/);
-    if (updateMatch?.[1]) {
-      candidateKeys.add(updateMatch[1]);
-    }
-    const prefixMatches = command.matchAll(/EVAL_UPDATE_[A-Za-z0-9_]+/g);
-    for (const m of prefixMatches) {
-      candidateKeys.add(m[0]);
-    }
-  }
+test('updated env var is present in project env list output', () => {
+  expect(existsSync('env-key-used.txt')).toBe(true);
+  expect(existsSync('env-update-ls-output.json')).toBe(true);
 
-  const evalUpdateKeys = [...candidateKeys].filter(key =>
-    /^EVAL_UPDATE_/.test(key)
-  );
-  expect(evalUpdateKeys.length).toBeGreaterThan(0);
-  // Do not assert key exists on project: evals run concurrently and env/remove may have deleted it.
+  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
+  const output = JSON.parse(
+    readFileSync('env-update-ls-output.json', 'utf-8')
+  ) as EnvListOutput;
+
+  expect(Array.isArray(output.envs)).toBe(true);
+  expect(output.envs?.some(env => env.key === key)).toBe(true);
 });

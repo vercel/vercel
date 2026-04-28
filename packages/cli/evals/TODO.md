@@ -30,22 +30,22 @@
 ## P1: Strengthen The Weakest Current Evals
 
 - `login-whoami`
-  - Verify the command produced an authenticated identity, not only that `whoami` was invoked.
+  - Verify the command produced an authenticated identity, not only that `whoami` was invoked. Initial JSON identity assertion is now in place.
   - Verify the agent reports the result clearly.
 - `login-not-logged-in`
-  - Verify the not-logged-in starting state.
-  - Verify the login flow actually succeeds when required.
-  - Verify the follow-up `whoami` confirms the authenticated identity.
+  - Verify the not-logged-in starting state. Initial isolated unauthenticated command assertion is now in place.
+  - Verify the login flow actually succeeds when required. True browser login is still intentionally avoided in CI.
+  - Verify the follow-up `whoami` confirms the authenticated identity. Initial JSON identity assertion is now in place.
 - `non-interactive`
-  - Verify the target operation actually completes, not only that a `--yes`-style flag appears in telemetry.
+  - Verify the target operation actually completes, not only that a `--yes`-style flag appears in telemetry. Initial filesystem and artifact checks are now in place; keep tightening if result output becomes richer.
   - Verify the agent does not stall on prompts.
 - `curl/explicit`
-  - Verify the CLI request succeeds against the deployment, not only that `vc curl` was run.
+  - Verify the CLI request succeeds against the deployment, not only that `vc curl` was run. Initial response-body assertion is now in place.
   - Verify the agent can interpret and report whether the project is serving traffic.
 - `curl/implicit`
   - Keep the inference aspect, but also verify the resulting answer is grounded in a successful CLI request.
 - `env/ls`
-  - Verify the command returns environment data for the linked project, not only that an `env ls`-style command was executed.
+  - Verify the command returns environment data for the linked project, not only that an `env ls`-style command was executed. Initial JSON structure assertion is now in place.
   - Add checks for expected structure or known keys/targets in the returned output.
 
 ## P1.5: Expand CLI Command Coverage
@@ -59,6 +59,7 @@
   - `pull`
   - `logs`
   - `alias`
+  - Added initial coverage for `project ls`, `project inspect`, `list`, `inspect`, `pull`, and `logs`. `alias` remains a gap.
 - Start with `vc link` using the existing eval fixture pattern:
   - prompt the agent to perform a fresh non-interactive link
   - verify linked project state in `.vercel/project.json`

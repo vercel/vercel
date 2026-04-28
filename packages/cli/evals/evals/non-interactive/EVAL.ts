@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -16,17 +16,23 @@ function getShellCommands(): string[] {
  * non-interactive flag (e.g. --yes or -y) when running the Vercel CLI,
  * as observed from the recorded shell commands.
  */
-test('agent used a non-interactive CLI command', () => {
+test('project is linked', () => {
+  expect(
+    existsSync('.vercel/project.json') || existsSync('.vercel/config.json')
+  ).toBe(true);
+});
+
+test('agent used vercel link non-interactively', () => {
   const commands = getShellCommands();
   expect(commands.length).toBeGreaterThan(0);
 
-  const cliCommands = commands.filter(command =>
-    /\b(vercel|vc)\b/.test(command)
+  const linkCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+link\b/.test(command)
   );
-  expect(cliCommands.length).toBeGreaterThan(0);
+  expect(linkCommands.length).toBeGreaterThan(0);
 
   // Agent should prefer non-interactive flags so the command completes without prompts
-  const hasNonInteractive = cliCommands.some(command => {
+  const hasNonInteractive = linkCommands.some(command => {
     return (
       command.includes('--yes') ||
       /\s-y(\s|$)/.test(command) ||
@@ -35,4 +41,11 @@ test('agent used a non-interactive CLI command', () => {
     );
   });
   expect(hasNonInteractive).toBe(true);
+});
+
+test('agent wrote linked project note', () => {
+  expect(existsSync('non-interactive-link.txt')).toBe(true);
+  expect(
+    readFileSync('non-interactive-link.txt', 'utf-8').trim().length
+  ).toBeGreaterThan(0);
 });

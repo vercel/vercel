@@ -51,6 +51,77 @@ async function listFilesRecursively(rootDir) {
   return files;
 }
 
+function collectModelValues(value, models = new Set(), seen = new Set()) {
+  if (value === null || value === undefined) return models;
+
+  if (typeof value !== 'object') return models;
+  if (seen.has(value)) return models;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectModelValues(item, models, seen);
+    }
+    return models;
+  }
+
+  for (const [key, entryValue] of Object.entries(value)) {
+    if (key === 'model' && typeof entryValue === 'string' && entryValue) {
+      models.add(entryValue);
+    }
+    collectModelValues(entryValue, models, seen);
+  }
+
+  return models;
+}
+
+async function collectRunMetadata(files) {
+  const configuredModels = new Set();
+  const resolvedModels = new Set();
+  const agents = new Set();
+
+  for (const fullPath of files) {
+    if (
+      !fullPath.endsWith('transcript.json') &&
+      !fullPath.endsWith('result.json')
+    ) {
+      continue;
+    }
+
+    let data;
+    try {
+      data = JSON.parse(await readFile(fullPath, 'utf8'));
+    } catch (_error) {
+      continue;
+    }
+
+    if (typeof data.agent === 'string' && data.agent) {
+      agents.add(data.agent);
+    }
+
+    if (typeof data.model === 'string' && data.model) {
+      configuredModels.add(data.model);
+    }
+
+    if (fullPath.endsWith('transcript.json')) {
+      for (const model of collectModelValues(data)) {
+        if (typeof model === 'string' && model) {
+          resolvedModels.add(model);
+        }
+      }
+    }
+  }
+
+  for (const model of configuredModels) {
+    resolvedModels.delete(model);
+  }
+
+  return {
+    agents: [...agents],
+    configuredModels: [...configuredModels],
+    resolvedModels: [...resolvedModels],
+  };
+}
 function contentTypeFor(relativePath) {
   if (relativePath.endsWith('.json')) return 'application/json';
   if (relativePath.endsWith('.md')) return 'text/markdown';
@@ -110,6 +181,8 @@ async function main() {
     return;
   }
 
+  const runMetadata = await collectRunMetadata(allFiles);
+
   const payload = {
     format: 'agent-eval-folder',
     batchId: args['batch-id'],
@@ -125,6 +198,9 @@ async function main() {
     appVersion: args['app-version'],
     finishedAt: new Date().toISOString(),
     tags: ['agent-eval', 'ci'],
+    metadata: {
+      agentEval: runMetadata,
+    },
   };
 
   const formData = new FormData();

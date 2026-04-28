@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -16,8 +16,9 @@ function getShellCommands(): string[] {
  * as observed from the recorded shell commands.
  */
 test('project is linked', () => {
-  // The eval harness ensures the project is linked; this test focuses on the CLI usage.
-  expect(true).toBe(true);
+  expect(
+    existsSync('.vercel/project.json') || existsSync('.vercel/config.json')
+  ).toBe(true);
 });
 
 test('agent used vc env command', () => {
@@ -33,4 +34,17 @@ test('agent used vc env command', () => {
     /\b(ls|list)\b/.test(command)
   );
   expect(listCommand).toBeDefined();
+  expect(envCommands.some(command => command.includes('--format=json'))).toBe(
+    true
+  );
+});
+
+test('agent saved env list JSON output', () => {
+  expect(existsSync('env-ls-output.json')).toBe(true);
+
+  const output = JSON.parse(readFileSync('env-ls-output.json', 'utf-8')) as {
+    envs?: unknown;
+  };
+
+  expect(Array.isArray(output.envs)).toBe(true);
 });

@@ -39,15 +39,39 @@ const ALL_EVALS: string[] = [
   'env/remove',
   'env/update',
   'init',
+  'inspect',
   'link',
+  'list',
   'login-whoami',
   'login-not-logged-in',
+  'logs',
   'marketplace/find-postgres-integration',
   'marketplace/install-neon-postgres',
   'marketplace/metadata-discovery',
   'marketplace/multi-product-install',
   'non-interactive',
+  'project/inspect',
+  'project/list',
+  'pull',
 ];
+
+function parseEvalList(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
+function getEvalsFromEnv(): string[] {
+  const requested = parseEvalList(process.env.CLI_EVAL_EVALS);
+  const excluded = new Set(parseEvalList(process.env.CLI_EVAL_EXCLUDE));
+  const known = new Set(ALL_EVALS);
+
+  const base = requested.length > 0 ? requested : ALL_EVALS;
+  return base.filter(
+    evalName => known.has(evalName) && !excluded.has(evalName)
+  );
+}
 
 /**
  * CLI evals experiment. Add eval fixtures under evals/ and configure
@@ -61,7 +85,7 @@ const ALL_EVALS: string[] = [
  */
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
-  evals: ALL_EVALS,
+  evals: getEvalsFromEnv(),
   runs: 1,
   earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
   timeout: 900, // 15 min per eval (env can need link + env ls; build is long)

@@ -1,6 +1,10 @@
 import { readFileSync, existsSync } from 'fs';
 import { test, expect } from 'vitest';
 
+type EnvListOutput = {
+  envs?: Array<{ key?: string }>;
+};
+
 function getShellCommands(): string[] {
   const results = JSON.parse(
     readFileSync('__agent_eval__/results.json', 'utf-8')
@@ -50,21 +54,20 @@ test('agent used non-interactive flags', () => {
 });
 
 test('agent used EVAL_ADD_ prefix for env var name', () => {
-  const commands = getShellCommands();
+  expect(existsSync('env-key-used.txt')).toBe(true);
+  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
+  expect(key).toMatch(/^EVAL_ADD_[A-Za-z0-9_]+$/);
+});
 
-  const candidateKeys = new Set<string>();
-  for (const command of commands) {
-    const positionalMatch = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
-    if (positionalMatch?.[1]) {
-      candidateKeys.add(positionalMatch[1]);
-    }
-    const prefixMatches = command.matchAll(/EVAL_ADD_[A-Za-z0-9_]+/g);
-    for (const m of prefixMatches) {
-      candidateKeys.add(m[0]);
-    }
-  }
+test('added env var is present in project env list output', () => {
+  expect(existsSync('env-key-used.txt')).toBe(true);
+  expect(existsSync('env-add-ls-output.json')).toBe(true);
 
-  const evalAddKeys = [...candidateKeys].filter(key => /^EVAL_ADD_/.test(key));
-  expect(evalAddKeys.length).toBeGreaterThan(0);
-  // Do not assert key exists on project: evals run concurrently and env/remove may have deleted it.
+  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
+  const output = JSON.parse(
+    readFileSync('env-add-ls-output.json', 'utf-8')
+  ) as EnvListOutput;
+
+  expect(Array.isArray(output.envs)).toBe(true);
+  expect(output.envs?.some(env => env.key === key)).toBe(true);
 });
