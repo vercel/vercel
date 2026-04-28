@@ -8,6 +8,8 @@
 
 [Join the Vercel Community](https://community.vercel.com/)
 
+<!-- ci: dummy change to validate pending Summary (e2e) status appears on PR -->
+
 ## Usage
 
 Vercel's frontend cloud gives developers frameworks, workflows, and infrastructure to build a faster, more personalized web.
