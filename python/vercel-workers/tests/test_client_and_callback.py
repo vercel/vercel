@@ -3,8 +3,12 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
+<<<<<<< HEAD
 from dataclasses import dataclass
 from datetime import date, datetime
+=======
+from datetime import date, datetime, timedelta
+>>>>>>> fb68ac620b ([vercel-workers] ack and retry directives (#16120))
 from decimal import Decimal
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -133,13 +137,18 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
 
 
+<<<<<<< HEAD
 class TestTypedSubscriptions(unittest.TestCase):
+=======
+class TestWorkerDirectives(unittest.TestCase):
+>>>>>>> fb68ac620b ([vercel-workers] ack and retry directives (#16120))
     def setUp(self) -> None:
         queue_client._subscriptions.clear()
 
     def tearDown(self) -> None:
         queue_client._subscriptions.clear()
 
+<<<<<<< HEAD
     def test_payload_only_handler(self) -> None:
         calls: list[dict[str, Any]] = []
 
@@ -230,6 +239,116 @@ class TestTypedSubscriptions(unittest.TestCase):
             "m1",
             "receipt",
         )
+=======
+    def _raw_callback(self) -> bytes:
+        return b'{"ok":true}'
+
+    def _environ(self) -> dict[str, str]:
+        return {
+            "CONTENT_TYPE": "application/json",
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "q",
+            "HTTP_CE_VQSCONSUMERGROUP": "c",
+            "HTTP_CE_VQSMESSAGEID": "m",
+            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "HTTP_CE_VQSCREATEDAT": "now",
+        }
+
+    def test_retry_after_return_delays_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return queue_client.RetryAfter(timedelta(minutes=2))
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 120)
+        delete_message.assert_not_called()
+
+    def test_retry_after_raise_delays_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            raise queue_client.RetryAfter(30)
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 30)
+        delete_message.assert_not_called()
+
+    def test_dict_return_is_not_a_retry_directive(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return {"afterSeconds": 30.0}
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+    def test_ack_return_deletes_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return queue_client.Ack("permanent")
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+    def test_ack_raise_deletes_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            raise queue_client.Ack("permanent")
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+>>>>>>> fb68ac620b ([vercel-workers] ack and retry directives (#16120))
         change_visibility.assert_not_called()
 
 

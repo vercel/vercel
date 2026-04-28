@@ -7,7 +7,7 @@ import os
 import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Protocol, TypedDict, cast, get_type_hints, overload
 from urllib.parse import quote
@@ -36,8 +36,9 @@ from .wsgi import (
 
 __all__ = [
     "MessageMetadata",
+    "Ack",
+    "RetryAfter",
     "WorkerJSONEncoder",
-    "WorkerTimeoutResult",
     "subscribe",
     "get_wsgi_app",
     "get_asgi_app",
@@ -71,10 +72,27 @@ class MessageMetadata(TypedDict, total=False):
     consumer: str
 
 
-class WorkerTimeoutResult(TypedDict):
-    """Result that instructs the queue to retry the message later."""
+class Ack(Exception):
+    """Directive that acknowledges a message without retrying it."""
 
-    timeoutSeconds: int
+    def __init__(self, reason: object | None = None) -> None:
+        self.reason: object | None = reason
+        super().__init__(str(reason) if reason is not None else "")
+
+
+class RetryAfter(Exception):
+    """Directive that retries a message after a delay."""
+
+    def __init__(self, delay: int | timedelta, reason: object | None = None) -> None:
+        if isinstance(delay, timedelta):
+            seconds = delay.total_seconds()
+        else:
+            seconds = float(delay)
+        if seconds < 0:
+            seconds = 0
+        self.timeout_seconds: int = int(seconds)
+        self.reason: object | None = reason
+        super().__init__(str(reason) if reason is not None else "")
 
 
 class PayloadWorkerCallable(Protocol):
@@ -132,6 +150,7 @@ class _Subscription:
 _subscriptions: list[_Subscription] = []
 
 
+<<<<<<< HEAD
 def _is_untyped_payload_annotation(annotation: Any) -> bool:
     return annotation is inspect.Signature.empty or annotation is Any
 
@@ -178,6 +197,10 @@ def _call_subscription(sub: _Subscription, message: Any, metadata: MessageMetada
     if invocation.include_metadata:
         return cast(MetadataWorkerCallable, sub.func)(payload, metadata)
     return cast(PayloadWorkerCallable, sub.func)(payload)
+=======
+async def _await_result(result: Awaitable[Any]) -> Any:
+    return await result
+>>>>>>> fb68ac620b ([vercel-workers] ack and retry directives (#16120))
 
 
 @overload
@@ -251,15 +274,21 @@ def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
     return [s for s in _subscriptions if s.matches(topic)]
 
 
+def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
+    if isinstance(result, RetryAfter):
+        return result.timeout_seconds
+    return current
+
+
 def _invoke_subscriptions(
     message: Any,
     metadata: MessageMetadata,
 ) -> int | None:
     """
-    Invoke all matching subscriptions and return an optional timeoutSeconds.
+    Invoke all matching subscriptions and return an optional retry delay.
 
-    If a worker returns a dict like {"timeoutSeconds": 300} then that value
-    will be propagated back to the queue service to delay the next attempt.
+    Only Ack and RetryAfter are interpreted as worker directives. Any other return
+    value is treated as successful completion.
     """
     topic = metadata.get("topic")
     timeout_seconds: int | None = None
@@ -268,17 +297,18 @@ def _invoke_subscriptions(
         try:
             result = _call_subscription(sub, message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-                result = asyncio.run(result)  # type: ignore[arg-type]
+                result = asyncio.run(_await_result(result))
+        except Ack:
+            return None
+        except RetryAfter as directive:
+            return directive.timeout_seconds
         except Exception:
             # Let the outer WSGI handler respond with 500.
             raise
 
-        if isinstance(result, dict) and "timeoutSeconds" in result:
-            try:
-                timeout_seconds = int(result["timeoutSeconds"])
-            except (TypeError, ValueError):
-                # Ignore invalid timeout values; continue with previous one if any.
-                pass
+        if isinstance(result, Ack):
+            return None
+        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
 
     return timeout_seconds
 
