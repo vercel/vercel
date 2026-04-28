@@ -117,7 +117,9 @@ jobs:
               sys.exit(1)
           print("All actions/checkout steps have a 'ref' specified.")
       - name: Run zizmor
-        run: zizmor --collect=workflows --color=never .github/workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: zizmor --collect=workflows --color=never .github/workflows/*.yml .github/workflows/*.yaml
 
   summary:
     name: Summary (lint)
