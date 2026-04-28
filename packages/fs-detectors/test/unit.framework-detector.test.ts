@@ -296,6 +296,35 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
   });
 
+  it('Detect .NET when a csproj filename matches a glob detector', async () => {
+    const fs = new VirtualFilesystem({
+      'HelloWorld.csproj': '<Project />',
+      'Program.cs': 'Console.WriteLine("Hello from .NET");',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('dotnet');
+  });
+
+  it('Detect .NET with LocalFileSystemDetector for a real fixture', async () => {
+    const fs = new LocalFileSystemDetector(
+      join(__dirname, '../../dotnet/test/fixtures/01-dotnet-hello-world')
+    );
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('dotnet');
+  });
+
   it('Detect Nuxt.js Edge', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({

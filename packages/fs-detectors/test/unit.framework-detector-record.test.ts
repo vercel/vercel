@@ -95,6 +95,21 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('nuxtjs');
   });
 
+  it('Detects .NET when a csproj filename matches a glob detector', async () => {
+    const fs = new VirtualFilesystem({
+      'HelloWorld.csproj': '<Project />',
+      'Program.cs': 'Console.WriteLine("Hello from .NET");',
+    });
+
+    const framework = await detectFrameworkRecord({
+      fs,
+      frameworkList,
+      useExperimentalFrameworks: true,
+    });
+
+    expect(framework?.slug).toBe('dotnet');
+  });
+
   it('Detect Nuxt.js edge', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
