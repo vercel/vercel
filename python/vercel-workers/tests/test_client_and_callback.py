@@ -179,6 +179,25 @@ class TestWorkerDirectives(unittest.TestCase):
         change_visibility.assert_called_once_with("q", "c", "m", "receipt", 30)
         delete_message.assert_not_called()
 
+    def test_dict_return_is_not_a_retry_directive(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return {"afterSeconds": 30.0}
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
     def test_ack_return_deletes_message(self) -> None:
         def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
             return queue_client.Ack("permanent")

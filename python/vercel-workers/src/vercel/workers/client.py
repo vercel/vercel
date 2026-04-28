@@ -38,7 +38,6 @@ __all__ = [
     "Ack",
     "RetryAfter",
     "WorkerJSONEncoder",
-    "WorkerTimeoutResult",
     "subscribe",
     "get_wsgi_app",
     "get_asgi_app",
@@ -93,12 +92,6 @@ class RetryAfter(Exception):
         self.timeout_seconds: int = int(seconds)
         self.reason: object | None = reason
         super().__init__(str(reason) if reason is not None else "")
-
-
-class WorkerTimeoutResult(TypedDict):
-    """Result that instructs the queue to retry the message later."""
-
-    timeoutSeconds: int
 
 
 class WorkerCallable(Protocol):
@@ -207,12 +200,6 @@ def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
 def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
     if isinstance(result, RetryAfter):
         return result.timeout_seconds
-    if isinstance(result, dict) and "timeoutSeconds" in result:
-        try:
-            return int(result["timeoutSeconds"])
-        except (TypeError, ValueError):
-            # Ignore invalid timeout values; continue with previous one if any.
-            return current
     return current
 
 
@@ -221,10 +208,10 @@ def _invoke_subscriptions(
     metadata: MessageMetadata,
 ) -> int | None:
     """
-    Invoke all matching subscriptions and return an optional timeoutSeconds.
+    Invoke all matching subscriptions and return an optional retry delay.
 
-    If a worker returns a dict like {"timeoutSeconds": 300} then that value
-    will be propagated back to the queue service to delay the next attempt.
+    Only Ack and RetryAfter are interpreted as worker directives. Any other return
+    value is treated as successful completion.
     """
     topic = metadata.get("topic")
     timeout_seconds: int | None = None
