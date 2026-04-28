@@ -141,7 +141,50 @@ replace (
     expect(modules[0].name).toBe('github.com/remote/pkg');
   });
 
-  it('keeps modules replaced with remote modules', () => {
+  it('keeps module when versioned local replace targets a different version', () => {
+    const content = `module example.com/app
+
+go 1.21
+
+require example.com/foo v1.5.0
+
+replace example.com/foo v1.2.3 => ./local
+`;
+    const { modules } = parseGoMod(content);
+    expect(modules).toHaveLength(1);
+    expect(modules[0]).toMatchObject({
+      name: 'example.com/foo',
+      version: 'v1.5.0',
+    });
+  });
+
+  it('excludes module when versioned local replace targets the required version', () => {
+    const content = `module example.com/app
+
+go 1.21
+
+require example.com/foo v1.2.3
+
+replace example.com/foo v1.2.3 => ./local
+`;
+    const { modules } = parseGoMod(content);
+    expect(modules).toEqual([]);
+  });
+
+  it('versionless local replace excludes regardless of required version', () => {
+    const content = `module example.com/app
+
+go 1.21
+
+require example.com/foo v9.9.9
+
+replace example.com/foo => ./local
+`;
+    const { modules } = parseGoMod(content);
+    expect(modules).toEqual([]);
+  });
+
+  it('substitutes module-path replaces with the replacement name and version', () => {
     const content = `module example.com/app
 
 go 1.21
@@ -151,8 +194,85 @@ require github.com/old/pkg v1.0.0
 replace github.com/old/pkg => github.com/new/pkg v2.0.0
 `;
     const { modules } = parseGoMod(content);
-    expect(modules).toHaveLength(1);
-    expect(modules[0].name).toBe('github.com/old/pkg');
+    expect(modules).toEqual([
+      {
+        name: 'github.com/new/pkg',
+        version: 'v2.0.0',
+        indirect: false,
+      },
+    ]);
+  });
+
+  it('preserves indirect status when substituting via replace', () => {
+    const content = `module example.com/app
+
+go 1.21
+
+require (
+    github.com/direct v1.0.0
+    github.com/indirect v1.0.0 // indirect
+)
+
+replace github.com/indirect => github.com/forked v2.0.0
+`;
+    const { modules } = parseGoMod(content);
+    const forked = modules.find(m => m.name === 'github.com/forked');
+    expect(forked).toMatchObject({ version: 'v2.0.0', indirect: true });
+  });
+
+  it('substitutes only the matching version for a versioned module replace', () => {
+    const content = `module example.com/app
+
+go 1.21
+
+require github.com/foo v1.5.0
+
+replace github.com/foo v1.2.3 => github.com/bar v2.0.0
+`;
+    const { modules } = parseGoMod(content);
+    // require version (v1.5.0) doesn't match replace LHS (v1.2.3), so the
+    // replace doesn't apply and the original entry is preserved.
+    expect(modules).toEqual([
+      { name: 'github.com/foo', version: 'v1.5.0', indirect: false },
+    ]);
+  });
+
+  it('substitutes version-only replace (same name, new version)', () => {
+    const content = `module example.com/app
+
+go 1.21
+
+require github.com/foo v1.0.0
+
+replace github.com/foo v1.0.0 => github.com/foo v1.0.5
+`;
+    const { modules } = parseGoMod(content);
+    expect(modules).toEqual([
+      { name: 'github.com/foo', version: 'v1.0.5', indirect: false },
+    ]);
+  });
+
+  it('prefers specific-version replace over wildcard replace', () => {
+    const content = `module example.com/app
+
+go 1.21
+
+require (
+    github.com/foo v1.0.0
+    github.com/foo-also v2.0.0
+)
+
+replace github.com/foo => github.com/wildcard v9.9.9
+replace github.com/foo v1.0.0 => github.com/specific v1.0.1
+`;
+    const { modules } = parseGoMod(content);
+    const names = modules.map(m => `${m.name}@${m.version}`).sort();
+    // foo v1.0.0 → specific (matches version)
+    // foo-also v2.0.0 → no rule matches, kept as-is
+    expect(names).toEqual([
+      'github.com/foo-also@v2.0.0',
+      'github.com/specific@v1.0.1',
+    ]);
   });
 
   it('excludes modules replaced with absolute local paths', () => {

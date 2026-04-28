@@ -34,17 +34,28 @@ function parseRequireEntry(
   };
 }
 
+// A parsed replace directive.
+// `from.version` undefined → matches all versions of `from.name`.
+// `to` null → local file-path replacement (drop the module).
+// `to` object → module-path replacement (substitute name + version).
+interface ReplaceRule {
+  from: { name: string; version: string | undefined };
+  to: { name: string; version: string } | null;
+}
+
 // Parses a replace entry — text after the `replace` keyword (single-line)
-// or a single line inside a `replace ( ... )` block. Returns the LHS module
-// name iff the entry replaces it with a local file path (RHS has no version,
-// per the Go spec); returns null for module-path replacements and for
+// or a single line inside a `replace ( ... )` block. Returns null for
 // unparseable lines.
-function getDependencyReplacedByLocal(text: string): string | null {
+function parseReplaceEntry(text: string): ReplaceRule | null {
   const m = stripComment(text).match(
-    /^(\S+)(?:\s+\S+)?\s+=>\s+\S+(?:\s+(\S+))?\s*$/
+    /^(\S+)(?:\s+(\S+))?\s+=>\s+(\S+)(?:\s+(\S+))?\s*$/
   );
   if (!m) return null;
-  return m[2] ? null : m[1];
+  const from = { name: m[1], version: m[2] };
+  // RHS has a version → module-path replacement; otherwise → local file path
+  return m[4]
+    ? { from, to: { name: m[3], version: m[4] } }
+    : { from, to: null };
 }
 
 export function parseGoMod(content: string): {
@@ -54,7 +65,7 @@ export function parseGoMod(content: string): {
   const lines = content.split(/\r?\n/);
   let goVersion = '';
   const allModules: GoModModule[] = [];
-  const localReplaces = new Set<string>();
+  const replaceRules: ReplaceRule[] = [];
 
   let i = 0;
   while (i < lines.length) {
@@ -98,8 +109,8 @@ export function parseGoMod(content: string): {
           i++;
           break;
         }
-        const local = getDependencyReplacedByLocal(innerRaw);
-        if (local) localReplaces.add(local);
+        const rule = parseReplaceEntry(innerRaw);
+        if (rule) replaceRules.push(rule);
         i++;
       }
       continue;
@@ -117,8 +128,8 @@ export function parseGoMod(content: string): {
     // Read a single-line replace
     const replHead = stripComment(raw).match(/^replace\s+(.*)$/);
     if (replHead) {
-      const local = getDependencyReplacedByLocal(replHead[1]);
-      if (local) localReplaces.add(local);
+      const rule = parseReplaceEntry(replHead[1]);
+      if (rule) replaceRules.push(rule);
       i++;
       continue;
     }
@@ -126,7 +137,30 @@ export function parseGoMod(content: string): {
     i++;
   }
 
-  const modules = allModules.filter(m => !localReplaces.has(m.name));
+  // Apply replace rules to each required module. A version-specific rule
+  // (`replace foo v1.2.3 => ...`) only applies when versions match; a
+  // versionless rule (`replace foo => ...`) applies to any version. When
+  // both exist for the same module, the specific match takes precedence.
+  const modules: GoModModule[] = [];
+  for (const m of allModules) {
+    const specific = replaceRules.find(
+      r => r.from.name === m.name && r.from.version === m.version
+    );
+    const wildcard = replaceRules.find(
+      r => r.from.name === m.name && r.from.version === undefined
+    );
+    const rule = specific ?? wildcard;
+    if (!rule) {
+      modules.push(m);
+      continue;
+    }
+    if (rule.to === null) continue; // local replace → drop
+    modules.push({
+      name: rule.to.name,
+      version: rule.to.version,
+      indirect: m.indirect,
+    });
+  }
   return { goVersion, modules };
 }
 
