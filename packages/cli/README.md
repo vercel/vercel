@@ -8,6 +8,9 @@
 
 [Join the Vercel Community](https://community.vercel.com/)
 
+<!-- ci: dummy change to validate CI workflows -->
+
+
 ## Usage
 
 Vercel's frontend cloud gives developers frameworks, workflows, and infrastructure to build a faster, more personalized web.
