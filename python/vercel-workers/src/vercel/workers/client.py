@@ -88,7 +88,7 @@ class RetryAfter(Exception):
         else:
             seconds = float(delay)
         if seconds < 0:
-            raise ValueError("retry delay must be non-negative")
+            seconds = 0
         self.timeout_seconds: int = int(seconds)
         self.reason: object | None = reason
         super().__init__(str(reason) if reason is not None else "")
