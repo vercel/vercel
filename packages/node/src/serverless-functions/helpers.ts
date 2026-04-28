@@ -66,9 +66,9 @@ export function getBodyParser(body: Buffer, contentType: string | undefined) {
   };
 }
 
-function getQueryParser({ url = '/', headers }: IncomingMessage) {
+function getQueryParser({ url = '/' }: IncomingMessage) {
   return function parseQuery(): VercelRequestQuery {
-    const urlObj = new URL(url, `http://${headers?.host ?? 'localhost'}`);
+    const urlObj = new URL(url, 'http://localhost');
     const query: VercelRequestQuery = {};
     urlObj.searchParams.forEach((value, key) => {
       const existing = query[key];
