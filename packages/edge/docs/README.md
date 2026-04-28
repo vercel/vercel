@@ -290,7 +290,7 @@ export default async function middleware(req: Request) {
   const flagged = await getFlag(req, 'isExperimental');
   if (flagged) {
     const url = new URL(req.url);
-    url.pathname = `/experimental{url.pathname}`;
+    url.pathname = `/experimental${url.pathname}`;
     return rewrite(url);
   }
 
