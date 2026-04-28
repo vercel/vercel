@@ -1,34 +1,7 @@
 import { test, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
 import { Vercel } from '@vercel/sdk';
-
-function getToken(): string {
-  const home = homedir();
-  const paths = [
-    join(home, '.local/share/com.vercel.cli/auth.json'),
-    join(home, '.vercel/auth.json'),
-  ];
-  for (const p of paths) {
-    try {
-      const auth = JSON.parse(readFileSync(p, 'utf-8'));
-      if (auth.token) return auth.token;
-    } catch {
-      // Auth file not found or unreadable; try next location
-    }
-  }
-
-  try {
-    const bashrc = readFileSync(join(home, '.bashrc'), 'utf-8');
-    const match = bashrc.match(/export VERCEL_TOKEN="([^"]+)"/);
-    if (match) return match[1];
-  } catch {
-    // .bashrc not found or unreadable
-  }
-
-  throw new Error('No Vercel auth token found');
-}
+import { getToken } from '../../../setup/get-token';
 
 function getProjectConfig(): { projectId: string; orgId: string } {
   return JSON.parse(readFileSync('.vercel/project.json', 'utf-8'));
