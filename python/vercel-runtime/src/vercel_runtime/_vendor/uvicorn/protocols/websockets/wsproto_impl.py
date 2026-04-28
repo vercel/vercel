@@ -5,11 +5,11 @@ import logging
 from typing import Any, Literal, cast
 from urllib.parse import unquote
 
-import wsproto
-from wsproto import ConnectionType, events
-from wsproto.connection import ConnectionState
-from wsproto.extensions import Extension, PerMessageDeflate
-from wsproto.utilities import LocalProtocolError, RemoteProtocolError
+from vercel_runtime._vendor import wsproto
+from vercel_runtime._vendor.wsproto import ConnectionType, events
+from vercel_runtime._vendor.wsproto.connection import ConnectionState
+from vercel_runtime._vendor.wsproto.extensions import Extension, PerMessageDeflate
+from vercel_runtime._vendor.wsproto.utilities import LocalProtocolError, RemoteProtocolError
 
 from vercel_runtime._vendor.uvicorn._types import (
     ASGI3Application,

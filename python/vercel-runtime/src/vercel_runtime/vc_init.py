@@ -533,38 +533,10 @@ class ASGIMiddleware:
     def __init__(self, app: _ASGIApp | Any) -> None:
         self.app = app
 
-    async def __call__(
-        self,
-        scope: _ASGIScope,
-        receive: _ASGIReceive,
-        send: _ASGISend,
-    ) -> None:
-        if scope.get("type") != "http":
-            # Non-HTTP traffic is forwarded verbatim
-            await self.app(scope, receive, send)
-            return
-
-        if scope.get("path") == "/_vercel/ping":
-            await send(
-                {
-                    "type": "http.response.start",
-                    "status": 200,
-                    "headers": [],
-                }
-            )
-            await send(
-                {
-                    "type": "http.response.body",
-                    "body": b"",
-                    "more_body": False,
-                }
-            )
-            return
-
-        # Extract internal headers and set per-request context
-        headers_list: list[tuple[bytes | str, bytes | str]] = (
-            scope.get("headers", []) or []
-        )
+    @staticmethod
+    def _extract_internal_headers(
+        headers_list: list[tuple[bytes | str, bytes | str]],
+    ) -> tuple[list[tuple[bytes, bytes]], str, int]:
         new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
@@ -601,6 +573,45 @@ class ASGIMiddleware:
                     (b"x-vercel-oidc-token", internal_oidc_token.encode())
                 )
 
+        return new_headers, invocation_id, request_id
+
+    async def __call__(
+        self,
+        scope: _ASGIScope,
+        receive: _ASGIReceive,
+        send: _ASGISend,
+    ) -> None:
+        scope_type = scope.get("type")
+        if scope_type not in ("http", "websocket"):
+            # Non-HTTP/WebSocket traffic is forwarded verbatim
+            await self.app(scope, receive, send)
+            return
+
+        if scope_type == "http" and scope.get("path") == "/_vercel/ping":
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 200,
+                    "headers": [],
+                }
+            )
+            await send(
+                {
+                    "type": "http.response.body",
+                    "body": b"",
+                    "more_body": False,
+                }
+            )
+            return
+
+        # Extract internal headers and set per-request context
+        headers_list: list[tuple[bytes | str, bytes | str]] = (
+            scope.get("headers", []) or []
+        )
+        new_headers, invocation_id, request_id = self._extract_internal_headers(
+            headers_list
+        )
+
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
         apply_service_route_prefix_to_asgi_scope(new_scope)
@@ -627,9 +638,14 @@ class ASGIMiddleware:
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
 
-        try:
-            await self.app(new_scope, receive, send)
-        finally:
+        request_finished = False
+
+        def finish_request() -> None:
+            nonlocal request_finished
+            if request_finished:
+                return
+
+            request_finished = True
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -643,6 +659,35 @@ class ASGIMiddleware:
                     },
                 }
             )
+
+        async def send_wrapper(message: dict[str, Any]) -> None:
+            await send(message)
+
+            if scope_type != "websocket":
+                return
+
+            message_type = message.get("type")
+            if message_type == "websocket.accept":
+                # Match the Node runtime's detached upgrade flow: once the 101
+                # is sent, the request lifecycle is complete even if the
+                # upgraded WebSocket stays open.
+                finish_request()
+                return
+
+            if message_type == "websocket.close":
+                finish_request()
+                return
+
+            if (
+                message_type == "websocket.http.response.body"
+                and not message.get("more_body")
+            ):
+                finish_request()
+
+        try:
+            await self.app(new_scope, receive, send_wrapper)
+        finally:
+            finish_request()
 
 
 if "VERCEL_IPC_PATH" in os.environ:
