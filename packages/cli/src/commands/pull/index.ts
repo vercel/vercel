@@ -23,6 +23,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
 import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
+import { requireMfaAuth } from '../../util/login/require-mfa-auth';
 
 async function pullAllEnvFiles(
   environment: string,
@@ -97,6 +98,14 @@ export default async function main(client: Client) {
   telemetryClient.trackCliFlagProd(isProduction);
   telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
   telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+
+  const isAutomatedContext = Boolean(
+    process.env.VERCEL_TOKEN || process.env.CI
+  );
+  if (!isAutomatedContext) {
+    const gate = await requireMfaAuth(client);
+    if (gate !== true) return gate;
+  }
 
   const returnCode = await pullCommandLogic(
     client,

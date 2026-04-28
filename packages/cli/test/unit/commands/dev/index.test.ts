@@ -32,7 +32,7 @@ afterEach(() => {
   // __VERCEL_DEV_RUNNING is set when `vercel dev` runs to act as a lock.
   // It's unset as a side effect of  the process exiting. This won't work under test
   // where `vercel dev` can be invoked several times in a row.
-  vi.stubEnv('__VERCEL_DEV_RUNNING', undefined);
+  delete process.env.__VERCEL_DEV_RUNNING;
   vol.reset();
 });
 
@@ -43,6 +43,7 @@ describe('dev', () => {
   const projectPath = `/user/name/code/${projectName}`;
 
   beforeEach(() => {
+    vi.stubEnv('CI', '1');
     useUser();
     useTeams(orgId);
     useProject({

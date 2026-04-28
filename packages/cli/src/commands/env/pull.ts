@@ -28,6 +28,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import { requireMfaAuth } from '../../util/login/require-mfa-auth';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -104,6 +105,15 @@ export default async function pull(
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionId(opts['--id']);
+
+  const isAutomatedContext = Boolean(
+    process.env.VERCEL_TOKEN || process.env.CI
+  );
+
+  if (!isAutomatedContext) {
+    const gate = await requireMfaAuth(client);
+    if (gate !== true) return gate;
+  }
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
