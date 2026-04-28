@@ -76,7 +76,7 @@ class Ack(Exception):
     """Directive that acknowledges a message without retrying it."""
 
     def __init__(self, reason: object | None = None) -> None:
-        self.reason = reason
+        self.reason: object | None = reason
         super().__init__(str(reason) if reason is not None else "")
 
 
@@ -90,8 +90,8 @@ class RetryAfter(Exception):
             seconds = float(delay)
         if seconds < 0:
             raise ValueError("retry delay must be non-negative")
-        self.timeoutSeconds = int(seconds)
-        self.reason = reason
+        self.timeout_seconds: int = int(seconds)
+        self.reason: object | None = reason
         super().__init__(str(reason) if reason is not None else "")
 
 
@@ -206,7 +206,7 @@ def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
 
 def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
     if isinstance(result, RetryAfter):
-        return result.timeoutSeconds
+        return result.timeout_seconds
     if isinstance(result, dict) and "timeoutSeconds" in result:
         try:
             return int(result["timeoutSeconds"])
@@ -237,7 +237,7 @@ def _invoke_subscriptions(
         except Ack:
             return None
         except RetryAfter as directive:
-            return directive.timeoutSeconds
+            return directive.timeout_seconds
         except Exception:
             # Let the outer WSGI handler respond with 500.
             raise
