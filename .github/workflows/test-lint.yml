@@ -78,7 +78,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pyyaml
+      - run: python -m pip install pyyaml==6.0.3 zizmor==1.24.1
       - name: Enforce actions/checkout ref
         shell: python
         run: |
@@ -116,6 +116,8 @@ jobs:
               print("\n".join(errors))
               sys.exit(1)
           print("All actions/checkout steps have a 'ref' specified.")
+      - name: Run zizmor
+        run: zizmor --collect=workflows --color=never .github/workflows
 
   summary:
     name: Summary (lint)

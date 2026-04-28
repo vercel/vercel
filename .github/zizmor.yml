@@ -1,0 +1,11 @@
+rules:
+  artipacked:
+    disable: true
+  excessive-permissions:
+    disable: true
+  template-injection:
+    disable: true
+  unpinned-uses:
+    config:
+      policies:
+        'actions/*': any
