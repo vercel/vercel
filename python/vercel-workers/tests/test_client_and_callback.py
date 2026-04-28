@@ -189,7 +189,7 @@ class TestTypedSubscriptions(unittest.TestCase):
                 {"topic": "users.create"},
             )
 
-    def test_callback_acknowledges_invalid_typed_payload(self) -> None:
+    def test_callback_does_not_acknowledge_invalid_typed_payload(self) -> None:
         def handle(payload: CreateUserPayload) -> None:
             pass
 
@@ -222,14 +222,9 @@ class TestTypedSubscriptions(unittest.TestCase):
         ):
             status, _headers, body = queue_client.handle_queue_callback(raw_body)
 
-        self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body), {"ok": True, "acknowledged": True})
-        delete_message.assert_called_once_with(
-            "users.create",
-            "consumer",
-            "m1",
-            "receipt",
-        )
+        self.assertEqual(status, 500)
+        self.assertEqual(json.loads(body), {"error": "payload-validation"})
+        delete_message.assert_not_called()
         change_visibility.assert_not_called()
 
 

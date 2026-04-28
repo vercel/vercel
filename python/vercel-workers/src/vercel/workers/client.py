@@ -460,15 +460,7 @@ def handle_queue_callback(
             timeout_seconds = _invoke_subscriptions(payload, metadata)
         except _PayloadValidationError as exc:
             print("vercel.workers.handle_queue_callback payload validation error:", str(exc))
-            if receipt_handle:
-                _delete_message_sync(
-                    queue_name,
-                    consumer_group,
-                    message_id,
-                    receipt_handle,
-                    extender,
-                )
-            return json_response(200, {"ok": True, "acknowledged": True})
+            return json_response(500, {"error": "payload-validation"})
 
         if receipt_handle:
             if timeout_seconds is not None:
