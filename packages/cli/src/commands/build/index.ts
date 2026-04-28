@@ -1588,6 +1588,19 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
 }
 
 const LAMBDA_SIZE_LIMIT_MB = 250;
+const LAMBDA_SIZE_WARNING_MB = 240;
+
+function printFunctionWithBreakdown(
+  result: { path: string; size: number; files: Map<string, number> },
+  color: 'red' | 'yellow'
+): void {
+  output.print(
+    `${chalk[color]('Function :')} ${chalk[color].bold(result.path)}\n` +
+      `${chalk[color]('Size     :')} ${chalk[color].bold(result.size.toFixed(2))} MB\n`
+  );
+  printFileSizeBreakdown(result.files);
+  output.print('\n');
+}
 
 function printFileSizeBreakdown(files: Map<string, number>): void {
   // Group files by package or directory structure
@@ -1652,43 +1665,39 @@ async function analyzeVcConfigFiles(
     (r): r is NonNullable<typeof r> => r !== null
   );
 
-  // Separate exceeded and normal functions
+  // Separate exceeded and approaching limit functions
   const sortedResults = validResults.sort((a, b) => b.size - a.size);
   const exceededFunctions = sortedResults.filter(
-    r => r.size > LAMBDA_SIZE_LIMIT_MB
+    r => r.size >= LAMBDA_SIZE_LIMIT_MB
   );
-  const normalFunctions = sortedResults.filter(
-    r => r.size <= LAMBDA_SIZE_LIMIT_MB
+  const approachingLimitFunctions = sortedResults.filter(
+    r => r.size >= LAMBDA_SIZE_WARNING_MB && r.size < LAMBDA_SIZE_LIMIT_MB
   );
 
-  // Show warning once if there are exceeded functions
+  // Show error message and list functions exceeding the limit
   if (exceededFunctions.length > 0) {
     output.print(
       `${chalk.red.bold(`⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached`)}\n\n`
     );
 
-    // List all affected functions
     for (const result of exceededFunctions) {
-      output.print(
-        `${chalk.red('Function :')} ${chalk.red.bold(result.path)}\n` +
-          `${chalk.red('Size     :')} ${chalk.red.bold(result.size.toFixed(2))} MB\n`
-      );
-
-      // Show breakdown of largest files/dependencies
-      printFileSizeBreakdown(result.files);
-      output.print('\n');
+      printFunctionWithBreakdown(result, 'red');
     }
+  }
 
-    // Show summary of normal functions
-    if (normalFunctions.length > 0) {
-      output.print(chalk.cyan(`Other functions:\n`));
-      for (const result of normalFunctions) {
-        output.print(
-          `${chalk.cyan(result.path)}: ${chalk.bold(result.size.toFixed(2))} MB\n`
-        );
-      }
+  // Show warning for functions approaching the limit
+  if (approachingLimitFunctions.length > 0) {
+    output.print(
+      `${chalk.yellow.bold(`⚠️  Functions approaching the ${LAMBDA_SIZE_LIMIT_MB} MB limit`)}\n\n`
+    );
+
+    for (const result of approachingLimitFunctions) {
+      printFunctionWithBreakdown(result, 'yellow');
     }
+  }
 
+  // Throw error after printing all output if any functions exceeded the limit
+  if (exceededFunctions.length > 0) {
     throw new NowBuildError({
       code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
       message: `${exceededFunctions.length} function${exceededFunctions.length === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
