@@ -5,6 +5,7 @@ import {
   getInternalServiceFunctionPath,
   NowBuildError,
   sanitizeConsumerName,
+  type ServiceQueueConsumer,
   type TriggerEvent,
 } from '@vercel/build-utils';
 import { entrypointToModule } from './utils';
@@ -22,9 +23,7 @@ interface QueueDetectionResult {
   error?: string;
 }
 
-export interface ServiceQueueConsumer extends DetectedQueueSubscription {
-  consumer: string;
-}
+export type { ServiceQueueConsumer };
 
 export function buildQueueConsumerName(
   serviceName: string,

@@ -7,14 +7,9 @@ import type { Service } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopicConfigs,
   isQueueTriggeredService,
+  type ServiceQueueConsumer,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
-
-interface ServiceQueueConsumer {
-  topic: string;
-  handler: string;
-  consumer: string;
-}
 
 interface StoredMessage {
   messageId: string;
