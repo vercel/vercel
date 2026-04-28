@@ -150,7 +150,6 @@ class _Subscription:
 _subscriptions: list[_Subscription] = []
 
 
-<<<<<<< HEAD
 def _is_untyped_payload_annotation(annotation: Any) -> bool:
     return annotation is inspect.Signature.empty or annotation is Any
 
@@ -197,10 +196,10 @@ def _call_subscription(sub: _Subscription, message: Any, metadata: MessageMetada
     if invocation.include_metadata:
         return cast(MetadataWorkerCallable, sub.func)(payload, metadata)
     return cast(PayloadWorkerCallable, sub.func)(payload)
-=======
+
+
 async def _await_result(result: Awaitable[Any]) -> Any:
     return await result
->>>>>>> fb68ac620b ([vercel-workers] ack and retry directives (#16120))
 
 
 @overload
