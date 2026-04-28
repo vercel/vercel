@@ -3,7 +3,7 @@ import {
   expandCronField,
   getNextCronDelay,
   parseCronFields,
-} from '../../../../src/util/dev/cron';
+} from '../../../src/util/cron';
 
 describe('parseCronFields', () => {
   it('parses a valid 5-field expression', () => {
@@ -104,6 +104,16 @@ describe('getNextCronDelay', () => {
     expect(getNextCronDelay('* * *')).toBeNull();
   });
 
+  it('returns null for out-of-range fields', () => {
+    // Strict validation rejects garbage that the lax expander would silently
+    // accept (and then fail to ever match).
+    expect(getNextCronDelay('60 * * * *')).toBeNull();
+    expect(getNextCronDelay('0 24 * * *')).toBeNull();
+    expect(getNextCronDelay('0 0 0 * *')).toBeNull();
+    expect(getNextCronDelay('0 0 * 13 *')).toBeNull();
+    expect(getNextCronDelay('0 0 * * 8')).toBeNull();
+  });
+
   it('returns delay for every-minute expression', () => {
     const now = localDate(2025, 6, 15, 10, 30, 15);
     const delay = getNextCronDelay('* * * * *', now);
@@ -148,6 +158,18 @@ describe('getNextCronDelay', () => {
     const delay = getNextCronDelay('0 0 * * 1', now);
     // Next Monday is 2025-06-16 00:00, 24h away
     expect(delay).toBe(24 * 60 * 60_000);
+  });
+
+  it('treats dow=7 the same as dow=0 (Sunday)', () => {
+    // 2025-06-15 is Sunday — at 00:01 the schedule has just missed today's
+    // 00:00 firing, so the next match is the same time next week.
+    const now = localDate(2025, 6, 15, 0, 1, 0);
+    const fromZero = getNextCronDelay('0 0 * * 0', now);
+    const fromSeven = getNextCronDelay('0 0 * * 7', now);
+    expect(fromZero).not.toBeNull();
+    expect(fromSeven).toBe(fromZero);
+    // Sanity: it's exactly 7 days minus 1 minute away.
+    expect(fromSeven).toBe(7 * 24 * 60 * 60_000 - 60_000);
   });
 
   it('ORs day-of-month and day-of-week when both are constrained', () => {
