@@ -1,1 +1,1 @@
-Pull the latest project settings and development environment variables for this linked project.
+Pull the latest project settings and environment variables for this linked project.
