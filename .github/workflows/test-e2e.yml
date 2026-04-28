@@ -38,6 +38,11 @@ jobs:
       totalCount: ${{ steps['affected-packages'].outputs['total'] }}
       allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
     steps:
+      # The `context` here MUST exactly match the one written by the
+      # `Report status to PR commit` step in the `summary` job below.
+      # GitHub commit statuses are upserted by `(sha, context)`, so a
+      # mismatch would create a second row instead of overwriting this
+      # pending one with the final result.
       - name: Post pending Summary (e2e) status to PR commit
         if: ${{ github.event.client_payload.git.sha }}
         uses: actions/github-script@v7
@@ -260,6 +265,10 @@ jobs:
             fi
           done
           echo "state=success" >> $GITHUB_OUTPUT
+      # The `context` here MUST exactly match the one written by the
+      # `Post pending Summary (e2e) status to PR commit` step in the
+      # `setup` job above so this final write overwrites that pending
+      # row instead of creating a duplicate.
       - name: Report status to PR commit
         if: ${{ always() && github.event.client_payload.git.sha }}
         uses: actions/github-script@v7
