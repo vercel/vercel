@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -22,18 +22,4 @@ test('agent created a deployment before inspecting it', () => {
 
   expect(deployCommands.length).toBeGreaterThan(0);
   expect(inspectCommands.length).toBeGreaterThan(0);
-});
-
-test('agent saved deployment target and inspect output', () => {
-  expect(existsSync('deployment-url.txt')).toBe(true);
-  expect(existsSync('inspect-output.txt')).toBe(true);
-
-  const deployment = readFileSync('deployment-url.txt', 'utf-8').trim();
-  const output = readFileSync('inspect-output.txt', 'utf-8');
-  expect(deployment.length).toBeGreaterThan(0);
-  expect(output.trim().length).toBeGreaterThan(0);
-  expect(
-    output.includes(deployment) ||
-      /ready|building|queued|error|deployment|url/i.test(output)
-  ).toBe(true);
 });

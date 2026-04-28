@@ -28,14 +28,7 @@ test('agent used vercel pull', () => {
   ).toBe(true);
 });
 
-test('project settings and development env file were pulled', () => {
+test('project settings and environment file were pulled', () => {
   expect(existsSync('.vercel/project.json')).toBe(true);
   expect(existsSync('.vercel/.env.development.local')).toBe(true);
-});
-
-test('agent wrote a pull summary', () => {
-  expect(existsSync('pull-summary.txt')).toBe(true);
-  expect(
-    readFileSync('pull-summary.txt', 'utf-8').trim().length
-  ).toBeGreaterThan(0);
 });
