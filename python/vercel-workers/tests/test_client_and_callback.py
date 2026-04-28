@@ -423,11 +423,11 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
 
-    def test_send_accepts_timedelta_delay_and_retention(self) -> None:
+    def test_send_accepts_duration_delay_and_retention(self) -> None:
         self._send(
             {"ok": True},
             json_encoder=None,
-            delay=timedelta(minutes=10),
+            delay=600,
             retention=timedelta(hours=6),
         )
 
@@ -435,14 +435,20 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         self.assertEqual(headers["Vqs-Delay-Seconds"], "600")
         self.assertEqual(headers["Vqs-Retention-Seconds"], "21600")
 
-    def test_send_rejects_duplicate_duration_options(self) -> None:
+    def test_send_accepts_float_duration(self) -> None:
+        self._send({"ok": True}, delay=1.5)
+
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Vqs-Delay-Seconds"], "1")
+
+    def test_send_rejects_negative_duration(self) -> None:
         with self.assertRaises(ValueError):
-            self._send(
-                {"ok": True},
-                delay=timedelta(seconds=1),
-                delay_seconds=1,
-            )
+            self._send({"ok": True}, delay=-1)
 
     def test_send_rejects_negative_timedelta(self) -> None:
         with self.assertRaises(ValueError):
             self._send({"ok": True}, delay=timedelta(seconds=-1))
+
+    def test_send_rejects_invalid_duration_type(self) -> None:
+        with self.assertRaises(TypeError):
+            self._send({"ok": True}, delay=[])

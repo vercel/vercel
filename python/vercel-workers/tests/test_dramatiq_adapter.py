@@ -35,7 +35,7 @@ class TestVercelQueuesBrokerOptions:
         assert opts.token is None
         assert opts.base_url is None
         assert opts.base_path is None
-        assert opts.retention_seconds is None
+        assert opts.retention is None
         assert opts.deployment_id is None
         assert opts.timeout == 10.0
         assert opts.visibility_timeout_seconds == 30
@@ -48,7 +48,7 @@ class TestVercelQueuesBrokerOptions:
                 "token": "test-token",
                 "base_url": "https://example.com",
                 "base_path": "/api/v3/messages",
-                "retention_seconds": 3600,
+                "retention": 3600,
                 "deployment_id": "deploy-123",
                 "timeout": 30.0,
                 "visibility_timeout_seconds": 60,
@@ -59,7 +59,7 @@ class TestVercelQueuesBrokerOptions:
         assert opts.token == "test-token"
         assert opts.base_url == "https://example.com"
         assert opts.base_path == "/api/v3/messages"
-        assert opts.retention_seconds == 3600
+        assert opts.retention == 3600
         assert opts.deployment_id == "deploy-123"
         assert opts.timeout == 30.0
         assert opts.visibility_timeout_seconds == 60

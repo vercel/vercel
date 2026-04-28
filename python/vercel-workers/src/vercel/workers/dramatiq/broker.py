@@ -4,7 +4,8 @@ import json
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from typing import Any
+from datetime import timedelta
+from typing import Any, TypeGuard
 
 from ..client import WorkerJSONEncoder, send
 
@@ -27,6 +28,13 @@ __all__ = [
     "VercelQueuesBrokerOptions",
     "DramatiqTaskEnvelope",
 ]
+
+
+type Duration = int | float | timedelta
+
+
+def _is_duration(value: object) -> TypeGuard[Duration]:
+    return isinstance(value, (int, float, timedelta)) and not isinstance(value, bool)
 
 
 class VercelDramatiqEncoder(Encoder):
@@ -61,7 +69,7 @@ class VercelQueuesBrokerOptions:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention_seconds: int | None = None
+    retention: Duration | None = None
     deployment_id: str | None = None
     timeout: float | None = 10.0
 
@@ -94,9 +102,9 @@ class VercelQueuesBrokerOptions:
         if isinstance(base_path, str) and base_path:
             cfg = replace(cfg, base_path=base_path)
 
-        retention = options.get("retention_seconds")
-        if isinstance(retention, int):
-            cfg = replace(cfg, retention_seconds=retention)
+        retention = options.get("retention")
+        if _is_duration(retention):
+            cfg = replace(cfg, retention=retention)
 
         deployment_id = options.get("deployment_id")
         if isinstance(deployment_id, str) and deployment_id:
@@ -336,7 +344,7 @@ class VercelQueuesBroker(Broker):
         )
 
         # Compute send-time delay from the delay parameter (milliseconds).
-        delay_seconds = int(delay / 1000) if delay and delay > 0 else None
+        delay_duration = int(delay / 1000) if delay and delay > 0 else None
 
         if os.environ.get("VWD_DEBUG_PUBLISH") not in {None, "", "0", "false", "FALSE"}:
             try:
@@ -351,8 +359,8 @@ class VercelQueuesBroker(Broker):
             queue_name,
             envelope,
             idempotency_key=idempotency_key,
-            retention_seconds=self._cfg.retention_seconds,
-            delay_seconds=delay_seconds,
+            retention=self._cfg.retention,
+            delay=delay_duration,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,
