@@ -255,11 +255,34 @@ function expandPattern(packageRoot, pattern) {
   }
 
   const matcher = globPatternToRegExp(normalizedPattern);
-  return walkFiles(packageRoot)
+  let matches = walkFiles(packageRoot)
     .filter(filePath =>
       matcher.test(path.relative(packageRoot, filePath).replace(/\\/g, '/'))
     )
     .sort((a, b) => a.localeCompare(b));
+
+  if (
+    hasWildcard(normalizedPattern) &&
+    !isLikelyTestPatternName(normalizedPattern)
+  ) {
+    matches = matches.filter(isTestFile);
+  }
+
+  return matches;
+}
+
+function hasWildcard(pattern) {
+  return pattern.includes('*') || pattern.includes('?');
+}
+
+function isLikelyTestPatternName(pattern) {
+  return DEFAULT_TEST_NAME_PATTERNS.some(name => pattern.includes(`.${name}.`));
+}
+
+function isTestFile(filePath) {
+  return DEFAULT_TEST_NAME_PATTERNS.some(name =>
+    new RegExp(`\\.${name}\\.[^.]+$`).test(filePath)
+  );
 }
 
 function globPatternToRegExp(pattern) {
