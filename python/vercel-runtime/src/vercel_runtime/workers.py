@@ -244,19 +244,14 @@ def _bootstrap_django_worker_app(module: object) -> object | None:
 
 
 def _bootstrap_queue_client_app(candidate: object) -> object | None:
-    has_subscriptions = getattr(candidate, "has_subscriptions", None)
     get_asgi_app = getattr(candidate, "get_asgi_app", None)
-    if not callable(has_subscriptions) or not callable(get_asgi_app):
+    if (
+        not _queue_client_has_subscriptions(candidate)
+        or not callable(get_asgi_app)
+    ):
         return None
 
     with contextlib.suppress(Exception):
-        has_subscriptions_fn = cast(
-            "Callable[[], bool]",
-            has_subscriptions,
-        )
-        if not has_subscriptions_fn():
-            return None
-
         get_asgi_app_fn = cast(
             "Callable[[], object]",
             get_asgi_app,
@@ -264,6 +259,21 @@ def _bootstrap_queue_client_app(candidate: object) -> object | None:
         return get_asgi_app_fn()
 
     return None
+
+
+def _queue_client_has_subscriptions(candidate: object) -> bool:
+    has_subscriptions = getattr(candidate, "has_subscriptions", None)
+    if not callable(has_subscriptions):
+        return False
+
+    with contextlib.suppress(Exception):
+        has_subscriptions_fn = cast(
+            "Callable[[], bool]",
+            has_subscriptions,
+        )
+        return has_subscriptions_fn()
+
+    return False
 
 
 def _get_queue_client_types(vercel_workers: object) -> tuple[type[object], ...]:
@@ -282,6 +292,74 @@ def _iter_module_values(module: object) -> list[object]:
     return list(cast("Mapping[str, object]", module_dict).values())
 
 
+def _iter_queue_client_candidates(
+    module: object,
+    queue_client_types: tuple[type[object], ...],
+    entrypoint_varname: str | None = None,
+) -> list[object]:
+    candidates: list[object] = []
+    entrypoint_candidate = (
+        getattr(module, entrypoint_varname, None)
+        if entrypoint_varname
+        else None
+    )
+    if isinstance(entrypoint_candidate, queue_client_types):
+        candidates.append(entrypoint_candidate)
+
+    for candidate in _iter_module_values(module):
+        if (
+            isinstance(candidate, queue_client_types)
+            and candidate is not entrypoint_candidate
+        ):
+            candidates.append(candidate)
+
+    return candidates
+
+
+def has_queue_client_worker_app(
+    module: object,
+    entrypoint_varname: str | None = None,
+) -> bool:
+    if not VERCEL_WORKERS_AVAILABLE:
+        return False
+
+    vercel_workers = _import_optional_module("vercel.workers")
+    if vercel_workers is None:
+        return False
+
+    queue_client_types = _get_queue_client_types(vercel_workers)
+    if not queue_client_types:
+        return False
+
+    return any(
+        _queue_client_has_subscriptions(candidate)
+        for candidate in _iter_queue_client_candidates(
+            module,
+            queue_client_types,
+            entrypoint_varname,
+        )
+    )
+
+
+def _bootstrap_entrypoint_queue_client_app(
+    module: object,
+    vercel_workers: object,
+    entrypoint_varname: str | None = None,
+) -> object | None:
+    if not entrypoint_varname:
+        return None
+
+    queue_client_types = _get_queue_client_types(vercel_workers)
+    if not queue_client_types:
+        return None
+
+    candidate = getattr(module, entrypoint_varname, None)
+    if not isinstance(candidate, queue_client_types):
+        return None
+
+    return _bootstrap_queue_client_app(candidate)
+
+
 def _bootstrap_exported_queue_client_app(
     module: object,
     vercel_workers: object,
@@ -290,10 +368,10 @@ def _bootstrap_exported_queue_client_app(
     if not queue_client_types:
         return None
 
-    for candidate in _iter_module_values(module):
-        if not isinstance(candidate, queue_client_types):
-            continue
-
+    for candidate in _iter_queue_client_candidates(
+        module,
+        queue_client_types,
+    ):
         app = _bootstrap_queue_client_app(candidate)
         if app is not None:
             return app
@@ -301,13 +379,24 @@ def _bootstrap_exported_queue_client_app(
     return None
 
 
-def _bootstrap_generic_worker_app(module: object) -> object | None:
+def _bootstrap_generic_worker_app(
+    module: object,
+    entrypoint_varname: str | None = None,
+) -> object | None:
     if not VERCEL_WORKERS_AVAILABLE:
         return None
 
     vercel_workers = _import_optional_module("vercel.workers")
     if vercel_workers is None:
         return None
+
+    app = _bootstrap_entrypoint_queue_client_app(
+        module,
+        vercel_workers,
+        entrypoint_varname,
+    )
+    if app is not None:
+        return app
 
     app = _bootstrap_queue_client_app(vercel_workers)
     if app is not None:
@@ -316,7 +405,10 @@ def _bootstrap_generic_worker_app(module: object) -> object | None:
     return _bootstrap_exported_queue_client_app(module, vercel_workers)
 
 
-def bootstrap_worker_service_app(module: object) -> object:
+def bootstrap_worker_service_app(
+    module: object,
+    entrypoint_varname: str | None = None,
+) -> object:
     if _find_celery_app(module) is not None:
         try:
             app = _bootstrap_celery_worker_app(module)
@@ -341,7 +433,7 @@ def bootstrap_worker_service_app(module: object) -> object:
         except Exception as exc:
             raise RuntimeError("Django tasks worker bootstrap failed.") from exc
 
-    app = _bootstrap_generic_worker_app(module)
+    app = _bootstrap_generic_worker_app(module, entrypoint_varname)
     if app is not None:
         return app
 

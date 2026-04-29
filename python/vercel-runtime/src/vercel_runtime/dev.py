@@ -406,7 +406,10 @@ def _setup_apps() -> None:
         return
 
     if is_worker_service():
-        _asgi_user_app = cast("ASGI", bootstrap_worker_service_app(mod))
+        _asgi_user_app = cast(
+            "ASGI",
+            bootstrap_worker_service_app(mod, variable_name),
+        )
         return
 
     app_name, user_app = resolve_app(mod, module_name, variable_name)

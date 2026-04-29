@@ -42,6 +42,7 @@ from vercel_runtime.routing import (
 )
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
+    has_queue_client_worker_app,
     is_celery_app,
     is_worker_service,
     prepare_celery_environment,
@@ -474,18 +475,24 @@ except Exception:
     _fatal_exc(f'could not import "{_entrypoint_rel}"')
 
 if is_worker_service():
+    has_queue_client_app = has_queue_client_worker_app(
+        __vc_module,
+        _entrypoint_varname,
+    )
     if "handler" not in __vc_variables and "Handler" not in __vc_variables:
         should_bootstrap_worker_app = (
-            "app" not in __vc_variables
+            has_queue_client_app
+            or "app" not in __vc_variables
             or is_celery_app(getattr(__vc_module, "app", None))
         )
     else:
-        should_bootstrap_worker_app = False
+        should_bootstrap_worker_app = has_queue_client_app
 
     if should_bootstrap_worker_app:
         try:
             __vc_module.__dict__["app"] = bootstrap_worker_service_app(
-                __vc_module
+                __vc_module,
+                _entrypoint_varname,
             )
             __vc_variables = dir(__vc_module)
         except Exception:
