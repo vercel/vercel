@@ -106,6 +106,18 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: node scripts/build-binary.mjs
 
+      - name: Smoke test binary version
+        if: ${{ matrix.target == 'bun-darwin-arm64' || matrix.target == 'bun-darwin-x64' || matrix.target == 'bun-linux-x64' || matrix.target == 'bun-windows-x64' }}
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          chmod +x "$bin" || true
+          out=$(./"$bin" --version)
+          echo "$out"
+          test -n "$out"
+
       - name: Compute checksum
         shell: bash
         working-directory: packages/cli

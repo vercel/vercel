@@ -1,0 +1,149 @@
+name: Validate Binary
+
+on:
+  push:
+    branches:
+      - 'melkey/bun-*'
+      - 'bun/**'
+  pull_request:
+    paths:
+      - 'packages/cli/scripts/build-binary.mjs'
+      - 'packages/cli/src/util/build/import-builders.ts'
+      - 'packages/cli/src/util/dev/builder.ts'
+      - 'packages/cli/src/util/is-bun-binary.ts'
+      - 'packages/cli/src/util/telemetry/index.ts'
+      - 'packages/node/src/build.ts'
+      - 'packages/node/src/edge-functions/edge-handler.mts'
+      - 'packages/node/src/fork-dev-server.ts'
+      - 'packages/node/src/start-dev-server.ts'
+      - 'packages/static-build/src/utils/gatsby.ts'
+      - 'packages/fs-detectors/src/detect-framework.ts'
+      - '.github/workflows/validate-binary.yml'
+      - '.github/workflows/release-binary.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: validate-binary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-x64-dev-smoke:
+    name: linux-x64 dev smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Build binary
+        working-directory: packages/cli
+        env:
+          BUN_TARGET: bun-linux-x64
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: node scripts/build-binary.mjs
+
+      - name: Smoke test binary version
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/vercel-linux-x64"
+          chmod +x "$bin"
+          out=$(./"$bin" --version)
+          echo "$out"
+          test -n "$out"
+
+      - name: Integration smoke with vc dev
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin_abs="$PWD/dist-bin/vercel-linux-x64"
+          fixture="$RUNNER_TEMP/vercel-binary-dev-smoke"
+          log="$RUNNER_TEMP/vercel-binary-dev-smoke.log"
+
+          rm -rf "$fixture"
+          mkdir -p "$fixture/api"
+          printf '%s\n' '{"name":"binary-dev-smoke","type":"module"}' > "$fixture/package.json"
+          printf '%s\n' '{}' > "$fixture/vercel.json"
+          cat > "$fixture/api/hello.js" <<'JS'
+          export default function handler(req, res) {
+            res.status(200).json({ hello: 'world', platform: process.platform, arch: process.arch });
+          }
+          JS
+
+          cleanup() {
+            if [ -n "${dev_pid:-}" ]; then
+              kill "$dev_pid" 2>/dev/null || true
+            fi
+          }
+          trap cleanup EXIT
+
+          cd "$fixture"
+          NO_UPDATE_NOTIFIER=1 VERCEL_TELEMETRY_DISABLED=1 \
+            "$bin_abs" dev -L --listen 4444 --debug > "$log" 2>&1 &
+          dev_pid=$!
+
+          for i in $(seq 1 45); do
+            if grep -q "Ready! Available" "$log" 2>/dev/null; then
+              echo "dev server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+
+          response=""
+          for i in $(seq 1 45); do
+            response=$(curl -s -m 10 http://localhost:4444/api/hello || true)
+            if echo "$response" | grep -q '"hello":"world"'; then
+              break
+            fi
+            sleep 1
+          done
+
+          echo "Response: $response"
+          echo "=== dev.log tail ==="
+          tail -80 "$log" || true
+          echo "$response" | grep -q '"hello":"world"'
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vercel-linux-x64
+          path: packages/cli/dist-bin/vercel-linux-x64
+          retention-days: 3
+          if-no-files-found: error
