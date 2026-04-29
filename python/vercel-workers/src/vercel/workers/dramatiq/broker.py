@@ -6,7 +6,14 @@ from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import Any
 
-from ..client import Duration, WorkerJSONEncoder, is_duration, send
+from ..client import (
+    _DEPLOYMENT_ID_UNSET,
+    Duration,
+    WorkerJSONEncoder,
+    _DeploymentIdOption,
+    is_duration,
+    send,
+)
 
 try:
     import dramatiq
@@ -62,7 +69,7 @@ class VercelQueuesBrokerOptions:
     base_url: str | None = None
     base_path: str | None = None
     retention: Duration | None = None
-    deployment_id: str | None = None
+    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
     # Consumption defaults (serverless callback / local polling)
@@ -98,6 +105,8 @@ class VercelQueuesBrokerOptions:
         if is_duration(retention):
             cfg = replace(cfg, retention=retention)
 
+        if "deployment_id" in options and options.get("deployment_id") is None:
+            cfg = replace(cfg, deployment_id=None)
         deployment_id = options.get("deployment_id")
         if isinstance(deployment_id, str) and deployment_id:
             cfg = replace(cfg, deployment_id=deployment_id)

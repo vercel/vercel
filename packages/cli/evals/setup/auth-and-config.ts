@@ -37,6 +37,7 @@ export const setupAuthAndConfig = async (sandbox: Sandbox) => {
   }
   try {
     const configJson = JSON.stringify({
+      authTokenStorage: 'file',
       telemetry: { enabled: false },
       currentTeam:
         process.env.CLI_EVAL_TEAM_ID ?? 'team_KhlEYrm473sP7ybEytVDlfyj',
