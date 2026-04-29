@@ -3,6 +3,22 @@ const child_process = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+function getTurboBinary() {
+  if (process.env.TURBO_BINARY) {
+    return process.env.TURBO_BINARY;
+  }
+
+  const root = path.resolve(__dirname, '..');
+  const localTurbo = path.join(
+    root,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'turbo.cmd' : 'turbo'
+  );
+
+  return fs.existsSync(localTurbo) ? localTurbo : 'turbo';
+}
+
 /**
  * Task names that indicate a package has tests
  */
@@ -95,7 +111,7 @@ async function turboQuery(args) {
   const chunks = [];
   return new Promise((resolve, reject) => {
     const root = path.resolve(__dirname, '..');
-    const turbo = path.join(root, 'node_modules', '.bin', 'turbo');
+    const turbo = getTurboBinary();
     const spawned = child_process.spawn(turbo, ['query', ...args], {
       cwd: root,
       env: process.env,
