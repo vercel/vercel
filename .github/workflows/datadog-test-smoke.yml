@@ -26,61 +26,45 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: install turbo@2.5.0
+        run: npm i -g turbo@2.5.0
+      - id: affected-packages
+        run: |
+          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          AFFECTED_OUTPUT=$(node utils/test-affected.js "${{ github.event.pull_request.base.sha }}" 2>&1)
+
+          PACKAGE_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Found [0-9]* affected packages" | grep -o "[0-9]*" | head -1 || echo "0")
+          TOTAL_COUNT=$(echo "$AFFECTED_OUTPUT" | grep -o "Total packages with tests: [0-9]*" | grep -o "[0-9]*" | head -1 || echo "0")
+
+          if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
+            STRATEGY="all-e2e"
+          elif echo "$AFFECTED_OUTPUT" | grep -q "test-all result detected"; then
+            STRATEGY="test-all"
+          elif [ "$PACKAGE_COUNT" -gt "0" ]; then
+            STRATEGY="affected-only"
+          else
+            STRATEGY="no-tests"
+          fi
+
+          PACKAGES=$(echo "$AFFECTED_OUTPUT" | sed -n '/Affected packages that would be tested:/,/This would result in the following turbo filters:/p' | grep "  - " | sed 's/  - //' | tr '\n' ',' | sed 's/,$//')
+          ALL_PACKAGES=$(echo "$AFFECTED_OUTPUT" | grep "All packages with tests:" | sed 's/All packages with tests: //' | head -1 | xargs)
+
+          echo "PACKAGE_COUNT=$PACKAGE_COUNT"
+          echo "TOTAL_COUNT=$TOTAL_COUNT"
+          echo "STRATEGY=$STRATEGY"
+
+          echo "strategy=$STRATEGY" >> $GITHUB_OUTPUT
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+          echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+          echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
-          TESTS_ARRAY='[
-            {
-              "runner": "ubuntu-latest",
-              "packagePath": "packages/error-utils",
-              "packageName": "@vercel/error-utils",
-              "scriptName": "vitest-unit",
-              "testScript": "vitest-run",
-              "nodeVersion": "22",
-              "testPaths": ["test/index.test.ts"],
-              "chunkNumber": 1,
-              "allChunksLength": 1
-            }
-          ]'
-          echo "Datadog smoke tests to run:"
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
+          echo "Unit tests to run:"
           echo "$TESTS_ARRAY"
-          echo "tests=$(echo "$TESTS_ARRAY" | jq -c .)" >> $GITHUB_OUTPUT
-
-  test:
-    timeout-minutes: 20
-    runs-on: ${{ matrix.runner }}
-    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
-    if: ${{ needs.setup.outputs.tests != '[]' }}
-    needs:
-      - setup
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJson(needs.setup.outputs.tests) }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.nodeVersion }}
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
-      - run: pnpm install
-      - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
         env:
-          FORCE_COLOR: '1'
-      - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
-        env:
-          FORCE_COLOR: '1'
-          NODE_OPTIONS: '-r dd-trace/ci/init'
-          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
-          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
-          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
-          DD_ENV: ci
-          DD_SERVICE: vercel-cli
-          DD_TRACE_DEBUG: 'true'
-          DD_PROFILING_ENABLED: 'false'
-          DD_NATIVE_METRICS: 'false'
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_TYPE: unit
