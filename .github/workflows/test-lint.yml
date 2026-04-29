@@ -46,9 +46,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@4a76a4951e2b37e999824e644cd130c67037ee2b # 1.100.0
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
         with:
-          toolchain: stable
           targets: wasm32-wasip2
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
