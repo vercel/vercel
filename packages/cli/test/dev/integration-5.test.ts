@@ -661,25 +661,21 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
       await readyResolver;
 
       // Service B responds independently
-      const serviceBRes = await nodeFetch(
-        `http://localhost:${port}/_/service-b/`
-      );
+      const serviceBRes = await nodeFetch(`http://localhost:${port}/api/b/`);
       expect(serviceBRes.status).toBe(200);
       const serviceBJson = await serviceBRes.json();
       expect(serviceBJson).toHaveProperty('service', 'service-b');
       expect(serviceBJson).toHaveProperty('message', 'Hello from service-b');
 
       // Service A responds independently
-      const serviceARes = await nodeFetch(
-        `http://localhost:${port}/_/service-a/`
-      );
+      const serviceARes = await nodeFetch(`http://localhost:${port}/api/a/`);
       expect(serviceARes.status).toBe(200);
       const serviceAJson = await serviceARes.json();
       expect(serviceAJson).toHaveProperty('service', 'service-a');
 
       // Service A calls Service B (service-to-service communication)
       const callRes = await nodeFetch(
-        `http://localhost:${port}/_/service-a/call-service-b`
+        `http://localhost:${port}/api/a/call-service-b`
       );
       expect(callRes.status).toBe(200);
       const callJson = await callRes.json();
@@ -696,8 +692,8 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
       expect(frontendRes.status).toBe(200);
       const frontendHtml = await frontendRes.text();
       expect(frontendHtml).toContain('<h1>Service Dashboard</h1>');
-      expect(frontendHtml).toContain('/_/service-a');
-      expect(frontendHtml).toContain('/_/service-b');
+      expect(frontendHtml).toContain('/api/a');
+      expect(frontendHtml).toContain('/api/b');
     } finally {
       await dev.kill();
     }

@@ -11,14 +11,16 @@
     },
     "service-a": {
       "framework": "fastapi",
-      "entrypoint": "service-a",
+      "entrypoint": "services/service-a",
+      "mount": "/api/a",
       "env": {
         "SERVICE_B_URL": {"ref": {"service": "service-b"}}
       }
     },
     "service-b": {
       "framework": "fastapi",
-      "entrypoint": "service-b"
+      "entrypoint": "services/service-b",
+      "mount": "/api/b"
     }
   }
 }
