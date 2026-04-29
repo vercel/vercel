@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Fix function size analysis to include functions hitting the exact 250 MB limit and surface a new warning for functions approaching the 250 MB limit. Requires `VERCEL_ANALYZE_BUILD_OUTPUT=1`.
+Improve function size log message to show warning when limit is reached or almost reached, and always display function size with dependencies breakdown. Requires `VERCEL_ANALYZE_BUILD_OUTPUT=1`.
