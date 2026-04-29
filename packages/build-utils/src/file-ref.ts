@@ -10,6 +10,7 @@ interface FileRefOptions {
   digest: string;
   contentType?: string;
   mutable?: boolean;
+  contentHash?: string;
 }
 
 const semaToDownloadFromS3 = new Sema(5);
@@ -29,12 +30,14 @@ export default class FileRef implements FileBase {
   public digest: string;
   public contentType: string | undefined;
   private mutable: boolean;
+  public contentHash?: string;
 
   constructor({
     mode = 0o100644,
     digest,
     contentType,
     mutable = false,
+    contentHash,
   }: FileRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof digest === 'string');
@@ -43,6 +46,7 @@ export default class FileRef implements FileBase {
     this.digest = digest;
     this.contentType = contentType;
     this.mutable = mutable;
+    this.contentHash = contentHash;
   }
 
   /**
