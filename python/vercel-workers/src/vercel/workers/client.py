@@ -72,6 +72,14 @@ class MessageMetadata(TypedDict, total=False):
     consumer: str
 
 
+class _DeploymentIdUnset:
+    pass
+
+
+_DEPLOYMENT_ID_UNSET = _DeploymentIdUnset()
+type _DeploymentIdOption = str | None | _DeploymentIdUnset
+
+
 class Ack(Exception):
     """Directive that acknowledges a message without retrying it."""
 
@@ -152,6 +160,37 @@ _subscriptions: list[_Subscription] = []
 
 def _is_untyped_payload_annotation(annotation: Any) -> bool:
     return annotation is inspect.Signature.empty or annotation is Any
+
+
+def _in_process_mode_enabled() -> bool:
+    return os.environ.get("VERCEL_WORKERS_IN_PROCESS") in {"1", "true", "TRUE", "yes", "YES"}
+
+
+def _deployment_pinning_disabled_for_dev() -> bool:
+    # `vercel dev` configures Python services with this local queue token. Match
+    # the TypeScript SDK behavior: deployment IDs are never sent in development.
+    return _in_process_mode_enabled() or os.environ.get("VERCEL_QUEUE_TOKEN") == "vc-dev-token"
+
+
+def _resolve_deployment_id(deployment_id: _DeploymentIdOption) -> str | None:
+    if _deployment_pinning_disabled_for_dev():
+        return None
+    if deployment_id is None:
+        return None
+    if isinstance(deployment_id, str):
+        return deployment_id or None
+
+    env_deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
+    if env_deployment_id:
+        return env_deployment_id
+
+    raise RuntimeError(
+        "No deployment ID available. VERCEL_DEPLOYMENT_ID is not set.\n\n"
+        "This usually means the code is running outside a Vercel deployment "
+        "(for example during build or in a non-Vercel environment).\n\n"
+        "To fix this, provide an explicit deployment_id when sending messages, "
+        "or explicitly opt out of deployment pinning with deployment_id=None."
+    )
 
 
 def _build_invocation_plan(func: WorkerCallable) -> _InvocationPlan:
@@ -637,7 +676,7 @@ def send(
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
-    deployment_id: str | None = None,
+    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
     base_path: str | None = None,
@@ -663,7 +702,9 @@ def send(
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
         retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
         delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
-        deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
+        deployment_id: Deployment pinning mode. Omit to auto-detect ``VERCEL_DEPLOYMENT_ID``,
+            pass ``None`` to explicitly send without a deployment ID, or pass a string to pin
+            to a specific deployment.
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
         base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
             ``https://vercel-queue.com``.
@@ -680,7 +721,7 @@ def send(
     #
     # For an explicit in-process dev shortcut (no persistence / retries), set:
     #   VERCEL_WORKERS_IN_PROCESS=1
-    if os.environ.get("VERCEL_WORKERS_IN_PROCESS") in {"1", "true", "TRUE", "yes", "YES"}:
+    if _in_process_mode_enabled():
         return _send_in_process(queue_name, payload)
 
     resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
@@ -693,9 +734,9 @@ def send(
         "Content-Type": content_type,
     } | (headers or {})
 
-    deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
+    resolved_deployment_id = _resolve_deployment_id(deployment_id)
+    if resolved_deployment_id:
+        headers["Vqs-Deployment-Id"] = resolved_deployment_id
 
     if idempotency_key:
         headers["Vqs-Idempotency-Key"] = idempotency_key
@@ -767,7 +808,7 @@ async def send_async(
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
-    deployment_id: str | None = None,
+    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
     base_path: str | None = None,
@@ -786,7 +827,9 @@ async def send_async(
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
         retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
         delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
-        deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
+        deployment_id: Deployment pinning mode. Omit to auto-detect ``VERCEL_DEPLOYMENT_ID``,
+            pass ``None`` to explicitly send without a deployment ID, or pass a string to pin
+            to a specific deployment.
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
         base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
             ``https://vercel-queue.com``.
@@ -809,9 +852,9 @@ async def send_async(
         "Content-Type": content_type,
     } | (headers or {})
 
-    deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
+    resolved_deployment_id = _resolve_deployment_id(deployment_id)
+    if resolved_deployment_id:
+        headers["Vqs-Deployment-Id"] = resolved_deployment_id
 
     if idempotency_key:
         headers["Vqs-Idempotency-Key"] = idempotency_key
