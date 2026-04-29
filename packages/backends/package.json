@@ -28,7 +28,8 @@
     "type-check": "tsc --noEmit"
   },
   "files": [
-    "dist"
+    "dist",
+    "templates"
   ],
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
