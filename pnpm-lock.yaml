@@ -955,6 +955,19 @@ importers:
         specifier: 2.1.4
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)
 
+  packages/cli-exec:
+    dependencies:
+      execa:
+        specifier: 5.1.1
+        version: 5.1.1
+    devDependencies:
+      '@types/node':
+        specifier: 20.11.0
+        version: 20.11.0
+      vitest:
+        specifier: 2.1.4
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)
+
   packages/client:
     dependencies:
       '@vercel/build-utils':
