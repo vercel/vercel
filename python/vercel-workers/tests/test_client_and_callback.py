@@ -420,7 +420,7 @@ class TestSendWithJSONEncoder(unittest.TestCase):
             patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
             patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
         ):
-            queue_client.send("q", payload, json_encoder=json_encoder)
+            queue_client.send("q", payload, deployment_id=None, json_encoder=json_encoder)
 
         return _FakeHttpxClient.captured_bodies[-1]
 
@@ -451,6 +451,87 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         body = self._send({"tags": {3, 1, 2}}, json_encoder=_CustomEncoder)
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
+
+
+class TestDeploymentPinning(unittest.TestCase):
+    def setUp(self) -> None:
+        _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
+        _FakeHttpxClient.captured_urls.clear()
+
+    def test_send_auto_pins_to_env_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True})
+
+        self.assertEqual(_FakeHttpxClient.captured_headers[-1]["Vqs-Deployment-Id"], "dpl_env")
+
+    def test_send_none_explicitly_unpins_even_with_env_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, deployment_id=None)
+
+        self.assertNotIn("Vqs-Deployment-Id", _FakeHttpxClient.captured_headers[-1])
+
+    def test_send_explicit_deployment_id_overrides_env(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, deployment_id="dpl_explicit")
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_headers[-1]["Vqs-Deployment-Id"],
+            "dpl_explicit",
+        )
+
+    def test_send_auto_requires_deployment_id_outside_dev(self) -> None:
+        with patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True):
+            with self.assertRaises(RuntimeError) as err:
+                queue_client.send("q", {"ok": True})
+
+        self.assertIn("No deployment ID available", str(err.exception))
+
+    def test_send_dev_token_omits_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "vc-dev-token",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True})
+
+        self.assertNotIn("Vqs-Deployment-Id", _FakeHttpxClient.captured_headers[-1])
 
 
 class TestQueueClients(unittest.TestCase):
@@ -498,7 +579,7 @@ class TestQueueClients(unittest.TestCase):
         self.assertEqual(headers["X-Call"], "call")
 
     def test_queue_client_preserves_dev_proxy_base_url(self) -> None:
-        client = queue_client.QueueClient(region="sfo1", token="tok")
+        client = queue_client.QueueClient(region="sfo1", token="tok", deployment_id=None)
 
         with (
             patch.dict(
@@ -519,6 +600,7 @@ class TestQueueClients(unittest.TestCase):
         client = queue_client.AsyncQueueClient(
             region="iad1",
             token="tok",
+            deployment_id=None,
             headers={"X-Client": "async"},
         )
 
@@ -610,7 +692,7 @@ class TestQueueClients(unittest.TestCase):
         )
 
     def test_queue_client_topic_send_validates_and_serializes_payload_type(self) -> None:
-        client = queue_client.QueueClient(region="sfo1", token="tok")
+        client = queue_client.QueueClient(region="sfo1", token="tok", deployment_id=None)
         users = client.topic("users.create", payload_type=CreateUserPayload)
 
         with (
@@ -658,12 +740,17 @@ class TestQueueClients(unittest.TestCase):
         users = client.topic("users.create", payload_type=CreateUserPayload)
 
         with self.assertRaises(TypeError):
+
             @users.subscribe
             def handle(payload: EmailPayload) -> None:
                 pass
 
     def test_async_queue_client_topic_send_uses_async_client(self) -> None:
-        client = queue_client.AsyncQueueClient(region="iad1", token="tok")
+        client = queue_client.AsyncQueueClient(
+            region="iad1",
+            token="tok",
+            deployment_id=None,
+        )
         users = client.topic("users.create", payload_type=CreateUserPayload)
 
         async def run() -> None:

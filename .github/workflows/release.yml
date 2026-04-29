@@ -20,6 +20,8 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -37,9 +39,8 @@ jobs:
           node-version: 24
 
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
         with:
-          toolchain: stable
           targets: wasm32-wasip2
 
       - name: Setup Python
@@ -68,7 +69,7 @@ jobs:
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
-        uses: changesets/action@d4c53c294341eec8a419ec2d1927138bfdeec234
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf
         with:
           version: pnpm ci:version
           publish: pnpm ci:publish # npm publish

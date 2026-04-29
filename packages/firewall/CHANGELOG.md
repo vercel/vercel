@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.1.4
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+
 ## 1.1.3
 
 ### Patch Changes
