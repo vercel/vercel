@@ -1,5 +1,11 @@
 # vercel-workers
 
+## 0.0.18
+
+### Patch Changes
+
+- daf8c59: [vercel-workers] remove `consumer` from public api
+
 ## 0.0.17
 
 ### Patch Changes
