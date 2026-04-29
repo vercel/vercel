@@ -334,27 +334,23 @@ jobs:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
           # VERCEL_WORKERS_PYTHON) are also available here, injected into
           # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
-          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
-          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
           FORCE_COLOR: '1'
-      - name: 'Determine Turbo HIT or MISS'
-        if: ${{ !cancelled() }}
-        id: turbo-summary
-        shell: bash
-        run: |
-          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
-          echo "MISS COUNT: $TURBO_MISS_COUNT"
-          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
-      - name: 'Upload Test Report to Datadog'
-        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
-        run: 'pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports'
-        env:
-          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          # Datadog Test Optimization: emit per-test spans correlated to the
+          # GitHub Actions job span, replacing the previous post-hoc JUnit
+          # upload. See test/lib/deployment/metrics.js for the legacy
+          # DATADOG_API_KEY consumer (custom transient-error metrics).
+          NODE_OPTIONS: '-r dd-trace/ci/init'
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           DD_ENV: ci
+          DD_SERVICE: vercel-cli
+          DD_PROFILING_ENABLED: 'false'
+          DD_NATIVE_METRICS: 'false'
 
   summary:
     name: Summary
