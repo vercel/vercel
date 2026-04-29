@@ -163,7 +163,7 @@ def _is_untyped_payload_annotation(annotation: Any) -> bool:
 
 
 def _in_process_mode_enabled() -> bool:
-    return os.environ.get("VERCEL_WORKERS_IN_PROCESS") == "1"
+    return os.environ.get("VERCEL_WORKERS_IN_PROCESS") in {"1", "true", "TRUE", "yes", "YES"}
 
 
 def _deployment_pinning_disabled_for_dev() -> bool:
