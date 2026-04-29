@@ -11,6 +11,7 @@ import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
 import { DevCommandExitError } from '../../util/dev/server';
+import { ServiceStartError } from '../../util/dev/services-orchestrator';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { packageName, getCommandName } from '../../util/pkg-name';
@@ -135,9 +136,12 @@ export default async function main(client: Client) {
   try {
     return await dev(client, parsedArgs.flags, args, telemetry);
   } catch (err) {
-    if (err instanceof DevCommandExitError) {
+    if (
+      err instanceof DevCommandExitError ||
+      err instanceof ServiceStartError
+    ) {
       output.error(err.message);
-      process.exit(err.exitCode);
+      process.exit(err instanceof DevCommandExitError ? err.exitCode : 1);
     }
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
