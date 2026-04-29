@@ -13,6 +13,13 @@ const TEST_TASK_NAMES = ['test', 'vitest', 'type-check'];
  */
 const E2E_TASK_NAMES = ['test-e2e', 'vitest-e2e'];
 
+const ADDITIONAL_PACKAGES_BY_CHANGED_FILE = [
+  {
+    pattern: /^python\//,
+    packages: ['vercel'],
+  },
+];
+
 /**
  * Get affected packages based on git changes since the given commit
  * @param {string} baseSha - The base commit SHA to compare against
@@ -54,9 +61,13 @@ async function getAffectedPackages(baseSha) {
     const affectedPackages = data.data.affectedPackages.items
       .filter(hasTestTasks)
       .map(pkg => pkg.name);
+    const additionalAffectedPackages =
+      getAdditionalAffectedPackages(changedFiles);
 
     // Handle e2e test special cases
-    let finalPackages = affectedPackages;
+    let finalPackages = [
+      ...new Set([...affectedPackages, ...additionalAffectedPackages]),
+    ];
 
     if (shouldRunAllE2E) {
       console.error(
@@ -178,6 +189,22 @@ function shouldRunAllE2ETests(changedFiles) {
 }
 
 /**
+ * Get packages whose e2e tests consume files outside their pnpm dependency graph.
+ * @param {string[]} changedFiles - Array of changed file paths
+ * @returns {string[]} Array of additional affected package names
+ */
+function getAdditionalAffectedPackages(changedFiles) {
+  const packages = changedFiles.flatMap(file =>
+    ADDITIONAL_PACKAGES_BY_CHANGED_FILE.flatMap(
+      ({ pattern, packages: packageNames }) =>
+        pattern.test(file) ? packageNames : []
+    )
+  );
+
+  return [...new Set(packages)];
+}
+
+/**
  * Get all packages that have e2e tests
  * @returns {Promise<string[]>} Array of package names with e2e tests
  */
@@ -266,6 +293,7 @@ async function getAllPackagesWithTests() {
 module.exports = {
   getAffectedPackages,
   getChangedFiles,
+  getAdditionalAffectedPackages,
   shouldRunAllE2ETests,
   getAllPackagesWithE2ETests,
   getAllPackagesWithTests,
