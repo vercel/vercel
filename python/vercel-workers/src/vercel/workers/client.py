@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import os
 import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from functools import wraps
-from typing import Any, Protocol, TypedDict, overload
+from typing import Any, Protocol, TypedDict, cast, get_type_hints, overload
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import httpx
+from pydantic import TypeAdapter, ValidationError
 
 from . import callback
 from .asgi import ASGI, build_asgi_app
@@ -35,8 +36,9 @@ from .wsgi import (
 
 __all__ = [
     "MessageMetadata",
+    "Ack",
+    "RetryAfter",
     "WorkerJSONEncoder",
-    "WorkerTimeoutResult",
     "subscribe",
     "get_wsgi_app",
     "get_asgi_app",
@@ -70,14 +72,38 @@ class MessageMetadata(TypedDict, total=False):
     consumer: str
 
 
-class WorkerTimeoutResult(TypedDict):
-    """Result that instructs the queue to retry the message later."""
+class Ack(Exception):
+    """Directive that acknowledges a message without retrying it."""
 
-    timeoutSeconds: int
+    def __init__(self, reason: object | None = None) -> None:
+        self.reason: object | None = reason
+        super().__init__(str(reason) if reason is not None else "")
 
 
-class WorkerCallable(Protocol):
+class RetryAfter(Exception):
+    """Directive that retries a message after a delay."""
+
+    def __init__(self, delay: int | timedelta, reason: object | None = None) -> None:
+        if isinstance(delay, timedelta):
+            seconds = delay.total_seconds()
+        else:
+            seconds = float(delay)
+        if seconds < 0:
+            seconds = 0
+        self.timeout_seconds: int = int(seconds)
+        self.reason: object | None = reason
+        super().__init__(str(reason) if reason is not None else "")
+
+
+class PayloadWorkerCallable(Protocol):
+    def __call__(self, message: Any) -> Any | Awaitable[Any]: ...
+
+
+class MetadataWorkerCallable(Protocol):
     def __call__(self, message: Any, metadata: MessageMetadata) -> Any | Awaitable[Any]: ...
+
+
+type WorkerCallable = PayloadWorkerCallable | MetadataWorkerCallable
 
 
 class SendMessageResult(TypedDict):
@@ -89,11 +115,30 @@ class SendMessageResult(TypedDict):
     messageId: str | None
 
 
+class _PayloadValidationError(Exception):
+    """Raised when SDK payload validation rejects a queue message."""
+
+
+@dataclass
+class _InvocationPlan:
+    payload_adapter: TypeAdapter[Any] | None
+    include_metadata: bool
+
+    def prepare_payload(self, payload: Any) -> Any:
+        if self.payload_adapter is None:
+            return payload
+        try:
+            return self.payload_adapter.validate_python(payload)
+        except ValidationError as exc:
+            raise _PayloadValidationError(str(exc)) from exc
+
+
 @dataclass
 class _Subscription:
     func: WorkerCallable
     topic_filter: Callable[[str | None], bool] | None = None
     topic_desc: str | None = None
+    invocation: _InvocationPlan | None = None
 
     def matches(self, topic: str | None) -> bool:
         if self.topic_filter is not None:
@@ -103,6 +148,58 @@ class _Subscription:
 
 
 _subscriptions: list[_Subscription] = []
+
+
+def _is_untyped_payload_annotation(annotation: Any) -> bool:
+    return annotation is inspect.Signature.empty or annotation is Any
+
+
+def _build_invocation_plan(func: WorkerCallable) -> _InvocationPlan:
+    signature = inspect.signature(func)
+    positional_params = [
+        param
+        for param in signature.parameters.values()
+        if param.kind
+        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+    ]
+    if not positional_params:
+        raise TypeError("queue worker must accept at least one payload parameter")
+    if len(positional_params) > 2:
+        raise TypeError("queue worker must accept payload or payload and metadata")
+
+    try:
+        type_hints = get_type_hints(func)
+    except Exception:
+        type_hints = {}
+
+    payload_param = positional_params[0]
+    payload_annotation = type_hints.get(payload_param.name, payload_param.annotation)
+    payload_adapter = (
+        None
+        if _is_untyped_payload_annotation(payload_annotation)
+        else TypeAdapter(payload_annotation)
+    )
+
+    return _InvocationPlan(
+        payload_adapter=payload_adapter,
+        include_metadata=len(positional_params) >= 2,
+    )
+
+
+def _call_subscription(sub: _Subscription, message: Any, metadata: MessageMetadata) -> Any:
+    invocation = sub.invocation
+    if invocation is None:
+        invocation = _build_invocation_plan(sub.func)
+        sub.invocation = invocation
+
+    payload = invocation.prepare_payload(message)
+    if invocation.include_metadata:
+        return cast(MetadataWorkerCallable, sub.func)(payload, metadata)
+    return cast(PayloadWorkerCallable, sub.func)(payload)
+
+
+async def _await_result(result: Awaitable[Any]) -> Any:
+    return await result
 
 
 @overload
@@ -149,14 +246,15 @@ def subscribe(
 
     def decorator(func: WorkerCallable) -> WorkerCallable:
         _subscriptions.append(
-            _Subscription(func=func, topic_filter=topic_filter, topic_desc=topic_desc)
+            _Subscription(
+                func=func,
+                topic_filter=topic_filter,
+                topic_desc=topic_desc,
+                invocation=_build_invocation_plan(func),
+            )
         )
 
-        @wraps(func)
-        def wrapper(message: Any, metadata: MessageMetadata) -> Any:
-            return func(message, metadata)
-
-        return wrapper  # type: ignore[return-value]
+        return func
 
     if _func is not None:
         # Used as @subscribe without arguments
@@ -175,36 +273,68 @@ def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
     return [s for s in _subscriptions if s.matches(topic)]
 
 
+def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
+    if isinstance(result, RetryAfter):
+        return result.timeout_seconds
+    return current
+
+
 def _invoke_subscriptions(
     message: Any,
     metadata: MessageMetadata,
 ) -> int | None:
     """
-    Invoke all matching subscriptions and return an optional timeoutSeconds.
+    Invoke all matching subscriptions and return an optional retry delay.
 
-    If a worker returns a dict like {"timeoutSeconds": 300} then that value
-    will be propagated back to the queue service to delay the next attempt.
+    Only Ack and RetryAfter are interpreted as worker directives. Any other return
+    value is treated as successful completion.
     """
     topic = metadata.get("topic")
     timeout_seconds: int | None = None
 
     for sub in _select_subscriptions(topic):
         try:
-            result = sub.func(message, metadata)
+            result = _call_subscription(sub, message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-                result = asyncio.run(result)  # type: ignore[arg-type]
+                result = asyncio.run(_await_result(result))
+        except Ack:
+            return None
+        except RetryAfter as directive:
+            return directive.timeout_seconds
         except Exception:
             # Let the outer WSGI handler respond with 500.
             raise
 
-        if isinstance(result, dict) and "timeoutSeconds" in result:
-            try:
-                timeout_seconds = int(result["timeoutSeconds"])
-            except (TypeError, ValueError):
-                # Ignore invalid timeout values; continue with previous one if any.
-                pass
+        if isinstance(result, Ack):
+            return None
+        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
 
     return timeout_seconds
+
+
+def _delete_message_sync(
+    queue_name: str,
+    consumer_group: str,
+    message_id: str,
+    receipt_handle: str,
+    extender: callback.VisibilityExtender | None,
+) -> None:
+    if extender is not None:
+        extender.finalize(
+            lambda: callback.delete_message(
+                queue_name,
+                consumer_group,
+                message_id,
+                receipt_handle,
+            ),
+        )
+    else:
+        callback.delete_message(
+            queue_name,
+            consumer_group,
+            message_id,
+            receipt_handle,
+        )
 
 
 def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
@@ -326,7 +456,12 @@ def handle_queue_callback(
             extender.start()
 
         # Execute subscribers and ack/delay accordingly.
-        timeout_seconds = _invoke_subscriptions(payload, metadata)
+        try:
+            timeout_seconds = _invoke_subscriptions(payload, metadata)
+        except _PayloadValidationError as exc:
+            print("vercel.workers.handle_queue_callback payload validation error:", str(exc))
+            return json_response(500, {"error": "payload-validation"})
+
         if receipt_handle:
             if timeout_seconds is not None:
                 if extender is not None:
@@ -348,22 +483,13 @@ def handle_queue_callback(
                         int(timeout_seconds),
                     )
             else:
-                if extender is not None:
-                    extender.finalize(
-                        lambda: callback.delete_message(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            receipt_handle,
-                        ),
-                    )
-                else:
-                    callback.delete_message(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        receipt_handle,
-                    )
+                _delete_message_sync(
+                    queue_name,
+                    consumer_group,
+                    message_id,
+                    receipt_handle,
+                    extender,
+                )
 
         return json_response(200, {"ok": True})
     except ValueError as exc:
