@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.24.2
+
+### Patch Changes
+
+- 09d9000: Fix the frameworks demo URL public-access test to check the public `/_logs` route instead of looking up alias hosts through the deployments API.
+
 ## 3.24.1
 
 ### Patch Changes

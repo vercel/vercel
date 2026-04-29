@@ -42,6 +42,7 @@ class _FakeResponse:
 
 class _FakeHttpxClient:
     captured_bodies: list[bytes] = []
+    captured_headers: list[dict[str, str]] = []
 
     def __init__(self, *args, **kwargs):
         self.response = _FakeResponse()
@@ -60,8 +61,9 @@ class _FakeHttpxClient:
         url: str,  # noqa: ARG002
         *,
         content: bytes | None = None,
-        headers: dict | None = None,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
+        headers: dict | None = None,  # pyright: ignore[reportMissingTypeArgument]
     ) -> _FakeResponse:
+        _FakeHttpxClient.captured_headers.append(dict(headers or {}))
         if content is not None:
             _FakeHttpxClient.captured_bodies.append(content)
         return self.response
@@ -375,6 +377,7 @@ class TestWorkerJSONEncoder(unittest.TestCase):
 class TestSendWithJSONEncoder(unittest.TestCase):
     def setUp(self) -> None:
         _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
 
     def _send(
         self,
@@ -386,7 +389,7 @@ class TestSendWithJSONEncoder(unittest.TestCase):
             patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
             patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
         ):
-            queue_client.send("q", payload, json_encoder=json_encoder)
+            queue_client.send("q", payload, deployment_id=None, json_encoder=json_encoder)
 
         return _FakeHttpxClient.captured_bodies[-1]
 
@@ -417,3 +420,91 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         body = self._send({"tags": {3, 1, 2}}, json_encoder=_CustomEncoder)
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
+
+
+class TestDeploymentPinning(unittest.TestCase):
+    def setUp(self) -> None:
+        _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
+
+    def _send(self, **kwargs: Any) -> dict[str, str]:
+        with (
+            patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, **kwargs)
+        return _FakeHttpxClient.captured_headers[-1]
+
+    def test_send_auto_pins_to_env_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True})
+
+        self.assertEqual(_FakeHttpxClient.captured_headers[-1]["Vqs-Deployment-Id"], "dpl_env")
+
+    def test_send_none_explicitly_unpins_even_with_env_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, deployment_id=None)
+
+        self.assertNotIn("Vqs-Deployment-Id", _FakeHttpxClient.captured_headers[-1])
+
+    def test_send_explicit_deployment_id_overrides_env(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, deployment_id="dpl_explicit")
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_headers[-1]["Vqs-Deployment-Id"],
+            "dpl_explicit",
+        )
+
+    def test_send_auto_requires_deployment_id_outside_dev(self) -> None:
+        with patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True):
+            with self.assertRaises(RuntimeError) as err:
+                queue_client.send("q", {"ok": True})
+
+        self.assertIn("No deployment ID available", str(err.exception))
+
+    def test_send_dev_token_omits_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "vc-dev-token",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True})
+
+        self.assertNotIn("Vqs-Deployment-Id", _FakeHttpxClient.captured_headers[-1])
