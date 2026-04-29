@@ -39,7 +39,10 @@ __all__ = [
     "Ack",
     "RetryAfter",
     "WorkerJSONEncoder",
+    "QueueClient",
+    "AsyncQueueClient",
     "subscribe",
+    "get_vercel_queue_subscriptions",
     "get_wsgi_app",
     "get_asgi_app",
     "has_subscriptions",
@@ -202,6 +205,71 @@ async def _await_result(result: Awaitable[Any]) -> Any:
     return await result
 
 
+def _register_subscription(
+    subscriptions: list[_Subscription],
+    func: WorkerCallable,
+    *,
+    topic_filter: Callable[[str | None], bool] | None,
+    topic_desc: str | None,
+) -> WorkerCallable:
+    subscriptions.append(
+        _Subscription(
+            func=func,
+            topic_filter=topic_filter,
+            topic_desc=topic_desc,
+            invocation=_build_invocation_plan(func),
+        )
+    )
+    return func
+
+
+def _build_subscribe_decorator(
+    subscriptions: list[_Subscription],
+    topic: str | tuple[str, Callable[[str | None], bool]] | None,
+) -> Callable[[WorkerCallable], WorkerCallable]:
+    topic_filter: Callable[[str | None], bool] | None = None
+    topic_desc: str | None = None
+    if isinstance(topic, str):
+
+        def exact_topic_filter(t: str | None) -> bool:
+            return t == topic
+
+        topic_filter = exact_topic_filter
+        topic_desc = topic
+    elif isinstance(topic, tuple):
+        topic_desc, topic_filter = topic
+
+    def decorator(func: WorkerCallable) -> WorkerCallable:
+        return _register_subscription(
+            subscriptions,
+            func,
+            topic_filter=topic_filter,
+            topic_desc=topic_desc,
+        )
+
+    return decorator
+
+
+def _subscription_handler_name(func: WorkerCallable) -> str:
+    module = getattr(func, "__module__", "")
+    qualname = getattr(func, "__qualname__", getattr(func, "__name__", "worker"))
+    return f"{module}:{qualname}" if module else str(qualname)
+
+
+def _serialize_subscriptions(subscriptions: Iterable[_Subscription]) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for sub in subscriptions:
+        if sub.topic_desc is None:
+            continue
+        entries.append(
+            {
+                "topic": sub.topic_desc,
+                "handler": _subscription_handler_name(sub.func),
+            }
+        )
+    return entries
+
+
 @overload
 def subscribe(_func: WorkerCallable) -> WorkerCallable: ...
 
@@ -232,36 +300,12 @@ def subscribe(
         def user_worker(message, metadata): ...
     """
 
-    topic_filter: Callable[[str | None], bool] | None = None
-    topic_desc: str | None = None
-    if isinstance(topic, str):
-
-        def exact_topic_filter(t: str | None) -> bool:
-            return t == topic
-
-        topic_filter = exact_topic_filter
-        topic_desc = topic
-    elif isinstance(topic, tuple):
-        topic_desc, topic_filter = topic
-
-    def decorator(func: WorkerCallable) -> WorkerCallable:
-        _subscriptions.append(
-            _Subscription(
-                func=func,
-                topic_filter=topic_filter,
-                topic_desc=topic_desc,
-                invocation=_build_invocation_plan(func),
-            )
-        )
-
-        return func
-
     if _func is not None:
         # Used as @subscribe without arguments
-        return decorator(_func)
+        return _build_subscribe_decorator(_subscriptions, topic)(_func)
 
     # Used as @subscribe(...)
-    return decorator
+    return _build_subscribe_decorator(_subscriptions, topic)
 
 
 def has_subscriptions() -> bool:
@@ -269,8 +313,17 @@ def has_subscriptions() -> bool:
     return bool(_subscriptions)
 
 
-def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
-    return [s for s in _subscriptions if s.matches(topic)]
+def get_vercel_queue_subscriptions() -> list[dict[str, str]]:
+    """Return registered queue subscriptions for build-time service detection."""
+
+    return _serialize_subscriptions(_subscriptions)
+
+
+def _select_subscriptions(
+    topic: str | None,
+    subscriptions: Iterable[_Subscription] = _subscriptions,
+) -> Iterable[_Subscription]:
+    return [s for s in subscriptions if s.matches(topic)]
 
 
 def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
@@ -282,6 +335,7 @@ def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
 def _invoke_subscriptions(
     message: Any,
     metadata: MessageMetadata,
+    subscriptions: Iterable[_Subscription] = _subscriptions,
 ) -> int | None:
     """
     Invoke all matching subscriptions and return an optional retry delay.
@@ -292,7 +346,7 @@ def _invoke_subscriptions(
     topic = metadata.get("topic")
     timeout_seconds: int | None = None
 
-    for sub in _select_subscriptions(topic):
+    for sub in _select_subscriptions(topic, subscriptions):
         try:
             result = _call_subscription(sub, message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
@@ -337,7 +391,11 @@ def _delete_message_sync(
         )
 
 
-def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
+def _send_in_process(
+    queue_name: str,
+    payload: Any,
+    subscriptions: list[_Subscription] = _subscriptions,
+) -> SendMessageResult:
     """
     Development-only, in-process send implementation.
 
@@ -348,7 +406,7 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
     This mirrors the TypeScript dev experience where callbacks are triggered
     locally, but without any persistence, visibility timeouts, or retries.
     """
-    if not _subscriptions:
+    if not subscriptions:
         raise RuntimeError(
             "No worker subscriptions registered. Import the module containing your "
             "@subscribe handlers before calling send() in in-process dev mode.",
@@ -357,10 +415,10 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
     # In dev mode, surface a clear error when there are worker functions but none of
     # them are subscribed to the requested topic. This helps catch mismatches between
     # the queue name used in send() and the topics configured via @subscribe.
-    matching_for_topic = [s for s in _subscriptions if s.matches(queue_name)]
+    matching_for_topic = [s for s in subscriptions if s.matches(queue_name)]
     if not matching_for_topic:
         available_topics = sorted(
-            {s.topic_desc for s in _subscriptions if s.topic_desc is not None},
+            {s.topic_desc for s in subscriptions if s.topic_desc is not None},
         )
         raise RuntimeError(
             "No worker subscriptions found for topic "
@@ -379,7 +437,7 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
 
     # In dev mode we deliver to all handlers that match the topic (or have no
     # explicit topic), similar to the TypeScript dev.ts behaviour.
-    _invoke_subscriptions(payload, metadata)
+    _invoke_subscriptions(payload, metadata, subscriptions)
 
     return {"messageId": message_id}
 
@@ -628,6 +686,148 @@ async def get_queue_token_async(explicit_token: str | None = None) -> str:
         "or ensure a Vercel OIDC token is available in this environment."
     )
     raise TokenResolutionError(msg)
+
+
+class _BaseQueueClient:
+    def __init__(
+        self,
+        *,
+        region: str | None = None,
+        token: str | None = None,
+        base_url: str | None = None,
+        base_path: str | None = None,
+        deployment_id: str | None = None,
+        headers: dict[str, str] | None = None,
+        content_type: str = "application/json",
+        timeout: float | None = 10.0,
+        json_encoder: type[json.JSONEncoder] | None = None,
+    ) -> None:
+        self.region: str | None = region
+        self.token: str | None = token
+        self.base_url: str | None = base_url
+        self.base_path: str | None = base_path
+        self.deployment_id: str | None = deployment_id
+        self.headers: dict[str, str] | None = dict(headers) if headers is not None else None
+        self.content_type: str = content_type
+        self.timeout: float | None = timeout
+        self.json_encoder: type[json.JSONEncoder] | None = json_encoder
+        self._subscriptions: list[_Subscription] = []
+
+    def _resolved_base_url(self) -> str | None:
+        if self.base_url is not None:
+            return self.base_url
+        # In `vercel dev`, this env var points at the local queue proxy. Let it win
+        # over region so client instances still dispatch to local worker services.
+        if os.environ.get("VERCEL_QUEUE_BASE_URL"):
+            return None
+        if self.region is not None:
+            return f"https://{self.region}.vercel-queue.com"
+        return None
+
+    def _merged_headers(self, headers: dict[str, str] | None) -> dict[str, str] | None:
+        if self.headers is None:
+            return headers
+        if headers is None:
+            return dict(self.headers)
+        return self.headers | headers
+
+    @overload
+    def subscribe(self, _func: WorkerCallable) -> WorkerCallable: ...
+
+    @overload
+    def subscribe(
+        self,
+        *,
+        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
+    ) -> Callable[[WorkerCallable], WorkerCallable]: ...
+
+    def subscribe(
+        self,
+        _func: WorkerCallable | None = None,
+        *,
+        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
+    ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
+        """Register a queue worker function with this client's registry."""
+
+        decorator = _build_subscribe_decorator(self._subscriptions, topic)
+        if _func is not None:
+            return decorator(_func)
+        return decorator
+
+    def has_subscriptions(self) -> bool:
+        """Return True if this client has registered queue workers."""
+
+        return bool(self._subscriptions)
+
+    def get_vercel_queue_subscriptions(self) -> list[dict[str, str]]:
+        """Return this client's subscriptions for build-time service detection."""
+
+        return _serialize_subscriptions(self._subscriptions)
+
+
+class QueueClient(_BaseQueueClient):
+    """Configured synchronous client for publishing Vercel Queue messages."""
+
+    def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        if os.environ.get("VERCEL_WORKERS_IN_PROCESS") in {"1", "true", "TRUE", "yes", "YES"}:
+            return _send_in_process(queue_name, payload, self._subscriptions)
+
+        return send(
+            queue_name,
+            payload,
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=deployment_id or self.deployment_id,
+            token=self.token,
+            base_url=self._resolved_base_url(),
+            base_path=self.base_path,
+            content_type=self.content_type,
+            timeout=self.timeout,
+            headers=self._merged_headers(headers),
+            json_encoder=self.json_encoder,
+        )
+
+
+class AsyncQueueClient(_BaseQueueClient):
+    """Configured asynchronous client for publishing Vercel Queue messages."""
+
+    async def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        return await send_async(
+            queue_name,
+            payload,
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=deployment_id or self.deployment_id,
+            token=self.token,
+            base_url=self._resolved_base_url(),
+            base_path=self.base_path,
+            content_type=self.content_type,
+            timeout=self.timeout,
+            headers=self._merged_headers(headers),
+            json_encoder=self.json_encoder,
+        )
 
 
 def send(

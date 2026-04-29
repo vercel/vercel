@@ -42,6 +42,8 @@ class _FakeResponse:
 
 class _FakeHttpxClient:
     captured_bodies: list[bytes] = []
+    captured_headers: list[dict[str, str]] = []
+    captured_urls: list[str] = []
 
     def __init__(self, *args, **kwargs):
         self.response = _FakeResponse()
@@ -57,13 +59,43 @@ class _FakeHttpxClient:
 
     def post(
         self,
-        url: str,  # noqa: ARG002
+        url: str,
         *,
         content: bytes | None = None,
-        headers: dict | None = None,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
+        headers: dict | None = None,  # pyright: ignore[reportMissingTypeArgument]
     ) -> _FakeResponse:
+        _FakeHttpxClient.captured_urls.append(url)
+        _FakeHttpxClient.captured_headers.append(dict(headers or {}))
         if content is not None:
             _FakeHttpxClient.captured_bodies.append(content)
+        return self.response
+
+
+class _FakeAsyncHttpxClient:
+    captured_bodies: list[bytes] = []
+    captured_headers: list[dict[str, str]] = []
+    captured_urls: list[str] = []
+
+    def __init__(self, *args, **kwargs):
+        self.response = _FakeResponse()
+
+    async def __aenter__(self) -> _FakeAsyncHttpxClient:
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
+        return False
+
+    async def post(
+        self,
+        url: str,
+        *,
+        content: bytes | None = None,
+        headers: dict | None = None,  # pyright: ignore[reportMissingTypeArgument]
+    ) -> _FakeResponse:
+        _FakeAsyncHttpxClient.captured_urls.append(url)
+        _FakeAsyncHttpxClient.captured_headers.append(dict(headers or {}))
+        if content is not None:
+            _FakeAsyncHttpxClient.captured_bodies.append(content)
         return self.response
 
 
@@ -375,6 +407,8 @@ class TestWorkerJSONEncoder(unittest.TestCase):
 class TestSendWithJSONEncoder(unittest.TestCase):
     def setUp(self) -> None:
         _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
+        _FakeHttpxClient.captured_urls.clear()
 
     def _send(
         self,
@@ -417,3 +451,131 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         body = self._send({"tags": {3, 1, 2}}, json_encoder=_CustomEncoder)
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
+
+
+class TestQueueClients(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+        _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
+        _FakeHttpxClient.captured_urls.clear()
+        _FakeAsyncHttpxClient.captured_bodies.clear()
+        _FakeAsyncHttpxClient.captured_headers.clear()
+        _FakeAsyncHttpxClient.captured_urls.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_queue_client_uses_constructor_configuration(self) -> None:
+        client = queue_client.QueueClient(
+            region="sfo1",
+            token="tok",
+            deployment_id="dpl_123",
+            headers={"X-Client": "client"},
+        )
+
+        with (
+            patch.dict(queue_client.os.environ, {}, clear=True),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            client.send(
+                "orders",
+                {"ok": True},
+                idempotency_key="key-1",
+                headers={"X-Call": "call"},
+            )
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls[-1],
+            "https://sfo1.vercel-queue.com/api/v3/topic/orders",
+        )
+        self.assertEqual(json.loads(_FakeHttpxClient.captured_bodies[-1]), {"ok": True})
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Authorization"], "Bearer tok")
+        self.assertEqual(headers["Vqs-Deployment-Id"], "dpl_123")
+        self.assertEqual(headers["Vqs-Idempotency-Key"], "key-1")
+        self.assertEqual(headers["X-Client"], "client")
+        self.assertEqual(headers["X-Call"], "call")
+
+    def test_queue_client_preserves_dev_proxy_base_url(self) -> None:
+        client = queue_client.QueueClient(region="sfo1", token="tok")
+
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {"VERCEL_QUEUE_BASE_URL": "http://localhost:3000/_svc/_queues"},
+                clear=True,
+            ),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            client.send("orders", {"ok": True})
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls[-1],
+            "http://localhost:3000/_svc/_queues/api/v3/topic/orders",
+        )
+
+    def test_async_queue_client_send_uses_async_transport(self) -> None:
+        client = queue_client.AsyncQueueClient(
+            region="iad1",
+            token="tok",
+            headers={"X-Client": "async"},
+        )
+
+        async def run() -> None:
+            with (
+                patch.dict(queue_client.os.environ, {}, clear=True),
+                patch.object(queue_client.httpx, "AsyncClient", _FakeAsyncHttpxClient),
+            ):
+                await client.send("orders", {"ok": True}, delay_seconds=5)
+
+        asyncio.run(run())
+
+        self.assertEqual(
+            _FakeAsyncHttpxClient.captured_urls[-1],
+            "https://iad1.vercel-queue.com/api/v3/topic/orders",
+        )
+        self.assertEqual(json.loads(_FakeAsyncHttpxClient.captured_bodies[-1]), {"ok": True})
+        headers = _FakeAsyncHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Authorization"], "Bearer tok")
+        self.assertEqual(headers["Vqs-Delay-Seconds"], "5")
+        self.assertEqual(headers["X-Client"], "async")
+
+    def test_queue_client_subscribe_registers_worker(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        self.assertFalse(queue_client.has_subscriptions())
+        self.assertTrue(client.has_subscriptions())
+        self.assertEqual(
+            client.get_vercel_queue_subscriptions(),
+            [{"topic": "orders", "handler": f"{__name__}:{handle.__qualname__}"}],
+        )
+
+        with patch.dict(
+            queue_client.os.environ,
+            {"VERCEL_WORKERS_IN_PROCESS": "1"},
+            clear=False,
+        ):
+            client.send("orders", {"ok": True})
+
+        self.assertEqual(calls, [{"ok": True}])
+
+    def test_async_queue_client_subscribe_registers_worker(self) -> None:
+        client = queue_client.AsyncQueueClient(region="iad1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        async def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        self.assertFalse(queue_client.has_subscriptions())
+        self.assertTrue(client.has_subscriptions())
+        self.assertEqual(
+            client.get_vercel_queue_subscriptions(),
+            [{"topic": "orders", "handler": f"{__name__}:{handle.__qualname__}"}],
+        )
