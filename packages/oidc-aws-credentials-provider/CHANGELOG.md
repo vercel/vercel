@@ -1,5 +1,14 @@
 # @vercel/oidc
 
+## 3.0.9
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [56c9f89]
+  - @vercel/oidc@3.3.0
+
 ## 3.0.8
 
 ### Patch Changes
