@@ -73,7 +73,9 @@ class TestMaybeBootstrapWorkerServiceApp(unittest.TestCase):
             self.assertRaisesRegex(
                 RuntimeError,
                 "Unable to bootstrap worker service because "
-                '"vercel-workers" is missing',
+                + '"vercel-workers" is missing',
             ),
         ):
-            vrw.maybe_bootstrap_worker_service_app(types.SimpleNamespace())
+            _ = vrw.maybe_bootstrap_worker_service_app(
+                types.SimpleNamespace()
+            )
