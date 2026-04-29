@@ -48,7 +48,9 @@ async function getAffectedPackages(baseSha) {
 
     // Get changed files for additional e2e logic
     const changedFiles = await getChangedFiles(baseSha);
-    const shouldRunAllE2E = shouldRunAllE2ETests(changedFiles);
+    const forceRunAllE2E = process.env.RUN_ALL_E2E_TESTS === 'true';
+    const shouldRunAllE2E =
+      forceRunAllE2E || shouldRunAllE2ETests(changedFiles);
 
     // Filter packages that have test tasks (similar to API repo logic)
     const affectedPackages = data.data.affectedPackages.items
@@ -60,7 +62,9 @@ async function getAffectedPackages(baseSha) {
 
     if (shouldRunAllE2E) {
       console.error(
-        'config or workflow changes detected - including all e2e test packages'
+        forceRunAllE2E
+          ? 'run-e2e-tests label detected - including all e2e test packages'
+          : 'config or workflow changes detected - including all e2e test packages'
       );
       // Get all packages with e2e tests
       const allPackagesWithE2E = await getAllPackagesWithE2ETests();

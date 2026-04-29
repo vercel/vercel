@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       statuses: write
+      issues: read
+      pull-requests: read
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ github.event.client_payload.url }}
@@ -66,8 +68,11 @@ jobs:
           PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" --jq '.[0]')
           PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
           BASE_SHA=$(echo "$PR_JSON" | jq -r '.base.sha')
+          LABELS=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/labels" --jq '.[].name')
+          RUN_E2E_TESTS=$(echo "$LABELS" | grep -Fxq "run-e2e-tests" && echo "true" || echo "false")
           echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "runE2ETests=$RUN_E2E_TESTS" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -97,6 +102,8 @@ jobs:
 
           if echo "$AFFECTED_OUTPUT" | grep -q "config or workflow changes detected"; then
             STRATEGY="all-e2e"
+          elif echo "$AFFECTED_OUTPUT" | grep -q "run-e2e-tests label detected"; then
+            STRATEGY="all-e2e"
           elif echo "$AFFECTED_OUTPUT" | grep -q "test-all result detected"; then
             STRATEGY="test-all"
           elif [ "$PACKAGE_COUNT" -gt "0" ]; then
@@ -121,6 +128,8 @@ jobs:
           echo "count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
           echo "total=$TOTAL_COUNT" >> $GITHUB_OUTPUT
           echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
+        env:
+          RUN_ALL_E2E_TESTS: ${{ steps.pr-context.outputs.runE2ETests }}
       - id: set-tests
         run: |
           TESTS_ARRAY=$(node utils/chunk-tests.js)
@@ -130,6 +139,7 @@ jobs:
         env:
           TURBO_BASE_SHA: ${{ steps.pr-context.outputs.baseSha }}
           TEST_TYPE: e2e
+          RUN_ALL_E2E_TESTS: ${{ steps.pr-context.outputs.runE2ETests }}
 
   test:
     timeout-minutes: 120

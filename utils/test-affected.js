@@ -55,7 +55,7 @@ async function main() {
     } else if (result.result === 'test-none') {
       console.log('No packages will be tested');
       console.error('Found 0 affected packages');
-    } else {
+    } else if (result.result === 'test-affected') {
       console.log('Affected packages that would be tested:');
       result.packages.forEach(pkg => console.log(`  - ${pkg}`));
       console.error(`Found ${result.packages.length} affected packages`);
@@ -67,7 +67,7 @@ async function main() {
       console.log('  (no filters - test all packages)');
     } else if (result.result === 'test-none') {
       console.log('  (no tests will run)');
-    } else {
+    } else if (result.result === 'test-affected') {
       result.packages.forEach(pkg => console.log(`  --filter=${pkg}...`));
     }
 
@@ -80,9 +80,14 @@ async function main() {
     } = require('./get-affected-packages');
     try {
       const changedFiles = await getChangedFiles(baseSha);
-      const runAllE2E = shouldRunAllE2ETests(changedFiles);
+      const forceRunAllE2E = process.env.RUN_ALL_E2E_TESTS === 'true';
+      const runAllE2E = forceRunAllE2E || shouldRunAllE2ETests(changedFiles);
 
-      if (runAllE2E) {
+      if (forceRunAllE2E) {
+        console.log(
+          '  ⚠️  run-e2e-tests label detected - ALL e2e tests will run'
+        );
+      } else if (runAllE2E) {
         console.log(
           '  ⚠️  Infrastructure changes detected - ALL e2e tests will run'
         );
