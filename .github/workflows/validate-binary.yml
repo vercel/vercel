@@ -27,9 +27,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  linux-x64-dev-smoke:
-    name: linux-x64 dev smoke
-    runs-on: ubuntu-latest
+  build:
+    name: ${{ matrix.asset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: bun-linux-x64
+            asset: vercel-linux-x64
+            ext: ''
+          - runner: windows-latest
+            target: bun-windows-x64
+            asset: vercel-windows-x64
+            ext: '.exe'
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,7 +86,7 @@ jobs:
       - name: Build binary
         working-directory: packages/cli
         env:
-          BUN_TARGET: bun-linux-x64
+          BUN_TARGET: ${{ matrix.target }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: node scripts/build-binary.mjs
 
@@ -83,13 +95,14 @@ jobs:
         working-directory: packages/cli
         run: |
           set -euo pipefail
-          bin="dist-bin/vercel-linux-x64"
-          chmod +x "$bin"
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          chmod +x "$bin" || true
           out=$(./"$bin" --version)
           echo "$out"
           test -n "$out"
 
       - name: Integration smoke with vc dev
+        if: ${{ matrix.target == 'bun-linux-x64' }}
         shell: bash
         working-directory: packages/cli
         run: |
@@ -145,7 +158,7 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vercel-linux-x64
-          path: packages/cli/dist-bin/vercel-linux-x64
+          name: ${{ matrix.asset }}${{ matrix.ext }}
+          path: packages/cli/dist-bin/${{ matrix.asset }}${{ matrix.ext }}
           retention-days: 3
           if-no-files-found: error
