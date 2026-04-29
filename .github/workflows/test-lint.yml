@@ -119,7 +119,7 @@ jobs:
       - name: Run zizmor
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: zizmor --collect=workflows --color=never .github/workflows/*.yml .github/workflows/*.yaml
+        run: zizmor --collect=workflows --color=never .github/workflows/
 
   summary:
     name: Summary (lint)
