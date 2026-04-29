@@ -16,6 +16,7 @@ export interface FileBase {
   type: string;
   mode: number;
   contentType?: string;
+  contentHash?: string;
   toStream: () => NodeJS.ReadableStream;
   toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
 }
