@@ -189,7 +189,7 @@ def _resolve_deployment_id(deployment_id: _DeploymentIdOption) -> str | None:
         "This usually means the code is running outside a Vercel deployment "
         "(for example during build or in a non-Vercel environment).\n\n"
         "To fix this, provide an explicit deployment_id when sending messages, "
-        'or explicitly opt out of deployment pinning with deployment_id=None.'
+        "or explicitly opt out of deployment pinning with deployment_id=None."
     )
 
 
