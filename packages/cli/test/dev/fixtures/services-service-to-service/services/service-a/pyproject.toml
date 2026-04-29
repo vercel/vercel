@@ -1,5 +1,5 @@
 [project]
-name = "services-zc-service-to-service-services-a"
+name = "services-service-to-service-services-a"
 version = "0.0.0"
 requires-python = ">=3.12"
 dependencies = [

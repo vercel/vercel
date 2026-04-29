@@ -1,0 +1,24 @@
+{
+  "experimentalServices": {
+    "service-next": {
+      "framework": "vite",
+      "entrypoint": "apps/web",
+      "mount": "/",
+      "env": {
+        "VITE_SERVICE_A_URL": {"ref": {"service": "service-a"}},
+        "VITE_SERVICE_B_URL": {"ref": {"service": "service-b"}}
+      }
+    },
+    "service-a": {
+      "framework": "fastapi",
+      "entrypoint": "service-a",
+      "env": {
+        "SERVICE_B_URL": {"ref": {"service": "service-b"}}
+      }
+    },
+    "service-b": {
+      "framework": "fastapi",
+      "entrypoint": "service-b"
+    }
+  }
+}

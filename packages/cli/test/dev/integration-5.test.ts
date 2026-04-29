@@ -642,6 +642,66 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
       await dev.kill();
     }
   });
+
+  test('[vercel dev] explicit config: service-to-service communication', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Service B responds independently
+      const serviceBRes = await nodeFetch(
+        `http://localhost:${port}/_/service-b/`
+      );
+      expect(serviceBRes.status).toBe(200);
+      const serviceBJson = await serviceBRes.json();
+      expect(serviceBJson).toHaveProperty('service', 'service-b');
+      expect(serviceBJson).toHaveProperty('message', 'Hello from service-b');
+
+      // Service A responds independently
+      const serviceARes = await nodeFetch(
+        `http://localhost:${port}/_/service-a/`
+      );
+      expect(serviceARes.status).toBe(200);
+      const serviceAJson = await serviceARes.json();
+      expect(serviceAJson).toHaveProperty('service', 'service-a');
+
+      // Service A calls Service B (service-to-service communication)
+      const callRes = await nodeFetch(
+        `http://localhost:${port}/_/service-a/call-service-b`
+      );
+      expect(callRes.status).toBe(200);
+      const callJson = await callRes.json();
+      expect(callJson).toHaveProperty('service', 'service-a');
+      expect(callJson).toHaveProperty('from_service_b');
+      expect(callJson.from_service_b).toHaveProperty('service', 'service-b');
+      expect(callJson.from_service_b).toHaveProperty(
+        'message',
+        'Hello from service-b'
+      );
+
+      // Frontend loads and received service URL env vars
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      expect(frontendRes.status).toBe(200);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain('<h1>Service Dashboard</h1>');
+      expect(frontendHtml).toContain('/_/service-a');
+      expect(frontendHtml).toContain('/_/service-b');
+    } finally {
+      await dev.kill();
+    }
+  });
 });
 
 describe('[vercel dev] Multi-service auto-detection', () => {
@@ -827,66 +887,6 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       expect(frontendHtml).toContain(
         '<h1>Frontend in apps/web/ (monorepo)</h1>'
       );
-    } finally {
-      await dev.kill();
-    }
-  });
-
-  test('[vercel dev] auto-detect: service-to-service communication', async () => {
-    const dir = fixture('services-zc-service-to-service');
-    const { dev, port, readyResolver } = await testFixture(
-      dir,
-      {
-        skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
-      },
-      ['--local']
-    );
-
-    try {
-      await readyResolver;
-
-      // Service B responds independently
-      const serviceBRes = await nodeFetch(
-        `http://localhost:${port}/_/service-b/`
-      );
-      expect(serviceBRes.status).toBe(200);
-      const serviceBJson = await serviceBRes.json();
-      expect(serviceBJson).toHaveProperty('service', 'service-b');
-      expect(serviceBJson).toHaveProperty('message', 'Hello from service-b');
-
-      // Service A responds independently
-      const serviceARes = await nodeFetch(
-        `http://localhost:${port}/_/service-a/`
-      );
-      expect(serviceARes.status).toBe(200);
-      const serviceAJson = await serviceARes.json();
-      expect(serviceAJson).toHaveProperty('service', 'service-a');
-
-      // Service A calls Service B (service-to-service communication)
-      const callRes = await nodeFetch(
-        `http://localhost:${port}/_/service-a/call-service-b`
-      );
-      expect(callRes.status).toBe(200);
-      const callJson = await callRes.json();
-      expect(callJson).toHaveProperty('service', 'service-a');
-      expect(callJson).toHaveProperty('from_service_b');
-      expect(callJson.from_service_b).toHaveProperty('service', 'service-b');
-      expect(callJson.from_service_b).toHaveProperty(
-        'message',
-        'Hello from service-b'
-      );
-
-      // Frontend loads and received service URL env vars
-      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
-      expect(frontendRes.status).toBe(200);
-      const frontendHtml = await frontendRes.text();
-      expect(frontendHtml).toContain('<h1>Service Dashboard</h1>');
-      expect(frontendHtml).toContain('/_/service-a');
-      expect(frontendHtml).toContain('/_/service-b');
     } finally {
       await dev.kill();
     }

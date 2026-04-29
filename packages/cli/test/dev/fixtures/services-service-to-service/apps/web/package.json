@@ -1,5 +1,5 @@
 {
-  "name": "services-zc-service-to-service-web",
+  "name": "services-service-to-service-web",
   "private": true,
   "scripts": {
     "dev": "vite",

@@ -696,7 +696,7 @@ wheels = [
 ]
 
 [[package]]
-name = "services-zc-service-to-service-services-b"
+name = "services-service-to-service-services-b"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
