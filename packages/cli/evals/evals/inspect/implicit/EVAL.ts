@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -14,7 +14,7 @@ function getShellCommands(): string[] {
 test('agent created a deployment before inspecting it', () => {
   const commands = getShellCommands();
   const deployCommands = commands.filter(command =>
-    /\b(vercel|vc)(\s+deploy\b|\s+(--yes|-y)(\s|$))/.test(command)
+    /\b(vercel|vc)\s+deploy\b/.test(command)
   );
   const inspectCommands = commands.filter(command =>
     /\b(vercel|vc)\s+inspect\b/.test(command)
@@ -22,4 +22,23 @@ test('agent created a deployment before inspecting it', () => {
 
   expect(deployCommands.length).toBeGreaterThan(0);
   expect(inspectCommands.length).toBeGreaterThan(0);
+});
+
+test('agent saved deployment details and wrote an answer', () => {
+  expect(existsSync('inspect-deployment-url.txt')).toBe(true);
+  expect(existsSync('inspect-output.txt')).toBe(true);
+  expect(existsSync('inspect-answer.txt')).toBe(true);
+
+  const deployment = readFileSync('inspect-deployment-url.txt', 'utf-8').trim();
+  const output = readFileSync('inspect-output.txt', 'utf-8');
+  const answer = readFileSync('inspect-answer.txt', 'utf-8');
+
+  expect(deployment.length).toBeGreaterThan(0);
+  expect(output.trim().length).toBeGreaterThan(0);
+  expect(/deployment|inspect|ready|building|error|url/i.test(output)).toBe(
+    true
+  );
+  expect(/status|ready|building|error|deployment|details/i.test(answer)).toBe(
+    true
+  );
 });

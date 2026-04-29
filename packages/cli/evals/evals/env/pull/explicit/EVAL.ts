@@ -28,20 +28,22 @@ test('agent used vercel env pull', () => {
     /\b(vercel|vc)\s+env\s+pull\b/.test(command)
   );
   expect(envPullCommands.length).toBeGreaterThan(0);
+  expect(envPullCommands.some(command => command.includes('.env.local'))).toBe(
+    true
+  );
+  expect(
+    envPullCommands.some(
+      command => command.includes('--yes') || /\s-y(\s|$)/.test(command)
+    )
+  ).toBe(true);
 });
 
 test('an env file was created', () => {
-  // Common filenames from env pull (default .env.local or user-specified)
-  const candidates = ['.env.local', '.env', '.env.development'];
-  const found = candidates.some(f => existsSync(f));
-  expect(found).toBe(true);
+  expect(existsSync('.env.local')).toBe(true);
 });
 
 test('pulled env file contains at least one env var', () => {
-  const candidates = ['.env.local', '.env', '.env.development'];
-  const path = candidates.find(f => existsSync(f));
-  expect(path).toBeDefined();
-  const content = readFileSync(path!, 'utf-8');
+  const content = readFileSync('.env.local', 'utf-8');
   // At least one line that looks like KEY=value (optional value)
   const hasKeyValue = content
     .split('\n')

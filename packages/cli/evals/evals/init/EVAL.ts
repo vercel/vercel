@@ -23,6 +23,7 @@ test('agent used vercel init', () => {
   );
 
   expect(initCommands.length).toBeGreaterThan(0);
+  expect(initCommands.some(command => /\bproject\b/.test(command))).toBe(true);
 });
 
 test('initialized project is a Next.js project and summary was written', () => {

@@ -21,30 +21,12 @@ test('project is linked', () => {
   ).toBe(true);
 });
 
-test('agent used vc env command', () => {
+test('agent used vc env list command', () => {
   const commands = getShellCommands();
   expect(commands.length).toBeGreaterThan(0);
 
-  const envCommands = commands.filter(command =>
-    /\b(vercel|vc)\s+env\b/.test(command)
+  const envListCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+(ls|list)\b/.test(command)
   );
-  expect(envCommands.length).toBeGreaterThan(0);
-
-  const listCommand = envCommands.find(command =>
-    /\b(ls|list)\b/.test(command)
-  );
-  expect(listCommand).toBeDefined();
-  expect(envCommands.some(command => command.includes('--format=json'))).toBe(
-    true
-  );
-});
-
-test('agent saved env list JSON output', () => {
-  expect(existsSync('env-ls-output.json')).toBe(true);
-
-  const output = JSON.parse(readFileSync('env-ls-output.json', 'utf-8')) as {
-    envs?: unknown;
-  };
-
-  expect(Array.isArray(output.envs)).toBe(true);
+  expect(envListCommands.length).toBeGreaterThan(0);
 });

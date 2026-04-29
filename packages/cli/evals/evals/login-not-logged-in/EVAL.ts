@@ -33,7 +33,12 @@ test('agent checked unauthenticated and authenticated CLI behavior', () => {
     )
   ).toBe(true);
   expect(
-    whoamiCommands.some(command => command.includes('--format=json'))
+    whoamiCommands.some(
+      command =>
+        command.includes('--format=json') ||
+        /--format\s+json\b/.test(command) ||
+        command.includes('--json')
+    )
   ).toBe(true);
 });
 

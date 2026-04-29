@@ -24,7 +24,12 @@ test('agent used CLI to check authenticated user', () => {
   );
   expect(whoamiCommands.length).toBeGreaterThan(0);
   expect(
-    whoamiCommands.some(command => command.includes('--format=json'))
+    whoamiCommands.some(
+      command =>
+        command.includes('--format=json') ||
+        /--format\s+json\b/.test(command) ||
+        command.includes('--json')
+    )
   ).toBe(true);
 });
 

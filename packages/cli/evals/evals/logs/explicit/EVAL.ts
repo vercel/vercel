@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -33,8 +33,17 @@ test('agent used vercel logs with a bounded mode', () => {
 test('agent created a deployment before fetching logs', () => {
   const commands = getShellCommands();
   expect(
-    commands.some(command =>
-      /\b(vercel|vc)(\s+deploy\b|\s+(--yes|-y)(\s|$))/.test(command)
-    )
+    commands.some(command => /\b(vercel|vc)\s+deploy\b/.test(command))
   ).toBe(true);
+});
+
+test('agent saved deployment URL and logs output', () => {
+  expect(existsSync('logs-deployment-url.txt')).toBe(true);
+  expect(existsSync('logs-output.txt')).toBe(true);
+
+  const deployment = readFileSync('logs-deployment-url.txt', 'utf-8').trim();
+  const logs = readFileSync('logs-output.txt', 'utf-8');
+
+  expect(deployment.length).toBeGreaterThan(0);
+  expect(logs.trim().length).toBeGreaterThan(0);
 });

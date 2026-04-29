@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -18,4 +18,15 @@ test('agent used vercel project inspect', () => {
   );
 
   expect(inspectCommands.length).toBeGreaterThan(0);
+});
+
+test('agent saved project inspect output', () => {
+  expect(existsSync('project-inspect-output.txt')).toBe(true);
+
+  const output = readFileSync('project-inspect-output.txt', 'utf-8');
+
+  expect(output.trim().length).toBeGreaterThan(0);
+  expect(output).toMatch(/\bID\b/i);
+  expect(output).toMatch(/\bName\b/i);
+  expect(output).toMatch(/\bOwner\b/i);
 });

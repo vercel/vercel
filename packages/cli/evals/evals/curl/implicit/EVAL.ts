@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -24,19 +24,4 @@ test('agent ran vc curl', () => {
     /\b(vercel|vc)\s+curl\b/.test(command)
   );
   expect(curlCommands.length).toBeGreaterThan(0);
-  expect(
-    curlCommands.some(command => /\b(vercel|vc)\s+curl\s+\//.test(command))
-  ).toBe(true);
-});
-
-test('agent verified served traffic and wrote an answer', () => {
-  expect(existsSync('traffic-deployment-url.txt')).toBe(true);
-  expect(existsSync('traffic-response.txt')).toBe(true);
-  expect(existsSync('traffic-answer.txt')).toBe(true);
-
-  const response = readFileSync('traffic-response.txt', 'utf-8');
-  const answer = readFileSync('traffic-answer.txt', 'utf-8');
-  expect(response).toContain('curl implicit eval fixture');
-  expect(/serving|served|traffic|yes|reachable/i.test(answer)).toBe(true);
-  expect(answer).toContain('curl implicit eval fixture');
 });

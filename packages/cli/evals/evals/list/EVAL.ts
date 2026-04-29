@@ -1,5 +1,9 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
+
+type DeploymentListOutput = {
+  deployments?: unknown;
+};
 
 function getShellCommands(): string[] {
   const results = JSON.parse(
@@ -18,4 +22,22 @@ test('agent used vercel list', () => {
   );
 
   expect(listCommands.length).toBeGreaterThan(0);
+  expect(
+    listCommands.some(
+      command =>
+        command.includes('--format=json') ||
+        /--format\s+json\b/.test(command) ||
+        command.includes('--json')
+    )
+  ).toBe(true);
+});
+
+test('agent saved deployment list JSON output', () => {
+  expect(existsSync('deployment-list-output.json')).toBe(true);
+
+  const output = JSON.parse(
+    readFileSync('deployment-list-output.json', 'utf-8')
+  ) as DeploymentListOutput;
+
+  expect(Array.isArray(output.deployments)).toBe(true);
 });

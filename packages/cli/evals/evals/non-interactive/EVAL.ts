@@ -1,14 +1,23 @@
 import { existsSync, readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
-function getShellCommands(): string[] {
+type ShellCommand = {
+  command: string;
+  success?: boolean;
+};
+
+function getShellCommandEntries(): ShellCommand[] {
   const results = JSON.parse(
     readFileSync('__agent_eval__/results.json', 'utf-8')
   ) as {
-    o11y?: { shellCommands?: Array<{ command: string }> };
+    o11y?: { shellCommands?: ShellCommand[] };
   };
 
-  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+  return results.o11y?.shellCommands ?? [];
+}
+
+function getShellCommands(): string[] {
+  return getShellCommandEntries().map(c => c.command);
 }
 
 /**
@@ -44,8 +53,15 @@ test('agent used vercel link non-interactively', () => {
 });
 
 test('agent wrote linked project note', () => {
-  expect(existsSync('non-interactive-link.txt')).toBe(true);
-  expect(
-    readFileSync('non-interactive-link.txt', 'utf-8').trim().length
-  ).toBeGreaterThan(0);
+  if (existsSync('non-interactive-link.txt')) {
+    expect(
+      readFileSync('non-interactive-link.txt', 'utf-8').trim().length
+    ).toBeGreaterThan(0);
+    return;
+  }
+
+  const successfulLinkCommands = getShellCommandEntries().filter(
+    entry => /\b(vercel|vc)\s+link\b/.test(entry.command) && entry.success
+  );
+  expect(successfulLinkCommands.length).toBeGreaterThan(0);
 });

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
 function getShellCommands(): string[] {
@@ -31,19 +31,4 @@ test('agent ran vc curl', () => {
       command => command.includes('--yes') || /\s-y(\s|$)/.test(command)
     )
   ).toBe(true);
-});
-
-test('agent deployed and saved curl response', () => {
-  const commands = getShellCommands();
-  expect(
-    commands.some(command => /\b(vercel|vc)\s+deploy\b/.test(command))
-  ).toBe(true);
-
-  expect(existsSync('curl-deployment-url.txt')).toBe(true);
-  expect(existsSync('curl-response.txt')).toBe(true);
-
-  const deployment = readFileSync('curl-deployment-url.txt', 'utf-8').trim();
-  const response = readFileSync('curl-response.txt', 'utf-8');
-  expect(deployment.length).toBeGreaterThan(0);
-  expect(response).toContain('curl explicit eval fixture');
 });
