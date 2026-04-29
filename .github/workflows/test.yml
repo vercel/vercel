@@ -301,7 +301,7 @@ jobs:
         run: |
           attempt=1
           max_attempts=2
-          export NODE_OPTIONS="--require=$(node -p "require.resolve('dd-trace/ci/init')")"
+          export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
@@ -451,7 +451,7 @@ jobs:
         run: |
           attempt=1
           max_attempts=2
-          export NODE_OPTIONS="--require=$(node -p "require.resolve('dd-trace/ci/init')")"
+          export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
