@@ -11,6 +11,8 @@ from ..wsgi import build_wsgi_app, status_reason
 from .transport import TransportConfig
 from .utils import _execute_envelope
 
+print("test changes")  # TODO: remove log
+
 try:
     from celery import Celery as CeleryApp  # type: ignore[import-untyped]
 except Exception as e:
