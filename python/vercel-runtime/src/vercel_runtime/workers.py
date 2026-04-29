@@ -243,16 +243,9 @@ def _bootstrap_django_worker_app(module: object) -> object | None:
     return get_asgi_app_fn()
 
 
-def _bootstrap_generic_worker_app() -> object | None:
-    if not VERCEL_WORKERS_AVAILABLE:
-        return None
-
-    vercel_workers = _import_optional_module("vercel.workers")
-    if vercel_workers is None:
-        return None
-
-    has_subscriptions = getattr(vercel_workers, "has_subscriptions", None)
-    get_asgi_app = getattr(vercel_workers, "get_asgi_app", None)
+def _bootstrap_queue_client_app(candidate: object) -> object | None:
+    has_subscriptions = getattr(candidate, "has_subscriptions", None)
+    get_asgi_app = getattr(candidate, "get_asgi_app", None)
     if not callable(has_subscriptions) or not callable(get_asgi_app):
         return None
 
@@ -271,6 +264,56 @@ def _bootstrap_generic_worker_app() -> object | None:
         return get_asgi_app_fn()
 
     return None
+
+
+def _get_queue_client_types(vercel_workers: object) -> tuple[type[object], ...]:
+    queue_client_types: list[type[object]] = []
+    for attr_name in ("QueueClient", "AsyncQueueClient"):
+        candidate_type = getattr(vercel_workers, attr_name, None)
+        if isinstance(candidate_type, type):
+            queue_client_types.append(candidate_type)
+    return tuple(queue_client_types)
+
+
+def _iter_module_values(module: object) -> list[object]:
+    module_dict = getattr(module, "__dict__", None)
+    if not isinstance(module_dict, dict):
+        return []
+    return list(cast("Mapping[str, object]", module_dict).values())
+
+
+def _bootstrap_exported_queue_client_app(
+    module: object,
+    vercel_workers: object,
+) -> object | None:
+    queue_client_types = _get_queue_client_types(vercel_workers)
+    if not queue_client_types:
+        return None
+
+    for candidate in _iter_module_values(module):
+        if not isinstance(candidate, queue_client_types):
+            continue
+
+        app = _bootstrap_queue_client_app(candidate)
+        if app is not None:
+            return app
+
+    return None
+
+
+def _bootstrap_generic_worker_app(module: object) -> object | None:
+    if not VERCEL_WORKERS_AVAILABLE:
+        return None
+
+    vercel_workers = _import_optional_module("vercel.workers")
+    if vercel_workers is None:
+        return None
+
+    app = _bootstrap_queue_client_app(vercel_workers)
+    if app is not None:
+        return app
+
+    return _bootstrap_exported_queue_client_app(module, vercel_workers)
 
 
 def bootstrap_worker_service_app(module: object) -> object:
@@ -298,7 +341,7 @@ def bootstrap_worker_service_app(module: object) -> object:
         except Exception as exc:
             raise RuntimeError("Django tasks worker bootstrap failed.") from exc
 
-    app = _bootstrap_generic_worker_app()
+    app = _bootstrap_generic_worker_app(module)
     if app is not None:
         return app
 
