@@ -885,7 +885,7 @@ describe.skipIf(flakey)('build', () => {
 
     // "static" directory contains static files
     const files = await fs.readdir(join(output, 'static'));
-    expect(files.sort()).toEqual(['index.html', 'package.json']);
+    expect(files.sort()).toEqual(['index.html']);
   });
 
   it('should set `VERCEL_ANALYTICS_ID` environment variable if Vercel Speed Insights is enabled', async () => {
