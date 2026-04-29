@@ -1,0 +1,89 @@
+name: Datadog Test Span Smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  VERCEL_TELEMETRY_DISABLED: '1'
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+jobs:
+  setup:
+    name: Find Changes (Datadog Smoke)
+    if: github.head_ref == 'ci/datadog-test-spans'
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.set-tests.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      - id: set-tests
+        run: |
+          TESTS_ARRAY='[
+            {
+              "runner": "ubuntu-latest",
+              "packagePath": "packages/error-utils",
+              "packageName": "@vercel/error-utils",
+              "scriptName": "vitest-unit",
+              "testScript": "vitest-run",
+              "nodeVersion": "22",
+              "testPaths": ["test/index.test.ts"],
+              "chunkNumber": 1,
+              "allChunksLength": 1
+            }
+          ]'
+          echo "Datadog smoke tests to run:"
+          echo "$TESTS_ARRAY"
+          echo "tests=$(echo "$TESTS_ARRAY" | jq -c .)" >> $GITHUB_OUTPUT
+
+  test:
+    timeout-minutes: 20
+    runs-on: ${{ matrix.runner }}
+    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
+    if: ${{ needs.setup.outputs.tests != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs.tests) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: '1'
+      - name: Test ${{matrix.packageName}}
+        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        env:
+          FORCE_COLOR: '1'
+          NODE_OPTIONS: '-r dd-trace/ci/init'
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DD_ENV: ci
+          DD_SERVICE: vercel-cli
+          DD_TRACE_DEBUG: 'true'
+          DD_PROFILING_ENABLED: 'false'
+          DD_NATIVE_METRICS: 'false'
