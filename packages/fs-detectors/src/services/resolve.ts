@@ -1,5 +1,6 @@
 import { posix as posixPath } from 'path';
 import type {
+  EnvVars,
   Service,
   ExperimentalServiceConfig,
   ExperimentalServices,
@@ -512,26 +513,26 @@ export function validateServiceConfig(
       };
     }
   }
-  if (config.envVars !== undefined) {
-    if (typeof config.envVars !== 'object' || Array.isArray(config.envVars)) {
+  if (config.env !== undefined) {
+    if (typeof config.env !== 'object' || Array.isArray(config.env)) {
       return {
         code: 'INVALID_ENV_VARS',
-        message: `Service "${name}" has invalid "envVars". Must be an object keyed by environment variable name.`,
+        message: `Service "${name}" has invalid "env". Must be an object keyed by environment variable name.`,
         serviceName: name,
       };
     }
-    for (const [envVarName, envVar] of Object.entries(config.envVars)) {
+    for (const [envVarName, envVar] of Object.entries(config.env)) {
       if (!ENV_VAR_NAME_RE.test(envVarName)) {
         return {
           code: 'INVALID_ENV_VAR_NAME',
-          message: `Service "${name}" has invalid envVars key "${envVarName}". Must match /^[A-Za-z_][A-Za-z0-9_]*$/.`,
+          message: `Service "${name}" has invalid env key "${envVarName}". Must match /^[A-Za-z_][A-Za-z0-9_]*$/.`,
           serviceName: name,
         };
       }
       if (!envVar || typeof envVar !== 'object' || Array.isArray(envVar)) {
         return {
           code: 'INVALID_ENV_VAR',
-          message: `Service "${name}" has invalid envVars["${envVarName}"]. Must be an object of shape { ref: { service: string } }.`,
+          message: `Service "${name}" has invalid env["${envVarName}"]. Must be an object of shape { ref: { service: string } }.`,
           serviceName: name,
         };
       }
@@ -539,14 +540,14 @@ export function validateServiceConfig(
       if (!ref || typeof ref !== 'object' || Array.isArray(ref)) {
         return {
           code: 'INVALID_ENV_VAR_REF',
-          message: `Service "${name}" envVars["${envVarName}"] must have a "ref" object.`,
+          message: `Service "${name}" env["${envVarName}"] must have a "ref" object.`,
           serviceName: name,
         };
       }
       if (typeof ref.service !== 'string' || ref.service.length === 0) {
         return {
           code: 'INVALID_ENV_VAR_REF',
-          message: `Service "${name}" envVars["${envVarName}"].ref must specify "service" as a non-empty string.`,
+          message: `Service "${name}" env["${envVarName}"].ref must specify "service" as a non-empty string.`,
           serviceName: name,
         };
       }
@@ -855,7 +856,7 @@ export async function resolveConfiguredService(
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    envVars: config.envVars,
+    env: config.env,
   };
 }
 
@@ -866,7 +867,8 @@ export async function resolveConfiguredService(
 export async function resolveAllConfiguredServices(
   services: ExperimentalServices,
   fs: DetectorFilesystem,
-  routePrefixSource: RoutePrefixSource = 'configured'
+  routePrefixSource: RoutePrefixSource = 'configured',
+  rootEnv?: EnvVars
 ): Promise<{
   services: Service[];
   errors: ServiceDetectionError[];
@@ -1012,29 +1014,46 @@ export async function resolveAllConfiguredServices(
 
   const servicesByName = new Map(resolved.map(s => [s.name, s]));
   for (const service of resolved) {
-    if (!service.envVars) {
-      continue;
-    }
-    for (const [envVarName, envVar] of Object.entries(service.envVars)) {
-      const refName = envVar.ref.service;
-      const target = servicesByName.get(refName);
-      if (!target) {
-        errors.push({
-          code: 'UNKNOWN_SERVICE_REF',
-          message: `Service "${service.name}" envVars["${envVarName}"] references unknown service "${refName}".`,
-          serviceName: service.name,
-        });
-        continue;
-      }
-      if (target.type !== 'web') {
-        errors.push({
-          code: 'INVALID_SERVICE_REF_TYPE',
-          message: `Service "${service.name}" envVars["${envVarName}"] references service "${refName}" which is a ${target.type} service and has no URL. Only web services can be referenced.`,
-          serviceName: service.name,
-        });
-      }
-    }
+    if (!service.env) continue;
+    validateEnvRefs(
+      service.env,
+      `Service "${service.name}" env`,
+      servicesByName,
+      errors,
+      service.name
+    );
+  }
+  if (rootEnv) {
+    validateEnvRefs(rootEnv, 'env', servicesByName, errors);
   }
 
   return { services: resolved, errors };
+}
+
+function validateEnvRefs(
+  env: EnvVars,
+  pathPrefix: string,
+  servicesByName: Map<string, Service>,
+  errors: ServiceDetectionError[],
+  serviceName?: string
+): void {
+  for (const [envVarName, envVar] of Object.entries(env)) {
+    const refName = envVar.ref.service;
+    const target = servicesByName.get(refName);
+    if (!target) {
+      errors.push({
+        code: 'UNKNOWN_SERVICE_REF',
+        message: `${pathPrefix}["${envVarName}"] references unknown service "${refName}".`,
+        ...(serviceName ? { serviceName } : {}),
+      });
+      continue;
+    }
+    if (target.type !== 'web') {
+      errors.push({
+        code: 'INVALID_SERVICE_REF_TYPE',
+        message: `${pathPrefix}["${envVarName}"] references service "${refName}" which is a ${target.type} service and has no URL. Only web services can be referenced.`,
+        ...(serviceName ? { serviceName } : {}),
+      });
+    }
+  }
 }

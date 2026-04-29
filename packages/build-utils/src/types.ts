@@ -586,16 +586,16 @@ export type ServiceTopics = string[] | ServiceQueueTopic[];
 export const JOB_TRIGGERS = ['queue', 'schedule', 'workflow'] as const;
 export type JobTrigger = (typeof JOB_TRIGGERS)[number];
 
-export interface ServiceEnvVarRef {
+export interface EnvVarRef {
   /** Name of another service in `experimentalServices` whose URL to inject. */
   service: string;
 }
 
-export interface ServiceEnvVar {
-  ref: ServiceEnvVarRef;
+export interface EnvVar {
+  ref: EnvVarRef;
 }
 
-export type ServiceEnvVars = Record<string, ServiceEnvVar>;
+export type EnvVars = Record<string, EnvVar>;
 
 export interface Service {
   name: string;
@@ -620,7 +620,7 @@ export interface Service {
   /* worker/job service config */
   topics?: ServiceTopics;
   /* environment variables declared by the user to be injected into this service. */
-  envVars?: ServiceEnvVars;
+  env?: EnvVars;
 }
 
 export function getServiceQueueTopicConfigs(config: {
@@ -901,7 +901,7 @@ export interface ExperimentalServiceConfig {
   topics?: ServiceTopics;
 
   /* Environment variables to inject into this service env */
-  envVars?: ServiceEnvVars;
+  env?: EnvVars;
 }
 
 /**

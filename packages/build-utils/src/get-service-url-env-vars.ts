@@ -1,4 +1,4 @@
-import type { Service } from './types';
+import type { EnvVars, Service } from './types';
 
 type Envs = { [key: string]: string | undefined };
 
@@ -8,7 +8,8 @@ interface FrameworkInfo {
 }
 
 export interface GetServiceUrlEnvVarsOptions {
-  targetService: Service;
+  requestedEnv: EnvVars;
+  consumerService?: Service;
   services: Service[];
   frameworkList: readonly FrameworkInfo[];
   currentEnv?: Envs;
@@ -48,11 +49,10 @@ function getFrameworkEnvPrefix(
 }
 
 /**
- * Resolve the `envVars` declared on a consumer service into a flat
- * map of environment variables to inject into that service env.
+ * Resolve a map of declared env-var refs into concrete URL values.
  *
  * By default the value is the absolute URL of the referenced web service,
- * while if the consumer's framework has an `envPrefix`
+ * while if a consumer's framework has an `envPrefix`
  * (e.g. `NEXT_PUBLIC_` or `VITE_`) and the declared name starts with that prefix
  * then the target's route prefix (e.g. `/api`) is used,
  * which useful for client bundles where same-origin requests avoid CORS.
@@ -64,7 +64,8 @@ export function getServiceUrlEnvVars(
   options: GetServiceUrlEnvVarsOptions
 ): Record<string, string> {
   const {
-    targetService: service,
+    requestedEnv,
+    consumerService,
     services,
     frameworkList,
     currentEnv = {},
@@ -72,23 +73,17 @@ export function getServiceUrlEnvVars(
     origin,
   } = options;
 
-  if (!service.envVars) {
-    return {};
-  }
-
   const baseUrl = origin || deploymentUrl;
-  if (!baseUrl) {
-    return {};
-  }
+  if (!baseUrl) return {};
 
   const servicesByName = new Map(services.map(s => [s.name, s]));
   const consumerEnvPrefix = getFrameworkEnvPrefix(
-    service.framework,
+    consumerService?.framework,
     frameworkList
   );
   const result: Record<string, string> = {};
 
-  for (const [name, envVar] of Object.entries(service.envVars)) {
+  for (const [name, envVar] of Object.entries(requestedEnv)) {
     if (name in currentEnv) {
       continue;
     }

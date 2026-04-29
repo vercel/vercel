@@ -230,6 +230,51 @@ const serviceTopicsSchema = {
   ],
 };
 
+const envVarNamesSchema = {
+  pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+  maxLength: 256,
+};
+
+const envVarRecordSchema = {
+  type: 'object',
+  additionalProperties: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['ref'],
+    properties: {
+      ref: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['service'],
+        properties: {
+          service: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 64,
+            pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+          },
+        },
+      },
+    },
+  },
+  propertyNames: envVarNamesSchema,
+};
+
+/**
+ * Top-level `env` accepts both a literal `Record<string, string>` (deprecated)
+ * or a new way that allows specifying required URLs to inject into service's env.
+ */
+const topLevelEnvSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      propertyNames: envVarNamesSchema,
+    },
+    envVarRecordSchema,
+  ],
+};
+
 const serviceCommonProperties = {
   root: {
     type: 'string',
@@ -295,33 +340,7 @@ const serviceCommonProperties = {
       },
     ],
   },
-  envVars: {
-    type: 'object',
-    additionalProperties: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['ref'],
-      properties: {
-        ref: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['service'],
-          properties: {
-            service: {
-              type: 'string',
-              minLength: 1,
-              maxLength: 64,
-              pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
-            },
-          },
-        },
-      },
-    },
-    propertyNames: {
-      pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
-      maxLength: 256,
-    },
-  },
+  env: envVarRecordSchema,
 };
 
 const serviceRoutableProperties = {
@@ -493,6 +512,7 @@ const vercelConfigSchema = {
     images: imagesSchema,
     crons: cronsSchema,
     bunVersion: { type: 'string' },
+    env: topLevelEnvSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,
   },

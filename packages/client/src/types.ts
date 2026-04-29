@@ -2,6 +2,7 @@ import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
+  EnvVars,
   Images,
   ProjectSettings,
   Cron,
@@ -157,7 +158,7 @@ export interface VercelConfig {
   meta?: string[];
   version?: number;
   public?: boolean;
-  env?: Dictionary<string>;
+  env?: Dictionary<string> | EnvVars;
   build?: {
     env?: Dictionary<string>;
   };

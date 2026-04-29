@@ -713,9 +713,14 @@ export default class DevServer {
     this.apiDir = detectApiDirectory(vercelConfig.builds || []);
     this.apiExtensions = detectApiExtensions(vercelConfig.builds || []);
 
-    // Update the env vars configuration
+    // Update the env vars configuration. `vercelConfig.env` may now be the
+    // new `Record<string, EnvVar>` shape and this will be resolved later,
+    // so only the legacy literal shape is forwarded as a `.env` validation base.
+    const literalTopLevelEnv = isLiteralEnvRecord(vercelConfig.env)
+      ? vercelConfig.env
+      : undefined;
     let [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', vercelConfig.env),
+      this.getLocalEnv('.env', literalTopLevelEnv),
       this.getLocalEnv('.env.build', vercelConfig.build?.env),
     ]);
 
@@ -946,6 +951,9 @@ export default class DevServer {
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
+        requestedProjectEnv: isLiteralEnvRecord(vercelConfig.env)
+          ? undefined
+          : vercelConfig.env,
         proxyOrigin: this.address.origin,
       });
       devCommandPromise = this.orchestrator.startAll();
@@ -2747,6 +2755,18 @@ function generateRequestId(podId: string, isInvoke = false): string {
 
 function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+/**
+ * Type guard for the legacy top-level `env` shape (`Record<string, string>`).
+ * The schema rejects mixed records, so a single sample is sufficient.
+ */
+function isLiteralEnvRecord(
+  env: VercelConfig['env']
+): env is Record<string, string> {
+  if (!env) return false;
+  const first = Object.values(env)[0];
+  return first === undefined || typeof first === 'string';
 }
 
 async function findBuildMatch(

@@ -13,6 +13,7 @@ import {
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
+  type EnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -843,6 +844,17 @@ async function doBuild(
     }
   }
 
+  // Resolve requested top-level `env` once
+  const requestedEnv =
+    detectedServices && isEnvVarsRecord(localConfig.env)
+      ? getServiceUrlEnvVars({
+          requestedEnv: localConfig.env,
+          services: detectedServices,
+          frameworkList,
+          deploymentUrl: process.env.VERCEL_URL,
+        })
+      : {};
+
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -1021,18 +1033,23 @@ async function doBuild(
       // Inject per-service URL environment variables so they're available during builds.
       // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
       // these env vars are baked into the client bundle so they can be accessed in the client code.
-      // User-defined env vars take precedence and won't be overwritten. The env will be cleared
+      // User-defined env takes precedence and won't be overwritten. The env will be cleared
       // after the build is complete
       const restoreEnv = new Map<string, string | undefined>();
-      if (service?.envVars && detectedServices) {
-        const injected = getServiceUrlEnvVars({
-          targetService: service,
-          services: detectedServices,
-          frameworkList,
-          currentEnv: process.env,
-          deploymentUrl: process.env.VERCEL_URL,
-        });
-        for (const [key, value] of Object.entries(injected)) {
+      if (detectedServices) {
+        const perServiceEnv = service?.env
+          ? getServiceUrlEnvVars({
+              requestedEnv: service.env,
+              consumerService: service,
+              services: detectedServices,
+              frameworkList,
+              currentEnv: process.env,
+              deploymentUrl: process.env.VERCEL_URL,
+            })
+          : {};
+        const merged = { ...requestedEnv, ...perServiceEnv };
+        for (const [key, value] of Object.entries(merged)) {
+          if (key in process.env) continue;
           restoreEnv.set(key, process.env[key]);
           process.env[key] = value;
           output.debug(`Injected service URL env var: ${key}=${value}`);
@@ -1582,6 +1599,12 @@ async function doBuild(
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
     await analyzeVcConfigFiles(cwd, outputDir);
   }
+}
+
+function isEnvVarsRecord(env: VercelConfig['env']): env is EnvVars {
+  if (!env) return false;
+  const first = Object.values(env)[0];
+  return typeof first === 'object' && first !== null;
 }
 
 function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {

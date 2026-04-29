@@ -8,6 +8,7 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
+  type EnvVars,
   type InferredServicesResult,
   type ResolvedServicesResult,
   type Service,
@@ -40,6 +41,14 @@ function emptyRoutes(): ServicesRoutes {
     crons: [],
     workers: [],
   };
+}
+
+function isEnvVars(
+  env: Record<string, string> | EnvVars | undefined
+): env is EnvVars {
+  if (!env) return false;
+  const first = Object.values(env)[0];
+  return typeof first === 'object' && first !== null;
 }
 
 function withResolvedResult(
@@ -229,7 +238,8 @@ export async function detectServices(
   const result = await resolveAllConfiguredServices(
     configuredServices,
     scopedFs,
-    'configured'
+    'configured',
+    isEnvVars(vercelConfig?.env) ? vercelConfig?.env : undefined
   );
 
   // Generate routes

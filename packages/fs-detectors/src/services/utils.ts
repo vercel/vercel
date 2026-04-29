@@ -10,6 +10,7 @@ import {
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
+  EnvVars,
   ServiceRuntime,
   ExperimentalServices,
   ServiceDetectionError,
@@ -194,7 +195,10 @@ export function inferServiceRuntime(config: {
 }
 
 export interface ReadVercelConfigResult {
-  config: { experimentalServices?: ExperimentalServices } | null;
+  config: {
+    experimentalServices?: ExperimentalServices;
+    env?: Record<string, string> | EnvVars;
+  } | null;
   error: ServiceDetectionError | null;
 }
 

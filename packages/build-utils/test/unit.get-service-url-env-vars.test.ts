@@ -16,13 +16,14 @@ const VITE = { slug: 'vite', envPrefix: 'VITE_' };
 const FASTAPI = { slug: 'fastapi' };
 
 describe('getServiceUrlEnvVars', () => {
-  it('returns empty when the consumer has no envVars', () => {
+  it('returns empty when the consumer has no env', () => {
     const services = [
       createService({ name: 'frontend', routePrefix: '/' }),
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS, FASTAPI],
       deploymentUrl: 'my-app.vercel.app',
@@ -36,14 +37,15 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         framework: 'nextjs',
-        envVars: {
+        env: {
           NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS],
       deploymentUrl: 'my-app.vercel.app',
@@ -59,14 +61,15 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         framework: 'nextjs',
-        envVars: {
+        env: {
           API_BASE_URL: { ref: { service: 'api' } },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS],
       deploymentUrl: 'my-app.vercel.app',
@@ -82,7 +85,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         framework: 'nextjs',
-        envVars: {
+        env: {
           API_BASE_URL: { ref: { service: 'api' } },
           NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
         },
@@ -90,7 +93,8 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS],
       deploymentUrl: 'my-app.vercel.app',
@@ -107,7 +111,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'api',
         routePrefix: '/api',
         framework: 'fastapi',
-        envVars: {
+        env: {
           DASHBOARD_URL: { ref: { service: 'frontend' } },
           NEXT_PUBLIC_DASHBOARD_URL: { ref: { service: 'frontend' } },
         },
@@ -115,7 +119,8 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'frontend', routePrefix: '/' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [FASTAPI, NEXTJS],
       deploymentUrl: 'my-app.vercel.app',
@@ -133,7 +138,7 @@ describe('getServiceUrlEnvVars', () => {
       createService({
         name: 'consumer',
         routePrefix: '/svc',
-        envVars: {
+        env: {
           API_URL: { ref: { service: 'api' } },
           NEXT_PUBLIC_API_URL: { ref: { service: 'api' } },
         },
@@ -141,7 +146,8 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS],
       deploymentUrl: 'my-app.vercel.app',
@@ -158,7 +164,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         framework: 'nextjs',
-        envVars: {
+        env: {
           // Different framework's prefix — should NOT trigger relative
           // resolution in a Next.js consumer.
           VITE_API_BASE_URL: { ref: { service: 'api' } },
@@ -167,7 +173,8 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS, VITE],
       deploymentUrl: 'my-app.vercel.app',
@@ -183,14 +190,15 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         framework: 'nextjs',
-        envVars: {
+        env: {
           NEXT_PUBLIC_: { ref: { service: 'api' } },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS],
       deploymentUrl: 'my-app.vercel.app',
@@ -206,7 +214,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'admin',
         routePrefix: '/admin',
         framework: 'vite',
-        envVars: {
+        env: {
           SITE_URL: { ref: { service: 'site' } },
           VITE_SITE_URL: { ref: { service: 'site' } },
         },
@@ -214,7 +222,8 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'site', routePrefix: '/' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [VITE],
       deploymentUrl: 'my-app.vercel.app',
@@ -231,7 +240,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         framework: 'nextjs',
-        envVars: {
+        env: {
           API_BASE_URL: { ref: { service: 'api' } },
           NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
         },
@@ -239,7 +248,8 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS],
       deploymentUrl: 'my-app.vercel.app',
@@ -258,7 +268,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         framework: 'nextjs',
-        envVars: {
+        env: {
           API_BASE_URL: { ref: { service: 'api' } },
           NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
         },
@@ -266,7 +276,8 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [NEXTJS],
       origin: 'http://localhost:3000',
@@ -282,14 +293,15 @@ describe('getServiceUrlEnvVars', () => {
       createService({
         name: 'frontend',
         routePrefix: '/',
-        envVars: {
+        env: {
           API_URL: { ref: { service: 'api' } },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [],
     });
@@ -301,13 +313,14 @@ describe('getServiceUrlEnvVars', () => {
       createService({
         name: 'frontend',
         routePrefix: '/',
-        envVars: {
+        env: {
           API_URL: { ref: { service: 'missing' } },
         },
       }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [],
       deploymentUrl: 'my-app.vercel.app',
@@ -320,14 +333,15 @@ describe('getServiceUrlEnvVars', () => {
       createService({
         name: 'frontend',
         routePrefix: '/',
-        envVars: {
+        env: {
           WORKER_URL: { ref: { service: 'worker' } },
         },
       }),
       createService({ name: 'worker', type: 'worker', routePrefix: undefined }),
     ];
     const result = getServiceUrlEnvVars({
-      targetService: services[0],
+      requestedEnv: services[0].env ?? {},
+      consumerService: services[0],
       services,
       frameworkList: [],
       deploymentUrl: 'my-app.vercel.app',
