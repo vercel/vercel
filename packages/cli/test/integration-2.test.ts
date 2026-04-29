@@ -949,7 +949,7 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
 // non-interactive / external-token guards). Both messages are acceptable; what
 // matters for these tests is that the deploy exits 1 and tells the user why.
 const unauthorizedDeployErrorRe =
-  /Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\.|Re-authentication is required for .* scope/;
+  /Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\.|(?:SAML )?[Rr]e-authentication is required for .* scope/;
 
 test('reject deploying with wrong team .vercel config', async () => {
   const directory = await setupE2EFixture('unauthorized-vercel-config');
