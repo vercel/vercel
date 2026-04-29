@@ -14,23 +14,23 @@ beforeEach(() => {
 
 describe('upgradeWebSocket', () => {
   describe('runtime support', () => {
-    test('throws when runtime does not provide upgradeWebSocket', () => {
+    test('throws when runtime does not provide upgradeWebSocket', async () => {
       g[SYMBOL_FOR_REQ_CONTEXT] = { get: () => ({}) };
 
-      expect(() => upgradeWebSocket()).toThrow(
+      await expect(upgradeWebSocket()).rejects.toThrow(
         'upgradeWebSocket is not available in the current runtime environment'
       );
     });
 
-    test('throws when context is empty', () => {
-      expect(() => upgradeWebSocket()).toThrow(
+    test('throws when context is empty', async () => {
+      await expect(upgradeWebSocket()).rejects.toThrow(
         'upgradeWebSocket is not available in the current runtime environment'
       );
     });
   });
 
   describe('delegation', () => {
-    test('calls context upgradeWebSocket and returns a WebSocket instance', () => {
+    test('calls context upgradeWebSocket and returns a WebSocket instance', async () => {
       const socket = new Socket();
       const req = new IncomingMessage(socket);
       req.method = 'GET';
@@ -49,7 +49,7 @@ describe('upgradeWebSocket', () => {
         get: () => ({ upgradeWebSocket: mockUpgrade }),
       };
 
-      const ws = upgradeWebSocket();
+      const ws = await upgradeWebSocket();
 
       expect(mockUpgrade).toHaveBeenCalled();
       expect(ws).toBeDefined();
