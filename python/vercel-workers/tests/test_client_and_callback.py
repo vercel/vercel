@@ -10,7 +10,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
@@ -555,6 +555,7 @@ class TestQueueClients(unittest.TestCase):
             client.get_vercel_queue_subscriptions(),
             [{"topic": "orders", "handler": f"{__name__}:{handle.__qualname__}"}],
         )
+        self.assertEqual(queue_client.get_vercel_queue_subscriptions(), [])
 
         with patch.dict(
             queue_client.os.environ,
@@ -564,6 +565,34 @@ class TestQueueClients(unittest.TestCase):
             client.send("orders", {"ok": True})
 
         self.assertEqual(calls, [{"ok": True}])
+
+    def test_queue_client_callback_uses_client_registry(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        raw_body = b'{"ok":true}'
+        environ = {
+            "CONTENT_TYPE": "application/json",
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "orders",
+            "HTTP_CE_VQSCONSUMERGROUP": "consumer",
+            "HTTP_CE_VQSMESSAGEID": "m",
+            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "HTTP_CE_VQSCREATEDAT": "now",
+        }
+
+        with patch.object(queue_client.callback, "delete_message") as delete_message:
+            status, _headers, body = client.handle_queue_callback(raw_body, environ)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        self.assertEqual(calls, [{"ok": True}])
+        delete_message.assert_called_once_with("orders", "consumer", "m", "receipt")
 
     def test_async_queue_client_subscribe_registers_worker(self) -> None:
         client = queue_client.AsyncQueueClient(region="iad1")
@@ -578,4 +607,79 @@ class TestQueueClients(unittest.TestCase):
         self.assertEqual(
             client.get_vercel_queue_subscriptions(),
             [{"topic": "orders", "handler": f"{__name__}:{handle.__qualname__}"}],
+        )
+
+    def test_queue_client_topic_send_validates_and_serializes_payload_type(self) -> None:
+        client = queue_client.QueueClient(region="sfo1", token="tok")
+        users = client.topic("users.create", payload_type=CreateUserPayload)
+
+        with (
+            patch.dict(queue_client.os.environ, {}, clear=True),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            users.send(CreateUserPayload(email="a@b.com", age=42))
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls[-1],
+            "https://sfo1.vercel-queue.com/api/v3/topic/users.create",
+        )
+        self.assertEqual(
+            json.loads(_FakeHttpxClient.captured_bodies[-1]),
+            {"email": "a@b.com", "age": 42},
+        )
+
+    def test_queue_client_topic_send_rejects_invalid_payload_type(self) -> None:
+        client = queue_client.QueueClient(region="sfo1", token="tok")
+        users = client.topic("users.create", payload_type=CreateUserPayload)
+
+        with self.assertRaises(ValidationError):
+            users.send({"email": "a@b.com", "age": "not-an-int"})
+
+    def test_queue_client_topic_subscribe_uses_payload_type(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        users = client.topic("users.create", payload_type=CreateUserPayload)
+        calls: list[CreateUserPayload] = []
+
+        @users.subscribe
+        def handle(payload):  # pyright: ignore[reportMissingParameterType]
+            calls.append(payload)
+
+        with patch.dict(
+            queue_client.os.environ,
+            {"VERCEL_WORKERS_IN_PROCESS": "1"},
+            clear=False,
+        ):
+            users.send({"email": "a@b.com", "age": "42"})
+
+        self.assertEqual(calls, [CreateUserPayload(email="a@b.com", age=42)])
+
+    def test_queue_client_topic_subscribe_rejects_mismatched_handler_annotation(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        users = client.topic("users.create", payload_type=CreateUserPayload)
+
+        with self.assertRaises(TypeError):
+            @users.subscribe
+            def handle(payload: EmailPayload) -> None:
+                pass
+
+    def test_async_queue_client_topic_send_uses_async_client(self) -> None:
+        client = queue_client.AsyncQueueClient(region="iad1", token="tok")
+        users = client.topic("users.create", payload_type=CreateUserPayload)
+
+        async def run() -> None:
+            with (
+                patch.dict(queue_client.os.environ, {}, clear=True),
+                patch.object(queue_client.httpx, "AsyncClient", _FakeAsyncHttpxClient),
+            ):
+                await users.send(CreateUserPayload(email="a@b.com", age=42))
+
+        asyncio.run(run())
+
+        self.assertEqual(
+            _FakeAsyncHttpxClient.captured_urls[-1],
+            "https://iad1.vercel-queue.com/api/v3/topic/users.create",
+        )
+        self.assertEqual(
+            json.loads(_FakeAsyncHttpxClient.captured_bodies[-1]),
+            {"email": "a@b.com", "age": 42},
         )
