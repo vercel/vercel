@@ -16,6 +16,7 @@ import { VERCEL_DIR } from '../projects/link';
 import { isErrnoException } from '@vercel/error-utils';
 import output from '../../output-manager';
 import { installBuilders } from './install-builders';
+import { isVercelCliBinary } from '../is-bun-binary';
 
 export interface BuilderWithPkg {
   path: string;
@@ -176,7 +177,7 @@ async function resolveBuilders(
       continue;
     }
 
-    if (name in BUILTIN_BUILDERS) {
+    if (isVercelCliBinary() && name in BUILTIN_BUILDERS) {
       const builtinVersion = BUILTIN_BUILDERS[name].version;
       const versionOk =
         parsed.type === 'tag' ||

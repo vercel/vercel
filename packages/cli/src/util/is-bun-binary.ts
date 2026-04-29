@@ -7,3 +7,9 @@ export function isBunCompiledBinary(): boolean {
     return false;
   }
 }
+
+export function isVercelCliBinary(): boolean {
+  return (
+    Boolean(process.env.VERCEL_CLI_BINARY_ASSET_DIR) || isBunCompiledBinary()
+  );
+}
