@@ -951,9 +951,6 @@ export default class DevServer {
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
-        requestedProjectEnv: isLiteralEnvRecord(vercelConfig.env)
-          ? undefined
-          : vercelConfig.env,
         proxyOrigin: this.address.origin,
       });
       devCommandPromise = this.orchestrator.startAll();

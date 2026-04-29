@@ -1025,6 +1025,11 @@ export async function resolveAllConfiguredServices(
   }
   if (rootEnv) {
     validateEnvRefs(rootEnv, 'env', servicesByName, errors);
+    // Fold top-level env refs into every service's `env`, so the result
+    // is always written in the build output and API won't be needed to do that again
+    for (const service of resolved) {
+      service.env = { ...rootEnv, ...(service.env ?? {}) };
+    }
   }
 
   return { services: resolved, errors };

@@ -13,7 +13,6 @@ import {
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
-  type EnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -844,17 +843,6 @@ async function doBuild(
     }
   }
 
-  // Resolve requested top-level `env` once
-  const requestedEnv =
-    detectedServices && isEnvVarsRecord(localConfig.env)
-      ? getServiceUrlEnvVars({
-          requestedEnv: localConfig.env,
-          services: detectedServices,
-          frameworkList,
-          deploymentUrl: process.env.VERCEL_URL,
-        })
-      : {};
-
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -1036,19 +1024,16 @@ async function doBuild(
       // User-defined env takes precedence and won't be overwritten. The env will be cleared
       // after the build is complete
       const restoreEnv = new Map<string, string | undefined>();
-      if (detectedServices) {
-        const perServiceEnv = service?.env
-          ? getServiceUrlEnvVars({
-              requestedEnv: service.env,
-              consumerService: service,
-              services: detectedServices,
-              frameworkList,
-              currentEnv: process.env,
-              deploymentUrl: process.env.VERCEL_URL,
-            })
-          : {};
-        const merged = { ...requestedEnv, ...perServiceEnv };
-        for (const [key, value] of Object.entries(merged)) {
+      if (detectedServices && service?.env) {
+        const perServiceEnv = getServiceUrlEnvVars({
+          requestedEnv: service.env,
+          consumerService: service,
+          services: detectedServices,
+          frameworkList,
+          currentEnv: process.env,
+          deploymentUrl: process.env.VERCEL_URL,
+        });
+        for (const [key, value] of Object.entries(perServiceEnv)) {
           if (key in process.env) continue;
           restoreEnv.set(key, process.env[key]);
           process.env[key] = value;
@@ -1599,12 +1584,6 @@ async function doBuild(
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
     await analyzeVcConfigFiles(cwd, outputDir);
   }
-}
-
-function isEnvVarsRecord(env: VercelConfig['env']): env is EnvVars {
-  if (!env) return false;
-  const first = Object.values(env)[0];
-  return typeof first === 'object' && first !== null;
 }
 
 function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {

@@ -25,7 +25,6 @@ import {
   type BuilderV3,
   type BuilderVX,
   type Config,
-  type EnvVars,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
 import { importBuilders } from '../build/import-builders';
@@ -162,7 +161,6 @@ interface ServicesOrchestratorOptions {
   cwd: string;
   repoRoot: string;
   env: NodeJS.ProcessEnv;
-  requestedProjectEnv?: EnvVars;
   proxyOrigin: string;
 }
 
@@ -176,7 +174,6 @@ export class ServicesOrchestrator {
   private cwd: string;
   private repoRoot: string;
   private env: NodeJS.ProcessEnv;
-  private projectEnv: Record<string, string>;
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
@@ -189,14 +186,6 @@ export class ServicesOrchestrator {
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
     this.env = options.env;
-    this.projectEnv = options.requestedProjectEnv
-      ? getServiceUrlEnvVars({
-          requestedEnv: options.requestedProjectEnv,
-          services: options.services,
-          frameworkList,
-          origin: options.proxyOrigin,
-        })
-      : {};
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
@@ -360,7 +349,6 @@ export class ServicesOrchestrator {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
-      this.projectEnv,
       perServiceEnv,
       process.env,
       this.env

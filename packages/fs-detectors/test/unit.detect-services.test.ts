@@ -1475,6 +1475,78 @@ describe('detectServices', () => {
         expect(result.errors).toEqual([]);
         expect(result.services).toHaveLength(1);
       });
+
+      it('should fold top-level env into every service.env', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              API_URL: { ref: { service: 'api' } },
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        const frontend = result.services.find(s => s.name === 'frontend');
+        const api = result.services.find(s => s.name === 'api');
+        expect(frontend?.env).toEqual({
+          API_URL: { ref: { service: 'api' } },
+        });
+        expect(api?.env).toEqual({
+          API_URL: { ref: { service: 'api' } },
+        });
+      });
+
+      it('per-service env overrides top-level on key conflict', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              API_URL: { ref: { service: 'api' } },
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  // Override the top-level entry with a different target.
+                  API_URL: { ref: { service: 'admin' } },
+                },
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+              },
+              admin: {
+                entrypoint: 'admin/index.ts',
+                routePrefix: '/admin',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+          'admin/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        const frontend = result.services.find(s => s.name === 'frontend');
+        // Per-service entry wins.
+        expect(frontend?.env).toEqual({
+          API_URL: { ref: { service: 'admin' } },
+        });
+      });
     });
 
     describe('with root', () => {
