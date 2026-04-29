@@ -301,6 +301,7 @@ jobs:
         run: |
           attempt=1
           max_attempts=2
+          export NODE_OPTIONS="-r $(node -p "require.resolve('dd-trace/ci/init')")"
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
@@ -327,7 +328,6 @@ jobs:
           # GitHub Actions job span, replacing the previous post-hoc JUnit
           # upload. See test/lib/deployment/metrics.js for the legacy
           # DATADOG_API_KEY consumer (custom transient-error metrics).
-          NODE_OPTIONS: '-r dd-trace/ci/init'
           DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
           DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
@@ -451,6 +451,7 @@ jobs:
         run: |
           attempt=1
           max_attempts=2
+          export NODE_OPTIONS="-r $(node -p "require.resolve('dd-trace/ci/init')")"
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
@@ -480,7 +481,6 @@ jobs:
           # GitHub Actions job span, replacing the previous post-hoc JUnit
           # upload. See test/lib/deployment/metrics.js for the legacy
           # DATADOG_API_KEY consumer (custom transient-error metrics).
-          NODE_OPTIONS: '-r dd-trace/ci/init'
           DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
           DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}

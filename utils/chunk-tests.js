@@ -152,11 +152,6 @@ function getScriptTestPatterns(packageJson, scriptName) {
     return jestPatterns;
   }
 
-  const vitestPatterns = getPatternsAfterCommand(script, 'vitest run');
-  if (vitestPatterns.length > 0) {
-    return vitestPatterns;
-  }
-
   if (script === 'pnpm test') {
     return getDefaultTestPatterns();
   }
