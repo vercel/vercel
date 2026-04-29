@@ -143,7 +143,9 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       const variableName = parts.at(-1)!;
       const rel = `${parts.slice(0, -1).join('/')}.py`;
       const ep = baseDir ? `${baseDir}/${rel}` : rel;
-      debug(`Django hook: ASGI entrypoint: ${ep} (variable: ${variableName})`);
+      debug(
+        `Django hook: ASGI entrypoint: ${ep} (variable: ${variableName}) - FORCE E2E TODO REMOVE`
+      ); // TODO: remove log
       resolvedEntrypoint = { entrypoint: ep, variableName };
     } else {
       const wsgiApp = djangoSettings['WSGI_APPLICATION'];
