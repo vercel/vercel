@@ -1,7 +1,10 @@
 // @ts-check
 const fs = require('node:fs');
 const path = require('node:path');
-const { getAffectedPackages } = require('./get-affected-packages');
+const {
+  getAffectedPackages,
+  getAllPackages,
+} = require('./get-affected-packages');
 
 const runnersMap = new Map([
   [
@@ -111,42 +114,6 @@ const packageOptionsOverrides = {
 
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
 const DEFAULT_TEST_NAME_PATTERNS = ['test', 'spec'];
-const WORKSPACE_PACKAGE_DIRS = ['packages', 'internals'];
-
-function getPackageManifests(rootPath) {
-  const manifests = [];
-
-  for (const packageDir of WORKSPACE_PACKAGE_DIRS) {
-    const absolutePackageDir = path.join(rootPath, packageDir);
-    if (!fs.existsSync(absolutePackageDir)) {
-      continue;
-    }
-
-    for (const entry of fs.readdirSync(absolutePackageDir, {
-      withFileTypes: true,
-    })) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-
-      const packageJsonPath = path.join(
-        absolutePackageDir,
-        entry.name,
-        'package.json'
-      );
-      if (fs.existsSync(packageJsonPath)) {
-        manifests.push(readPackageManifest(rootPath, packageJsonPath));
-      }
-    }
-  }
-
-  const examplesPackageJson = path.join(rootPath, 'examples', 'package.json');
-  if (fs.existsSync(examplesPackageJson)) {
-    manifests.push(readPackageManifest(rootPath, examplesPackageJson));
-  }
-
-  return manifests;
-}
 
 function readPackageManifest(rootPath, packageJsonPath) {
   const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -409,7 +376,14 @@ async function getChunkedTests() {
    */
   const testsToRun = {};
 
-  const packageManifests = getPackageManifests(rootPath);
+  const packageManifests = (await getAllPackages())
+    .filter(pkg => pkg.name && pkg.name !== '//' && pkg.path)
+    .map(pkg =>
+      readPackageManifest(
+        rootPath,
+        path.join(rootPath, pkg.path, 'package.json')
+      )
+    );
   const affectedPackageSet = new Set(affectedPackages);
   packageManifests
     .filter(({ packageName }) => {

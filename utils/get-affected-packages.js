@@ -29,6 +29,20 @@ const TEST_TASK_NAMES = ['test', 'vitest', 'type-check'];
  */
 const E2E_TASK_NAMES = ['test-e2e', 'vitest-e2e'];
 
+async function getAllPackages() {
+  const variablesPath = path.resolve(__dirname, 'all-packages-variables.json');
+  const queryPath = path.resolve(__dirname, 'all-packages-query.gql');
+
+  const response = await turboQuery(['--variables', variablesPath, queryPath]);
+  const data = JSON.parse(response.toString('utf8'));
+
+  if (!data.data || !data.data.packages) {
+    throw new Error('No packages data found in GraphQL response');
+  }
+
+  return data.data.packages.items;
+}
+
 /**
  * Get affected packages based on git changes since the given commit
  * @param {string} baseSha - The base commit SHA to compare against
@@ -199,27 +213,7 @@ function shouldRunAllE2ETests(changedFiles) {
  */
 async function getAllPackagesWithE2ETests() {
   try {
-    // Use GraphQL query to find all packages with e2e test tasks
-    const variablesPath = path.resolve(
-      __dirname,
-      'all-packages-variables.json'
-    );
-    const queryPath = path.resolve(__dirname, 'all-packages-query.gql');
-
-    const response = await turboQuery([
-      '--variables',
-      variablesPath,
-      queryPath,
-    ]);
-
-    const data = JSON.parse(response.toString('utf8'));
-
-    if (!data.data || !data.data.packages) {
-      console.warn('No packages data found in GraphQL response');
-      return [];
-    }
-
-    const packagesWithE2E = data.data.packages.items
+    const packagesWithE2E = (await getAllPackages())
       .filter(pkg => {
         // Skip root package
         if (!pkg.name || pkg.name === '//') return false;
@@ -249,26 +243,7 @@ async function getAllPackagesWithE2ETests() {
  */
 async function getAllPackagesWithTests() {
   try {
-    const variablesPath = path.resolve(
-      __dirname,
-      'all-packages-variables.json'
-    );
-    const queryPath = path.resolve(__dirname, 'all-packages-query.gql');
-
-    const response = await turboQuery([
-      '--variables',
-      variablesPath,
-      queryPath,
-    ]);
-
-    const data = JSON.parse(response.toString('utf8'));
-
-    if (!data.data || !data.data.packages) {
-      console.warn('No packages data found in GraphQL response');
-      return [];
-    }
-
-    const packagesWithTests = data.data.packages.items
+    const packagesWithTests = (await getAllPackages())
       .filter(hasTestTasks)
       .map(pkg => pkg.name);
 
@@ -281,6 +256,7 @@ async function getAllPackagesWithTests() {
 
 module.exports = {
   getAffectedPackages,
+  getAllPackages,
   getChangedFiles,
   shouldRunAllE2ETests,
   getAllPackagesWithE2ETests,
