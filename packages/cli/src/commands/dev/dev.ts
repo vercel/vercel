@@ -190,10 +190,12 @@ export default async function dev(
         output.debug('OIDC token refresh was aborted');
         return;
       }
-      // re-throwing this one here would only produce an unhandled
-      // rejection because this callback runs in a detached `setTimeout`
+      // if on forced restart after OIDC refresh (12 hours)
+      // we can't restart a dev command, then we can only
+      // show the error and exit
       if (error instanceof DevCommandExitError) {
-        return;
+        output.error(error.message);
+        process.exit(error.exitCode);
       }
       throw error;
     }

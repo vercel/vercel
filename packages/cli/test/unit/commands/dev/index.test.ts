@@ -6,16 +6,26 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { useProject } from '../../../mocks/project';
 
-vi.mock('../../../../src/util/dev/server', () => {
+const { mockStart } = vi.hoisted(() => ({
+  mockStart: vi.fn<() => void>(),
+}));
+
+vi.mock('../../../../src/util/dev/server', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../../../src/util/dev/server')
+  >('../../../../src/util/dev/server');
   class DevServer {
     devCommand = 'framework dev';
     feed() {}
     stop() {
       return Promise.resolve();
     }
-    start() {}
+    start = mockStart;
   }
-  return { default: DevServer };
+  return {
+    default: DevServer,
+    DevCommandExitError: actual.DevCommandExitError,
+  };
 });
 
 vi.mock('node:fs/promises', async () => {
@@ -200,6 +210,62 @@ describe('dev', () => {
           value: 'TRUE',
         },
       ]);
+    });
+  });
+
+  describe('dev command failure', () => {
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+        code?: number
+      ) => {
+        throw new Error(`__exit__:${code ?? ''}`);
+      }) as never);
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+      mockStart.mockReset();
+    });
+
+    it('prints error and exits with the dev command exit code', async () => {
+      const { DevCommandExitError } = await import(
+        '../../../../src/util/dev/server'
+      );
+
+      mockStart.mockRejectedValueOnce(
+        new DevCommandExitError(
+          'Dev Command “framework dev” exited with code 127',
+          127
+        )
+      );
+
+      client.setArgv('dev', projectPath);
+
+      await expect(dev(client)).rejects.toThrow('__exit__:127');
+      await expect(client.stderr).toOutput(
+        'Error: Dev Command “framework dev” exited with code 127'
+      );
+    });
+
+    it('exits with code 1 on ServiceStartError', async () => {
+      const { ServiceStartError } = await import(
+        '../../../../src/util/dev/services-orchestrator'
+      );
+
+      mockStart.mockRejectedValueOnce(
+        new ServiceStartError([
+          new Error('Service "frontend" exited with code 127'),
+        ])
+      );
+
+      client.setArgv('dev', projectPath);
+
+      await expect(dev(client)).rejects.toThrow('__exit__:1');
+      await expect(client.stderr).toOutput(
+        'Service "frontend" exited with code 127'
+      );
     });
   });
 });
