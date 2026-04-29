@@ -533,11 +533,11 @@ export const config = { matcher: '/api/users/:path*' };
 
 ### upgradeWebSocket
 
-▸ **upgradeWebSocket**(): [`WebSocket`](index.md#websocket)
+▸ **upgradeWebSocket**(): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[`WebSocket`](index.md#websocket)\>
 
 #### Returns
 
-[`WebSocket`](index.md#websocket)
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[`WebSocket`](index.md#websocket)\>
 
 #### Defined in
 
