@@ -39,8 +39,13 @@ export const HIVE_LAMBDA_SIZE_BYTES = 1 * 1024 * 1024 * 1024;
 // build log renders them as multi-line paragraphs instead of one long
 // unbroken sentence.
 const FUNCTIONS_BETA_CTA =
-  'Run `vercel deploy --functions-beta` to use extended function limits\n' +
+  'Run `vercel deploy --functions-beta` to use extended function limits ' +
   '(up to 1 GB), or reduce your dependency footprint.';
+
+const BUNDLING_DOCS_LINK =
+  'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
+const FUNCTIONS_BETA_DOCS_LINK =
+  'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
 
 // Shown when the user is already on Functions Beta (Hive) but their bundle
 // still exceeds the extended 1 GB limit. In that case we cannot suggest
@@ -177,7 +182,9 @@ export class PythonDependencyExternalizer {
             `  1. Remove unused dependencies from your project.\n` +
             `  2. Remove the custom install command to allow Vercel to manage\n` +
             `     and optimize dependencies automatically.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        link: shouldShowFunctionsBetaHint()
+          ? FUNCTIONS_BETA_DOCS_LINK
+          : BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -250,7 +257,9 @@ export class PythonDependencyExternalizer {
             `within the ${ephemeralLimitMB} MB ephemeral storage available to Lambda\n` +
             `functions. Consider removing unused dependencies or splitting\n` +
             `your application into smaller functions.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        link: shouldShowFunctionsBetaHint()
+          ? FUNCTIONS_BETA_DOCS_LINK
+          : BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -540,7 +549,9 @@ export class PythonDependencyExternalizer {
             `This usually means your private packages or source code are too\n` +
             `large. Consider reducing the size of private dependencies or\n` +
             `splitting your application.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        link: shouldShowFunctionsBetaHint()
+          ? FUNCTIONS_BETA_DOCS_LINK
+          : BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
