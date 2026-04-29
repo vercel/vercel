@@ -8,7 +8,7 @@ const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
 const { duplicateWithConfig } = require('../utils');
-const { streamToBuffer } = require('@vercel/build-utils');
+const { glob, streamToBuffer } = require('@vercel/build-utils');
 const { createHash } = require('crypto');
 
 const runBuildLambda = createRunBuildLambda(builder);
@@ -154,6 +154,34 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     // expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
     //   /server\/app\/dashboard\/index\.rsc$/
     // );
+  });
+
+  it('should expose Next.js server source maps as private outputs', async () => {
+    const fixturePath = path.join(__dirname, '../fixtures/00-app-dir-no-ppr');
+    const { buildResult, workPath } = await runBuildLambda(fixturePath);
+    const emittedServerSourceMaps = await glob(
+      'server/**/*.map',
+      path.join(workPath, '.next')
+    );
+    const emittedSourceMapPaths = Object.keys(emittedServerSourceMaps).map(
+      sourceMapPath =>
+        path.posix.join(
+          '_next/__private/server-source-maps',
+          sourceMapPath.replace(/^server\/+/, '')
+        )
+    );
+
+    expect(emittedSourceMapPaths.length).toBeGreaterThan(0);
+    emittedSourceMapPaths.forEach(sourceMapPath => {
+      expect(buildResult.output[sourceMapPath]).toBeDefined();
+    });
+
+    expect(buildResult.routes).toContainEqual({
+      src: '^/_next/__private/server\\-source\\-maps/.+\\.map$',
+      dest: '/404',
+      status: 404,
+      continue: true,
+    });
   });
 
   it('should not generate /_next/data routes for pure App Router apps', async () => {

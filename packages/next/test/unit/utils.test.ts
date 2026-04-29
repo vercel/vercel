@@ -2,6 +2,8 @@ import path from 'path';
 import os from 'os';
 import {
   excludeFiles,
+  getPrivateServerSourceMapRoute,
+  getPrivateServerSourceMaps,
   validateEntrypoint,
   normalizePackageJson,
   getImagesConfig,
@@ -416,6 +418,44 @@ describe('getServerlessPages', () => {
 
     expect(Object.keys(pages)).toEqual(['_app.js', '_error.js']);
     expect(Object.keys(appPaths)).toEqual(['favicon.ico.js', 'index.js']);
+  });
+});
+
+describe('getPrivateServerSourceMaps', () => {
+  it('should expose Next.js server source maps as private outputs', async () => {
+    const dir = await genDir({
+      'server/chunks/app/api/route.js.map': '{"version":3}',
+      'server/chunks/ssr/_0izskry._.js.map': '{"version":3}',
+      'server/app/page.js': 'compiled output',
+    });
+
+    const result = await getPrivateServerSourceMaps(dir);
+
+    expect(result.files).toMatchObject({
+      '_next/__private/server-source-maps/chunks/app/api/route.js.map':
+        expect.any(FileFsRef),
+      '_next/__private/server-source-maps/chunks/ssr/_0izskry._.js.map':
+        expect.any(FileFsRef),
+    });
+    expect(
+      result.files[
+        '_next/__private/server-source-maps/chunks/app/api/route.js.map'
+      ]
+    ).toMatchObject({
+      contentType: 'application/json',
+    });
+    expect(result.routes).toEqual([getPrivateServerSourceMapRoute()]);
+  });
+
+  it('should not emit routes when no server source maps exist', async () => {
+    const dir = await genDir({
+      'server/app/page.js': 'compiled output',
+    });
+
+    const result = await getPrivateServerSourceMaps(dir);
+
+    expect(result.files).toEqual({});
+    expect(result.routes).toEqual([]);
   });
 });
 
