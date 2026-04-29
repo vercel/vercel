@@ -1,6 +1,7 @@
 import { mergeConfig } from 'vite';
 import rootConfig from '../../vitest.config.mjs';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 // Get peer dependencies to externalize them (they may not be installed in CI)
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
