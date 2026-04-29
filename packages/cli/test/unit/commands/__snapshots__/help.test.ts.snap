@@ -2333,6 +2333,12 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                               number    
 
 
+  Examples:
+
+  - Run a command with Environment Variables from the linked Project
+
+    $ vercel env run -- <command>
+
 "
 `;
 
@@ -2377,6 +2383,12 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
+  Examples:
+
+  - Run a command with Environment Variables from the linked Project
+
+    $ vercel env run -- <command>
+
 "
 `;
 
@@ -2411,6 +2423,12 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Run a command with Environment Variables from the linked Project
+
+    $ vercel env run -- <command>
 
 "
 `;

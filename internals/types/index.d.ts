@@ -2,6 +2,7 @@ import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
+import type { AuthTokenStorage } from '@vercel/cli-auth/credentials-store.js';
 import type { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
@@ -51,6 +52,7 @@ export interface AuthConfig {
 export interface GlobalConfig {
   '// Note'?: string;
   '// Docs'?: string;
+  authTokenStorage?: AuthTokenStorage;
   currentTeam?: string;
   api?: string;
 

@@ -158,10 +158,10 @@ export const tokensSubcommand = {
       name: 'remove',
       shorthand: null,
       type: [String],
-      argument: 'TOKEN',
+      argument: 'ID_OR_TOKEN',
       deprecated: false,
       description:
-        'Revoke one or more token strings (repeatable). Requires `--yes` in non-interactive mode',
+        'Revoke one or more tokens by id or plaintext token (repeatable). Requires `--yes` in non-interactive mode',
     },
   ],
   examples: [],
