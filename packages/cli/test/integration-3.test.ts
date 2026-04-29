@@ -941,18 +941,54 @@ test('should pass through exit code for CLI extension', async () => {
   expect(output.exitCode).toEqual(6);
 });
 
-test('default command should prompt login with empty auth.json', async () => {
-  const output = await execCli(binaryPath, ['-Q', '/tmp'], {
-    // execCli passes the token automatically, undo that functionality for this test
-    token: false,
-    env: {
-      // Unset VERCEL_TOKEN so the env var doesn't bypass the login prompt
-      VERCEL_TOKEN: '',
-    },
+test('default command should prompt login with empty credentials', async () => {
+  const globalConfigDir = getNewTmpDir();
+  await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
+    authTokenStorage: 'file',
   });
+
+  const output = await execCli(
+    binaryPath,
+    ['-Q', '/tmp', '--global-config', globalConfigDir],
+    {
+      // execCli passes the token automatically, undo that functionality for this test
+      token: false,
+      env: {
+        // Unset VERCEL_TOKEN so the env var doesn't bypass the login prompt
+        VERCEL_TOKEN: '',
+      },
+    }
+  );
   expect(output.stderr, formatOutput(output)).toBeTruthy();
   expect(output.stderr).toContain(
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
+  );
+});
+
+test('invalid authTokenStorage should fail with a config error', async () => {
+  const globalConfigDir = getNewTmpDir();
+  await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
+    authTokenStorage: 'keychain',
+  });
+
+  const output = await execCli(
+    binaryPath,
+    ['-Q', '/tmp', '--global-config', globalConfigDir],
+    {
+      reject: false,
+      token: false,
+      env: {
+        VERCEL_TOKEN: '',
+      },
+    }
+  );
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toContain(
+    'An unexpected error occurred while trying to read the config'
+  );
+  expect(output.stderr).toContain(
+    'Invalid value for `authTokenStorage`: "keychain". Expected one of: "auto", "file", "keyring".'
   );
 });
 

@@ -9,6 +9,7 @@
   ],
   "dependencies": {
     "@types/node": "20.11.0",
+    "@vercel/cli-auth": "workspace:*",
     "@vercel-internals/constants": "workspace:*",
     "@vercel/build-utils": "workspace:*",
     "@vercel/routing-utils": "workspace:*"

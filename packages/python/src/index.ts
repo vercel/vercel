@@ -305,20 +305,19 @@ export const build: BuildVX = async ({
         rootDir,
       });
       versionSpan.setAttributes({
-        'python.version': pythonVersionString(resolution.pythonVersion),
+        'python.version':
+          pythonVersionString(resolution.pythonVersion) ?? 'unknown',
         'python.versionSource': resolution.versionSource,
       });
       return resolution;
     });
 
   if (pinVersionFilePath) {
-    console.log(
-      `Writing .python-version file with version ${pythonVersionString(pythonVersion)}`
-    );
-    await writeFile(
-      pinVersionFilePath,
-      `${pythonVersionString(pythonVersion)}\n`
-    );
+    const versionToPin = pythonVersionString(pythonVersion);
+    if (versionToPin) {
+      console.log(`Writing .python-version file with version ${versionToPin}`);
+      await writeFile(pinVersionFilePath, `${versionToPin}\n`);
+    }
   }
 
   // Create a virtual environment so dependencies can be installed via
@@ -795,8 +794,9 @@ from vercel_runtime.vc_init import vc_handler
   });
 
   // Write project manifest for diagnostics (best-effort, never fails the build).
-  // Requires uv.lock to resolve versions and dependency graph.
-  if (uvLockPath) {
+  // Requires uv.lock to resolve versions and dependency graph.  Skipped in
+  // `vercel dev` since the CLI only reads the manifest in `vercel build`.
+  if (uvLockPath && !meta.isDev) {
     try {
       await generateProjectManifest({
         workPath,
