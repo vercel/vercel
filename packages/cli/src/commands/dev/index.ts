@@ -10,6 +10,7 @@ import { printError } from '../../util/error';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
+import { DevCommandExitError } from '../../util/dev/server';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { packageName, getCommandName } from '../../util/pkg-name';
@@ -134,6 +135,10 @@ export default async function main(client: Client) {
   try {
     return await dev(client, parsedArgs.flags, args, telemetry);
   } catch (err) {
+    if (err instanceof DevCommandExitError) {
+      output.error(err.message);
+      process.exit(err.exitCode);
+    }
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
       // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"

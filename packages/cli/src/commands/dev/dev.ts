@@ -4,7 +4,7 @@ import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
 
-import DevServer from '../../util/dev/server';
+import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
@@ -186,11 +186,16 @@ export default async function dev(
         telemetry.trackOidcTokenRefresh(++refreshCount);
       }
     } catch (error) {
-      // Throw any error aside from an abort error.
-      if (!(error instanceof Error && error.name === 'AbortError')) {
-        throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        output.debug('OIDC token refresh was aborted');
+        return;
       }
-      output.debug('OIDC token refresh was aborted');
+      // re-throwing this one here would only produce an unhandled
+      // rejection because this callback runs in a detached `setTimeout`
+      if (error instanceof DevCommandExitError) {
+        return;
+      }
+      throw error;
     }
   });
 
