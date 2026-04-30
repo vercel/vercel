@@ -1,7 +1,6 @@
 // @ts-check
 const fs = require('node:fs');
 const path = require('node:path');
-const { globSync } = require('glob');
 const {
   getAffectedPackages,
   getAllPackages,
@@ -255,12 +254,12 @@ function expandPattern(packageRoot, pattern) {
     return [absolutePattern];
   }
 
-  let matches = globSync(normalizedPattern, {
-    absolute: true,
-    cwd: packageRoot,
-    nodir: true,
-    ignore: ['**/node_modules/**', '**/dist/**', '**/.turbo/**'],
-  }).sort((a, b) => a.localeCompare(b));
+  const matcher = globPatternToRegExp(normalizedPattern);
+  let matches = walkFiles(packageRoot)
+    .filter(filePath =>
+      matcher.test(path.relative(packageRoot, filePath).replace(/\\/g, '/'))
+    )
+    .sort((a, b) => a.localeCompare(b));
 
   if (
     hasWildcard(normalizedPattern) &&
@@ -284,6 +283,60 @@ function isTestFile(filePath) {
   return DEFAULT_TEST_NAME_PATTERNS.some(name =>
     new RegExp(`\\.${name}\\.[^.]+$`).test(filePath)
   );
+}
+
+function globPatternToRegExp(pattern) {
+  let source = '^';
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    const nextChar = pattern[index + 1];
+    const followingChar = pattern[index + 2];
+
+    if (char === '*' && nextChar === '*' && followingChar === '/') {
+      source += '(?:.*/)?';
+      index += 2;
+    } else if (char === '*' && nextChar === '*') {
+      source += '.*';
+      index += 1;
+    } else if (char === '*') {
+      source += '[^/]*';
+    } else if (char === '?') {
+      source += '[^/]';
+    } else {
+      source += escapeRegExp(char);
+    }
+  }
+  source += '$';
+  return new RegExp(source);
+}
+
+function escapeRegExp(char) {
+  return /[\\^$.*+?()[\]{}|]/.test(char) ? `\\${char}` : char;
+}
+
+function walkFiles(directory) {
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
+
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (
+      entry.name === 'node_modules' ||
+      entry.name === 'dist' ||
+      entry.name === '.turbo'
+    ) {
+      continue;
+    }
+
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...walkFiles(entryPath));
+    } else {
+      files.push(entryPath);
+    }
+  }
+  return files;
 }
 
 function getRunnerOptions(scriptName, packageName) {
