@@ -11,11 +11,13 @@ import {
   createSubcommand,
   listSubcommand,
   tokenSubcommand,
+  openSubcommand,
   connexCommand,
 } from './command';
 import { create } from './create';
 import { list } from './list';
 import { token } from './token';
+import { openClient } from './open';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
@@ -27,6 +29,7 @@ const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
+  open: getCommandAliases(openSubcommand),
 };
 
 export default async function connex(client: Client): Promise<number> {
@@ -113,6 +116,23 @@ export default async function connex(client: Client): Promise<number> {
         const tokenFlagsSpec = getFlagsSpecification(tokenSubcommand.options);
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
         return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
+      }
+      case 'open': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(openSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandOpen(subcommandOriginal);
+
+        const openFlagsSpec = getFlagsSpecification(openSubcommand.options);
+        const openParsedArgs = parseArguments(subArgs, openFlagsSpec);
+        telemetry.trackCliOptionFormat(openParsedArgs.flags['--format']);
+        return await openClient(
+          client,
+          openParsedArgs.args,
+          openParsedArgs.flags
+        );
       }
       default: {
         const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');

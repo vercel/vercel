@@ -36,16 +36,8 @@ describe('refreshToken', () => {
       recursive: true,
     });
 
-    fs.writeFileSync(
-      path.join(cliDataDir, 'config.json'),
-      JSON.stringify({ authTokenStorage: 'file' })
-    );
-
     // write the auth.json file to supply the auth token for the cli
-    fs.writeFileSync(
-      path.join(cliDataDir, 'auth.json'),
-      JSON.stringify({ token: 'test' })
-    );
+    fs.writeFileSync(path.join(cliDataDir, 'auth.json'), '{token: "test"}');
 
     // write the project.json file to supply the projectId
     fs.writeFileSync(
