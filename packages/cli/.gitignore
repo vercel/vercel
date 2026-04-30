@@ -4,3 +4,4 @@
 .env*.local
 
 dist-bin/
+dist-native-packages/

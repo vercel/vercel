@@ -1,23 +1,20 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 
-const cliRoot = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
-const nativeRoot = join(cliRoot, 'native-packages');
-const packageDirs = [
-  'cli-darwin-arm64',
-  'cli-darwin-x64',
-  'cli-linux-arm64',
-  'cli-linux-x64',
-  'cli-linux-arm64-musl',
-  'cli-linux-x64-musl',
-  'cli-windows-arm64',
-  'cli-windows-x64',
-  'cli-native',
-];
+const cliRoot = dirname(
+  fileURLToPath(new URL('../package.json', import.meta.url))
+);
+const nativeRoot = join(cliRoot, 'dist-native-packages');
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -41,17 +38,36 @@ function capture(command, args, options = {}) {
 const tarballDir = mkdtempSync(join(tmpdir(), 'vercel-native-packages-'));
 
 try {
+  const packageDirs = readdirSync(nativeRoot, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
+    .filter(packageDirName =>
+      existsSync(join(nativeRoot, packageDirName, 'package.json'))
+    )
+    .sort((a, b) => {
+      if (a === 'cli-native') return 1;
+      if (b === 'cli-native') return -1;
+      return a.localeCompare(b);
+    });
+
+  if (packageDirs.length === 0) {
+    console.error(`no native packages found in ${nativeRoot}`);
+    process.exit(1);
+  }
+
   for (const packageDirName of packageDirs) {
     const packageDir = join(nativeRoot, packageDirName);
     const pkg = JSON.parse(
-      capture('node', ['-p', 'JSON.stringify(require("./package.json"))'], {
-        cwd: packageDir,
-      }).stdout
+      readFileSync(join(packageDir, 'package.json'), 'utf8')
     );
 
-    const view = capture('npm', ['view', `${pkg.name}@${pkg.version}`, 'version'], {
-      cwd: packageDir,
-    });
+    const view = capture(
+      'npm',
+      ['view', `${pkg.name}@${pkg.version}`, 'version'],
+      {
+        cwd: packageDir,
+      }
+    );
     if (view.status === 0) {
       console.log(`skip: ${pkg.name}@${pkg.version} (already published)`);
       continue;
