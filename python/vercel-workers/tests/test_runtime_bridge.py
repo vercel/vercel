@@ -69,9 +69,7 @@ class TestWorkerBootstrapBridge(unittest.TestCase):
         body: bytes,
     ) -> list[dict[str, Any]]:
         sent: list[dict[str, Any]] = []
-        receive_messages = [
-            {"type": "http.request", "body": body, "more_body": False}
-        ]
+        receive_messages = [{"type": "http.request", "body": body, "more_body": False}]
 
         async def receive() -> dict[str, Any]:
             if receive_messages:
