@@ -25,7 +25,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@napi-rs/keyring": "1.2.0",
     "async-listen": "3.0.0",
     "open": "8.4.0",
     "xdg-app-paths": "5",

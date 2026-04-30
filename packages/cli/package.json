@@ -38,7 +38,6 @@
     "node": ">= 18"
   },
   "dependencies": {
-    "@vercel/cli-auth": "workspace:*",
     "@vercel/blob": "2.3.0",
     "@vercel/build-utils": "workspace:*",
     "@vercel/detect-agent": "workspace:*",

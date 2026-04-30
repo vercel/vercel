@@ -1,26 +1,11 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { getVercelDataDir } from './token-util';
 
-// @vercel/oidc emits declarations with the repo's older TypeScript toolchain.
-// Importing cli-auth's generated types pulls in zod v4 declarations that this
-// build cannot parse, so keep the runtime dependency here untyped.
-const {
-  clearAllCredentialsStrict,
-  hasCredentials,
-  readCredentials,
-  writeCredentials,
-}: {
-  clearAllCredentialsStrict: (dir: string) => void;
-  hasCredentials: (credentials: Partial<AuthConfig>) => boolean;
-  readCredentials: (dir: string) => AuthConfig;
-  writeCredentials: (dir: string, credentials: Partial<AuthConfig>) => void;
-} = require('@vercel/cli-auth/credentials-store.js');
-
 /**
- * Auth configuration stored in ~/.../com.vercel.cli/auth.json or OS keyring
+ * Auth configuration stored in ~/.../com.vercel.cli/auth.json
  */
 export interface AuthConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
   /** An `access_token` obtained using the OAuth Device Authorization flow. */
   token?: string;
   /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
@@ -35,17 +20,16 @@ export interface AuthConfig {
 }
 
 /**
- * Get the path to the auth config directory
+ * Get the path to the auth config file
  */
-function getAuthConfigDir(): string {
+function getAuthConfigPath(): string {
   const dataDir = getVercelDataDir();
   if (!dataDir) {
     throw new Error(
       `Unable to find Vercel CLI data directory. Your platform: ${process.platform}. Supported: darwin, linux, win32.`
     );
   }
-
-  return dataDir;
+  return path.join(dataDir, 'auth.json');
 }
 
 /**
@@ -54,7 +38,15 @@ function getAuthConfigDir(): string {
  */
 export function readAuthConfig(): AuthConfig | null {
   try {
-    return readCredentials(getAuthConfigDir());
+    const authPath = getAuthConfigPath();
+    if (!fs.existsSync(authPath)) {
+      return null;
+    }
+    const content = fs.readFileSync(authPath, 'utf8');
+    if (!content) {
+      return null;
+    }
+    return JSON.parse(content) as AuthConfig;
   } catch (_error) {
     return null;
   }
@@ -64,12 +56,16 @@ export function readAuthConfig(): AuthConfig | null {
  * Write the auth config to disk with proper permissions
  */
 export function writeAuthConfig(config: AuthConfig): void {
-  if (hasCredentials(config)) {
-    writeCredentials(getAuthConfigDir(), config);
-    return;
+  const authPath = getAuthConfigPath();
+  const authDir = path.dirname(authPath);
+
+  // Ensure directory exists with proper permissions
+  if (!fs.existsSync(authDir)) {
+    fs.mkdirSync(authDir, { mode: 0o770, recursive: true });
   }
 
-  clearAllCredentialsStrict(getAuthConfigDir());
+  // Write file with restrictive permissions (owner read/write only)
+  fs.writeFileSync(authPath, JSON.stringify(config, null, 2), { mode: 0o600 });
 }
 
 /**
