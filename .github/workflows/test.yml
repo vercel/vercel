@@ -10,7 +10,7 @@ permissions:
   checks: read
   deployments: read
   issues: write
-  pull-requests: read
+  pull-requests: write
   statuses: write
 
 env:
@@ -132,6 +132,7 @@ jobs:
   comment-test-strategy:
     name: Comment Test Strategy
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs:
       - setup
     steps:
