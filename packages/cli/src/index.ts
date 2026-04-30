@@ -1,6 +1,6 @@
 import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
-const bump = 'hello'
+const bump = 'hello2'
 bump
 
 try {
