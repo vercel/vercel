@@ -27,6 +27,13 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandOpen(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'open',
+      value: actual,
+    });
+  }
+
   trackCliOptionLimit(v: number | undefined) {
     if (v !== undefined) {
       this.trackCliOption({

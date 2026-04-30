@@ -151,13 +151,45 @@ export const tokenSubcommand = {
   ],
 } as const;
 
+export const openSubcommand = {
+  name: 'open',
+  aliases: [],
+  description: 'Open a Connex client in the Vercel dashboard',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Open a client by ID',
+      value: `${packageName} connex open scl_abc123`,
+    },
+    {
+      name: 'Open a client by UID',
+      value: `${packageName} connex open slack/my-bot`,
+    },
+    {
+      name: 'Print the dashboard URL as JSON',
+      value: `${packageName} connex open scl_abc123 --format=json`,
+    },
+  ],
+} as const;
+
 export const connexCommand = {
   name: 'connex',
   aliases: [],
   description: 'Manage Vercel Connect clients',
   arguments: [],
   options: [],
-  subcommands: [createSubcommand, listSubcommand, tokenSubcommand],
+  subcommands: [
+    createSubcommand,
+    listSubcommand,
+    tokenSubcommand,
+    openSubcommand,
+  ],
   examples: [
     {
       name: 'Create a Slack app',
@@ -170,6 +202,10 @@ export const connexCommand = {
     {
       name: 'Get a token',
       value: `${packageName} connex token scl_abc123`,
+    },
+    {
+      name: 'Open a client in the dashboard',
+      value: `${packageName} connex open scl_abc123`,
     },
   ],
 } as const;

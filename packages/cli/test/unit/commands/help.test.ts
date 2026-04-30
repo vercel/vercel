@@ -460,6 +460,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('connex open subcommand', () => {
+      it('connex open subcommand help column width 120', () => {
+        expect(
+          help(connex.openSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration help output snapshots', () => {
