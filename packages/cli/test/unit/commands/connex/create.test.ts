@@ -268,14 +268,8 @@ describe('connex create', () => {
   it('should persist team to config after interactive selection', async () => {
     delete client.config.currentTeam;
 
-    client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
-      res.writeHead(302, {
-        Location: 'https://vercel.com/test/~/connex/create?type=slack',
-      });
-      res.end();
-    });
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
-      res.json({ status: 'success', data: { clientId: 'scl_persist' } });
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_persist', uid: 'uid_persist' }));
     });
 
     client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
@@ -308,14 +302,8 @@ describe('connex create', () => {
     });
     client.cwd = cwd;
 
-    client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
-      res.writeHead(302, {
-        Location: 'https://vercel.com/test/~/connex/create?type=slack',
-      });
-      res.end();
-    });
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
-      res.json({ status: 'success', data: { clientId: 'scl_linked' } });
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_linked', uid: 'uid_linked' }));
     });
 
     client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
@@ -345,14 +333,8 @@ describe('connex create', () => {
   });
 
   it('should not rewrite config when team is already set', async () => {
-    client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
-      res.writeHead(302, {
-        Location: 'https://vercel.com/test/~/connex/create?type=slack',
-      });
-      res.end();
-    });
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
-      res.json({ status: 'success', data: { clientId: 'scl_noop' } });
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_noop', uid: 'uid_noop' }));
     });
 
     client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
@@ -370,42 +352,6 @@ describe('connex create', () => {
           message: 'Registration required',
           registerUrl: 'https://vercel.com/test/~/connex/register',
         },
-      });
-    });
-
-    let pollCount = 0;
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
-      pollCount++;
-      if (pollCount <= 2) {
-        res.statusCode = 404;
-        res.json({ error: { code: 'not_found', message: 'Not Found' } });
-      } else {
-        res.json({ status: 'success', data: { clientId: 'scl_after404' } });
-      }
-    });
-
-    client.scenario.get('/v1/connex/clients/:id', (req, res) => {
-      res.json(
-        fakeConnexClient({
-          id: (req.params as any).id,
-          uid: 'uid_after404',
-        })
-      );
-    });
-
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
-
-    const exitCode = await connex(client);
-
-    expect(exitCode).toBe(0);
-    expect(pollCount).toBe(3);
-    await expect(client.stderr).toOutput('scl_after404');
-  });
-
-  it('should tolerate early 404s during polling', async () => {
-    client.scenario.get('/v1/connex/clients/managed', (_req, res) => {
-      res.writeHead(302, {
-        Location: 'https://vercel.com/test/~/connex/create?type=slack',
       });
     });
 
