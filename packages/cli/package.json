@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "52.1.0",
+  "version": "52.2.1",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -38,7 +38,6 @@
     "node": ">= 18"
   },
   "dependencies": {
-    "@vercel/cli-auth": "workspace:*",
     "@vercel/blob": "2.3.0",
     "@vercel/build-utils": "workspace:*",
     "@vercel/detect-agent": "workspace:*",

@@ -6,7 +6,6 @@ import o from '../../output-manager';
 
 export async function logout(client: Client): Promise<number> {
   const { authConfig } = client;
-  const skipWrite = authConfig.skipWrite === true;
 
   if (!authConfig.token) {
     o.note(
@@ -34,12 +33,10 @@ export async function logout(client: Client): Promise<number> {
 
   try {
     client.updateConfig({ currentTeam: undefined });
-    client.emptyAuthConfig();
+    client.writeToConfigFile();
 
-    if (!skipWrite) {
-      client.writeToConfigFile();
-      client.persistAuthConfig();
-    }
+    client.emptyAuthConfig();
+    client.writeToAuthConfigFile();
     o.debug('Configuration has been deleted');
 
     if (!logoutError) {
