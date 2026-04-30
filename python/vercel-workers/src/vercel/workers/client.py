@@ -924,38 +924,8 @@ class _BaseQueueClient:
         )
 
 
-def _collect_client_subscriptions(
-    clients: Iterable[_BaseQueueClient],
-    *,
-    include_global: bool = False,
-) -> list[_Subscription]:
-    subscriptions = list(_subscriptions) if include_global else []
-    for client in clients:
-        subscriptions.extend(client._subscriptions)
-    return subscriptions
-
-
-def get_asgi_app_for_clients(
-    clients: Iterable[_BaseQueueClient],
-    *,
-    include_global: bool = False,
-) -> ASGI:
-    client_list = list(clients)
-
-    def handle_client_queue_callback(
-        raw_body: bytes,
-        environ: dict[str, Any] | None = None,
-    ) -> tuple[int, list[tuple[str, str]], bytes]:
-        return _handle_queue_callback(
-            raw_body,
-            environ,
-            _collect_client_subscriptions(
-                client_list,
-                include_global=include_global,
-            ),
-        )
-
-    return build_asgi_app(handle_client_queue_callback)
+def get_asgi_app_for_client(client: _BaseQueueClient) -> ASGI:
+    return _build_asgi_app_for_subscriptions(client._subscriptions)
 
 
 class QueueClient(_BaseQueueClient):

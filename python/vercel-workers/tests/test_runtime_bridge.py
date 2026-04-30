@@ -203,6 +203,75 @@ class TestWorkerBootstrapBridge(unittest.TestCase):
         self.assertEqual(calls, [{"ok": True}])
         delete_message.assert_called_once_with("orders", "consumer", "m", "receipt")
 
+    def test_resolve_worker_service_app_rejects_multiple_queue_clients(
+        self,
+    ) -> None:
+        orders = queue_client.QueueClient(region="sfo1")
+        invoices = queue_client.QueueClient(region="sfo1")
+
+        @orders.subscribe(topic="orders")
+        def handle_order(payload: dict[str, Any]) -> None:
+            pass
+
+        @invoices.subscribe(topic="invoices")
+        def handle_invoice(payload: dict[str, Any]) -> None:
+            pass
+
+        module = types.SimpleNamespace(orders=orders, invoices=invoices)
+
+        with (
+            patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            self.assertRaisesRegex(
+                RuntimeError,
+                "must export only one queue client",
+            ),
+        ):
+            vwr._resolve_worker_service_app(module)
+
+    def test_resolve_worker_service_app_uses_named_queue_client_entrypoint(
+        self,
+    ) -> None:
+        orders = queue_client.QueueClient(region="sfo1")
+        invoices = queue_client.QueueClient(region="sfo1")
+        calls: list[str] = []
+
+        @orders.subscribe(topic="orders")
+        def handle_order(payload: dict[str, Any]) -> None:
+            calls.append("orders")
+
+        @invoices.subscribe(topic="invoices")
+        def handle_invoice(payload: dict[str, Any]) -> None:
+            calls.append("invoices")
+
+        module = types.SimpleNamespace(orders=orders, invoices=invoices)
+
+        with (
+            patch.dict(
+                vwr.os.environ,
+                {"__VC_HANDLER_VARIABLE_NAME": "orders"},
+                clear=False,
+            ),
+            patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            app = vwr._resolve_worker_service_app(module)
+            self.assertIsNotNone(app)
+            sent = asyncio.run(
+                self._asgi_request(
+                    cast(Any, app),
+                    headers=self._queue_callback_headers("orders"),
+                    body=b'{"ok": true}',
+                )
+            )
+
+        self.assertEqual(sent[0]["status"], 200)
+        self.assertEqual(calls, ["orders"])
+        delete_message.assert_called_once_with("orders", "consumer", "m", "receipt")
+
     def test_bootstrap_worker_service_app_wraps_framework_errors(self) -> None:
         with (
             patch.object(

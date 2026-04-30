@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Iterable, MutableMapping
+import os
+from collections.abc import MutableMapping
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypeGuard
 
@@ -9,7 +10,7 @@ from .client import (
     AsyncQueueClient,
     QueueClient,
     get_asgi_app as get_generic_asgi_app,
-    get_asgi_app_for_clients,
+    get_asgi_app_for_client,
     has_subscriptions,
 )
 
@@ -155,36 +156,60 @@ def _bootstrap_django_worker_app() -> object | None:
     return get_asgi_app()
 
 
-def _iter_queue_clients(module: object) -> Iterable[_QueueClient]:
-    seen: set[int] = set()
+def _entrypoint_variable_name() -> str | None:
+    value = os.environ.get("__VC_HANDLER_VARIABLE_NAME")
+    if value:
+        return value
+    return os.environ.get("VERCEL_DEV_VARIABLE_NAME") or None
+
+
+def _as_subscribed_queue_client(candidate: object) -> _QueueClient | None:
+    if not isinstance(candidate, (QueueClient, AsyncQueueClient)):
+        return None
+    if not candidate.has_subscriptions():
+        return None
+    return candidate
+
+
+def _get_queue_client(module: object) -> _QueueClient | None:
+    entrypoint_variable_name = _entrypoint_variable_name()
+    if entrypoint_variable_name is not None:
+        with contextlib.suppress(AttributeError):
+            entrypoint_candidate: object = getattr(module, entrypoint_variable_name)
+            if client := _as_subscribed_queue_client(entrypoint_candidate):
+                return client
+
+    queue_client: _QueueClient | None = None
+    queue_client_id: int | None = None
     for name in dir(module):
         if name.startswith("_"):
             continue
 
         with contextlib.suppress(AttributeError):
             candidate: object = getattr(module, name)
-            if not isinstance(candidate, (QueueClient, AsyncQueueClient)):
+            client = _as_subscribed_queue_client(candidate)
+            if client is None:
                 continue
 
-            candidate_id = id(candidate)
-            if candidate_id in seen:
+            candidate_id = id(client)
+            if queue_client_id == candidate_id:
                 continue
+            if queue_client is not None:
+                raise RuntimeError(
+                    "worker entrypoint must export only one queue client with subscriptions"
+                )
 
-            seen.add(candidate_id)
-            yield candidate
+            queue_client = client
+            queue_client_id = candidate_id
+
+    return queue_client
 
 
 def _bootstrap_generic_worker_app(module: object) -> object | None:
-    queue_clients = [
-        client for client in _iter_queue_clients(module) if client.has_subscriptions()
-    ]
-    has_global_subscriptions = has_subscriptions()
-    if queue_clients:
-        return get_asgi_app_for_clients(
-            queue_clients,
-            include_global=has_global_subscriptions,
-        )
-    if has_global_subscriptions:
+    queue_client = _get_queue_client(module)
+    if queue_client is not None:
+        return get_asgi_app_for_client(queue_client)
+    if has_subscriptions():
         return get_generic_asgi_app()
     return None
 
