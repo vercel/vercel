@@ -3248,8 +3248,9 @@ describe('worker services dependency installation', () => {
       }),
     } as Record<string, FileBlob>;
 
+    let result;
     try {
-      await buildWithMocks({
+      result = await buildWithMocks({
         workPath,
         files,
         entrypoint: 'handler.py',
@@ -3266,7 +3267,7 @@ describe('worker services dependency installation', () => {
       if (fs.existsSync(workPath)) fs.removeSync(workPath);
     }
 
-    return pipCalls;
+    return { pipCalls, result };
   }
 
   beforeEach(() => {
@@ -3285,13 +3286,13 @@ describe('worker services dependency installation', () => {
   });
 
   it('installs vercel-workers when worker services are enabled', async () => {
-    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
     const workersDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
     expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
   });
 
   it('does not install vercel-workers when worker services are not enabled', async () => {
-    const pipCalls = await buildWithPipSpy();
+    const { pipCalls } = await buildWithPipSpy();
     expect(
       pipCalls.some(args =>
         args.some(arg => arg.startsWith('vercel-workers=='))
@@ -3302,12 +3303,24 @@ describe('worker services dependency installation', () => {
   it('uses VERCEL_WORKERS_PYTHON override when provided', async () => {
     process.env.VERCEL_WORKERS_PYTHON =
       'vercel-workers @ file:///tmp/vercel-workers.whl';
-    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
     expect(
       pipCalls.some(args =>
         args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
       )
     ).toBe(true);
+  });
+
+  it('marks python lambdas with internal worker services env when enabled', async () => {
+    const { result } = await buildWithPipSpy({ hasWorkerServices: true });
+    const lambda = getBuildOutputV3(result);
+    expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+  });
+
+  it('does not mark python lambdas when worker services are not enabled', async () => {
+    const { result } = await buildWithPipSpy();
+    const lambda = getBuildOutputV3(result);
+    expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
   });
 });
 
@@ -3377,7 +3390,9 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 
   describe('getUvCacheDir', () => {
     it('returns the correct cache directory path', () => {
-      expect(getUvCacheDir('/repo')).toBe('/repo/.vercel/python/cache/uv');
+      expect(getUvCacheDir('/repo')).toBe(
+        path.join('/repo', '.vercel', 'python', 'cache', 'uv')
+      );
     });
   });
 

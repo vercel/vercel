@@ -1,6 +1,6 @@
 {
   "name": "@vercel/edge",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -26,6 +26,7 @@
     "@edge-runtime/jest-environment": "2.3.7",
     "@types/jest": "27.4.1",
     "jest-junit": "16.0.0",
+    "prettier": "3.8.3",
     "ts-node": "8.9.1",
     "tsup": "7.2.0",
     "typedoc": "0.24.6",
