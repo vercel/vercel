@@ -34,6 +34,13 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandOpen(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'open',
+      value: actual,
+    });
+  }
+
   trackCliArgumentClient(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
