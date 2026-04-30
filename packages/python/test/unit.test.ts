@@ -3390,7 +3390,9 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 
   describe('getUvCacheDir', () => {
     it('returns the correct cache directory path', () => {
-      expect(getUvCacheDir('/repo')).toBe('/repo/.vercel/python/cache/uv');
+      expect(getUvCacheDir('/repo')).toBe(
+        path.join('/repo', '.vercel', 'python', 'cache', 'uv')
+      );
     });
   });
 
