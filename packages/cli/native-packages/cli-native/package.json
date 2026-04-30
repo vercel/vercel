@@ -1,0 +1,20 @@
+{
+  "name": "@vercel/cli-native",
+  "version": "0.0.0-native-placeholder",
+  "description": "Opt-in native binary distribution for the Vercel CLI",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "vercel": "./bin/vercel.js",
+    "vc": "./bin/vercel.js",
+    "vercel-native": "./bin/vercel.js",
+    "vcn": "./bin/vercel.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "optionalDependencies": {}
+}

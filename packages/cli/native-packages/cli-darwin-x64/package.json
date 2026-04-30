@@ -1,0 +1,24 @@
+{
+  "name": "@vercel/cli-darwin-x64",
+  "version": "0.0.0-native-placeholder",
+  "description": "Native Vercel CLI binary for macOS x64",
+  "license": "Apache-2.0",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "bin": {
+    "vercel": "./bin/vercel",
+    "vc": "./bin/vercel",
+    "vercel-native": "./bin/vercel",
+    "vcn": "./bin/vercel"
+  },
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

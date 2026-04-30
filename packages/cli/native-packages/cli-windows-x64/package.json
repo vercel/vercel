@@ -1,0 +1,24 @@
+{
+  "name": "@vercel/cli-windows-x64",
+  "version": "0.0.0-native-placeholder",
+  "description": "Native Vercel CLI binary for Windows x64",
+  "license": "Apache-2.0",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "bin": {
+    "vercel": "./bin/vercel.exe",
+    "vc": "./bin/vercel.exe",
+    "vercel-native": "./bin/vercel.exe",
+    "vcn": "./bin/vercel.exe"
+  },
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release-binary-${{ github.ref }}
@@ -130,6 +131,14 @@ jobs:
           fi
           cat "$file.sha256"
 
+      - name: Upload binary artifact for npm packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}${{ matrix.ext }}
+          path: packages/cli/dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+          retention-days: 3
+          if-no-files-found: error
+
       # Changesets creates the release in release.yml; wait so we don't clobber it.
       - name: Wait for GitHub Release
         shell: bash
@@ -160,3 +169,38 @@ jobs:
             "dist-bin/${{ matrix.asset }}${{ matrix.ext }}.sha256" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
+
+  publish-native-npm:
+    name: Publish native npm packages
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install npm@11
+        run: npm i -g npm@11
+
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/cli/dist-bin
+          merge-multiple: true
+
+      - name: Stage native npm packages
+        working-directory: packages/cli
+        run: node scripts/stage-native-packages.mjs
+
+      - name: Publish native npm packages
+        working-directory: packages/cli
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+        run: node scripts/publish-native-packages.mjs
