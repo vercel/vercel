@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+  repository_dispatch:
+    types:
+      - vercel.project.QmcQ2AGNAWeR6ZJCWAhqhbixxvWbgvsR2LMT4fzmTfY9SK.deployment.ready
 
 permissions:
   contents: read
@@ -20,12 +23,13 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.client_payload.git.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   setup:
     name: Find Changes
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview' && github.event.client_payload.git.ref == 'refs/heads/changeset-release/main') }}
     runs-on: ubuntu-latest
     outputs:
       unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
@@ -39,6 +43,24 @@ jobs:
       totalCount: ${{ steps['affected-packages'].outputs['total'] }}
       allPackages: ${{ steps['affected-packages'].outputs['allPackages'] }}
     steps:
+      - name: Resolve PR context
+        id: pr-context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            HEAD_SHA="${{ github.event.client_payload.git.sha }}"
+            PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${HEAD_SHA}/pulls" --jq '.[0]')
+            PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+            BASE_SHA=$(echo "$PR_JSON" | jq -r '.base.sha')
+          fi
+          echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "headSha=$HEAD_SHA" >> $GITHUB_OUTPUT
       # The `context` here MUST exactly match the one written by the
       # `Report status to PR commit` step in the `summary` job below.
       # GitHub commit statuses are upserted by `(sha, context)`, so a
@@ -51,27 +73,16 @@ jobs:
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: '${{ github.event.pull_request.head.sha }}',
+              sha: '${{ steps.pr-context.outputs.headSha }}',
               state: 'pending',
               context: 'Summary',
               target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
               description: 'Tests in progress',
             });
-      - name: Resolve PR context
-        id: pr-context
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
-          echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
-          echo "headSha=$HEAD_SHA" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr-context.outputs.headSha }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
@@ -524,7 +535,7 @@ jobs:
       # job above so this final write overwrites that pending row
       # instead of creating a duplicate.
       - name: Report status to PR commit
-        if: ${{ always() && github.event.pull_request.head.sha }}
+        if: ${{ always() && needs.setup.outputs.headSha }}
         uses: actions/github-script@v7
         env:
           CHECK_STATE: ${{ steps.check-all.outputs.state }}
@@ -534,7 +545,7 @@ jobs:
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: '${{ github.event.pull_request.head.sha }}',
+              sha: '${{ needs.setup.outputs.headSha }}',
               state,
               context: 'Summary',
               target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
