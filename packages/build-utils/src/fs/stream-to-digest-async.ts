@@ -31,8 +31,11 @@ export async function streamToDigestAsync(
     stream.on('readable', () => {
       let chunk: any;
       while (null !== (chunk = stream.read())) {
-        md5.update(chunk);
-        sha256.update(chunk);
+        const buffer = Buffer.isBuffer(chunk)
+          ? Uint8Array.from(chunk)
+          : Uint8Array.from(Buffer.from(chunk));
+        md5.update(buffer);
+        sha256.update(buffer);
         count += chunk.length;
       }
     });
@@ -44,5 +47,5 @@ export function sha256(value: any) {
 }
 
 export function md5(value: Buffer) {
-  return createHash('md5').update(value).digest('hex');
+  return createHash('md5').update(Uint8Array.from(value)).digest('hex');
 }
