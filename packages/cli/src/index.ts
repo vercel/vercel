@@ -58,7 +58,7 @@ import earlyGetConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
 import {
-  getDefaultAuthConfig,
+  defaultAuthConfig,
   defaultGlobalConfig,
 } from './util/config/get-default';
 import * as ERRORS from './util/errors-ts';
@@ -317,10 +317,20 @@ const main = async () => {
 
   let authConfig: AuthConfig;
   try {
-    authConfig = configFiles.readAuthConfigFile(config);
+    authConfig = configFiles.readAuthConfigFile();
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOENT') {
-      authConfig = getDefaultAuthConfig();
+      authConfig = defaultAuthConfig;
+      try {
+        configFiles.writeToAuthConfigFile(authConfig);
+      } catch (err: unknown) {
+        output.error(
+          `An unexpected error occurred while trying to write the auth config to "${hp(
+            VERCEL_AUTH_CONFIG_PATH
+          )}" ${errorToString(err)}`
+        );
+        return 1;
+      }
     } else {
       output.error(
         `An unexpected error occurred while trying to read the auth config in "${hp(

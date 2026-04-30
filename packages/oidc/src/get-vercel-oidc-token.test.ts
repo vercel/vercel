@@ -40,10 +40,6 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     fs.mkdirSync(path.join(rootDir, '.vercel'), {
       recursive: true,
     });
-    fs.writeFileSync(
-      path.join(cliDataDir, 'config.json'),
-      JSON.stringify({ authTokenStorage: 'file' })
-    );
 
     vi.spyOn(process, 'cwd').mockReturnValue(rootDir);
     vi.mocked(findRootDir).mockReturnValue(rootDir);
