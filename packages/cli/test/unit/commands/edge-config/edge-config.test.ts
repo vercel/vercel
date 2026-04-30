@@ -228,6 +228,59 @@ describe('edge-config', () => {
     expect(out).toEqual({ status: 'ok', revoked: 2 });
   });
 
+  it('lists tokens with partialToken (masked value) in table output', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_tok', slug: 'my-store' }]);
+    });
+    client.scenario.get('/v1/edge-config/ecfg_tok/tokens', (_req, res) => {
+      res.json([
+        {
+          id: 'tok_abc123',
+          label: 'production',
+          partialToken: 'ecr********',
+          createdAt: 1_713_528_000_000,
+        },
+      ]);
+    });
+
+    client.setArgv('edge-config', 'tokens', 'my-store');
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('tok_abc123');
+    expect(output).toContain('ecr********');
+    expect(output).toContain('production');
+  });
+
+  it('lists tokens with partialToken in JSON output', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_tok', slug: 'my-store' }]);
+    });
+    client.scenario.get('/v1/edge-config/ecfg_tok/tokens', (_req, res) => {
+      res.json([
+        {
+          id: 'tok_abc123',
+          label: 'production',
+          partialToken: 'ecr********',
+          createdAt: 1_713_528_000_000,
+        },
+      ]);
+    });
+
+    client.setArgv('edge-config', 'tokens', 'my-store', '--format', 'json');
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toEqual([
+      {
+        id: 'tok_abc123',
+        label: 'production',
+        partialToken: 'ecr********',
+        createdAt: 1_713_528_000_000,
+      },
+    ]);
+  });
+
   it('validates --patch before slug rename when both --slug and --patch are provided', async () => {
     let putCalled = false;
     client.scenario.put('/v1/edge-config/ecfg_update_order', (_req, res) => {
