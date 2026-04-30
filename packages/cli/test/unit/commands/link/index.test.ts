@@ -2,6 +2,7 @@ import { EOL } from 'node:os';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
+import * as fsDetectors from '@vercel/fs-detectors';
 import {
   readJSON,
   mkdirp,
@@ -781,6 +782,45 @@ describe('link', () => {
           value: 'TRUE',
         },
       ]);
+    });
+
+    it('should not crash when detectServicesResult.resolved is undefined', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+
+      const detectServicesSpy = vi
+        .spyOn(fsDetectors, 'detectServices')
+        // Simulate an incomplete detector output seen in some environments.
+        .mockResolvedValue({
+          services: [],
+          errors: [],
+          inferred: undefined,
+          resolved: undefined,
+        } as any);
+
+      try {
+        const { project } = useProject({
+          ...defaultProject,
+          id: basename(cwd),
+          name: basename(cwd),
+        });
+        useUnknownProject();
+
+        client.cwd = cwd;
+        client.setArgv('--yes');
+        const exitCodePromise = link(client);
+
+        await expect(client.stderr).toOutput('Searching for existing projects');
+        await expect(client.stderr).toOutput(
+          `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+        );
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "link"').toEqual(0);
+      } finally {
+        detectServicesSpy.mockRestore();
+      }
     });
   });
 
