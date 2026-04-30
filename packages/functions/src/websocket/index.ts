@@ -21,34 +21,35 @@ export async function upgradeWebSocket(): Promise<WebSocket> {
       socket.removeListener('close', onClose);
     };
 
-    const done = (err?: unknown, ws?: WebSocket) => {
+    const rejectUpgrade = (err: unknown) => {
       cleanup();
 
-      if (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        reject(new Error(`WebSocket upgrade failed: ${message}`));
+      if (err instanceof Error) {
+        reject(err);
         return;
       }
 
-      if (ws) {
-        resolve(ws);
-        return;
-      }
-
-      reject(new Error('WebSocket upgrade failed'));
+      reject(new Error('WebSocket upgrade failed', { cause: err }));
     };
 
-    const onError = (err: Error) => done(err);
+    const resolveUpgrade = (ws: WebSocket) => {
+      cleanup();
+      resolve(ws);
+    };
+
+    const onError = (err: Error) => rejectUpgrade(err);
     const onClose = () =>
-      done('socket closed before the WebSocket upgrade completed');
+      rejectUpgrade(
+        new Error('socket closed before the WebSocket upgrade completed')
+      );
 
     socket.once('error', onError);
     socket.once('close', onClose);
 
     try {
-      wss.handleUpgrade(req, socket, head, client => done(undefined, client));
+      wss.handleUpgrade(req, socket, head, resolveUpgrade);
     } catch (err) {
-      done(err);
+      rejectUpgrade(err);
     }
   });
 }
