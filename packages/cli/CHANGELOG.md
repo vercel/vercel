@@ -1,5 +1,56 @@
 # vercel
 
+## 53.0.0
+
+### Major Changes
+
+- 56880dd: `vercel edge-config tokens <id-or-slug> --format json` no longer includes plaintext `token` values. Each row now contains `id`, `label`, `partialToken`, and `createdAt`.
+
+  If your scripts read the `token` field to identify or remove a token, switch to `id` instead. For example, `vercel edge-config tokens <id-or-slug> --remove <id> --yes`.
+
+  Plaintext tokens are still printed once at creation via `--add <label>`.
+
+### Minor Changes
+
+- 4ae5eca: Adds `vercel connex open <clientIdOrUid>` — opens a Connex client's detail page in the Vercel dashboard. Gated behind `FF_CONNEX_ENABLED`.
+
+  - Accepts either an `scl_` client ID or a UID (e.g. `slack/my-bot`); resolves UIDs to the canonical `scl_` ID via `GET /v1/connex/clients/:id` before building the dashboard URL (the dashboard route is a single `[clientId]` segment).
+  - Honors `--format=json` (emits `{ "url": "..." }`) and `stdout.isTTY` (non-TTY writes the URL to stdout so it can be piped).
+  - Mirrors `vercel integration open`: presence-checks the client first so a bad id/uid fails fast with a CLI error instead of a 404 in the browser.
+
+- d071a00: Add `vercel connex remove` command to delete a Connex client by id or uid. Refuses when projects are connected unless `--disconnect-all` is passed (mirrors `vercel integration-resource remove`); supports `--yes` and `--format=json`.
+- f0c17c0: Add masked token value column to `vercel edge-config tokens` table output.
+- bc302e4: `vercel flags sdk-keys ls` now surfaces the server-masked `partialKeyValue` preview (e.g. `vf_server_abc********`) in a new column of the default table output, between `Label` and `Created`. The `--json` output also includes `partialKeyValue` on each row.
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- 93a0a1a: Persist the team selection in `vercel connex` commands so users are not re-prompted on every invocation. Personal-scope selections are rejected since connex clients are team-owned.
+- 9cd5297: Scope `vercel edge-config` subcommands to the locally linked project's team by default, matching `vercel env`, `vercel crons`, etc. Falls back to the globally configured team when no project is linked.
+- 46a2646: Limit `vc link --scope` project lookup to the requested scope.
+- dc02702: Track resolved deploy target environment in CLI telemetry.
+- Updated dependencies [25e84c6]
+- Updated dependencies [c56f851]
+  - @vercel/python@6.37.0
+  - @vercel/build-utils@13.21.0
+  - @vercel/backends@0.3.0
+  - @vercel/remix-builder@5.8.0
+  - @vercel/next@4.17.0
+  - @vercel/rust@1.2.0
+  - @vercel/go@3.6.0
+  - @vercel/static-build@2.9.22
+  - @vercel/redwood@2.4.13
+  - @vercel/elysia@0.1.72
+  - @vercel/express@0.1.82
+  - @vercel/fastify@0.1.75
+  - @vercel/h3@0.1.81
+  - @vercel/hono@0.2.75
+  - @vercel/hydrogen@1.3.7
+  - @vercel/koa@0.1.55
+  - @vercel/nestjs@0.2.76
+  - @vercel/node@5.7.14
+  - @vercel/ruby@2.3.2
+
 ## 52.2.1
 
 ### Patch Changes
