@@ -83,6 +83,7 @@ class TestVercelQueuesBroker:
         broker = VercelQueuesBroker()
         assert isinstance(broker.options, VercelQueuesBrokerOptions)
         assert len(broker.get_declared_queues()) == 0
+        assert broker.get_declared_actors() == set()
 
     def test_broker_with_options(self):
         broker = VercelQueuesBroker(options={"timeout": 20.0})
@@ -103,6 +104,15 @@ class TestVercelQueuesBroker:
         broker = VercelQueuesBroker()
         broker.declare_queue("my-queue")
         assert broker.get_declared_delay_queues() == set()
+
+    def test_get_declared_actors(self):
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="actor-registration-test")
+        def registered_actor() -> None:
+            pass
+
+        assert "registered_actor" in broker.get_declared_actors()
 
     def test_consume_raises_not_implemented(self):
         broker = VercelQueuesBroker()

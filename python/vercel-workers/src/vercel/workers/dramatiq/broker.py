@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, cast
 
 from ..client import (
     _DEPLOYMENT_ID_UNSET,
@@ -390,7 +390,8 @@ class VercelQueuesBroker(Broker):
 
     def get_declared_actors(self) -> set[str]:
         """Get the set of declared actor names."""
-        return set()
+        actors = cast("Mapping[str, object]", self.actors)
+        return set(actors)
 
     def get_declared_queues(self) -> set[str]:
         """Get the set of declared queue names."""
