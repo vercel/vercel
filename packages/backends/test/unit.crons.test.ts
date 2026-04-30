@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCronRouteTable, getServiceCrons } from '../src/crons';
+import { getServiceCrons } from '../src/crons';
 
 describe('getServiceCrons', () => {
   it('returns undefined for non-schedule-triggered services', () => {
@@ -48,7 +48,6 @@ describe('getServiceCrons', () => {
       {
         path: '/_svc/cleanup/crons/cleanup/cron',
         schedule: '0 0 * * *',
-        resolvedHandler: 'default',
       },
     ]);
   });
@@ -68,7 +67,6 @@ describe('getServiceCrons', () => {
       {
         path: '/_svc/cleanup/crons/jobs/cleanup/cron',
         schedule: '*/5 * * * *',
-        resolvedHandler: 'default',
       },
     ]);
   });
@@ -81,41 +79,12 @@ describe('getServiceCrons', () => {
     ).toThrow(/missing an entrypoint/);
   });
 
-  it('returns undefined on a <dynamic> schedule (defers to CLI legacy check)', () => {
-    // Dynamic schedules aren't yet supported for JS/TS services.
-    // Returning undefined lets the CLI's existing CRON_SERVICE_NO_CRONS
-    // path produce the legacy error message.
-    expect(
+  it('throws on a <dynamic> schedule (not yet supported for JS/TS)', () => {
+    expect(() =>
       getServiceCrons({
         service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
         entrypoint: 'cleanup.ts',
       })
-    ).toBeUndefined();
-  });
-});
-
-describe('buildCronRouteTable', () => {
-  it('maps cron paths to handler function names', () => {
-    expect(
-      buildCronRouteTable([
-        {
-          path: '/_svc/cleanup/crons/cleanup/cron',
-          schedule: '0 0 * * *',
-          resolvedHandler: 'default',
-        },
-        {
-          path: '/_svc/tasks/crons/tasks/hourly',
-          schedule: '0 * * * *',
-          resolvedHandler: 'hourly',
-        },
-      ])
-    ).toEqual({
-      '/_svc/cleanup/crons/cleanup/cron': 'default',
-      '/_svc/tasks/crons/tasks/hourly': 'hourly',
-    });
-  });
-
-  it('returns an empty object for an empty input', () => {
-    expect(buildCronRouteTable([])).toEqual({});
+    ).toThrow(/Dynamic cron schedules .* not yet supported/);
   });
 });

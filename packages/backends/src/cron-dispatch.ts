@@ -94,6 +94,10 @@ async function resolveShimFormat(args: {
   const { format } = await resolveEntrypointAndFormat({
     entrypoint: args.handler,
     workPath: args.workPath,
+    // Cron-service users may have a tiny project with just an entrypoint
+    // and a vercel.json, but no package.json. Node would treat that file
+    // as CJS and we should too.
+    defaultFormat: 'cjs',
   });
   const extension =
     extname(args.handler) || (format === 'esm' ? '.mjs' : '.cjs');

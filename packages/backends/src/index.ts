@@ -110,6 +110,10 @@ export const build: BuildV2 = async args => {
     const rolldownResult = await rolldown({
       ...args,
       span: buildSpan,
+      // Cron-service users may have just an entrypoint and a
+      // vercel.json with no package.json. Default `.js` to CJS so the
+      // bundle step can resolve the format like Node would at runtime.
+      defaultFormat: isCronService ? 'cjs' : undefined,
     });
 
     // Only hono's introspection is supported for now. Cron services

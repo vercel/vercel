@@ -7,25 +7,11 @@ import {
 
 const DYNAMIC_SCHEDULE = '<dynamic>';
 
-/** Function name to invoke on the imported user module. */
-const DEFAULT_HANDLER_NAME = 'default';
-
-export interface ServiceCronEntry extends Cron {
-  /**
-   * The function to invoke on the user's module. For v1 this is always
-   * `'default'`; multi-handler / `<dynamic>` support will populate this
-   * from the user's registry.
-   */
-  resolvedHandler: string;
-}
-
 /** Build the JSON route table embedded in `__VC_CRON_ROUTES`. */
-export function buildCronRouteTable(
-  crons: ServiceCronEntry[]
-): Record<string, string> {
+export function buildCronRouteTable(crons: Cron[]): Record<string, string> {
   const table: Record<string, string> = {};
   for (const cron of crons) {
-    table[cron.path] = cron.resolvedHandler;
+    table[cron.path] = 'default';
   }
   return table;
 }
@@ -36,11 +22,16 @@ export function buildCronRouteTable(
  * Mirrors `packages/python/src/crons.ts` for static schedules. Returns
  * `undefined` when the service is not schedule-triggered. Throws on
  * `<dynamic>` schedules — that path is reserved for a follow-up.
+ *
+ * v1 always invokes the user module's default export, so this returns
+ * plain `Cron[]` (no handler-name field). When `handlerFunction` or
+ * `<dynamic>` support lands, this will need to grow a per-path handler
+ * name back.
  */
 export function getServiceCrons(opts: {
   service?: BuildOptions['service'];
   entrypoint?: string;
-}): ServiceCronEntry[] | undefined {
+}): Cron[] | undefined {
   const { service, entrypoint } = opts;
 
   if (!service || !isScheduleTriggeredService(service)) {
@@ -55,19 +46,15 @@ export function getServiceCrons(opts: {
   }
 
   if (service.schedule === DYNAMIC_SCHEDULE) {
-    // Dynamic schedules aren't yet supported for JS/TS services. Return
-    // undefined so the CLI's downstream check (build/index.ts:1235-1260)
-    // fires its existing CRON_SERVICE_NO_CRONS error, preserving the
-    // legacy message and regression coverage.
-    return undefined;
+    throw new Error(
+      'Dynamic cron schedules ("<dynamic>") are not yet supported for JavaScript/TypeScript services. Use a static cron expression in vercel.json.'
+    );
   }
 
-  const cronPath = getInternalServiceCronPath(service.name, entrypoint, 'cron');
   return [
     {
-      path: cronPath,
+      path: getInternalServiceCronPath(service.name, entrypoint, 'cron'),
       schedule: service.schedule,
-      resolvedHandler: DEFAULT_HANDLER_NAME,
     },
   ];
 }
