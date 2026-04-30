@@ -81,8 +81,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: install turbo@2.5.0
-        run: npm i -g turbo@2.5.0
+      - name: install Find Changes tooling
+        run: npm install --no-save --no-package-lock turbo@2.5.0 glob@10.2.3
       - id: affected-packages
         run: |
           # Set base SHA for affected package detection
