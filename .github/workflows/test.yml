@@ -82,7 +82,7 @@ jobs:
         with:
           node-version: 22
       - name: install Find Changes tooling
-        run: npm install --no-save --no-package-lock turbo@2.5.0 glob@10.2.3
+        run: npm install --no-save --no-package-lock --legacy-peer-deps turbo@2.5.0 glob@10.2.3
       - id: affected-packages
         run: |
           # Set base SHA for affected package detection
