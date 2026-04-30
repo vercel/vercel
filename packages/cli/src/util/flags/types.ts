@@ -135,6 +135,9 @@ export interface SdkKey {
   keyValue?: string;
   tokenValue?: string;
   connectionString?: string;
+  // Server-masked preview of the key value, e.g. `vf_server_abc********`.
+  // Safe to display; never contains the full secret.
+  partialKeyValue?: string;
 }
 
 export interface SdkKeysListResponse {

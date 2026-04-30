@@ -1,5 +1,29 @@
 # vercel
 
+## 52.2.1
+
+### Patch Changes
+
+- bf07448: Revert "auth: Make it possible to store CLI credentials in OS keychain (#16083)"
+- a00740e: `vc whoami` now shows both the logged-in user and the active team, and surfaces when the active team is set by a local project link rather than the globally-selected team.
+- Updated dependencies [894e7d4]
+  - @vercel/python@6.36.1
+  - @vercel/node@5.7.13
+
+## 52.2.0
+
+### Minor Changes
+
+- 24686d0: Add configurable auth token storage with keyring-backed persistence and file fallback support.
+
+### Patch Changes
+
+- Updated dependencies [24686d0]
+- Updated dependencies [d36ee35]
+- Updated dependencies [56c9f89]
+  - @vercel/cli-auth@0.1.0
+  - @vercel/node@5.7.13
+
 ## 52.1.0
 
 ### Minor Changes
