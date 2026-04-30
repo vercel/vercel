@@ -166,12 +166,4 @@ Sometimes you want to test changes to a Builder against an existing project, may
 4. Move the resulting tarball to a directory
 5. Run `vercel <directory>` to upload the tarball file and get a URL. Remember to append `/<tarball name>` to then end of your URL
 6. Edit any existing `vercel.json` project and replace `use` with the URL
-7. Run `vercel` or `vercel dev` to deploy with the experimental Builder
-
-**Note:** You will need to turn off vercel authentication in settings -> deployment protection so the builder can be downloaded
-
-## Reference
-
-- [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
-- [Contributing Guidelines](./.github/CONTRIBUTING.md)
-- [Apache 2.0 License](./LICENSE)
+7. Run `vercel` or `vercel dev` to deploy w
