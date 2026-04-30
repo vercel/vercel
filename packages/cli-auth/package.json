@@ -33,7 +33,6 @@
   "devDependencies": {
     "@types/node": "20.11.0",
     "memfs": "4.14.0",
-    "typescript": "5.9.2",
     "vite": "7.1.7",
     "vitest": "2.1.4"
   },

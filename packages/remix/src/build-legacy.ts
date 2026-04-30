@@ -465,7 +465,7 @@ module.exports = config;`;
       if (lockfilePath && lockfileRaw) {
         cleanupOps.push(
           fs
-            .writeFile(lockfilePath, lockfileRaw)
+            .writeFile(lockfilePath, Uint8Array.from(lockfileRaw))
             .then(() => debug(`Restored original "${lockfilePath}" file`))
         );
       }
