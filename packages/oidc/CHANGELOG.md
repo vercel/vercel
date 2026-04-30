@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.3.1
+
+### Patch Changes
+
+- bf07448: Revert "auth: Make it possible to store CLI credentials in OS keychain (#16083)"
+
 ## 3.3.0
 
 ### Minor Changes

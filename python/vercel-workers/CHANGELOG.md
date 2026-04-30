@@ -1,5 +1,11 @@
 # vercel-workers
 
+## 0.0.20
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
 ## 0.0.19
 
 ### Patch Changes
