@@ -804,11 +804,12 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create  type  Create a new Connex client                              
-  list          List Connex clients for the current team                
-  token   id    Get a token for a Connex client (accepts a client ID    
-                like scl_abc or a UID like slack/my-bot)                
-  open    id    Open a Connex client in the Vercel dashboard            
+  create  type    Create a new Connex client                            
+  list            List Connex clients for the current team              
+  token   id      Get a token for a Connex client (accepts a client ID  
+                  like scl_abc or a UID like slack/my-bot)              
+  remove  client  Delete a Connex client                                
+  open    id      Open a Connex client in the Vercel dashboard          
 
 
   Global Options:
