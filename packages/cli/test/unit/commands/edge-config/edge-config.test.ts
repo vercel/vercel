@@ -1,6 +1,9 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
+import { useTeams } from '../../../mocks/team';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import edgeConfig from '../../../../src/commands/edge-config';
 import { teamCache } from '../../../../src/util/teams/get-team-by-id';
 
@@ -362,6 +365,61 @@ describe('edge-config', () => {
     expect(exitCode).toBe(1);
     expect(putCalled).toBe(false);
     await expect(client.stderr).toOutput('`--patch` must be');
+  });
+
+  describe('linked project scope', () => {
+    it('uses the linked project team instead of the globally configured team', async () => {
+      // Globally we are scoped to a different team. The linked project's
+      // team should win so users see Edge Configs from the project they
+      // are currently working on.
+      client.config.currentTeam = 'team_other';
+
+      useTeams('team_linked_ec');
+      useProject(
+        {
+          ...defaultProject,
+          id: 'edge-config-linked',
+          name: 'edge-config-linked',
+          accountId: 'team_linked_ec',
+        },
+        []
+      );
+      client.scenario.get('/teams/team_linked_ec', (_req, res) => {
+        res.json({
+          id: 'team_linked_ec',
+          slug: 'linked-ec',
+          name: 'Linked EC',
+          billing: { plan: 'pro', period: { start: 0, end: 0 }, addons: [] },
+        });
+      });
+
+      let observedTeamId: string | undefined;
+      client.scenario.get('/v1/edge-config', (req, res) => {
+        observedTeamId = req.query.teamId as string | undefined;
+        res.json([{ id: 'ecfg_linked', slug: 'flags' }]);
+      });
+
+      client.cwd = setupUnitFixture('commands/edge-config/linked');
+      client.setArgv('edge-config', 'list');
+      const exitCode = await edgeConfig(client);
+      expect(exitCode).toBe(0);
+      expect(observedTeamId).toBe('team_linked_ec');
+    });
+
+    it('falls back to the globally configured team when not linked', async () => {
+      // No fixture / no `.vercel/project.json` here, so the helper
+      // should leave `currentTeam` untouched.
+      let observedTeamId: string | undefined;
+      client.scenario.get('/v1/edge-config', (req, res) => {
+        observedTeamId = req.query.teamId as string | undefined;
+        res.json([]);
+      });
+
+      client.setArgv('edge-config', 'list');
+      const exitCode = await edgeConfig(client);
+      expect(exitCode).toBe(0);
+      expect(observedTeamId).toBe('team_ec_test');
+    });
   });
 
   describe('--non-interactive', () => {
