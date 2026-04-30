@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import contextlib
+import importlib
 import os
-from importlib import import_module
 from typing import TYPE_CHECKING, Protocol, cast
 
 if TYPE_CHECKING:
@@ -41,7 +41,7 @@ def _load_workers_runtime() -> _WorkersRuntime | None:
     with contextlib.suppress(ImportError):
         runtime_module = cast(
             "object",
-            import_module("vercel.workers._runtime"),
+            importlib.import_module("vercel.workers._runtime"),
         )
         return cast("_WorkersRuntime", runtime_module)
     return None
