@@ -67,6 +67,15 @@ describe('resolveScopeContext', () => {
       expect(ctx.explicitScopeProvided).toBe(true);
     });
 
+    it('should detect -S flag as explicit scope', async () => {
+      client.config.currentTeam = mockTeam.id;
+      client.argv = ['projects', 'ls', '-S', mockTeam.slug];
+
+      const ctx = await getScope(client, { resolveLocalScope: true });
+
+      expect(ctx.explicitScopeProvided).toBe(true);
+    });
+
     it('should detect -T flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
       client.argv = ['projects', 'ls', '-T', mockTeam.slug];

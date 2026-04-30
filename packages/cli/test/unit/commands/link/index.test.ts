@@ -14,7 +14,7 @@ import link from '../../../../src/commands/link';
 import pull from '../../../../src/commands/env/pull';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useTeams, createTeam } from '../../../mocks/team';
+import { useTeams, createTeam, type Team } from '../../../mocks/team';
 import {
   defaultProject,
   useProject,
@@ -2082,6 +2082,61 @@ describe('link', () => {
       for (const teamId of queriedTeamIds) {
         expect(teamId).toBeTruthy();
       }
+    });
+
+    it('should only search the explicit scope when --scope is provided', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const projectName = 'project-x';
+
+      const [teamA] = useTeams('team_a') as Team[];
+      const teamB = createTeam('team_b', 'team-b', 'Team B');
+      const teamC = createTeam('team_c', 'team-c', 'Team C');
+      const queriedTeamIds: (string | undefined)[] = [];
+      const projectA = {
+        ...defaultProject,
+        id: 'proj-on-a',
+        name: projectName,
+      };
+
+      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+        const teamId = req.query.teamId as string | undefined;
+        queriedTeamIds.push(teamId);
+
+        if (teamId === teamA.id) {
+          return res.json(projectA);
+        }
+
+        res.status(403).json({
+          error: {
+            message: 'Re-authentication required',
+            saml: true,
+            teamId,
+            scope: teamId,
+            enforced: true,
+          },
+        });
+      });
+      useUnknownProject();
+
+      client.config.currentTeam = teamA.id;
+      client.cwd = cwd;
+      client.setArgv('--scope', teamA.slug, '--project', projectName, '--yes');
+      const reauthSpy = vi.spyOn(client, 'reauthenticate');
+
+      const exitCode = await link(client);
+
+      expect(exitCode).toEqual(0);
+      expect(queriedTeamIds).toEqual([teamA.id]);
+      expect(queriedTeamIds).not.toContain(teamB.id);
+      expect(queriedTeamIds).not.toContain(teamC.id);
+      expect(reauthSpy).not.toHaveBeenCalled();
+
+      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.orgId).toEqual(teamA.id);
+      expect(projectJson.projectId).toEqual(projectA.id);
+
+      reauthSpy.mockRestore();
     });
 
     describe('multiple matches', () => {
