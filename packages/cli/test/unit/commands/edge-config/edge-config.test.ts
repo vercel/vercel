@@ -246,9 +246,10 @@ describe('edge-config', () => {
     client.setArgv('edge-config', 'tokens', 'my-store');
     const exitCode = await edgeConfig(client);
     expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('tok_abc123');
-    await expect(client.stderr).toOutput('ecr********');
-    await expect(client.stderr).toOutput('production');
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('tok_abc123');
+    expect(output).toContain('ecr********');
+    expect(output).toContain('production');
   });
 
   it('lists tokens with partialToken in JSON output', async () => {
