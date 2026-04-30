@@ -91,12 +91,26 @@ export async function getBlobRWToken(
 
 /**
  * Build the auth-related option object for an `@vercel/blob` SDK call.
- * For `rw` mode, returns `{ token }`. For `oidc` mode, returns `{}` —
- * the SDK reads `VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID` from `process.env`.
+ *
+ * For `rw` mode, returns `{ token }` — the store ID is encoded in the token
+ * itself and decoded server-side.
+ *
+ * For `oidc` mode, returns `{ token, storeId }` — the SDK forwards `storeId`
+ * to the API as the `x-vercel-blob-store-id` header, since OIDC tokens don't
+ * encode the store.
  */
-export function blobOpts(auth: BlobRWToken): { token?: string } {
+export function blobOpts(auth: BlobRWToken): {
+  token?: string;
+  storeId?: string;
+} {
   if (auth.success && auth.kind === 'rw') {
     return { token: auth.token };
+  }
+  if (auth.success && auth.kind === 'oidc') {
+    return {
+      token: process.env.VERCEL_OIDC_TOKEN,
+      storeId: auth.storeId,
+    };
   }
   return {};
 }
