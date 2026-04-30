@@ -6,13 +6,14 @@ import unittest
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from pydantic import BaseModel
 
-import vercel.workers._queue.service as queue_service
+import vercel.workers._queue.receive as queue_receive_impl
+import vercel.workers._queue.send as queue_service
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
 from vercel.workers.client import WorkerJSONEncoder
@@ -51,7 +52,7 @@ class _FakeHttpxClient:
     def __enter__(self) -> _FakeHttpxClient:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> Literal[False]:
         return False
 
     def get(self, url: str, headers: dict[str, str]) -> _FakeResponse:
@@ -73,23 +74,23 @@ class _FakeHttpxClient:
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_receive_message_by_id_returns_raw_bytes_for_non_json_payload(self) -> None:
         with patch.object(
-            queue_callback._client,
+            queue_receive_impl,
             "get_queue_base_url",
             return_value="https://queue.example.com",
         ):
             with patch.object(
-                queue_callback._client,
+                queue_receive_impl,
                 "get_queue_base_path",
                 return_value="/api/v2/messages",
             ):
                 with patch.object(
-                    queue_callback._client,
+                    queue_receive_impl,
                     "get_queue_token",
                     return_value="token",
                 ):
-                    with patch.object(queue_callback.httpx, "Client", _FakeHttpxClient):
+                    with patch.object(queue_receive_impl.httpx, "Client", _FakeHttpxClient):
                         with patch.object(
-                            queue_callback,
+                            queue_receive_impl,
                             "parse_multipart_message",
                             return_value=(
                                 {

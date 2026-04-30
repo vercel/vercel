@@ -8,19 +8,19 @@ from urllib.parse import quote
 
 import httpx
 
-from vercel.workers._queue.types import (
-    DEPLOYMENT_ID_UNSET,
-    DeploymentIdOption,
-    SendMessageResult,
-    WorkerJSONEncoder,
-)
-from vercel.workers.exceptions import (
+from vercel.workers._queue.exceptions import (
     BadRequestError,
     DuplicateIdempotencyKeyError,
     ForbiddenError,
     InternalServerError,
     TokenResolutionError,
     UnauthorizedError,
+)
+from vercel.workers._queue.types import (
+    DEPLOYMENT_ID_UNSET,
+    DeploymentIdOption,
+    SendMessageResult,
+    WorkerJSONEncoder,
 )
 
 
@@ -289,7 +289,7 @@ def _handle_send_response(response: httpx.Response) -> SendMessageResult:
     return {"messageId": str(data["messageId"])}
 
 
-def send_message(
+def send(
     queue_name: str,
     payload: Any,
     *,
@@ -326,7 +326,7 @@ def send_message(
     return _handle_send_response(response)
 
 
-async def send_message_async(
+async def send_async(
     queue_name: str,
     payload: Any,
     *,
@@ -369,6 +369,6 @@ __all__ = [
     "get_queue_token",
     "get_queue_token_async",
     "in_process_mode_enabled",
-    "send_message",
-    "send_message_async",
+    "send",
+    "send_async",
 ]

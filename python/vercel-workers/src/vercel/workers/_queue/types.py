@@ -31,6 +31,51 @@ class SendMessageResult(TypedDict):
     messageId: str | None
 
 
+class MessageMetadata(TypedDict, total=False):
+    """Metadata describing a queue message delivery."""
+
+    messageId: str
+    deliveryCount: int
+    createdAt: str
+    topic: str
+    consumer: str
+
+
+class ReceivedMessage(TypedDict):
+    messageId: str
+    deliveryCount: int
+    createdAt: str
+    receipt_handle: str
+    contentType: str
+    payload: Any
+
+
+class ParsedV2BetaCallback(TypedDict):
+    queueName: str
+    consumerGroup: str
+    messageId: str
+    receiptHandle: str
+    deliveryCount: int
+    createdAt: str
+    payload: Any
+
+
+class CloudEventData(TypedDict):
+    messageId: str
+    queueName: str
+    consumerGroup: str
+
+
+class CloudEvent(TypedDict, total=False):
+    type: str
+    source: str
+    id: str
+    datacontenttype: str
+    data: CloudEventData
+    time: str
+    specversion: str
+
+
 class _DeploymentIdUnset:
     pass
 
@@ -41,7 +86,12 @@ type DeploymentIdOption = str | None | _DeploymentIdUnset
 
 __all__ = [
     "DEPLOYMENT_ID_UNSET",
+    "CloudEvent",
+    "CloudEventData",
     "DeploymentIdOption",
+    "MessageMetadata",
+    "ParsedV2BetaCallback",
+    "ReceivedMessage",
     "SendMessageResult",
     "WorkerJSONEncoder",
 ]

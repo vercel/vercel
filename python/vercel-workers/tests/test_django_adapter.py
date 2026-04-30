@@ -9,8 +9,8 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+import vercel.workers._queue.send as queue_service
 from vercel.workers import _queue
-from vercel.workers._queue import service as queue_service
 
 # Skip all tests if Django is not available (optional dependency)
 try:

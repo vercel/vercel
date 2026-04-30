@@ -1,18 +1,33 @@
 from __future__ import annotations
 
-import asyncio
-import inspect
 import json
 import os
-from collections.abc import Awaitable, Callable, Iterable
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import Any, Protocol, TypedDict, cast, get_type_hints, overload
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any, overload
 from uuid import uuid4
 
-from pydantic import TypeAdapter, ValidationError
+import vercel.workers.callback as callback
 
-from . import _queue, callback
+from ._queue import send as queue_send
+from ._queue.subscribe import (
+    Ack,
+    PayloadValidationError as _PayloadValidationError,
+    RetryAfter,
+    Subscription as _Subscription,
+    WorkerCallable,
+    build_subscribe_decorator as _build_subscribe_decorator,
+    invoke_subscriptions as _invoke_subscriptions,
+    select_subscriptions as _select_subscriptions,
+    subscriptions as _subscriptions,
+)
+from ._queue.types import (
+    DEPLOYMENT_ID_UNSET,
+    DeploymentIdOption,
+    MessageMetadata,
+    SendMessageResult,
+    WorkerJSONEncoder,
+)
 from .asgi import ASGI, build_asgi_app
 from .exceptions import VQSError
 from .wsgi import (
@@ -21,9 +36,6 @@ from .wsgi import (
     json_response,
     status_reason,
 )
-
-SendMessageResult = _queue.SendMessageResult
-WorkerJSONEncoder = _queue.WorkerJSONEncoder
 
 __all__ = [
     "MessageMetadata",
@@ -37,181 +49,6 @@ __all__ = [
     "send",
     "send_async",
 ]
-
-
-class MessageMetadata(TypedDict, total=False):
-    """Metadata describing a queue message delivery."""
-
-    messageId: str
-    deliveryCount: int
-    createdAt: str
-    topic: str
-    consumer: str
-
-
-class Ack(Exception):
-    """Directive that acknowledges a message without retrying it."""
-
-    def __init__(self, reason: object | None = None) -> None:
-        self.reason: object | None = reason
-        super().__init__(str(reason) if reason is not None else "")
-
-
-class RetryAfter(Exception):
-    """Directive that retries a message after a delay."""
-
-    def __init__(self, delay: int | timedelta, reason: object | None = None) -> None:
-        if isinstance(delay, timedelta):
-            seconds = delay.total_seconds()
-        else:
-            seconds = float(delay)
-        if seconds < 0:
-            seconds = 0
-        self.timeout_seconds: int = int(seconds)
-        self.reason: object | None = reason
-        super().__init__(str(reason) if reason is not None else "")
-
-
-class PayloadWorkerCallable(Protocol):
-    def __call__(self, message: Any) -> Any | Awaitable[Any]: ...
-
-
-class MetadataWorkerCallable(Protocol):
-    def __call__(self, message: Any, metadata: MessageMetadata) -> Any | Awaitable[Any]: ...
-
-
-type WorkerCallable = PayloadWorkerCallable | MetadataWorkerCallable
-
-
-class _PayloadValidationError(Exception):
-    """Raised when SDK payload validation rejects a queue message."""
-
-
-@dataclass
-class _InvocationPlan:
-    payload_adapter: TypeAdapter[Any] | None
-    include_metadata: bool
-
-    def prepare_payload(self, payload: Any) -> Any:
-        if self.payload_adapter is None:
-            return payload
-        try:
-            return self.payload_adapter.validate_python(payload)
-        except ValidationError as exc:
-            raise _PayloadValidationError(str(exc)) from exc
-
-
-@dataclass
-class _Subscription:
-    func: WorkerCallable
-    topic_filter: Callable[[str | None], bool] | None = None
-    topic_desc: str | None = None
-    invocation: _InvocationPlan | None = None
-
-    def matches(self, topic: str | None) -> bool:
-        if self.topic_filter is not None:
-            if not self.topic_filter(topic):
-                return False
-        return True
-
-
-_subscriptions: list[_Subscription] = []
-
-
-def _is_untyped_payload_annotation(annotation: Any) -> bool:
-    return annotation is inspect.Signature.empty or annotation is Any
-
-
-def _build_invocation_plan(func: WorkerCallable) -> _InvocationPlan:
-    signature = inspect.signature(func)
-    positional_params = [
-        param
-        for param in signature.parameters.values()
-        if param.kind
-        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
-    ]
-    if not positional_params:
-        raise TypeError("queue worker must accept at least one payload parameter")
-    if len(positional_params) > 2:
-        raise TypeError("queue worker must accept payload or payload and metadata")
-
-    try:
-        type_hints = get_type_hints(func)
-    except Exception:
-        type_hints = {}
-
-    payload_param = positional_params[0]
-    payload_annotation = type_hints.get(payload_param.name, payload_param.annotation)
-    payload_adapter = (
-        None
-        if _is_untyped_payload_annotation(payload_annotation)
-        else TypeAdapter(payload_annotation)
-    )
-    return _InvocationPlan(
-        payload_adapter=payload_adapter,
-        include_metadata=len(positional_params) >= 2,
-    )
-
-
-def _call_subscription(sub: _Subscription, message: Any, metadata: MessageMetadata) -> Any:
-    invocation = sub.invocation
-    if invocation is None:
-        invocation = _build_invocation_plan(sub.func)
-        sub.invocation = invocation
-
-    payload = invocation.prepare_payload(message)
-    if invocation.include_metadata:
-        return cast(MetadataWorkerCallable, sub.func)(payload, metadata)
-    return cast(PayloadWorkerCallable, sub.func)(payload)
-
-
-async def _await_result(result: Awaitable[Any]) -> Any:
-    return await result
-
-
-def _register_subscription(
-    subscriptions: list[_Subscription],
-    func: WorkerCallable,
-    *,
-    topic_filter: Callable[[str | None], bool] | None,
-    topic_desc: str | None,
-) -> WorkerCallable:
-    subscriptions.append(
-        _Subscription(
-            func=func,
-            topic_filter=topic_filter,
-            topic_desc=topic_desc,
-            invocation=_build_invocation_plan(func),
-        )
-    )
-    return func
-
-
-def _build_subscribe_decorator(
-    subscriptions: list[_Subscription],
-    topic: str | tuple[str, Callable[[str | None], bool]] | None,
-) -> Callable[[WorkerCallable], WorkerCallable]:
-    topic_filter: Callable[[str | None], bool] | None = None
-    topic_desc: str | None = None
-    if isinstance(topic, str):
-
-        def exact_topic_filter(t: str | None) -> bool:
-            return t == topic
-
-        topic_filter = exact_topic_filter
-        topic_desc = topic
-    elif isinstance(topic, tuple):
-        topic_desc, topic_filter = topic
-
-    def decorator(func: WorkerCallable) -> WorkerCallable:
-        return _register_subscription(
-            subscriptions,
-            func,
-            topic_filter=topic_filter,
-            topic_desc=topic_desc,
-        )
-
-    return decorator
 
 
 @overload
@@ -255,53 +92,6 @@ def subscribe(
 def has_subscriptions() -> bool:
     """Return True if any worker functions have been registered via @subscribe."""
     return bool(_subscriptions)
-
-
-def _select_subscriptions(
-    topic: str | None,
-    subscriptions: Iterable[_Subscription] = _subscriptions,
-) -> Iterable[_Subscription]:
-    return [s for s in subscriptions if s.matches(topic)]
-
-
-def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
-    if isinstance(result, RetryAfter):
-        return result.timeout_seconds
-    return current
-
-
-def _invoke_subscriptions(
-    message: Any,
-    metadata: MessageMetadata,
-    subscriptions: Iterable[_Subscription] = _subscriptions,
-) -> int | None:
-    """
-    Invoke all matching subscriptions and return an optional retry delay.
-
-    Only Ack and RetryAfter are interpreted as worker directives. Any other return
-    value is treated as successful completion.
-    """
-    topic = metadata.get("topic")
-    timeout_seconds: int | None = None
-
-    for sub in _select_subscriptions(topic, subscriptions):
-        try:
-            result = _call_subscription(sub, message, metadata)
-            if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-                result = asyncio.run(_await_result(result))
-        except Ack:
-            return None
-        except RetryAfter as directive:
-            return directive.timeout_seconds
-        except Exception:
-            # Let the outer WSGI handler respond with 500.
-            raise
-
-        if isinstance(result, Ack):
-            return None
-        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
-
-    return timeout_seconds
 
 
 def _delete_message_sync(
@@ -559,19 +349,19 @@ def get_asgi_app() -> ASGI:
 
 
 def get_queue_base_url() -> str:
-    return _queue.get_queue_base_url()
+    return queue_send.get_queue_base_url()
 
 
 def get_queue_base_path() -> str:
-    return _queue.get_queue_base_path()
+    return queue_send.get_queue_base_path()
 
 
 def get_queue_token(explicit_token: str | None = None) -> str:
-    return _queue.get_queue_token(explicit_token)
+    return queue_send.get_queue_token(explicit_token)
 
 
 async def get_queue_token_async(explicit_token: str | None = None) -> str:
-    return await _queue.get_queue_token_async(explicit_token)
+    return await queue_send.get_queue_token_async(explicit_token)
 
 
 async def send_async(
@@ -581,7 +371,7 @@ async def send_async(
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
-    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET,
+    deployment_id: DeploymentIdOption = DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
     base_path: str | None = None,
@@ -590,7 +380,7 @@ async def send_async(
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
-    return await _queue.send_message_async(
+    return await queue_send.send_async(
         queue_name,
         payload,
         idempotency_key=idempotency_key,
@@ -614,7 +404,7 @@ def send(
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
-    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET,
+    deployment_id: DeploymentIdOption = DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
     base_path: str | None = None,
@@ -623,10 +413,10 @@ def send(
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
-    if _queue.in_process_mode_enabled():
+    if queue_send.in_process_mode_enabled():
         return _send_in_process(queue_name, payload)
 
-    return _queue.send_message(
+    return queue_send.send(
         queue_name,
         payload,
         idempotency_key=idempotency_key,
