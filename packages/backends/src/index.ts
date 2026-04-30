@@ -55,6 +55,15 @@ function hasExplicitBuildCommand(
 }
 
 export const build: BuildV2 = async args => {
+  // Reject `module:function` colon syntax in entrypoints. fs-detectors
+  // parses it into `Service.handlerFunction` regardless of service
+  // type.
+  if (typeof args.config?.handlerFunction === 'string') {
+    throw new Error(
+      `Named-function entrypoints are not supported for JavaScript services (got "${args.entrypoint}:${args.config.handlerFunction}"). Put each handler in its own file with a default export.`
+    );
+  }
+
   const downloadResult = await downloadInstallAndBundle(args);
   const nodeVersion = await getNodeVersion(
     args.workPath,

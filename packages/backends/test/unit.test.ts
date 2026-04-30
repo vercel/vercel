@@ -493,6 +493,29 @@ it('emits crons[] and a dispatcher shim for a schedule-triggered service', async
   expect(hasCatchall).toBe(false);
 }, 60000);
 
+it('rejects entrypoints with named-function (module:function) syntax', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  await expect(
+    build({
+      files: {},
+      workPath: workDir,
+      config: {
+        ...defaultConfig,
+        // fs-detectors sets `handlerFunction` from `entrypoint:
+        // "file.ts:foo"` colon syntax. JS-land has no precedent for
+        // named-function entrypoints — the guard rejects it loudly.
+        handlerFunction: 'someHandler',
+      },
+      meta,
+      entrypoint: 'src/server.ts',
+      repoRootPath: workDir,
+    })
+  ).rejects.toThrow(/Named-function entrypoints are not supported/);
+}, 30000);
+
 it('strips service route prefixes for hono apps at runtime', async () => {
   const fixtureName = '04-hono-index-ts-esm';
   const fixtureSource = join(__dirname, 'fixtures', fixtureName);
