@@ -2,6 +2,7 @@ import { isError } from '@vercel/error-utils';
 import type Client from './client';
 import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
 import { packageName } from './pkg-name';
+import { stripSensitiveAuthArgs } from './redact-args';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -86,10 +87,10 @@ export function buildCommandWithYes(
   argv: string[],
   pkgName: string = packageName
 ): string {
-  const args = argv.slice(2);
+  const args = stripSensitiveAuthArgs(argv.slice(2));
   const hasYes = args.some(a => a === '--yes' || a === '-y');
-  const out = hasYes ? [...args] : [...args, '--yes'];
-  return `${pkgName} ${out.join(' ')}`;
+  const out = hasYes ? args : [...args, '--yes'];
+  return `${pkgName} ${out.join(' ')}`.trim();
 }
 
 /** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
@@ -103,7 +104,7 @@ const GLOBAL_FLAG_NAMES = new Set([
   '--team',
   '-S',
   '-T',
-  '--token',
+  // --token/-t are intentionally excluded and stripped via stripSensitiveAuthArgs.
 ]);
 
 /** Boolean globals: the next argv token is never their value (avoids eating a subcommand like `oauth-apps`). */
@@ -113,7 +114,7 @@ const BOOLEAN_GLOBAL_FLAG_NAMES = new Set(['--yes', '-y', '--non-interactive']);
  * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
  */
 export function getGlobalFlagsFromArgv(argv: string[]): string[] {
-  const args = argv.slice(2);
+  const args = stripSensitiveAuthArgs(argv.slice(2));
   const out: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -139,16 +140,17 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
  * for {@link buildCommandWithGlobalFlags} without duplicating `--cwd`, etc.).
  */
 export function omitGlobalFlagsFromArgs(args: string[]): string[] {
+  const safeArgs = stripSensitiveAuthArgs(args);
   const out: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+  for (let i = 0; i < safeArgs.length; i++) {
+    const arg = safeArgs[i];
     const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
     if (GLOBAL_FLAG_NAMES.has(name)) {
       const skipSeparateValue =
         !BOOLEAN_GLOBAL_FLAG_NAMES.has(name) &&
         !arg.includes('=') &&
-        i + 1 < args.length &&
-        !args[i + 1].startsWith('-');
+        i + 1 < safeArgs.length &&
+        !safeArgs[i + 1].startsWith('-');
       if (skipSeparateValue) {
         i++;
       }
@@ -230,14 +232,15 @@ export function buildCommandWithGlobalFlags(
 export function getPreservedArgsForEnvAdd(argv: string[]): string[] {
   const args = argv.slice(2);
   const addIdx = args.indexOf('add');
-  if (addIdx === -1 || args[addIdx - 1] !== 'env') return args;
+  if (addIdx === -1 || args[addIdx - 1] !== 'env')
+    return stripSensitiveAuthArgs(args);
   let i = addIdx + 1;
   let positionals = 0;
   while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
     positionals++;
     i++;
   }
-  return args.slice(i);
+  return stripSensitiveAuthArgs(args.slice(i));
 }
 
 /**
@@ -279,10 +282,11 @@ export function buildEnvAddCommandWithPreservedArgs(
 export function getPreservedArgsForEnvPull(argv: string[]): string[] {
   const args = argv.slice(2);
   const pullIdx = args.indexOf('pull');
-  if (pullIdx === -1 || args[pullIdx - 1] !== 'env') return args;
+  if (pullIdx === -1 || args[pullIdx - 1] !== 'env')
+    return stripSensitiveAuthArgs(args);
   let i = pullIdx + 1;
   if (i < args.length && !args[i].startsWith('-')) i++;
-  return args.slice(i);
+  return stripSensitiveAuthArgs(args.slice(i));
 }
 
 /**
@@ -291,14 +295,15 @@ export function getPreservedArgsForEnvPull(argv: string[]): string[] {
 export function getPreservedArgsForEnvRm(argv: string[]): string[] {
   const args = argv.slice(2);
   const rmIdx = args.indexOf('rm');
-  if (rmIdx === -1 || args[rmIdx - 1] !== 'env') return args;
+  if (rmIdx === -1 || args[rmIdx - 1] !== 'env')
+    return stripSensitiveAuthArgs(args);
   let i = rmIdx + 1;
   let positionals = 0;
   while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
     positionals++;
     i++;
   }
-  return args.slice(i);
+  return stripSensitiveAuthArgs(args.slice(i));
 }
 
 /**
@@ -324,14 +329,15 @@ export function buildEnvRmCommandWithPreservedArgs(
 export function getPreservedArgsForEnvUpdate(argv: string[]): string[] {
   const args = argv.slice(2);
   const updateIdx = args.indexOf('update');
-  if (updateIdx === -1 || args[updateIdx - 1] !== 'env') return args;
+  if (updateIdx === -1 || args[updateIdx - 1] !== 'env')
+    return stripSensitiveAuthArgs(args);
   let i = updateIdx + 1;
   let positionals = 0;
   while (i < args.length && positionals < 3 && !args[i].startsWith('-')) {
     positionals++;
     i++;
   }
-  return args.slice(i);
+  return stripSensitiveAuthArgs(args.slice(i));
 }
 
 /**
@@ -372,7 +378,7 @@ export function buildCommandWithScope(
   scopeSlug: string,
   pkgName: string = packageName
 ): string {
-  const args = argv.slice(2);
+  const args = stripSensitiveAuthArgs(argv.slice(2));
   const out: string[] = [];
   for (let i = 0; i < args.length; i++) {
     // Handle space-separated: --scope VALUE, --team VALUE, -S VALUE, -T VALUE
