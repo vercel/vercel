@@ -273,6 +273,26 @@ describe('deploy', () => {
     expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
+  it('should prefer an explicit target config over early cwd config', async () => {
+    const targetDir = setupTmpDir('deploy-explicit-target-config');
+    await fs.writeJSON(join(targetDir, 'now.json'), { version: 1 });
+    await fs.writeFile(join(targetDir, 'index.txt'), 'hello');
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', targetDir);
+    client.localConfig = {
+      [fileNameSymbol]: 'vercel.json',
+      version: 2,
+    };
+
+    const exitCodePromise = deploy(client);
+    await expect(client.stderr).toOutput(
+      'Error: The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.\n'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
+  });
+
   it('should send a tgz file when `--archive=tgz`', async () => {
     const user = useUser();
     useTeams('team_dummy');
