@@ -224,7 +224,7 @@ export async function login(
     await updateCurrentTeamAfterLogin(client);
   }
 
-  client.persistAuthConfig();
+  client.writeToAuthConfigFile();
   client.writeToConfigFile();
 
   o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
