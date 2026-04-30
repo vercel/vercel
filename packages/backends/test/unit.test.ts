@@ -428,6 +428,71 @@ it('strips service route prefixes for express apps at runtime', async () => {
   expect(readLambdaResponseBody(response)).toBe('Hello World');
 }, 30000);
 
+it('emits crons[] and a dispatcher shim for a schedule-triggered service', async () => {
+  const fixtureName = '20-cron-default-export';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      serviceName: 'cleanup',
+    },
+    meta,
+    entrypoint: 'index.mjs',
+    repoRootPath: workDir,
+    service: {
+      name: 'cleanup',
+      type: 'job',
+      trigger: 'schedule',
+      schedule: '0 0 * * *',
+    },
+  })) as BuildResultV2Typical;
+
+  // Build result includes the cron entry the CLI/orchestrator consumes.
+  expect(result.crons).toEqual([
+    expect.objectContaining({
+      path: '/_svc/cleanup/crons/index/cron',
+      schedule: '0 0 * * *',
+    }),
+  ]);
+
+  // Lambda is mounted at the internal service path.
+  const lambda = getServiceLambda(result, 'cleanup');
+  expect(lambda).toBeDefined();
+
+  // Lambda handler points at the dispatcher shim, not the user file.
+  expect(lambda.handler).toContain('__vc_cron_dispatch');
+
+  // The dispatcher shim is in the lambda bundle and embeds the route
+  // table inline (not via lambda env, since AWS Lambda rejects env var
+  // names with leading underscores).
+  expect(lambda.files).toBeDefined();
+  const dispatcherFileKey = Object.keys(lambda.files!).find(k =>
+    k.endsWith('__vc_cron_dispatch.mjs')
+  );
+  expect(dispatcherFileKey).toBeDefined();
+  const dispatcherFile = lambda.files![dispatcherFileKey!] as unknown as {
+    data: Buffer | string;
+  };
+  const dispatcherSource =
+    typeof dispatcherFile.data === 'string'
+      ? dispatcherFile.data
+      : dispatcherFile.data.toString('utf-8');
+  expect(dispatcherSource).toContain(
+    `JSON.parse('{"/_svc/cleanup/crons/index/cron":"default"}')`
+  );
+  expect(lambda.environment.__VC_CRON_ROUTES).toBeUndefined();
+
+  // No catchall route — cron services only respond at their internal cron path.
+  const hasCatchall = result.routes?.some(
+    r => typeof r.src === 'string' && r.src.includes('(.*)')
+  );
+  expect(hasCatchall).toBe(false);
+}, 60000);
+
 it('strips service route prefixes for hono apps at runtime', async () => {
   const fixtureName = '04-hono-index-ts-esm';
   const fixtureSource = join(__dirname, 'fixtures', fixtureName);

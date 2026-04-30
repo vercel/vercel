@@ -16,6 +16,8 @@ import {
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
 import { applyServiceVcInit } from './service-vc-init.js';
+import { applyCronDispatch } from './cron-dispatch.js';
+import { buildCronRouteTable, getServiceCrons } from './crons.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
@@ -76,6 +78,15 @@ export const build: BuildV2 = async args => {
   const buildSpan = span.child('vc.builder.backends.build');
 
   return buildSpan.trace(async () => {
+    // Capture the original (CLI-provided) entrypoint before findEntrypoint
+    // overrides it. The cron URL path is derived from the user-declared
+    // entrypoint so it matches the CLI orchestrator's fallback synthesis.
+    const cronEntries = getServiceCrons({
+      service: args.service,
+      entrypoint: args.entrypoint,
+    });
+    const isCronService = cronEntries !== undefined;
+
     const entrypoint = await findEntrypointOrThrow(args.workPath);
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
@@ -101,9 +112,11 @@ export const build: BuildV2 = async args => {
       span: buildSpan,
     });
 
-    // Only hono's introspection is supported for now
+    // Only hono's introspection is supported for now. Cron services
+    // aren't HTTP-routed (the dispatcher answers a single internal path),
+    // so introspection is skipped regardless of framework.
     const introspectionPromise =
-      rolldownResult.framework.slug === 'hono'
+      !isCronService && rolldownResult.framework.slug === 'hono'
         ? introspection({
             ...args,
             span: buildSpan,
@@ -200,7 +213,16 @@ export const build: BuildV2 = async args => {
 
     let lambdaFiles = files;
     let lambdaHandler = handler;
-    if (shouldStripServiceRoutePrefix) {
+    if (isCronService && cronEntries) {
+      const dispatched = await applyCronDispatch({
+        files,
+        handler,
+        workPath: nftWorkPath,
+        routes: buildCronRouteTable(cronEntries),
+      });
+      lambdaFiles = dispatched.files;
+      lambdaHandler = dispatched.handler;
+    } else if (shouldStripServiceRoutePrefix) {
       const shimmedLambda = await applyServiceVcInit({
         files,
         handler,
@@ -258,17 +280,20 @@ export const build: BuildV2 = async args => {
       };
     };
 
-    // Build routes: filesystem handler, then introspected routes, then catch-all
-    const routes = [
-      {
-        handle: 'filesystem',
-      },
-      ...introspectionResult.routes.map(remapRouteDestination),
-      {
-        src: getServiceCatchallSource(serviceRoutePrefix),
-        dest: internalServiceFunctionPath ?? '/',
-      },
-    ];
+    // Build routes: filesystem handler, then introspected routes, then catch-all.
+    // Cron services only respond at their internal cron path (`_svc/{name}/crons/...`),
+    // which the CLI services pipeline rewrites to `_svc/{name}/index` independently
+    // of this builder.
+    const routes = isCronService
+      ? [{ handle: 'filesystem' }]
+      : [
+          { handle: 'filesystem' },
+          ...introspectionResult.routes.map(remapRouteDestination),
+          {
+            src: getServiceCatchallSource(serviceRoutePrefix),
+            dest: internalServiceFunctionPath ?? '/',
+          },
+        ];
 
     const output: Record<string, Lambda> = internalServiceOutputPath
       ? { [internalServiceOutputPath]: lambda }
@@ -292,6 +317,7 @@ export const build: BuildV2 = async args => {
     return {
       routes,
       output,
+      ...(cronEntries ? { crons: cronEntries } : {}),
     };
   });
 };
