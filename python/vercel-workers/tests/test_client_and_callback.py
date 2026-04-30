@@ -691,6 +691,28 @@ class TestQueueClients(unittest.TestCase):
             [{"topic": "orders", "handler": f"{__name__}:{handle.__qualname__}"}],
         )
 
+    def test_async_queue_client_send_uses_client_registry_in_process(self) -> None:
+        client = queue_client.AsyncQueueClient(region="iad1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        async def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        async def run() -> None:
+            with patch.dict(
+                queue_client.os.environ,
+                {"VERCEL_WORKERS_IN_PROCESS": "1"},
+                clear=False,
+            ):
+                result = await client.send("orders", {"ok": True})
+
+            self.assertIsNotNone(result["messageId"])
+
+        asyncio.run(run())
+
+        self.assertEqual(calls, [{"ok": True}])
+
     def test_queue_client_topic_send_validates_and_serializes_payload_type(self) -> None:
         client = queue_client.QueueClient(region="sfo1", token="tok", deployment_id=None)
         users = client.topic("users.create", payload_type=CreateUserPayload)

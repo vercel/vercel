@@ -423,6 +423,37 @@ def _invoke_subscriptions(
     return timeout_seconds
 
 
+async def _invoke_subscriptions_async(
+    message: Any,
+    metadata: MessageMetadata,
+    subscriptions: Iterable[_Subscription] = _subscriptions,
+) -> int | None:
+    """
+    Async variant of _invoke_subscriptions for in-process async clients.
+    """
+    topic = metadata.get("topic")
+    timeout_seconds: int | None = None
+
+    for sub in _select_subscriptions(topic, subscriptions):
+        try:
+            result = _call_subscription(sub, message, metadata)
+            if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+                result = await result
+        except Ack:
+            return None
+        except RetryAfter as directive:
+            return directive.timeout_seconds
+        except Exception:
+            # Let the caller surface the subscription failure.
+            raise
+
+        if isinstance(result, Ack):
+            return None
+        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
+
+    return timeout_seconds
+
+
 def _delete_message_sync(
     queue_name: str,
     consumer_group: str,
@@ -448,21 +479,10 @@ def _delete_message_sync(
         )
 
 
-def _send_in_process(
+def _prepare_in_process_delivery(
     queue_name: str,
-    payload: Any,
-    subscriptions: list[_Subscription] = _subscriptions,
-) -> SendMessageResult:
-    """
-    Development-only, in-process send implementation.
-
-    When ``VERCEL_WORKERS_IN_PROCESS=1``, :func:`send` can short-circuit and invoke
-    subscribed workers directly in the current process instead of talking to the
-    Queue Service API.
-
-    This mirrors the TypeScript dev experience where callbacks are triggered
-    locally, but without any persistence, visibility timeouts, or retries.
-    """
+    subscriptions: list[_Subscription],
+) -> MessageMetadata:
     if not subscriptions:
         raise RuntimeError(
             "No worker subscriptions registered. Import the module containing your "
@@ -484,19 +504,46 @@ def _send_in_process(
             + (", ".join(repr(t) for t in available_topics) or "(none with explicit topics)"),
         )
 
-    message_id = str(uuid4())
-    metadata: MessageMetadata = {
-        "messageId": message_id,
+    return {
+        "messageId": str(uuid4()),
         "deliveryCount": 1,
         "createdAt": datetime.now(UTC).isoformat(),
         "topic": queue_name,
     }
 
+
+def _send_in_process(
+    queue_name: str,
+    payload: Any,
+    subscriptions: list[_Subscription] = _subscriptions,
+) -> SendMessageResult:
+    """
+    Development-only, in-process send implementation.
+
+    When ``VERCEL_WORKERS_IN_PROCESS=1``, :func:`send` can short-circuit and invoke
+    subscribed workers directly in the current process instead of talking to the
+    Queue Service API.
+
+    This mirrors the TypeScript dev experience where callbacks are triggered
+    locally, but without any persistence, visibility timeouts, or retries.
+    """
+    metadata = _prepare_in_process_delivery(queue_name, subscriptions)
+
     # In dev mode we deliver to all handlers that match the topic (or have no
     # explicit topic), similar to the TypeScript dev.ts behaviour.
     _invoke_subscriptions(payload, metadata, subscriptions)
 
-    return {"messageId": message_id}
+    return {"messageId": metadata["messageId"]}
+
+
+async def _send_in_process_async(
+    queue_name: str,
+    payload: Any,
+    subscriptions: list[_Subscription] = _subscriptions,
+) -> SendMessageResult:
+    metadata = _prepare_in_process_delivery(queue_name, subscriptions)
+    await _invoke_subscriptions_async(payload, metadata, subscriptions)
+    return {"messageId": metadata["messageId"]}
 
 
 def _handle_queue_callback(
@@ -644,6 +691,16 @@ def handle_queue_callback(
     return _handle_queue_callback(raw_body, environ, _subscriptions)
 
 
+def _build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASGI:
+    return build_asgi_app(
+        lambda raw_body, environ: _handle_queue_callback(
+            raw_body,
+            environ,
+            subscriptions,
+        )
+    )
+
+
 def get_wsgi_app() -> WSGI:
     """Return a WSGI app that executes subscribed workers from Vercel Queue callbacks."""
     return build_wsgi_app(handle_queue_callback)
@@ -651,7 +708,7 @@ def get_wsgi_app() -> WSGI:
 
 def get_asgi_app() -> ASGI:
     """Return an ASGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return build_asgi_app(handle_queue_callback)
+    return _build_asgi_app_for_subscriptions(_subscriptions)
 
 
 def get_queue_base_url() -> str:
@@ -852,7 +909,7 @@ class _BaseQueueClient:
     def get_asgi_app(self) -> ASGI:
         """Return an ASGI app that executes this client's subscribed workers."""
 
-        return build_asgi_app(self.handle_queue_callback)
+        return _build_asgi_app_for_subscriptions(self._subscriptions)
 
     def topic_subscribe_decorator(
         self,
@@ -865,6 +922,40 @@ class _BaseQueueClient:
             topic,
             payload_type=payload_type,
         )
+
+
+def _collect_client_subscriptions(
+    clients: Iterable[_BaseQueueClient],
+    *,
+    include_global: bool = False,
+) -> list[_Subscription]:
+    subscriptions = list(_subscriptions) if include_global else []
+    for client in clients:
+        subscriptions.extend(client._subscriptions)
+    return subscriptions
+
+
+def get_asgi_app_for_clients(
+    clients: Iterable[_BaseQueueClient],
+    *,
+    include_global: bool = False,
+) -> ASGI:
+    client_list = list(clients)
+
+    def handle_client_queue_callback(
+        raw_body: bytes,
+        environ: dict[str, Any] | None = None,
+    ) -> tuple[int, list[tuple[str, str]], bytes]:
+        return _handle_queue_callback(
+            raw_body,
+            environ,
+            _collect_client_subscriptions(
+                client_list,
+                include_global=include_global,
+            ),
+        )
+
+    return build_asgi_app(handle_client_queue_callback)
 
 
 class QueueClient(_BaseQueueClient):
@@ -958,6 +1049,13 @@ class AsyncQueueClient(_BaseQueueClient):
         deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
         headers: dict[str, str] | None = None,
     ) -> SendMessageResult:
+        if _in_process_mode_enabled():
+            return await _send_in_process_async(
+                queue_name,
+                payload,
+                self._subscriptions,
+            )
+
         effective_deployment_id = (
             self.deployment_id if deployment_id is _DEPLOYMENT_ID_UNSET else deployment_id
         )

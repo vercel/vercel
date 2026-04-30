@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypeGuard
 
 from .client import (
+    AsyncQueueClient,
+    QueueClient,
     get_asgi_app as get_generic_asgi_app,
+    get_asgi_app_for_clients,
     has_subscriptions,
 )
 
@@ -14,6 +17,9 @@ if TYPE_CHECKING:
     from celery import Celery as CeleryAppType  # type: ignore[import-untyped]
 
     from .dramatiq import VercelQueuesBroker as DramatiqBrokerType
+
+
+type _QueueClient = QueueClient | AsyncQueueClient
 
 
 def _has_module(module_name: str) -> bool:
@@ -149,10 +155,38 @@ def _bootstrap_django_worker_app() -> object | None:
     return get_asgi_app()
 
 
-def _bootstrap_generic_worker_app() -> object | None:
-    if not has_subscriptions():
-        return None
-    return get_generic_asgi_app()
+def _iter_queue_clients(module: object) -> Iterable[_QueueClient]:
+    seen: set[int] = set()
+    for name in dir(module):
+        if name.startswith("_"):
+            continue
+
+        with contextlib.suppress(AttributeError):
+            candidate: object = getattr(module, name)
+            if not isinstance(candidate, (QueueClient, AsyncQueueClient)):
+                continue
+
+            candidate_id = id(candidate)
+            if candidate_id in seen:
+                continue
+
+            seen.add(candidate_id)
+            yield candidate
+
+
+def _bootstrap_generic_worker_app(module: object) -> object | None:
+    queue_clients = [
+        client for client in _iter_queue_clients(module) if client.has_subscriptions()
+    ]
+    has_global_subscriptions = has_subscriptions()
+    if queue_clients:
+        return get_asgi_app_for_clients(
+            queue_clients,
+            include_global=has_global_subscriptions,
+        )
+    if has_global_subscriptions:
+        return get_generic_asgi_app()
+    return None
 
 
 def _resolve_worker_service_app(module: object) -> object | None:
@@ -170,7 +204,7 @@ def _resolve_worker_service_app(module: object) -> object | None:
         if app is not None:
             return app
 
-    return _bootstrap_generic_worker_app()
+    return _bootstrap_generic_worker_app(module)
 
 
 def maybe_bootstrap_worker_service_app(module: object) -> object | None:
@@ -184,6 +218,6 @@ def maybe_bootstrap_worker_service_app(module: object) -> object | None:
 
     raise RuntimeError(
         "Unable to bootstrap worker service. "
-        "Export an ASGI/WSGI app, or configure "
-        "Celery/Dramatiq/Django via vercel-workers."
+        + "Export an ASGI/WSGI app, register a queue subscription, or configure "
+        + "Celery/Dramatiq/Django via vercel-workers."
     )
