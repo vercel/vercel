@@ -41,10 +41,9 @@ from vercel_runtime.routing import (
     split_request_target,
 )
 from vercel_runtime.workers import (
-    bootstrap_worker_service_app,
-    is_celery_app,
     is_worker_service,
-    prepare_celery_environment,
+    maybe_bootstrap_worker_service_app,
+    prepare_worker_environment,
 )
 
 if TYPE_CHECKING:
@@ -467,31 +466,22 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
-    prepare_celery_environment()
+    prepare_worker_environment()
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
     _fatal_exc(f'could not import "{_entrypoint_rel}"')
 
 if is_worker_service():
-    if "handler" not in __vc_variables and "Handler" not in __vc_variables:
-        should_bootstrap_worker_app = (
-            "app" not in __vc_variables
-            or is_celery_app(getattr(__vc_module, "app", None))
-        )
-    else:
-        should_bootstrap_worker_app = False
-
-    if should_bootstrap_worker_app:
-        try:
-            __vc_module.__dict__["app"] = bootstrap_worker_service_app(
-                __vc_module
-            )
+    try:
+        worker_app = maybe_bootstrap_worker_service_app(__vc_module)
+        if worker_app is not None:
+            __vc_module.__dict__["app"] = worker_app
             __vc_variables = dir(__vc_module)
-        except Exception:
-            _stderr("Error bootstrapping worker service app:")
-            _stderr(traceback.format_exc())
-            exit(1)
+    except Exception:
+        _stderr("Error bootstrapping worker service app:")
+        _stderr(traceback.format_exc())
+        exit(1)
 
 if is_cron_service():
     try:
