@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.7.15
+
+### Patch Changes
+
+- f7b5377: fix(node): replace deprecated `url.parse()` with WHATWG URL API to silence DEP0169 deprecation warning on cold starts
+
 ## 5.7.14
 
 ### Patch Changes
