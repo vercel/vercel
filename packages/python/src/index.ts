@@ -62,6 +62,8 @@ import {
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
+const PYTHON_ENTRYPOINT_DOCS_URL =
+  'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
 
 import {
   detectPythonEntrypoint,
@@ -187,6 +189,21 @@ export async function downloadFilesInWorkPath({
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev && entrypoint) {
+    const normalizedEntrypoint = entrypoint.endsWith('.py')
+      ? entrypoint
+      : `${entrypoint}.py`;
+    if (
+      !hasProp(downloadedFiles, entrypoint) &&
+      !hasProp(downloadedFiles, normalizedEntrypoint)
+    ) {
+      throw new NowBuildError({
+        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+        message: `Configured Python entrypoint "${normalizedEntrypoint}" was not found.`,
+        link: PYTHON_ENTRYPOINT_DOCS_URL,
+        action: 'Learn More',
+      });
+    }
+
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
     // Replace dots in the entrypoint basename with underscores so the cache

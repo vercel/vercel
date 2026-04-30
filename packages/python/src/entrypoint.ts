@@ -42,6 +42,9 @@ export const PYTHON_CANDIDATE_ENTRYPOINTS = getCandidateEntrypointsInDirs(
   PYTHON_ENTRYPOINT_DIRS
 );
 
+const PYTHON_ENTRYPOINT_DOCS_URL =
+  'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
+
 interface EntrypointDiagnostics {
   /** Candidate files that exist on disk but don't export app/application/handler */
   existingWithoutEntrypoint: string[];
@@ -72,6 +75,60 @@ async function fileExists(filePath: string): Promise<boolean> {
     return stat.isFile();
   } catch {
     return false;
+  }
+}
+
+function getFrameworkDisplayName(framework: string): string {
+  switch (framework) {
+    case 'fastapi':
+      return 'FastAPI';
+    case 'flask':
+      return 'Flask';
+    case 'django':
+      return 'Django';
+    case 'fasthtml':
+      return 'FastHTML';
+    default:
+      return framework;
+  }
+}
+
+function getFrameworkEntrypointDocsUrl(framework: string): string {
+  switch (framework) {
+    case 'fastapi':
+      return 'https://vercel.com/docs/frameworks/backend/fastapi#exporting-the-fastapi-application';
+    case 'flask':
+      return 'https://vercel.com/docs/frameworks/backend/flask#exporting-the-flask-application';
+    case 'django':
+      return 'https://vercel.com/docs/frameworks/full-stack/django#configure-the-django-entrypoint';
+    default:
+      return PYTHON_ENTRYPOINT_DOCS_URL;
+  }
+}
+
+function getMissingExportMessage(
+  framework: string,
+  entrypoints: string[]
+): string {
+  const fileList = entrypoints.slice(0, 3).join(', ');
+  const found = `Found ${fileList}`;
+  const subject = entrypoints.length === 1 ? 'it' : 'none';
+  const verb = entrypoints.length === 1 ? 'does not define' : 'define';
+  const displayName = getFrameworkDisplayName(framework);
+
+  switch (framework) {
+    case 'fastapi':
+      return `${found} but ${subject} ${verb} a top-level "app" FastAPI instance.`;
+    case 'flask':
+      return `${found} but ${subject} ${verb} a top-level "app" Flask instance.`;
+    case 'django':
+      return `${found} but ${subject} ${verb} a top-level "application" ASGI or WSGI instance.`;
+    case 'fasthtml':
+      return `${found} but ${subject} ${verb} a top-level "app" ${displayName} instance.`;
+    default:
+      return entrypoints.length === 1
+        ? `Found ${fileList} but it does not export a top-level "app", "application", or "handler" variable.`
+        : `Found ${fileList} but none export a top-level "app", "application", or "handler" variable.`;
   }
 }
 
@@ -218,19 +275,17 @@ function makeDiagnosticError(
   diagnostics: EntrypointDiagnostics
 ): NowBuildError {
   const code = `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`;
-  const link = `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`;
+  const link = getFrameworkEntrypointDocsUrl(framework);
   const action = 'Learn More';
+  const displayName = getFrameworkDisplayName(framework);
 
   let message: string;
 
   if (diagnostics.existingWithoutEntrypoint.length > 0) {
-    const fileList = diagnostics.existingWithoutEntrypoint
-      .slice(0, 3)
-      .join(', ');
-    message =
-      diagnostics.existingWithoutEntrypoint.length === 1
-        ? `Found ${fileList} but it does not export a top-level "app", "application", or "handler" variable.`
-        : `Found ${fileList} but none export a top-level "app", "application", or "handler" variable.`;
+    message = getMissingExportMessage(
+      framework,
+      diagnostics.existingWithoutEntrypoint
+    );
   } else if (
     diagnostics.pyprojectAppScript &&
     diagnostics.pyprojectCheckedPaths?.length
@@ -239,10 +294,10 @@ function makeDiagnosticError(
     message = `pyproject.toml [project.scripts] defines app = "${diagnostics.pyprojectAppScript}" but ${checked} was not found.`;
   } else if (diagnostics.otherPyFiles.length > 0) {
     const fileList = diagnostics.otherPyFiles.slice(0, 5).join(', ');
-    message = `No ${framework} entrypoint found in standard locations. Found Python files: ${fileList}. Rename one to app.py or add an "app" script to [project.scripts] in pyproject.toml.`;
+    message = `No ${displayName} entrypoint found in standard locations. Found Python files: ${fileList}. Rename one to app.py or set "tool.vercel.entrypoint" in pyproject.toml.`;
   } else {
     const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-    message = `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`;
+    message = `No ${displayName} entrypoint found. Set "tool.vercel.entrypoint" in pyproject.toml or define an entrypoint in one of: ${searchedList}.`;
   }
 
   return new NowBuildError({ code, message, link, action });
@@ -251,9 +306,7 @@ function makeDiagnosticError(
 /**
  * Detect a Python entrypoint for any Python framework using AST-based detection.
  */
-export async function detectGenericPythonEntrypoint(
-  workPath: string
-): Promise<{
+export async function detectGenericPythonEntrypoint(workPath: string): Promise<{
   detected: DetectedPythonEntrypoint | null;
   findDiagnostics: FindResult;
 }> {
@@ -280,9 +333,7 @@ export async function detectGenericPythonEntrypoint(
  * Detect a Django Python entrypoint: look for manage.py with
  * DJANGO_SETTINGS_MODULE, then fall back to AST-based detection if needed.
  */
-export async function detectDjangoPythonEntrypoint(
-  workPath: string
-): Promise<{
+export async function detectDjangoPythonEntrypoint(workPath: string): Promise<{
   detected: DetectedPythonEntrypoint | null;
   findDiagnostics: FindResult;
   dirs: string[];
@@ -345,6 +396,18 @@ export async function detectPythonEntrypoint(
     const entrypoint = configEntryFile.endsWith('.py')
       ? configEntryFile
       : `${configEntryFile}.py`;
+    const entrypointExists = await fileExists(join(workPath, entrypoint));
+
+    if (!entrypointExists) {
+      return {
+        error: new NowBuildError({
+          code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+          message: `Configured Python entrypoint "${entrypoint}" was not found.`,
+          link: PYTHON_ENTRYPOINT_DOCS_URL,
+          action: 'Learn More',
+        }),
+      };
+    }
 
     let varName: string | null =
       configEntryVar ?? (await checkEntrypoint(workPath, entrypoint));
@@ -370,7 +433,7 @@ export async function detectPythonEntrypoint(
         error: new NowBuildError({
           code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
           message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
-          link: 'https://vercel.com/docs/functions/serverless-functions/runtimes/python',
+          link: PYTHON_ENTRYPOINT_DOCS_URL,
           action: 'Learn More',
         }),
       };
