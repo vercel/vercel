@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import os
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from email.parser import BytesParser
 from email.policy import default as _email_default_policy
 from typing import Any, TypedDict
@@ -23,6 +24,62 @@ from .exceptions import (
 )
 
 CLOUD_EVENT_TYPE_V2BETA = "com.vercel.queue.v2beta"
+
+
+class _DeploymentIdUnset:
+    pass
+
+
+_DEPLOYMENT_ID_UNSET = _DeploymentIdUnset()
+
+
+@dataclass(frozen=True)
+class QueueRequestConfig:
+    token: str | None = None
+    base_url: str | None = None
+    base_path: str | None = None
+    deployment_id: str | None | _DeploymentIdUnset = _DEPLOYMENT_ID_UNSET
+    headers: Mapping[str, str] | None = None
+    timeout: float | None = 10.0
+
+
+def _get_queue_base_url(config: QueueRequestConfig | None) -> str:
+    if config is not None and config.base_url is not None:
+        return config.base_url.rstrip("/")
+    return _client.get_queue_base_url().rstrip("/")
+
+
+def _get_queue_base_path(config: QueueRequestConfig | None) -> str:
+    if config is not None and config.base_path is not None:
+        return config.base_path
+    return _client.get_queue_base_path()
+
+
+def _get_queue_token(config: QueueRequestConfig | None) -> str:
+    return _client.get_queue_token(config.token if config is not None else None)
+
+
+def _get_timeout(config: QueueRequestConfig | None, timeout: float | None) -> float | None:
+    if config is not None:
+        return config.timeout
+    return timeout
+
+
+def _apply_request_config(
+    headers: dict[str, str],
+    config: QueueRequestConfig | None,
+) -> None:
+    if config is not None and config.headers is not None:
+        headers.update(config.headers)
+
+    deployment_id: str | None = None
+    if config is None or isinstance(config.deployment_id, _DeploymentIdUnset):
+        deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
+    elif isinstance(config.deployment_id, str):
+        deployment_id = config.deployment_id or None
+
+    if deployment_id:
+        headers["Vqs-Deployment-Id"] = deployment_id
 
 
 def _get_environ_header(environ: dict[str, Any], name: str, default: str = "") -> str:
@@ -239,6 +296,7 @@ def receive_messages(
     limit: int = 1,
     visibility_timeout_seconds: int | None = None,
     timeout: float | None = 10.0,
+    request_config: QueueRequestConfig | None = None,
 ) -> list[ReceivedMessage]:
     """
     Receive one or more messages from a queue.
@@ -249,18 +307,15 @@ def receive_messages(
     Returns a list of messages (possibly empty).
     """
 
-    base_url = _client.get_queue_base_url().rstrip("/")
-    base_path = _client.get_queue_base_path()
-    auth_token = _client.get_queue_token(None)
+    base_url = _get_queue_base_url(request_config)
+    base_path = _get_queue_base_path(request_config)
+    auth_token = _get_queue_token(request_config)
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
         "Accept": "multipart/mixed",
     }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
+    _apply_request_config(headers, request_config)
 
     if visibility_timeout_seconds is not None:
         headers["Vqs-Visibility-Timeout-Seconds"] = str(int(visibility_timeout_seconds))
@@ -270,7 +325,7 @@ def receive_messages(
     topic_path = quote(queue_name, safe="")
     consumer_path = quote(consumer_group, safe="")
     url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}"
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=_get_timeout(request_config, timeout)) as client:
         response = client.post(url, headers=headers)
 
     if response.status_code == 204:
@@ -336,6 +391,7 @@ def receive_message_by_id(
     *,
     visibility_timeout_seconds: int | None = None,
     timeout: float | None = 10.0,
+    request_config: QueueRequestConfig | None = None,
 ) -> tuple[Any, int, str, str]:
     """
     Minimal receive-by-id:
@@ -345,18 +401,15 @@ def receive_message_by_id(
 
     Returns (payload, delivery_count, created_at, receipt_handle).
     """
-    base_url = _client.get_queue_base_url().rstrip("/")  # type: ignore[attr-defined]
-    base_path = _client.get_queue_base_path()  # type: ignore[attr-defined]
-    auth_token = _client.get_queue_token(None)  # type: ignore[attr-defined]
+    base_url = _get_queue_base_url(request_config)
+    base_path = _get_queue_base_path(request_config)
+    auth_token = _get_queue_token(request_config)
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
         "Accept": "multipart/mixed",
     }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
+    _apply_request_config(headers, request_config)
 
     if visibility_timeout_seconds is not None:
         headers["Vqs-Visibility-Timeout-Seconds"] = str(int(visibility_timeout_seconds))
@@ -365,7 +418,7 @@ def receive_message_by_id(
     consumer_path = quote(consumer_group, safe="")
     message_path = quote(message_id, safe="")
     url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/id/{message_path}"
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=_get_timeout(request_config, timeout)) as client:
         response = client.post(url, headers=headers)
 
     if response.status_code == 400:
@@ -429,24 +482,22 @@ def delete_message(
     receipt_handle: str,
     *,
     timeout: float | None = 10.0,
+    request_config: QueueRequestConfig | None = None,
 ) -> None:
-    base_url = _client.get_queue_base_url().rstrip("/")  # type: ignore[attr-defined]
-    base_path = _client.get_queue_base_path()  # type: ignore[attr-defined]
-    auth_token = _client.get_queue_token(None)  # type: ignore[attr-defined]
+    base_url = _get_queue_base_url(request_config)
+    base_path = _get_queue_base_path(request_config)
+    auth_token = _get_queue_token(request_config)
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
     }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
+    _apply_request_config(headers, request_config)
 
     topic_path = quote(queue_name, safe="")
     consumer_path = quote(consumer_group, safe="")
     handle_path = quote(receipt_handle, safe="")
     url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/lease/{handle_path}"
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=_get_timeout(request_config, timeout)) as client:
         response = client.delete(url, headers=headers)
 
     if response.status_code == 400:
@@ -475,19 +526,17 @@ def change_visibility(
     visibility_timeout_seconds: int,
     *,
     timeout: float | None = 10.0,
+    request_config: QueueRequestConfig | None = None,
 ) -> None:
-    base_url = _client.get_queue_base_url().rstrip("/")  # type: ignore[attr-defined]
-    base_path = _client.get_queue_base_path()  # type: ignore[attr-defined]
-    auth_token = _client.get_queue_token(None)  # type: ignore[attr-defined]
+    base_url = _get_queue_base_url(request_config)
+    base_path = _get_queue_base_path(request_config)
+    auth_token = _get_queue_token(request_config)
 
     headers: dict[str, str] = {
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": "application/json",
     }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
+    _apply_request_config(headers, request_config)
 
     body = json.dumps({"visibilityTimeoutSeconds": visibility_timeout_seconds})
 
@@ -495,7 +544,7 @@ def change_visibility(
     consumer_path = quote(consumer_group, safe="")
     handle_path = quote(receipt_handle, safe="")
     url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/lease/{handle_path}"
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=_get_timeout(request_config, timeout)) as client:
         response = client.patch(url, content=body.encode("utf-8"), headers=headers)
 
     if response.status_code == 400:
@@ -538,19 +587,21 @@ class VisibilityExtender:
         visibility_timeout_seconds: int,
         refresh_interval_seconds: float,
         timeout: float | None = 10.0,
+        request_config: QueueRequestConfig | None = None,
         debug: bool = False,
     ) -> None:
-        self.queue_name = queue_name
-        self.consumer_group = consumer_group
-        self.message_id = message_id
-        self.receipt_handle = receipt_handle
-        self.visibility_timeout_seconds = int(visibility_timeout_seconds)
-        self.refresh_interval_seconds = float(refresh_interval_seconds)
-        self.timeout = timeout
-        self.debug = debug
+        self.queue_name: str = queue_name
+        self.consumer_group: str = consumer_group
+        self.message_id: str = message_id
+        self.receipt_handle: str = receipt_handle
+        self.visibility_timeout_seconds: int = int(visibility_timeout_seconds)
+        self.refresh_interval_seconds: float = float(refresh_interval_seconds)
+        self.timeout: float | None = timeout
+        self.request_config: QueueRequestConfig | None = request_config
+        self.debug: bool = debug
 
-        self._stop = threading.Event()
-        self._lock = threading.Lock()
+        self._stop: threading.Event = threading.Event()
+        self._lock: threading.Lock = threading.Lock()
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
@@ -589,6 +640,7 @@ class VisibilityExtender:
                         self.receipt_handle,
                         int(self.visibility_timeout_seconds),
                         timeout=self.timeout,
+                        request_config=self.request_config,
                     )
                 except Exception as exc:  # noqa: BLE001
                     if self.debug:

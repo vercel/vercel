@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import contextlib
+import os
 from collections.abc import MutableMapping
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypeGuard
 
 from .client import (
+    AsyncQueueClient,
+    QueueClient,
     get_asgi_app as get_generic_asgi_app,
+    get_asgi_app_for_client,
     has_subscriptions,
 )
 
@@ -14,6 +18,9 @@ if TYPE_CHECKING:
     from celery import Celery as CeleryAppType  # type: ignore[import-untyped]
 
     from .dramatiq import VercelQueuesBroker as DramatiqBrokerType
+
+
+type _QueueClient = QueueClient | AsyncQueueClient
 
 
 def _has_module(module_name: str) -> bool:
@@ -149,10 +156,62 @@ def _bootstrap_django_worker_app() -> object | None:
     return get_asgi_app()
 
 
-def _bootstrap_generic_worker_app() -> object | None:
-    if not has_subscriptions():
+def _entrypoint_variable_name() -> str | None:
+    value = os.environ.get("__VC_HANDLER_VARIABLE_NAME")
+    if value:
+        return value
+    return os.environ.get("VERCEL_DEV_VARIABLE_NAME") or None
+
+
+def _as_subscribed_queue_client(candidate: object) -> _QueueClient | None:
+    if not isinstance(candidate, (QueueClient, AsyncQueueClient)):
         return None
-    return get_generic_asgi_app()
+    if not candidate.has_subscriptions():
+        return None
+    return candidate
+
+
+def _get_queue_client(module: object) -> _QueueClient | None:
+    entrypoint_variable_name = _entrypoint_variable_name()
+    if entrypoint_variable_name is not None:
+        with contextlib.suppress(AttributeError):
+            entrypoint_candidate: object = getattr(module, entrypoint_variable_name)
+            if client := _as_subscribed_queue_client(entrypoint_candidate):
+                return client
+
+    queue_client: _QueueClient | None = None
+    queue_client_id: int | None = None
+    for name in dir(module):
+        if name.startswith("_"):
+            continue
+
+        with contextlib.suppress(AttributeError):
+            candidate: object = getattr(module, name)
+            client = _as_subscribed_queue_client(candidate)
+            if client is None:
+                continue
+
+            candidate_id = id(client)
+            if queue_client_id == candidate_id:
+                continue
+            if queue_client is not None:
+                raise RuntimeError(
+                    "worker entrypoint must export only one queue client with subscriptions"
+                )
+
+            queue_client = client
+            queue_client_id = candidate_id
+
+    return queue_client
+
+
+def _bootstrap_generic_worker_app(module: object) -> object | None:
+    queue_client = _get_queue_client(module)
+    if queue_client is not None:
+        return get_asgi_app_for_client(queue_client)
+    if has_subscriptions():
+        return get_generic_asgi_app()
+    return None
 
 
 def _resolve_worker_service_app(module: object) -> object | None:
@@ -170,7 +229,7 @@ def _resolve_worker_service_app(module: object) -> object | None:
         if app is not None:
             return app
 
-    return _bootstrap_generic_worker_app()
+    return _bootstrap_generic_worker_app(module)
 
 
 def maybe_bootstrap_worker_service_app(module: object) -> object | None:
@@ -184,6 +243,6 @@ def maybe_bootstrap_worker_service_app(module: object) -> object | None:
 
     raise RuntimeError(
         "Unable to bootstrap worker service. "
-        "Export an ASGI/WSGI app, or configure "
-        "Celery/Dramatiq/Django via vercel-workers."
+        + "Export an ASGI/WSGI app, register a queue subscription, or configure "
+        + "Celery/Dramatiq/Django via vercel-workers."
     )

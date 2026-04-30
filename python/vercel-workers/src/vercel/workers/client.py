@@ -44,6 +44,7 @@ __all__ = [
     "Topic",
     "AsyncTopic",
     "subscribe",
+    "get_vercel_queue_subscriptions",
     "get_wsgi_app",
     "get_asgi_app",
     "has_subscriptions",
@@ -197,7 +198,10 @@ def _resolve_deployment_id(deployment_id: _DeploymentIdOption) -> str | None:
     )
 
 
-def _build_invocation_plan(func: WorkerCallable) -> _InvocationPlan:
+def _build_invocation_plan(
+    func: WorkerCallable,
+    payload_type: Any = inspect.Signature.empty,
+) -> _InvocationPlan:
     signature = inspect.signature(func)
     positional_params = [
         param
@@ -217,10 +221,20 @@ def _build_invocation_plan(func: WorkerCallable) -> _InvocationPlan:
 
     payload_param = positional_params[0]
     payload_annotation = type_hints.get(payload_param.name, payload_param.annotation)
+    if _is_untyped_payload_annotation(payload_annotation):
+        effective_payload_annotation = payload_type
+    else:
+        if not _is_untyped_payload_annotation(payload_type) and payload_annotation != payload_type:
+            raise TypeError(
+                "queue worker payload annotation must match topic payload_type "
+                f"({payload_annotation!r} != {payload_type!r})"
+            )
+        effective_payload_annotation = payload_annotation
+
     payload_adapter = (
         None
-        if _is_untyped_payload_annotation(payload_annotation)
-        else TypeAdapter(payload_annotation)
+        if _is_untyped_payload_annotation(effective_payload_annotation)
+        else TypeAdapter(effective_payload_annotation)
     )
 
     return _InvocationPlan(
@@ -251,13 +265,14 @@ def _register_subscription(
     *,
     topic_filter: Callable[[str | None], bool] | None,
     topic_desc: str | None,
+    payload_type: Any = inspect.Signature.empty,
 ) -> WorkerCallable:
     subscriptions.append(
         _Subscription(
             func=func,
             topic_filter=topic_filter,
             topic_desc=topic_desc,
-            invocation=_build_invocation_plan(func),
+            invocation=_build_invocation_plan(func, payload_type=payload_type),
         )
     )
     return func
@@ -266,6 +281,7 @@ def _register_subscription(
 def _build_subscribe_decorator(
     subscriptions: list[_Subscription],
     topic: str | tuple[str, Callable[[str | None], bool]] | None,
+    payload_type: Any = inspect.Signature.empty,
 ) -> Callable[[WorkerCallable], WorkerCallable]:
     topic_filter: Callable[[str | None], bool] | None = None
     topic_desc: str | None = None
@@ -285,9 +301,30 @@ def _build_subscribe_decorator(
             func,
             topic_filter=topic_filter,
             topic_desc=topic_desc,
+            payload_type=payload_type,
         )
 
     return decorator
+
+
+def _subscription_handler_name(func: WorkerCallable) -> str:
+    module = getattr(func, "__module__", "")
+    qualname = getattr(func, "__qualname__", getattr(func, "__name__", "worker"))
+    return f"{module}:{qualname}" if module else str(qualname)
+
+
+def _serialize_subscriptions(subscriptions: Iterable[_Subscription]) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for sub in subscriptions:
+        if sub.topic_desc is None:
+            continue
+        entries.append(
+            {
+                "topic": sub.topic_desc,
+                "handler": _subscription_handler_name(sub.func),
+            }
+        )
+    return entries
 
 
 @overload
@@ -331,6 +368,12 @@ def subscribe(
 def has_subscriptions() -> bool:
     """Return True if any worker functions have been registered via @subscribe."""
     return bool(_subscriptions)
+
+
+def get_vercel_queue_subscriptions() -> list[dict[str, str]]:
+    """Return registered queue subscriptions for build-time service detection."""
+
+    return _serialize_subscriptions(_subscriptions)
 
 
 def _select_subscriptions(
@@ -380,29 +423,100 @@ def _invoke_subscriptions(
     return timeout_seconds
 
 
+async def _invoke_subscriptions_async(
+    message: Any,
+    metadata: MessageMetadata,
+    subscriptions: Iterable[_Subscription] = _subscriptions,
+) -> int | None:
+    """
+    Async variant of _invoke_subscriptions for in-process async clients.
+    """
+    topic = metadata.get("topic")
+    timeout_seconds: int | None = None
+
+    for sub in _select_subscriptions(topic, subscriptions):
+        try:
+            result = _call_subscription(sub, message, metadata)
+            if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+                result = await result
+        except Ack:
+            return None
+        except RetryAfter as directive:
+            return directive.timeout_seconds
+        except Exception:
+            # Let the caller surface the subscription failure.
+            raise
+
+        if isinstance(result, Ack):
+            return None
+        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
+
+    return timeout_seconds
+
+
 def _delete_message_sync(
     queue_name: str,
     consumer_group: str,
     message_id: str,
     receipt_handle: str,
     extender: callback.VisibilityExtender | None,
+    request_config: callback.QueueRequestConfig | None,
 ) -> None:
-    if extender is not None:
-        extender.finalize(
-            lambda: callback.delete_message(
+    def delete() -> None:
+        if request_config is None:
+            callback.delete_message(
                 queue_name,
                 consumer_group,
                 message_id,
                 receipt_handle,
-            ),
-        )
-    else:
+            )
+            return
         callback.delete_message(
             queue_name,
             consumer_group,
             message_id,
             receipt_handle,
+            request_config=request_config,
         )
+
+    if extender is not None:
+        extender.finalize(delete)
+    else:
+        delete()
+
+
+def _change_visibility_sync(
+    queue_name: str,
+    consumer_group: str,
+    message_id: str,
+    receipt_handle: str,
+    timeout_seconds: int,
+    extender: callback.VisibilityExtender | None,
+    request_config: callback.QueueRequestConfig | None,
+) -> None:
+    def change() -> None:
+        if request_config is None:
+            callback.change_visibility(
+                queue_name,
+                consumer_group,
+                message_id,
+                receipt_handle,
+                timeout_seconds,
+            )
+            return
+        callback.change_visibility(
+            queue_name,
+            consumer_group,
+            message_id,
+            receipt_handle,
+            timeout_seconds,
+            request_config=request_config,
+        )
+
+    if extender is not None:
+        extender.finalize(change)
+    else:
+        change()
 
 
 def _prepare_in_process_delivery(
@@ -462,10 +576,21 @@ def _send_in_process(
     return {"messageId": metadata["messageId"]}
 
 
+async def _send_in_process_async(
+    queue_name: str,
+    payload: Any,
+    subscriptions: list[_Subscription] = _subscriptions,
+) -> SendMessageResult:
+    metadata = _prepare_in_process_delivery(queue_name, subscriptions)
+    await _invoke_subscriptions_async(payload, metadata, subscriptions)
+    return {"messageId": metadata["messageId"]}
+
+
 def _handle_queue_callback(
     raw_body: bytes,
     environ: dict[str, Any] | None = None,
     subscriptions: list[_Subscription] = _subscriptions,
+    request_config: callback.QueueRequestConfig | None = None,
 ) -> tuple[int, list[tuple[str, str]], bytes]:
     """
     Core callback handler used by both WSGI/ASGI wrappers.
@@ -513,6 +638,7 @@ def _handle_queue_callback(
                 consumer_group,
                 message_id,
                 visibility_timeout_seconds=visibility_timeout_seconds,
+                request_config=request_config,
             )
 
         metadata: MessageMetadata = {
@@ -531,6 +657,8 @@ def _handle_queue_callback(
                 receipt_handle,
                 visibility_timeout_seconds=visibility_timeout_seconds,
                 refresh_interval_seconds=refresh_interval_seconds,
+                timeout=request_config.timeout if request_config is not None else 10.0,
+                request_config=request_config,
             )
             extender.start()
 
@@ -543,24 +671,15 @@ def _handle_queue_callback(
 
         if receipt_handle:
             if timeout_seconds is not None:
-                if extender is not None:
-                    extender.finalize(
-                        lambda: callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            receipt_handle,
-                            int(timeout_seconds),
-                        ),
-                    )
-                else:
-                    callback.change_visibility(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        receipt_handle,
-                        int(timeout_seconds),
-                    )
+                _change_visibility_sync(
+                    queue_name,
+                    consumer_group,
+                    message_id,
+                    receipt_handle,
+                    int(timeout_seconds),
+                    extender,
+                    request_config,
+                )
             else:
                 _delete_message_sync(
                     queue_name,
@@ -568,6 +687,7 @@ def _handle_queue_callback(
                     message_id,
                     receipt_handle,
                     extender,
+                    request_config,
                 )
 
         return json_response(200, {"ok": True})
@@ -607,12 +727,16 @@ def handle_queue_callback(
     return _handle_queue_callback(raw_body, environ, _subscriptions)
 
 
-def _build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASGI:
+def _build_asgi_app_for_subscriptions(
+    subscriptions: list[_Subscription],
+    request_config: callback.QueueRequestConfig | None = None,
+) -> ASGI:
     return build_asgi_app(
         lambda raw_body, environ: _handle_queue_callback(
             raw_body,
             environ,
             subscriptions,
+            request_config,
         )
     )
 
@@ -755,6 +879,7 @@ class _BaseQueueClient:
         self.content_type: str = content_type
         self.timeout: float | None = timeout
         self.json_encoder: type[json.JSONEncoder] | None = json_encoder
+        self._subscriptions: list[_Subscription] = []
 
     def _resolved_base_url(self) -> str | None:
         if self.base_url is not None:
@@ -773,6 +898,103 @@ class _BaseQueueClient:
         if headers is None:
             return dict(self.headers)
         return self.headers | headers
+
+    def _request_config(self) -> callback.QueueRequestConfig:
+        if self.deployment_id is not _DEPLOYMENT_ID_UNSET:
+            return callback.QueueRequestConfig(
+                token=self.token,
+                base_url=self._resolved_base_url(),
+                base_path=self.base_path,
+                deployment_id=cast(str | None, self.deployment_id),
+                headers=self.headers,
+                timeout=self.timeout,
+            )
+        return callback.QueueRequestConfig(
+            token=self.token,
+            base_url=self._resolved_base_url(),
+            base_path=self.base_path,
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    @overload
+    def subscribe(self, _func: WorkerCallable) -> WorkerCallable: ...
+
+    @overload
+    def subscribe(
+        self,
+        *,
+        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
+    ) -> Callable[[WorkerCallable], WorkerCallable]: ...
+
+    def subscribe(
+        self,
+        _func: WorkerCallable | None = None,
+        *,
+        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
+    ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
+        """Register a queue worker function with this client's registry."""
+
+        decorator = _build_subscribe_decorator(self._subscriptions, topic)
+        if _func is not None:
+            return decorator(_func)
+        return decorator
+
+    def has_subscriptions(self) -> bool:
+        """Return True if this client has registered queue workers."""
+
+        return bool(self._subscriptions)
+
+    def get_vercel_queue_subscriptions(self) -> list[dict[str, str]]:
+        """Return this client's subscriptions for build-time service detection."""
+
+        return _serialize_subscriptions(self._subscriptions)
+
+    def handle_queue_callback(
+        self,
+        raw_body: bytes,
+        environ: dict[str, Any] | None = None,
+    ) -> tuple[int, list[tuple[str, str]], bytes]:
+        """Handle a queue callback using this client's subscription registry."""
+
+        return _handle_queue_callback(
+            raw_body,
+            environ,
+            self._subscriptions,
+            self._request_config(),
+        )
+
+    def get_wsgi_app(self) -> WSGI:
+        """Return a WSGI app that executes this client's subscribed workers."""
+
+        return build_wsgi_app(self.handle_queue_callback)
+
+    def get_asgi_app(self) -> ASGI:
+        """Return an ASGI app that executes this client's subscribed workers."""
+
+        return _build_asgi_app_for_subscriptions(
+            self._subscriptions,
+            self._request_config(),
+        )
+
+    def topic_subscribe_decorator(
+        self,
+        topic: str,
+        *,
+        payload_type: Any = inspect.Signature.empty,
+    ) -> Callable[[WorkerCallable], WorkerCallable]:
+        return _build_subscribe_decorator(
+            self._subscriptions,
+            topic,
+            payload_type=payload_type,
+        )
+
+
+def get_asgi_app_for_client(client: _BaseQueueClient) -> ASGI:
+    return _build_asgi_app_for_subscriptions(
+        client._subscriptions,
+        client._request_config(),
+    )
 
 
 class QueueClient(_BaseQueueClient):
@@ -808,6 +1030,9 @@ class QueueClient(_BaseQueueClient):
         deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
         headers: dict[str, str] | None = None,
     ) -> SendMessageResult:
+        if _in_process_mode_enabled():
+            return _send_in_process(queue_name, payload, self._subscriptions)
+
         effective_deployment_id = (
             self.deployment_id if deployment_id is _DEPLOYMENT_ID_UNSET else deployment_id
         )
@@ -863,6 +1088,13 @@ class AsyncQueueClient(_BaseQueueClient):
         deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
         headers: dict[str, str] | None = None,
     ) -> SendMessageResult:
+        if _in_process_mode_enabled():
+            return await _send_in_process_async(
+                queue_name,
+                payload,
+                self._subscriptions,
+            )
+
         effective_deployment_id = (
             self.deployment_id if deployment_id is _DEPLOYMENT_ID_UNSET else deployment_id
         )
@@ -905,6 +1137,23 @@ class _BaseTopic[PayloadT, ClientT: _BaseQueueClient]:
         if not json_mode:
             return validated
         return self._payload_adapter.dump_python(validated, mode="json")
+
+    @overload
+    def subscribe(self, _func: WorkerCallable) -> WorkerCallable: ...
+
+    @overload
+    def subscribe(self) -> Callable[[WorkerCallable], WorkerCallable]: ...
+
+    def subscribe(
+        self,
+        _func: WorkerCallable | None = None,
+    ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
+        """Register a queue worker for this topic."""
+
+        decorator = self.client.topic_subscribe_decorator(self.name, payload_type=self.payload_type)
+        if _func is not None:
+            return decorator(_func)
+        return decorator
 
 
 class Topic[PayloadT](_BaseTopic[PayloadT, QueueClient]):

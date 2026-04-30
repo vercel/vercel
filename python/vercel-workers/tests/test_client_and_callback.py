@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, patch
 from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
@@ -44,9 +44,11 @@ class _FakeHttpxClient:
     captured_bodies: list[bytes] = []
     captured_headers: list[dict[str, str]] = []
     captured_urls: list[str] = []
+    captured_timeouts: list[float | None] = []
 
     def __init__(self, *args, **kwargs):
         self.response = _FakeResponse()
+        _FakeHttpxClient.captured_timeouts.append(kwargs.get("timeout"))
 
     def __enter__(self) -> _FakeHttpxClient:
         return self
@@ -58,6 +60,29 @@ class _FakeHttpxClient:
         return self.response
 
     def post(
+        self,
+        url: str,
+        *,
+        content: bytes | None = None,
+        headers: dict | None = None,  # pyright: ignore[reportMissingTypeArgument]
+    ) -> _FakeResponse:
+        _FakeHttpxClient.captured_urls.append(url)
+        _FakeHttpxClient.captured_headers.append(dict(headers or {}))
+        if content is not None:
+            _FakeHttpxClient.captured_bodies.append(content)
+        return self.response
+
+    def delete(
+        self,
+        url: str,
+        *,
+        headers: dict | None = None,  # pyright: ignore[reportMissingTypeArgument]
+    ) -> _FakeResponse:
+        _FakeHttpxClient.captured_urls.append(url)
+        _FakeHttpxClient.captured_headers.append(dict(headers or {}))
+        return self.response
+
+    def patch(
         self,
         url: str,
         *,
@@ -260,71 +285,6 @@ class TestTypedSubscriptions(unittest.TestCase):
         change_visibility.assert_not_called()
 
 
-class TestExplicitSubscriptionRegistries(unittest.TestCase):
-    def setUp(self) -> None:
-        queue_client._subscriptions.clear()
-
-    def tearDown(self) -> None:
-        queue_client._subscriptions.clear()
-
-    def test_invoke_subscriptions_uses_explicit_registry(self) -> None:
-        global_calls: list[dict[str, Any]] = []
-        explicit_calls: list[dict[str, Any]] = []
-        subscriptions: list[queue_client._Subscription] = []
-
-        def global_worker(payload: dict[str, Any]) -> None:
-            global_calls.append(payload)
-
-        def explicit_worker(payload: dict[str, Any]) -> None:
-            explicit_calls.append(payload)
-
-        queue_client.subscribe(topic="orders")(global_worker)
-        queue_client._build_subscribe_decorator(subscriptions, topic="orders")(explicit_worker)
-
-        queue_client._invoke_subscriptions(
-            {"ok": True},
-            {"topic": "orders"},
-            subscriptions,
-        )
-
-        self.assertEqual(global_calls, [])
-        self.assertEqual(explicit_calls, [{"ok": True}])
-
-    def test_handle_queue_callback_uses_explicit_registry(self) -> None:
-        calls: list[dict[str, Any]] = []
-        subscriptions: list[queue_client._Subscription] = []
-
-        def explicit_worker(payload: dict[str, Any]) -> None:
-            calls.append(payload)
-
-        queue_client._build_subscribe_decorator(subscriptions, topic="orders")(explicit_worker)
-
-        raw_body = b'{"ok":true}'
-        environ = {
-            "CONTENT_TYPE": "application/json",
-            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
-            "HTTP_CE_VQSQUEUENAME": "orders",
-            "HTTP_CE_VQSCONSUMERGROUP": "consumer",
-            "HTTP_CE_VQSMESSAGEID": "m",
-            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
-            "HTTP_CE_VQSDELIVERYCOUNT": "1",
-            "HTTP_CE_VQSCREATEDAT": "now",
-        }
-
-        with patch.object(queue_client.callback, "delete_message") as delete_message:
-            status, _headers, body = queue_client._handle_queue_callback(
-                raw_body,
-                environ,
-                subscriptions,
-            )
-
-        self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body), {"ok": True})
-        self.assertEqual(calls, [{"ok": True}])
-        delete_message.assert_called_once_with("orders", "consumer", "m", "receipt")
-        self.assertFalse(queue_client.has_subscriptions())
-
-
 class TestWorkerDirectives(unittest.TestCase):
     def setUp(self) -> None:
         queue_client._subscriptions.clear()
@@ -474,6 +434,7 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         _FakeHttpxClient.captured_bodies.clear()
         _FakeHttpxClient.captured_headers.clear()
         _FakeHttpxClient.captured_urls.clear()
+        _FakeHttpxClient.captured_timeouts.clear()
 
     def _send(
         self,
@@ -523,14 +484,7 @@ class TestDeploymentPinning(unittest.TestCase):
         _FakeHttpxClient.captured_bodies.clear()
         _FakeHttpxClient.captured_headers.clear()
         _FakeHttpxClient.captured_urls.clear()
-
-    def _send(self, **kwargs: Any) -> dict[str, str]:
-        with (
-            patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
-        ):
-            queue_client.send("q", {"ok": True}, **kwargs)
-        return _FakeHttpxClient.captured_headers[-1]
+        _FakeHttpxClient.captured_timeouts.clear()
 
     def test_send_auto_pins_to_env_deployment_id(self) -> None:
         with (
@@ -609,12 +563,17 @@ class TestDeploymentPinning(unittest.TestCase):
 
 class TestQueueClients(unittest.TestCase):
     def setUp(self) -> None:
+        queue_client._subscriptions.clear()
         _FakeHttpxClient.captured_bodies.clear()
         _FakeHttpxClient.captured_headers.clear()
         _FakeHttpxClient.captured_urls.clear()
+        _FakeHttpxClient.captured_timeouts.clear()
         _FakeAsyncHttpxClient.captured_bodies.clear()
         _FakeAsyncHttpxClient.captured_headers.clear()
         _FakeAsyncHttpxClient.captured_urls.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
 
     def test_queue_client_uses_constructor_configuration(self) -> None:
         client = queue_client.QueueClient(
@@ -692,6 +651,216 @@ class TestQueueClients(unittest.TestCase):
         self.assertEqual(headers["Vqs-Delay-Seconds"], "5")
         self.assertEqual(headers["X-Client"], "async")
 
+    def test_queue_client_subscribe_registers_worker(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        self.assertFalse(queue_client.has_subscriptions())
+        self.assertTrue(client.has_subscriptions())
+        self.assertEqual(
+            client.get_vercel_queue_subscriptions(),
+            [{"topic": "orders", "handler": f"{__name__}:{handle.__qualname__}"}],
+        )
+        self.assertEqual(queue_client.get_vercel_queue_subscriptions(), [])
+
+        with patch.dict(
+            queue_client.os.environ,
+            {"VERCEL_WORKERS_IN_PROCESS": "1"},
+            clear=False,
+        ):
+            client.send("orders", {"ok": True})
+
+        self.assertEqual(calls, [{"ok": True}])
+
+    def test_queue_client_callback_uses_client_registry(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        raw_body = b'{"ok":true}'
+        environ = {
+            "CONTENT_TYPE": "application/json",
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "orders",
+            "HTTP_CE_VQSCONSUMERGROUP": "consumer",
+            "HTTP_CE_VQSMESSAGEID": "m",
+            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "HTTP_CE_VQSCREATEDAT": "now",
+        }
+
+        with patch.object(queue_client.callback, "delete_message") as delete_message:
+            status, _headers, body = client.handle_queue_callback(raw_body, environ)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        self.assertEqual(calls, [{"ok": True}])
+        delete_message.assert_called_once_with(
+            "orders",
+            "consumer",
+            "m",
+            "receipt",
+            request_config=ANY,
+        )
+
+    def test_queue_client_callback_uses_client_config_for_receive_and_ack(self) -> None:
+        client = queue_client.QueueClient(
+            token="client-token",
+            base_url="https://queue.example.com",
+            base_path="/custom/topic",
+            deployment_id="dpl_client",
+            headers={"X-Client": "client"},
+            timeout=3.0,
+        )
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        raw_body = json.dumps(
+            {
+                "type": "com.vercel.queue.v1beta",
+                "data": {
+                    "queueName": "orders",
+                    "consumerGroup": "consumer",
+                    "messageId": "m",
+                },
+            }
+        ).encode()
+
+        with (
+            patch.dict(queue_client.os.environ, {}, clear=True),
+            patch.object(queue_client.callback.httpx, "Client", _FakeHttpxClient),
+            patch.object(
+                queue_client.callback,
+                "parse_multipart_message",
+                return_value=(
+                    {
+                        "Content-Type": "application/json",
+                        "Vqs-Delivery-Count": "1",
+                        "Vqs-Timestamp": "now",
+                        "Vqs-Receipt-Handle": "receipt",
+                    },
+                    b'{"ok":true}',
+                ),
+            ),
+        ):
+            status, _headers, body = client.handle_queue_callback(raw_body)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        self.assertEqual(calls, [{"ok": True}])
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls,
+            [
+                "https://queue.example.com/custom/topic/orders/consumer/consumer/id/m",
+                "https://queue.example.com/custom/topic/orders/consumer/consumer/lease/receipt",
+            ],
+        )
+        receive_headers = _FakeHttpxClient.captured_headers[0]
+        self.assertEqual(receive_headers["Authorization"], "Bearer client-token")
+        self.assertEqual(receive_headers["Vqs-Deployment-Id"], "dpl_client")
+        self.assertEqual(receive_headers["X-Client"], "client")
+        self.assertEqual(receive_headers["Vqs-Visibility-Timeout-Seconds"], "30")
+
+        ack_headers = _FakeHttpxClient.captured_headers[1]
+        self.assertEqual(ack_headers["Authorization"], "Bearer client-token")
+        self.assertEqual(ack_headers["Vqs-Deployment-Id"], "dpl_client")
+        self.assertEqual(ack_headers["X-Client"], "client")
+        self.assertEqual(_FakeHttpxClient.captured_timeouts, [3.0, 3.0])
+
+    def test_queue_client_callback_uses_client_config_for_retry_after(self) -> None:
+        client = queue_client.QueueClient(
+            token="client-token",
+            base_url="https://queue.example.com",
+            base_path="/custom/topic",
+            deployment_id="dpl_client",
+            headers={"X-Client": "client"},
+            timeout=3.0,
+        )
+
+        @client.subscribe(topic="orders")
+        def handle(payload: dict[str, Any]) -> queue_client.RetryAfter:
+            return queue_client.RetryAfter(45)
+
+        raw_body = b'{"ok":true}'
+        environ = {
+            "CONTENT_TYPE": "application/json",
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "orders",
+            "HTTP_CE_VQSCONSUMERGROUP": "consumer",
+            "HTTP_CE_VQSMESSAGEID": "m",
+            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "HTTP_CE_VQSCREATEDAT": "now",
+        }
+
+        with (
+            patch.dict(queue_client.os.environ, {}, clear=True),
+            patch.object(queue_client.callback.httpx, "Client", _FakeHttpxClient),
+        ):
+            status, _headers, body = client.handle_queue_callback(raw_body, environ)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls,
+            ["https://queue.example.com/custom/topic/orders/consumer/consumer/lease/receipt"],
+        )
+        self.assertEqual(
+            json.loads(_FakeHttpxClient.captured_bodies[-1]), {"visibilityTimeoutSeconds": 45}
+        )
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Authorization"], "Bearer client-token")
+        self.assertEqual(headers["Vqs-Deployment-Id"], "dpl_client")
+        self.assertEqual(headers["X-Client"], "client")
+        self.assertEqual(_FakeHttpxClient.captured_timeouts, [3.0])
+
+    def test_async_queue_client_subscribe_registers_worker(self) -> None:
+        client = queue_client.AsyncQueueClient(region="iad1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        async def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        self.assertFalse(queue_client.has_subscriptions())
+        self.assertTrue(client.has_subscriptions())
+        self.assertEqual(
+            client.get_vercel_queue_subscriptions(),
+            [{"topic": "orders", "handler": f"{__name__}:{handle.__qualname__}"}],
+        )
+
+    def test_async_queue_client_send_uses_client_registry_in_process(self) -> None:
+        client = queue_client.AsyncQueueClient(region="iad1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        async def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        async def run() -> None:
+            with patch.dict(
+                queue_client.os.environ,
+                {"VERCEL_WORKERS_IN_PROCESS": "1"},
+                clear=False,
+            ):
+                result = await client.send("orders", {"ok": True})
+
+            self.assertIsNotNone(result["messageId"])
+
+        asyncio.run(run())
+
+        self.assertEqual(calls, [{"ok": True}])
+
     def test_queue_client_topic_send_validates_and_serializes_payload_type(self) -> None:
         client = queue_client.QueueClient(region="sfo1", token="tok", deployment_id=None)
         users = client.topic("users.create", payload_type=CreateUserPayload)
@@ -717,6 +886,34 @@ class TestQueueClients(unittest.TestCase):
 
         with self.assertRaises(ValidationError):
             users.send({"email": "a@b.com", "age": "not-an-int"})
+
+    def test_queue_client_topic_subscribe_uses_payload_type(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        users = client.topic("users.create", payload_type=CreateUserPayload)
+        calls: list[CreateUserPayload] = []
+
+        @users.subscribe
+        def handle(payload):  # pyright: ignore[reportMissingParameterType]
+            calls.append(payload)
+
+        with patch.dict(
+            queue_client.os.environ,
+            {"VERCEL_WORKERS_IN_PROCESS": "1"},
+            clear=False,
+        ):
+            users.send({"email": "a@b.com", "age": "42"})
+
+        self.assertEqual(calls, [CreateUserPayload(email="a@b.com", age=42)])
+
+    def test_queue_client_topic_subscribe_rejects_mismatched_handler_annotation(self) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        users = client.topic("users.create", payload_type=CreateUserPayload)
+
+        with self.assertRaises(TypeError):
+
+            @users.subscribe
+            def handle(payload: EmailPayload) -> None:
+                pass
 
     def test_async_queue_client_topic_send_uses_async_client(self) -> None:
         client = queue_client.AsyncQueueClient(

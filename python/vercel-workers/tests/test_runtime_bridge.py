@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import types
 import unittest
-from unittest.mock import patch
+from typing import Any, cast
+from unittest.mock import ANY, patch
 
 import vercel.workers._runtime as vwr
+import vercel.workers.client as queue_client
 
 
 class TestPrepareEnvironment(unittest.TestCase):
@@ -51,6 +55,55 @@ class TestPrepareEnvironment(unittest.TestCase):
 
 
 class TestWorkerBootstrapBridge(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    @staticmethod
+    async def _asgi_request(
+        app: Any,
+        *,
+        headers: list[tuple[bytes, bytes]],
+        body: bytes,
+    ) -> list[dict[str, Any]]:
+        sent: list[dict[str, Any]] = []
+        receive_messages = [{"type": "http.request", "body": body, "more_body": False}]
+
+        async def receive() -> dict[str, Any]:
+            if receive_messages:
+                return receive_messages.pop(0)
+            return {"type": "http.disconnect"}
+
+        async def send(message: dict[str, Any]) -> None:
+            sent.append(message)
+
+        await app(
+            {
+                "type": "http",
+                "method": "POST",
+                "path": "/",
+                "headers": headers,
+            },
+            receive,
+            send,
+        )
+        return sent
+
+    @staticmethod
+    def _queue_callback_headers(topic: str) -> list[tuple[bytes, bytes]]:
+        return [
+            (b"content-type", b"application/json"),
+            (b"ce-type", b"com.vercel.queue.v2beta"),
+            (b"ce-vqsqueuename", topic.encode()),
+            (b"ce-vqsconsumergroup", b"consumer"),
+            (b"ce-vqsmessageid", b"m"),
+            (b"ce-vqsreceipthandle", b"receipt"),
+            (b"ce-vqsdeliverycount", b"1"),
+            (b"ce-vqscreatedat", b"now"),
+        ]
+
     def test_maybe_bootstrap_worker_service_app_returns_explicit_app(self) -> None:
         module = types.SimpleNamespace(app=object())
 
@@ -81,6 +134,159 @@ class TestWorkerBootstrapBridge(unittest.TestCase):
             app = vwr._resolve_worker_service_app(types.SimpleNamespace())
 
         self.assertIs(app, expected_app)
+
+    def test_resolve_worker_service_app_uses_queue_client_subscriptions(
+        self,
+    ) -> None:
+        client = queue_client.QueueClient(region="sfo1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        module = types.SimpleNamespace(client=client)
+
+        with (
+            patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            app = vwr._resolve_worker_service_app(module)
+            self.assertIsNotNone(app)
+            sent = asyncio.run(
+                self._asgi_request(
+                    cast(Any, app),
+                    headers=self._queue_callback_headers("orders"),
+                    body=b'{"ok": true}',
+                )
+            )
+
+        self.assertEqual(sent[0]["status"], 200)
+        self.assertEqual(json.loads(sent[1]["body"]), {"ok": True})
+        self.assertEqual(calls, [{"ok": True}])
+        delete_message.assert_called_once_with(
+            "orders",
+            "consumer",
+            "m",
+            "receipt",
+            request_config=ANY,
+        )
+
+    def test_resolve_worker_service_app_uses_async_queue_client_subscriptions(
+        self,
+    ) -> None:
+        client = queue_client.AsyncQueueClient(region="sfo1")
+        calls: list[dict[str, Any]] = []
+
+        @client.subscribe(topic="orders")
+        async def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        module = types.SimpleNamespace(client=client)
+
+        with (
+            patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            app = vwr._resolve_worker_service_app(module)
+            self.assertIsNotNone(app)
+            sent = asyncio.run(
+                self._asgi_request(
+                    cast(Any, app),
+                    headers=self._queue_callback_headers("orders"),
+                    body=b'{"ok": true}',
+                )
+            )
+
+        self.assertEqual(sent[0]["status"], 200)
+        self.assertEqual(json.loads(sent[1]["body"]), {"ok": True})
+        self.assertEqual(calls, [{"ok": True}])
+        delete_message.assert_called_once_with(
+            "orders",
+            "consumer",
+            "m",
+            "receipt",
+            request_config=ANY,
+        )
+
+    def test_resolve_worker_service_app_rejects_multiple_queue_clients(
+        self,
+    ) -> None:
+        orders = queue_client.QueueClient(region="sfo1")
+        invoices = queue_client.QueueClient(region="sfo1")
+
+        @orders.subscribe(topic="orders")
+        def handle_order(payload: dict[str, Any]) -> None:
+            pass
+
+        @invoices.subscribe(topic="invoices")
+        def handle_invoice(payload: dict[str, Any]) -> None:
+            pass
+
+        module = types.SimpleNamespace(orders=orders, invoices=invoices)
+
+        with (
+            patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            self.assertRaisesRegex(
+                RuntimeError,
+                "must export only one queue client",
+            ),
+        ):
+            vwr._resolve_worker_service_app(module)
+
+    def test_resolve_worker_service_app_uses_named_queue_client_entrypoint(
+        self,
+    ) -> None:
+        orders = queue_client.QueueClient(region="sfo1")
+        invoices = queue_client.QueueClient(region="sfo1")
+        calls: list[str] = []
+
+        @orders.subscribe(topic="orders")
+        def handle_order(payload: dict[str, Any]) -> None:
+            calls.append("orders")
+
+        @invoices.subscribe(topic="invoices")
+        def handle_invoice(payload: dict[str, Any]) -> None:
+            calls.append("invoices")
+
+        module = types.SimpleNamespace(orders=orders, invoices=invoices)
+
+        with (
+            patch.dict(
+                vwr.os.environ,
+                {"__VC_HANDLER_VARIABLE_NAME": "orders"},
+                clear=False,
+            ),
+            patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            app = vwr._resolve_worker_service_app(module)
+            self.assertIsNotNone(app)
+            sent = asyncio.run(
+                self._asgi_request(
+                    cast(Any, app),
+                    headers=self._queue_callback_headers("orders"),
+                    body=b'{"ok": true}',
+                )
+            )
+
+        self.assertEqual(sent[0]["status"], 200)
+        self.assertEqual(calls, ["orders"])
+        delete_message.assert_called_once_with(
+            "orders",
+            "consumer",
+            "m",
+            "receipt",
+            request_config=ANY,
+        )
 
     def test_bootstrap_worker_service_app_wraps_framework_errors(self) -> None:
         with (
