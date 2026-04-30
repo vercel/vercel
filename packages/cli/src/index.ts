@@ -1,5 +1,9 @@
 import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
+const bump = () => {}
+
+bump()
+
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
