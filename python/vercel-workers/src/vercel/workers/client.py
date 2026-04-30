@@ -241,6 +241,51 @@ async def _await_result(result: Awaitable[Any]) -> Any:
     return await result
 
 
+def _register_subscription(
+    subscriptions: list[_Subscription],
+    func: WorkerCallable,
+    *,
+    topic_filter: Callable[[str | None], bool] | None,
+    topic_desc: str | None,
+) -> WorkerCallable:
+    subscriptions.append(
+        _Subscription(
+            func=func,
+            topic_filter=topic_filter,
+            topic_desc=topic_desc,
+            invocation=_build_invocation_plan(func),
+        )
+    )
+    return func
+
+
+def _build_subscribe_decorator(
+    subscriptions: list[_Subscription],
+    topic: str | tuple[str, Callable[[str | None], bool]] | None,
+) -> Callable[[WorkerCallable], WorkerCallable]:
+    topic_filter: Callable[[str | None], bool] | None = None
+    topic_desc: str | None = None
+    if isinstance(topic, str):
+
+        def exact_topic_filter(t: str | None) -> bool:
+            return t == topic
+
+        topic_filter = exact_topic_filter
+        topic_desc = topic
+    elif isinstance(topic, tuple):
+        topic_desc, topic_filter = topic
+
+    def decorator(func: WorkerCallable) -> WorkerCallable:
+        return _register_subscription(
+            subscriptions,
+            func,
+            topic_filter=topic_filter,
+            topic_desc=topic_desc,
+        )
+
+    return decorator
+
+
 @overload
 def subscribe(_func: WorkerCallable) -> WorkerCallable: ...
 
@@ -271,36 +316,12 @@ def subscribe(
         def user_worker(message, metadata): ...
     """
 
-    topic_filter: Callable[[str | None], bool] | None = None
-    topic_desc: str | None = None
-    if isinstance(topic, str):
-
-        def exact_topic_filter(t: str | None) -> bool:
-            return t == topic
-
-        topic_filter = exact_topic_filter
-        topic_desc = topic
-    elif isinstance(topic, tuple):
-        topic_desc, topic_filter = topic
-
-    def decorator(func: WorkerCallable) -> WorkerCallable:
-        _subscriptions.append(
-            _Subscription(
-                func=func,
-                topic_filter=topic_filter,
-                topic_desc=topic_desc,
-                invocation=_build_invocation_plan(func),
-            )
-        )
-
-        return func
-
     if _func is not None:
         # Used as @subscribe without arguments
-        return decorator(_func)
+        return _build_subscribe_decorator(_subscriptions, topic)(_func)
 
     # Used as @subscribe(...)
-    return decorator
+    return _build_subscribe_decorator(_subscriptions, topic)
 
 
 def has_subscriptions() -> bool:
@@ -308,8 +329,11 @@ def has_subscriptions() -> bool:
     return bool(_subscriptions)
 
 
-def _select_subscriptions(topic: str | None) -> Iterable[_Subscription]:
-    return [s for s in _subscriptions if s.matches(topic)]
+def _select_subscriptions(
+    topic: str | None,
+    subscriptions: Iterable[_Subscription] = _subscriptions,
+) -> Iterable[_Subscription]:
+    return [s for s in subscriptions if s.matches(topic)]
 
 
 def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
@@ -321,6 +345,7 @@ def _result_timeout_seconds(result: Any, current: int | None) -> int | None:
 def _invoke_subscriptions(
     message: Any,
     metadata: MessageMetadata,
+    subscriptions: Iterable[_Subscription] = _subscriptions,
 ) -> int | None:
     """
     Invoke all matching subscriptions and return an optional retry delay.
@@ -331,7 +356,7 @@ def _invoke_subscriptions(
     topic = metadata.get("topic")
     timeout_seconds: int | None = None
 
-    for sub in _select_subscriptions(topic):
+    for sub in _select_subscriptions(topic, subscriptions):
         try:
             result = _call_subscription(sub, message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
@@ -376,7 +401,44 @@ def _delete_message_sync(
         )
 
 
-def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
+def _prepare_in_process_delivery(
+    queue_name: str,
+    subscriptions: list[_Subscription],
+) -> MessageMetadata:
+    if not subscriptions:
+        raise RuntimeError(
+            "No worker subscriptions registered. Import the module containing your "
+            "@subscribe handlers before calling send() in in-process dev mode.",
+        )
+
+    # In dev mode, surface a clear error when there are worker functions but none of
+    # them are subscribed to the requested topic. This helps catch mismatches between
+    # the queue name used in send() and the topics configured via @subscribe.
+    matching_for_topic = [s for s in subscriptions if s.matches(queue_name)]
+    if not matching_for_topic:
+        available_topics = sorted(
+            {s.topic_desc for s in subscriptions if s.topic_desc is not None},
+        )
+        raise RuntimeError(
+            "No worker subscriptions found for topic "
+            f"{queue_name!r} in in-process dev mode. "
+            "Known topics: "
+            + (", ".join(repr(t) for t in available_topics) or "(none with explicit topics)"),
+        )
+
+    return {
+        "messageId": str(uuid4()),
+        "deliveryCount": 1,
+        "createdAt": datetime.now(UTC).isoformat(),
+        "topic": queue_name,
+    }
+
+
+def _send_in_process(
+    queue_name: str,
+    payload: Any,
+    subscriptions: list[_Subscription] = _subscriptions,
+) -> SendMessageResult:
     """
     Development-only, in-process send implementation.
 
@@ -387,45 +449,19 @@ def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
     This mirrors the TypeScript dev experience where callbacks are triggered
     locally, but without any persistence, visibility timeouts, or retries.
     """
-    if not _subscriptions:
-        raise RuntimeError(
-            "No worker subscriptions registered. Import the module containing your "
-            "@subscribe handlers before calling send() in in-process dev mode.",
-        )
-
-    # In dev mode, surface a clear error when there are worker functions but none of
-    # them are subscribed to the requested topic. This helps catch mismatches between
-    # the queue name used in send() and the topics configured via @subscribe.
-    matching_for_topic = [s for s in _subscriptions if s.matches(queue_name)]
-    if not matching_for_topic:
-        available_topics = sorted(
-            {s.topic_desc for s in _subscriptions if s.topic_desc is not None},
-        )
-        raise RuntimeError(
-            "No worker subscriptions found for topic "
-            f"{queue_name!r} in in-process dev mode. "
-            "Known topics: "
-            + (", ".join(repr(t) for t in available_topics) or "(none with explicit topics)"),
-        )
-
-    message_id = str(uuid4())
-    metadata: MessageMetadata = {
-        "messageId": message_id,
-        "deliveryCount": 1,
-        "createdAt": datetime.now(UTC).isoformat(),
-        "topic": queue_name,
-    }
+    metadata = _prepare_in_process_delivery(queue_name, subscriptions)
 
     # In dev mode we deliver to all handlers that match the topic (or have no
     # explicit topic), similar to the TypeScript dev.ts behaviour.
-    _invoke_subscriptions(payload, metadata)
+    _invoke_subscriptions(payload, metadata, subscriptions)
 
-    return {"messageId": message_id}
+    return {"messageId": metadata["messageId"]}
 
 
-def handle_queue_callback(
+def _handle_queue_callback(
     raw_body: bytes,
     environ: dict[str, Any] | None = None,
+    subscriptions: list[_Subscription] = _subscriptions,
 ) -> tuple[int, list[tuple[str, str]], bytes]:
     """
     Core callback handler used by both WSGI/ASGI wrappers.
@@ -435,7 +471,7 @@ def handle_queue_callback(
 
     extender: callback.VisibilityExtender | None = None
     try:
-        if not _subscriptions:
+        if not subscriptions:
             return json_response(500, {"error": "no-subscribers"})
 
         # Mirror the Node defaults (ConsumerGroupOptions): 30s visibility, refresh every 10s.
@@ -457,7 +493,7 @@ def handle_queue_callback(
             queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
 
         # Fail fast if no workers match this topic.
-        if not _select_subscriptions(queue_name):
+        if not _select_subscriptions(queue_name, subscriptions):
             return json_response(
                 500,
                 {
@@ -496,7 +532,7 @@ def handle_queue_callback(
 
         # Execute subscribers and ack/delay accordingly.
         try:
-            timeout_seconds = _invoke_subscriptions(payload, metadata)
+            timeout_seconds = _invoke_subscriptions(payload, metadata, subscriptions)
         except _PayloadValidationError as exc:
             print("vercel.workers.handle_queue_callback payload validation error:", str(exc))
             return json_response(500, {"error": "payload-validation"})
@@ -554,6 +590,29 @@ def handle_queue_callback(
             extender.stop()
 
 
+def handle_queue_callback(
+    raw_body: bytes,
+    environ: dict[str, Any] | None = None,
+) -> tuple[int, list[tuple[str, str]], bytes]:
+    """
+    Core callback handler used by both WSGI/ASGI wrappers.
+
+    Returns: (status_code, headers, body_bytes)
+    """
+
+    return _handle_queue_callback(raw_body, environ, _subscriptions)
+
+
+def _build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASGI:
+    return build_asgi_app(
+        lambda raw_body, environ: _handle_queue_callback(
+            raw_body,
+            environ,
+            subscriptions,
+        )
+    )
+
+
 def get_wsgi_app() -> WSGI:
     """Return a WSGI app that executes subscribed workers from Vercel Queue callbacks."""
     return build_wsgi_app(handle_queue_callback)
@@ -561,7 +620,7 @@ def get_wsgi_app() -> WSGI:
 
 def get_asgi_app() -> ASGI:
     """Return an ASGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return build_asgi_app(handle_queue_callback)
+    return _build_asgi_app_for_subscriptions(_subscriptions)
 
 
 def get_queue_base_url() -> str:

@@ -230,6 +230,71 @@ class TestTypedSubscriptions(unittest.TestCase):
         change_visibility.assert_not_called()
 
 
+class TestExplicitSubscriptionRegistries(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_invoke_subscriptions_uses_explicit_registry(self) -> None:
+        global_calls: list[dict[str, Any]] = []
+        explicit_calls: list[dict[str, Any]] = []
+        subscriptions: list[queue_client._Subscription] = []
+
+        def global_worker(payload: dict[str, Any]) -> None:
+            global_calls.append(payload)
+
+        def explicit_worker(payload: dict[str, Any]) -> None:
+            explicit_calls.append(payload)
+
+        queue_client.subscribe(topic="orders")(global_worker)
+        queue_client._build_subscribe_decorator(subscriptions, topic="orders")(explicit_worker)
+
+        queue_client._invoke_subscriptions(
+            {"ok": True},
+            {"topic": "orders"},
+            subscriptions,
+        )
+
+        self.assertEqual(global_calls, [])
+        self.assertEqual(explicit_calls, [{"ok": True}])
+
+    def test_handle_queue_callback_uses_explicit_registry(self) -> None:
+        calls: list[dict[str, Any]] = []
+        subscriptions: list[queue_client._Subscription] = []
+
+        def explicit_worker(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        queue_client._build_subscribe_decorator(subscriptions, topic="orders")(explicit_worker)
+
+        raw_body = b'{"ok":true}'
+        environ = {
+            "CONTENT_TYPE": "application/json",
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "orders",
+            "HTTP_CE_VQSCONSUMERGROUP": "consumer",
+            "HTTP_CE_VQSMESSAGEID": "m",
+            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "HTTP_CE_VQSCREATEDAT": "now",
+        }
+
+        with patch.object(queue_client.callback, "delete_message") as delete_message:
+            status, _headers, body = queue_client._handle_queue_callback(
+                raw_body,
+                environ,
+                subscriptions,
+            )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        self.assertEqual(calls, [{"ok": True}])
+        delete_message.assert_called_once_with("orders", "consumer", "m", "receipt")
+        self.assertFalse(queue_client.has_subscriptions())
+
+
 class TestWorkerDirectives(unittest.TestCase):
     def setUp(self) -> None:
         queue_client._subscriptions.clear()
