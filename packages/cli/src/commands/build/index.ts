@@ -2115,9 +2115,10 @@ function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {
 }
 
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
   for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    chunks.push(Uint8Array.from(buffer));
   }
   return Buffer.concat(chunks).toString('utf-8');
 }
