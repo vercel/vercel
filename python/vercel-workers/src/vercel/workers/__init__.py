@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from .client import (
     Ack,
+    AsyncQueueClient,
+    AsyncTopic,
     MessageMetadata,
+    QueueClient,
     RetryAfter,
+    Topic,
     WorkerJSONEncoder,
     get_asgi_app,
     get_wsgi_app,
@@ -33,6 +37,10 @@ __all__ = [
     "Ack",
     "RetryAfter",
     "WorkerJSONEncoder",
+    "QueueClient",
+    "AsyncQueueClient",
+    "Topic",
+    "AsyncTopic",
     "subscribe",
     "get_wsgi_app",
     "get_asgi_app",

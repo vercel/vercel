@@ -39,6 +39,10 @@ __all__ = [
     "Ack",
     "RetryAfter",
     "WorkerJSONEncoder",
+    "QueueClient",
+    "AsyncQueueClient",
+    "Topic",
+    "AsyncTopic",
     "subscribe",
     "get_wsgi_app",
     "get_asgi_app",
@@ -726,6 +730,253 @@ async def get_queue_token_async(explicit_token: str | None = None) -> str:
         "or ensure a Vercel OIDC token is available in this environment."
     )
     raise TokenResolutionError(msg)
+
+
+class _BaseQueueClient:
+    def __init__(
+        self,
+        *,
+        region: str | None = None,
+        token: str | None = None,
+        base_url: str | None = None,
+        base_path: str | None = None,
+        deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
+        headers: dict[str, str] | None = None,
+        content_type: str = "application/json",
+        timeout: float | None = 10.0,
+        json_encoder: type[json.JSONEncoder] | None = None,
+    ) -> None:
+        self.region: str | None = region
+        self.token: str | None = token
+        self.base_url: str | None = base_url
+        self.base_path: str | None = base_path
+        self.deployment_id: _DeploymentIdOption = deployment_id
+        self.headers: dict[str, str] | None = dict(headers) if headers is not None else None
+        self.content_type: str = content_type
+        self.timeout: float | None = timeout
+        self.json_encoder: type[json.JSONEncoder] | None = json_encoder
+
+    def _resolved_base_url(self) -> str | None:
+        if self.base_url is not None:
+            return self.base_url
+        # In `vercel dev`, this env var points at the local queue proxy. Let it win
+        # over region so client instances still dispatch to local worker services.
+        if os.environ.get("VERCEL_QUEUE_BASE_URL"):
+            return None
+        if self.region is not None:
+            return f"https://{self.region}.vercel-queue.com"
+        return None
+
+    def _merged_headers(self, headers: dict[str, str] | None) -> dict[str, str] | None:
+        if self.headers is None:
+            return headers
+        if headers is None:
+            return dict(self.headers)
+        return self.headers | headers
+
+
+class QueueClient(_BaseQueueClient):
+    """Configured synchronous client for publishing Vercel Queue messages."""
+
+    @overload
+    def topic(self, name: str) -> Topic[Any]: ...
+
+    @overload
+    def topic[PayloadT](self, name: str, *, payload_type: type[PayloadT]) -> Topic[PayloadT]: ...
+
+    @overload
+    def topic(self, name: str, *, payload_type: Any) -> Topic[Any]: ...
+
+    def topic(
+        self,
+        name: str,
+        *,
+        payload_type: Any = inspect.Signature.empty,
+    ) -> Topic[Any]:
+        """Return a typed handle for a queue topic."""
+
+        return Topic(self, name, payload_type=payload_type)
+
+    def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        effective_deployment_id = (
+            self.deployment_id if deployment_id is _DEPLOYMENT_ID_UNSET else deployment_id
+        )
+        return send(
+            queue_name,
+            payload,
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=effective_deployment_id,
+            token=self.token,
+            base_url=self._resolved_base_url(),
+            base_path=self.base_path,
+            content_type=self.content_type,
+            timeout=self.timeout,
+            headers=self._merged_headers(headers),
+            json_encoder=self.json_encoder,
+        )
+
+
+class AsyncQueueClient(_BaseQueueClient):
+    """Configured asynchronous client for publishing Vercel Queue messages."""
+
+    @overload
+    def topic(self, name: str) -> AsyncTopic[Any]: ...
+
+    @overload
+    def topic[PayloadT](
+        self, name: str, *, payload_type: type[PayloadT]
+    ) -> AsyncTopic[PayloadT]: ...
+
+    @overload
+    def topic(self, name: str, *, payload_type: Any) -> AsyncTopic[Any]: ...
+
+    def topic(
+        self,
+        name: str,
+        *,
+        payload_type: Any = inspect.Signature.empty,
+    ) -> AsyncTopic[Any]:
+        """Return a typed async handle for a queue topic."""
+
+        return AsyncTopic(self, name, payload_type=payload_type)
+
+    async def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        effective_deployment_id = (
+            self.deployment_id if deployment_id is _DEPLOYMENT_ID_UNSET else deployment_id
+        )
+        return await send_async(
+            queue_name,
+            payload,
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=effective_deployment_id,
+            token=self.token,
+            base_url=self._resolved_base_url(),
+            base_path=self.base_path,
+            content_type=self.content_type,
+            timeout=self.timeout,
+            headers=self._merged_headers(headers),
+            json_encoder=self.json_encoder,
+        )
+
+
+class _BaseTopic[PayloadT, ClientT: _BaseQueueClient]:
+    def __init__(
+        self,
+        client: ClientT,
+        name: str,
+        *,
+        payload_type: Any = inspect.Signature.empty,
+    ) -> None:
+        self.client: ClientT = client
+        self.name: str = name
+        self.payload_type: Any = payload_type
+        self._payload_adapter: TypeAdapter[Any] | None = (
+            None if _is_untyped_payload_annotation(payload_type) else TypeAdapter(payload_type)
+        )
+
+    def _prepare_payload(self, payload: PayloadT, *, json_mode: bool) -> Any:
+        if self._payload_adapter is None:
+            return payload
+        validated = self._payload_adapter.validate_python(payload)
+        if not json_mode:
+            return validated
+        return self._payload_adapter.dump_python(validated, mode="json")
+
+
+class Topic[PayloadT](_BaseTopic[PayloadT, QueueClient]):
+    """Typed queue topic bound to a synchronous QueueClient."""
+
+    def __init__(
+        self,
+        client: QueueClient,
+        name: str,
+        *,
+        payload_type: Any = inspect.Signature.empty,
+    ) -> None:
+        super().__init__(client, name, payload_type=payload_type)
+
+    def send(
+        self,
+        payload: PayloadT,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        return self.client.send(
+            self.name,
+            self._prepare_payload(
+                payload,
+                json_mode=self.client.content_type == "application/json",
+            ),
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=deployment_id,
+            headers=headers,
+        )
+
+
+class AsyncTopic[PayloadT](_BaseTopic[PayloadT, AsyncQueueClient]):
+    """Typed queue topic bound to an asynchronous AsyncQueueClient."""
+
+    def __init__(
+        self,
+        client: AsyncQueueClient,
+        name: str,
+        *,
+        payload_type: Any = inspect.Signature.empty,
+    ) -> None:
+        super().__init__(client, name, payload_type=payload_type)
+
+    async def send(
+        self,
+        payload: PayloadT,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        return await self.client.send(
+            self.name,
+            self._prepare_payload(
+                payload,
+                json_mode=self.client.content_type == "application/json",
+            ),
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=deployment_id,
+            headers=headers,
+        )
 
 
 def send(
