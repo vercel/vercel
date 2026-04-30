@@ -48,7 +48,9 @@ export default async function emptyStore(
 
   const storeId = getStoreIdFromAuth(auth);
   if (!storeId) {
-    printError('Could not resolve a Blob store ID from the provided credentials.');
+    printError(
+      'Could not resolve a Blob store ID from the provided credentials.'
+    );
     return 1;
   }
 

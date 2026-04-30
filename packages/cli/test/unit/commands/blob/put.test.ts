@@ -11,7 +11,9 @@ import { ReadStream } from 'node:fs';
 // Mock the external dependencies
 vi.mock('@vercel/blob');
 vi.mock('../../../../src/util/blob/token', async () => {
-  const actual = await vi.importActual<typeof import('../../../../src/util/blob/token')>('../../../../src/util/blob/token');
+  const actual = await vi.importActual<
+    typeof import('../../../../src/util/blob/token')
+  >('../../../../src/util/blob/token');
   return { ...actual, getBlobRWToken: vi.fn() };
 });
 vi.mock('../../../../src/output-manager');

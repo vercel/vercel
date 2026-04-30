@@ -11,7 +11,9 @@ import type { BlobRWToken } from '../../../../src/util/blob/token';
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
 vi.mock('../../../../src/util/blob/token', async () => {
-  const actual = await vi.importActual<typeof import('../../../../src/util/blob/token')>('../../../../src/util/blob/token');
+  const actual = await vi.importActual<
+    typeof import('../../../../src/util/blob/token')
+  >('../../../../src/util/blob/token');
   return { ...actual, getBlobRWToken: vi.fn() };
 });
 vi.mock('../../../../src/output-manager');

@@ -166,11 +166,7 @@ describe('blob empty-store', () => {
     });
 
     it('should skip confirmation with --yes', async () => {
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(0);
       expect(confirmInputMock).not.toHaveBeenCalled();
@@ -321,11 +317,7 @@ describe('blob empty-store', () => {
         .mockResolvedValueOnce({ store: { name: 'my-store' } })
         .mockResolvedValueOnce({ connections: [] });
 
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalled();
@@ -334,11 +326,7 @@ describe('blob empty-store', () => {
 
   describe('error cases', () => {
     it('should return 1 when argument parsing fails', async () => {
-      const exitCode = await emptyStore(
-        client,
-        ['--invalid-flag'],
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--invalid-flag'], fullToken);
 
       expect(exitCode).toBe(1);
     });
@@ -366,11 +354,7 @@ describe('blob empty-store', () => {
       mockedBlob.list.mockReset();
       mockedBlob.list.mockRejectedValue(new Error('List failed'));
 
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(1);
     });
@@ -391,11 +375,7 @@ describe('blob empty-store', () => {
       } as any);
       mockedBlob.del.mockRejectedValue(new Error('Delete failed'));
 
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(1);
     });

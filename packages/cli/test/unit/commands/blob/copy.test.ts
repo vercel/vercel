@@ -9,7 +9,9 @@ import output from '../../../../src/output-manager';
 // Mock the external dependencies
 vi.mock('@vercel/blob');
 vi.mock('../../../../src/util/blob/token', async () => {
-  const actual = await vi.importActual<typeof import('../../../../src/util/blob/token')>('../../../../src/util/blob/token');
+  const actual = await vi.importActual<
+    typeof import('../../../../src/util/blob/token')
+  >('../../../../src/util/blob/token');
   return { ...actual, getBlobRWToken: vi.fn() };
 });
 vi.mock('../../../../src/output-manager');
@@ -306,11 +308,7 @@ describe('blob copy', () => {
     });
 
     it('should return 1 when --access flag is missing', async () => {
-      const exitCode = await copy(
-        client,
-        ['source.txt', 'dest.txt'],
-        testAuth
-      );
+      const exitCode = await copy(client, ['source.txt', 'dest.txt'], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(

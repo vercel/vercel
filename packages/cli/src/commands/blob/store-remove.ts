@@ -5,10 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { removeStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getLinkedProject } from '../../util/projects/link';
-import {
-  getStoreIdFromAuth,
-  type BlobRWToken,
-} from '../../util/blob/token';
+import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
 import { envPullCommandLogic } from '../env/pull';
 import {
   formatStoreLabel,

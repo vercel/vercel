@@ -1,8 +1,5 @@
 import output from '../../output-manager';
-import {
-  getStoreIdFromAuth,
-  type BlobRWToken,
-} from '../../util/blob/token';
+import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
