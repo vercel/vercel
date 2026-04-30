@@ -5,7 +5,11 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { emptyStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import * as blob from '@vercel/blob';
-import type { BlobRWToken } from '../../util/blob/token';
+import {
+  blobOpts,
+  getStoreIdFromAuth,
+  type BlobRWToken,
+} from '../../util/blob/token';
 import { BlobEmptyStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-empty';
 import { getLinkedProject } from '../../util/projects/link';
 import {
@@ -16,8 +20,7 @@ import {
 export default async function emptyStore(
   client: Client,
   argv: string[],
-  rwToken: string,
-  fullToken: BlobRWToken
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobEmptyStoreTelemetryClient({
     opts: {
@@ -43,13 +46,11 @@ export default async function emptyStore(
 
   telemetryClient.trackCliFlagYes(yes);
 
-  if (!fullToken.success) {
-    printError(fullToken.error);
+  const storeId = getStoreIdFromAuth(auth);
+  if (!storeId) {
+    printError('Could not resolve a Blob store ID from the provided credentials.');
     return 1;
   }
-
-  const [, , , id] = fullToken.token.split('_');
-  const storeId = `store_${id}`;
 
   try {
     const link = await getLinkedProject(client);
@@ -67,7 +68,7 @@ export default async function emptyStore(
           method: 'GET',
           accountId,
         }),
-        blob.list({ token: rwToken, limit: 1 }),
+        blob.list({ ...blobOpts(auth), limit: 1 }),
       ]
     );
 
@@ -105,7 +106,7 @@ export default async function emptyStore(
       output.spinner(`Deleting blobs... (${totalDeleted} deleted)`);
 
       const listResult = await blob.list({
-        token: rwToken,
+        ...blobOpts(auth),
         limit: 1000,
       });
 
@@ -115,7 +116,7 @@ export default async function emptyStore(
       }
 
       const urls = listResult.blobs.map(b => b.url);
-      await blob.del(urls, { token: rwToken });
+      await blob.del(urls, { ...blobOpts(auth) });
       totalDeleted += urls.length;
     }
 

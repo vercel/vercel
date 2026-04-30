@@ -3,6 +3,7 @@ import { client } from '../../../mocks/client';
 import get from '../../../../src/commands/blob/get';
 import * as blobModule from '@vercel/blob';
 import type { GetBlobResult } from '@vercel/blob';
+import type { BlobRWToken } from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
 import { Readable } from 'node:stream';
 import { ReadableStream as WebReadableStream } from 'node:stream/web';
@@ -61,6 +62,11 @@ function createMockGetResult(body?: string) {
 
 describe('blob get', () => {
   const testToken = 'vercel_blob_rw_test_token_123';
+  const testAuth: BlobRWToken = {
+    success: true,
+    kind: 'rw',
+    token: testToken,
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,7 +83,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['--access', 'public', 'test-file.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -121,7 +127,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['--access', 'public', 'test-file.txt', '--output', './local.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -162,7 +168,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['private-file.txt', '--access', 'private'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -191,7 +197,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['--access', 'public', blobUrl],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -205,7 +211,7 @@ describe('blob get', () => {
     it('should show spinner only when --output is used', async () => {
       // Without --output: no spinner
       client.setArgv('blob', 'get', '--access', 'public', 'test-file.txt');
-      await get(client, ['--access', 'public', 'test-file.txt'], testToken);
+      await get(client, ['--access', 'public', 'test-file.txt'], testAuth);
       expect(mockedOutput.spinner).not.toHaveBeenCalled();
 
       vi.clearAllMocks();
@@ -227,7 +233,7 @@ describe('blob get', () => {
       await get(
         client,
         ['--access', 'public', 'test-file.txt', '--output', 'out.txt'],
-        testToken
+        testAuth
       );
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Downloading blob');
     });
@@ -254,7 +260,7 @@ describe('blob get', () => {
           '--if-none-match',
           '"some-etag"',
         ],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -292,7 +298,7 @@ describe('blob get', () => {
           '--if-none-match',
           '"some-etag"',
         ],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -310,7 +316,7 @@ describe('blob get', () => {
           '--if-none-match',
           '"etag-value"',
         ],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -333,7 +339,7 @@ describe('blob get', () => {
 
   describe('error cases', () => {
     it('should return 1 when --access flag is missing', async () => {
-      const exitCode = await get(client, ['test-file.txt'], testToken);
+      const exitCode = await get(client, ['test-file.txt'], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -343,7 +349,7 @@ describe('blob get', () => {
     });
 
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await get(client, ['--access', 'public'], testToken);
+      const exitCode = await get(client, ['--access', 'public'], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -358,7 +364,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['--access', 'public', 'nonexistent.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(1);
@@ -373,7 +379,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['--access', 'public', 'test-file.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(1);
@@ -383,7 +389,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['test-file.txt', '--access', 'invalid'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(1);
@@ -394,7 +400,7 @@ describe('blob get', () => {
     });
 
     it('should return 1 when argument parsing fails', async () => {
-      const exitCode = await get(client, ['--invalid-flag'], testToken);
+      const exitCode = await get(client, ['--invalid-flag'], testAuth);
       expect(exitCode).toBe(1);
     });
   });
@@ -407,7 +413,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['--access', 'private', 'test-file.txt', '--output', 'out.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -431,7 +437,7 @@ describe('blob get', () => {
       const exitCode = await get(
         client,
         ['--access', 'public', 'test-file.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);

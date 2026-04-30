@@ -3,13 +3,17 @@ import { client } from '../../../mocks/client';
 import put from '../../../../src/commands/blob/put';
 import * as blobModule from '@vercel/blob';
 import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
+import type { BlobRWToken } from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
 import * as path from 'node:path';
 import { ReadStream } from 'node:fs';
 
 // Mock the external dependencies
 vi.mock('@vercel/blob');
-vi.mock('../../../../src/util/blob/token');
+vi.mock('../../../../src/util/blob/token', async () => {
+  const actual = await vi.importActual<typeof import('../../../../src/util/blob/token')>('../../../../src/util/blob/token');
+  return { ...actual, getBlobRWToken: vi.fn() };
+});
 vi.mock('../../../../src/output-manager');
 
 const mockedBlob = vi.mocked(blobModule);
@@ -18,6 +22,11 @@ const mockedOutput = vi.mocked(output);
 
 describe('blob put', () => {
   const testToken = 'vercel_blob_rw_test_token_123';
+  const testAuth: BlobRWToken = {
+    success: true,
+    kind: 'rw',
+    token: testToken,
+  };
   const fixturesPath = path.join(__dirname, 'fixtures');
 
   // Helper function to get fixture path
@@ -30,8 +39,9 @@ describe('blob put', () => {
 
     // Default successful mocks
     mockedGetBlobRWToken.mockResolvedValue({
-      token: testToken,
       success: true,
+      kind: 'rw',
+      token: testToken,
     });
     mockedBlob.put.mockResolvedValue({
       url: 'https://example.com/uploaded-file.txt',
@@ -51,7 +61,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -123,7 +133,7 @@ describe('blob put', () => {
           '--allow-overwrite',
           testFile,
         ],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -183,7 +193,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -217,7 +227,7 @@ describe('blob put', () => {
         const exitCode = await put(
           client,
           ['--access', 'public', testFile],
-          testToken
+          testAuth
         );
         expect(exitCode).toBe(0);
       }
@@ -233,13 +243,13 @@ describe('blob put', () => {
         }),
       }));
 
-      const exitCode = await put(client, ['--invalid-flag'], testToken);
+      const exitCode = await put(client, ['--invalid-flag'], testAuth);
       expect(exitCode).toBe(1);
     });
 
     it('should return 1 when --access flag is missing', async () => {
       const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(client, [testFile], testToken);
+      const exitCode = await put(client, [testFile], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -249,7 +259,7 @@ describe('blob put', () => {
     });
 
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await put(client, ['--access', 'public'], testToken);
+      const exitCode = await put(client, ['--access', 'public'], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedBlob.put).not.toHaveBeenCalled();
@@ -260,7 +270,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', 'nonexistent-file.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(1);
@@ -275,7 +285,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testDir],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(1);
@@ -293,7 +303,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(1);
@@ -309,7 +319,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--add-random-suffix', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -325,7 +335,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--pathname', 'custom/path.txt', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -341,7 +351,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--content-type', 'image/jpeg', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -357,7 +367,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--cache-control-max-age', '86400', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -373,7 +383,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'private', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -400,7 +410,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--allow-overwrite', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -416,7 +426,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--if-match', '"some-etag"', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -432,7 +442,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--multipart', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -450,7 +460,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -471,7 +481,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -506,7 +516,7 @@ describe('blob put', () => {
           '--allow-overwrite',
           testFile,
         ],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -549,7 +559,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -568,7 +578,7 @@ describe('blob put', () => {
         const exitCode = await put(
           client,
           ['--access', 'public', testFile],
-          testToken
+          testAuth
         );
         expect(exitCode).toBe(0);
       }
@@ -581,7 +591,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -600,7 +610,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', testFile],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(1);
@@ -619,7 +629,7 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--pathname', 'from-stdin.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -643,7 +653,7 @@ describe('blob put', () => {
     });
 
     it('should fail when reading from stdin without pathname', async () => {
-      const exitCode = await put(client, ['--access', 'public'], testToken);
+      const exitCode = await put(client, ['--access', 'public'], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -668,7 +678,7 @@ describe('blob put', () => {
           '3600',
           '--allow-overwrite',
         ],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);

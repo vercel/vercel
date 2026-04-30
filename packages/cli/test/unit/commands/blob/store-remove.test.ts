@@ -8,7 +8,10 @@ import type { BlobRWToken } from '../../../../src/util/blob/token';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
-vi.mock('../../../../src/util/blob/token');
+vi.mock('../../../../src/util/blob/token', async () => {
+  const actual = await vi.importActual<typeof import('../../../../src/util/blob/token')>('../../../../src/util/blob/token');
+  return { ...actual, getBlobRWToken: vi.fn() };
+});
 vi.mock('../../../../src/output-manager');
 vi.mock('../../../../src/commands/env/pull');
 
@@ -285,6 +288,7 @@ describe('blob store remove', () => {
 
       const exitCode = await removeStore(client, [], {
         success: true,
+        kind: 'rw',
         token: 'blob_rw_token_xyz789_additional_data',
       });
 

@@ -13,11 +13,12 @@ import chalk from 'chalk';
 import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
 import { printError } from '../../util/error';
 import { parseAccessFlag } from '../../util/blob/access';
+import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 
 export default async function put(
   client: Client,
   argv: string[],
-  rwToken: string
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobPutTelemetryClient({
     opts: {
@@ -139,7 +140,7 @@ export default async function put(
     output.spinner('Uploading blob');
 
     result = await blob.put(pathname, putBody, {
-      token: rwToken,
+      ...blobOpts(auth),
       access,
       addRandomSuffix: addRandomSuffix ?? false,
       multipart: multipart ?? true,

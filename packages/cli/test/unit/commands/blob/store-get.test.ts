@@ -10,7 +10,10 @@ import type { BlobRWToken } from '../../../../src/util/blob/token';
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
-vi.mock('../../../../src/util/blob/token');
+vi.mock('../../../../src/util/blob/token', async () => {
+  const actual = await vi.importActual<typeof import('../../../../src/util/blob/token')>('../../../../src/util/blob/token');
+  return { ...actual, getBlobRWToken: vi.fn() };
+});
 vi.mock('../../../../src/output-manager');
 const formatSpy = vi.spyOn(dfns, 'format');
 
@@ -24,6 +27,7 @@ describe('blob store get', () => {
   const noToken: BlobRWToken = { success: false, error: 'No token found' };
   const token: BlobRWToken = {
     success: true,
+    kind: 'rw',
     token: 'vercel_blob_rw_123456_abcdefghijk',
   };
 
@@ -393,8 +397,9 @@ describe('blob store get', () => {
         const expectedStoreId = `store_${id}`;
 
         const exitCode = await getStore(client, [], {
-          token,
           success: true,
+          kind: 'rw',
+          token,
         });
         expect(exitCode).toBe(0);
         expect(client.fetch).toHaveBeenCalledWith(

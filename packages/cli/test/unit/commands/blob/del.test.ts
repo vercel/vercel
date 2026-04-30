@@ -3,11 +3,15 @@ import { client } from '../../../mocks/client';
 import del from '../../../../src/commands/blob/del';
 import * as blobModule from '@vercel/blob';
 import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
+import type { BlobRWToken } from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
 
 // Mock the external dependencies
 vi.mock('@vercel/blob');
-vi.mock('../../../../src/util/blob/token');
+vi.mock('../../../../src/util/blob/token', async () => {
+  const actual = await vi.importActual<typeof import('../../../../src/util/blob/token')>('../../../../src/util/blob/token');
+  return { ...actual, getBlobRWToken: vi.fn() };
+});
 vi.mock('../../../../src/output-manager');
 
 const mockedBlob = vi.mocked(blobModule);
@@ -16,6 +20,11 @@ const mockedOutput = vi.mocked(output);
 
 describe('blob del', () => {
   const testToken = 'vercel_blob_rw_test_token_123';
+  const testAuth: BlobRWToken = {
+    success: true,
+    kind: 'rw',
+    token: testToken,
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -23,8 +32,9 @@ describe('blob del', () => {
 
     // Default successful mocks
     mockedGetBlobRWToken.mockResolvedValue({
-      token: testToken,
       success: true,
+      kind: 'rw',
+      token: testToken,
     });
     mockedBlob.del.mockResolvedValue();
   });
@@ -33,7 +43,7 @@ describe('blob del', () => {
     it('should delete single blob successfully and track telemetry', async () => {
       client.setArgv('blob', 'del', 'test-file.txt');
 
-      const exitCode = await del(client, ['test-file.txt'], testToken);
+      const exitCode = await del(client, ['test-file.txt'], testAuth);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalledWith(['test-file.txt'], {
@@ -59,7 +69,7 @@ describe('blob del', () => {
       const exitCode = await del(
         client,
         ['file1.txt', 'file2.txt', 'file3.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -84,7 +94,7 @@ describe('blob del', () => {
       const blobUrl = 'https://example.com/blob-file.txt';
       client.setArgv('blob', 'del', blobUrl);
 
-      const exitCode = await del(client, [blobUrl], testToken);
+      const exitCode = await del(client, [blobUrl], testAuth);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalledWith([blobUrl], {
@@ -101,7 +111,7 @@ describe('blob del', () => {
       ];
       client.setArgv('blob', 'del', ...args);
 
-      const exitCode = await del(client, args, testToken);
+      const exitCode = await del(client, args, testAuth);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalledWith(args, {
@@ -124,7 +134,7 @@ describe('blob del', () => {
       const exitCode = await del(
         client,
         ['--if-match', '"some-etag"', 'test-file.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -138,7 +148,7 @@ describe('blob del', () => {
       const exitCode = await del(
         client,
         ['--if-match', '"etag-value"', 'test-file.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -164,12 +174,12 @@ describe('blob del', () => {
         }),
       }));
 
-      const exitCode = await del(client, ['--invalid-flag'], testToken);
+      const exitCode = await del(client, ['--invalid-flag'], testAuth);
       expect(exitCode).toBe(1);
     });
 
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await del(client, [], testToken);
+      const exitCode = await del(client, [], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedBlob.del).not.toHaveBeenCalled();
@@ -180,7 +190,7 @@ describe('blob del', () => {
       const deleteError = new Error('Blob deletion failed');
       mockedBlob.del.mockRejectedValue(deleteError);
 
-      const exitCode = await del(client, ['test-file.txt'], testToken);
+      const exitCode = await del(client, ['test-file.txt'], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob');
@@ -197,7 +207,7 @@ describe('blob del', () => {
       const exitCode = await del(
         client,
         ['first-file.txt', 'second-file.txt'],
-        testToken
+        testAuth
       );
 
       expect(exitCode).toBe(0);
@@ -210,7 +220,7 @@ describe('blob del', () => {
     });
 
     it('should track argument even with single file', async () => {
-      const exitCode = await del(client, ['single-file.txt'], testToken);
+      const exitCode = await del(client, ['single-file.txt'], testAuth);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -222,7 +232,7 @@ describe('blob del', () => {
     });
 
     it('should not track telemetry when no arguments provided', async () => {
-      const exitCode = await del(client, [], testToken);
+      const exitCode = await del(client, [], testAuth);
 
       expect(exitCode).toBe(1);
       // Should not have any telemetry events since arguments are missing
@@ -247,7 +257,7 @@ describe('blob del', () => {
       ];
 
       for (const args of testCases) {
-        const exitCode = await del(client, args, testToken);
+        const exitCode = await del(client, args, testAuth);
         expect(exitCode).toBe(0);
         expect(mockedBlob.del).toHaveBeenCalledWith(args, {
           token: testToken,
@@ -263,7 +273,7 @@ describe('blob del', () => {
       ];
 
       for (const args of urlCases) {
-        const exitCode = await del(client, args, testToken);
+        const exitCode = await del(client, args, testAuth);
         expect(exitCode).toBe(0);
         expect(mockedBlob.del).toHaveBeenCalledWith(args, {
           token: testToken,
@@ -274,7 +284,7 @@ describe('blob del', () => {
 
   describe('spinner and output behavior', () => {
     it('should show spinner during deletion and stop it on success', async () => {
-      const exitCode = await del(client, ['test-file.txt'], testToken);
+      const exitCode = await del(client, ['test-file.txt'], testAuth);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob');
@@ -286,7 +296,7 @@ describe('blob del', () => {
       const deleteError = new Error('Network error');
       mockedBlob.del.mockRejectedValue(deleteError);
 
-      const exitCode = await del(client, ['test-file.txt'], testToken);
+      const exitCode = await del(client, ['test-file.txt'], testAuth);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob');
