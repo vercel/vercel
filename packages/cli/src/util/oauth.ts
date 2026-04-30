@@ -331,6 +331,31 @@ export async function refreshTokenRequest(options: {
   });
 }
 
+/**
+ * Perform the Token Exchange Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc8693#section-2.1
+ */
+export async function tokenExchangeRequest(options: {
+  subject_token: string;
+  team_id: string;
+}): Promise<Response> {
+  return await nodeFetch((await as()).token_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': userAgent,
+    },
+    body: new URLSearchParams({
+      client_id: VERCEL_CLI_CLIENT_ID,
+      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+      requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+      subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
+      ...options,
+    }),
+  });
+}
+
 type OAuthErrorCode =
   | 'invalid_request'
   | 'invalid_client'

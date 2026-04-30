@@ -1,0 +1,47 @@
+# Vercel CLI OIDC Token Exchange Plan
+
+## Problem
+
+The Vercel CLI currently treats `--token` and `VERCEL_TOKEN` as direct Vercel bearer tokens. That works for classic Vercel tokens and tokens stored through normal `auth.json` login flows, but it does not work when CI provides a third-party OIDC token.
+
+OIDC JWTs contain characters like dots, so the old explicit-token validation rejected them before the CLI could do anything useful. The CLI also had no concept of "this token is not a Vercel token, so I should exchange it first."
+
+## Solution
+
+Add a small auth bootstrap layer that classifies explicit tokens before validation:
+
+- Vercel token: use directly, preserving current behavior.
+- OIDC JWT: exchange once with the OAuth token exchange endpoint, then use the returned Vercel token for the rest of the CLI run.
+- Invalid token: fail with a clear error.
+
+Keep the implementation simple: no command-specific OIDC behavior, no persistent storage of exchanged tokens, and no CLI-side OIDC signature verification. The API remains the authority for validating trust, issuer, claims, TTL, and sensitive-action eligibility.
+
+## Implementation TODO
+
+- [x] Add a credential classifier for explicit tokens.
+- [x] Detect known Vercel token formats, including legacy 24-character tokens and prefixed tokens such as `vcp_` and `vca_`.
+- [x] Detect OIDC JWT candidates by checking for three JWT segments and a decodable payload with `iss`, `sub`, and `exp`.
+- [x] Update CLI auth bootstrap in `packages/cli/src/index.ts` to classify tokens before invalid-character validation.
+- [x] Preserve current direct behavior for Vercel tokens from `--token` and `VERCEL_TOKEN`.
+- [x] Exchange OIDC JWTs before assigning `client.authConfig.token`.
+- [x] Keep `auth.json` login and refresh behavior unchanged.
+- [x] Add a token exchange helper that posts RFC 8693 params to the discovered OAuth token endpoint.
+- [x] Resolve `team_id` from explicit `--scope`/`--team` team ids, linked project `orgId`, or `VERCEL_ORG_ID`.
+- [x] Keep sensitive-action behavior server-owned; the CLI does not bypass API gates.
+- [x] Add focused unit tests for classification and token exchange request construction.
+- [x] Add a changeset for `@vercel/cli`.
+
+## Follow-up TODO
+
+- [ ] Add higher-level auth bootstrap tests that exercise `VERCEL_TOKEN` and `--token` OIDC exchange through the CLI entrypoint.
+- [ ] Revisit `--scope` slug support if the API wants the CLI to exchange using slugs instead of requiring a team id before authentication.
+- [ ] Confirm the final API response shape from PR #70164 still matches the existing OAuth token response parser.
+
+## Assumptions
+
+- `VERCEL_TOKEN` is an input channel, not a token type.
+- JWT-looking values in `VERCEL_TOKEN` or `--token` should be treated as OIDC exchange candidates.
+- The CLI should not verify OIDC signatures.
+- The CLI should not write exchanged tokens to `auth.json`.
+- The API endpoint from PR #70164 is responsible for trust validation and token minting.
+- No CLI command should need to know whether the original credential was OIDC.

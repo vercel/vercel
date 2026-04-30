@@ -51,6 +51,7 @@ import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
+import { classifyCredential } from './util/auth/credential';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
@@ -79,6 +80,7 @@ import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
 import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
+import { processTokenResponse, tokenExchangeRequest } from './util/oauth';
 import {
   getPlatformEnv,
   Span,
@@ -728,22 +730,72 @@ const main = async () => {
       return finishWithExitCode(1);
     }
 
-    const invalid = token.match(/(\W)/g);
-    if (invalid) {
-      const notContain = Array.from(new Set(invalid)).sort();
-      output.prettyError({
-        message: `You defined ${param(
-          '--token'
-        )}, but its contents are invalid. Must not contain: ${notContain
-          .map(c => JSON.stringify(c))
-          .join(', ')}`,
-        link: 'https://err.sh/vercel/invalid-token-value',
-      });
+    const credentialKind = classifyCredential(token);
+    if (credentialKind === 'oidc-token') {
+      const teamId = await resolveOidcTokenExchangeTeamId(
+        parsedArgs.flags,
+        client.cwd
+      );
 
-      return finishWithExitCode(1);
+      if (!teamId) {
+        output.prettyError({
+          message:
+            `You defined ${param('--token')} with an OIDC token, but OIDC token exchange requires a team id. ` +
+            `Provide ${param('--scope')} with a team id, link the project, or set VERCEL_ORG_ID.`,
+          link: 'https://err.sh/vercel/oidc-token-exchange-team-required',
+        });
+
+        return finishWithExitCode(1);
+      }
+
+      try {
+        const exchangeResponse = await tokenExchangeRequest({
+          subject_token: token,
+          team_id: teamId,
+        });
+        const [exchangeError, exchangedToken] =
+          await processTokenResponse(exchangeResponse);
+
+        if (exchangeError) {
+          output.prettyError(exchangeError);
+          return finishWithExitCode(1);
+        }
+
+        client.authConfig = {
+          token: exchangedToken.access_token,
+          expiresAt: Math.floor(Date.now() / 1000) + exchangedToken.expires_in,
+          skipWrite: true,
+          tokenSource,
+        };
+      } catch (err: unknown) {
+        printError(err);
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      }
+    } else {
+      if (credentialKind === 'invalid') {
+        const invalid = token.match(/(\W)/g);
+        const message = invalid
+          ? `You defined ${param(
+              '--token'
+            )}, but its contents are invalid. Must not contain: ${Array.from(
+              new Set(invalid)
+            )
+              .sort()
+              .map(c => JSON.stringify(c))
+              .join(', ')}`
+          : `You defined ${param('--token')}, but its contents are invalid.`;
+
+        output.prettyError({
+          message,
+          link: 'https://err.sh/vercel/invalid-token-value',
+        });
+
+        return finishWithExitCode(1);
+      }
+
+      client.authConfig = { token, skipWrite: true, tokenSource };
     }
-
-    client.authConfig = { token, skipWrite: true, tokenSource };
 
     // Don't use team from config if `--token` was set
     if (client.config && client.config.currentTeam) {
@@ -1281,6 +1333,26 @@ const main = async () => {
 
   return exitCode;
 };
+
+async function resolveOidcTokenExchangeTeamId(
+  flags: Record<string, unknown>,
+  cwd: string
+): Promise<string | undefined> {
+  const scope = flags['--scope'] || flags['--team'];
+  if (typeof scope === 'string' && scope.startsWith('team_')) {
+    return scope;
+  }
+
+  const link = await getLinkFromDir<{ orgId: string }>(getVercelDirectory(cwd));
+  if (link?.orgId?.startsWith('team_')) {
+    return link.orgId;
+  }
+
+  const orgId = getPlatformEnv('ORG_ID');
+  if (orgId?.startsWith('team_')) {
+    return orgId;
+  }
+}
 
 main()
   .then(async exitCode => {
