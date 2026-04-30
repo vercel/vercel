@@ -87,15 +87,6 @@ export const build: BuildV2 = async args => {
   const buildSpan = span.child('vc.builder.backends.build');
 
   return buildSpan.trace(async () => {
-    // Capture the original (CLI-provided) entrypoint before findEntrypoint
-    // overrides it. The cron URL path is derived from the user-declared
-    // entrypoint so it matches the CLI orchestrator's fallback synthesis.
-    const cronEntries = getServiceCrons({
-      service: args.service,
-      entrypoint: args.entrypoint,
-    });
-    const isCronService = cronEntries !== undefined;
-
     // Use the explicitly-provided entrypoint when provided by CLI/fs-detectors.
     // If sentinel value 'package.json' is passed, fallback to candidate-list discovery.
     const entrypoint =
@@ -104,6 +95,12 @@ export const build: BuildV2 = async args => {
         : await findEntrypointOrThrow(args.workPath);
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
+
+    const cronEntries = getServiceCrons({
+      service: args.service,
+      entrypoint,
+    });
+    const isCronService = cronEntries !== undefined;
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
@@ -130,9 +127,8 @@ export const build: BuildV2 = async args => {
       defaultFormat: isCronService ? 'cjs' : undefined,
     });
 
-    // Only hono's introspection is supported for now. Cron services
-    // aren't HTTP-routed (the dispatcher answers a single internal path),
-    // so introspection is skipped regardless of framework.
+    // Only hono's introspection is supported for now.
+    // Cron services should have no public routes, so introspection is skipped.
     const introspectionPromise =
       !isCronService && rolldownResult.framework.slug === 'hono'
         ? introspection({
