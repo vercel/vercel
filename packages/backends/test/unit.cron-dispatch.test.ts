@@ -33,12 +33,13 @@ describe('applyCronDispatch', () => {
         files: {},
         handler: 'index.mjs',
         workPath,
+        routes: {},
       });
       expect(result.handler).toBe('index.__vc_cron_dispatch.mjs');
       const src = getShimSource(result);
       expect(src).toContain('import * as __vc_user_module from "./index.mjs"');
       expect(src).toContain('export default function');
-      expect(src).toContain('__VC_CRON_ROUTES');
+      expect(src).toContain('vcCronDispatch');
       expect(src).toContain('CRON_SECRET');
     } finally {
       await rm(workPath, { recursive: true, force: true });
@@ -52,12 +53,13 @@ describe('applyCronDispatch', () => {
         files: {},
         handler: 'index.cjs',
         workPath,
+        routes: {},
       });
       expect(result.handler).toBe('index.__vc_cron_dispatch.cjs');
       const src = getShimSource(result);
       expect(src).toContain('const __vc_user_module = require("./index.cjs")');
       expect(src).toContain('module.exports = function');
-      expect(src).toContain('__VC_CRON_ROUTES');
+      expect(src).toContain('vcCronDispatch');
     } finally {
       await rm(workPath, { recursive: true, force: true });
     }
@@ -70,6 +72,7 @@ describe('applyCronDispatch', () => {
         files: {},
         handler: 'index.js',
         workPath,
+        routes: {},
       });
       expect(result.handler).toBe('index.__vc_cron_dispatch.js');
       const src = getShimSource(result);
@@ -87,6 +90,7 @@ describe('applyCronDispatch', () => {
         files: {},
         handler: 'index.js',
         workPath,
+        routes: {},
       });
       expect(result.handler).toBe('index.__vc_cron_dispatch.js');
       const src = getShimSource(result);
@@ -104,6 +108,7 @@ describe('applyCronDispatch', () => {
         files: {},
         handler: 'jobs/index.mjs',
         workPath,
+        routes: {},
       });
       expect(result.handler).toBe('jobs/index.__vc_cron_dispatch.mjs');
       const src = getShimSource(result);
@@ -121,6 +126,7 @@ describe('applyCronDispatch', () => {
         files: original as never,
         handler: 'index.mjs',
         workPath,
+        routes: {},
       });
       expect(result.files['index.mjs']).toBe('sentinel');
       expect(result.files['index.__vc_cron_dispatch.mjs']).toBeDefined();
@@ -165,12 +171,7 @@ interface ShimContext {
 }
 
 async function setupShimDir(opts: {
-  /**
-   * Object → JSON-stringified into the env var.
-   * String → used verbatim (for malformed-JSON tests).
-   * `null` → env var deleted (for missing-env tests).
-   */
-  routes: Record<string, string> | string | null;
+  routes: Record<string, string>;
   cronSecret?: string;
   userModuleSource: string;
 }): Promise<{ shimUrl: string; restore: () => Promise<void> }> {
@@ -185,22 +186,14 @@ async function setupShimDir(opts: {
     files: {},
     handler: 'index.mjs',
     workPath: dir,
+    routes: opts.routes,
   });
   const shimSource = (
     result.files[result.handler] as unknown as { data: string }
   ).data;
   await writeFile(join(dir, result.handler), shimSource, 'utf-8');
 
-  const prevRoutes = process.env.__VC_CRON_ROUTES;
   const prevSecret = process.env.CRON_SECRET;
-  if (opts.routes === null) {
-    delete process.env.__VC_CRON_ROUTES;
-  } else {
-    process.env.__VC_CRON_ROUTES =
-      typeof opts.routes === 'string'
-        ? opts.routes
-        : JSON.stringify(opts.routes);
-  }
   if (opts.cronSecret !== undefined) {
     process.env.CRON_SECRET = opts.cronSecret;
   } else {
@@ -210,8 +203,6 @@ async function setupShimDir(opts: {
   return {
     shimUrl: pathToFileURL(join(dir, result.handler)).toString(),
     restore: async () => {
-      if (prevRoutes === undefined) delete process.env.__VC_CRON_ROUTES;
-      else process.env.__VC_CRON_ROUTES = prevRoutes;
       if (prevSecret === undefined) delete process.env.CRON_SECRET;
       else process.env.CRON_SECRET = prevSecret;
       await rm(dir, { recursive: true, force: true });
@@ -432,18 +423,6 @@ describe('cron dispatcher boot-time validation', () => {
     }
   });
 
-  it('throws at module load when __VC_CRON_ROUTES is malformed JSON', async () => {
-    const setup = await setupShimDir({
-      routes: 'this-is-not-json',
-      userModuleSource: 'export default async function () {}',
-    });
-    try {
-      await expect(import(setup.shimUrl)).rejects.toThrow();
-    } finally {
-      await setup.restore();
-    }
-  });
-
   it('boots successfully with a valid named-export route', async () => {
     const setup = await setupShimDir({
       routes: { '/_svc/x/crons/index/hourly': 'hourly' },
@@ -451,20 +430,6 @@ describe('cron dispatcher boot-time validation', () => {
     });
     try {
       await expect(import(setup.shimUrl)).resolves.toBeTruthy();
-    } finally {
-      await setup.restore();
-    }
-  });
-
-  it('throws at module load when __VC_CRON_ROUTES is not set', async () => {
-    const setup = await setupShimDir({
-      routes: null,
-      userModuleSource: 'export default async function () {}',
-    });
-    try {
-      await expect(import(setup.shimUrl)).rejects.toThrow(
-        /__VC_CRON_ROUTES.*environment variable is not set/
-      );
     } finally {
       await setup.restore();
     }

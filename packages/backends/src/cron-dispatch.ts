@@ -22,23 +22,32 @@ const CJS_TEMPLATE = readFileSync(
 );
 
 const USER_MODULE_PLACEHOLDER = /['"]__VC_USER_MODULE_PATH__['"]/g;
+const ROUTES_PLACEHOLDER = /'__VC_ROUTES_JSON__'/g;
 
 /**
  * Wrap a cron service handler with a dispatcher shim that:
- *   - reads `__VC_CRON_ROUTES` (JSON: cron path → handler-function name)
+ *   - looks up the inbound request path in a route table baked into the
+ *     shim at build time and invokes the named export on the user module
+ *     (or the default export when the table value is `"default"`)
  *   - verifies `CRON_SECRET` via `Authorization: Bearer ...` when set
- *   - looks up the inbound request path in the route table and invokes
- *     the named export on the user module (or the default export when
- *     the table value is `"default"`)
  *
  * The dispatcher source lives in templates/vc_cron_dispatch.{mjs,cjs};
- * this function only picks the right template, swaps in the user module
- * import path, and writes the result into the lambda files.
+ * this function picks the right template, swaps in the user module
+ * import path and the cron route table, and writes the result into the
+ * lambda files.
+ *
+ * The route table is embedded inline rather than passed via a lambda
+ * env var because AWS Lambda rejects env var names that don't start
+ * with a letter — `__VC_CRON_ROUTES` would fail at deploy time. The
+ * Python builder works around the same constraint by writing the route
+ * table into its trampoline source.
  */
 export async function applyCronDispatch(args: {
   files: Files;
   handler: string;
   workPath: string;
+  /** Cron path → handler-function-name on the user module. */
+  routes: Record<string, string>;
 }): Promise<{ files: Files; handler: string }> {
   const { format, extension } = await resolveShimFormat(args);
   const handlerDir = dirname(args.handler);
@@ -48,11 +57,23 @@ export async function applyCronDispatch(args: {
     handlerDir === '.' ? dispatchName : join(handlerDir, dispatchName);
 
   const handlerImportPath = `./${basename(args.handler)}`;
+
+  // Single-quote the route JSON so embedded double quotes don't need
+  // escaping. Cron paths and handler names only contain
+  // [a-zA-Z0-9_./:-] so JSON.stringify won't produce backslashes — but
+  // assert defensively so any future change that introduces them
+  // surfaces here rather than at runtime.
+  const routesJson = JSON.stringify(args.routes);
+  if (routesJson.includes('\\') || routesJson.includes("'")) {
+    throw new Error(
+      `cron route table contains characters that need JS-string escaping: ${routesJson}`
+    );
+  }
+
   const template = format === 'esm' ? ESM_TEMPLATE : CJS_TEMPLATE;
-  const dispatchSource = template.replace(
-    USER_MODULE_PLACEHOLDER,
-    JSON.stringify(handlerImportPath)
-  );
+  const dispatchSource = template
+    .replace(USER_MODULE_PLACEHOLDER, JSON.stringify(handlerImportPath))
+    .replace(ROUTES_PLACEHOLDER, `'${routesJson}'`);
 
   return {
     handler: dispatchHandler,

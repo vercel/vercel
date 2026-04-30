@@ -53,14 +53,14 @@ function safeBearerEqual(authHeader, secret) {
 }
 
 // Pre-resolve every route at module load. A bad route table fails the
-// lambda at boot
-const __vc_routes_raw = process.env.__VC_CRON_ROUTES
-if (!__vc_routes_raw) {
-  throw new Error(
-    'unable to bootstrap cron service: "__VC_CRON_ROUTES" environment variable is not set'
-  )
-}
-const __vc_routes_parsed = JSON.parse(__vc_routes_raw)
+// lambda at boot rather than at first request.
+//
+// `__VC_ROUTES_JSON__` is replaced at build time with the JSON route
+// table. Embedded inline here (instead of read from env) because AWS
+// Lambda env var names must start with a letter, so `__VC_CRON_ROUTES`
+// would fail at deploy time. The Python builder works around the same
+// constraint by writing the route table into its trampoline source.
+const __vc_routes_parsed = JSON.parse('__VC_ROUTES_JSON__')
 const RESOLVED_HANDLERS = new Map()
 for (const __vc_path in __vc_routes_parsed) {
   const __vc_name = __vc_routes_parsed[__vc_path]
