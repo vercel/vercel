@@ -1,5 +1,19 @@
 # vercel
 
+## 53.0.1
+
+### Patch Changes
+
+- Updated dependencies [f7b5377]
+  - @vercel/node@5.7.15
+  - @vercel/elysia@0.1.73
+  - @vercel/express@0.1.83
+  - @vercel/fastify@0.1.76
+  - @vercel/h3@0.1.82
+  - @vercel/hono@0.2.76
+  - @vercel/koa@0.1.56
+  - @vercel/nestjs@0.2.77
+
 ## 53.0.0
 
 ### Major Changes
