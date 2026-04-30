@@ -15,7 +15,7 @@ pytest.importorskip("dramatiq")
 import dramatiq
 from dramatiq.message import Message
 
-from vercel.workers import client
+from vercel.workers import _queue
 from vercel.workers.dramatiq import (
     DramatiqWorkerConfig,
     PollingWorker,
@@ -37,7 +37,7 @@ class TestVercelQueuesBrokerOptions:
         assert opts.base_url is None
         assert opts.base_path is None
         assert opts.retention_seconds is None
-        assert opts.deployment_id is client._DEPLOYMENT_ID_UNSET
+        assert opts.deployment_id is _queue.DEPLOYMENT_ID_UNSET
         assert opts.timeout == 10.0
         assert opts.visibility_timeout_seconds == 30
         assert opts.visibility_refresh_interval_seconds == 10.0

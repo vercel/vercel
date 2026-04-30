@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from typing import Any, cast
 
-from .._internal import queue_service
+from .. import _queue
 from ..client import send
 
 try:
@@ -36,7 +36,7 @@ class VercelDramatiqEncoder(Encoder):
     _json_encoder: type[json.JSONEncoder]
 
     def __init__(self, json_encoder: type[json.JSONEncoder] | None = None) -> None:
-        self._json_encoder = json_encoder or queue_service.WorkerJSONEncoder
+        self._json_encoder = json_encoder or _queue.WorkerJSONEncoder
 
     def encode(self, data: dict[str, Any]) -> bytes:
         return json.dumps(
@@ -63,7 +63,7 @@ class VercelQueuesBrokerOptions:
     base_url: str | None = None
     base_path: str | None = None
     retention_seconds: int | None = None
-    deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
     # Consumption defaults (serverless callback / local polling)

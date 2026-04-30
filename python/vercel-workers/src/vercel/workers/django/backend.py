@@ -10,7 +10,7 @@ from traceback import format_exception
 from typing import Any, TypedDict, cast
 from uuid import UUID
 
-from .._internal import queue_service
+from .. import _queue
 from ..client import send, send_async
 
 try:
@@ -121,7 +121,7 @@ class VercelQueuesBackendOptions:
     base_url: str | None = None
     base_path: str | None = None
     retention_seconds: int | None = None
-    deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
     # Result storage (Django cache).

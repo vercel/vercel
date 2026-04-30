@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
-import vercel.workers._internal.queue_service as queue_service
+import vercel.workers._queue.service as queue_service
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
 from vercel.workers.client import WorkerJSONEncoder
@@ -231,57 +231,35 @@ class TestTypedSubscriptions(unittest.TestCase):
         change_visibility.assert_not_called()
 
 
-class TestQueueClientRegistries(unittest.TestCase):
+class TestExplicitSubscriptionRegistries(unittest.TestCase):
     def setUp(self) -> None:
         queue_client._subscriptions.clear()
 
     def tearDown(self) -> None:
         queue_client._subscriptions.clear()
 
-    def test_queue_client_send_uses_own_subscription_registry(self) -> None:
+    def test_invoke_subscriptions_uses_explicit_registry(self) -> None:
         global_calls: list[dict[str, Any]] = []
-        client_calls: list[dict[str, Any]] = []
-        client = queue_client.QueueClient()
+        explicit_calls: list[dict[str, Any]] = []
+        subscriptions: list[queue_client._Subscription] = []
 
         def global_worker(payload: dict[str, Any]) -> None:
             global_calls.append(payload)
 
-        def client_worker(payload: dict[str, Any]) -> None:
-            client_calls.append(payload)
+        def explicit_worker(payload: dict[str, Any]) -> None:
+            explicit_calls.append(payload)
 
         queue_client.subscribe(topic="orders")(global_worker)
-        client.subscribe(topic="orders")(client_worker)
+        queue_client._build_subscribe_decorator(subscriptions, topic="orders")(explicit_worker)
 
-        with patch.dict(queue_client.os.environ, {"VERCEL_WORKERS_IN_PROCESS": "1"}):
-            result = client.send("orders", {"ok": True})
+        queue_client._invoke_subscriptions(
+            {"ok": True},
+            {"topic": "orders"},
+            subscriptions,
+        )
 
-        self.assertIsInstance(result["messageId"], str)
         self.assertEqual(global_calls, [])
-        self.assertEqual(client_calls, [{"ok": True}])
-
-    def test_async_queue_client_send_uses_own_subscription_registry(self) -> None:
-        global_calls: list[dict[str, Any]] = []
-        client_calls: list[dict[str, Any]] = []
-        client = queue_client.AsyncQueueClient()
-
-        def global_worker(payload: dict[str, Any]) -> None:
-            global_calls.append(payload)
-
-        async def client_worker(payload: dict[str, Any]) -> None:
-            client_calls.append(payload)
-
-        queue_client.subscribe(topic="orders")(global_worker)
-        client.subscribe(topic="orders")(client_worker)
-
-        async def send() -> queue_client.SendMessageResult:
-            with patch.dict(queue_client.os.environ, {"VERCEL_WORKERS_IN_PROCESS": "1"}):
-                return await client.send("orders", {"ok": True})
-
-        result = asyncio.run(send())
-
-        self.assertIsInstance(result["messageId"], str)
-        self.assertEqual(global_calls, [])
-        self.assertEqual(client_calls, [{"ok": True}])
+        self.assertEqual(explicit_calls, [{"ok": True}])
 
 
 class TestWorkerDirectives(unittest.TestCase):

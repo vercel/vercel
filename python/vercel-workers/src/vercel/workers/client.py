@@ -12,8 +12,7 @@ from uuid import uuid4
 
 from pydantic import TypeAdapter, ValidationError
 
-from . import callback
-from ._internal import queue_service
+from . import _queue, callback
 from .asgi import ASGI, build_asgi_app
 from .exceptions import VQSError
 from .wsgi import (
@@ -23,15 +22,13 @@ from .wsgi import (
     status_reason,
 )
 
-SendMessageResult = queue_service.SendMessageResult
-WorkerJSONEncoder = queue_service.WorkerJSONEncoder
+SendMessageResult = _queue.SendMessageResult
+WorkerJSONEncoder = _queue.WorkerJSONEncoder
 
 __all__ = [
     "MessageMetadata",
     "Ack",
     "RetryAfter",
-    "QueueClient",
-    "AsyncQueueClient",
     "WorkerJSONEncoder",
     "subscribe",
     "get_wsgi_app",
@@ -252,12 +249,12 @@ def subscribe(
         return _build_subscribe_decorator(_subscriptions, topic)(_func)
 
     # Used as @subscribe(...)
-    return _default_queue_client.subscribe(topic=topic)
+    return _build_subscribe_decorator(_subscriptions, topic)
 
 
 def has_subscriptions() -> bool:
     """Return True if any worker functions have been registered via @subscribe."""
-    return _default_queue_client.has_subscriptions()
+    return bool(_subscriptions)
 
 
 def _select_subscriptions(
@@ -299,34 +296,6 @@ def _invoke_subscriptions(
         except Exception:
             # Let the outer WSGI handler respond with 500.
             raise
-
-        if isinstance(result, Ack):
-            return None
-        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
-
-    return timeout_seconds
-
-
-async def _invoke_subscriptions_async(
-    message: Any,
-    metadata: MessageMetadata,
-    subscriptions: Iterable[_Subscription] = _subscriptions,
-) -> int | None:
-    """
-    Async variant of _invoke_subscriptions for in-process async producers.
-    """
-    topic = metadata.get("topic")
-    timeout_seconds: int | None = None
-
-    for sub in _select_subscriptions(topic, subscriptions):
-        try:
-            result = _call_subscription(sub, message, metadata)
-            if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-                result = await result
-        except Ack:
-            return None
-        except RetryAfter as directive:
-            return directive.timeout_seconds
 
         if isinstance(result, Ack):
             return None
@@ -414,19 +383,6 @@ def _send_in_process(
     # explicit topic), similar to the TypeScript dev.ts behaviour.
     _ = _invoke_subscriptions(payload, metadata, subscriptions)
 
-    message_id = metadata.get("messageId")
-    if message_id is None:
-        raise RuntimeError("in-process delivery metadata is missing messageId")
-    return {"messageId": message_id}
-
-
-async def _send_in_process_async(
-    queue_name: str,
-    payload: Any,
-    subscriptions: list[_Subscription] = _subscriptions,
-) -> SendMessageResult:
-    metadata = _prepare_in_process_delivery(queue_name, subscriptions)
-    _ = await _invoke_subscriptions_async(payload, metadata, subscriptions)
     message_id = metadata.get("messageId")
     if message_id is None:
         raise RuntimeError("in-process delivery metadata is missing messageId")
@@ -579,7 +535,7 @@ def handle_queue_callback(
     Returns: (status_code, headers, body_bytes)
     """
 
-    return _default_queue_client.handle_queue_callback(raw_body, environ)
+    return _handle_queue_callback(raw_body, environ, _subscriptions)
 
 
 def _build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASGI:
@@ -592,153 +548,30 @@ def _build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASG
     )
 
 
-class _QueueClientBase:
-    def __init__(self, *, _subscriptions: list[_Subscription] | None = None) -> None:
-        self._subscriptions: list[_Subscription] = (
-            [] if _subscriptions is None else _subscriptions
-        )
-
-    @overload
-    def subscribe(self, _func: WorkerCallable) -> WorkerCallable: ...
-
-    @overload
-    def subscribe(
-        self,
-        *,
-        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
-    ) -> Callable[[WorkerCallable], WorkerCallable]: ...
-
-    def subscribe(
-        self,
-        _func: WorkerCallable | None = None,
-        *,
-        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
-    ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
-        if _func is not None:
-            return _build_subscribe_decorator(self._subscriptions, topic)(_func)
-        return _build_subscribe_decorator(self._subscriptions, topic)
-
-    def has_subscriptions(self) -> bool:
-        return bool(self._subscriptions)
-
-    def handle_queue_callback(
-        self,
-        raw_body: bytes,
-        environ: dict[str, Any] | None = None,
-    ) -> tuple[int, list[tuple[str, str]], bytes]:
-        return _handle_queue_callback(raw_body, environ, self._subscriptions)
-
-    def get_wsgi_app(self) -> WSGI:
-        return build_wsgi_app(self.handle_queue_callback)
-
-    def get_asgi_app(self) -> ASGI:
-        return _build_asgi_app_for_subscriptions(self._subscriptions)
-
-
-class QueueClient(_QueueClientBase):
-    def send(
-        self,
-        queue_name: str,
-        payload: Any,
-        *,
-        idempotency_key: str | None = None,
-        retention_seconds: int | None = None,
-        delay_seconds: int | None = None,
-        deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
-        token: str | None = None,
-        base_url: str | None = None,
-        base_path: str | None = None,
-        content_type: str = "application/json",
-        timeout: float | None = 10.0,
-        headers: dict[str, str] | None = None,
-        json_encoder: type[json.JSONEncoder] | None = None,
-    ) -> SendMessageResult:
-        if queue_service.in_process_mode_enabled():
-            return _send_in_process(queue_name, payload, self._subscriptions)
-
-        return queue_service.send_message(
-            queue_name,
-            payload,
-            idempotency_key=idempotency_key,
-            retention_seconds=retention_seconds,
-            delay_seconds=delay_seconds,
-            deployment_id=deployment_id,
-            token=token,
-            base_url=base_url,
-            base_path=base_path,
-            content_type=content_type,
-            timeout=timeout,
-            headers=headers,
-            json_encoder=json_encoder,
-        )
-
-
-class AsyncQueueClient(_QueueClientBase):
-    async def send(
-        self,
-        queue_name: str,
-        payload: Any,
-        *,
-        idempotency_key: str | None = None,
-        retention_seconds: int | None = None,
-        delay_seconds: int | None = None,
-        deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
-        token: str | None = None,
-        base_url: str | None = None,
-        base_path: str | None = None,
-        content_type: str = "application/json",
-        timeout: float | None = 10.0,
-        headers: dict[str, str] | None = None,
-        json_encoder: type[json.JSONEncoder] | None = None,
-    ) -> SendMessageResult:
-        if queue_service.in_process_mode_enabled():
-            return await _send_in_process_async(queue_name, payload, self._subscriptions)
-
-        return await queue_service.send_message_async(
-            queue_name,
-            payload,
-            idempotency_key=idempotency_key,
-            retention_seconds=retention_seconds,
-            delay_seconds=delay_seconds,
-            deployment_id=deployment_id,
-            token=token,
-            base_url=base_url,
-            base_path=base_path,
-            content_type=content_type,
-            timeout=timeout,
-            headers=headers,
-            json_encoder=json_encoder,
-        )
-
-
-_default_queue_client = QueueClient(_subscriptions=_subscriptions)
-_default_async_queue_client = AsyncQueueClient(_subscriptions=_subscriptions)
-
-
 def get_wsgi_app() -> WSGI:
     """Return a WSGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return _default_queue_client.get_wsgi_app()
+    return build_wsgi_app(handle_queue_callback)
 
 
 def get_asgi_app() -> ASGI:
     """Return an ASGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return _default_queue_client.get_asgi_app()
+    return _build_asgi_app_for_subscriptions(_subscriptions)
 
 
 def get_queue_base_url() -> str:
-    return queue_service.get_queue_base_url()
+    return _queue.get_queue_base_url()
 
 
 def get_queue_base_path() -> str:
-    return queue_service.get_queue_base_path()
+    return _queue.get_queue_base_path()
 
 
 def get_queue_token(explicit_token: str | None = None) -> str:
-    return queue_service.get_queue_token(explicit_token)
+    return _queue.get_queue_token(explicit_token)
 
 
 async def get_queue_token_async(explicit_token: str | None = None) -> str:
-    return await queue_service.get_queue_token_async(explicit_token)
+    return await _queue.get_queue_token_async(explicit_token)
 
 
 async def send_async(
@@ -748,7 +581,7 @@ async def send_async(
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
-    deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
     base_path: str | None = None,
@@ -757,7 +590,7 @@ async def send_async(
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
-    return await _default_async_queue_client.send(
+    return await _queue.send_message_async(
         queue_name,
         payload,
         idempotency_key=idempotency_key,
@@ -772,6 +605,8 @@ async def send_async(
         headers=headers,
         json_encoder=json_encoder,
     )
+
+
 def send(
     queue_name: str,
     payload: Any,
@@ -779,7 +614,7 @@ def send(
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
-    deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
     base_path: str | None = None,
@@ -788,7 +623,10 @@ def send(
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
-    return _default_queue_client.send(
+    if _queue.in_process_mode_enabled():
+        return _send_in_process(queue_name, payload)
+
+    return _queue.send_message(
         queue_name,
         payload,
         idempotency_key=idempotency_key,

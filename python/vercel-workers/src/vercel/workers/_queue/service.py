@@ -3,14 +3,17 @@ from __future__ import annotations
 import json
 import os
 import warnings
-from datetime import date, datetime
-from decimal import Decimal
-from typing import Any, TypedDict
+from typing import Any
 from urllib.parse import quote
-from uuid import UUID
 
 import httpx
 
+from vercel.workers._queue.types import (
+    DEPLOYMENT_ID_UNSET,
+    DeploymentIdOption,
+    SendMessageResult,
+    WorkerJSONEncoder,
+)
 from vercel.workers.exceptions import (
     BadRequestError,
     DuplicateIdempotencyKeyError,
@@ -19,38 +22,6 @@ from vercel.workers.exceptions import (
     TokenResolutionError,
     UnauthorizedError,
 )
-
-
-class WorkerJSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles common Python types not supported by the stdlib."""
-
-    def default(self, o: Any) -> Any:
-        match o:
-            case UUID():
-                return str(o)
-            case datetime() | date():
-                return o.isoformat()
-            case Decimal():
-                return float(o)
-            case _:
-                return super().default(o)
-
-
-class SendMessageResult(TypedDict):
-    """Result of sending a message to the queue.
-
-    ``messageId`` is ``None`` when the server returns 202 (deferred delivery).
-    """
-
-    messageId: str | None
-
-
-class _DeploymentIdUnset:
-    pass
-
-
-DEPLOYMENT_ID_UNSET = _DeploymentIdUnset()
-type DeploymentIdOption = str | None | _DeploymentIdUnset
 
 
 def in_process_mode_enabled() -> bool:
@@ -393,10 +364,6 @@ async def send_message_async(
 
 
 __all__ = [
-    "DeploymentIdOption",
-    "SendMessageResult",
-    "WorkerJSONEncoder",
-    "DEPLOYMENT_ID_UNSET",
     "get_queue_base_path",
     "get_queue_base_url",
     "get_queue_token",

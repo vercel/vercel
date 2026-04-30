@@ -9,7 +9,8 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from vercel.workers import client
+from vercel.workers import _queue
+from vercel.workers._queue import service as queue_service
 
 # Skip all tests if Django is not available (optional dependency)
 try:
@@ -163,7 +164,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         self.assertIsNone(cfg.base_url)
         self.assertIsNone(cfg.base_path)
         self.assertIsNone(cfg.retention_seconds)
-        self.assertIs(cfg.deployment_id, client._DEPLOYMENT_ID_UNSET)
+        self.assertIs(cfg.deployment_id, _queue.DEPLOYMENT_ID_UNSET)
         self.assertEqual(cfg.timeout, 10.0)
         self.assertEqual(cfg.cache_alias, "default")
         self.assertEqual(cfg.cache_key_prefix, "vercel-workers:django-tasks")
@@ -740,7 +741,7 @@ class TestDjangoEnqueueSerializesNonPrimitiveTypes(unittest.TestCase):
 
         with (
             patch.dict("os.environ", {"VERCEL_QUEUE_TOKEN": "tok", "VERCEL_DEPLOYMENT_ID": "dpl"}),
-            patch.object(client.httpx, "Client", _FakeClient),
+            patch.object(queue_service.httpx, "Client", _FakeClient),
             patch.object(backend, "_store_result"),
         ):
             backend.enqueue(task, args=args, kwargs=kwargs)
