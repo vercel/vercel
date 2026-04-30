@@ -1,6 +1,7 @@
 // @ts-check
 const fs = require('node:fs');
 const path = require('node:path');
+const testGlob = require('./test-glob');
 const {
   getAffectedPackages,
   getAllPackages,
@@ -232,111 +233,16 @@ function getTestPathsForPackage(rootPath, packagePath, patterns) {
   const testPaths = new Set();
 
   for (const pattern of patterns) {
-    for (const testPath of expandPattern(packageRoot, pattern)) {
+    for (const testPath of testGlob.expandTestPattern(
+      packageRoot,
+      pattern,
+      getDefaultTestPatterns()
+    )) {
       testPaths.add(testPath);
     }
   }
 
   return [...testPaths].sort((a, b) => a.localeCompare(b));
-}
-
-function expandPattern(packageRoot, pattern) {
-  const normalizedPattern = pattern.replace(/\\/g, '/').replace(/^\.\//, '');
-  const absolutePattern = path.join(packageRoot, normalizedPattern);
-
-  if (fs.existsSync(absolutePattern)) {
-    const stat = fs.statSync(absolutePattern);
-    if (stat.isDirectory()) {
-      return getDefaultTestPatterns().flatMap(defaultPattern =>
-        expandPattern(absolutePattern, defaultPattern.replace(/^test\//, ''))
-      );
-    }
-    return [absolutePattern];
-  }
-
-  const matcher = globPatternToRegExp(normalizedPattern);
-  let matches = walkFiles(packageRoot)
-    .filter(filePath =>
-      matcher.test(path.relative(packageRoot, filePath).replace(/\\/g, '/'))
-    )
-    .sort((a, b) => a.localeCompare(b));
-
-  if (
-    hasWildcard(normalizedPattern) &&
-    !isLikelyTestPatternName(normalizedPattern)
-  ) {
-    matches = matches.filter(isTestFile);
-  }
-
-  return matches;
-}
-
-function hasWildcard(pattern) {
-  return pattern.includes('*') || pattern.includes('?');
-}
-
-function isLikelyTestPatternName(pattern) {
-  return DEFAULT_TEST_NAME_PATTERNS.some(name => pattern.includes(`.${name}.`));
-}
-
-function isTestFile(filePath) {
-  return DEFAULT_TEST_NAME_PATTERNS.some(name =>
-    new RegExp(`\\.${name}\\.[^.]+$`).test(filePath)
-  );
-}
-
-function globPatternToRegExp(pattern) {
-  let source = '^';
-  for (let index = 0; index < pattern.length; index += 1) {
-    const char = pattern[index];
-    const nextChar = pattern[index + 1];
-    const followingChar = pattern[index + 2];
-
-    if (char === '*' && nextChar === '*' && followingChar === '/') {
-      source += '(?:.*/)?';
-      index += 2;
-    } else if (char === '*' && nextChar === '*') {
-      source += '.*';
-      index += 1;
-    } else if (char === '*') {
-      source += '[^/]*';
-    } else if (char === '?') {
-      source += '[^/]';
-    } else {
-      source += escapeRegExp(char);
-    }
-  }
-  source += '$';
-  return new RegExp(source);
-}
-
-function escapeRegExp(char) {
-  return /[\\^$.*+?()[\]{}|]/.test(char) ? `\\${char}` : char;
-}
-
-function walkFiles(directory) {
-  if (!fs.existsSync(directory)) {
-    return [];
-  }
-
-  const files = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (
-      entry.name === 'node_modules' ||
-      entry.name === 'dist' ||
-      entry.name === '.turbo'
-    ) {
-      continue;
-    }
-
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...walkFiles(entryPath));
-    } else {
-      files.push(entryPath);
-    }
-  }
-  return files;
 }
 
 function getRunnerOptions(scriptName, packageName) {
