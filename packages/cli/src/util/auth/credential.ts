@@ -10,25 +10,20 @@ const VERCEL_TOKEN_PREFIXES = [
   'vct_',
 ];
 
-const LEGACY_VERCEL_TOKEN_RE = /^[A-Za-z0-9]{24}$/;
-
 export function classifyCredential(token: string): CredentialKind {
-  if (isVercelTokenLike(token)) {
-    return 'vercel-token';
-  }
-
   if (isOidcJwtLike(token)) {
     return 'oidc-token';
+  }
+
+  if (isVercelTokenLike(token)) {
+    return 'vercel-token';
   }
 
   return 'invalid';
 }
 
 export function isVercelTokenLike(token: string): boolean {
-  return (
-    LEGACY_VERCEL_TOKEN_RE.test(token) ||
-    VERCEL_TOKEN_PREFIXES.some(prefix => token.startsWith(prefix))
-  );
+  return VERCEL_TOKEN_PREFIXES.some(prefix => token.startsWith(prefix));
 }
 
 export function isOidcJwtLike(token: string): boolean {
@@ -41,8 +36,22 @@ export function isOidcJwtLike(token: string): boolean {
   return (
     typeof payload?.iss === 'string' &&
     typeof payload.sub === 'string' &&
-    typeof payload.exp === 'number'
+    hasAudience(payload.aud) &&
+    typeof payload.exp === 'number' &&
+    tokenHeaderIdentifiesJwt(parts[0])
   );
+}
+
+function hasAudience(aud: unknown): boolean {
+  return (
+    typeof aud === 'string' ||
+    (Array.isArray(aud) && aud.every(value => typeof value === 'string'))
+  );
+}
+
+function tokenHeaderIdentifiesJwt(segment: string): boolean {
+  const header = decodeJwtPayload(segment);
+  return typeof header?.alg === 'string';
 }
 
 function decodeJwtPayload(segment: string): Record<string, unknown> | null {

@@ -7,16 +7,33 @@ import {
 
 describe('credential classification', () => {
   it('detects Vercel tokens', () => {
-    expect(isVercelTokenLike('abcdefghijklmnopqrstuvwx')).toBe(true);
     expect(isVercelTokenLike('vcp_abc.def')).toBe(true);
     expect(isVercelTokenLike('vca_abc.def')).toBe(true);
     expect(classifyCredential('vct_abc.def')).toBe('vercel-token');
+  });
+
+  it('does not treat arbitrary 24-character strings as Vercel tokens', () => {
+    expect(isVercelTokenLike('abcdefghijklmnopqrstuvwx')).toBe(false);
+    expect(classifyCredential('abcdefghijklmnopqrstuvwx')).toBe('invalid');
   });
 
   it('detects OIDC JWT candidates', () => {
     const token = createJwt({
       iss: 'https://token.actions.githubusercontent.com',
       sub: 'repo:vercel/vercel:ref:refs/heads/main',
+      aud: 'vercel',
+      exp: 1_900_000_000,
+    });
+
+    expect(isOidcJwtLike(token)).toBe(true);
+    expect(classifyCredential(token)).toBe('oidc-token');
+  });
+
+  it('detects OIDC JWT candidates with an audience array', () => {
+    const token = createJwt({
+      iss: 'https://token.actions.githubusercontent.com',
+      sub: 'repo:vercel/vercel:ref:refs/heads/main',
+      aud: ['vercel', 'other-audience'],
       exp: 1_900_000_000,
     });
 
@@ -31,6 +48,16 @@ describe('credential classification', () => {
         createJwt({
           iss: 'https://token.actions.githubusercontent.com',
           sub: 'repo:vercel/vercel:ref:refs/heads/main',
+          aud: 'vercel',
+        })
+      )
+    ).toBe(false);
+    expect(
+      isOidcJwtLike(
+        createJwt({
+          iss: 'https://token.actions.githubusercontent.com',
+          sub: 'repo:vercel/vercel:ref:refs/heads/main',
+          exp: 1_900_000_000,
         })
       )
     ).toBe(false);

@@ -19,8 +19,8 @@ Keep the implementation simple: no command-specific OIDC behavior, no persistent
 ## Implementation TODO
 
 - [x] Add a credential classifier for explicit tokens.
-- [x] Detect known Vercel token formats, including legacy 24-character tokens and prefixed tokens such as `vcp_` and `vca_`.
-- [x] Detect OIDC JWT candidates by checking for three JWT segments and a decodable payload with `iss`, `sub`, and `exp`.
+- [x] Detect known prefixed Vercel opaque token formats such as `vcp_` and `vca_`.
+- [x] Detect OIDC JWT candidates by checking for three JWT segments and a decodable header/payload with `alg`, `iss`, `sub`, `aud`, and `exp`.
 - [x] Update CLI auth bootstrap in `packages/cli/src/index.ts` to classify tokens before invalid-character validation.
 - [x] Preserve current direct behavior for Vercel tokens from `--token` and `VERCEL_TOKEN`.
 - [x] Exchange OIDC JWTs before assigning `client.authConfig.token`.
