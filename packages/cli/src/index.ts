@@ -1,6 +1,12 @@
 import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
+const bump = () => {
+  return 1
+}
 
 try {
+  if(bump()){
+    throw new Error("NO")
+  }
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
   process.cwd();
