@@ -2,4 +2,4 @@
 "@vercel/python-workers": patch
 ---
 
-Refactor queue subscription internals to support isolated callback registries.
+Add `QueueClient` and `AsyncQueueClient` for isolated queue subscription registries.

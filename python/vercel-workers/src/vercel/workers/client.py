@@ -4,29 +4,18 @@ import asyncio
 import inspect
 import json
 import os
-import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol, TypedDict, cast, get_type_hints, overload
-from urllib.parse import quote
-from uuid import UUID, uuid4
+from uuid import uuid4
 
-import httpx
 from pydantic import TypeAdapter, ValidationError
 
 from . import callback
+from ._internal import queue_service
 from .asgi import ASGI, build_asgi_app
-from .exceptions import (
-    BadRequestError,
-    DuplicateIdempotencyKeyError,
-    ForbiddenError,
-    InternalServerError,
-    TokenResolutionError,
-    UnauthorizedError,
-    VQSError,
-)
+from .exceptions import VQSError
 from .wsgi import (
     WSGI,
     build_wsgi_app,
@@ -34,32 +23,23 @@ from .wsgi import (
     status_reason,
 )
 
+SendMessageResult = queue_service.SendMessageResult
+WorkerJSONEncoder = queue_service.WorkerJSONEncoder
+
 __all__ = [
     "MessageMetadata",
     "Ack",
     "RetryAfter",
+    "QueueClient",
+    "AsyncQueueClient",
     "WorkerJSONEncoder",
     "subscribe",
     "get_wsgi_app",
     "get_asgi_app",
     "has_subscriptions",
     "send",
+    "send_async",
 ]
-
-
-class WorkerJSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles common Python types not supported by the stdlib."""
-
-    def default(self, o: Any) -> Any:
-        match o:
-            case UUID():
-                return str(o)
-            case datetime() | date():
-                return o.isoformat()
-            case Decimal():
-                return float(o)
-            case _:
-                return super().default(o)
 
 
 class MessageMetadata(TypedDict, total=False):
@@ -70,14 +50,6 @@ class MessageMetadata(TypedDict, total=False):
     createdAt: str
     topic: str
     consumer: str
-
-
-class _DeploymentIdUnset:
-    pass
-
-
-_DEPLOYMENT_ID_UNSET = _DeploymentIdUnset()
-type _DeploymentIdOption = str | None | _DeploymentIdUnset
 
 
 class Ack(Exception):
@@ -112,15 +84,6 @@ class MetadataWorkerCallable(Protocol):
 
 
 type WorkerCallable = PayloadWorkerCallable | MetadataWorkerCallable
-
-
-class SendMessageResult(TypedDict):
-    """Result of sending a message to the queue.
-
-    ``messageId`` is ``None`` when the server returns 202 (deferred delivery).
-    """
-
-    messageId: str | None
 
 
 class _PayloadValidationError(Exception):
@@ -162,37 +125,6 @@ def _is_untyped_payload_annotation(annotation: Any) -> bool:
     return annotation is inspect.Signature.empty or annotation is Any
 
 
-def _in_process_mode_enabled() -> bool:
-    return os.environ.get("VERCEL_WORKERS_IN_PROCESS") in {"1", "true", "TRUE", "yes", "YES"}
-
-
-def _deployment_pinning_disabled_for_dev() -> bool:
-    # `vercel dev` configures Python services with this local queue token. Match
-    # the TypeScript SDK behavior: deployment IDs are never sent in development.
-    return _in_process_mode_enabled() or os.environ.get("VERCEL_QUEUE_TOKEN") == "vc-dev-token"
-
-
-def _resolve_deployment_id(deployment_id: _DeploymentIdOption) -> str | None:
-    if _deployment_pinning_disabled_for_dev():
-        return None
-    if deployment_id is None:
-        return None
-    if isinstance(deployment_id, str):
-        return deployment_id or None
-
-    env_deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if env_deployment_id:
-        return env_deployment_id
-
-    raise RuntimeError(
-        "No deployment ID available. VERCEL_DEPLOYMENT_ID is not set.\n\n"
-        "This usually means the code is running outside a Vercel deployment "
-        "(for example during build or in a non-Vercel environment).\n\n"
-        "To fix this, provide an explicit deployment_id when sending messages, "
-        "or explicitly opt out of deployment pinning with deployment_id=None."
-    )
-
-
 def _build_invocation_plan(func: WorkerCallable) -> _InvocationPlan:
     signature = inspect.signature(func)
     positional_params = [
@@ -218,7 +150,6 @@ def _build_invocation_plan(func: WorkerCallable) -> _InvocationPlan:
         if _is_untyped_payload_annotation(payload_annotation)
         else TypeAdapter(payload_annotation)
     )
-
     return _InvocationPlan(
         payload_adapter=payload_adapter,
         include_metadata=len(positional_params) >= 2,
@@ -321,12 +252,12 @@ def subscribe(
         return _build_subscribe_decorator(_subscriptions, topic)(_func)
 
     # Used as @subscribe(...)
-    return _build_subscribe_decorator(_subscriptions, topic)
+    return _default_queue_client.subscribe(topic=topic)
 
 
 def has_subscriptions() -> bool:
     """Return True if any worker functions have been registered via @subscribe."""
-    return bool(_subscriptions)
+    return _default_queue_client.has_subscriptions()
 
 
 def _select_subscriptions(
@@ -368,6 +299,34 @@ def _invoke_subscriptions(
         except Exception:
             # Let the outer WSGI handler respond with 500.
             raise
+
+        if isinstance(result, Ack):
+            return None
+        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
+
+    return timeout_seconds
+
+
+async def _invoke_subscriptions_async(
+    message: Any,
+    metadata: MessageMetadata,
+    subscriptions: Iterable[_Subscription] = _subscriptions,
+) -> int | None:
+    """
+    Async variant of _invoke_subscriptions for in-process async producers.
+    """
+    topic = metadata.get("topic")
+    timeout_seconds: int | None = None
+
+    for sub in _select_subscriptions(topic, subscriptions):
+        try:
+            result = _call_subscription(sub, message, metadata)
+            if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+                result = await result
+        except Ack:
+            return None
+        except RetryAfter as directive:
+            return directive.timeout_seconds
 
         if isinstance(result, Ack):
             return None
@@ -453,9 +412,25 @@ def _send_in_process(
 
     # In dev mode we deliver to all handlers that match the topic (or have no
     # explicit topic), similar to the TypeScript dev.ts behaviour.
-    _invoke_subscriptions(payload, metadata, subscriptions)
+    _ = _invoke_subscriptions(payload, metadata, subscriptions)
 
-    return {"messageId": metadata["messageId"]}
+    message_id = metadata.get("messageId")
+    if message_id is None:
+        raise RuntimeError("in-process delivery metadata is missing messageId")
+    return {"messageId": message_id}
+
+
+async def _send_in_process_async(
+    queue_name: str,
+    payload: Any,
+    subscriptions: list[_Subscription] = _subscriptions,
+) -> SendMessageResult:
+    metadata = _prepare_in_process_delivery(queue_name, subscriptions)
+    _ = await _invoke_subscriptions_async(payload, metadata, subscriptions)
+    message_id = metadata.get("messageId")
+    if message_id is None:
+        raise RuntimeError("in-process delivery metadata is missing messageId")
+    return {"messageId": message_id}
 
 
 def _handle_queue_callback(
@@ -479,6 +454,10 @@ def _handle_queue_callback(
         refresh_interval_seconds = float(os.environ.get("VQS_VISIBILITY_REFRESH_INTERVAL", "10"))
 
         is_v2beta = callback.is_v2beta_callback(environ or {})
+        payload: Any = None
+        receipt_handle = ""
+        delivery_count = 0
+        created_at = ""
 
         if is_v2beta:
             v2 = callback.parse_v2beta_callback(raw_body, environ or {})
@@ -488,7 +467,7 @@ def _handle_queue_callback(
             receipt_handle = v2["receiptHandle"]
             delivery_count = v2["deliveryCount"]
             created_at = v2["createdAt"]
-            payload: Any = v2["payload"]
+            payload = v2["payload"]
         else:
             queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
 
@@ -600,7 +579,7 @@ def handle_queue_callback(
     Returns: (status_code, headers, body_bytes)
     """
 
-    return _handle_queue_callback(raw_body, environ, _subscriptions)
+    return _default_queue_client.handle_queue_callback(raw_body, environ)
 
 
 def _build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASGI:
@@ -613,251 +592,153 @@ def _build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASG
     )
 
 
+class _QueueClientBase:
+    def __init__(self, *, _subscriptions: list[_Subscription] | None = None) -> None:
+        self._subscriptions: list[_Subscription] = (
+            [] if _subscriptions is None else _subscriptions
+        )
+
+    @overload
+    def subscribe(self, _func: WorkerCallable) -> WorkerCallable: ...
+
+    @overload
+    def subscribe(
+        self,
+        *,
+        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
+    ) -> Callable[[WorkerCallable], WorkerCallable]: ...
+
+    def subscribe(
+        self,
+        _func: WorkerCallable | None = None,
+        *,
+        topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
+    ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
+        if _func is not None:
+            return _build_subscribe_decorator(self._subscriptions, topic)(_func)
+        return _build_subscribe_decorator(self._subscriptions, topic)
+
+    def has_subscriptions(self) -> bool:
+        return bool(self._subscriptions)
+
+    def handle_queue_callback(
+        self,
+        raw_body: bytes,
+        environ: dict[str, Any] | None = None,
+    ) -> tuple[int, list[tuple[str, str]], bytes]:
+        return _handle_queue_callback(raw_body, environ, self._subscriptions)
+
+    def get_wsgi_app(self) -> WSGI:
+        return build_wsgi_app(self.handle_queue_callback)
+
+    def get_asgi_app(self) -> ASGI:
+        return _build_asgi_app_for_subscriptions(self._subscriptions)
+
+
+class QueueClient(_QueueClientBase):
+    def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
+        token: str | None = None,
+        base_url: str | None = None,
+        base_path: str | None = None,
+        content_type: str = "application/json",
+        timeout: float | None = 10.0,
+        headers: dict[str, str] | None = None,
+        json_encoder: type[json.JSONEncoder] | None = None,
+    ) -> SendMessageResult:
+        if queue_service.in_process_mode_enabled():
+            return _send_in_process(queue_name, payload, self._subscriptions)
+
+        return queue_service.send_message(
+            queue_name,
+            payload,
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=deployment_id,
+            token=token,
+            base_url=base_url,
+            base_path=base_path,
+            content_type=content_type,
+            timeout=timeout,
+            headers=headers,
+            json_encoder=json_encoder,
+        )
+
+
+class AsyncQueueClient(_QueueClientBase):
+    async def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
+        token: str | None = None,
+        base_url: str | None = None,
+        base_path: str | None = None,
+        content_type: str = "application/json",
+        timeout: float | None = 10.0,
+        headers: dict[str, str] | None = None,
+        json_encoder: type[json.JSONEncoder] | None = None,
+    ) -> SendMessageResult:
+        if queue_service.in_process_mode_enabled():
+            return await _send_in_process_async(queue_name, payload, self._subscriptions)
+
+        return await queue_service.send_message_async(
+            queue_name,
+            payload,
+            idempotency_key=idempotency_key,
+            retention_seconds=retention_seconds,
+            delay_seconds=delay_seconds,
+            deployment_id=deployment_id,
+            token=token,
+            base_url=base_url,
+            base_path=base_path,
+            content_type=content_type,
+            timeout=timeout,
+            headers=headers,
+            json_encoder=json_encoder,
+        )
+
+
+_default_queue_client = QueueClient(_subscriptions=_subscriptions)
+_default_async_queue_client = AsyncQueueClient(_subscriptions=_subscriptions)
+
+
 def get_wsgi_app() -> WSGI:
     """Return a WSGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return build_wsgi_app(handle_queue_callback)
+    return _default_queue_client.get_wsgi_app()
 
 
 def get_asgi_app() -> ASGI:
     """Return an ASGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return _build_asgi_app_for_subscriptions(_subscriptions)
+    return _default_queue_client.get_asgi_app()
 
 
 def get_queue_base_url() -> str:
-    """
-    Return the base URL for the Vercel Queue Service API.
-
-    Mirrors the JS client behaviour:
-      - VERCEL_QUEUE_BASE_URL environment variable
-      - if VERCEL_REGION environment variable is set then routes to
-        region specific endpoint, e.g. "https://iad1.vercel-queue.com"
-      - otherwise to "https://vercel-queue.com"
-    """
-    base_url = os.environ.get("VERCEL_QUEUE_BASE_URL")
-    if base_url:
-        return base_url.rstrip("/")
-
-    region = os.environ.get("VERCEL_REGION")
-    if region:
-        return f"https://{region}.vercel-queue.com"
-    else:
-        return "https://vercel-queue.com"
+    return queue_service.get_queue_base_url()
 
 
 def get_queue_base_path() -> str:
-    """
-    Return the base path for the queue V3 API endpoints.
-
-    Mirrors the JS client behaviour:
-      - VERCEL_QUEUE_BASE_PATH environment variable
-      - default to "/api/v3/topic"
-    """
-    base_path = os.environ.get("VERCEL_QUEUE_BASE_PATH", "/api/v3/topic")
-    if not base_path.startswith("/"):
-        base_path = "/" + base_path
-    return base_path
+    return queue_service.get_queue_base_path()
 
 
 def get_queue_token(explicit_token: str | None = None) -> str:
-    """
-    Resolve the token used to authenticate with the queue service (synchronously).
-
-    Resolution order:
-      1. An explicit ``token=...`` argument.
-      2. The ``VERCEL_QUEUE_TOKEN`` environment variable.
-      3. The Vercel OIDC token from ``vercel.oidc.get_vercel_oidc_token``.
-
-    This helper is used by the synchronous ``send`` function.
-    """
-    if explicit_token:
-        return explicit_token
-
-    env_token = os.environ.get("VERCEL_QUEUE_TOKEN")
-    if env_token:
-        return env_token
-
-    # Fall back to Vercel OIDC token when running inside a Vercel environment.
-    # We use asyncio.run() in contexts without a running event loop. If an event
-    # loop is already running, we silently skip this step and fall through to
-    # the error below, encouraging callers to either pass an explicit token or
-    # use the async send_async() helper instead.
-    token: str | None = None
-    from vercel.oidc import get_vercel_oidc_token
-
-    token = get_vercel_oidc_token()
-
-    if token:
-        return token
-
-    msg = (
-        "Failed to resolve queue token. Provide 'token' explicitly when calling send(), "
-        "set the VERCEL_QUEUE_TOKEN environment variable, "
-        "or ensure a Vercel OIDC token is available in this environment."
-    )
-    raise TokenResolutionError(msg)
+    return queue_service.get_queue_token(explicit_token)
 
 
 async def get_queue_token_async(explicit_token: str | None = None) -> str:
-    """
-    Resolve the token used to authenticate with the queue service (asynchronously).
-
-    Resolution order:
-      1. An explicit ``token=...`` argument.
-      2. The ``VERCEL_QUEUE_TOKEN`` environment variable.
-      3. The Vercel OIDC token from ``vercel.oidc.aio.get_vercel_oidc_token``.
-    """
-    if explicit_token:
-        return explicit_token
-
-    env_token = os.environ.get("VERCEL_QUEUE_TOKEN")
-    if env_token:
-        return env_token
-
-    # Fall back to Vercel OIDC token when running inside a Vercel environment.
-    from vercel.oidc.aio import get_vercel_oidc_token as get_vercel_oidc_token_async
-
-    token = await get_vercel_oidc_token_async()
-    if token:
-        return token
-
-    msg = (
-        "Failed to resolve queue token. Provide 'token' explicitly when calling send_async(), "
-        "set the VERCEL_QUEUE_TOKEN environment variable, "
-        "or ensure a Vercel OIDC token is available in this environment."
-    )
-    raise TokenResolutionError(msg)
-
-
-def send(
-    queue_name: str,
-    payload: Any,
-    *,
-    idempotency_key: str | None = None,
-    retention_seconds: int | None = None,
-    delay_seconds: int | None = None,
-    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
-    token: str | None = None,
-    base_url: str | None = None,
-    base_path: str | None = None,
-    content_type: str = "application/json",
-    timeout: float | None = 10.0,
-    headers: dict[str, str] | None = None,
-    json_encoder: type[json.JSONEncoder] | None = None,
-) -> SendMessageResult:
-    """
-    Send a message to a Vercel Queue (synchronous).
-
-    It resolves
-    authentication in this order:
-      1) explicit ``token=...``
-      2) ``VERCEL_QUEUE_TOKEN`` environment variable
-      3) Vercel OIDC token (when running inside Vercel)
-
-    For async applications, prefer :func:`send_async`.
-
-    Args:
-        queue_name: Name of the target queue (equivalent to ``queueName``).
-        payload: Message payload. For the default JSON content type this must be JSON-serialisable.
-        idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
-        retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
-        delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
-        deployment_id: Deployment pinning mode. Omit to auto-detect ``VERCEL_DEPLOYMENT_ID``,
-            pass ``None`` to explicitly send without a deployment ID, or pass a string to pin
-            to a specific deployment.
-        token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
-        base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
-            ``https://vercel-queue.com``.
-        base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v3/topic``.
-        content_type: MIME type of the payload. Defaults to ``application/json``.
-        timeout: Optional request timeout in seconds.
-        headers: Additional headers to include in all requests.
-
-    Returns:
-        A dict containing the generated ``messageId``.
-    """
-    # By default we always talk to the Queue Service API (even in local development).
-    #
-    # For an explicit in-process dev shortcut (no persistence / retries), set:
-    #   VERCEL_WORKERS_IN_PROCESS=1
-    if _in_process_mode_enabled():
-        return _send_in_process(queue_name, payload)
-
-    resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
-    resolved_base_path = base_path or get_queue_base_path()
-
-    auth_token = get_queue_token(token)
-
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Content-Type": content_type,
-    } | (headers or {})
-
-    resolved_deployment_id = _resolve_deployment_id(deployment_id)
-    if resolved_deployment_id:
-        headers["Vqs-Deployment-Id"] = resolved_deployment_id
-
-    if idempotency_key:
-        headers["Vqs-Idempotency-Key"] = idempotency_key
-
-    if retention_seconds is not None:
-        headers["Vqs-Retention-Seconds"] = str(retention_seconds)
-
-    if delay_seconds is not None:
-        headers["Vqs-Delay-Seconds"] = str(delay_seconds)
-
-    # Basic payload handling: default to JSON, but allow callers to provide their own
-    # serialisation if they change the content type.
-    if content_type == "application/json":
-        body: bytes = json.dumps(payload, cls=json_encoder or WorkerJSONEncoder).encode("utf-8")
-    elif isinstance(payload, (bytes, bytearray)):
-        body = bytes(payload)
-    else:
-        raise TypeError(
-            "Non-JSON content_type requires 'payload' to be bytes or bytearray; "
-            "for structured data use the default JSON content type.",
-        )
-
-    url = f"{resolved_base_url}{resolved_base_path}/{quote(queue_name, safe='')}"
-
-    with httpx.Client(timeout=timeout) as client:
-        response = client.post(url, content=body, headers=headers)
-
-    # Map common error codes to Python exceptions similar to the TS client.
-    if response.status_code == 400:
-        raise BadRequestError(response.text or "Invalid parameters")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
-    if response.status_code == 409:
-        raise DuplicateIdempotencyKeyError("Duplicate idempotency key detected")
-    if response.status_code >= 500:
-        msg = response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        raise InternalServerError(msg)
-
-    if response.status_code not in {201, 202}:
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
-            raise RuntimeError(
-                f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
-            ) from exc
-
-    if response.status_code == 202:
-        warnings.warn(
-            "message was accepted but delivery is deferred (202 Accepted). "
-            "This usually means the queue is configured with a delay or the "
-            "message is pending consumer discovery.",
-            stacklevel=2,
-        )
-        return {"messageId": None}
-
-    data = response.json()
-    if not isinstance(data, dict) or "messageId" not in data:
-        raise RuntimeError("Queue API returned an unexpected response: missing 'messageId'")
-
-    return {"messageId": str(data["messageId"])}
+    return await queue_service.get_queue_token_async(explicit_token)
 
 
 async def send_async(
@@ -867,7 +748,7 @@ async def send_async(
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
-    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
+    deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
     base_path: str | None = None,
@@ -876,103 +757,49 @@ async def send_async(
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
-    """
-    Asynchronous variant of :func:`send` that additionally supports resolving
-    tokens via the Vercel OIDC helper when running inside Vercel.
-
-    Args:
-        queue_name: Name of the target queue (equivalent to ``queueName``).
-        payload: Message payload. For the default JSON content type this must be JSON-serialisable.
-        idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
-        retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
-        delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
-        deployment_id: Deployment pinning mode. Omit to auto-detect ``VERCEL_DEPLOYMENT_ID``,
-            pass ``None`` to explicitly send without a deployment ID, or pass a string to pin
-            to a specific deployment.
-        token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
-        base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
-            ``https://vercel-queue.com``.
-        base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v3/topic``.
-        content_type: MIME type of the payload. Defaults to ``application/json``.
-        timeout: Optional request timeout in seconds.
-        headers: Additional headers to include in all requests.
-
-    Returns:
-        A dict containing the generated ``messageId``.
-    """
-    resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
-    resolved_base_path = base_path or get_queue_base_path()
-
-    auth_token = await get_queue_token_async(token)
-
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Content-Type": content_type,
-    } | (headers or {})
-
-    resolved_deployment_id = _resolve_deployment_id(deployment_id)
-    if resolved_deployment_id:
-        headers["Vqs-Deployment-Id"] = resolved_deployment_id
-
-    if idempotency_key:
-        headers["Vqs-Idempotency-Key"] = idempotency_key
-
-    if retention_seconds is not None:
-        headers["Vqs-Retention-Seconds"] = str(retention_seconds)
-
-    if delay_seconds is not None:
-        headers["Vqs-Delay-Seconds"] = str(delay_seconds)
-
-    # Basic payload handling: default to JSON, but allow callers to provide their own
-    # serialisation if they change the content type.
-    if content_type == "application/json":
-        body: bytes = json.dumps(payload, cls=json_encoder or WorkerJSONEncoder).encode("utf-8")
-    elif isinstance(payload, (bytes, bytearray)):
-        body = bytes(payload)
-    else:
-        raise TypeError(
-            "Non-JSON content_type requires 'payload' to be bytes or bytearray; "
-            "for structured data use the default JSON content type.",
-        )
-
-    url = f"{resolved_base_url}{resolved_base_path}/{quote(queue_name, safe='')}"
-
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(url, content=body, headers=headers)
-
-    # Map common error codes to Python exceptions similar to the TS client.
-    if response.status_code == 400:
-        raise BadRequestError(response.text or "Invalid parameters")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
-    if response.status_code == 409:
-        raise DuplicateIdempotencyKeyError("Duplicate idempotency key detected")
-    if response.status_code >= 500:
-        msg = response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        raise InternalServerError(msg)
-
-    if response.status_code not in {201, 202}:
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
-            raise RuntimeError(
-                f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
-            ) from exc
-
-    if response.status_code == 202:
-        warnings.warn(
-            "message was accepted but delivery is deferred (202 Accepted). "
-            "This usually means the queue is configured with a delay or the "
-            "message is pending consumer discovery.",
-            stacklevel=2,
-        )
-        return {"messageId": None}
-
-    data = response.json()
-    if not isinstance(data, dict) or "messageId" not in data:
-        raise RuntimeError("Queue API returned an unexpected response: missing 'messageId'")
-
-    return {"messageId": str(data["messageId"])}
+    return await _default_async_queue_client.send(
+        queue_name,
+        payload,
+        idempotency_key=idempotency_key,
+        retention_seconds=retention_seconds,
+        delay_seconds=delay_seconds,
+        deployment_id=deployment_id,
+        token=token,
+        base_url=base_url,
+        base_path=base_path,
+        content_type=content_type,
+        timeout=timeout,
+        headers=headers,
+        json_encoder=json_encoder,
+    )
+def send(
+    queue_name: str,
+    payload: Any,
+    *,
+    idempotency_key: str | None = None,
+    retention_seconds: int | None = None,
+    delay_seconds: int | None = None,
+    deployment_id: queue_service.DeploymentIdOption = queue_service.DEPLOYMENT_ID_UNSET,
+    token: str | None = None,
+    base_url: str | None = None,
+    base_path: str | None = None,
+    content_type: str = "application/json",
+    timeout: float | None = 10.0,
+    headers: dict[str, str] | None = None,
+    json_encoder: type[json.JSONEncoder] | None = None,
+) -> SendMessageResult:
+    return _default_queue_client.send(
+        queue_name,
+        payload,
+        idempotency_key=idempotency_key,
+        retention_seconds=retention_seconds,
+        delay_seconds=delay_seconds,
+        deployment_id=deployment_id,
+        token=token,
+        base_url=base_url,
+        base_path=base_path,
+        content_type=content_type,
+        timeout=timeout,
+        headers=headers,
+        json_encoder=json_encoder,
+    )
