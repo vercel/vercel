@@ -2,11 +2,8 @@
 'vercel': major
 ---
 
-`vercel edge-config tokens <id-or-slug> --format json` no longer emits a plaintext `token` field for each listed token. The JSON payload now only contains `id`, `label`, `partialToken`, and `createdAt` per row.
+`vercel edge-config tokens <id-or-slug> --format json` no longer includes plaintext `token` values. Each row now contains `id`, `label`, `partialToken`, and `createdAt`.
 
-**Breaking change for JSON consumers.** Scripts or CI jobs reading `.[].token` from this output need to migrate:
+If your scripts read the `token` field to identify or remove a token, switch to `id` instead. For example, `vercel edge-config tokens <id-or-slug> --remove <id> --yes`.
 
-- Use `.[].id` to address a specific token in follow-up commands (for example `vercel edge-config tokens <id-or-slug> --remove <id> --yes`).
-- Use `.[].partialToken` (e.g. `aaaa********`) to identify a token to a human.
-
-Plaintext tokens are still printed once at creation time via `vercel edge-config tokens <id-or-slug> --add <label>`; that flow is unchanged. This aligns the CLI with the upcoming Edge Config API change that stops returning plaintext `token` values from `GET /v1/edge-config/:id/tokens`.
+Plaintext tokens are still printed once at creation via `--add <label>`.
