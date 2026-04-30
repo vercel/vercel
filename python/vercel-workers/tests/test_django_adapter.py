@@ -163,7 +163,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         self.assertIsNone(cfg.base_url)
         self.assertIsNone(cfg.base_path)
         self.assertIsNone(cfg.retention_seconds)
-        self.assertIsNone(cfg.deployment_id)
+        self.assertIs(cfg.deployment_id, client._DEPLOYMENT_ID_UNSET)
         self.assertEqual(cfg.timeout, 10.0)
         self.assertEqual(cfg.cache_alias, "default")
         self.assertEqual(cfg.cache_key_prefix, "vercel-workers:django-tasks")
@@ -739,7 +739,7 @@ class TestDjangoEnqueueSerializesNonPrimitiveTypes(unittest.TestCase):
         task = self._make_task()
 
         with (
-            patch.dict("os.environ", {"VERCEL_QUEUE_TOKEN": "tok"}),
+            patch.dict("os.environ", {"VERCEL_QUEUE_TOKEN": "tok", "VERCEL_DEPLOYMENT_ID": "dpl"}),
             patch.object(client.httpx, "Client", _FakeClient),
             patch.object(backend, "_store_result"),
         ):

@@ -1,5 +1,19 @@
 # @vercel/oidc
 
+## 3.3.0
+
+### Minor Changes
+
+- 24686d0: Add configurable auth token storage with keyring-backed persistence and file fallback support.
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [d36ee35]
+- Updated dependencies [56c9f89]
+  - @vercel/cli-auth@0.1.0
+
 ## 3.2.1
 
 ### Patch Changes
