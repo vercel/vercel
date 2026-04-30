@@ -96,7 +96,12 @@ export const build: BuildV2 = async args => {
     });
     const isCronService = cronEntries !== undefined;
 
-    const entrypoint = await findEntrypointOrThrow(args.workPath);
+    // Use the explicitly-provided entrypoint when provided by CLI/fs-detectors.
+    // If sentinel value 'package.json' is passed, fallback to candidate-list discovery.
+    const entrypoint =
+      args.entrypoint && args.entrypoint !== 'package.json'
+        ? args.entrypoint
+        : await findEntrypointOrThrow(args.workPath);
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
 
