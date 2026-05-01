@@ -260,6 +260,7 @@ async function handleInitDeployment(
     flagName: 'target',
     flags: parsedArguments.flags,
   });
+  telemetryClient.trackTargetEnvironment(target);
 
   const parsedArchive = parsedArguments.flags['--archive'];
   if (
@@ -1090,6 +1091,7 @@ async function handleDefaultDeploy(
     flagName: 'target',
     flags: parsedArguments.flags,
   });
+  telemetryClient.trackTargetEnvironment(target);
 
   // Validate that --skip-domain is only used with production deployments
   const skipDomain = parsedArguments.flags['--skip-domain'];

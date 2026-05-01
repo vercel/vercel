@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, TypedDict
+from typing import Any, TypedDict, TypeGuard
 from uuid import UUID
 
 
@@ -20,6 +20,13 @@ class WorkerJSONEncoder(json.JSONEncoder):
                 return float(o)
             case _:
                 return super().default(o)
+
+
+type Duration = int | float | timedelta
+
+
+def is_duration(value: object) -> TypeGuard[Duration]:
+    return isinstance(value, (int, float, timedelta)) and not isinstance(value, bool)
 
 
 class SendMessageResult(TypedDict):
@@ -89,9 +96,11 @@ __all__ = [
     "CloudEvent",
     "CloudEventData",
     "DeploymentIdOption",
+    "Duration",
     "MessageMetadata",
     "ParsedV2BetaCallback",
     "ReceivedMessage",
     "SendMessageResult",
     "WorkerJSONEncoder",
+    "is_duration",
 ]

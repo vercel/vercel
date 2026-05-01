@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import warnings
+from datetime import timedelta
 from typing import Any
 from urllib.parse import quote
 
@@ -19,8 +21,10 @@ from vercel.workers._queue.exceptions import (
 from vercel.workers._queue.types import (
     DEPLOYMENT_ID_UNSET,
     DeploymentIdOption,
+    Duration,
     SendMessageResult,
     WorkerJSONEncoder,
+    is_duration,
 )
 
 
@@ -44,7 +48,39 @@ def resolve_deployment_id(deployment_id: DeploymentIdOption) -> str | None:
     deployment_id_env = os.environ.get("VERCEL_DEPLOYMENT_ID")
     if deployment_id_env:
         return deployment_id_env
-    raise RuntimeError("No deployment ID available. Pass deployment_id=None to disable pinning.")
+    raise RuntimeError(
+        "No deployment ID available. VERCEL_DEPLOYMENT_ID is not set.\n\n"
+        "This usually means the code is running outside a Vercel deployment "
+        "(for example during build or in a non-Vercel environment).\n\n"
+        "To fix this, provide an explicit deployment_id when sending messages, "
+        "or explicitly opt out of deployment pinning with deployment_id=None."
+    )
+
+
+def _duration_to_seconds(name: str, value: object) -> int | None:
+    if value is None:
+        return None
+    if not is_duration(value):
+        raise TypeError(f"{name} must be a number of seconds or datetime.timedelta")
+    if isinstance(value, timedelta):
+        seconds = value.total_seconds()
+    else:
+        seconds = float(value)
+    if not math.isfinite(seconds):
+        raise ValueError(f"{name} must be finite")
+    if seconds < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return int(seconds)
+
+
+def _resolve_duration_alias(
+    name: str,
+    duration: Duration | None,
+    seconds: int | None,
+) -> int | None:
+    if duration is not None and seconds is not None:
+        raise TypeError(f'cannot pass both "{name}" and "{name}_seconds"')
+    return _duration_to_seconds(name, duration if duration is not None else seconds)
 
 
 def get_queue_base_url() -> str:
@@ -294,6 +330,8 @@ def send(
     payload: Any,
     *,
     idempotency_key: str | None = None,
+    retention: Duration | None = None,
+    delay: Duration | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
     deployment_id: DeploymentIdOption = DEPLOYMENT_ID_UNSET,
@@ -305,12 +343,18 @@ def send(
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
+    resolved_retention_seconds = _resolve_duration_alias(
+        "retention",
+        retention,
+        retention_seconds,
+    )
+    resolved_delay_seconds = _resolve_duration_alias("delay", delay, delay_seconds)
     url, body, request_headers = _build_send_request(
         queue_name,
         payload,
         idempotency_key=idempotency_key,
-        retention_seconds=retention_seconds,
-        delay_seconds=delay_seconds,
+        retention_seconds=resolved_retention_seconds,
+        delay_seconds=resolved_delay_seconds,
         deployment_id=deployment_id,
         token=token,
         base_url=base_url,
@@ -331,6 +375,8 @@ async def send_async(
     payload: Any,
     *,
     idempotency_key: str | None = None,
+    retention: Duration | None = None,
+    delay: Duration | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
     deployment_id: DeploymentIdOption = DEPLOYMENT_ID_UNSET,
@@ -342,12 +388,18 @@ async def send_async(
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
+    resolved_retention_seconds = _resolve_duration_alias(
+        "retention",
+        retention,
+        retention_seconds,
+    )
+    resolved_delay_seconds = _resolve_duration_alias("delay", delay, delay_seconds)
     url, body, request_headers = await _build_send_request_async(
         queue_name,
         payload,
         idempotency_key=idempotency_key,
-        retention_seconds=retention_seconds,
-        delay_seconds=delay_seconds,
+        retention_seconds=resolved_retention_seconds,
+        delay_seconds=resolved_delay_seconds,
         deployment_id=deployment_id,
         token=token,
         base_url=base_url,
@@ -364,11 +416,13 @@ async def send_async(
 
 
 __all__ = [
+    "Duration",
     "get_queue_base_path",
     "get_queue_base_url",
     "get_queue_token",
     "get_queue_token_async",
     "in_process_mode_enabled",
+    "is_duration",
     "send",
     "send_async",
 ]

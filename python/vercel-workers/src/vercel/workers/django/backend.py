@@ -120,7 +120,7 @@ class VercelQueuesBackendOptions:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention_seconds: int | None = None
+    retention: _queue.Duration | None = None
     deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
@@ -151,9 +151,9 @@ class VercelQueuesBackendOptions:
         if isinstance(deployment_id, str) and deployment_id:
             cfg = replace(cfg, deployment_id=deployment_id)
 
-        retention = options.get("retention_seconds")
-        if isinstance(retention, int):
-            cfg = replace(cfg, retention_seconds=retention)
+        retention = options.get("retention")
+        if _queue.is_duration(retention):
+            cfg = replace(cfg, retention=retention)
 
         timeout = options.get("timeout")
         if isinstance(timeout, (int, float)):
@@ -347,18 +347,18 @@ class VercelQueuesBackend(BaseTaskBackend):
         }
 
         # Compute send-time delay from run_after if present.
-        delay_seconds: int | None = None
+        delay_duration: int | None = None
         if task.run_after is not None:
             delta = (task.run_after - datetime.now(UTC)).total_seconds()
             if delta > 0:
-                delay_seconds = int(delta)
+                delay_duration = int(delta)
 
         # Enqueue to the Vercel queue named after Django's queue_name.
         send_result = send(
             task.queue_name,
             envelope,
-            retention_seconds=self._cfg.retention_seconds,
-            delay_seconds=delay_seconds,
+            retention=self._cfg.retention,
+            delay=delay_duration,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,
@@ -426,18 +426,18 @@ class VercelQueuesBackend(BaseTaskBackend):
         }
 
         # Compute send-time delay from run_after if present.
-        delay_seconds: int | None = None
+        delay_duration: int | None = None
         if task.run_after is not None:
             delta = (task.run_after - datetime.now(UTC)).total_seconds()
             if delta > 0:
-                delay_seconds = int(delta)
+                delay_duration = int(delta)
 
         # Enqueue using async send.
         send_result = await send_async(
             task.queue_name,
             envelope,
-            retention_seconds=self._cfg.retention_seconds,
-            delay_seconds=delay_seconds,
+            retention=self._cfg.retention,
+            delay=delay_duration,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,

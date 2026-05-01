@@ -417,12 +417,14 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         payload: dict,  # pyright: ignore[reportMissingTypeArgument]
         *,
         json_encoder: type[json.JSONEncoder] | None = None,
+        **kwargs: object,
     ) -> bytes:
         with (
             patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
             patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
-            queue_client.send("q", payload, deployment_id=None, json_encoder=json_encoder)
+            kwargs.setdefault("deployment_id", None)
+            queue_client.send("q", payload, json_encoder=json_encoder, **kwargs)
 
         return _FakeHttpxClient.captured_bodies[-1]
 
@@ -453,6 +455,36 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         body = self._send({"tags": {3, 1, 2}}, json_encoder=_CustomEncoder)
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
+
+    def test_send_accepts_duration_delay_and_retention(self) -> None:
+        self._send(
+            {"ok": True},
+            json_encoder=None,
+            delay=600,
+            retention=timedelta(hours=6),
+        )
+
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Vqs-Delay-Seconds"], "600")
+        self.assertEqual(headers["Vqs-Retention-Seconds"], "21600")
+
+    def test_send_accepts_float_duration(self) -> None:
+        self._send({"ok": True}, delay=1.5)
+
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Vqs-Delay-Seconds"], "1")
+
+    def test_send_rejects_negative_duration(self) -> None:
+        with self.assertRaises(ValueError):
+            self._send({"ok": True}, delay=-1)
+
+    def test_send_rejects_negative_timedelta(self) -> None:
+        with self.assertRaises(ValueError):
+            self._send({"ok": True}, delay=timedelta(seconds=-1))
+
+    def test_send_rejects_invalid_duration_type(self) -> None:
+        with self.assertRaises(TypeError):
+            self._send({"ok": True}, delay=[])
 
 
 class TestDeploymentPinning(unittest.TestCase):

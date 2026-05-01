@@ -163,7 +163,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         self.assertIsNone(cfg.token)
         self.assertIsNone(cfg.base_url)
         self.assertIsNone(cfg.base_path)
-        self.assertIsNone(cfg.retention_seconds)
+        self.assertIsNone(cfg.retention)
         self.assertIs(cfg.deployment_id, _queue.DEPLOYMENT_ID_UNSET)
         self.assertEqual(cfg.timeout, 10.0)
         self.assertEqual(cfg.cache_alias, "default")
@@ -175,7 +175,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
             "token": "test-token",
             "base_url": "https://example.com",
             "base_path": "/api/v3",
-            "retention_seconds": 86400,
+            "retention": 86400,
             "deployment_id": "deploy-123",
             "timeout": 30.0,
             "cache_alias": "redis",
@@ -186,7 +186,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         self.assertEqual(cfg.token, "test-token")
         self.assertEqual(cfg.base_url, "https://example.com")
         self.assertEqual(cfg.base_path, "/api/v3")
-        self.assertEqual(cfg.retention_seconds, 86400)
+        self.assertEqual(cfg.retention, 86400)
         self.assertEqual(cfg.deployment_id, "deploy-123")
         self.assertEqual(cfg.timeout, 30.0)
         self.assertEqual(cfg.cache_alias, "redis")

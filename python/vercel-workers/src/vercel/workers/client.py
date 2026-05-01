@@ -24,9 +24,11 @@ from ._queue.subscribe import (
 from ._queue.types import (
     DEPLOYMENT_ID_UNSET,
     DeploymentIdOption,
+    Duration,
     MessageMetadata,
     SendMessageResult,
     WorkerJSONEncoder,
+    is_duration,
 )
 from .asgi import ASGI, build_asgi_app
 from .exceptions import VQSError
@@ -37,7 +39,14 @@ from .wsgi import (
     status_reason,
 )
 
+# Some callers patch this module's `os.environ`; keep the module import live while
+# the send implementation lives under `vercel.workers._queue`.
+_CLIENT_ENVIRON = os.environ
+
 __all__ = [
+    "DEPLOYMENT_ID_UNSET",
+    "DeploymentIdOption",
+    "Duration",
     "MessageMetadata",
     "Ack",
     "RetryAfter",
@@ -46,9 +55,14 @@ __all__ = [
     "get_wsgi_app",
     "get_asgi_app",
     "has_subscriptions",
+    "is_duration",
     "send",
     "send_async",
 ]
+
+
+_DEPLOYMENT_ID_UNSET = DEPLOYMENT_ID_UNSET
+type _DeploymentIdOption = DeploymentIdOption
 
 
 @overload
@@ -369,6 +383,8 @@ async def send_async(
     payload: Any,
     *,
     idempotency_key: str | None = None,
+    retention: Duration | None = None,
+    delay: Duration | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
     deployment_id: DeploymentIdOption = DEPLOYMENT_ID_UNSET,
@@ -384,6 +400,8 @@ async def send_async(
         queue_name,
         payload,
         idempotency_key=idempotency_key,
+        retention=retention,
+        delay=delay,
         retention_seconds=retention_seconds,
         delay_seconds=delay_seconds,
         deployment_id=deployment_id,
@@ -402,6 +420,8 @@ def send(
     payload: Any,
     *,
     idempotency_key: str | None = None,
+    retention: Duration | None = None,
+    delay: Duration | None = None,
     retention_seconds: int | None = None,
     delay_seconds: int | None = None,
     deployment_id: DeploymentIdOption = DEPLOYMENT_ID_UNSET,
@@ -420,6 +440,8 @@ def send(
         queue_name,
         payload,
         idempotency_key=idempotency_key,
+        retention=retention,
+        delay=delay,
         retention_seconds=retention_seconds,
         delay_seconds=delay_seconds,
         deployment_id=deployment_id,

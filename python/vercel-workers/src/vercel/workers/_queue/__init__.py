@@ -33,11 +33,13 @@ from vercel.workers._queue.receive import (
     receive_messages,
 )
 from vercel.workers._queue.send import (
+    Duration,
     get_queue_base_path,
     get_queue_base_url,
     get_queue_token,
     get_queue_token_async,
     in_process_mode_enabled,
+    is_duration,
 )
 from vercel.workers._queue.subscribe import (
     Ack,
@@ -73,6 +75,7 @@ __all__ = [
     "DEPLOYMENT_ID_UNSET",
     "DuplicateIdempotencyKeyError",
     "DeploymentIdOption",
+    "Duration",
     "ForbiddenError",
     "InternalServerError",
     "InvalidLimitError",
@@ -105,6 +108,7 @@ __all__ = [
     "has_subscriptions",
     "in_process_mode_enabled",
     "invoke_subscriptions",
+    "is_duration",
     "is_v2beta_callback",
     "parse_cloudevent",
     "parse_multipart_message",
