@@ -1293,19 +1293,10 @@ main()
 
         if (isTTY) {
           // Interactive mode: prompt user to update now
-          const errorMsg =
-            exitCode && exitCode !== 2
-              ? chalk.magenta(
-                  ` The latest update ${chalk.italic(
-                    'may'
-                  )} fix any errors that occurred.`
-                )
-              : '';
-
           output.print(
             `\nUpdate available for Vercel CLI (${chalk.gray(
               `v${pkg.version}`
-            )} → ${chalk.green(`v${latest}`)})${errorMsg}\n`
+            )} → ${chalk.green(`v${latest}`)})\n`
           );
           output.print(
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
