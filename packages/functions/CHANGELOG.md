@@ -1,5 +1,16 @@
 # @vercel/functions
 
+## 3.5.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/oidc@3.4.0
+
 ## 3.4.6
 
 ### Patch Changes

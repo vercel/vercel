@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.6.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 3.5.0
 
 ### Minor Changes
