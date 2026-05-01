@@ -1,6 +1,6 @@
 import { FileBlob, type Files } from '@vercel/build-utils';
 import { readFileSync } from 'node:fs';
-import { basename, dirname, extname, join } from 'node:path';
+import { dirname, extname, join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveEntrypointAndFormat } from './rolldown/resolve-format.js';
 
@@ -50,13 +50,15 @@ export async function applyCronDispatch(args: {
   routes: Record<string, string>;
 }): Promise<{ files: Files; handler: string }> {
   const { format, extension } = await resolveShimFormat(args);
-  const handlerDir = dirname(args.handler);
-  const handlerBaseName = basename(args.handler, extname(args.handler));
+  // Use POSIX path utilities — lambda `files` map keys are always
+  // forward-slash separated regardless of build host OS.
+  const handlerDir = posix.dirname(args.handler);
+  const handlerBaseName = posix.basename(args.handler, extname(args.handler));
   const dispatchName = `${handlerBaseName}.__vc_cron_dispatch${extension}`;
   const dispatchHandler =
-    handlerDir === '.' ? dispatchName : join(handlerDir, dispatchName);
+    handlerDir === '.' ? dispatchName : posix.join(handlerDir, dispatchName);
 
-  const handlerImportPath = `./${basename(args.handler)}`;
+  const handlerImportPath = `./${posix.basename(args.handler)}`;
 
   // Single-quote the route JSON so embedded double quotes don't need
   // escaping. Cron paths and handler names only contain

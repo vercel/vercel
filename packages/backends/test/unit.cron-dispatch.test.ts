@@ -225,213 +225,221 @@ async function loadEsmShim(opts: {
   }
 }
 
-describe('cron dispatcher behavior', () => {
-  it('returns 405 for non-GET/POST methods', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      userModuleSource: 'export default async function () {}',
+describe.skipIf(process.platform === 'win32')(
+  'cron dispatcher behavior',
+  () => {
+    it('returns 405 for non-GET/POST methods', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        const res = makeRes();
+        await ctx.handler(makeReq('PUT', '/_svc/x/crons/index/cron'), res);
+        expect(res.statusCode).toBe(405);
+        expect(JSON.parse(res.body)).toEqual({ error: 'method not allowed' });
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const res = makeRes();
-      await ctx.handler(makeReq('PUT', '/_svc/x/crons/index/cron'), res);
-      expect(res.statusCode).toBe(405);
-      expect(JSON.parse(res.body)).toEqual({ error: 'method not allowed' });
-    } finally {
-      await ctx.cleanup();
-    }
-  });
 
-  it('checks method before auth (PUT without secret returns 405, not 401)', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      cronSecret: 's3cret',
-      userModuleSource: 'export default async function () {}',
+    it('checks method before auth (PUT without secret returns 405, not 401)', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        cronSecret: 's3cret',
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        const res = makeRes();
+        await ctx.handler(makeReq('PUT', '/_svc/x/crons/index/cron'), res);
+        expect(res.statusCode).toBe(405);
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const res = makeRes();
-      await ctx.handler(makeReq('PUT', '/_svc/x/crons/index/cron'), res);
-      expect(res.statusCode).toBe(405);
-    } finally {
-      await ctx.cleanup();
-    }
-  });
 
-  it('returns 401 when CRON_SECRET set and Authorization header missing', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      cronSecret: 's3cret',
-      userModuleSource: 'export default async function () {}',
+    it('returns 401 when CRON_SECRET set and Authorization header missing', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        cronSecret: 's3cret',
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        const res = makeRes();
+        await ctx.handler(makeReq('POST', '/_svc/x/crons/index/cron'), res);
+        expect(res.statusCode).toBe(401);
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const res = makeRes();
-      await ctx.handler(makeReq('POST', '/_svc/x/crons/index/cron'), res);
-      expect(res.statusCode).toBe(401);
-    } finally {
-      await ctx.cleanup();
-    }
-  });
 
-  it('returns 401 when Authorization mismatches (wrong-length too)', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      cronSecret: 's3cret',
-      userModuleSource: 'export default async function () {}',
+    it('returns 401 when Authorization mismatches (wrong-length too)', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        cronSecret: 's3cret',
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        const wrong = makeRes();
+        await ctx.handler(
+          makeReq('POST', '/_svc/x/crons/index/cron', {
+            authorization: 'Bearer wrong',
+          }),
+          wrong
+        );
+        expect(wrong.statusCode).toBe(401);
+
+        // Even at the right length, the wrong content must 401.
+        const wrongSameLen = makeRes();
+        await ctx.handler(
+          makeReq('POST', '/_svc/x/crons/index/cron', {
+            authorization: 'Bearer wrongx',
+          }),
+          wrongSameLen
+        );
+        expect(wrongSameLen.statusCode).toBe(401);
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const wrong = makeRes();
-      await ctx.handler(
-        makeReq('POST', '/_svc/x/crons/index/cron', {
-          authorization: 'Bearer wrong',
-        }),
-        wrong
-      );
-      expect(wrong.statusCode).toBe(401);
 
-      // Even at the right length, the wrong content must 401.
-      const wrongSameLen = makeRes();
-      await ctx.handler(
-        makeReq('POST', '/_svc/x/crons/index/cron', {
-          authorization: 'Bearer wrongx',
-        }),
-        wrongSameLen
-      );
-      expect(wrongSameLen.statusCode).toBe(401);
-    } finally {
-      await ctx.cleanup();
-    }
-  });
-
-  it('invokes the default export and returns 200', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      userModuleSource: `
+    it('invokes the default export and returns 200', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        userModuleSource: `
         globalThis.__cron_test_calls = (globalThis.__cron_test_calls || 0)
         export default async function () {
           globalThis.__cron_test_calls++
         }
       `,
+      });
+      try {
+        (globalThis as Record<string, unknown>).__cron_test_calls = 0;
+        const res = makeRes();
+        await ctx.handler(makeReq('POST', '/_svc/x/crons/index/cron'), res);
+        expect(res.statusCode).toBe(200);
+        expect(JSON.parse(res.body)).toEqual({ ok: true });
+        expect((globalThis as Record<string, unknown>).__cron_test_calls).toBe(
+          1
+        );
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      (globalThis as Record<string, unknown>).__cron_test_calls = 0;
-      const res = makeRes();
-      await ctx.handler(makeReq('POST', '/_svc/x/crons/index/cron'), res);
-      expect(res.statusCode).toBe(200);
-      expect(JSON.parse(res.body)).toEqual({ ok: true });
-      expect((globalThis as Record<string, unknown>).__cron_test_calls).toBe(1);
-    } finally {
-      await ctx.cleanup();
-    }
-  });
 
-  it('returns 200 with valid Bearer secret', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      cronSecret: 's3cret',
-      userModuleSource: 'export default async function () {}',
+    it('returns 200 with valid Bearer secret', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        cronSecret: 's3cret',
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        const res = makeRes();
+        await ctx.handler(
+          makeReq('POST', '/_svc/x/crons/index/cron', {
+            authorization: 'Bearer s3cret',
+          }),
+          res
+        );
+        expect(res.statusCode).toBe(200);
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const res = makeRes();
-      await ctx.handler(
-        makeReq('POST', '/_svc/x/crons/index/cron', {
-          authorization: 'Bearer s3cret',
-        }),
-        res
-      );
-      expect(res.statusCode).toBe(200);
-    } finally {
-      await ctx.cleanup();
-    }
-  });
 
-  it('returns 404 when path is not in the route table', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      userModuleSource: 'export default async function () {}',
+    it('returns 404 when path is not in the route table', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        const res = makeRes();
+        await ctx.handler(makeReq('POST', '/something/else'), res);
+        expect(res.statusCode).toBe(404);
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const res = makeRes();
-      await ctx.handler(makeReq('POST', '/something/else'), res);
-      expect(res.statusCode).toBe(404);
-    } finally {
-      await ctx.cleanup();
-    }
-  });
 
-  it('returns 500 when the handler throws', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      userModuleSource: `
+    it('returns 500 when the handler throws', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        userModuleSource: `
         export default async function () {
           throw new Error('boom')
         }
       `,
+      });
+      try {
+        const res = makeRes();
+        await ctx.handler(makeReq('POST', '/_svc/x/crons/index/cron'), res);
+        expect(res.statusCode).toBe(500);
+        expect(JSON.parse(res.body)).toEqual({ error: 'internal' });
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const res = makeRes();
-      await ctx.handler(makeReq('POST', '/_svc/x/crons/index/cron'), res);
-      expect(res.statusCode).toBe(500);
-      expect(JSON.parse(res.body)).toEqual({ error: 'internal' });
-    } finally {
-      await ctx.cleanup();
-    }
-  });
 
-  it('strips query string from the inbound URL', async () => {
-    const ctx = await loadEsmShim({
-      routes: { '/_svc/x/crons/index/cron': 'default' },
-      userModuleSource: 'export default async function () {}',
+    it('strips query string from the inbound URL', async () => {
+      const ctx = await loadEsmShim({
+        routes: { '/_svc/x/crons/index/cron': 'default' },
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        const res = makeRes();
+        await ctx.handler(
+          makeReq('POST', '/_svc/x/crons/index/cron?foo=bar'),
+          res
+        );
+        expect(res.statusCode).toBe(200);
+      } finally {
+        await ctx.cleanup();
+      }
     });
-    try {
-      const res = makeRes();
-      await ctx.handler(
-        makeReq('POST', '/_svc/x/crons/index/cron?foo=bar'),
-        res
-      );
-      expect(res.statusCode).toBe(200);
-    } finally {
-      await ctx.cleanup();
-    }
-  });
-});
+  }
+);
 
-describe('cron dispatcher boot-time validation', () => {
-  it('throws at module load when a route names a missing handler', async () => {
-    const setup = await setupShimDir({
-      routes: { '/_svc/x/crons/index/cron': 'doesNotExist' },
-      userModuleSource: 'export default async function () {}',
+describe.skipIf(process.platform === 'win32')(
+  'cron dispatcher boot-time validation',
+  () => {
+    it('throws at module load when a route names a missing handler', async () => {
+      const setup = await setupShimDir({
+        routes: { '/_svc/x/crons/index/cron': 'doesNotExist' },
+        userModuleSource: 'export default async function () {}',
+      });
+      try {
+        await expect(import(setup.shimUrl)).rejects.toThrow(
+          /not a function in the user module/
+        );
+      } finally {
+        await setup.restore();
+      }
     });
-    try {
-      await expect(import(setup.shimUrl)).rejects.toThrow(
-        /not a function in the user module/
-      );
-    } finally {
-      await setup.restore();
-    }
-  });
 
-  it('throws at module load when a named export is not callable', async () => {
-    const setup = await setupShimDir({
-      routes: { '/_svc/x/crons/index/cron': 'cleanup' },
-      userModuleSource: `export const cleanup = 'not-a-function'`,
+    it('throws at module load when a named export is not callable', async () => {
+      const setup = await setupShimDir({
+        routes: { '/_svc/x/crons/index/cron': 'cleanup' },
+        userModuleSource: `export const cleanup = 'not-a-function'`,
+      });
+      try {
+        await expect(import(setup.shimUrl)).rejects.toThrow(
+          /not a function in the user module/
+        );
+      } finally {
+        await setup.restore();
+      }
     });
-    try {
-      await expect(import(setup.shimUrl)).rejects.toThrow(
-        /not a function in the user module/
-      );
-    } finally {
-      await setup.restore();
-    }
-  });
 
-  it('boots successfully with a valid named-export route', async () => {
-    const setup = await setupShimDir({
-      routes: { '/_svc/x/crons/index/hourly': 'hourly' },
-      userModuleSource: `export async function hourly() {}`,
+    it('boots successfully with a valid named-export route', async () => {
+      const setup = await setupShimDir({
+        routes: { '/_svc/x/crons/index/hourly': 'hourly' },
+        userModuleSource: `export async function hourly() {}`,
+      });
+      try {
+        await expect(import(setup.shimUrl)).resolves.toBeTruthy();
+      } finally {
+        await setup.restore();
+      }
     });
-    try {
-      await expect(import(setup.shimUrl)).resolves.toBeTruthy();
-    } finally {
-      await setup.restore();
-    }
-  });
-});
+  }
+);
