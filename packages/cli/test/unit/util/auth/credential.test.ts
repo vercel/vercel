@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   classifyCredential,
+  getJwtPayload,
   isOidcJwtLike,
   isVercelTokenLike,
 } from '../../../../src/util/auth/credential';
 
 describe('credential classification', () => {
-  it('detects Vercel tokens', () => {
+  it('detects known prefixed Vercel tokens', () => {
     expect(isVercelTokenLike('vcp_abc.def')).toBe(true);
     expect(isVercelTokenLike('vca_abc.def')).toBe(true);
     expect(classifyCredential('vct_abc.def')).toBe('vercel-token');
@@ -15,6 +16,22 @@ describe('credential classification', () => {
   it('does not treat arbitrary 24-character strings as Vercel tokens', () => {
     expect(isVercelTokenLike('abcdefghijklmnopqrstuvwx')).toBe(false);
     expect(classifyCredential('abcdefghijklmnopqrstuvwx')).toBe('invalid');
+  });
+
+  it('decodes JWT payloads', () => {
+    const token = createJwt({
+      iss: 'https://token.actions.githubusercontent.com',
+      sub: 'repo:vercel/vercel:ref:refs/heads/main',
+      aud: 'vercel',
+      exp: 1_900_000_000,
+    });
+
+    expect(getJwtPayload(token)).toEqual({
+      iss: 'https://token.actions.githubusercontent.com',
+      sub: 'repo:vercel/vercel:ref:refs/heads/main',
+      aud: 'vercel',
+      exp: 1_900_000_000,
+    });
   });
 
   it('detects OIDC JWT candidates', () => {
@@ -42,6 +59,7 @@ describe('credential classification', () => {
   });
 
   it('rejects malformed JWT candidates', () => {
+    expect(getJwtPayload('a.b.c')).toBe(null);
     expect(isOidcJwtLike('a.b.c')).toBe(false);
     expect(
       isOidcJwtLike(

@@ -10,6 +10,13 @@ const VERCEL_TOKEN_PREFIXES = [
   'vct_',
 ];
 
+export interface JwtPayload {
+  iss?: unknown;
+  sub?: unknown;
+  aud?: unknown;
+  exp?: unknown;
+}
+
 export function classifyCredential(token: string): CredentialKind {
   if (isOidcJwtLike(token)) {
     return 'oidc-token';
@@ -27,19 +34,56 @@ export function isVercelTokenLike(token: string): boolean {
 }
 
 export function isOidcJwtLike(token: string): boolean {
-  const parts = token.split('.');
-  if (parts.length !== 3 || parts.some(part => part.length === 0)) {
-    return false;
-  }
+  const header = getJwtHeader(token);
+  const payload = getJwtPayload(token);
 
-  const payload = decodeJwtPayload(parts[1]);
   return (
+    typeof header?.alg === 'string' &&
     typeof payload?.iss === 'string' &&
     typeof payload.sub === 'string' &&
     hasAudience(payload.aud) &&
-    typeof payload.exp === 'number' &&
-    tokenHeaderIdentifiesJwt(parts[0])
+    typeof payload.exp === 'number'
   );
+}
+
+export function getJwtPayload(token: string): JwtPayload | null {
+  return decodeJwtPart(token, 1);
+}
+
+function getJwtHeader(token: string): Record<string, unknown> | null {
+  return decodeJwtPart(token, 0);
+}
+
+function decodeJwtPart(
+  token: string,
+  index: number
+): Record<string, unknown> | null {
+  const tokenParts = token.split('.');
+  if (tokenParts.length !== 3) {
+    return null;
+  }
+
+  const part = tokenParts[index];
+  if (!part) {
+    return null;
+  }
+
+  try {
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      '='
+    );
+    const decoded: unknown = JSON.parse(
+      Buffer.from(padded, 'base64').toString('utf8')
+    );
+
+    if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) {
+      return decoded as Record<string, unknown>;
+    }
+  } catch {}
+
+  return null;
 }
 
 function hasAudience(aud: unknown): boolean {
@@ -47,26 +91,4 @@ function hasAudience(aud: unknown): boolean {
     typeof aud === 'string' ||
     (Array.isArray(aud) && aud.every(value => typeof value === 'string'))
   );
-}
-
-function tokenHeaderIdentifiesJwt(segment: string): boolean {
-  const header = decodeJwtPayload(segment);
-  return typeof header?.alg === 'string';
-}
-
-function decodeJwtPayload(segment: string): Record<string, unknown> | null {
-  try {
-    const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(
-      normalized.length + ((4 - (normalized.length % 4)) % 4),
-      '='
-    );
-    const decoded = Buffer.from(padded, 'base64').toString('utf8');
-    const payload: unknown = JSON.parse(decoded);
-    if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-      return payload as Record<string, unknown>;
-    }
-  } catch {}
-
-  return null;
 }
