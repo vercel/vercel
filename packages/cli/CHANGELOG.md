@@ -1,5 +1,15 @@
 # vercel
 
+## 53.1.0
+
+### Minor Changes
+
+- 5cf1179: Use services orchestrator for single web services in local dev.
+
+### Patch Changes
+
+- 3aa821e: Allow adding Development Environment Variables on teams that enforce sensitive Environment Variables.
+
 ## 53.0.1
 
 ### Patch Changes
