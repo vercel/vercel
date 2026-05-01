@@ -41,6 +41,8 @@ export interface ServicesRoutes {
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
   defaults: Route[];
+  /** SPA fallback routes for static web services */
+  fallbacks: Route[];
   /**
    * Internal routes for schedule-triggered job services.
    * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the scheduled job function.
