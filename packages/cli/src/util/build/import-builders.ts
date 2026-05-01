@@ -36,16 +36,26 @@ type ResolveBuildersResult =
 
 const require_ = createRequire(__filename);
 
-import goPkg from '@vercel/go/package.json';
-import hydrogenPkg from '@vercel/hydrogen/package.json';
-import nextPkg from '@vercel/next/package.json';
-import nodePkg from '@vercel/node/package.json';
-import pythonPkg from '@vercel/python/package.json';
-import redwoodPkg from '@vercel/redwood/package.json';
-import remixPkg from '@vercel/remix-builder/package.json';
-import rubyPkg from '@vercel/ruby/package.json';
-import rustPkg from '@vercel/rust/package.json';
-import staticBuildPkg from '@vercel/static-build/package.json';
+type BuilderPackageJson = PackageJson & { version: string };
+
+const goPkg = require_('@vercel/go/package.json') as BuilderPackageJson;
+const hydrogenPkg = require_(
+  '@vercel/hydrogen/package.json'
+) as BuilderPackageJson;
+const nextPkg = require_('@vercel/next/package.json') as BuilderPackageJson;
+const nodePkg = require_('@vercel/node/package.json') as BuilderPackageJson;
+const pythonPkg = require_('@vercel/python/package.json') as BuilderPackageJson;
+const redwoodPkg = require_(
+  '@vercel/redwood/package.json'
+) as BuilderPackageJson;
+const remixPkg = require_(
+  '@vercel/remix-builder/package.json'
+) as BuilderPackageJson;
+const rubyPkg = require_('@vercel/ruby/package.json') as BuilderPackageJson;
+const rustPkg = require_('@vercel/rust/package.json') as BuilderPackageJson;
+const staticBuildPkg = require_(
+  '@vercel/static-build/package.json'
+) as BuilderPackageJson;
 
 // Compiled binaries cannot rely on resolving bundled builders from disk.
 const BUILTIN_BUILDERS: Record<
