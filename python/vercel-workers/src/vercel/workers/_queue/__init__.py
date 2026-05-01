@@ -6,6 +6,7 @@ from vercel.workers._queue.callback import (
     parse_cloudevent,
     parse_v2beta_callback,
 )
+from vercel.workers._queue.client import AsyncQueueClient, QueueClient
 from vercel.workers._queue.exceptions import (
     BadRequestError,
     DuplicateIdempotencyKeyError,
@@ -68,6 +69,7 @@ from vercel.workers._queue.types import (
 
 __all__ = [
     "Ack",
+    "AsyncQueueClient",
     "BadRequestError",
     "CLOUD_EVENT_TYPE_V2BETA",
     "CloudEvent",
@@ -86,6 +88,7 @@ __all__ = [
     "MessageNotFoundError",
     "ParsedV2BetaCallback",
     "PayloadValidationError",
+    "QueueClient",
     "QueueEmptyError",
     "ReceivedMessage",
     "RetryAfter",
