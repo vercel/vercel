@@ -1,0 +1,19 @@
+{
+  "name": "gh-notify-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Filters GitHub notifications down to the ones that actually matter: failing CI on your PRs, @mentions, and real-human comments on your PRs.",
+  "type": "module",
+  "bin": {
+    "gh-notify-agent": "./src/cli.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/cli.mjs",
+    "once": "node src/cli.mjs once",
+    "watch": "node src/cli.mjs watch",
+    "test": "node --test test/"
+  }
+}
