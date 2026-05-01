@@ -1,5 +1,16 @@
 # @vercel/cervel
 
+## 0.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/backends@0.3.0
+
 ## 0.0.55
 
 ### Patch Changes

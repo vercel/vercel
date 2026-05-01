@@ -3,15 +3,31 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
-from datetime import date, datetime
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from typing import Any, Literal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
+from pydantic import BaseModel
+
+import vercel.workers._queue.receive as queue_receive_impl
+import vercel.workers._queue.send as queue_service
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
 from vercel.workers.client import WorkerJSONEncoder
 from vercel.workers.exceptions import TokenResolutionError
+
+
+class CreateUserPayload(BaseModel):
+    email: str
+    age: int
+
+
+@dataclass
+class EmailPayload:
+    to: str
 
 
 class _FakeResponse:
@@ -28,6 +44,7 @@ class _FakeResponse:
 
 class _FakeHttpxClient:
     captured_bodies: list[bytes] = []
+    captured_headers: list[dict[str, str]] = []
 
     def __init__(self, *args, **kwargs):
         self.response = _FakeResponse()
@@ -35,7 +52,7 @@ class _FakeHttpxClient:
     def __enter__(self) -> _FakeHttpxClient:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> Literal[False]:
         return False
 
     def get(self, url: str, headers: dict[str, str]) -> _FakeResponse:
@@ -46,8 +63,9 @@ class _FakeHttpxClient:
         url: str,  # noqa: ARG002
         *,
         content: bytes | None = None,
-        headers: dict | None = None,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
+        headers: dict | None = None,  # pyright: ignore[reportMissingTypeArgument]
     ) -> _FakeResponse:
+        _FakeHttpxClient.captured_headers.append(dict(headers or {}))
         if content is not None:
             _FakeHttpxClient.captured_bodies.append(content)
         return self.response
@@ -56,23 +74,23 @@ class _FakeHttpxClient:
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_receive_message_by_id_returns_raw_bytes_for_non_json_payload(self) -> None:
         with patch.object(
-            queue_callback._client,
+            queue_receive_impl,
             "get_queue_base_url",
             return_value="https://queue.example.com",
         ):
             with patch.object(
-                queue_callback._client,
+                queue_receive_impl,
                 "get_queue_base_path",
                 return_value="/api/v2/messages",
             ):
                 with patch.object(
-                    queue_callback._client,
+                    queue_receive_impl,
                     "get_queue_token",
                     return_value="token",
                 ):
-                    with patch.object(queue_callback.httpx, "Client", _FakeHttpxClient):
+                    with patch.object(queue_receive_impl.httpx, "Client", _FakeHttpxClient):
                         with patch.object(
-                            queue_callback,
+                            queue_receive_impl,
                             "parse_multipart_message",
                             return_value=(
                                 {
@@ -119,6 +137,250 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
 
 
+class TestTypedSubscriptions(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_payload_only_handler(self) -> None:
+        calls: list[dict[str, Any]] = []
+
+        def handle(payload: dict[str, Any]) -> None:
+            calls.append(payload)
+
+        queue_client.subscribe(topic="a")(handle)
+        queue_client._invoke_subscriptions({"ok": True}, {"topic": "a"})
+
+        self.assertEqual(calls, [{"ok": True}])
+
+    def test_pydantic_payload_annotation(self) -> None:
+        calls: list[tuple[CreateUserPayload, str | None]] = []
+
+        def handle(payload: CreateUserPayload, metadata: queue_client.MessageMetadata) -> None:
+            calls.append((payload, metadata.get("messageId")))
+
+        queue_client.subscribe(topic="users.create")(handle)
+        queue_client._invoke_subscriptions(
+            {"email": "a@b.com", "age": "42"},
+            {"topic": "users.create", "messageId": "m1"},
+        )
+
+        self.assertEqual(calls[0][0], CreateUserPayload(email="a@b.com", age=42))
+        self.assertEqual(calls[0][1], "m1")
+
+    def test_dataclass_payload_annotation(self) -> None:
+        calls: list[EmailPayload] = []
+
+        def handle(payload: EmailPayload) -> None:
+            calls.append(payload)
+
+        queue_client.subscribe(topic="emails")(handle)
+        queue_client._invoke_subscriptions({"to": "a@b.com"}, {"topic": "emails"})
+
+        self.assertEqual(calls, [EmailPayload(to="a@b.com")])
+
+    def test_invalid_typed_payload_raises_poison_payload_error(self) -> None:
+        def handle(payload: CreateUserPayload) -> None:
+            pass
+
+        queue_client.subscribe(topic="users.create")(handle)
+
+        with self.assertRaises(queue_client._PayloadValidationError):
+            queue_client._invoke_subscriptions(
+                {"email": "a@b.com", "age": "not-an-int"},
+                {"topic": "users.create"},
+            )
+
+    def test_callback_does_not_acknowledge_invalid_typed_payload(self) -> None:
+        def handle(payload: CreateUserPayload) -> None:
+            pass
+
+        queue_client.subscribe(topic="users.create")(handle)
+
+        raw_body = json.dumps(
+            {
+                "type": "com.vercel.queue.v1beta",
+                "data": {
+                    "queueName": "users.create",
+                    "consumerGroup": "consumer",
+                    "messageId": "m1",
+                },
+            },
+        ).encode()
+
+        with (
+            patch.object(
+                queue_client.callback,
+                "receive_message_by_id",
+                return_value=(
+                    {"email": "a@b.com", "age": "not-an-int"},
+                    1,
+                    "now",
+                    "receipt",
+                ),
+            ),
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+        ):
+            status, _headers, body = queue_client.handle_queue_callback(raw_body)
+
+        self.assertEqual(status, 500)
+        self.assertEqual(json.loads(body), {"error": "payload-validation"})
+        delete_message.assert_not_called()
+        change_visibility.assert_not_called()
+
+
+class TestExplicitSubscriptionRegistries(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_invoke_subscriptions_uses_explicit_registry(self) -> None:
+        global_calls: list[dict[str, Any]] = []
+        explicit_calls: list[dict[str, Any]] = []
+        subscriptions: list[queue_client._Subscription] = []
+
+        def global_worker(payload: dict[str, Any]) -> None:
+            global_calls.append(payload)
+
+        def explicit_worker(payload: dict[str, Any]) -> None:
+            explicit_calls.append(payload)
+
+        queue_client.subscribe(topic="orders")(global_worker)
+        queue_client._build_subscribe_decorator(subscriptions, topic="orders")(explicit_worker)
+
+        queue_client._invoke_subscriptions(
+            {"ok": True},
+            {"topic": "orders"},
+            subscriptions,
+        )
+
+        self.assertEqual(global_calls, [])
+        self.assertEqual(explicit_calls, [{"ok": True}])
+
+
+class TestWorkerDirectives(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def _raw_callback(self) -> bytes:
+        return b'{"ok":true}'
+
+    def _environ(self) -> dict[str, str]:
+        return {
+            "CONTENT_TYPE": "application/json",
+            "HTTP_CE_TYPE": "com.vercel.queue.v2beta",
+            "HTTP_CE_VQSQUEUENAME": "q",
+            "HTTP_CE_VQSCONSUMERGROUP": "c",
+            "HTTP_CE_VQSMESSAGEID": "m",
+            "HTTP_CE_VQSRECEIPTHANDLE": "receipt",
+            "HTTP_CE_VQSDELIVERYCOUNT": "1",
+            "HTTP_CE_VQSCREATEDAT": "now",
+        }
+
+    def test_retry_after_return_delays_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return queue_client.RetryAfter(timedelta(minutes=2))
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 120)
+        delete_message.assert_not_called()
+
+    def test_retry_after_raise_delays_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            raise queue_client.RetryAfter(30)
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        change_visibility.assert_called_once_with("q", "c", "m", "receipt", 30)
+        delete_message.assert_not_called()
+
+    def test_dict_return_is_not_a_retry_directive(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return {"afterSeconds": 30.0}
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+    def test_ack_return_deletes_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return queue_client.Ack("permanent")
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+    def test_ack_raise_deletes_message(self) -> None:
+        def worker(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            raise queue_client.Ack("permanent")
+
+        queue_client.subscribe(topic="q")(worker)
+
+        with (
+            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_client.callback, "delete_message") as delete_message,
+        ):
+            status, _headers, _body = queue_client.handle_queue_callback(
+                self._raw_callback(),
+                self._environ(),
+            )
+
+        self.assertEqual(status, 200)
+        delete_message.assert_called_once_with("q", "c", "m", "receipt")
+        change_visibility.assert_not_called()
+
+
 class TestWorkerJSONEncoder(unittest.TestCase):
     def test_uuid_serialized_as_string(self) -> None:
         uid = uuid4()
@@ -148,18 +410,21 @@ class TestWorkerJSONEncoder(unittest.TestCase):
 class TestSendWithJSONEncoder(unittest.TestCase):
     def setUp(self) -> None:
         _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
 
     def _send(
         self,
         payload: dict,  # pyright: ignore[reportMissingTypeArgument]
         *,
         json_encoder: type[json.JSONEncoder] | None = None,
+        **kwargs: object,
     ) -> bytes:
         with (
             patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
-            queue_client.send("q", payload, json_encoder=json_encoder)
+            kwargs.setdefault("deployment_id", None)
+            queue_client.send("q", payload, json_encoder=json_encoder, **kwargs)
 
         return _FakeHttpxClient.captured_bodies[-1]
 
@@ -190,3 +455,121 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         body = self._send({"tags": {3, 1, 2}}, json_encoder=_CustomEncoder)
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
+
+    def test_send_accepts_duration_delay_and_retention(self) -> None:
+        self._send(
+            {"ok": True},
+            json_encoder=None,
+            delay=600,
+            retention=timedelta(hours=6),
+        )
+
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Vqs-Delay-Seconds"], "600")
+        self.assertEqual(headers["Vqs-Retention-Seconds"], "21600")
+
+    def test_send_accepts_float_duration(self) -> None:
+        self._send({"ok": True}, delay=1.5)
+
+        headers = _FakeHttpxClient.captured_headers[-1]
+        self.assertEqual(headers["Vqs-Delay-Seconds"], "1")
+
+    def test_send_rejects_negative_duration(self) -> None:
+        with self.assertRaises(ValueError):
+            self._send({"ok": True}, delay=-1)
+
+    def test_send_rejects_negative_timedelta(self) -> None:
+        with self.assertRaises(ValueError):
+            self._send({"ok": True}, delay=timedelta(seconds=-1))
+
+    def test_send_rejects_invalid_duration_type(self) -> None:
+        with self.assertRaises(TypeError):
+            self._send({"ok": True}, delay=[])
+
+
+class TestDeploymentPinning(unittest.TestCase):
+    def setUp(self) -> None:
+        _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_headers.clear()
+
+    def _send(self, **kwargs: Any) -> dict[str, str]:
+        with (
+            patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, **kwargs)
+        return _FakeHttpxClient.captured_headers[-1]
+
+    def test_send_auto_pins_to_env_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True})
+
+        self.assertEqual(_FakeHttpxClient.captured_headers[-1]["Vqs-Deployment-Id"], "dpl_env")
+
+    def test_send_none_explicitly_unpins_even_with_env_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, deployment_id=None)
+
+        self.assertNotIn("Vqs-Deployment-Id", _FakeHttpxClient.captured_headers[-1])
+
+    def test_send_explicit_deployment_id_overrides_env(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "tok",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, deployment_id="dpl_explicit")
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_headers[-1]["Vqs-Deployment-Id"],
+            "dpl_explicit",
+        )
+
+    def test_send_auto_requires_deployment_id_outside_dev(self) -> None:
+        with patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True):
+            with self.assertRaises(RuntimeError) as err:
+                queue_client.send("q", {"ok": True})
+
+        self.assertIn("No deployment ID available", str(err.exception))
+
+    def test_send_dev_token_omits_deployment_id(self) -> None:
+        with (
+            patch.dict(
+                queue_client.os.environ,
+                {
+                    "VERCEL_QUEUE_TOKEN": "vc-dev-token",
+                    "VERCEL_DEPLOYMENT_ID": "dpl_env",
+                },
+                clear=True,
+            ),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True})
+
+        self.assertNotIn("Vqs-Deployment-Id", _FakeHttpxClient.captured_headers[-1])
