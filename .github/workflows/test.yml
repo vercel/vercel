@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - main
-  repository_dispatch:
-    types:
-      - vercel.project.QmcQ2AGNAWeR6ZJCWAhqhbixxvWbgvsR2LMT4fzmTfY9SK.deployment.ready
 
 permissions:
   contents: read
@@ -23,13 +20,12 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.client_payload.git.ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   setup:
     name: Find Changes
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'repository_dispatch' && github.event.client_payload.environment == 'preview' && github.event.client_payload.git.ref == 'refs/heads/changeset-release/main') }}
     runs-on: ubuntu-latest
     outputs:
       unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
@@ -48,16 +44,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          else
-            HEAD_SHA="${{ github.event.client_payload.git.sha }}"
-            PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${HEAD_SHA}/pulls" --jq '.[0]')
-            PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
-            BASE_SHA=$(echo "$PR_JSON" | jq -r '.base.sha')
-          fi
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
           echo "headSha=$HEAD_SHA" >> $GITHUB_OUTPUT

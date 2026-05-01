@@ -117,6 +117,15 @@ export class TelemetryClient {
     });
   }
 
+  protected trackTargetEnvironment(
+    targetEnvironment: 'production' | 'preview'
+  ) {
+    this.track({
+      key: 'target_environment',
+      value: targetEnvironment,
+    });
+  }
+
   protected trackCommandOutput(eventData: { key: string; value: string }) {
     this.track({
       key: `output:${eventData.key}`,
