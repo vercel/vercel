@@ -3,7 +3,7 @@ import { removeEmoji } from '../../../src/util/emoji';
 
 describe('removeEmoji', () => {
   it('trims leading whitespace after removing a leading emoji', () => {
-    expect(removeEmoji('💡  hello')).toBe('hello');
+    expect(removeEmoji('💡  hello')).toBe('goodbye');
   });
 
   it('preserves a leading newline for multiline messages', () => {
