@@ -733,6 +733,7 @@ const main = async () => {
     if (isOidcJwtLike(token)) {
       const teamId = await resolveOidcTokenExchangeTeamId(
         parsedArgs.flags,
+        client.config,
         client.cwd
       );
 
@@ -1330,11 +1331,16 @@ const main = async () => {
 
 async function resolveOidcTokenExchangeTeamId(
   flags: Record<string, unknown>,
+  config: GlobalConfig,
   cwd: string
 ): Promise<string | undefined> {
   const scope = flags['--scope'] || flags['--team'];
   if (typeof scope === 'string' && scope.startsWith('team_')) {
     return scope;
+  }
+
+  if (config.currentTeam?.startsWith('team_')) {
+    return config.currentTeam;
   }
 
   const link = await getLinkFromDir<{ orgId: string }>(getVercelDirectory(cwd));
