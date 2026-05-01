@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
@@ -87,11 +89,19 @@ export const build: BuildV2 = async args => {
   const buildSpan = span.child('vc.builder.backends.build');
 
   return buildSpan.trace(async () => {
-    // Use the explicitly-provided entrypoint when provided by CLI/fs-detectors.
-    // If sentinel value 'package.json' is passed, fallback to candidate-list discovery.
-    const entrypoint =
+    // Use an explicit entrypoint when provided by CLI/fs-detectors.
+    // Fall back to candidate-list discovery when:
+    // - The CLI/framework passes the `package.json` sentinel.
+    // - The file doesn't exist (framework-preset placeholders like
+    //   `useRuntime.src: 'index.js'` reach us unreplaced under
+    //   VERCEL_EXPERIMENTAL_BACKENDS).
+    const explicit =
       args.entrypoint && args.entrypoint !== 'package.json'
         ? args.entrypoint
+        : null;
+    const entrypoint =
+      explicit && existsSync(join(args.workPath, explicit))
+        ? explicit
         : await findEntrypointOrThrow(args.workPath);
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
