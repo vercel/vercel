@@ -6,12 +6,14 @@ import unittest
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from pydantic import BaseModel
 
+import vercel.workers._queue.receive as queue_receive_impl
+import vercel.workers._queue.send as queue_service
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
 from vercel.workers.client import WorkerJSONEncoder
@@ -50,7 +52,7 @@ class _FakeHttpxClient:
     def __enter__(self) -> _FakeHttpxClient:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> Literal[False]:
         return False
 
     def get(self, url: str, headers: dict[str, str]) -> _FakeResponse:
@@ -72,23 +74,23 @@ class _FakeHttpxClient:
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_receive_message_by_id_returns_raw_bytes_for_non_json_payload(self) -> None:
         with patch.object(
-            queue_callback._client,
+            queue_receive_impl,
             "get_queue_base_url",
             return_value="https://queue.example.com",
         ):
             with patch.object(
-                queue_callback._client,
+                queue_receive_impl,
                 "get_queue_base_path",
                 return_value="/api/v2/messages",
             ):
                 with patch.object(
-                    queue_callback._client,
+                    queue_receive_impl,
                     "get_queue_token",
                     return_value="token",
                 ):
-                    with patch.object(queue_callback.httpx, "Client", _FakeHttpxClient):
+                    with patch.object(queue_receive_impl.httpx, "Client", _FakeHttpxClient):
                         with patch.object(
-                            queue_callback,
+                            queue_receive_impl,
                             "parse_multipart_message",
                             return_value=(
                                 {
@@ -228,6 +230,37 @@ class TestTypedSubscriptions(unittest.TestCase):
         self.assertEqual(json.loads(body), {"error": "payload-validation"})
         delete_message.assert_not_called()
         change_visibility.assert_not_called()
+
+
+class TestExplicitSubscriptionRegistries(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_invoke_subscriptions_uses_explicit_registry(self) -> None:
+        global_calls: list[dict[str, Any]] = []
+        explicit_calls: list[dict[str, Any]] = []
+        subscriptions: list[queue_client._Subscription] = []
+
+        def global_worker(payload: dict[str, Any]) -> None:
+            global_calls.append(payload)
+
+        def explicit_worker(payload: dict[str, Any]) -> None:
+            explicit_calls.append(payload)
+
+        queue_client.subscribe(topic="orders")(global_worker)
+        queue_client._build_subscribe_decorator(subscriptions, topic="orders")(explicit_worker)
+
+        queue_client._invoke_subscriptions(
+            {"ok": True},
+            {"topic": "orders"},
+            subscriptions,
+        )
+
+        self.assertEqual(global_calls, [])
+        self.assertEqual(explicit_calls, [{"ok": True}])
 
 
 class TestWorkerDirectives(unittest.TestCase):
@@ -388,7 +421,7 @@ class TestSendWithJSONEncoder(unittest.TestCase):
     ) -> bytes:
         with (
             patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
             kwargs.setdefault("deployment_id", None)
             queue_client.send("q", payload, json_encoder=json_encoder, **kwargs)
@@ -462,7 +495,7 @@ class TestDeploymentPinning(unittest.TestCase):
     def _send(self, **kwargs: Any) -> dict[str, str]:
         with (
             patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=True),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
             queue_client.send("q", {"ok": True}, **kwargs)
         return _FakeHttpxClient.captured_headers[-1]
@@ -477,7 +510,7 @@ class TestDeploymentPinning(unittest.TestCase):
                 },
                 clear=True,
             ),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
             queue_client.send("q", {"ok": True})
 
@@ -493,7 +526,7 @@ class TestDeploymentPinning(unittest.TestCase):
                 },
                 clear=True,
             ),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
             queue_client.send("q", {"ok": True}, deployment_id=None)
 
@@ -509,7 +542,7 @@ class TestDeploymentPinning(unittest.TestCase):
                 },
                 clear=True,
             ),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
             queue_client.send("q", {"ok": True}, deployment_id="dpl_explicit")
 
@@ -535,7 +568,7 @@ class TestDeploymentPinning(unittest.TestCase):
                 },
                 clear=True,
             ),
-            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+            patch.object(queue_service.httpx, "Client", _FakeHttpxClient),
         ):
             queue_client.send("q", {"ok": True})
 

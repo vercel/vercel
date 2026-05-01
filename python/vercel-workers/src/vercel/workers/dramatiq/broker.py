@@ -6,14 +6,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from typing import Any, cast
 
-from ..client import (
-    _DEPLOYMENT_ID_UNSET,
-    Duration,
-    WorkerJSONEncoder,
-    _DeploymentIdOption,
-    is_duration,
-    send,
-)
+from .. import _queue
+from ..client import send
 
 try:
     import dramatiq
@@ -42,7 +36,7 @@ class VercelDramatiqEncoder(Encoder):
     _json_encoder: type[json.JSONEncoder]
 
     def __init__(self, json_encoder: type[json.JSONEncoder] | None = None) -> None:
-        self._json_encoder = json_encoder or WorkerJSONEncoder
+        self._json_encoder = json_encoder or _queue.WorkerJSONEncoder
 
     def encode(self, data: dict[str, Any]) -> bytes:
         return json.dumps(
@@ -68,8 +62,8 @@ class VercelQueuesBrokerOptions:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention: Duration | None = None
-    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET
+    retention: _queue.Duration | None = None
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
     # Consumption defaults (serverless callback / local polling)
@@ -102,7 +96,7 @@ class VercelQueuesBrokerOptions:
             cfg = replace(cfg, base_path=base_path)
 
         retention = options.get("retention")
-        if is_duration(retention):
+        if _queue.is_duration(retention):
             cfg = replace(cfg, retention=retention)
 
         if "deployment_id" in options and options.get("deployment_id") is None:

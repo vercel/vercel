@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from ..client import _DEPLOYMENT_ID_UNSET, Duration, _DeploymentIdOption, is_duration, send
+from .. import _queue
+from ..client import send
 from .utils import _extract_task_from_kombu_message, _parse_iso_datetime
 
 try:
@@ -49,8 +50,8 @@ class TransportConfig:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention: Duration | None = None
-    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET
+    retention: _queue.Duration | None = None
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
     include_raw_message: bool = False
     # Consumption defaults (serverless callback / local polling)
@@ -103,7 +104,7 @@ class TransportConfig:
             cfg.base_path = base_path
 
         retention = options.get("retention")
-        if is_duration(retention):
+        if _queue.is_duration(retention):
             cfg.retention = retention
 
         if "deployment_id" in options and options.get("deployment_id") is None:

@@ -10,14 +10,8 @@ from traceback import format_exception
 from typing import Any, TypedDict, cast
 from uuid import UUID
 
-from ..client import (
-    _DEPLOYMENT_ID_UNSET,
-    Duration,
-    _DeploymentIdOption,
-    is_duration,
-    send,
-    send_async,
-)
+from .. import _queue
+from ..client import send, send_async
 
 try:
     from django.core.cache import caches  # type: ignore[import-untyped]
@@ -126,8 +120,8 @@ class VercelQueuesBackendOptions:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention: Duration | None = None
-    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET
+    retention: _queue.Duration | None = None
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
     # Result storage (Django cache).
@@ -158,7 +152,7 @@ class VercelQueuesBackendOptions:
             cfg = replace(cfg, deployment_id=deployment_id)
 
         retention = options.get("retention")
-        if is_duration(retention):
+        if _queue.is_duration(retention):
             cfg = replace(cfg, retention=retention)
 
         timeout = options.get("timeout")
