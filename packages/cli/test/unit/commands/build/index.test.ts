@@ -1156,6 +1156,43 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should build multiple JS cron services from nested entrypoints', async () => {
+    // Two cron services in one fixture, each with its own nested
+    // entrypoint under `jobs/`. Verifies the cron URL path includes
+    // the nested directories, that each service builds its own lambda
+    // mounted at `_svc/{name}/index`, and that each lambda's
+    // dispatcher shim ends up alongside the bundled handler.
+    const cwd = fixture('with-services-cron-nested');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual(
+      expect.arrayContaining([
+        {
+          path: '/_svc/cleanup/crons/jobs/cleanup/cron',
+          schedule: '0 0 * * *',
+        },
+        {
+          path: '/_svc/report/crons/jobs/report/cron',
+          schedule: '0 6 * * *',
+        },
+      ])
+    );
+
+    const cleanupConfig = await fs.readJSON(
+      join(output, 'functions/_svc/cleanup/index.func/.vc-config.json')
+    );
+    expect(cleanupConfig.handler).toContain('__vc_cron_dispatch');
+
+    const reportConfig = await fs.readJSON(
+      join(output, 'functions/_svc/report/index.func/.vc-config.json')
+    );
+    expect(reportConfig.handler).toContain('__vc_cron_dispatch');
+  });
+
   it('should build a JS cron service through the cron dispatcher', async () => {
     const cwd = fixture('with-services-cron-handler');
     const output = join(cwd, '.vercel', 'output');
