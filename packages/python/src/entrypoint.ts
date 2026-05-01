@@ -176,13 +176,68 @@ async function findOtherPyFiles(
   return results;
 }
 
+async function resolveModuleAttrEntrypoint(
+  workPath: string,
+  value: string
+): Promise<PythonEntrypoint | null> {
+  // Expect values like "package.module:app". Extract the module portion.
+  const match = value.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
+  if (!match) return null;
+  const modulePath = match[1];
+  const variableName = match[2];
+  const relPath = modulePath.replace(/\./g, '/');
+
+  const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
+  for (const candidate of candidates) {
+    if (await fileExists(join(workPath, candidate))) {
+      return { entrypoint: candidate, variableName };
+    }
+  }
+  return null;
+}
+
+export async function getVercelToolsEntrypoint(
+  workPath: string
+): Promise<PythonEntrypoint | null> {
+  const pyprojectData = await readConfigFile<{
+    tool?: { vercel?: { entrypoint?: unknown } };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return null;
+
+  const vercelEntrypoint = pyprojectData.tool?.vercel?.entrypoint;
+  if (typeof vercelEntrypoint !== 'string') return null;
+  return resolveModuleAttrEntrypoint(workPath, vercelEntrypoint);
+}
+
+// Legacy: kept for compatibility. Prefer tool.vercel.entrypoint.
+export async function getPyprojectScriptsEntrypoint(
+  workPath: string
+): Promise<PythonEntrypoint | null> {
+  const pyprojectData = await readConfigFile<{
+    project?: { scripts?: Record<string, unknown> };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return null;
+
+  const scripts = pyprojectData.project?.scripts as
+    | Record<string, unknown>
+    | undefined;
+  const appScript = scripts?.app;
+  if (typeof appScript !== 'string') return null;
+  return resolveModuleAttrEntrypoint(workPath, appScript);
+}
+
 interface PyprojectEntrypointResult {
   entrypoint: PythonEntrypoint | null;
   appScript?: string;
   checkedPaths?: string[];
 }
 
-export async function getPyprojectEntrypoint(
+/**
+ * Like getPyprojectScriptsEntrypoint but returns diagnostic metadata
+ * (the raw script value and checked paths) so callers can produce
+ * targeted error messages when resolution fails.
+ */
+async function getPyprojectEntrypointWithDiagnostics(
   workPath: string
 ): Promise<PyprojectEntrypointResult> {
   const pyprojectData = await readConfigFile<{
@@ -190,9 +245,6 @@ export async function getPyprojectEntrypoint(
   }>(join(workPath, 'pyproject.toml'));
   if (!pyprojectData) return { entrypoint: null };
 
-  // If `pyproject.toml` has a [project.scripts] table and contains a script
-  // named "app", parse the value (format: "module:attr") to determine the
-  // module and map it to a file path.
   const scripts = pyprojectData.project?.scripts as
     | Record<string, unknown>
     | undefined;
@@ -206,7 +258,6 @@ export async function getPyprojectEntrypoint(
   const variableName = match[2];
   const relPath = modulePath.replace(/\./g, '/');
 
-  // Prefer an existing file match if present; otherwise fall back to "<module>.py".
   const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
   for (const candidate of candidates) {
     if (await fileExists(join(workPath, candidate))) {
@@ -443,7 +494,11 @@ export async function detectPythonEntrypoint(
     return null;
   }
 
-  // Otherwise do a search, collecting diagnostics for better error messages
+  // Check `tool.vercel.entrypoint` in pyproject.toml first.
+  const vercelEntry = await getVercelToolsEntrypoint(workPath);
+  if (vercelEntry) return { entrypoint: vercelEntry };
+
+  // Then do a framework-specific search, collecting diagnostics for better error messages
   let findDiagnostics: FindResult;
   let searchDirs: string[];
 
@@ -460,7 +515,8 @@ export async function detectPythonEntrypoint(
         searchDirs,
         candidateSet
       );
-      const pyprojectResult = await getPyprojectEntrypoint(workPath);
+      const pyprojectResult =
+        await getPyprojectEntrypointWithDiagnostics(workPath);
       const diagnostics: EntrypointDiagnostics = {
         existingWithoutEntrypoint: findDiagnostics.existingWithoutEntrypoint,
         otherPyFiles,
@@ -479,8 +535,8 @@ export async function detectPythonEntrypoint(
     if (genericResult.detected) return genericResult.detected;
   }
 
-  // Check pyproject.toml [project.scripts] for an "app" entry
-  const pyprojectResult = await getPyprojectEntrypoint(workPath);
+  // Fall back to `project.scripts.app` in pyproject.toml.
+  const pyprojectResult = await getPyprojectEntrypointWithDiagnostics(workPath);
   if (pyprojectResult.entrypoint) {
     return { entrypoint: pyprojectResult.entrypoint };
   }
