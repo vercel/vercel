@@ -5,53 +5,58 @@ export interface JwtPayload {
   exp?: unknown;
 }
 
+interface DecodedJwt {
+  header: Record<string, unknown>;
+  body: JwtPayload;
+}
+
 export function isOidcJwtLike(token: string): boolean {
-  const header = getJwtHeader(token);
-  const payload = getJwtPayload(token);
+  const { header, body } = maybeDecodeJwt(token) ?? {};
 
   return (
     typeof header?.alg === 'string' &&
-    typeof payload?.iss === 'string' &&
-    typeof payload.sub === 'string' &&
-    hasAudience(payload.aud) &&
-    typeof payload.exp === 'number'
+    typeof body?.iss === 'string' &&
+    typeof body.sub === 'string' &&
+    hasAudience(body.aud) &&
+    typeof body.exp === 'number'
   );
 }
 
 export function getJwtPayload(token: string): JwtPayload | null {
-  return decodeJwtPart(token, 1);
+  return maybeDecodeJwt(token)?.body ?? null;
 }
 
-function getJwtHeader(token: string): Record<string, unknown> | null {
-  return decodeJwtPart(token, 0);
-}
-
-function decodeJwtPart(
-  token: string,
-  index: number
-): Record<string, unknown> | null {
+function maybeDecodeJwt(token: string): DecodedJwt | null {
   const tokenParts = token.split('.');
   if (tokenParts.length !== 3) {
     return null;
   }
 
-  const part = tokenParts[index];
-  if (!part) {
+  const [encodedHeader, encodedBody] = tokenParts;
+  if (!encodedHeader || !encodedBody) {
     return null;
   }
 
   try {
-    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(
-      base64.length + ((4 - (base64.length % 4)) % 4),
-      '='
+    const header: unknown = JSON.parse(
+      Buffer.from(encodedHeader, 'base64url').toString('utf8')
     );
-    const decoded: unknown = JSON.parse(
-      Buffer.from(padded, 'base64').toString('utf8')
+    const body: unknown = JSON.parse(
+      Buffer.from(encodedBody, 'base64url').toString('utf8')
     );
 
-    if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) {
-      return decoded as Record<string, unknown>;
+    if (
+      header &&
+      typeof header === 'object' &&
+      !Array.isArray(header) &&
+      body &&
+      typeof body === 'object' &&
+      !Array.isArray(body)
+    ) {
+      return {
+        header: header as Record<string, unknown>,
+        body: body as JwtPayload,
+      };
     }
   } catch {}
 

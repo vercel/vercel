@@ -340,6 +340,8 @@ export async function tokenExchangeRequest(options: {
   subject_token: string;
   team_id: string;
 }): Promise<Response> {
+  // The subject token is the credential being exchanged, so it belongs in the
+  // form body. This request intentionally does not send an Authorization header.
   return await nodeFetch((await as()).token_endpoint, {
     method: 'POST',
     headers: {
