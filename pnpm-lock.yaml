@@ -197,9 +197,6 @@ importers:
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../../packages/build-utils
-      '@vercel/cli-auth':
-        specifier: workspace:*
-        version: link:../../packages/cli-auth
       '@vercel/routing-utils':
         specifier: workspace:*
         version: link:../../packages/routing-utils
