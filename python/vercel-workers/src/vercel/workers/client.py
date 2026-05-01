@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import math
 import os
 import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Protocol, TypedDict, cast, get_type_hints, overload
+from typing import Any, Protocol, TypedDict, TypeGuard, cast, get_type_hints, overload
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -112,6 +113,11 @@ class MetadataWorkerCallable(Protocol):
 
 
 type WorkerCallable = PayloadWorkerCallable | MetadataWorkerCallable
+type Duration = int | float | timedelta
+
+
+def is_duration(value: object) -> TypeGuard[Duration]:
+    return isinstance(value, (int, float, timedelta)) and not isinstance(value, bool)
 
 
 class SendMessageResult(TypedDict):
@@ -121,6 +127,22 @@ class SendMessageResult(TypedDict):
     """
 
     messageId: str | None
+
+
+def _duration_to_seconds(name: str, value: object) -> int | None:
+    if value is None:
+        return None
+    if not is_duration(value):
+        raise TypeError(f"{name} must be a number of seconds or datetime.timedelta")
+    if isinstance(value, timedelta):
+        seconds = value.total_seconds()
+    else:
+        seconds = float(value)
+    if not math.isfinite(seconds):
+        raise ValueError(f"{name} must be finite")
+    if seconds < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return int(seconds)
 
 
 class _PayloadValidationError(Exception):
@@ -674,8 +696,8 @@ def send(
     payload: Any,
     *,
     idempotency_key: str | None = None,
-    retention_seconds: int | None = None,
-    delay_seconds: int | None = None,
+    retention: Duration | None = None,
+    delay: Duration | None = None,
     deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
@@ -700,8 +722,9 @@ def send(
         queue_name: Name of the target queue (equivalent to ``queueName``).
         payload: Message payload. For the default JSON content type this must be JSON-serialisable.
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
-        retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
-        delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
+        retention: Optional message retention duration, as seconds or ``datetime.timedelta``.
+        delay: Optional duration before the message becomes visible, as seconds or
+            ``datetime.timedelta``.
         deployment_id: Deployment pinning mode. Omit to auto-detect ``VERCEL_DEPLOYMENT_ID``,
             pass ``None`` to explicitly send without a deployment ID, or pass a string to pin
             to a specific deployment.
@@ -724,6 +747,9 @@ def send(
     if _in_process_mode_enabled():
         return _send_in_process(queue_name, payload)
 
+    retention_header_value = _duration_to_seconds("retention", retention)
+    delay_header_value = _duration_to_seconds("delay", delay)
+
     resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
     resolved_base_path = base_path or get_queue_base_path()
 
@@ -741,11 +767,11 @@ def send(
     if idempotency_key:
         headers["Vqs-Idempotency-Key"] = idempotency_key
 
-    if retention_seconds is not None:
-        headers["Vqs-Retention-Seconds"] = str(retention_seconds)
+    if retention_header_value is not None:
+        headers["Vqs-Retention-Seconds"] = str(retention_header_value)
 
-    if delay_seconds is not None:
-        headers["Vqs-Delay-Seconds"] = str(delay_seconds)
+    if delay_header_value is not None:
+        headers["Vqs-Delay-Seconds"] = str(delay_header_value)
 
     # Basic payload handling: default to JSON, but allow callers to provide their own
     # serialisation if they change the content type.
@@ -806,8 +832,8 @@ async def send_async(
     payload: Any,
     *,
     idempotency_key: str | None = None,
-    retention_seconds: int | None = None,
-    delay_seconds: int | None = None,
+    retention: Duration | None = None,
+    delay: Duration | None = None,
     deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET,
     token: str | None = None,
     base_url: str | None = None,
@@ -825,8 +851,9 @@ async def send_async(
         queue_name: Name of the target queue (equivalent to ``queueName``).
         payload: Message payload. For the default JSON content type this must be JSON-serialisable.
         idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
-        retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
-        delay_seconds: Optional delay before the message becomes visible (``Vqs-Delay-Seconds``).
+        retention: Optional message retention duration, as seconds or ``datetime.timedelta``.
+        delay: Optional duration before the message becomes visible, as seconds or
+            ``datetime.timedelta``.
         deployment_id: Deployment pinning mode. Omit to auto-detect ``VERCEL_DEPLOYMENT_ID``,
             pass ``None`` to explicitly send without a deployment ID, or pass a string to pin
             to a specific deployment.
@@ -842,6 +869,9 @@ async def send_async(
     Returns:
         A dict containing the generated ``messageId``.
     """
+    retention_header_value = _duration_to_seconds("retention", retention)
+    delay_header_value = _duration_to_seconds("delay", delay)
+
     resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
     resolved_base_path = base_path or get_queue_base_path()
 
@@ -859,11 +889,11 @@ async def send_async(
     if idempotency_key:
         headers["Vqs-Idempotency-Key"] = idempotency_key
 
-    if retention_seconds is not None:
-        headers["Vqs-Retention-Seconds"] = str(retention_seconds)
+    if retention_header_value is not None:
+        headers["Vqs-Retention-Seconds"] = str(retention_header_value)
 
-    if delay_seconds is not None:
-        headers["Vqs-Delay-Seconds"] = str(delay_seconds)
+    if delay_header_value is not None:
+        headers["Vqs-Delay-Seconds"] = str(delay_header_value)
 
     # Basic payload handling: default to JSON, but allow callers to provide their own
     # serialisation if they change the content type.
