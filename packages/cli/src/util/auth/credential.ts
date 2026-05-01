@@ -1,36 +1,8 @@
-export type CredentialKind = 'vercel-token' | 'oidc-token' | 'invalid';
-
-const VERCEL_TOKEN_PREFIXES = [
-  'vca_',
-  'vci_',
-  'vck_',
-  'vcp_',
-  'vcr_',
-  'vcs_',
-  'vct_',
-];
-
 export interface JwtPayload {
   iss?: unknown;
   sub?: unknown;
   aud?: unknown;
   exp?: unknown;
-}
-
-export function classifyCredential(token: string): CredentialKind {
-  if (isOidcJwtLike(token)) {
-    return 'oidc-token';
-  }
-
-  if (isVercelTokenLike(token)) {
-    return 'vercel-token';
-  }
-
-  return 'invalid';
-}
-
-export function isVercelTokenLike(token: string): boolean {
-  return VERCEL_TOKEN_PREFIXES.some(prefix => token.startsWith(prefix));
 }
 
 export function isOidcJwtLike(token: string): boolean {

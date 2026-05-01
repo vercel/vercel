@@ -1,23 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  classifyCredential,
   getJwtPayload,
   isOidcJwtLike,
-  isVercelTokenLike,
 } from '../../../../src/util/auth/credential';
 
-describe('credential classification', () => {
-  it('detects known prefixed Vercel tokens', () => {
-    expect(isVercelTokenLike('vcp_abc.def')).toBe(true);
-    expect(isVercelTokenLike('vca_abc.def')).toBe(true);
-    expect(classifyCredential('vct_abc.def')).toBe('vercel-token');
-  });
-
-  it('does not treat arbitrary 24-character strings as Vercel tokens', () => {
-    expect(isVercelTokenLike('abcdefghijklmnopqrstuvwx')).toBe(false);
-    expect(classifyCredential('abcdefghijklmnopqrstuvwx')).toBe('invalid');
-  });
-
+describe('OIDC credential detection', () => {
   it('decodes JWT payloads', () => {
     const token = createJwt({
       iss: 'https://token.actions.githubusercontent.com',
@@ -43,7 +30,6 @@ describe('credential classification', () => {
     });
 
     expect(isOidcJwtLike(token)).toBe(true);
-    expect(classifyCredential(token)).toBe('oidc-token');
   });
 
   it('detects OIDC JWT candidates with an audience array', () => {
@@ -55,7 +41,6 @@ describe('credential classification', () => {
     });
 
     expect(isOidcJwtLike(token)).toBe(true);
-    expect(classifyCredential(token)).toBe('oidc-token');
   });
 
   it('rejects malformed JWT candidates', () => {
@@ -81,9 +66,10 @@ describe('credential classification', () => {
     ).toBe(false);
   });
 
-  it('classifies invalid tokens', () => {
-    expect(classifyCredential('not-a-valid-token')).toBe('invalid');
-    expect(classifyCredential('he\nl,o.')).toBe('invalid');
+  it('does not classify opaque tokens as OIDC', () => {
+    expect(isOidcJwtLike('vcp_abc.def')).toBe(false);
+    expect(isOidcJwtLike('abcdefghijklmnopqrstuvwx')).toBe(false);
+    expect(isOidcJwtLike('not-a-valid-token')).toBe(false);
   });
 });
 

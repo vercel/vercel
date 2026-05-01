@@ -51,7 +51,7 @@ import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
-import { classifyCredential } from './util/auth/credential';
+import { isOidcJwtLike } from './util/auth/credential';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
@@ -730,8 +730,7 @@ const main = async () => {
       return finishWithExitCode(1);
     }
 
-    const credentialKind = classifyCredential(token);
-    if (credentialKind === 'oidc-token') {
+    if (isOidcJwtLike(token)) {
       const teamId = await resolveOidcTokenExchangeTeamId(
         parsedArgs.flags,
         client.cwd
@@ -773,21 +772,16 @@ const main = async () => {
         return finishWithExitCode(1);
       }
     } else {
-      if (credentialKind === 'invalid') {
-        const invalid = token.match(/(\W)/g);
-        const message = invalid
-          ? `You defined ${param(
-              '--token'
-            )}, but its contents are invalid. Must not contain: ${Array.from(
-              new Set(invalid)
-            )
-              .sort()
-              .map(c => JSON.stringify(c))
-              .join(', ')}`
-          : `You defined ${param('--token')}, but its contents are invalid.`;
+      const invalid = token.match(/(\W)/g);
+      if (invalid) {
+        const notContain = Array.from(new Set(invalid)).sort();
 
         output.prettyError({
-          message,
+          message: `You defined ${param(
+            '--token'
+          )}, but its contents are invalid. Must not contain: ${notContain
+            .map(c => JSON.stringify(c))
+            .join(', ')}`,
           link: 'https://err.sh/vercel/invalid-token-value',
         });
 
