@@ -424,6 +424,150 @@ test('mergeRoutes ensure `handle: error` comes last', () => {
   deepStrictEqual(actual, expected);
 });
 
+test('mergeRoutes puts zero-config index.html fallback after builder routes', () => {
+  const userRoutes: Route[] = [];
+  const rootServiceSrc = '^(?!/svc/experience(?:/|$))(?:/(.*))';
+  const builds: Build[] = [
+    {
+      use: '@vercel/zero-config-routes',
+      entrypoint: '/',
+      routes: [
+        { handle: 'filesystem' },
+        {
+          src: '^(?=/svc/experience(?:/|$))(?:/svc/experience(?:/.*)?$)',
+          dest: '/_svc/experience/index',
+          check: true,
+        },
+        {
+          src: rootServiceSrc,
+          dest: '/index.html',
+        },
+      ],
+    },
+    {
+      use: '@vercel/static-build',
+      entrypoint: 'svc:09999:/:api:services/api/package.json',
+      routes: [
+        { handle: 'filesystem' },
+        {
+          src: rootServiceSrc,
+          dest: '/__server',
+        },
+      ],
+    },
+  ];
+
+  const actual = mergeRoutes({ userRoutes, builds });
+  const expected = [
+    { handle: 'filesystem' },
+    {
+      src: '^(?=/svc/experience(?:/|$))(?:/svc/experience(?:/.*)?$)',
+      dest: '/_svc/experience/index',
+      check: true,
+    },
+    {
+      src: rootServiceSrc,
+      dest: '/__server',
+    },
+    {
+      src: rootServiceSrc,
+      dest: '/index.html',
+    },
+  ];
+
+  deepStrictEqual(actual, expected);
+});
+
+test('mergeRoutes does not treat enriched zero-config index.html routes as fallbacks', () => {
+  const userRoutes: Route[] = [];
+  const rootServiceSrc = '^(?!/svc/experience(?:/|$))(?:/(.*))';
+  const builds: Build[] = [
+    {
+      use: '@vercel/zero-config-routes',
+      entrypoint: '/',
+      routes: [
+        { handle: 'filesystem' },
+        {
+          src: rootServiceSrc,
+          dest: '/index.html',
+          status: 200,
+        },
+      ],
+    },
+    {
+      use: '@vercel/static-build',
+      entrypoint: 'svc:09999:/:api:services/api/package.json',
+      routes: [
+        { handle: 'filesystem' },
+        {
+          src: rootServiceSrc,
+          dest: '/__server',
+        },
+      ],
+    },
+  ];
+
+  const actual = mergeRoutes({ userRoutes, builds });
+  const expected = [
+    { handle: 'filesystem' },
+    {
+      src: rootServiceSrc,
+      dest: '/index.html',
+      status: 200,
+    },
+    {
+      src: rootServiceSrc,
+      dest: '/__server',
+    },
+  ];
+
+  deepStrictEqual(actual, expected);
+});
+
+test('mergeRoutes treats slashless zero-config index.html routes as fallbacks', () => {
+  const userRoutes: Route[] = [];
+  const rootServiceSrc = '^/(.*)';
+  const builds: Build[] = [
+    {
+      use: '@vercel/zero-config-routes',
+      entrypoint: '/',
+      routes: [
+        { handle: 'filesystem' },
+        {
+          src: rootServiceSrc,
+          dest: 'index.html',
+        },
+      ],
+    },
+    {
+      use: '@vercel/static-build',
+      entrypoint: 'svc:09999:/:api:services/api/package.json',
+      routes: [
+        { handle: 'filesystem' },
+        {
+          src: rootServiceSrc,
+          dest: '/__server',
+        },
+      ],
+    },
+  ];
+
+  const actual = mergeRoutes({ userRoutes, builds });
+  const expected = [
+    { handle: 'filesystem' },
+    {
+      src: rootServiceSrc,
+      dest: '/__server',
+    },
+    {
+      src: rootServiceSrc,
+      dest: 'index.html',
+    },
+  ];
+
+  deepStrictEqual(actual, expected);
+});
+
 test('mergeRoutes ensure beforeFiles comes after redirects (continue)', () => {
   const userRoutes: Route[] = [];
   const builds: Build[] = [
