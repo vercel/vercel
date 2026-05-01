@@ -18,6 +18,30 @@ To install the latest version of Vercel CLI, run this command:
 npm i -g vercel
 ```
 
+> [!WARNING]
+> Native standalone binaries are experimental. The existing `npm i -g vercel` install path is unchanged and continues to install the standard JavaScript CLI.
+
+To opt in to the experimental native CLI package for your current platform, run:
+
+```bash
+npm i -g @vercel/cli-native
+```
+
+The native CLI package exposes `vercel-native` and `vcn` commands so it does not collide with an existing global `vercel` or `vc` install.
+
+You can also install a specific experimental native binary package directly:
+
+```bash
+npm i -g @vercel/cli-darwin-arm64
+npm i -g @vercel/cli-darwin-x64
+npm i -g @vercel/cli-linux-arm64
+npm i -g @vercel/cli-linux-x64
+npm i -g @vercel/cli-linux-arm64-musl
+npm i -g @vercel/cli-linux-x64-musl
+npm i -g @vercel/cli-windows-arm64
+npm i -g @vercel/cli-windows-x64
+```
+
 To quickly start a new project, run the following commands:
 
 ```bash
