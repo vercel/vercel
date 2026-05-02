@@ -26,6 +26,15 @@ export function getPluginTargetForAgent(
   if (!agentName) {
     return undefined;
   }
+
+  if (
+    agentName === KNOWN_AGENTS.CLAUDE ||
+    agentName.startsWith('claude-code') ||
+    agentName === KNOWN_AGENTS.COWORK
+  ) {
+    return 'claude-code';
+  }
+
   return AGENT_TO_TARGET[agentName];
 }
 
@@ -430,52 +439,6 @@ export function buildClaudePromptCopy(
   };
 }
 
-export function buildClaudeAdvisoryMessage(
-  status: ClaudePluginStatus,
-  plan: ClaudePluginMigrationPlan
-): string {
-  if (status.legacy?.stale) {
-    return `Vercel Plugin for Claude Code update available. Your old Vercel plugin install points to a missing plugin directory. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
-  }
-
-  if (status.state === 'legacy-only') {
-    return `Vercel Plugin for Claude Code update available. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
-  }
-
-  if (status.state === 'both' || plan.removeLegacy) {
-    return `Vercel Plugin for Claude Code update available. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
-  }
-
-  if (plan.updateOfficial) {
-    return `Vercel Plugin for Claude Code update available. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
-  }
-
-  return `Vercel Plugin for Claude Code available. Run ${getClaudeAdvisoryCommand(status, plan)} to install.`;
-}
-
-function getClaudeAdvisoryCommand(
-  status: ClaudePluginStatus,
-  plan: ClaudePluginMigrationPlan
-): string {
-  if (status.legacy?.stale) {
-    return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
-  }
-
-  if (plan.installOfficial && status.state === 'none') {
-    return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
-  }
-
-  if (status.state === 'both' && plan.removeLegacy) {
-    return `claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}`;
-  }
-
-  if (plan.updateOfficial && status.state === 'official-only') {
-    return `claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
-  }
-
-  return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
-}
-
 async function runClaudeCommand(
   spinnerMessage: string,
   successMessage: string,
@@ -685,19 +648,9 @@ export async function autoInstallVercelPlugin(
           confirmMessage = claudePrompt.confirm;
         }
 
-        // Match CLI update notices in non-TTY: print advisory text, not a
-        // structured action payload that can be mistaken for command output.
+        // Agent command output is often interpreted as tool data. Keep plugin
+        // install prompts to TTY flows so non-TTY agent output stays clean.
         if (client.isAgent && !client.stdin.isTTY) {
-          const advisoryMessage =
-            uninstalledTargets.includes('claude-code') &&
-            claudeStatus &&
-            claudePlan
-              ? buildClaudeAdvisoryMessage(claudeStatus, claudePlan)
-              : promptMessages.join(' ');
-
-          if (advisoryMessage.trim()) {
-            output.print(`${advisoryMessage}\n`);
-          }
           await markPromptedToday(prefs);
           return;
         }
