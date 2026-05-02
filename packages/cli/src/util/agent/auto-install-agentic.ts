@@ -8,7 +8,6 @@ import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../client';
 import output from '../../output-manager';
 import getGlobalPathConfig from '../config/global-path';
-import { AGENT_ACTION } from '../agent-output-constants';
 
 const PREFS_FILE = 'agent-preferences.json';
 const CLAUDE_LEGACY_PLUGIN_ID = 'vercel-plugin@vercel';
@@ -42,9 +41,15 @@ interface ClaudeListedPlugin {
   scope?: string;
   enabled?: boolean;
   installPath?: string;
+  stale?: boolean;
   installedAt?: string;
   lastUpdated?: string;
   mcpServers?: Record<string, unknown>;
+}
+
+interface ClaudeInstalledPluginsRegistry {
+  plugins?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export type ClaudePluginInstallState =
@@ -130,7 +135,7 @@ async function readClaudeInstalledPluginsFromRegistry(): Promise<
 > {
   try {
     const raw = await readFile(
-      join(homedir(), '.claude', 'plugins', 'installed_plugins.json'),
+      getClaudeInstalledPluginsRegistryPath(),
       'utf-8'
     );
     const data = JSON.parse(raw);
@@ -152,6 +157,48 @@ async function readClaudeInstalledPluginsFromRegistry(): Promise<
     return entries;
   } catch {
     return [];
+  }
+}
+
+function getClaudeInstalledPluginsRegistryPath(): string {
+  return join(homedir(), '.claude', 'plugins', 'installed_plugins.json');
+}
+
+async function markStaleClaudePluginInstalls(
+  plugins: ClaudeListedPlugin[]
+): Promise<ClaudeListedPlugin[]> {
+  return Promise.all(
+    plugins.map(async plugin => {
+      if (plugin.installPath && !(await fileExists(plugin.installPath))) {
+        return { ...plugin, stale: true };
+      }
+      return plugin;
+    })
+  );
+}
+
+async function removeClaudePluginFromRegistry(
+  pluginId: string
+): Promise<boolean> {
+  try {
+    const registryPath = getClaudeInstalledPluginsRegistryPath();
+    const raw = await readFile(registryPath, 'utf-8');
+    const data = JSON.parse(raw) as ClaudeInstalledPluginsRegistry;
+
+    if (!data.plugins || !(pluginId in data.plugins)) {
+      return false;
+    }
+
+    delete data.plugins[pluginId];
+    await writeFile(
+      registryPath,
+      `${JSON.stringify(data, null, 2)}\n`,
+      'utf-8'
+    );
+    return true;
+  } catch (err) {
+    output.debug(`Failed to remove Claude plugin registry entry: ${err}`);
+    return false;
   }
 }
 
@@ -213,7 +260,7 @@ async function getClaudeInstalledPlugins(): Promise<ClaudeListedPlugin[]> {
     try {
       const parsed = JSON.parse(result.stdout);
       if (Array.isArray(parsed)) {
-        return parsed as ClaudeListedPlugin[];
+        return markStaleClaudePluginInstalls(parsed as ClaudeListedPlugin[]);
       }
     } catch (err) {
       output.debug(`Failed to parse Claude plugin list JSON: ${err}`);
@@ -224,7 +271,9 @@ async function getClaudeInstalledPlugins(): Promise<ClaudeListedPlugin[]> {
     );
   }
 
-  return readClaudeInstalledPluginsFromRegistry();
+  return markStaleClaudePluginInstalls(
+    await readClaudeInstalledPluginsFromRegistry()
+  );
 }
 
 async function fetchLatestVercelPluginVersion(): Promise<string | undefined> {
@@ -381,45 +430,37 @@ export function buildClaudePromptCopy(
   };
 }
 
-export function buildClaudeActionRequiredMessage(
+export function buildClaudeAdvisoryMessage(
   status: ClaudePluginStatus,
   plan: ClaudePluginMigrationPlan
 ): string {
+  if (status.legacy?.stale) {
+    return `Vercel Plugin for Claude Code update available. Your old Vercel plugin install points to a missing plugin directory. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
+  }
+
   if (status.state === 'legacy-only') {
-    return `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\n2. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
+    return `Vercel Plugin for Claude Code update available. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
   }
 
   if (status.state === 'both' || plan.removeLegacy) {
-    return `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. It will run:\n1. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
+    return `Vercel Plugin for Claude Code update available. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
   }
 
   if (plan.updateOfficial) {
-    return `Working with Vercel is easier with the latest Vercel Plugin for Claude Code. It will run:\n1. claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to update it?`;
+    return `Vercel Plugin for Claude Code update available. Run ${getClaudeAdvisoryCommand(status, plan)} to update.`;
   }
 
-  return `Working with Vercel is easier with the Vercel Plugin for Claude Code. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\nWould you like me to install it?`;
+  return `Vercel Plugin for Claude Code available. Run ${getClaudeAdvisoryCommand(status, plan)} to install.`;
 }
 
-function buildClaudeActionRequiredLabel(
+function getClaudeAdvisoryCommand(
   status: ClaudePluginStatus,
   plan: ClaudePluginMigrationPlan
 ): string {
-  if (
-    status.state === 'legacy-only' ||
-    status.state === 'both' ||
-    plan.removeLegacy ||
-    plan.updateOfficial
-  ) {
-    return 'Update it';
+  if (status.legacy?.stale) {
+    return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
   }
 
-  return 'Install it';
-}
-
-function getClaudeActionRequiredCommand(
-  status: ClaudePluginStatus,
-  plan: ClaudePluginMigrationPlan
-): string {
   if (plan.installOfficial && status.state === 'none') {
     return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
   }
@@ -433,27 +474,6 @@ function getClaudeActionRequiredCommand(
   }
 
   return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
-}
-
-function getClaudeActionRequiredNextSteps(
-  status: ClaudePluginStatus,
-  plan: ClaudePluginMigrationPlan
-): Array<{ command: string; when?: string }> {
-  const next: Array<{ command: string; when?: string }> = [
-    {
-      command: getClaudeActionRequiredCommand(status, plan),
-      when: buildClaudeActionRequiredLabel(status, plan),
-    },
-  ];
-
-  if (status.state === 'legacy-only' && plan.removeLegacy) {
-    next.push({
-      command: `claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}`,
-      when: 'Remove the old plugin after the update',
-    });
-  }
-
-  return next;
 }
 
 async function runClaudeCommand(
@@ -481,9 +501,54 @@ async function runClaudeCommand(
   return false;
 }
 
+async function removeStaleLegacyClaudePlugin(
+  removeMarketplace: boolean
+): Promise<boolean> {
+  output.spinner('Removing the stale legacy Vercel Claude plugin...');
+  const removedRegistryEntry = await removeClaudePluginFromRegistry(
+    CLAUDE_LEGACY_PLUGIN_ID
+  );
+  output.stopSpinner();
+
+  if (!removedRegistryEntry) {
+    output.warn(
+      'Could not remove the stale legacy Vercel Claude plugin registry entry.'
+    );
+    return false;
+  }
+
+  output.success('Removed the stale legacy Vercel Claude plugin');
+
+  if (removeMarketplace) {
+    const removedMarketplace = await runClaudeCommand(
+      'Removing the legacy Vercel marketplace...',
+      'Removed the legacy Vercel marketplace',
+      'Removed the stale legacy Vercel plugin, but could not remove the legacy marketplace.',
+      ['plugins', 'marketplace', 'remove', 'vercel'],
+      { quietSuccess: true }
+    );
+    if (!removedMarketplace) {
+      output.log('Cleanup command: claude plugins marketplace remove vercel');
+    }
+  }
+
+  return true;
+}
+
 async function runClaudeMigration(
   plan: ClaudePluginMigrationPlan
 ): Promise<void> {
+  let removedStaleLegacy = false;
+
+  if (plan.removeLegacy) {
+    const statusBeforeInstall = await getClaudePluginStatus();
+    if (statusBeforeInstall.legacy?.stale) {
+      removedStaleLegacy = await removeStaleLegacyClaudePlugin(
+        plan.removeLegacyMarketplace
+      );
+    }
+  }
+
   if (plan.installOfficial) {
     const installed = await runClaudeCommand(
       'Installing the official Vercel Claude plugin...',
@@ -527,7 +592,7 @@ async function runClaudeMigration(
     }
   }
 
-  if (plan.removeLegacyMarketplace) {
+  if (plan.removeLegacyMarketplace && !removedStaleLegacy) {
     const finalStatus = await getClaudePluginStatus();
     if (!finalStatus.legacy) {
       const removedMarketplace = await runClaudeCommand(
@@ -620,39 +685,19 @@ export async function autoInstallVercelPlugin(
           confirmMessage = claudePrompt.confirm;
         }
 
-        // Agents in non-TTY: output structured JSON so agent prompts the user
+        // Match CLI update notices in non-TTY: print advisory text, not a
+        // structured action payload that can be mistaken for command output.
         if (client.isAgent && !client.stdin.isTTY) {
-          const actionRequiredMessage =
+          const advisoryMessage =
             uninstalledTargets.includes('claude-code') &&
             claudeStatus &&
             claudePlan
-              ? buildClaudeActionRequiredMessage(claudeStatus, claudePlan)
+              ? buildClaudeAdvisoryMessage(claudeStatus, claudePlan)
               : promptMessages.join(' ');
-          const next =
-            uninstalledTargets.includes('claude-code') &&
-            claudeStatus &&
-            claudePlan
-              ? getClaudeActionRequiredNextSteps(claudeStatus, claudePlan)
-              : [
-                  {
-                    command: `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`,
-                    when: 'Install it',
-                  },
-                ];
-          client.stdout.write(
-            `${JSON.stringify(
-              {
-                status: 'action_required',
-                reason: 'plugin_install',
-                action: AGENT_ACTION.CONFIRMATION_REQUIRED,
-                message: actionRequiredMessage,
-                userActionRequired: true,
-                next,
-              },
-              null,
-              2
-            )}\n`
-          );
+
+          if (advisoryMessage.trim()) {
+            output.print(`${advisoryMessage}\n`);
+          }
           await markPromptedToday(prefs);
           return;
         }

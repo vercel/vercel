@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
-  buildClaudeActionRequiredMessage,
+  buildClaudeAdvisoryMessage,
   buildClaudePromptCopy,
   buildClaudePluginMigrationPlan,
   buildClaudePluginStatus,
@@ -61,6 +61,23 @@ describe('buildClaudePluginStatus', () => {
     expect(status.state).toBe('both');
     expect(status.legacy?.version).toBe('0.32.6');
     expect(status.official?.version).toBe('0.32.7');
+  });
+
+  it('preserves stale legacy install metadata', () => {
+    const status = buildClaudePluginStatus(
+      [
+        {
+          id: 'vercel-plugin@vercel',
+          version: '0.22.0',
+          installPath: '/missing/vercel-plugin',
+          stale: true,
+        },
+      ],
+      '0.32.7'
+    );
+
+    expect(status.state).toBe('legacy-only');
+    expect(status.legacy?.stale).toBe(true);
   });
 });
 
@@ -213,9 +230,9 @@ describe('buildClaudePromptCopy', () => {
   });
 });
 
-describe('buildClaudeActionRequiredMessage', () => {
+describe('buildClaudeAdvisoryMessage', () => {
   it('uses marketplace upgrade wording for legacy Claude installs', () => {
-    const message = buildClaudeActionRequiredMessage(
+    const message = buildClaudeAdvisoryMessage(
       {
         state: 'legacy-only',
         legacy: { id: 'vercel-plugin@vercel', version: '0.22.0' },
@@ -229,12 +246,40 @@ describe('buildClaudeActionRequiredMessage', () => {
       }
     );
 
-    expect(message).toContain(
-      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
-    );
+    expect(message).toContain('Vercel Plugin for Claude Code update available');
     expect(message).toContain(
       'claude plugins install vercel@claude-plugins-official'
     );
-    expect(message).toContain('claude plugins uninstall vercel-plugin@vercel');
+    expect(message).not.toContain('Would you like me to update it?');
+  });
+
+  it('does not suggest uninstalling stale legacy Claude installs', () => {
+    const message = buildClaudeAdvisoryMessage(
+      {
+        state: 'legacy-only',
+        legacy: {
+          id: 'vercel-plugin@vercel',
+          version: '0.22.0',
+          installPath: '/missing/vercel-plugin',
+          stale: true,
+        },
+        latestVersion: '0.32.7',
+      },
+      {
+        installOfficial: true,
+        updateOfficial: false,
+        removeLegacy: true,
+        removeLegacyMarketplace: true,
+      }
+    );
+
+    expect(message).toContain(
+      'claude plugins install vercel@claude-plugins-official'
+    );
+    expect(message).toContain('missing plugin directory');
+    expect(message).not.toContain(
+      'claude plugins uninstall vercel-plugin@vercel'
+    );
+    expect(message).not.toContain('Would you like me to update it?');
   });
 });
