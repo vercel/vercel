@@ -6,6 +6,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags, defaultSdkKeys } from '../../../mocks/flags';
+import type { SdkKey } from '../../../../src/util/flags/types';
 
 describe('flags sdk-keys', () => {
   beforeEach(() => {
@@ -70,6 +71,58 @@ describe('flags sdk-keys', () => {
       expect(exitCode).toEqual(0);
     });
 
+    it('renders the partial key value in the default table output', async () => {
+      client.setArgv('flags', 'sdk-keys', 'ls');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const stderr = client.stderr.getFullOutput();
+      const stdout = client.stdout.getFullOutput();
+      const combined = `${stderr}\n${stdout}`;
+
+      expect(combined).toContain('Partial Key Value');
+      expect(combined).toContain('vf_server_abc********');
+      expect(combined).toContain('vf_client_def********');
+    });
+
+    it('never leaks cleartext secrets in the default table output', async () => {
+      const sdkKeysWithSecrets: SdkKey[] = [
+        {
+          ...defaultSdkKeys[0],
+          keyValue: 'vf_server_fullsecretvalue_should_not_leak',
+          tokenValue: 'tok_fullsecrettoken_should_not_leak',
+          connectionString:
+            'https://flags.vercel.com/v1/flags/secret_should_not_leak',
+        },
+      ];
+      client.reset();
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-flags-test',
+        name: 'vercel-flags-test',
+      });
+      useFlags(undefined, sdkKeysWithSecrets);
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+
+      client.setArgv('flags', 'sdk-keys', 'ls');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const stderr = client.stderr.getFullOutput();
+      const stdout = client.stdout.getFullOutput();
+      const combined = `${stderr}\n${stdout}`;
+
+      expect(combined).not.toContain(
+        'vf_server_fullsecretvalue_should_not_leak'
+      );
+      expect(combined).not.toContain('tok_fullsecrettoken_should_not_leak');
+      expect(combined).not.toContain('secret_should_not_leak');
+    });
+
     describe('--json', () => {
       it('outputs valid JSON with SDK key data', async () => {
         client.setArgv('flags', 'sdk-keys', 'ls', '--json');
@@ -85,6 +138,10 @@ describe('flags sdk-keys', () => {
         expect(parsed.sdkKeys[0]).toHaveProperty('type');
         expect(parsed.sdkKeys[0]).toHaveProperty('environment');
         expect(parsed.sdkKeys[0]).toHaveProperty('createdAt');
+        expect(parsed.sdkKeys[0]).toHaveProperty(
+          'partialKeyValue',
+          'vf_server_abc********'
+        );
       });
 
       it('tracks telemetry for --json', async () => {

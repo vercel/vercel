@@ -145,6 +145,7 @@ export const defaultSdkKeys: SdkKey[] = [
     createdAt: Date.now() - 86400000,
     updatedAt: Date.now() - 86400000,
     label: 'Production Server',
+    partialKeyValue: 'vf_server_abc********',
   },
   {
     hashKey: 'sdk_key_def456',
@@ -154,6 +155,7 @@ export const defaultSdkKeys: SdkKey[] = [
     createdBy: 'user_123',
     createdAt: Date.now() - 172800000,
     updatedAt: Date.now() - 172800000,
+    partialKeyValue: 'vf_client_def********',
   },
 ];
 

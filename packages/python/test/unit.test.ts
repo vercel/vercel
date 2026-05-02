@@ -1789,6 +1789,60 @@ describe('pyproject.toml entrypoint detection', () => {
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
+
+  it('prefers [tool.vercel] entrypoint over [project.scripts] app', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-pyproject-tool-vercel-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend', 'api'), { recursive: true });
+    fs.mkdirSync(path.join(workPath, 'other'), { recursive: true });
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data:
+          '[project]\nname = "x"\nversion = "0.0.1"\n\n' +
+          '[project.scripts]\napp = "other.server:main"\n\n' +
+          '[tool.vercel]\nentrypoint = "backend.api.server:app"\n',
+      }),
+      'backend/api/server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+      'other/server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\nmain = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await buildWithMocks({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend/api/server.py')).toBe(true);
+    expect(content.includes('other/server.py')).toBe(false);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
 });
 
 describe('vercel.json entrypoint configuration', () => {
@@ -3248,8 +3302,9 @@ describe('worker services dependency installation', () => {
       }),
     } as Record<string, FileBlob>;
 
+    let result;
     try {
-      await buildWithMocks({
+      result = await buildWithMocks({
         workPath,
         files,
         entrypoint: 'handler.py',
@@ -3266,7 +3321,7 @@ describe('worker services dependency installation', () => {
       if (fs.existsSync(workPath)) fs.removeSync(workPath);
     }
 
-    return pipCalls;
+    return { pipCalls, result };
   }
 
   beforeEach(() => {
@@ -3285,13 +3340,13 @@ describe('worker services dependency installation', () => {
   });
 
   it('installs vercel-workers when worker services are enabled', async () => {
-    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
     const workersDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
     expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
   });
 
   it('does not install vercel-workers when worker services are not enabled', async () => {
-    const pipCalls = await buildWithPipSpy();
+    const { pipCalls } = await buildWithPipSpy();
     expect(
       pipCalls.some(args =>
         args.some(arg => arg.startsWith('vercel-workers=='))
@@ -3302,12 +3357,24 @@ describe('worker services dependency installation', () => {
   it('uses VERCEL_WORKERS_PYTHON override when provided', async () => {
     process.env.VERCEL_WORKERS_PYTHON =
       'vercel-workers @ file:///tmp/vercel-workers.whl';
-    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
     expect(
       pipCalls.some(args =>
         args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
       )
     ).toBe(true);
+  });
+
+  it('marks python lambdas with internal worker services env when enabled', async () => {
+    const { result } = await buildWithPipSpy({ hasWorkerServices: true });
+    const lambda = getBuildOutputV3(result);
+    expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+  });
+
+  it('does not mark python lambdas when worker services are not enabled', async () => {
+    const { result } = await buildWithPipSpy();
+    const lambda = getBuildOutputV3(result);
+    expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
   });
 });
 
@@ -3377,7 +3444,9 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
 
   describe('getUvCacheDir', () => {
     it('returns the correct cache directory path', () => {
-      expect(getUvCacheDir('/repo')).toBe('/repo/.vercel/python/cache/uv');
+      expect(getUvCacheDir('/repo')).toBe(
+        path.join('/repo', '.vercel', 'python', 'cache', 'uv')
+      );
     });
   });
 
