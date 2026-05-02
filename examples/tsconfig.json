@@ -2,6 +2,13 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node"
+  }
+}{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "target": "esnext",
     "module": "commonjs"
   }
 }
