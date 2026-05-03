@@ -1,5 +1,16 @@
 # @vercel/build-utils
 
+## 13.21.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
 ## 13.20.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.2.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/build-utils@13.21.0
+
 ## 2.1.21
 
 ### Patch Changes
