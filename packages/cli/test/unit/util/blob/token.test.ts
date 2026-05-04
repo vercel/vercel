@@ -40,8 +40,9 @@ describe('getBlobRWToken', () => {
       const result = await getBlobRWToken(client, argv);
 
       expect(result).toEqual({
-        token: tokenFromFlag,
         success: true,
+        kind: 'rw',
+        token: tokenFromFlag,
       });
       expect(mockedCreateEnvObject).not.toHaveBeenCalled();
     });
@@ -61,8 +62,9 @@ describe('getBlobRWToken', () => {
       const result = await getBlobRWToken(client, argv);
 
       expect(result).toEqual({
-        token: tokenFromFlag,
         success: true,
+        kind: 'rw',
+        token: tokenFromFlag,
       });
       expect(mockedCreateEnvObject).not.toHaveBeenCalled();
     });
@@ -85,8 +87,9 @@ describe('getBlobRWToken', () => {
       const result = await getBlobRWToken(client, argv);
 
       expect(result).toEqual({
-        token: tokenFromFlag,
         success: true,
+        kind: 'rw',
+        token: tokenFromFlag,
       });
       expect(mockedCreateEnvObject).not.toHaveBeenCalled();
     });
@@ -101,8 +104,9 @@ describe('getBlobRWToken', () => {
       const result = await getBlobRWToken(client, argv);
 
       expect(result).toEqual({
-        token: envToken,
         success: true,
+        kind: 'rw',
+        token: envToken,
       });
       expect(mockedCreateEnvObject).not.toHaveBeenCalled();
     });
@@ -119,8 +123,9 @@ describe('getBlobRWToken', () => {
       const result = await getBlobRWToken(client, argv);
 
       expect(result).toEqual({
-        token: envToken,
         success: true,
+        kind: 'rw',
+        token: envToken,
       });
       expect(mockedCreateEnvObject).not.toHaveBeenCalled();
     });
@@ -138,8 +143,9 @@ describe('getBlobRWToken', () => {
       const result = await getBlobRWToken(client, argv);
 
       expect(result).toEqual({
-        token: envFileToken,
         success: true,
+        kind: 'rw',
+        token: envFileToken,
       });
       expect(mockedCreateEnvObject).toHaveBeenCalledWith(
         expect.stringMatching(/\.env\.local$/)
@@ -239,8 +245,9 @@ describe('getBlobRWToken', () => {
       const result = await getBlobRWToken(client, argv);
 
       expect(result).toEqual({
-        token: lastToken,
         success: true,
+        kind: 'rw',
+        token: lastToken,
       });
     });
   });
@@ -259,8 +266,9 @@ describe('getBlobRWToken', () => {
       for (const argv of subcommands) {
         const result = await getBlobRWToken(client, argv);
         expect(result).toEqual({
-          token,
           success: true,
+          kind: 'rw',
+          token,
         });
       }
     });
@@ -277,8 +285,9 @@ describe('getBlobRWToken', () => {
       for (const argv of argvVariations) {
         const result = await getBlobRWToken(client, argv);
         expect(result).toEqual({
-          token,
           success: true,
+          kind: 'rw',
+          token,
         });
       }
     });

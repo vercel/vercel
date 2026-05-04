@@ -102,7 +102,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return list(client, args, token.token);
+      return list(client, args, token);
     case 'put':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -117,7 +117,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return put(client, args, token.token);
+      return put(client, args, token);
     case 'get':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -132,7 +132,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return get(client, args, token.token);
+      return get(client, args, token);
     case 'del':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -147,7 +147,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return del(client, args, token.token);
+      return del(client, args, token);
     case 'copy':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -162,7 +162,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return copy(client, args, token.token);
+      return copy(client, args, token);
     case 'create-store':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -217,7 +217,7 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return emptyStore(client, args, token.token, token);
+      return emptyStore(client, args, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));

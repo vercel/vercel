@@ -1,5 +1,5 @@
 import output from '../../output-manager';
-import type { BlobRWToken } from '../../util/blob/token';
+import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
@@ -38,11 +38,9 @@ export default async function getStore(
     args: [storeIdArg],
   } = parsedArgs;
 
-  let storeId = storeIdArg;
-  if (!storeId && rwToken.success) {
-    const [, , , id] = rwToken.token.split('_');
-
-    storeId = `store_${id}`;
+  let storeId: string | undefined = storeIdArg;
+  if (!storeId) {
+    storeId = getStoreIdFromAuth(rwToken) ?? undefined;
   }
 
   if (!storeId) {

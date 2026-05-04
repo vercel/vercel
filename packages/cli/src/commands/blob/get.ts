@@ -8,6 +8,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { BlobGetTelemetryClient } from '../../util/telemetry/commands/blob/get';
 import { printError } from '../../util/error';
 import { parseAccessFlag } from '../../util/blob/access';
+import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 import { createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
@@ -17,7 +18,7 @@ import bytes from 'bytes';
 export default async function get(
   client: Client,
   argv: string[],
-  rwToken: string
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobGetTelemetryClient({
     opts: {
@@ -67,7 +68,7 @@ export default async function get(
     }
 
     const result = await blob.get(urlOrPathname, {
-      token: rwToken,
+      ...blobOpts(auth),
       access,
       ifNoneMatch,
     });
