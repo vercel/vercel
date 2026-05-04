@@ -30,7 +30,7 @@
       "require": "./middleware.js"
     }
   },
-  "version": "3.4.4",
+  "version": "3.5.0",
   "repository": {
     "directory": "packages/functions",
     "type": "git",
@@ -54,7 +54,6 @@
     "typedoc": "0.24.6",
     "typedoc-plugin-markdown": "3.15.2",
     "typedoc-plugin-mdn-links": "3.0.3",
-    "typescript": "4.9.5",
     "vitest": "2.0.1"
   },
   "peerDependencies": {

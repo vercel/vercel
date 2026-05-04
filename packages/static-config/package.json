@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-config",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "repository": {
@@ -26,7 +26,6 @@
     "@swc/core": "1.2.182",
     "@types/jest": "27.4.1",
     "@types/node": "20.11.0",
-    "jest-junit": "16.0.0",
-    "typescript": "4.9.5"
+    "jest-junit": "16.0.0"
   }
 }

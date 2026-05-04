@@ -15,6 +15,7 @@ pytest.importorskip("dramatiq")
 import dramatiq
 from dramatiq.message import Message
 
+from vercel.workers import _queue
 from vercel.workers.dramatiq import (
     DramatiqWorkerConfig,
     PollingWorker,
@@ -35,8 +36,8 @@ class TestVercelQueuesBrokerOptions:
         assert opts.token is None
         assert opts.base_url is None
         assert opts.base_path is None
-        assert opts.retention_seconds is None
-        assert opts.deployment_id is None
+        assert opts.retention is None
+        assert opts.deployment_id is _queue.DEPLOYMENT_ID_UNSET
         assert opts.timeout == 10.0
         assert opts.visibility_timeout_seconds == 30
         assert opts.visibility_refresh_interval_seconds == 10.0
@@ -48,7 +49,7 @@ class TestVercelQueuesBrokerOptions:
                 "token": "test-token",
                 "base_url": "https://example.com",
                 "base_path": "/api/v3/messages",
-                "retention_seconds": 3600,
+                "retention": 3600,
                 "deployment_id": "deploy-123",
                 "timeout": 30.0,
                 "visibility_timeout_seconds": 60,
@@ -59,7 +60,7 @@ class TestVercelQueuesBrokerOptions:
         assert opts.token == "test-token"
         assert opts.base_url == "https://example.com"
         assert opts.base_path == "/api/v3/messages"
-        assert opts.retention_seconds == 3600
+        assert opts.retention == 3600
         assert opts.deployment_id == "deploy-123"
         assert opts.timeout == 30.0
         assert opts.visibility_timeout_seconds == 60
@@ -82,6 +83,7 @@ class TestVercelQueuesBroker:
         broker = VercelQueuesBroker()
         assert isinstance(broker.options, VercelQueuesBrokerOptions)
         assert len(broker.get_declared_queues()) == 0
+        assert broker.get_declared_actors() == set()
 
     def test_broker_with_options(self):
         broker = VercelQueuesBroker(options={"timeout": 20.0})
@@ -102,6 +104,15 @@ class TestVercelQueuesBroker:
         broker = VercelQueuesBroker()
         broker.declare_queue("my-queue")
         assert broker.get_declared_delay_queues() == set()
+
+    def test_get_declared_actors(self):
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="actor-registration-test")
+        def registered_actor() -> None:
+            pass
+
+        assert "registered_actor" in broker.get_declared_actors()
 
     def test_consume_raises_not_implemented(self):
         broker = VercelQueuesBroker()

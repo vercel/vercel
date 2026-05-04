@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ._queue.client import AsyncQueueClient, QueueClient
 from .client import (
     Ack,
     MessageMetadata,
@@ -34,6 +35,8 @@ __all__ = [
     "Ack",
     "RetryAfter",
     "WorkerJSONEncoder",
+    "QueueClient",
+    "AsyncQueueClient",
     "subscribe",
     "get_vercel_queue_subscriptions",
     "get_wsgi_app",
