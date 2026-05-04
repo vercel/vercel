@@ -11,6 +11,13 @@
       "entrypoint": "worker/worker.py",
       "topics": ["tasks-topic"]
     },
+    "worker-client": {
+      "type": "job",
+      "trigger": "queue",
+      "runtime": "python",
+      "entrypoint": "worker/worker:queue",
+      "topics": ["client-topic"]
+    },
     "worker-wildcard": {
       "type": "worker",
       "runtime": "python",

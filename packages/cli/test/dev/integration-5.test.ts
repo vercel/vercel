@@ -900,7 +900,7 @@ describe('[vercel dev] Worker service', () => {
     await fs.remove(resultsDir);
   });
 
-  test('[vercel dev] web send() triggers exact and wildcard worker execution', async () => {
+  test('[vercel dev] web send() triggers exact, wildcard, and named client worker execution', async () => {
     const dir = fixture('services-worker');
     const { dev, port, readyResolver } = await testFixture(
       dir,
@@ -952,6 +952,31 @@ describe('[vercel dev] Worker service', () => {
       expect(wildcardResult).toHaveProperty('received', true);
       expect(wildcardResult.message).toHaveProperty('action', 'test');
       expect(wildcardResult.message).toHaveProperty('value', 42);
+
+      const clientEnqueueRes = await nodeFetch(
+        `http://localhost:${port}/enqueue-client`,
+        {
+          method: 'POST',
+        }
+      );
+      expect(clientEnqueueRes.status).toBe(200);
+      const clientEnqueueJson = await clientEnqueueRes.json();
+      expect(clientEnqueueJson).toHaveProperty('messageId');
+
+      const clientResultPath = join(resultsDir, 'worker_client_result.json');
+      let clientResult: any = null;
+      for (let i = 0; i < 30; i++) {
+        await sleep(500);
+        if (await fs.pathExists(clientResultPath)) {
+          clientResult = await fs.readJson(clientResultPath);
+          break;
+        }
+      }
+
+      expect(clientResult).not.toBeNull();
+      expect(clientResult).toHaveProperty('received', true);
+      expect(clientResult.message).toHaveProperty('action', 'client-test');
+      expect(clientResult.message).toHaveProperty('value', 7);
     } finally {
       await dev.kill();
     }
