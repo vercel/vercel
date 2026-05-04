@@ -1,5 +1,11 @@
 import chalk from 'chalk';
+import ms from 'ms';
 import type Client from '../../util/client';
+import {
+  nextFireAfter,
+  parseCronExpression,
+  previousFireBefore,
+} from '../../util/cron-times';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -18,6 +24,32 @@ import type { CronJobDefinition } from './types';
 interface LocalCron {
   path: string;
   schedule: string;
+}
+
+interface CronTimes {
+  next: Date | null;
+  previous: Date | null;
+}
+
+// Vercel evaluates cron schedules in UTC.
+function computeCronTimes(schedule: string, now: Date): CronTimes {
+  const fields = parseCronExpression(schedule);
+  if (!fields) {
+    output.debug(`failed to parse cron schedule "${schedule}"`);
+    return { next: null, previous: null };
+  }
+  return {
+    next: nextFireAfter(now, fields),
+    previous: previousFireBefore(now, fields),
+  };
+}
+
+function formatRelative(target: Date | null, now: Date): string {
+  if (!target) return chalk.dim('—');
+  const delta = target.getTime() - now.getTime();
+  if (delta === 0) return 'now';
+  if (delta > 0) return `in ${ms(delta)}`;
+  return `${ms(-delta)} ago`;
 }
 
 export default async function ls(client: Client, argv: string[]) {
@@ -104,18 +136,30 @@ export default async function ls(client: Client, argv: string[]) {
     }
   }
 
+  const now = new Date();
+
   if (asJson) {
     output.stopSpinner();
     const jsonOutput = {
-      crons: definitions.map(cron => ({
-        path: cron.path,
-        schedule: cron.schedule,
-        host: cron.host,
-      })),
-      undeployed: undeployedCrons.map(cron => ({
-        path: cron.path,
-        schedule: cron.schedule,
-      })),
+      crons: definitions.map(cron => {
+        const { next, previous } = computeCronTimes(cron.schedule, now);
+        return {
+          path: cron.path,
+          schedule: cron.schedule,
+          host: cron.host,
+          nextRun: next ? next.toISOString() : null,
+          previousRun: previous ? previous.toISOString() : null,
+        };
+      }),
+      undeployed: undeployedCrons.map(cron => {
+        const { next, previous } = computeCronTimes(cron.schedule, now);
+        return {
+          path: cron.path,
+          schedule: cron.schedule,
+          nextRun: next ? next.toISOString() : null,
+          previousRun: previous ? previous.toISOString() : null,
+        };
+      }),
       modified: modifiedCrons.map(({ local, deployed }) => ({
         path: local.path,
         localSchedule: local.schedule,
@@ -139,7 +183,10 @@ export default async function ls(client: Client, argv: string[]) {
         `${totalDeployed} cron ${totalDeployed === 1 ? 'job' : 'jobs'} found for ${chalk.bold(`${org.slug}/${project.name}`)}${isDisabled ? chalk.yellow(' (disabled)') : ''} ${chalk.gray(lsStamp())}`
       );
       output.print(
-        formatCronsTable(definitions).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
+        formatCronsTable(definitions, now).replace(
+          /^(.*)/gm,
+          `${' '.repeat(1)}$1`
+        )
       );
       output.print('\n\n');
     }
@@ -165,13 +212,22 @@ export default async function ls(client: Client, argv: string[]) {
   return 0;
 }
 
-function formatCronsTable(definitions: CronJobDefinition[]) {
-  const rows: string[][] = definitions.map(cron => [
-    chalk.bold(cron.path),
-    cron.schedule,
-  ]);
+function formatCronsTable(definitions: CronJobDefinition[], now: Date) {
+  const rows: string[][] = definitions.map(cron => {
+    const { next, previous } = computeCronTimes(cron.schedule, now);
+    return [
+      chalk.bold(cron.path),
+      cron.schedule,
+      formatRelative(next, now),
+      formatRelative(previous, now),
+    ];
+  });
 
-  return formatTable(['Path', 'Schedule'], ['l', 'l'], [{ rows }]);
+  return formatTable(
+    ['Path', 'Schedule', 'Next Run', 'Previous Run'],
+    ['l', 'l', 'l', 'l'],
+    [{ rows }]
+  );
 }
 
 function formatPendingCronsTable(
