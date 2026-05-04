@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getServiceCrons } from '../src/crons';
+import { buildCronRouteTable, getServiceCrons } from '../src/crons';
 
 describe('getServiceCrons', () => {
   it('returns undefined for non-schedule-triggered services', () => {
@@ -48,6 +48,7 @@ describe('getServiceCrons', () => {
       {
         path: '/_svc/cleanup/crons/cleanup/cron',
         schedule: '0 0 * * *',
+        exportName: 'default',
       },
     ]);
   });
@@ -67,6 +68,7 @@ describe('getServiceCrons', () => {
       {
         path: '/_svc/cleanup/crons/jobs/cleanup/cron',
         schedule: '*/5 * * * *',
+        exportName: 'default',
       },
     ]);
   });
@@ -86,5 +88,27 @@ describe('getServiceCrons', () => {
         entrypoint: 'cleanup.ts',
       })
     ).toThrow(/Dynamic cron schedules .* not yet supported/);
+  });
+});
+
+describe('buildCronRouteTable', () => {
+  it('maps each entry path to its handler', () => {
+    expect(
+      buildCronRouteTable([
+        {
+          path: '/_svc/cleanup/crons/cleanup/cron',
+          schedule: '0 0 * * *',
+          exportName: 'default',
+        },
+        {
+          path: '/_svc/jobs/crons/jobs/hourly',
+          schedule: '0 * * * *',
+          exportName: 'hourly',
+        },
+      ])
+    ).toEqual({
+      '/_svc/cleanup/crons/cleanup/cron': 'default',
+      '/_svc/jobs/crons/jobs/hourly': 'hourly',
+    });
   });
 });

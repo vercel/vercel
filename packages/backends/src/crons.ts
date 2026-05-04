@@ -7,11 +7,22 @@ import {
 
 const DYNAMIC_SCHEDULE = '<dynamic>';
 
-/** Build the JSON route table embedded in `__VC_CRON_ROUTES`. */
-export function buildCronRouteTable(crons: Cron[]): Record<string, string> {
+export interface BackendsCron extends Cron {
+  /**
+   * Name of the export on the user's bundled module that the dispatcher
+   * should invoke for this entry. `'default'` for static schedules; for
+   * `<dynamic>` schedules each entry names a different named export.
+   */
+  exportName: string;
+}
+
+/** Build the JSON route table embedded in the dispatcher shim. */
+export function buildCronRouteTable(
+  crons: BackendsCron[]
+): Record<string, string> {
   const table: Record<string, string> = {};
   for (const cron of crons) {
-    table[cron.path] = 'default';
+    table[cron.path] = cron.exportName;
   }
   return table;
 }
@@ -22,16 +33,11 @@ export function buildCronRouteTable(crons: Cron[]): Record<string, string> {
  * Mirrors `packages/python/src/crons.ts` for static schedules. Returns
  * `undefined` when the service is not schedule-triggered. Throws on
  * `<dynamic>` schedules — that path is reserved for a follow-up.
- *
- * v1 always invokes the user module's default export, so this returns
- * plain `Cron[]` (no handler-name field). When `handlerFunction` or
- * `<dynamic>` support lands, this will need to grow a per-path handler
- * name back.
  */
 export function getServiceCrons(opts: {
   service?: BuildOptions['service'];
   entrypoint?: string;
-}): Cron[] | undefined {
+}): BackendsCron[] | undefined {
   const { service, entrypoint } = opts;
 
   if (!service || !isScheduleTriggeredService(service)) {
@@ -55,6 +61,7 @@ export function getServiceCrons(opts: {
     {
       path: getInternalServiceCronPath(service.name, entrypoint, 'cron'),
       schedule: service.schedule,
+      exportName: 'default',
     },
   ];
 }
