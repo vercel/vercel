@@ -151,6 +151,80 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
         self.assertEqual(created_at, "2025-01-01T00:00:00Z")
         self.assertEqual(ticket, "receipt-handle-123")
 
+    def test_receive_messages_async_uses_async_client(self) -> None:
+        _FakeAsyncHttpxClient.captured_headers.clear()
+        _FakeAsyncHttpxClient.captured_urls.clear()
+
+        async def run() -> list[queue_receive_impl.ReceivedMessage]:
+            with (
+                patch.dict(queue_receive_impl.os.environ, {}, clear=True),
+                patch.object(
+                    queue_receive_impl,
+                    "get_queue_base_url",
+                    return_value="https://queue.example.com",
+                ),
+                patch.object(
+                    queue_receive_impl,
+                    "get_queue_base_path",
+                    return_value="/api/v2/messages",
+                ),
+                patch.object(
+                    queue_receive_impl,
+                    "get_queue_token_async",
+                    new=AsyncMock(return_value="token"),
+                ),
+                patch.object(queue_receive_impl.httpx, "AsyncClient", _FakeAsyncHttpxClient),
+                patch.object(
+                    queue_receive_impl,
+                    "parse_multipart_messages",
+                    return_value=[
+                        (
+                            {
+                                "Content-Type": "application/json",
+                                "Vqs-Message-Id": "m1",
+                                "Vqs-Delivery-Count": "2",
+                                "Vqs-Timestamp": "2025-01-01T00:00:00Z",
+                                "Vqs-Receipt-Handle": "receipt-1",
+                            },
+                            b'{"ok":true}',
+                        ),
+                        (
+                            {
+                                "Content-Type": "text/plain",
+                                "Vqs-Message-Id": "m2",
+                                "Vqs-Receipt-Handle": "receipt-2",
+                            },
+                            b"raw",
+                        ),
+                    ],
+                ),
+            ):
+                return await queue_receive_impl.receive_messages_async(
+                    "q",
+                    "c",
+                    limit=2,
+                    visibility_timeout_seconds=45,
+                )
+
+        messages = asyncio.run(run())
+
+        self.assertEqual(
+            _FakeAsyncHttpxClient.captured_urls[-1],
+            "https://queue.example.com/api/v2/messages/q/consumer/c",
+        )
+        self.assertEqual(
+            _FakeAsyncHttpxClient.captured_headers[-1],
+            {
+                "Authorization": "Bearer token",
+                "Accept": "multipart/mixed",
+                "Vqs-Visibility-Timeout-Seconds": "45",
+                "Vqs-Max-Messages": "2",
+            },
+        )
+        self.assertEqual(messages[0]["payload"], {"ok": True})
+        self.assertEqual(messages[0]["deliveryCount"], 2)
+        self.assertEqual(messages[1]["payload"], b"raw")
+
     def test_get_queue_token_error_message_is_string(self) -> None:
         with patch.dict(queue_client.os.environ, {}, clear=True):
             with patch("vercel.oidc.get_vercel_oidc_token", return_value=None):

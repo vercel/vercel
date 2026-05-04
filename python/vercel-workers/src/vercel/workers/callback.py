@@ -30,6 +30,7 @@ from vercel.workers._queue.receive import (
     receive_message_by_id,
     receive_message_by_id_async,
     receive_messages,
+    receive_messages_async,
 )
 from vercel.workers._queue.subscribe import (
     Ack,
@@ -494,4 +495,5 @@ __all__ = [
     "receive_message_by_id",
     "receive_message_by_id_async",
     "receive_messages",
+    "receive_messages_async",
 ]

@@ -259,6 +259,34 @@ def _raise_for_lease_response(
     _ = response.raise_for_status()
 
 
+def _parse_receive_messages_response(response: httpx.Response) -> list[ReceivedMessage]:
+    messages: list[ReceivedMessage] = []
+    for part_headers, payload_bytes in parse_multipart_messages(response):
+        message_id = part_headers.get("Vqs-Message-Id")
+        receipt_handle = part_headers.get("Vqs-Receipt-Handle")
+        timestamp = part_headers.get("Vqs-Timestamp") or ""
+        content_type = part_headers.get("Content-Type", "")
+
+        if not message_id or not receipt_handle:
+            # Skip malformed parts
+            continue
+
+        payload = _decode_payload(payload_bytes, content_type, str(message_id))
+
+        messages.append(
+            {
+                "messageId": str(message_id),
+                "deliveryCount": _delivery_count_from_headers(part_headers),
+                "createdAt": str(timestamp),
+                "receipt_handle": str(receipt_handle),
+                "contentType": str(content_type),
+                "payload": payload,
+            }
+        )
+
+    return messages
+
+
 def receive_messages(
     queue_name: str,
     consumer_group: str,
@@ -291,31 +319,36 @@ def receive_messages(
         return []
     _raise_for_receive_messages_response(response)
 
-    messages: list[ReceivedMessage] = []
-    for part_headers, payload_bytes in parse_multipart_messages(response):
-        message_id = part_headers.get("Vqs-Message-Id")
-        receipt_handle = part_headers.get("Vqs-Receipt-Handle")
-        timestamp = part_headers.get("Vqs-Timestamp") or ""
-        content_type = part_headers.get("Content-Type", "")
+    return _parse_receive_messages_response(response)
 
-        if not message_id or not receipt_handle:
-            # Skip malformed parts
-            continue
 
-        payload = _decode_payload(payload_bytes, content_type, str(message_id))
+async def receive_messages_async(
+    queue_name: str,
+    consumer_group: str,
+    *,
+    limit: int = 1,
+    visibility_timeout_seconds: int | None = None,
+    timeout: float | None = 10.0,
+) -> list[ReceivedMessage]:
+    """
+    Async variant of receive_messages().
+    """
+    auth_token = await get_queue_token_async(None)
+    headers = _queue_headers(
+        auth_token,
+        accept="multipart/mixed",
+        visibility_timeout_seconds=visibility_timeout_seconds,
+        limit=limit,
+    )
+    url = _queue_consumer_url(queue_name, consumer_group)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(url, headers=headers)
 
-        messages.append(
-            {
-                "messageId": str(message_id),
-                "deliveryCount": _delivery_count_from_headers(part_headers),
-                "createdAt": str(timestamp),
-                "receipt_handle": str(receipt_handle),
-                "contentType": str(content_type),
-                "payload": payload,
-            }
-        )
+    if response.status_code == 204:
+        return []
+    _raise_for_receive_messages_response(response)
 
-    return messages
+    return _parse_receive_messages_response(response)
 
 
 def receive_message_by_id(
@@ -660,4 +693,5 @@ __all__ = [
     "receive_message_by_id_async",
     "receive_message_by_id",
     "receive_messages",
+    "receive_messages_async",
 ]
