@@ -55,6 +55,7 @@ __all__ = [
 _DEPLOYMENT_ID_UNSET = DEPLOYMENT_ID_UNSET
 type _DeploymentIdOption = DeploymentIdOption
 
+
 @overload
 def subscribe(_func: WorkerCallable) -> WorkerCallable: ...
 

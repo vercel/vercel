@@ -66,6 +66,7 @@ class _QueueCallbackState:
             "consumer": self.consumer_group,
         }
 
+
 def _callback_visibility_options() -> tuple[int, float]:
     # Mirror the Node defaults (ConsumerGroupOptions): 30s visibility, refresh every 10s.
     return (
@@ -428,6 +429,7 @@ def build_asgi_app_for_subscriptions(subscriptions: list[_Subscription]) -> ASGI
         return await handle_queue_callback_async(raw_body, environ, subscriptions)
 
     return build_asgi_app(handle)
+
 
 __all__ = [
     "CLOUD_EVENT_TYPE_V2BETA",

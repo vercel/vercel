@@ -16,6 +16,7 @@ import vercel.workers._queue._transport as queue_transport
 import vercel.workers._queue.client as queue_client_impl
 import vercel.workers._queue.receive as queue_receive_impl
 import vercel.workers._queue.send as queue_service
+import vercel.workers.asgi as queue_asgi
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
 from vercel.workers._queue.subscribe import (
@@ -402,6 +403,59 @@ class TestSubscriptionInvocation(unittest.TestCase):
         delete_message_async.assert_not_awaited()
         change_visibility.assert_not_called()
         delete_message.assert_not_called()
+
+
+class TestAsgiApp(unittest.TestCase):
+    def test_build_asgi_app_awaits_async_callable_object(self) -> None:
+        calls: list[bytes] = []
+        ce_types: list[str] = []
+
+        class AsyncCallableHandler:
+            async def __call__(
+                self,
+                raw_body: bytes,
+                environ: dict[str, Any],
+            ) -> tuple[int, list[tuple[str, str]], bytes]:
+                calls.append(raw_body)
+                ce_types.append(environ["HTTP_CE_TYPE"])
+                return 202, [("Content-Type", "text/plain")], b"accepted"
+
+        async def run() -> list[dict[str, Any]]:
+            app = queue_asgi.build_asgi_app(AsyncCallableHandler())
+            sent: list[dict[str, Any]] = []
+            received = False
+
+            async def receive() -> dict[str, Any]:
+                nonlocal received
+                if received:
+                    return {"type": "http.disconnect"}
+                received = True
+                return {"type": "http.request", "body": b"payload", "more_body": False}
+
+            async def send(message: dict[str, Any]) -> None:
+                sent.append(message)
+
+            await app(
+                {
+                    "type": "http",
+                    "method": "POST",
+                    "path": "/",
+                    "headers": [
+                        (b"content-type", b"application/json"),
+                        (b"ce-type", b"com.vercel.queue.v2beta"),
+                    ],
+                },
+                receive,
+                send,
+            )
+            return sent
+
+        sent = asyncio.run(run())
+
+        self.assertEqual(calls, [b"payload"])
+        self.assertEqual(ce_types, ["com.vercel.queue.v2beta"])
+        self.assertEqual(sent[0]["status"], 202)
+        self.assertEqual(sent[1]["body"], b"accepted")
 
 
 class TestTypedSubscriptions(unittest.TestCase):
