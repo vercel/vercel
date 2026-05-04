@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
+import vercel.workers._queue._transport as queue_transport
 import vercel.workers._queue.client as queue_client_impl
 import vercel.workers._queue.receive as queue_receive_impl
 import vercel.workers._queue.send as queue_service
@@ -110,12 +111,12 @@ class _FakeAsyncHttpxClient:
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_receive_message_by_id_returns_raw_bytes_for_non_json_payload(self) -> None:
         with patch.object(
-            queue_receive_impl,
+            queue_transport,
             "get_queue_base_url",
             return_value="https://queue.example.com",
         ):
             with patch.object(
-                queue_receive_impl,
+                queue_transport,
                 "get_queue_base_path",
                 return_value="/api/v2/messages",
             ):
@@ -157,14 +158,14 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
 
         async def run() -> list[queue_receive_impl.ReceivedMessage]:
             with (
-                patch.dict(queue_receive_impl.os.environ, {}, clear=True),
+                patch.dict(queue_transport.os.environ, {}, clear=True),
                 patch.object(
-                    queue_receive_impl,
+                    queue_transport,
                     "get_queue_base_url",
                     return_value="https://queue.example.com",
                 ),
                 patch.object(
-                    queue_receive_impl,
+                    queue_transport,
                     "get_queue_base_path",
                     return_value="/api/v2/messages",
                 ),
