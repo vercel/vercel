@@ -1,10 +1,9 @@
 from flask import Blueprint, jsonify
 
+bp = Blueprint("items", __name__)
 
-api_bp = Blueprint("api", __name__)
 
-
-@api_bp.get("/api/data")
+@bp.get("/api/data")
 def get_sample_data():
     return jsonify(
         {
@@ -19,7 +18,7 @@ def get_sample_data():
     )
 
 
-@api_bp.get("/api/items/<int:item_id>")
+@bp.get("/api/items/<int:item_id>")
 def get_item(item_id: int):
     return jsonify(
         {

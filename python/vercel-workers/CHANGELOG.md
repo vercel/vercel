@@ -1,5 +1,12 @@
 # vercel-workers
 
+## 0.0.21
+
+### Patch Changes
+
+- 6935baa: Refactor Python queue sdk into `_queue/`
+- 574c9f1: [vercel-workers] Replaces retention_seconds and delay_seconds with retention and delay which support timedelta, e.g retention=timedelta(hours=6)
+
 ## 0.0.20
 
 ### Patch Changes
