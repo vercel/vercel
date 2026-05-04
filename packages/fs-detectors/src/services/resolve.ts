@@ -8,6 +8,7 @@ import type {
 } from './types';
 import {
   getServiceQueueTopics,
+  isScheduleTriggeredService,
   JOB_TRIGGERS,
   JobTrigger,
 } from '@vercel/build-utils';
@@ -389,9 +390,10 @@ export function validateServiceConfig(
   }
   const serviceType = config.type || 'web';
   const isJobService = serviceType === 'job' || serviceType === 'cron';
-  const isScheduleJobService =
-    serviceType === 'cron' ||
-    (serviceType === 'job' && config.trigger === 'schedule');
+  const isScheduleJobService = isScheduleTriggeredService({
+    type: serviceType,
+    trigger: config.trigger,
+  });
   const isQueueJobService = serviceType === 'job' && config.trigger === 'queue';
   const isWorkflowService =
     serviceType === 'job' && config.trigger === 'workflow';
