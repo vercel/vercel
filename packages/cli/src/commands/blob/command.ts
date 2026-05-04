@@ -452,6 +452,24 @@ export const blobCommand = {
       description: 'Read_Write_Token for the Blob store',
       argument: 'String',
     },
+    {
+      name: 'oidc-token',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'OIDC token for the Blob store (must be passed together with --store-id)',
+      argument: 'String',
+    },
+    {
+      name: 'store-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Blob store id, with or without the "store_" prefix (must be passed together with --oidc-token)',
+      argument: 'String',
+    },
   ],
   examples: [],
 } as const;

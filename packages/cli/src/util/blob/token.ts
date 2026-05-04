@@ -2,18 +2,36 @@ import { resolve } from 'node:path';
 import { createEnvObject } from '../env/diff-env-files';
 
 import type Client from '../client';
-import { getFlagsSpecification } from '../get-flags-specification';
-import { blobCommand } from '../../commands/blob/command';
-import { parseArguments } from '../get-args';
 import { getCommandName, packageName } from '../pkg-name';
 import cmd from '../output/cmd';
 import listItem from '../output/list-item';
 
+/**
+ * Linear scan for a specific named flag's value. Supports both
+ * `--flag value` and `--flag=value` forms. Used to read the few auth
+ * flags here without re-running the full arg parser over an argv that
+ * also contains the subcommand and its own flags.
+ */
+function findFlagValue(argv: string[], flag: string): string | undefined {
+  const eqPrefix = `${flag}=`;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === flag) return argv[i + 1];
+    if (arg.startsWith(eqPrefix)) return arg.slice(eqPrefix.length);
+  }
+  return undefined;
+}
+
 const ErrorMessage = `No Vercel Blob credentials found. To fix this issue, choose one of the following options:
-${listItem(`Pass the token directly as an option: ${getCommandName('blob list --rw-token BLOB_READ_WRITE_TOKEN')}`, 1)}
-${listItem(`Set OIDC credentials as environment variables: ${cmd(`VERCEL_OIDC_TOKEN=... BLOB_STORE_ID=... ${packageName} blob list`)}`, 2)}
-${listItem(`Set the Token as an environment variable: ${cmd(`BLOB_READ_WRITE_TOKEN=BLOB_READ_WRITE_TOKEN ${packageName} blob list`)}`, 3)}
-${listItem('Link your current folder to a Vercel Project that has a Vercel Blob store connected', 4)}`;
+${listItem(`Pass the read-write token as an option: ${getCommandName('blob list --rw-token BLOB_READ_WRITE_TOKEN')}`, 1)}
+${listItem(`Pass OIDC credentials as options: ${getCommandName('blob list --oidc-token VERCEL_OIDC_TOKEN --store-id BLOB_STORE_ID')}`, 2)}
+${listItem(`Set OIDC credentials as environment variables: ${cmd(`VERCEL_OIDC_TOKEN=... BLOB_STORE_ID=... ${packageName} blob list`)}`, 3)}
+${listItem(`Set the read-write token as an environment variable: ${cmd(`BLOB_READ_WRITE_TOKEN=BLOB_READ_WRITE_TOKEN ${packageName} blob list`)}`, 4)}
+${listItem('Link your current folder to a Vercel Project that has a Vercel Blob store connected', 5)}`;
+
+const PartialOidcFlagsErrorMessage = `--oidc-token and --store-id must be passed together. Pass both flags, or omit them and rely on environment variables / linked project credentials.`;
+
+const PartialOidcEnvErrorMessage = `VERCEL_OIDC_TOKEN and BLOB_STORE_ID must both be set, or both be unset. Set both to use OIDC, unset both to use the read-write token, or pass --rw-token / --oidc-token + --store-id explicitly.`;
 
 export type BlobRWToken =
   | { success: true; kind: 'rw'; token: string }
@@ -24,69 +42,62 @@ export async function getBlobRWToken(
   client: Client,
   argv: string[]
 ): Promise<BlobRWToken> {
-  const flagsSpecification = getFlagsSpecification(blobCommand.options);
+  // 1. Explicit auth flags are exclusive. Try --rw-token first, then the
+  //    --oidc-token + --store-id pair. If either OIDC flag is passed alone,
+  //    surface a hard error rather than silently falling through.
+  const rwToken = findFlagValue(argv, '--rw-token');
+  if (rwToken) {
+    return { success: true, kind: 'rw', token: rwToken };
+  }
 
-  // 1. --rw-token flag is exclusive: if present, never fall back to OIDC.
+  const oidcTokenFlag = findFlagValue(argv, '--oidc-token');
+  const storeIdFlag = findFlagValue(argv, '--store-id');
+  if (oidcTokenFlag || storeIdFlag) {
+    if (!oidcTokenFlag || !storeIdFlag) {
+      return { success: false, error: PartialOidcFlagsErrorMessage };
+    }
+    // Hoist onto process.env so the SDK's getVercelOidcToken() picks it up.
+    process.env.VERCEL_OIDC_TOKEN = oidcTokenFlag;
+    return { success: true, kind: 'oidc', storeId: storeIdFlag };
+  }
+
+  // 2. Env-derived auth: combine process.env with .env.local (process.env
+  //    wins; .env.local fills gaps). Then resolve in this order:
+  //      a. Hard-fail if OIDC config is partial — VERCEL_OIDC_TOKEN xor
+  //         BLOB_STORE_ID. We never silently downgrade to RW when the user
+  //         partially configured OIDC, mirroring the explicit-flags policy
+  //         and AWS's credential-provider behavior.
+  //      b. Both OIDC vars present → OIDC.
+  //      c. BLOB_READ_WRITE_TOKEN present → RW.
+  //      d. Otherwise → no-creds error.
+  let envFile: Record<string, string | undefined> = {};
   try {
-    const parsedArgs = parseArguments(argv, flagsSpecification);
-    const {
-      flags: { '--rw-token': rwToken },
-    } = parsedArgs;
-
-    if (rwToken) {
-      return { success: true, kind: 'rw', token: rwToken };
-    }
-  } catch (_err) {
-    // continue with token hierarchy
-  }
-
-  // 2. OIDC from process.env (default when both vars are present).
-  if (process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID) {
-    return {
-      success: true,
-      kind: 'oidc',
-      storeId: process.env.BLOB_STORE_ID,
-    };
-  }
-
-  // 3. BLOB_READ_WRITE_TOKEN from process.env.
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    return {
-      success: true,
-      kind: 'rw',
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    };
-  }
-
-  // 4 & 5. Fall back to .env.local — OIDC pair first, then RW token.
-  const filename = '.env.local';
-  const fullPath = resolve(client.cwd, filename);
-
-  try {
-    const env = await createEnvObject(fullPath);
-
-    if (env?.VERCEL_OIDC_TOKEN && env?.BLOB_STORE_ID) {
-      // Hoist to process.env so the SDK's env-read picks them up.
-      process.env.VERCEL_OIDC_TOKEN ??= env.VERCEL_OIDC_TOKEN;
-      process.env.BLOB_STORE_ID ??= env.BLOB_STORE_ID;
-      return { success: true, kind: 'oidc', storeId: env.BLOB_STORE_ID };
-    }
-
-    if (env?.BLOB_READ_WRITE_TOKEN) {
-      return {
-        success: true,
-        kind: 'rw',
-        token: env.BLOB_READ_WRITE_TOKEN,
-      };
-    }
+    envFile = (await createEnvObject(resolve(client.cwd, '.env.local'))) ?? {};
   } catch (_error) {
-    // continue with token hierarchy
+    // .env.local missing or unreadable — fine, treat as empty.
   }
 
-  return {
-    error: ErrorMessage,
-    success: false,
-  };
+  const oidcToken = process.env.VERCEL_OIDC_TOKEN ?? envFile.VERCEL_OIDC_TOKEN;
+  const storeId = process.env.BLOB_STORE_ID ?? envFile.BLOB_STORE_ID;
+  const rwTokenEnv =
+    process.env.BLOB_READ_WRITE_TOKEN ?? envFile.BLOB_READ_WRITE_TOKEN;
+
+  if (Boolean(oidcToken) !== Boolean(storeId)) {
+    return { success: false, error: PartialOidcEnvErrorMessage };
+  }
+
+  if (oidcToken && storeId) {
+    // Hoist onto process.env so the SDK's getVercelOidcToken() picks it up.
+    process.env.VERCEL_OIDC_TOKEN ??= oidcToken;
+    process.env.BLOB_STORE_ID ??= storeId;
+    return { success: true, kind: 'oidc', storeId };
+  }
+
+  if (rwTokenEnv) {
+    return { success: true, kind: 'rw', token: rwTokenEnv };
+  }
+
+  return { success: false, error: ErrorMessage };
 }
 
 /**
