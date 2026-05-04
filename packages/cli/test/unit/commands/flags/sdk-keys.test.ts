@@ -86,7 +86,14 @@ describe('flags sdk-keys', () => {
     });
 
     it('never leaks cleartext secrets in the default table output', async () => {
-      const sdkKeysWithSecrets: SdkKey[] = [
+      // Simulate a mixed-version window where the API still returns
+      // plaintext `keyValue` / `tokenValue` / `connectionString` on LIST.
+      // The CLI must strip these fields regardless of what the API returns.
+      // Cast through `unknown` because we are deliberately simulating a
+      // non-conformant API payload: `SdkKey` no longer declares the
+      // plaintext fields, but we want to prove the CLI strips them even
+      // if a stale API deploy sneaks them onto the LIST response.
+      const sdkKeysWithSecrets = [
         {
           ...defaultSdkKeys[0],
           keyValue: 'vf_server_fullsecretvalue_should_not_leak',
@@ -94,7 +101,7 @@ describe('flags sdk-keys', () => {
           connectionString:
             'https://flags.vercel.com/v1/flags/secret_should_not_leak',
         },
-      ];
+      ] as unknown as SdkKey[];
       client.reset();
       useUser();
       useTeams('team_dummy');
@@ -121,6 +128,61 @@ describe('flags sdk-keys', () => {
       );
       expect(combined).not.toContain('tok_fullsecrettoken_should_not_leak');
       expect(combined).not.toContain('secret_should_not_leak');
+    });
+
+    it('never leaks cleartext secrets in --json output', async () => {
+      // Same mixed-version simulation as the table-output test, but asserts
+      // the JSON contract exposed to scripts. Even if a stale API deploy
+      // still returns plaintext on LIST, `flags sdk-keys ls --json` must
+      // never surface `keyValue`, `tokenValue`, or `connectionString` to
+      // stdout.
+      // Cast through `unknown` because we are deliberately simulating a
+      // non-conformant API payload: `SdkKey` no longer declares the
+      // plaintext fields, but we want to prove the CLI strips them even
+      // if a stale API deploy sneaks them onto the LIST response.
+      const sdkKeysWithSecrets = [
+        {
+          ...defaultSdkKeys[0],
+          keyValue: 'vf_server_fullsecretvalue_should_not_leak_json',
+          tokenValue: 'tok_fullsecrettoken_should_not_leak_json',
+          connectionString:
+            'https://flags.vercel.com/v1/flags/secret_should_not_leak_json',
+        },
+        {
+          ...defaultSdkKeys[1],
+          keyValue: 'vf_client_fullsecretvalue_should_not_leak_json',
+        },
+      ] as unknown as SdkKey[];
+      client.reset();
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-flags-test',
+        name: 'vercel-flags-test',
+      });
+      useFlags(undefined, sdkKeysWithSecrets);
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+
+      client.setArgv('flags', 'sdk-keys', 'ls', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const raw = client.stdout.getFullOutput();
+      expect(raw).not.toContain('vf_server_fullsecretvalue_should_not_leak');
+      expect(raw).not.toContain('vf_client_fullsecretvalue_should_not_leak');
+      expect(raw).not.toContain('tok_fullsecrettoken_should_not_leak');
+      expect(raw).not.toContain('secret_should_not_leak');
+
+      const parsed = JSON.parse(raw);
+      expect(parsed.sdkKeys).toHaveLength(2);
+      for (const row of parsed.sdkKeys) {
+        expect(row).not.toHaveProperty('keyValue');
+        expect(row).not.toHaveProperty('tokenValue');
+        expect(row).not.toHaveProperty('connectionString');
+      }
     });
 
     describe('--json', () => {

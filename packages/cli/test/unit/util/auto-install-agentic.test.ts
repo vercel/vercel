@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
-  buildClaudeActionRequiredMessage,
   buildClaudePromptCopy,
   buildClaudePluginMigrationPlan,
   buildClaudePluginStatus,
@@ -22,6 +21,9 @@ describe('getPluginTargetForAgent', () => {
   it('maps Claude Code agents to the Claude plugin target', () => {
     expect(getPluginTargetForAgent(KNOWN_AGENTS.CLAUDE)).toBe('claude-code');
     expect(getPluginTargetForAgent(KNOWN_AGENTS.COWORK)).toBe('claude-code');
+    expect(getPluginTargetForAgent('claude-code/2.1.126/agent')).toBe(
+      'claude-code'
+    );
   });
 
   it('does not map Codex to a Claude plugin target', () => {
@@ -61,6 +63,23 @@ describe('buildClaudePluginStatus', () => {
     expect(status.state).toBe('both');
     expect(status.legacy?.version).toBe('0.32.6');
     expect(status.official?.version).toBe('0.32.7');
+  });
+
+  it('preserves stale legacy install metadata', () => {
+    const status = buildClaudePluginStatus(
+      [
+        {
+          id: 'vercel-plugin@vercel',
+          version: '0.22.0',
+          installPath: '/missing/vercel-plugin',
+          stale: true,
+        },
+      ],
+      '0.32.7'
+    );
+
+    expect(status.state).toBe('legacy-only');
+    expect(status.legacy?.stale).toBe(true);
   });
 });
 
@@ -210,31 +229,5 @@ describe('buildClaudePromptCopy', () => {
       'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
     );
     expect(copy.confirm).toContain('0.32.6 to 0.32.7');
-  });
-});
-
-describe('buildClaudeActionRequiredMessage', () => {
-  it('uses marketplace upgrade wording for legacy Claude installs', () => {
-    const message = buildClaudeActionRequiredMessage(
-      {
-        state: 'legacy-only',
-        legacy: { id: 'vercel-plugin@vercel', version: '0.22.0' },
-        latestVersion: '0.32.7',
-      },
-      {
-        installOfficial: true,
-        updateOfficial: false,
-        removeLegacy: true,
-        removeLegacyMarketplace: true,
-      }
-    );
-
-    expect(message).toContain(
-      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
-    );
-    expect(message).toContain(
-      'claude plugins install vercel@claude-plugins-official'
-    );
-    expect(message).toContain('claude plugins uninstall vercel-plugin@vercel');
   });
 });

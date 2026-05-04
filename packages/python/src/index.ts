@@ -365,6 +365,14 @@ export const build: BuildVX = async ({
     : join(workPath, '.vercel', 'python', '.venv');
   const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
   const hasCachedUv = fs.existsSync(uvCacheDir);
+  const restoredCache =
+    hasCachedVenv && hasCachedUv
+      ? 'both'
+      : hasCachedVenv
+        ? 'venv'
+        : hasCachedUv
+          ? 'uv'
+          : 'none';
   if (hasCachedVenv || hasCachedUv) {
     debug(
       `Build cache detected: venv=${hasCachedVenv}, uv-cache=${hasCachedUv}`
@@ -425,6 +433,8 @@ export const build: BuildVX = async ({
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
       installCommand: projectInstallCommand || undefined,
+      runtime: 'python',
+      'python.cache.restored': restoredCache,
     })
     .trace(async () => {
       if (projectInstallCommand) {
@@ -866,12 +876,6 @@ export const prepareCache: PrepareCache = async ({
   repoRootPath,
   workPath,
 }) => {
-  // Feature-gated: only enabled when the platform sets this env var.
-  // This allows incremental rollout to specific teams before general availability.
-  if (process.env.VERCEL_PYTHON_PREPARE_CACHE !== '1') {
-    return {};
-  }
-
   const root = repoRootPath || workPath;
   const ignore = ['**/*.pyc', '**/__pycache__/**'];
 

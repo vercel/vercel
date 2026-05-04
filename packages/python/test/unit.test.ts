@@ -74,7 +74,7 @@ import {
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
-import { FileBlob, download } from '@vercel/build-utils';
+import { FileBlob, Span, download } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
 import execa from 'execa';
 
@@ -208,7 +208,7 @@ describe('prepareCache()', () => {
     }
   });
 
-  it('returns empty object when VERCEL_PYTHON_PREPARE_CACHE is not set', async () => {
+  it('caches uv cache and the venv by default', async () => {
     delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
     const workPath = path.join(
       tmpdir(),
@@ -229,14 +229,13 @@ describe('prepareCache()', () => {
         repoRootPath: workPath,
       });
 
-      expect(Object.keys(files)).toHaveLength(0);
+      expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
     } finally {
       await fs.remove(workPath);
     }
   });
 
-  it('caches uv cache and the venv, excludes bytecode and user source when enabled', async () => {
-    process.env.VERCEL_PYTHON_PREPARE_CACHE = '1';
+  it('caches uv cache and the venv, excludes bytecode and user source', async () => {
     const workPath = path.join(
       tmpdir(),
       `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
@@ -295,6 +294,59 @@ describe('prepareCache()', () => {
     } finally {
       await fs.remove(workPath);
     }
+  });
+});
+
+describe('build cache trace tags', () => {
+  it('reports restored Python cache state on the install span', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-span-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+    const events: any[] = [];
+    const span = new Span({
+      name: 'vc.builder',
+      reporter: {
+        report: event => events.push(event),
+      },
+    });
+
+    makeMockPython('3.11');
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'version = 3.11.0\n'
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+
+    try {
+      await build({
+        workPath,
+        files: {
+          'handler.py': new FileBlob({
+            data: 'def app(environ, start_response): pass',
+          }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {},
+        repoRootPath: workPath,
+        span,
+      });
+    } finally {
+      await fs.remove(workPath);
+    }
+
+    const installSpan = events.find(
+      event => event.name === 'vc.builder.install'
+    );
+    expect(installSpan?.tags).toMatchObject({
+      runtime: 'python',
+      'python.cache.restored': 'both',
+    });
   });
 });
 
