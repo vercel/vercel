@@ -474,9 +474,13 @@ except Exception:
 
 if is_worker_service():
     try:
-        worker_app = maybe_bootstrap_worker_service_app(__vc_module)
+        worker_app = maybe_bootstrap_worker_service_app(
+            __vc_module,
+            _entrypoint_varname,
+        )
         if worker_app is not None:
             __vc_module.__dict__["app"] = worker_app
+            _entrypoint_varname = "app"
             __vc_variables = dir(__vc_module)
     except Exception:
         _stderr("Error bootstrapping worker service app:")

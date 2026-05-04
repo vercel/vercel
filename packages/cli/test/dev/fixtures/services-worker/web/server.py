@@ -22,3 +22,9 @@ def enqueue():
     with open(os.path.join(RESULT_DIR, "send_result.json"), "w") as f:
         json.dump({"messageId": message_id}, f)
     return {"messageId": message_id}
+
+
+@app.post("/enqueue-client")
+def enqueue_client():
+    result = send("client-topic", {"action": "client-test", "value": 7})
+    return {"messageId": result.get("messageId", "")}

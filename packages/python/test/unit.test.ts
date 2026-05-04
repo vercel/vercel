@@ -2092,6 +2092,35 @@ describe('handlerFunction validation', () => {
     ).rejects.toThrow(/Handler function "cleanup" not found/);
   });
 
+  it('allows queue-triggered job handlerFunction to name a QueueClient', async () => {
+    const files = {
+      'worker.py': new FileBlob({
+        data: 'from vercel.workers import QueueClient\nqueue = QueueClient()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'worker.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'queue' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'job', trigger: 'queue' },
+    });
+
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_VARIABLE_NAME": "queue"'
+    );
+  });
+
   it('uses handlerFunction as variable name for web services', async () => {
     const files = {
       'app.py': new FileBlob({

@@ -36,7 +36,10 @@ def prepare_worker_environment() -> None:
     workers_runtime.prepare_environment(os.environ)
 
 
-def maybe_bootstrap_worker_service_app(module: object) -> object | None:
+def maybe_bootstrap_worker_service_app(
+    module: object,
+    variable_name: str | None = None,
+) -> object | None:
     workers_runtime = _load_workers_runtime()
     if workers_runtime is None:
         raise RuntimeError(
@@ -46,5 +49,8 @@ def maybe_bootstrap_worker_service_app(module: object) -> object | None:
         )
     return cast(
         "object | None",
-        workers_runtime.maybe_bootstrap_worker_service_app(module),
+        workers_runtime.maybe_bootstrap_worker_service_app(
+            module,
+            variable_name,
+        ),
     )

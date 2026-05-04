@@ -5,6 +5,11 @@ from collections.abc import MutableMapping
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypeGuard
 
+from ._queue.client import (
+    AsyncQueueClient,
+    QueueClient,
+)
+from .callback import build_asgi_app_for_subscriptions
 from .client import (
     get_asgi_app as get_generic_asgi_app,
     has_subscriptions,
@@ -81,6 +86,10 @@ def is_vercel_dramatiq_broker(
     return isinstance(candidate, VercelQueuesBroker)
 
 
+def is_queue_client(candidate: object) -> TypeGuard[QueueClient | AsyncQueueClient]:
+    return isinstance(candidate, QueueClient | AsyncQueueClient)
+
+
 def _find_celery_app(module: object) -> CeleryAppType | None:
     candidates = [
         getattr(module, "app", None),
@@ -155,7 +164,35 @@ def _bootstrap_generic_worker_app() -> object | None:
     return get_generic_asgi_app()
 
 
-def _resolve_worker_service_app(module: object) -> object | None:
+def _bootstrap_queue_client_worker_app(
+    module: object,
+    variable_name: str | None,
+) -> object | None:
+    if not variable_name:
+        return None
+
+    client = getattr(module, variable_name, None)
+    if not is_queue_client(client):
+        return None
+
+    subscriptions = client.subscriptions
+    if not subscriptions:
+        raise RuntimeError(
+            f'queue client "{variable_name}" did not register any subscriptions: '
+            + "ensure your worker entrypoint imports task modules before startup"
+        )
+
+    return build_asgi_app_for_subscriptions(subscriptions)
+
+
+def _resolve_worker_service_app(
+    module: object,
+    variable_name: str | None = None,
+) -> object | None:
+    queue_client_app = _bootstrap_queue_client_worker_app(module, variable_name)
+    if queue_client_app is not None:
+        return queue_client_app
+
     bootstrappers = (
         ("Celery", lambda: _bootstrap_celery_worker_app(module)),
         ("Dramatiq", lambda: _bootstrap_dramatiq_worker_app(module)),
@@ -173,9 +210,12 @@ def _resolve_worker_service_app(module: object) -> object | None:
     return _bootstrap_generic_worker_app()
 
 
-def maybe_bootstrap_worker_service_app(module: object) -> object | None:
+def maybe_bootstrap_worker_service_app(
+    module: object,
+    variable_name: str | None = None,
+) -> object | None:
     exported_names = dir(module)
-    app = _resolve_worker_service_app(module)
+    app = _resolve_worker_service_app(module, variable_name)
     if app is not None:
         return app
 
