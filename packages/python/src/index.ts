@@ -16,6 +16,7 @@ import {
   execCommand,
   scanParentDirs,
   getEnvForPackageManager,
+  isQueueTriggeredService,
   isPythonFramework,
   Span,
   BUILDER_INSTALLER_STEP,
@@ -623,7 +624,7 @@ export const build: BuildVX = async ({
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
 
-  if (handlerFunction) {
+  if (handlerFunction && !(service && isQueueTriggeredService(service))) {
     const entrypointPath = join(workPath, entrypoint);
     const source = await fs.promises.readFile(entrypointPath, 'utf-8');
     const found = await containsTopLevelCallable(source, handlerFunction);

@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch
 
 import vercel.workers._runtime as vwr
+from vercel.workers import QueueClient
 
 
 class TestPrepareEnvironment(unittest.TestCase):
@@ -81,6 +82,26 @@ class TestWorkerBootstrapBridge(unittest.TestCase):
             app = vwr._resolve_worker_service_app(types.SimpleNamespace())
 
         self.assertIs(app, expected_app)
+
+    def test_resolve_worker_service_app_uses_named_queue_client(self) -> None:
+        expected_app = object()
+        queue = QueueClient()
+
+        @queue.subscribe(topic="orders")
+        def handle(payload: object) -> None:
+            _ = payload
+
+        module = types.SimpleNamespace(queue=queue)
+
+        with patch.object(
+            vwr,
+            "build_asgi_app_for_subscriptions",
+            return_value=expected_app,
+        ) as build_app:
+            app = vwr._resolve_worker_service_app(module, "queue")
+
+        self.assertIs(app, expected_app)
+        build_app.assert_called_once_with(queue.subscriptions)
 
     def test_bootstrap_worker_service_app_wraps_framework_errors(self) -> None:
         with (

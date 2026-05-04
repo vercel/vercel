@@ -406,7 +406,7 @@ def _setup_apps() -> None:
         return
 
     if is_worker_service():
-        worker_app = maybe_bootstrap_worker_service_app(mod)
+        worker_app = maybe_bootstrap_worker_service_app(mod, variable_name)
         if worker_app is not None:
             _asgi_user_app = cast("ASGI", worker_app)
             return

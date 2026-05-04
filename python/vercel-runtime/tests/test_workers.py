@@ -64,7 +64,24 @@ class TestMaybeBootstrapWorkerServiceApp(unittest.TestCase):
 
         self.assertIs(app, expected_app)
         bridge.maybe_bootstrap_worker_service_app.assert_called_once_with(
-            module
+            module,
+            None,
+        )
+
+    def test_delegates_variable_name_to_workers_runtime(self) -> None:
+        module = types.SimpleNamespace()
+        expected_app = object()
+        bridge = types.SimpleNamespace(
+            maybe_bootstrap_worker_service_app=Mock(return_value=expected_app)
+        )
+
+        with patch.object(vrw, "_load_workers_runtime", return_value=bridge):
+            app = vrw.maybe_bootstrap_worker_service_app(module, "queue")
+
+        self.assertIs(app, expected_app)
+        bridge.maybe_bootstrap_worker_service_app.assert_called_once_with(
+            module,
+            "queue",
         )
 
     def test_raises_when_workers_runtime_is_missing(self) -> None:

@@ -86,6 +86,10 @@ class _BaseQueueClient:
     def has_subscriptions(self) -> bool:
         return bool(self._subscriptions)
 
+    @property
+    def subscriptions(self) -> list[Subscription]:
+        return self._subscriptions
+
 
 class QueueClient(_BaseQueueClient):
     """Configured synchronous client for publishing Vercel Queue messages."""
