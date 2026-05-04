@@ -34,10 +34,10 @@ export function buildCronRouteTable(
  * `undefined` when the service is not schedule-triggered. Throws on
  * `<dynamic>` schedules — that path is reserved for a follow-up.
  */
-export function getServiceCrons(opts: {
+export async function getServiceCrons(opts: {
   service?: BuildOptions['service'];
   entrypoint?: string;
-}): BackendsCronEntry[] | undefined {
+}): Promise<BackendsCronEntry[] | undefined> {
   const { service, entrypoint } = opts;
 
   if (!service || !isScheduleTriggeredService(service)) {

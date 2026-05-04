@@ -107,7 +107,7 @@ export const build: BuildV2 = async args => {
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
 
-    const cronEntries = getServiceCrons({
+    const cronEntries = await getServiceCrons({
       service: args.service,
       entrypoint,
     });
