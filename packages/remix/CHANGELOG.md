@@ -1,5 +1,17 @@
 # @vercel/remix-builder
 
+## 5.8.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+  - @vercel/error-utils@2.1.0
+
 ## 5.7.2
 
 ### Patch Changes

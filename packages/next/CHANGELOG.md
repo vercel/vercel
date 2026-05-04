@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.17.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 4.16.8
 
 ### Patch Changes

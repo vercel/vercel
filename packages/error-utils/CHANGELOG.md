@@ -1,5 +1,11 @@
 # @vercel/error-utils
 
+## 2.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 2.0.3
 
 ### Patch Changes

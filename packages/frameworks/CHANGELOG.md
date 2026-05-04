@@ -1,5 +1,22 @@
 # @vercel/frameworks
 
+## 3.25.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/error-utils@2.1.0
+
+## 3.24.2
+
+### Patch Changes
+
+- 09d9000: Fix the frameworks demo URL public-access test to check the public `/_logs` route instead of looking up alias hosts through the deployments API.
+
 ## 3.24.1
 
 ### Patch Changes
