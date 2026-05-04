@@ -35,9 +35,26 @@ export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 // bundled directly into the Lambda instead of using runtime installation.
 export const HIVE_LAMBDA_SIZE_BYTES = 1 * 1024 * 1024 * 1024;
 
+// Error messages are hard-wrapped with explicit newlines so the Vercel
+// build log renders them as multi-line paragraphs instead of one long
+// unbroken sentence.
 const FUNCTIONS_BETA_CTA =
   'Run `vercel deploy --functions-beta` to use extended function limits ' +
   '(up to 1 GB), or reduce your dependency footprint.';
+
+const BUNDLING_DOCS_LINK =
+  'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
+const FUNCTIONS_BETA_DOCS_LINK =
+  'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
+
+// Shown when the user is already on Functions Beta (Hive) but their bundle
+// still exceeds the extended 1 GB limit. In that case we cannot suggest
+// opting into Functions Beta -- they are already using it -- so we tell
+// them the only remaining path is to reduce the bundle below 1 GB.
+const FUNCTIONS_BETA_EXCEEDED_CTA =
+  'Your deployment is already using extended function limits (`--functions-beta`).\n' +
+  'Reduce your dependency footprint to under 1 GB or split your application\n' +
+  'into smaller functions.';
 
 /**
  * Returns true when the build environment opts in to showing the
@@ -159,11 +176,15 @@ export class PythonDependencyExternalizer {
           ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
           : `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-            `When using a custom install command, Vercel cannot automatically optimize ` +
-            `dependency bundling. To reduce the size of your dependencies, you can:\n` +
-            `  1. Remove unused dependencies from your project\n` +
-            `  2. Remove the custom install command to allow Vercel to manage and optimize dependencies automatically`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+            `When using a custom install command, Vercel cannot automatically\n` +
+            `optimize dependency bundling. To reduce the size of your\n` +
+            `dependencies, you can:\n` +
+            `  1. Remove unused dependencies from your project.\n` +
+            `  2. Remove the custom install command to allow Vercel to manage\n` +
+            `     and optimize dependencies automatically.`,
+        link: shouldShowFunctionsBetaHint()
+          ? FUNCTIONS_BETA_DOCS_LINK
+          : BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -175,10 +196,12 @@ export class PythonDependencyExternalizer {
       const limitMB = (HIVE_LAMBDA_SIZE_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function ` +
-          `size limit (${limitMB} MB). Consider removing unused dependencies or ` +
-          `splitting your application into smaller functions.`,
+        message: shouldShowFunctionsBetaHint()
+          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
+            FUNCTIONS_BETA_EXCEEDED_CTA
+          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
+            `Consider removing unused dependencies or splitting your\n` +
+            `application into smaller functions.`,
         link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
         action: 'Learn More',
       });
@@ -229,12 +252,14 @@ export class PythonDependencyExternalizer {
         message: shouldShowFunctionsBetaHint()
           ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
-            `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
-            `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
-            `to Lambda functions. Consider removing unused dependencies or splitting your ` +
-            `application into smaller functions.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+          : `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
+            `Even with runtime dependency installation, all packages must fit\n` +
+            `within the ${ephemeralLimitMB} MB ephemeral storage available to Lambda\n` +
+            `functions. Consider removing unused dependencies or splitting\n` +
+            `your application into smaller functions.`,
+        link: shouldShowFunctionsBetaHint()
+          ? FUNCTIONS_BETA_DOCS_LINK
+          : BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -322,12 +347,15 @@ export class PythonDependencyExternalizer {
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
-          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
-          `but no public packages have compatible pre-built wheels for the Lambda platform.\n` +
-          `Runtime dependency installation requires packages to have binary wheels.\n\n` +
+          `Bundle size exceeds the Lambda limit and requires runtime\n` +
+          `dependency installation, but no public packages have compatible\n` +
+          `pre-built wheels for the Lambda platform.\n\n` +
+          `Runtime dependency installation requires packages to have binary\n` +
+          `wheels.\n\n` +
           `To fix this, either:\n` +
-          ` 1. Regenerate your lock file with: uv lock --upgrade, or\n` +
-          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
+          `  1. Regenerate your lock file with: uv lock --upgrade, or\n` +
+          `  2. Switch the problematic packages to ones that have pre-built\n` +
+          `     wheels available.`,
       });
     }
 
@@ -516,11 +544,14 @@ export class PythonDependencyExternalizer {
         message: shouldShowFunctionsBetaHint()
           ? `Total bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
             FUNCTIONS_BETA_CTA
-          : `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
-            `deferring public packages to runtime installation. This usually means your ` +
-            `private packages or source code are too large. Consider reducing the size of ` +
-            `private dependencies or splitting your application.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+          : `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after\n` +
+            `deferring public packages to runtime installation.\n\n` +
+            `This usually means your private packages or source code are too\n` +
+            `large. Consider reducing the size of private dependencies or\n` +
+            `splitting your application.`,
+        link: shouldShowFunctionsBetaHint()
+          ? FUNCTIONS_BETA_DOCS_LINK
+          : BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
