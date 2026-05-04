@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import threading
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from email.parser import BytesParser
 from email.policy import default as _email_default_policy
 from typing import Any
@@ -24,6 +25,7 @@ from vercel.workers._queue.send import (
     get_queue_base_path,
     get_queue_base_url,
     get_queue_token,
+    get_queue_token_async,
 )
 from vercel.workers._queue.types import ReceivedMessage
 
@@ -100,6 +102,163 @@ def parse_multipart_messages(
     return parts
 
 
+def _queue_consumer_url(
+    queue_name: str,
+    consumer_group: str,
+    *suffix_parts: str,
+) -> str:
+    base_url = get_queue_base_url().rstrip("/")
+    base_path = get_queue_base_path()
+    path_parts = [
+        quote(queue_name, safe=""),
+        "consumer",
+        quote(consumer_group, safe=""),
+        *(quote(part, safe="") for part in suffix_parts),
+    ]
+    return f"{base_url}{base_path}/{'/'.join(path_parts)}"
+
+
+def _queue_headers(
+    auth_token: str,
+    *,
+    accept: str | None = None,
+    content_type: str | None = None,
+    visibility_timeout_seconds: int | None = None,
+    limit: int | None = None,
+) -> dict[str, str]:
+    headers = {"Authorization": f"Bearer {auth_token}"}
+
+    if accept is not None:
+        headers["Accept"] = accept
+    if content_type is not None:
+        headers["Content-Type"] = content_type
+
+    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
+    if deployment_id:
+        headers["Vqs-Deployment-Id"] = deployment_id
+
+    if visibility_timeout_seconds is not None:
+        headers["Vqs-Visibility-Timeout-Seconds"] = str(int(visibility_timeout_seconds))
+    if limit is not None:
+        headers["Vqs-Max-Messages"] = str(int(limit))
+
+    return headers
+
+
+def _decode_payload(
+    payload_bytes: bytes,
+    content_type: str,
+    message_id: str,
+) -> Any:
+    if "application/json" not in content_type.lower():
+        return payload_bytes
+
+    try:
+        return json.loads(payload_bytes.decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        raise MessageCorruptedError(
+            message_id,
+            f"Failed to parse payload as JSON: {exc}",
+        ) from exc
+
+
+def _delivery_count_from_headers(part_headers: dict[str, str]) -> int:
+    delivery_count_raw = part_headers.get("Vqs-Delivery-Count") or "0"
+    try:
+        return int(delivery_count_raw)
+    except ValueError:
+        return 0
+
+
+def _raise_for_receive_messages_response(response: httpx.Response) -> None:
+    if response.status_code == 400:
+        raise BadRequestError(response.text or "Invalid parameters")
+    if response.status_code == 401:
+        raise UnauthorizedError()
+    if response.status_code == 429:
+        raise ThrottledError(parse_retry_after(response))
+    if response.status_code >= 500:
+        raise InternalServerError(
+            response.text or f"Server error: {response.status_code} {response.reason_phrase}"
+        )
+
+    _ = response.raise_for_status()
+
+
+def _raise_for_receive_by_id_response(
+    response: httpx.Response,
+    message_id: str,
+) -> None:
+    if response.status_code == 400:
+        raise BadRequestError(response.text or "Invalid parameters")
+    if response.status_code == 401:
+        raise UnauthorizedError()
+    if response.status_code == 404:
+        raise MessageNotFoundError(message_id)
+    if response.status_code == 409:
+        raise MessageNotAvailableError(message_id)
+    if response.status_code == 410:
+        raise MessageNotFoundError(message_id)
+    if response.status_code == 429:
+        raise ThrottledError(parse_retry_after(response))
+    if response.status_code >= 500:
+        raise InternalServerError(
+            response.text or f"Server error: {response.status_code} {response.reason_phrase}"
+        )
+
+    _ = response.raise_for_status()
+
+
+def _parse_receive_by_id_response(
+    response: httpx.Response,
+    message_id: str,
+) -> tuple[Any, int, str, str]:
+    try:
+        part_headers, payload_bytes = parse_multipart_message(response)
+    except Exception as exc:
+        raise MessageCorruptedError(
+            message_id,
+            f"Failed to parse multipart response: {exc}",
+        ) from exc
+
+    timestamp = part_headers.get("Vqs-Timestamp") or ""
+    receipt_handle = part_headers.get("Vqs-Receipt-Handle")
+
+    if not receipt_handle:
+        raise MessageCorruptedError(
+            message_id,
+            "Missing required queue header 'Vqs-Receipt-Handle' in multipart response",
+        )
+
+    content_type = part_headers.get("Content-Type", "")
+    payload = _decode_payload(payload_bytes, content_type, message_id)
+    return payload, _delivery_count_from_headers(part_headers), timestamp, receipt_handle
+
+
+def _raise_for_lease_response(
+    response: httpx.Response,
+    message_id: str,
+    *,
+    bad_request_message: str,
+) -> None:
+    if response.status_code == 400:
+        raise BadRequestError(bad_request_message)
+    if response.status_code == 401:
+        raise UnauthorizedError()
+    if response.status_code == 404:
+        raise MessageNotFoundError(message_id)
+    if response.status_code == 409:
+        raise MessageNotAvailableError(message_id, "lease expired or receipt handle mismatch")
+    if response.status_code == 429:
+        raise ThrottledError(parse_retry_after(response))
+    if response.status_code >= 500:
+        raise InternalServerError(
+            response.text or f"Server error: {response.status_code} {response.reason_phrase}"
+        )
+
+    _ = response.raise_for_status()
+
+
 def receive_messages(
     queue_name: str,
     consumer_group: str,
@@ -117,76 +276,38 @@ def receive_messages(
     Returns a list of messages (possibly empty).
     """
 
-    base_url = get_queue_base_url().rstrip("/")
-    base_path = get_queue_base_path()
     auth_token = get_queue_token(None)
-
-    headers: dict[str, str] = {
-        "Authorization": f"Bearer {auth_token}",
-        "Accept": "multipart/mixed",
-    }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
-
-    if visibility_timeout_seconds is not None:
-        headers["Vqs-Visibility-Timeout-Seconds"] = str(int(visibility_timeout_seconds))
-    if limit is not None:
-        headers["Vqs-Max-Messages"] = str(int(limit))
-
-    topic_path = quote(queue_name, safe="")
-    consumer_path = quote(consumer_group, safe="")
-    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}"
+    headers = _queue_headers(
+        auth_token,
+        accept="multipart/mixed",
+        visibility_timeout_seconds=visibility_timeout_seconds,
+        limit=limit,
+    )
+    url = _queue_consumer_url(queue_name, consumer_group)
     with httpx.Client(timeout=timeout) as client:
         response = client.post(url, headers=headers)
 
     if response.status_code == 204:
         return []
-    if response.status_code == 400:
-        raise BadRequestError(response.text or "Invalid parameters")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 429:
-        raise ThrottledError(parse_retry_after(response))
-    if response.status_code >= 500:
-        raise InternalServerError(
-            response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        )
-
-    response.raise_for_status()
+    _raise_for_receive_messages_response(response)
 
     messages: list[ReceivedMessage] = []
     for part_headers, payload_bytes in parse_multipart_messages(response):
         message_id = part_headers.get("Vqs-Message-Id")
         receipt_handle = part_headers.get("Vqs-Receipt-Handle")
         timestamp = part_headers.get("Vqs-Timestamp") or ""
-        delivery_count_raw = part_headers.get("Vqs-Delivery-Count") or "0"
         content_type = part_headers.get("Content-Type", "")
 
         if not message_id or not receipt_handle:
             # Skip malformed parts
             continue
 
-        try:
-            delivery_count = int(delivery_count_raw)
-        except ValueError:
-            delivery_count = 0
-
-        payload: Any = payload_bytes
-        if "application/json" in content_type.lower():
-            try:
-                payload = json.loads(payload_bytes.decode("utf-8"))
-            except Exception as exc:  # noqa: BLE001
-                raise MessageCorruptedError(
-                    str(message_id),
-                    f"Failed to parse payload as JSON: {exc}",
-                ) from exc
+        payload = _decode_payload(payload_bytes, content_type, str(message_id))
 
         messages.append(
             {
                 "messageId": str(message_id),
-                "deliveryCount": delivery_count,
+                "deliveryCount": _delivery_count_from_headers(part_headers),
                 "createdAt": str(timestamp),
                 "receipt_handle": str(receipt_handle),
                 "contentType": str(content_type),
@@ -213,81 +334,43 @@ def receive_message_by_id(
 
     Returns (payload, delivery_count, created_at, receipt_handle).
     """
-    base_url = get_queue_base_url().rstrip("/")
-    base_path = get_queue_base_path()
     auth_token = get_queue_token(None)
-
-    headers: dict[str, str] = {
-        "Authorization": f"Bearer {auth_token}",
-        "Accept": "multipart/mixed",
-    }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
-
-    if visibility_timeout_seconds is not None:
-        headers["Vqs-Visibility-Timeout-Seconds"] = str(int(visibility_timeout_seconds))
-
-    topic_path = quote(queue_name, safe="")
-    consumer_path = quote(consumer_group, safe="")
-    message_path = quote(message_id, safe="")
-    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/id/{message_path}"
+    headers = _queue_headers(
+        auth_token,
+        accept="multipart/mixed",
+        visibility_timeout_seconds=visibility_timeout_seconds,
+    )
+    url = _queue_consumer_url(queue_name, consumer_group, "id", message_id)
     with httpx.Client(timeout=timeout) as client:
         response = client.post(url, headers=headers)
 
-    if response.status_code == 400:
-        raise BadRequestError(response.text or "Invalid parameters")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 404:
-        raise MessageNotFoundError(message_id)
-    if response.status_code == 409:
-        raise MessageNotAvailableError(message_id)
-    if response.status_code == 410:
-        raise MessageNotFoundError(message_id)
-    if response.status_code == 429:
-        raise ThrottledError(parse_retry_after(response))
-    if response.status_code >= 500:
-        raise InternalServerError(
-            response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        )
+    _raise_for_receive_by_id_response(response, message_id)
+    return _parse_receive_by_id_response(response, message_id)
 
-    response.raise_for_status()
 
-    try:
-        part_headers, payload_bytes = parse_multipart_message(response)
-    except Exception as exc:
-        raise MessageCorruptedError(
-            message_id,
-            f"Failed to parse multipart response: {exc}",
-        ) from exc
-    delivery_count_raw = part_headers.get("Vqs-Delivery-Count") or "0"
-    timestamp = part_headers.get("Vqs-Timestamp") or ""
-    receipt_handle = part_headers.get("Vqs-Receipt-Handle")
+async def receive_message_by_id_async(
+    queue_name: str,
+    consumer_group: str,
+    message_id: str,
+    *,
+    visibility_timeout_seconds: int | None = None,
+    timeout: float | None = 10.0,
+) -> tuple[Any, int, str, str]:
+    """
+    Async variant of receive_message_by_id().
+    """
+    auth_token = await get_queue_token_async(None)
+    headers = _queue_headers(
+        auth_token,
+        accept="multipart/mixed",
+        visibility_timeout_seconds=visibility_timeout_seconds,
+    )
+    url = _queue_consumer_url(queue_name, consumer_group, "id", message_id)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(url, headers=headers)
 
-    if not receipt_handle:
-        raise MessageCorruptedError(
-            message_id,
-            "Missing required queue header 'Vqs-Receipt-Handle' in multipart response",
-        )
-
-    try:
-        delivery_count = int(delivery_count_raw)
-    except ValueError:
-        delivery_count = 0
-
-    content_type = part_headers.get("Content-Type", "")
-    payload: Any = payload_bytes
-    if "application/json" in content_type.lower():
-        try:
-            payload = json.loads(payload_bytes.decode("utf-8"))
-        except Exception as exc:  # noqa: BLE001
-            raise MessageCorruptedError(
-                message_id,
-                f"Failed to parse payload as JSON: {exc}",
-            ) from exc
-    return payload, delivery_count, timestamp, receipt_handle  # type: ignore[return-value]
+    _raise_for_receive_by_id_response(response, message_id)
+    return _parse_receive_by_id_response(response, message_id)
 
 
 def delete_message(
@@ -298,41 +381,38 @@ def delete_message(
     *,
     timeout: float | None = 10.0,
 ) -> None:
-    base_url = get_queue_base_url().rstrip("/")
-    base_path = get_queue_base_path()
     auth_token = get_queue_token(None)
-
-    headers: dict[str, str] = {
-        "Authorization": f"Bearer {auth_token}",
-    }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
-
-    topic_path = quote(queue_name, safe="")
-    consumer_path = quote(consumer_group, safe="")
-    handle_path = quote(receipt_handle, safe="")
-    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/lease/{handle_path}"
+    headers = _queue_headers(auth_token)
+    url = _queue_consumer_url(queue_name, consumer_group, "lease", receipt_handle)
     with httpx.Client(timeout=timeout) as client:
         response = client.delete(url, headers=headers)
 
-    if response.status_code == 400:
-        raise BadRequestError("Missing or invalid receipt handle")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 404:
-        raise MessageNotFoundError(message_id)
-    if response.status_code == 409:
-        raise MessageNotAvailableError(message_id, "lease expired or receipt handle mismatch")
-    if response.status_code == 429:
-        raise ThrottledError(parse_retry_after(response))
-    if response.status_code >= 500:
-        raise InternalServerError(
-            response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        )
+    _raise_for_lease_response(
+        response,
+        message_id,
+        bad_request_message="Missing or invalid receipt handle",
+    )
 
-    response.raise_for_status()
+
+async def delete_message_async(
+    queue_name: str,
+    consumer_group: str,
+    message_id: str,
+    receipt_handle: str,
+    *,
+    timeout: float | None = 10.0,
+) -> None:
+    auth_token = await get_queue_token_async(None)
+    headers = _queue_headers(auth_token)
+    url = _queue_consumer_url(queue_name, consumer_group, "lease", receipt_handle)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.delete(url, headers=headers)
+
+    _raise_for_lease_response(
+        response,
+        message_id,
+        bad_request_message="Missing or invalid receipt handle",
+    )
 
 
 def change_visibility(
@@ -344,44 +424,41 @@ def change_visibility(
     *,
     timeout: float | None = 10.0,
 ) -> None:
-    base_url = get_queue_base_url().rstrip("/")
-    base_path = get_queue_base_path()
     auth_token = get_queue_token(None)
-
-    headers: dict[str, str] = {
-        "Authorization": f"Bearer {auth_token}",
-        "Content-Type": "application/json",
-    }
-
-    deployment_id = os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
-
+    headers = _queue_headers(auth_token, content_type="application/json")
     body = json.dumps({"visibilityTimeoutSeconds": visibility_timeout_seconds})
-
-    topic_path = quote(queue_name, safe="")
-    consumer_path = quote(consumer_group, safe="")
-    handle_path = quote(receipt_handle, safe="")
-    url = f"{base_url}{base_path}/{topic_path}/consumer/{consumer_path}/lease/{handle_path}"
+    url = _queue_consumer_url(queue_name, consumer_group, "lease", receipt_handle)
     with httpx.Client(timeout=timeout) as client:
         response = client.patch(url, content=body.encode("utf-8"), headers=headers)
 
-    if response.status_code == 400:
-        raise BadRequestError("Missing receipt handle or invalid visibility timeout")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 404:
-        raise MessageNotFoundError(message_id)
-    if response.status_code == 409:
-        raise MessageNotAvailableError(message_id, "lease expired or receipt handle mismatch")
-    if response.status_code == 429:
-        raise ThrottledError(parse_retry_after(response))
-    if response.status_code >= 500:
-        raise InternalServerError(
-            response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        )
+    _raise_for_lease_response(
+        response,
+        message_id,
+        bad_request_message="Missing receipt handle or invalid visibility timeout",
+    )
 
-    response.raise_for_status()
+
+async def change_visibility_async(
+    queue_name: str,
+    consumer_group: str,
+    message_id: str,
+    receipt_handle: str,
+    visibility_timeout_seconds: int,
+    *,
+    timeout: float | None = 10.0,
+) -> None:
+    auth_token = await get_queue_token_async(None)
+    headers = _queue_headers(auth_token, content_type="application/json")
+    body = json.dumps({"visibilityTimeoutSeconds": visibility_timeout_seconds})
+    url = _queue_consumer_url(queue_name, consumer_group, "lease", receipt_handle)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.patch(url, content=body.encode("utf-8"), headers=headers)
+
+    _raise_for_lease_response(
+        response,
+        message_id,
+        bad_request_message="Missing receipt handle or invalid visibility timeout",
+    )
 
 
 class VisibilityExtender:
@@ -473,14 +550,114 @@ class VisibilityExtender:
                     return
 
 
+class AsyncVisibilityExtender:
+    """
+    Asyncio visibility timeout extension loop.
+
+    Used by ASGI callbacks to keep queue lease operations on the running event loop.
+    """
+
+    def __init__(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        message_id: str,
+        receipt_handle: str,
+        *,
+        visibility_timeout_seconds: int,
+        refresh_interval_seconds: float,
+        timeout: float | None = 10.0,
+        debug: bool = False,
+    ) -> None:
+        self.queue_name = queue_name
+        self.consumer_group = consumer_group
+        self.message_id = message_id
+        self.receipt_handle = receipt_handle
+        self.visibility_timeout_seconds = int(visibility_timeout_seconds)
+        self.refresh_interval_seconds = float(refresh_interval_seconds)
+        self.timeout = timeout
+        self.debug = debug
+
+        self._stop: asyncio.Event | None = None
+        self._lock = asyncio.Lock()
+        self._task: asyncio.Task[None] | None = None
+
+    def start(self) -> None:
+        if self.refresh_interval_seconds <= 0:
+            return
+
+        self._stop = asyncio.Event()
+        self._task = asyncio.create_task(self._run())
+
+    async def stop(self) -> None:
+        if self._stop is not None:
+            self._stop.set()
+        if self._task is not None and self._task is not asyncio.current_task():
+            await self._task
+
+    async def finalize(self, fn: Callable[[], Awaitable[None]]) -> None:
+        """
+        Stop the extension loop and run `fn` (delete/change-visibility) exclusively.
+        """
+        if self._stop is not None:
+            self._stop.set()
+        async with self._lock:
+            await fn()
+
+    async def _run(self) -> None:
+        stop = self._stop
+        if stop is None:
+            return
+
+        while True:
+            try:
+                _ = await asyncio.wait_for(
+                    stop.wait(),
+                    timeout=self.refresh_interval_seconds,
+                )
+                return
+            except TimeoutError:
+                pass
+
+            async with self._lock:
+                if stop.is_set():
+                    return
+                try:
+                    await change_visibility_async(
+                        self.queue_name,
+                        self.consumer_group,
+                        self.message_id,
+                        self.receipt_handle,
+                        int(self.visibility_timeout_seconds),
+                        timeout=self.timeout,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    if self.debug:
+                        print(
+                            "[vercelqueue] visibility extension failed",
+                            {
+                                "queue": self.queue_name,
+                                "consumer": self.consumer_group,
+                                "messageId": self.message_id,
+                                "error": repr(exc),
+                            },
+                        )
+                    # Fail fast; we'll rely on the current visibility timeout.
+                    return
+
+
 __all__ = [
+    "AsyncVisibilityExtender",
     "ReceivedMessage",
     "VisibilityExtender",
     "change_visibility",
+    "change_visibility_async",
     "delete_message",
+    "delete_message_async",
     "parse_multipart_message",
     "parse_multipart_messages",
     "parse_retry_after",
+    "receive_message_by_id_async",
     "receive_message_by_id",
     "receive_messages",
 ]
