@@ -75,12 +75,18 @@ function normalizeDataRequestRoutes(request, routeTree, splatRouteIds) {
     return request;
   }
 
-  const requestedIds = parseRequestedRouteIds(url.searchParams.get(SPLAT_ROUTES_PARAM));
-  if (!requestedIds.length || !requestedIds.every(id => splatRouteIds.has(id))) {
+  const requestedIds = parseRequestedRouteIds(
+    url.searchParams.get(SPLAT_ROUTES_PARAM)
+  );
+  if (
+    !requestedIds.length ||
+    !requestedIds.every(id => splatRouteIds.has(id))
+  ) {
     return request;
   }
 
-  const pathnameWithoutSuffix = url.pathname.slice(0, -DATA_SUFFIX.length) || '/';
+  const pathnameWithoutSuffix =
+    url.pathname.slice(0, -DATA_SUFFIX.length) || '/';
   const fallbackRouteId = getFallbackRouteId(
     pathnameWithoutSuffix,
     routeTree,
