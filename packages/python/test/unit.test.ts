@@ -15,6 +15,14 @@ const tmpPythonDir = path.join(
   tmpdir(),
   `vc-test-python-${Math.floor(Math.random() * 1e6)}`
 );
+const pythonEntrypointDocsUrl =
+  'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
+const fastapiEntrypointDocsUrl =
+  'https://vercel.com/docs/frameworks/backend/fastapi#exporting-the-fastapi-application';
+const flaskEntrypointDocsUrl =
+  'https://vercel.com/docs/frameworks/backend/flask#exporting-the-flask-application';
+const djangoEntrypointDocsUrl =
+  'https://vercel.com/docs/frameworks/full-stack/django#configure-the-django-entrypoint';
 
 // For tests that exercise the build pipeline, we don't care about the actual
 // vendored dependencies, only that the build completes and the handler exists.
@@ -1923,7 +1931,10 @@ describe('vercel.json entrypoint configuration', () => {
         config: { framework: 'fastapi' },
         repoRootPath: workPath,
       })
-    ).rejects.toThrow(/ENOENT/);
+    ).rejects.toMatchObject({
+      message: 'Configured Python entrypoint "nonexistent.py" was not found.',
+      link: pythonEntrypointDocsUrl,
+    });
   });
 
   it('detects the variable automatically when no variable is specified', async () => {
@@ -1965,9 +1976,12 @@ describe('vercel.json entrypoint configuration', () => {
         config: { framework: 'fastapi' },
         repoRootPath: workPath,
       })
-    ).rejects.toThrow(
-      /Could not find a top-level "app", "application", or "handler" in "myapp\.py"/
-    );
+    ).rejects.toMatchObject({
+      message: expect.stringMatching(
+        /Could not find a top-level "app", "application", or "handler" in "myapp\.py"/
+      ),
+      link: pythonEntrypointDocsUrl,
+    });
   });
 });
 
@@ -3589,5 +3603,103 @@ describe('ensureVenv uv invocation', () => {
       '--python',
       '3.12',
     ]);
+  });
+});
+
+describe('entrypoint diagnostic error messages', () => {
+  // Uses dynamic import to avoid hoisting issues with vi.mock
+  let detectPythonEntrypoint: typeof import('../src/entrypoint').detectPythonEntrypoint;
+
+  beforeEach(async () => {
+    ({ detectPythonEntrypoint } = await import('../src/entrypoint'));
+  });
+
+  it('reports no Python files when directory is empty', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-empty-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(/No fastapi entrypoint found/i);
+    expect(result!.error!.link).toBe(fastapiEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('links Django entrypoint errors to the Django guide', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-django-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectPythonEntrypoint('django', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(/No django entrypoint found/i);
+    expect(result!.error!.link).toBe(djangoEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports candidate file exists but lacks export', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-noexport-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(path.join(workPath, 'app.py'), 'x = 1\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /Found app\.py but it does not define/i
+    );
+    expect(result!.error!.link).toBe(fastapiEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports nearby .py files with non-standard names', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-nearby-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'myapi.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(/Found Python files:.*myapi\.py/i);
+    expect(result!.error!.link).toBe(fastapiEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports pyproject.toml scripts.app pointing to missing module', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-scripts-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[project.scripts]\napp = "mymod:app"\n'
+    );
+
+    const result = await detectPythonEntrypoint('flask', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /pyproject\.toml.*defines app.*mymod:app.*not found/i
+    );
+    expect(result!.error!.link).toBe(flaskEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('missing export error takes priority over nearby files', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-priority-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(path.join(workPath, 'app.py'), 'x = 1\n');
+    fs.writeFileSync(path.join(workPath, 'myapi.py'), 'app = 1\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /Found app\.py but it does not define/i
+    );
+    expect(result!.error!.message).not.toMatch(/Found Python files/i);
+
+    fs.removeSync(workPath);
   });
 });
