@@ -110,6 +110,54 @@ class _FakeAsyncHttpxClient:
         return self.response
 
 
+def _queue_callback_headers(*, receipt_handle: str | None = None) -> list[tuple[bytes, bytes]]:
+    headers = [
+        (b"content-type", b"application/json"),
+        (b"ce-type", b"com.vercel.queue.v2beta"),
+        (b"ce-vqsqueuename", b"a"),
+        (b"ce-vqsconsumergroup", b"consumer-a"),
+        (b"ce-vqsmessageid", b"m"),
+        (b"ce-vqsdeliverycount", b"1"),
+        (b"ce-vqscreatedat", b"now"),
+    ]
+    if receipt_handle is not None:
+        headers.append((b"ce-vqsreceipthandle", receipt_handle.encode("ascii")))
+    return headers
+
+
+async def _run_asgi_post(
+    app: queue_asgi.ASGI,
+    *,
+    body: bytes = b'{"hello":"world"}',
+    headers: list[tuple[bytes, bytes]] | None = None,
+) -> tuple[list[dict[str, Any]], asyncio.AbstractEventLoop]:
+    sent: list[dict[str, Any]] = []
+    received = False
+    app_loop = asyncio.get_running_loop()
+
+    async def receive() -> dict[str, Any]:
+        nonlocal received
+        if received:
+            return {"type": "http.disconnect"}
+        received = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    await app(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/",
+            "headers": headers if headers is not None else _queue_callback_headers(),
+        },
+        receive,
+        send,
+    )
+    return sent, app_loop
+
+
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_receive_message_by_id_returns_raw_bytes_for_non_json_payload(self) -> None:
         with patch.object(
@@ -290,44 +338,7 @@ class TestSubscriptionInvocation(unittest.TestCase):
 
         queue_client.subscribe(topic="a")(handle_async)
 
-        async def run() -> tuple[list[dict], asyncio.AbstractEventLoop]:  # pyright: ignore[reportMissingTypeArgument]
-            app = queue_client.get_asgi_app()
-            sent: list[dict] = []  # pyright: ignore[reportMissingTypeArgument]
-            body = b'{"hello":"world"}'
-            received = False
-            app_loop = asyncio.get_running_loop()
-
-            async def receive() -> dict:  # pyright: ignore[reportMissingTypeArgument]
-                nonlocal received
-                if received:
-                    return {"type": "http.disconnect"}
-                received = True
-                return {"type": "http.request", "body": body, "more_body": False}
-
-            async def send(message: dict) -> None:  # pyright: ignore[reportMissingTypeArgument]
-                sent.append(message)
-
-            await app(
-                {
-                    "type": "http",
-                    "method": "POST",
-                    "path": "/",
-                    "headers": [
-                        (b"content-type", b"application/json"),
-                        (b"ce-type", b"com.vercel.queue.v2beta"),
-                        (b"ce-vqsqueuename", b"a"),
-                        (b"ce-vqsconsumergroup", b"consumer-a"),
-                        (b"ce-vqsmessageid", b"m"),
-                        (b"ce-vqsdeliverycount", b"1"),
-                        (b"ce-vqscreatedat", b"now"),
-                    ],
-                },
-                receive,
-                send,
-            )
-            return sent, app_loop
-
-        sent, app_loop = asyncio.run(run())
+        sent, app_loop = asyncio.run(_run_asgi_post(queue_client.get_asgi_app()))
 
         self.assertEqual(sent[0]["status"], 200)
         self.assertEqual(calls, ["world"])
@@ -338,42 +349,6 @@ class TestSubscriptionInvocation(unittest.TestCase):
             return queue_client.RetryAfter(7)
 
         queue_client.subscribe(topic="a")(handle)
-
-        async def run() -> list[dict]:  # pyright: ignore[reportMissingTypeArgument]
-            app = queue_client.get_asgi_app()
-            sent: list[dict] = []  # pyright: ignore[reportMissingTypeArgument]
-            received = False
-
-            async def receive() -> dict:  # pyright: ignore[reportMissingTypeArgument]
-                nonlocal received
-                if received:
-                    return {"type": "http.disconnect"}
-                received = True
-                return {"type": "http.request", "body": b'{"hello":"world"}', "more_body": False}
-
-            async def send(message: dict) -> None:  # pyright: ignore[reportMissingTypeArgument]
-                sent.append(message)
-
-            await app(
-                {
-                    "type": "http",
-                    "method": "POST",
-                    "path": "/",
-                    "headers": [
-                        (b"content-type", b"application/json"),
-                        (b"ce-type", b"com.vercel.queue.v2beta"),
-                        (b"ce-vqsqueuename", b"a"),
-                        (b"ce-vqsconsumergroup", b"consumer-a"),
-                        (b"ce-vqsmessageid", b"m"),
-                        (b"ce-vqsreceipthandle", b"receipt"),
-                        (b"ce-vqsdeliverycount", b"1"),
-                        (b"ce-vqscreatedat", b"now"),
-                    ],
-                },
-                receive,
-                send,
-            )
-            return sent
 
         with (
             patch.dict(queue_client.os.environ, {"VQS_VISIBILITY_REFRESH_INTERVAL": "0"}),
@@ -390,7 +365,12 @@ class TestSubscriptionInvocation(unittest.TestCase):
             patch.object(queue_callback, "change_visibility") as change_visibility,
             patch.object(queue_callback, "delete_message") as delete_message,
         ):
-            sent = asyncio.run(run())
+            sent, _app_loop = asyncio.run(
+                _run_asgi_post(
+                    queue_client.get_asgi_app(),
+                    headers=_queue_callback_headers(receipt_handle="receipt"),
+                )
+            )
 
         self.assertEqual(sent[0]["status"], 200)
         change_visibility_async.assert_awaited_once_with(
@@ -420,37 +400,16 @@ class TestAsgiApp(unittest.TestCase):
                 ce_types.append(environ["HTTP_CE_TYPE"])
                 return 202, [("Content-Type", "text/plain")], b"accepted"
 
-        async def run() -> list[dict[str, Any]]:
-            app = queue_asgi.build_asgi_app(AsyncCallableHandler())
-            sent: list[dict[str, Any]] = []
-            received = False
-
-            async def receive() -> dict[str, Any]:
-                nonlocal received
-                if received:
-                    return {"type": "http.disconnect"}
-                received = True
-                return {"type": "http.request", "body": b"payload", "more_body": False}
-
-            async def send(message: dict[str, Any]) -> None:
-                sent.append(message)
-
-            await app(
-                {
-                    "type": "http",
-                    "method": "POST",
-                    "path": "/",
-                    "headers": [
-                        (b"content-type", b"application/json"),
-                        (b"ce-type", b"com.vercel.queue.v2beta"),
-                    ],
-                },
-                receive,
-                send,
+        sent, _app_loop = asyncio.run(
+            _run_asgi_post(
+                queue_asgi.build_asgi_app(AsyncCallableHandler()),
+                body=b"payload",
+                headers=[
+                    (b"content-type", b"application/json"),
+                    (b"ce-type", b"com.vercel.queue.v2beta"),
+                ],
             )
-            return sent
-
-        sent = asyncio.run(run())
+        )
 
         self.assertEqual(calls, [b"payload"])
         self.assertEqual(ce_types, ["com.vercel.queue.v2beta"])
