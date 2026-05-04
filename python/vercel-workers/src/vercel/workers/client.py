@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from typing import Any, overload
 from uuid import uuid4
 
-from . import bootstrap as _bootstrap
 from ._queue import send as queue_send
 from ._queue.subscribe import (
     Ack,
@@ -28,13 +27,12 @@ from ._queue.types import (
     is_duration,
 )
 from .asgi import ASGI
-from .wsgi import WSGI
+from .callback import build_asgi_app_for_subscriptions, handle_queue_callback
+from .wsgi import WSGI, build_wsgi_app
 
 # Some callers patch this module's `os.environ`; keep the module import live while
 # the send implementation lives under `vercel.workers._queue`.
 _CLIENT_ENVIRON = os.environ
-callback = _bootstrap.callback
-_PayloadValidationError = _bootstrap.PayloadValidationError
 
 __all__ = [
     "DEPLOYMENT_ID_UNSET",
@@ -108,7 +106,7 @@ def _prepare_in_process_delivery(
     if not subscriptions:
         raise RuntimeError(
             "No worker subscriptions registered. Import the module containing your "
-            "@subscribe handlers before calling send() in in-process dev mode.",
+            + "@subscribe handlers before calling send() in in-process dev mode.",
         )
 
     # In dev mode, surface a clear error when there are worker functions but none of
@@ -120,9 +118,8 @@ def _prepare_in_process_delivery(
             {s.topic_desc for s in subscriptions if s.topic_desc is not None},
         )
         raise RuntimeError(
-            "No worker subscriptions found for topic "
-            f"{queue_name!r} in in-process dev mode. "
-            "Known topics: "
+            f"No worker subscriptions found for topic {queue_name!r} "
+            + "in in-process dev mode. Known topics: "
             + (", ".join(repr(t) for t in available_topics) or "(none with explicit topics)"),
         )
 
@@ -161,27 +158,14 @@ def _send_in_process(
     return {"messageId": message_id}
 
 
-def handle_queue_callback(
-    raw_body: bytes,
-    environ: dict[str, Any] | None = None,
-) -> tuple[int, list[tuple[str, str]], bytes]:
-    """
-    Core callback handler used by both WSGI/ASGI wrappers.
-
-    Returns: (status_code, headers, body_bytes)
-    """
-
-    return _bootstrap.handle_queue_callback(raw_body, environ, _subscriptions)
-
-
 def get_wsgi_app() -> WSGI:
     """Return a WSGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return _bootstrap.build_wsgi_queue_app(_subscriptions)
+    return build_wsgi_app(handle_queue_callback)
 
 
 def get_asgi_app() -> ASGI:
     """Return an ASGI app that executes subscribed workers from Vercel Queue callbacks."""
-    return _bootstrap.build_asgi_queue_app(_subscriptions)
+    return build_asgi_app_for_subscriptions(_subscriptions)
 
 
 def get_queue_base_url() -> str:

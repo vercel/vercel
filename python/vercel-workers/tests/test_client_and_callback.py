@@ -12,14 +12,17 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
+import vercel.workers._queue._transport as queue_transport
 import vercel.workers._queue.client as queue_client_impl
 import vercel.workers._queue.receive as queue_receive_impl
 import vercel.workers._queue.send as queue_service
+import vercel.workers.asgi as queue_asgi
 import vercel.workers.callback as queue_callback
 import vercel.workers.client as queue_client
 from vercel.workers._queue.subscribe import (
     call_subscription,
     invoke_subscriptions,
+    invoke_subscriptions_async,
     select_subscriptions,
 )
 from vercel.workers.client import WorkerJSONEncoder
@@ -107,15 +110,63 @@ class _FakeAsyncHttpxClient:
         return self.response
 
 
+def _queue_callback_headers(*, receipt_handle: str | None = None) -> list[tuple[bytes, bytes]]:
+    headers = [
+        (b"content-type", b"application/json"),
+        (b"ce-type", b"com.vercel.queue.v2beta"),
+        (b"ce-vqsqueuename", b"a"),
+        (b"ce-vqsconsumergroup", b"consumer-a"),
+        (b"ce-vqsmessageid", b"m"),
+        (b"ce-vqsdeliverycount", b"1"),
+        (b"ce-vqscreatedat", b"now"),
+    ]
+    if receipt_handle is not None:
+        headers.append((b"ce-vqsreceipthandle", receipt_handle.encode("ascii")))
+    return headers
+
+
+async def _run_asgi_post(
+    app: queue_asgi.ASGI,
+    *,
+    body: bytes = b'{"hello":"world"}',
+    headers: list[tuple[bytes, bytes]] | None = None,
+) -> tuple[list[dict[str, Any]], asyncio.AbstractEventLoop]:
+    sent: list[dict[str, Any]] = []
+    received = False
+    app_loop = asyncio.get_running_loop()
+
+    async def receive() -> dict[str, Any]:
+        nonlocal received
+        if received:
+            return {"type": "http.disconnect"}
+        received = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    await app(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/",
+            "headers": headers if headers is not None else _queue_callback_headers(),
+        },
+        receive,
+        send,
+    )
+    return sent, app_loop
+
+
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_receive_message_by_id_returns_raw_bytes_for_non_json_payload(self) -> None:
         with patch.object(
-            queue_receive_impl,
+            queue_transport,
             "get_queue_base_url",
             return_value="https://queue.example.com",
         ):
             with patch.object(
-                queue_receive_impl,
+                queue_transport,
                 "get_queue_base_path",
                 return_value="/api/v2/messages",
             ):
@@ -151,6 +202,80 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
         self.assertEqual(created_at, "2025-01-01T00:00:00Z")
         self.assertEqual(ticket, "receipt-handle-123")
 
+    def test_receive_messages_async_uses_async_client(self) -> None:
+        _FakeAsyncHttpxClient.captured_headers.clear()
+        _FakeAsyncHttpxClient.captured_urls.clear()
+
+        async def run() -> list[queue_receive_impl.ReceivedMessage]:
+            with (
+                patch.dict(queue_transport.os.environ, {}, clear=True),
+                patch.object(
+                    queue_transport,
+                    "get_queue_base_url",
+                    return_value="https://queue.example.com",
+                ),
+                patch.object(
+                    queue_transport,
+                    "get_queue_base_path",
+                    return_value="/api/v2/messages",
+                ),
+                patch.object(
+                    queue_receive_impl,
+                    "get_queue_token_async",
+                    new=AsyncMock(return_value="token"),
+                ),
+                patch.object(queue_receive_impl.httpx, "AsyncClient", _FakeAsyncHttpxClient),
+                patch.object(
+                    queue_receive_impl,
+                    "parse_multipart_messages",
+                    return_value=[
+                        (
+                            {
+                                "Content-Type": "application/json",
+                                "Vqs-Message-Id": "m1",
+                                "Vqs-Delivery-Count": "2",
+                                "Vqs-Timestamp": "2025-01-01T00:00:00Z",
+                                "Vqs-Receipt-Handle": "receipt-1",
+                            },
+                            b'{"ok":true}',
+                        ),
+                        (
+                            {
+                                "Content-Type": "text/plain",
+                                "Vqs-Message-Id": "m2",
+                                "Vqs-Receipt-Handle": "receipt-2",
+                            },
+                            b"raw",
+                        ),
+                    ],
+                ),
+            ):
+                return await queue_receive_impl.receive_messages_async(
+                    "q",
+                    "c",
+                    limit=2,
+                    visibility_timeout_seconds=45,
+                )
+
+        messages = asyncio.run(run())
+
+        self.assertEqual(
+            _FakeAsyncHttpxClient.captured_urls[-1],
+            "https://queue.example.com/api/v2/messages/q/consumer/c",
+        )
+        self.assertEqual(
+            _FakeAsyncHttpxClient.captured_headers[-1],
+            {
+                "Authorization": "Bearer token",
+                "Accept": "multipart/mixed",
+                "Vqs-Visibility-Timeout-Seconds": "45",
+                "Vqs-Max-Messages": "2",
+            },
+        )
+        self.assertEqual(messages[0]["payload"], {"ok": True})
+        self.assertEqual(messages[0]["deliveryCount"], 2)
+        self.assertEqual(messages[1]["payload"], b"raw")
+
     def test_get_queue_token_error_message_is_string(self) -> None:
         with patch.dict(queue_client.os.environ, {}, clear=True):
             with patch("vercel.oidc.get_vercel_oidc_token", return_value=None):
@@ -171,6 +296,125 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
 
         self.assertIsInstance(err.exception.args[0], str)
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
+
+
+class TestSubscriptionInvocation(unittest.TestCase):
+    def setUp(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def tearDown(self) -> None:
+        queue_client._subscriptions.clear()
+
+    def test_invoke_async_subscription_async(self) -> None:
+        calls: list[str] = []
+
+        async def handle_async(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            calls.append("handle_async")
+            return queue_client.RetryAfter(5)
+
+        queue_client.subscribe(topic="a")(handle_async)
+
+        async def run() -> int | None:
+            return await invoke_subscriptions_async(
+                {"hello": "world"},
+                {
+                    "messageId": "m",
+                    "deliveryCount": 1,
+                    "createdAt": "now",
+                    "topic": "a",
+                },
+            )
+
+        self.assertEqual(asyncio.run(run()), 5)
+        self.assertEqual(calls, ["handle_async"])
+
+    def test_get_asgi_app_awaits_async_subscription(self) -> None:
+        calls: list[str] = []
+        subscriber_loops: list[asyncio.AbstractEventLoop] = []
+
+        async def handle_async(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            subscriber_loops.append(asyncio.get_running_loop())
+            calls.append(message["hello"])
+
+        queue_client.subscribe(topic="a")(handle_async)
+
+        sent, app_loop = asyncio.run(_run_asgi_post(queue_client.get_asgi_app()))
+
+        self.assertEqual(sent[0]["status"], 200)
+        self.assertEqual(calls, ["world"])
+        self.assertIs(subscriber_loops[0], app_loop)
+
+    def test_get_asgi_app_uses_async_visibility_update(self) -> None:
+        def handle(message, metadata):  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+            return queue_client.RetryAfter(7)
+
+        queue_client.subscribe(topic="a")(handle)
+
+        with (
+            patch.dict(queue_client.os.environ, {"VQS_VISIBILITY_REFRESH_INTERVAL": "0"}),
+            patch.object(
+                queue_callback,
+                "change_visibility_async",
+                new=AsyncMock(),
+            ) as change_visibility_async,
+            patch.object(
+                queue_callback,
+                "delete_message_async",
+                new=AsyncMock(),
+            ) as delete_message_async,
+            patch.object(queue_callback, "change_visibility") as change_visibility,
+            patch.object(queue_callback, "delete_message") as delete_message,
+        ):
+            sent, _app_loop = asyncio.run(
+                _run_asgi_post(
+                    queue_client.get_asgi_app(),
+                    headers=_queue_callback_headers(receipt_handle="receipt"),
+                )
+            )
+
+        self.assertEqual(sent[0]["status"], 200)
+        change_visibility_async.assert_awaited_once_with(
+            "a",
+            "consumer-a",
+            "m",
+            "receipt",
+            7,
+        )
+        delete_message_async.assert_not_awaited()
+        change_visibility.assert_not_called()
+        delete_message.assert_not_called()
+
+
+class TestAsgiApp(unittest.TestCase):
+    def test_build_asgi_app_awaits_async_callable_object(self) -> None:
+        calls: list[bytes] = []
+        ce_types: list[str] = []
+
+        class AsyncCallableHandler:
+            async def __call__(
+                self,
+                raw_body: bytes,
+                environ: dict[str, Any],
+            ) -> tuple[int, list[tuple[str, str]], bytes]:
+                calls.append(raw_body)
+                ce_types.append(environ["HTTP_CE_TYPE"])
+                return 202, [("Content-Type", "text/plain")], b"accepted"
+
+        sent, _app_loop = asyncio.run(
+            _run_asgi_post(
+                queue_asgi.build_asgi_app(AsyncCallableHandler()),
+                body=b"payload",
+                headers=[
+                    (b"content-type", b"application/json"),
+                    (b"ce-type", b"com.vercel.queue.v2beta"),
+                ],
+            )
+        )
+
+        self.assertEqual(calls, [b"payload"])
+        self.assertEqual(ce_types, ["com.vercel.queue.v2beta"])
+        self.assertEqual(sent[0]["status"], 202)
+        self.assertEqual(sent[1]["body"], b"accepted")
 
 
 class TestTypedSubscriptions(unittest.TestCase):
@@ -223,7 +467,7 @@ class TestTypedSubscriptions(unittest.TestCase):
 
         queue_client.subscribe(topic="users.create")(handle)
 
-        with self.assertRaises(queue_client._PayloadValidationError):
+        with self.assertRaises(queue_callback.PayloadValidationError):
             queue_client._invoke_subscriptions(
                 {"email": "a@b.com", "age": "not-an-int"},
                 {"topic": "users.create"},
@@ -248,7 +492,7 @@ class TestTypedSubscriptions(unittest.TestCase):
 
         with (
             patch.object(
-                queue_client.callback,
+                queue_callback,
                 "receive_message_by_id",
                 return_value=(
                     {"email": "a@b.com", "age": "not-an-int"},
@@ -257,8 +501,8 @@ class TestTypedSubscriptions(unittest.TestCase):
                     "receipt",
                 ),
             ),
-            patch.object(queue_client.callback, "delete_message") as delete_message,
-            patch.object(queue_client.callback, "change_visibility") as change_visibility,
+            patch.object(queue_callback, "delete_message") as delete_message,
+            patch.object(queue_callback, "change_visibility") as change_visibility,
         ):
             status, _headers, body = queue_client.handle_queue_callback(raw_body)
 
@@ -328,8 +572,8 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            patch.object(queue_client.callback, "change_visibility") as change_visibility,
-            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_callback, "change_visibility") as change_visibility,
+            patch.object(queue_callback, "delete_message") as delete_message,
         ):
             status, _headers, _body = queue_client.handle_queue_callback(
                 self._raw_callback(),
@@ -347,8 +591,8 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            patch.object(queue_client.callback, "change_visibility") as change_visibility,
-            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_callback, "change_visibility") as change_visibility,
+            patch.object(queue_callback, "delete_message") as delete_message,
         ):
             status, _headers, _body = queue_client.handle_queue_callback(
                 self._raw_callback(),
@@ -366,8 +610,8 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            patch.object(queue_client.callback, "change_visibility") as change_visibility,
-            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_callback, "change_visibility") as change_visibility,
+            patch.object(queue_callback, "delete_message") as delete_message,
         ):
             status, _headers, _body = queue_client.handle_queue_callback(
                 self._raw_callback(),
@@ -385,8 +629,8 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            patch.object(queue_client.callback, "change_visibility") as change_visibility,
-            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_callback, "change_visibility") as change_visibility,
+            patch.object(queue_callback, "delete_message") as delete_message,
         ):
             status, _headers, _body = queue_client.handle_queue_callback(
                 self._raw_callback(),
@@ -404,8 +648,8 @@ class TestWorkerDirectives(unittest.TestCase):
         queue_client.subscribe(topic="q")(worker)
 
         with (
-            patch.object(queue_client.callback, "change_visibility") as change_visibility,
-            patch.object(queue_client.callback, "delete_message") as delete_message,
+            patch.object(queue_callback, "change_visibility") as change_visibility,
+            patch.object(queue_callback, "delete_message") as delete_message,
         ):
             status, _headers, _body = queue_client.handle_queue_callback(
                 self._raw_callback(),

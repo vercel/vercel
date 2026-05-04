@@ -239,6 +239,39 @@ def invoke_subscriptions(
     return timeout_seconds
 
 
+async def invoke_subscriptions_async(
+    message: Any,
+    metadata: MessageMetadata,
+    registry: Iterable[Subscription] = subscriptions,
+) -> int | None:
+    """
+    Invoke all matching subscriptions from an async callback path.
+    """
+    topic = metadata.get("topic")
+    timeout_seconds: int | None = None
+
+    for sub in select_subscriptions(topic, registry):
+        try:
+            if inspect.iscoroutinefunction(sub.func):
+                result = call_subscription(sub, message, metadata)
+            else:
+                result = await asyncio.to_thread(call_subscription, sub, message, metadata)
+            if inspect.isawaitable(result):
+                result = await result
+        except Ack:
+            return None
+        except RetryAfter as directive:
+            return directive.timeout_seconds
+        except Exception:
+            raise
+
+        if isinstance(result, Ack):
+            return None
+        timeout_seconds = result_timeout_seconds(result, timeout_seconds)
+
+    return timeout_seconds
+
+
 __all__ = [
     "Ack",
     "PayloadValidationError",
@@ -248,6 +281,7 @@ __all__ = [
     "build_subscribe_decorator",
     "has_subscriptions",
     "invoke_subscriptions",
+    "invoke_subscriptions_async",
     "select_subscriptions",
     "subscribe",
     "subscriptions",
