@@ -1,5 +1,26 @@
 # @vercel/build-utils
 
+## 13.21.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 13.20.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Add shared build output deserialization helpers for existing callers. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
 ## 13.19.1
 
 ### Patch Changes

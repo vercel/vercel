@@ -1,7 +1,11 @@
 // @ts-check
-const child_process = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
-const { getAffectedPackages } = require('./get-affected-packages');
+const testGlob = require('./test-glob');
+const {
+  getAffectedPackages,
+  getAllPackages,
+} = require('./get-affected-packages');
 
 const runnersMap = new Map([
   [
@@ -109,6 +113,138 @@ const packageOptionsOverrides = {
   vercel: { max: 2 },
 };
 
+const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
+const DEFAULT_TEST_NAME_PATTERNS = ['test', 'spec'];
+
+function readPackageManifest(rootPath, packageJsonPath) {
+  const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  return {
+    packagePath: path.relative(rootPath, path.dirname(packageJsonPath)),
+    packageJson: manifest,
+    packageName: manifest.name,
+  };
+}
+
+function getScriptTestPatterns(packageJson, scriptName) {
+  const configuredPatterns = packageJson.testing?.[scriptName];
+  if (configuredPatterns) {
+    return Array.isArray(configuredPatterns)
+      ? configuredPatterns
+      : [configuredPatterns];
+  }
+
+  const script = packageJson.scripts?.[scriptName];
+  if (!script) {
+    return [];
+  }
+
+  const globPatterns = getQuotedPatterns(script);
+  if (script.startsWith('glob ') && globPatterns.length > 0) {
+    return globPatterns;
+  }
+
+  const pnpmTestPatterns = getPatternsAfterCommand(script, 'pnpm test');
+  if (pnpmTestPatterns.length > 0) {
+    return pnpmTestPatterns;
+  }
+
+  const jestPatterns = getPatternsAfterCommand(script, 'jest');
+  if (jestPatterns.length > 0) {
+    return jestPatterns;
+  }
+
+  if (script === 'pnpm test') {
+    return getDefaultTestPatterns();
+  }
+
+  return [];
+}
+
+function getQuotedPatterns(script) {
+  const patterns = [];
+  const quotedPattern = /'([^']+)'|"([^"]+)"/g;
+  let match;
+  while ((match = quotedPattern.exec(script))) {
+    patterns.push(match[1] || match[2]);
+  }
+  return patterns.filter(pattern => isLikelyTestPattern(pattern));
+}
+
+function getPatternsAfterCommand(script, command) {
+  const commandIndex = script.lastIndexOf(command);
+  if (commandIndex === -1) {
+    return [];
+  }
+
+  const args = tokenizeShellArgs(script.slice(commandIndex + command.length));
+  const patterns = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '&&' || arg === ';') {
+      break;
+    }
+
+    if (arg === '--config' || arg === '-c') {
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith('-')) {
+      continue;
+    }
+
+    if (isLikelyTestPattern(arg)) {
+      patterns.push(arg);
+    }
+  }
+
+  return patterns.length > 0 ? patterns : getDefaultTestPatterns();
+}
+
+function tokenizeShellArgs(input) {
+  const tokens = [];
+  const tokenPattern = /'([^']*)'|"([^"]*)"|(\S+)/g;
+  let match;
+  while ((match = tokenPattern.exec(input))) {
+    tokens.push(match[1] || match[2] || match[3]);
+  }
+  return tokens;
+}
+
+function isLikelyTestPattern(pattern) {
+  return (
+    pattern.includes('/') ||
+    pattern.includes('*') ||
+    DEFAULT_TEST_NAME_PATTERNS.some(name => pattern.includes(`.${name}.`))
+  );
+}
+
+function getDefaultTestPatterns() {
+  return DEFAULT_TEST_NAME_PATTERNS.flatMap(testName =>
+    DEFAULT_TEST_FILE_EXTENSIONS.map(
+      extension => `test/**/*.${testName}.${extension}`
+    )
+  );
+}
+
+function getTestPathsForPackage(rootPath, packagePath, patterns) {
+  const packageRoot = path.join(rootPath, packagePath);
+  const testPaths = new Set();
+
+  for (const pattern of patterns) {
+    for (const testPath of testGlob.expandTestPattern(
+      packageRoot,
+      pattern,
+      getDefaultTestPatterns()
+    )) {
+      testPaths.add(testPath);
+    }
+  }
+
+  return [...testPaths].sort((a, b) => a.localeCompare(b));
+}
+
 function getRunnerOptions(scriptName, packageName) {
   let runnerOptions = runnersMap.get(scriptName);
   if (packageOptionsOverrides[packageName]) {
@@ -147,7 +283,7 @@ async function getChunkedTests() {
     : { result: 'test-all' };
 
   let affectedPackages = [];
-  if (result.result === 'test-affected') {
+  if (result.result === 'test-affected' && 'packages' in result) {
     affectedPackages = result.packages;
   } else if (result.result === 'test-none') {
     console.error('Testing strategy: no tests (no packages affected)');
@@ -158,54 +294,47 @@ async function getChunkedTests() {
     `Testing strategy: ${affectedPackages.length > 0 ? 'affected packages only' : 'all packages'}`
   );
 
-  const turboArgs = [
-    `run`,
-    ...scripts,
-    `--cache-dir=.turbo`,
-    '--output-logs=full',
-    '--log-order=stream',
-  ];
-
-  // Add filter for affected packages if we have them
-  if (affectedPackages.length > 0) {
-    // Create a filter that includes affected packages and their dependents
-    const filters = affectedPackages.map(pkg => `--filter=${pkg}...`);
-    turboArgs.push(...filters);
-  }
-
-  turboArgs.push('--', '--', '--listTests'); // need two of these due to pnpm arg parsing
-
-  const dryRunText = (await turbo(turboArgs)).toString('utf8');
-
   /**
    * @typedef {string} TestPath
    * @type {{ [package: string]: { [script: string]: TestPath[] } }}
    */
   const testsToRun = {};
 
-  dryRunText
-    .split('\n')
-    .flatMap(line => {
-      const [packageAndScriptName, possiblyPath] = line.split(' ');
-      const [packageName, scriptName] = packageAndScriptName.split(':');
-
-      if (!packageName || !scriptName || !possiblyPath?.includes(rootPath)) {
-        return [];
-      }
-
-      return { testPath: possiblyPath, scriptName, packageName };
+  const packageManifests = (await getAllPackages())
+    .filter(pkg => pkg.name && pkg.name !== '//' && pkg.path)
+    .map(pkg =>
+      readPackageManifest(
+        rootPath,
+        path.join(rootPath, pkg.path, 'package.json')
+      )
+    );
+  const affectedPackageSet = new Set(affectedPackages);
+  packageManifests
+    .filter(({ packageName }) => {
+      return (
+        affectedPackageSet.size === 0 || affectedPackageSet.has(packageName)
+      );
     })
-    .forEach(({ testPath, scriptName, packageName }) => {
-      const [, packageDir, shortPackageName] = testPath
-        .replace(rootPath, '')
-        .split(path.sep);
+    .forEach(({ packageJson, packageName, packagePath }) => {
+      for (const scriptName of scripts) {
+        const patterns = getScriptTestPatterns(packageJson, scriptName);
+        if (patterns.length === 0) {
+          continue;
+        }
 
-      const packagePath =
-        path.join(packageDir, shortPackageName) + ',' + packageName;
-      testsToRun[packagePath] = testsToRun[packagePath] || {};
-      testsToRun[packagePath][scriptName] =
-        testsToRun[packagePath][scriptName] || [];
-      testsToRun[packagePath][scriptName].push(testPath);
+        const testPaths = getTestPathsForPackage(
+          rootPath,
+          packagePath,
+          patterns
+        );
+        if (testPaths.length === 0) {
+          continue;
+        }
+
+        const packagePathAndName = `${packagePath},${packageName}`;
+        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {};
+        testsToRun[packagePathAndName][scriptName] = testPaths;
+      }
     });
 
   const chunkedTests = Object.entries(testsToRun).flatMap(
@@ -254,42 +383,6 @@ async function getChunkedTests() {
 }
 
 /**
- * Run turbo cli
- * @param {string[]} args
- */
-async function turbo(args) {
-  const chunks = [];
-  try {
-    await new Promise((resolve, reject) => {
-      const root = path.resolve(__dirname, '..');
-      const turbo = path.join(root, 'node_modules', '.bin', 'turbo');
-      const spawned = child_process.spawn(turbo, args, {
-        cwd: root,
-        env: process.env,
-      });
-      spawned.stdout.on('data', data => {
-        chunks.push(data);
-        process.stderr.write(data);
-      });
-      spawned.stderr.on('data', data => {
-        process.stderr.write(data);
-      });
-      spawned.on('close', code => {
-        if (code !== 0) {
-          reject(new Error(`Turbo exited with code ${code}`));
-        } else {
-          resolve(code);
-        }
-      });
-    });
-    return Buffer.concat(chunks);
-  } catch (e) {
-    console.error(e.message);
-    process.exit(1);
-  }
-}
-
-/**
  * @template T
  * @param {number} minChunks minimum number of chunks
  * @param {number} maxChunks maximum number of chunks
@@ -323,4 +416,5 @@ if (module === require.main || !module.parent) {
 
 module.exports = {
   intoChunks,
+  getScriptTestPatterns,
 };

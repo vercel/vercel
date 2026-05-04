@@ -1,5 +1,12 @@
 # @vercel/redwood
 
+## 2.4.13
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+
 ## 2.4.12
 
 ### Patch Changes

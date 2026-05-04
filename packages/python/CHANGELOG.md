@@ -1,5 +1,32 @@
 # @vercel/python
 
+## 6.37.0
+
+### Minor Changes
+
+- 25e84c6: Support specifying entrypoint in vercel.tool.entrypoint in pyproject.toml
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 6.36.1
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
+## 6.36.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Don't pass --python 3.0 to uv venv when running vc dev ([#16072](https://github.com/vercel/vercel/pull/16072))
+
 ## 6.35.0
 
 ### Minor Changes

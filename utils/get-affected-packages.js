@@ -3,6 +3,22 @@ const child_process = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+function getTurboBinary() {
+  if (process.env.TURBO_BINARY) {
+    return process.env.TURBO_BINARY;
+  }
+
+  const root = path.resolve(__dirname, '..');
+  const localTurbo = path.join(
+    root,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'turbo.cmd' : 'turbo'
+  );
+
+  return fs.existsSync(localTurbo) ? localTurbo : 'turbo';
+}
+
 /**
  * Task names that indicate a package has tests
  */
@@ -12,6 +28,20 @@ const TEST_TASK_NAMES = ['test', 'vitest', 'type-check'];
  * Task names that indicate a package has e2e tests
  */
 const E2E_TASK_NAMES = ['test-e2e', 'vitest-e2e'];
+
+async function getAllPackages() {
+  const variablesPath = path.resolve(__dirname, 'all-packages-variables.json');
+  const queryPath = path.resolve(__dirname, 'all-packages-query.gql');
+
+  const response = await turboQuery(['--variables', variablesPath, queryPath]);
+  const data = JSON.parse(response.toString('utf8'));
+
+  if (!data.data || !data.data.packages) {
+    throw new Error('No packages data found in GraphQL response');
+  }
+
+  return data.data.packages.items;
+}
 
 /**
  * Get affected packages based on git changes since the given commit
@@ -95,7 +125,7 @@ async function turboQuery(args) {
   const chunks = [];
   return new Promise((resolve, reject) => {
     const root = path.resolve(__dirname, '..');
-    const turbo = path.join(root, 'node_modules', '.bin', 'turbo');
+    const turbo = getTurboBinary();
     const spawned = child_process.spawn(turbo, ['query', ...args], {
       cwd: root,
       env: process.env,
@@ -183,27 +213,7 @@ function shouldRunAllE2ETests(changedFiles) {
  */
 async function getAllPackagesWithE2ETests() {
   try {
-    // Use GraphQL query to find all packages with e2e test tasks
-    const variablesPath = path.resolve(
-      __dirname,
-      'all-packages-variables.json'
-    );
-    const queryPath = path.resolve(__dirname, 'all-packages-query.gql');
-
-    const response = await turboQuery([
-      '--variables',
-      variablesPath,
-      queryPath,
-    ]);
-
-    const data = JSON.parse(response.toString('utf8'));
-
-    if (!data.data || !data.data.packages) {
-      console.warn('No packages data found in GraphQL response');
-      return [];
-    }
-
-    const packagesWithE2E = data.data.packages.items
+    const packagesWithE2E = (await getAllPackages())
       .filter(pkg => {
         // Skip root package
         if (!pkg.name || pkg.name === '//') return false;
@@ -233,26 +243,7 @@ async function getAllPackagesWithE2ETests() {
  */
 async function getAllPackagesWithTests() {
   try {
-    const variablesPath = path.resolve(
-      __dirname,
-      'all-packages-variables.json'
-    );
-    const queryPath = path.resolve(__dirname, 'all-packages-query.gql');
-
-    const response = await turboQuery([
-      '--variables',
-      variablesPath,
-      queryPath,
-    ]);
-
-    const data = JSON.parse(response.toString('utf8'));
-
-    if (!data.data || !data.data.packages) {
-      console.warn('No packages data found in GraphQL response');
-      return [];
-    }
-
-    const packagesWithTests = data.data.packages.items
+    const packagesWithTests = (await getAllPackages())
       .filter(hasTestTasks)
       .map(pkg => pkg.name);
 
@@ -265,6 +256,7 @@ async function getAllPackagesWithTests() {
 
 module.exports = {
   getAffectedPackages,
+  getAllPackages,
   getChangedFiles,
   shouldRunAllE2ETests,
   getAllPackagesWithE2ETests,

@@ -186,10 +186,7 @@ export default class DevServer {
     if (!this.services || this.services.length === 0) {
       return false;
     }
-    if (this.services.length > 1) {
-      return true;
-    }
-    return this.services[0].type !== 'web';
+    return true;
   }
 
   constructor(cwd: string, options: DevServerOptions) {
@@ -1542,9 +1539,9 @@ export default class DevServer {
       ].join('\r\n');
 
       const body = Buffer.concat([
-        Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`),
-        result.payload,
-        Buffer.from(`\r\n--${boundary}--\r\n`),
+        Uint8Array.from(Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`)),
+        Uint8Array.from(result.payload),
+        Uint8Array.from(Buffer.from(`\r\n--${boundary}--\r\n`)),
       ]);
 
       res.writeHead(200, {
@@ -1586,7 +1583,7 @@ export default class DevServer {
       }
 
       const boundary = `----vcdevboundary${randomBytes(8).toString('hex')}`;
-      const parts: Buffer[] = [];
+      const parts: Uint8Array[] = [];
       for (const msg of messages) {
         const partHeaders = [
           `Vqs-Message-Id: ${msg.messageId}`,
@@ -1597,12 +1594,14 @@ export default class DevServer {
         ].join('\r\n');
 
         parts.push(
-          Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`),
-          msg.payload,
-          Buffer.from('\r\n')
+          Uint8Array.from(
+            Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`)
+          ),
+          Uint8Array.from(msg.payload),
+          Uint8Array.from(Buffer.from('\r\n'))
         );
       }
-      parts.push(Buffer.from(`--${boundary}--\r\n`));
+      parts.push(Uint8Array.from(Buffer.from(`--${boundary}--\r\n`)));
 
       const body = Buffer.concat(parts);
       res.writeHead(200, {

@@ -14,8 +14,8 @@ export async function executeUpgrade(): Promise<number> {
   output.debug(`Executing: ${updateCommand}`);
 
   return new Promise<number>(resolve => {
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
+    const stdout: Uint8Array[] = [];
+    const stderr: Uint8Array[] = [];
 
     const upgradeProcess = spawn(command, args, {
       stdio: ['inherit', 'pipe', 'pipe'],
@@ -23,11 +23,11 @@ export async function executeUpgrade(): Promise<number> {
     });
 
     upgradeProcess.stdout?.on('data', (data: Buffer) => {
-      stdout.push(data);
+      stdout.push(Uint8Array.from(data));
     });
 
     upgradeProcess.stderr?.on('data', (data: Buffer) => {
-      stderr.push(data);
+      stderr.push(Uint8Array.from(data));
     });
 
     upgradeProcess.on('error', (err: Error) => {
