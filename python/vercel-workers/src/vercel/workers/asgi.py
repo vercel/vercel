@@ -14,10 +14,10 @@ ASGI = Callable[
     Awaitable[None],
 ]
 
-Handler = Callable[[bytes, dict[str, Any]], tuple[int, list[tuple[str, str]], bytes]]
-AsyncHandler = Callable[
-    [bytes, dict[str, Any]], Awaitable[tuple[int, list[tuple[str, str]], bytes]]
-]
+type HandlerResult = tuple[int, list[tuple[str, str]], bytes]
+
+Handler = Callable[[bytes, dict[str, Any]], HandlerResult]
+AsyncHandler = Callable[[bytes, dict[str, Any]], Awaitable[HandlerResult]]
 
 
 def _get_header(scope: dict[str, Any], name: str) -> str | None:
@@ -154,7 +154,8 @@ def build_asgi_app(
                 environ[key] = value
 
             raw_body = await _read_body(receive)
-            if inspect.iscoroutinefunction(handler):
+            handler_call = type(handler).__call__
+            if inspect.iscoroutinefunction(handler) or inspect.iscoroutinefunction(handler_call):
                 async_handler = cast(AsyncHandler, handler)
                 status_code, headers, body = await async_handler(raw_body, environ)
             else:
