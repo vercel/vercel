@@ -53,7 +53,7 @@ Error.message
 
 #### Defined in
 
-node_modules/.pnpm/typescript@4.9.5/node_modules/typescript/lib/lib.es5.d.ts:1054
+node_modules/.pnpm/typescript@4.9.4/node_modules/typescript/lib/lib.es5.d.ts:1054
 
 ---
 
@@ -81,7 +81,7 @@ Error.stack
 
 #### Defined in
 
-node_modules/.pnpm/typescript@4.9.5/node_modules/typescript/lib/lib.es5.d.ts:1055
+node_modules/.pnpm/typescript@4.9.4/node_modules/typescript/lib/lib.es5.d.ts:1055
 
 ---
 

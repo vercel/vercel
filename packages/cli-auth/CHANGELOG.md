@@ -1,5 +1,28 @@
 # @vercel/cli-auth
 
+## 0.2.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 0.1.1
+
+### Patch Changes
+
+- bf07448: Revert "auth: Make it possible to store CLI credentials in OS keychain (#16083)"
+
+## 0.1.0
+
+### Minor Changes
+
+- 24686d0: Add configurable auth token storage with keyring-backed persistence and file fallback support.
+
+### Patch Changes
+
+- d36ee35: Ensure root-level build outputs are restored before packaging preview tarballs.
+- 56c9f89: add missing prettier dev dependency
+
 ## 0.0.1
 
 ### Patch Changes
