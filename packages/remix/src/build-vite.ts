@@ -18,6 +18,7 @@ import {
 } from '@vercel/build-utils';
 import {
   getPathFromRoute,
+  getReactRouterDataPaths,
   getRegExpFromPath,
   getPackageVersion,
   hasScript,
@@ -534,9 +535,12 @@ export const build: BuildV2 = async ({
 
     output[path] = func;
     if (isReactRouter) {
-      // Emit a parallel entry so the filesystem handle resolves `<path>.data`
-      // to the same bundle. `writeFunctionSymlink` dedupes this to a symlink.
-      output[`${path}.data`] = func;
+      // Emit parallel entries so the filesystem handle resolves the
+      // single-fetch URL(s) for this route to the same bundle. Note that
+      // the root index route uses `/_root.data` rather than `/index.data`.
+      for (const dataPath of getReactRouterDataPaths(path)) {
+        output[dataPath] = func;
+      }
     }
 
     // If this is a dynamic route then add a Vercel route
