@@ -1,5 +1,11 @@
 # vercel-workers
 
+## 0.0.22
+
+### Patch Changes
+
+- 9599101: [python/vercel-workers] Adds QueueClient and AsyncQueueClient
+
 ## 0.0.21
 
 ### Patch Changes
