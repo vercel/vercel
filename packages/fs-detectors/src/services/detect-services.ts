@@ -37,6 +37,7 @@ function emptyRoutes(): ServicesRoutes {
     hostRewrites: [],
     rewrites: [],
     defaults: [],
+    fallbacks: [],
     crons: [],
     workers: [],
   };
@@ -275,6 +276,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
   const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
+  const fallbacks: Route[] = [];
   const crons: Route[] = [];
   const workers: Route[] = [];
 
@@ -326,13 +328,12 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     if (isStaticBuild(service)) {
       // Static/SPA service: serve index.html for client-side routing
       if (routePrefix === '/') {
-        defaults.push({ handle: 'filesystem' });
-        defaults.push({
+        fallbacks.push({
           src: scopeRouteSourceToOwnership('/(.*)', ownershipGuard),
           dest: '/index.html',
         });
       } else {
-        rewrites.push({
+        fallbacks.push({
           src: scopeRouteSourceToOwnership(
             `^/${normalizedPrefix}(?:/.*)?$`,
             ownershipGuard
@@ -375,7 +376,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     });
   }
 
-  return { hostRewrites, rewrites, defaults, crons, workers };
+  return { hostRewrites, rewrites, defaults, fallbacks, crons, workers };
 }
 
 function escapeRegex(str: string): string {

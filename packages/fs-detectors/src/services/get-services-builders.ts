@@ -21,6 +21,7 @@ export interface ServicesBuildersResult {
   warnings: ErrorResponse[];
   hostRewriteRoutes: Route[] | null;
   defaultRoutes: Route[] | null;
+  fallbackRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
@@ -50,6 +51,7 @@ export async function getServicesBuilders(
       warnings: [],
       hostRewriteRoutes: null,
       defaultRoutes: null,
+      fallbackRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
@@ -76,6 +78,7 @@ export async function getServicesBuilders(
       warnings: warningResponses,
       hostRewriteRoutes: null,
       defaultRoutes: null,
+      fallbackRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
@@ -95,6 +98,7 @@ export async function getServicesBuilders(
       warnings: warningResponses,
       hostRewriteRoutes: null,
       defaultRoutes: null,
+      fallbackRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
@@ -112,6 +116,8 @@ export async function getServicesBuilders(
       result.routes.hostRewrites.length > 0 ? result.routes.hostRewrites : null,
     defaultRoutes:
       result.routes.defaults.length > 0 ? result.routes.defaults : null,
+    fallbackRoutes:
+      result.routes.fallbacks.length > 0 ? result.routes.fallbacks : null,
     redirectRoutes: [],
     rewriteRoutes:
       result.routes.rewrites.length > 0 ||
