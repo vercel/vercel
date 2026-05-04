@@ -792,12 +792,12 @@ describe('generateProjectManifest', () => {
       pythonPackage: pkg,
       pythonVersion,
       uvLockPath,
-      serviceType: 'worker',
+      serviceType: 'queue',
     });
 
     const manifestPath = path.join(tempDir, DIAGNOSTICS_PATH);
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    expect(manifest.serviceType).toBe('worker');
+    expect(manifest.serviceType).toBe('queue');
   });
 
   it('omits serviceType from manifest when not provided', async () => {

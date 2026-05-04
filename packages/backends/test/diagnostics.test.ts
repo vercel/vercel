@@ -1567,11 +1567,11 @@ describe('generateProjectManifest — serviceType field', () => {
       cliType: 'npm',
       lockfilePath: undefined,
       lockfileVersion: undefined,
-      serviceType: 'worker',
+      serviceType: 'queue',
     });
 
     const manifest = readManifest(tempDir);
-    expect(manifest.serviceType).toBe('worker');
+    expect(manifest.serviceType).toBe('queue');
   });
 
   it('omits serviceType from manifest when not provided', async () => {

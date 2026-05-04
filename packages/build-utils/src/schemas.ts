@@ -179,7 +179,8 @@ export const packageManifestSchema = {
     },
     serviceType: {
       type: 'string',
-      description: 'Service type, e.g. "web", "worker", "cron".',
+      description:
+        'Service type: one of "web", "schedule", "queue", "workflow".',
     },
     runtimeVersion: {
       type: 'object',

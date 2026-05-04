@@ -8,6 +8,7 @@ import {
 } from './package-versions';
 import {
   download,
+  getReportedServiceType,
   glob,
   Lambda,
   FileBlob,
@@ -831,7 +832,7 @@ from vercel_runtime.vc_init import vc_handler
         pythonVersion,
         uvLockPath,
         framework,
-        serviceType: service?.type,
+        serviceType: service ? getReportedServiceType(service) : undefined,
       });
     } catch (err) {
       debug(
