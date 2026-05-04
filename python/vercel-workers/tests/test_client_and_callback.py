@@ -21,6 +21,7 @@ import vercel.workers.client as queue_client
 from vercel.workers._queue.subscribe import (
     call_subscription,
     invoke_subscriptions,
+    invoke_subscriptions_async,
     select_subscriptions,
 )
 from vercel.workers.client import WorkerJSONEncoder
@@ -265,7 +266,7 @@ class TestSubscriptionInvocation(unittest.TestCase):
         queue_client.subscribe(topic="a")(handle_async)
 
         async def run() -> int | None:
-            return await queue_callback._invoke_subscriptions_async(
+            return await invoke_subscriptions_async(
                 {"hello": "world"},
                 {
                     "messageId": "m",

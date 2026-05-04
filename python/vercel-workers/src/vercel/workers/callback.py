@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-import inspect
 import os
-from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -33,13 +30,10 @@ from vercel.workers._queue.receive import (
     receive_messages_async,
 )
 from vercel.workers._queue.subscribe import (
-    Ack,
     PayloadValidationError,
-    RetryAfter,
     Subscription as _Subscription,
-    call_subscription as _call_subscription,
     invoke_subscriptions as _invoke_subscriptions,
-    result_timeout_seconds as _result_timeout_seconds,
+    invoke_subscriptions_async as _invoke_subscriptions_async,
     select_subscriptions as _select_subscriptions,
     subscriptions as _subscriptions,
 )
@@ -71,41 +65,6 @@ class _QueueCallbackState:
             "topic": self.queue_name,
             "consumer": self.consumer_group,
         }
-
-
-async def _invoke_subscriptions_async(
-    message: Any,
-    metadata: MessageMetadata,
-    registry: Iterable[_Subscription] = _subscriptions,
-) -> int | None:
-    """
-    Invoke all matching subscriptions from an async callback path.
-    """
-    topic = metadata.get("topic")
-    timeout_seconds: int | None = None
-
-    for sub in _select_subscriptions(topic, registry):
-        try:
-            if inspect.iscoroutinefunction(sub.func):
-                result = _call_subscription(sub, message, metadata)
-            else:
-                result = await asyncio.to_thread(_call_subscription, sub, message, metadata)
-            if inspect.isawaitable(result):
-                result = await result
-        except Ack:
-            return None
-        except RetryAfter as directive:
-            return directive.timeout_seconds
-        except Exception:
-            # Let the outer ASGI handler respond with 500.
-            raise
-
-        if isinstance(result, Ack):
-            return None
-        timeout_seconds = _result_timeout_seconds(result, timeout_seconds)
-
-    return timeout_seconds
-
 
 def _callback_visibility_options() -> tuple[int, float]:
     # Mirror the Node defaults (ConsumerGroupOptions): 30s visibility, refresh every 10s.
