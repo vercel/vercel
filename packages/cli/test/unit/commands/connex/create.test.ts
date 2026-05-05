@@ -93,6 +93,7 @@ describe('connex create', () => {
     expect(postBody).toMatchObject({
       service: 'slack',
       name: 'my-bot',
+      triggers: { enabled: false },
     });
     expect(typeof postBody.request_code).toBe('string');
     expect(pollHit).toBe(false);
@@ -344,9 +345,8 @@ describe('connex create', () => {
     expect(writeConfigSpy).not.toHaveBeenCalled();
   });
 
-  describe('FF_CONNEX_TRIGGERS auto-behavior', () => {
-    it('should auto-include triggers: { enabled: true } in POST body when FF_CONNEX_TRIGGERS=1', async () => {
-      vi.stubEnv('FF_CONNEX_TRIGGERS', '1');
+  describe('--triggers flag', () => {
+    it('should send triggers: { enabled: true } when --triggers is passed', async () => {
       let postBody: any;
       client.scenario.post('/v1/connex/clients/managed', (req, res) => {
         postBody = req.body;
@@ -355,7 +355,14 @@ describe('connex create', () => {
         );
       });
 
-      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+      client.setArgv(
+        'connex',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--triggers'
+      );
 
       const exitCode = await connex(client);
 
@@ -365,11 +372,9 @@ describe('connex create', () => {
         name: 'my-bot',
         triggers: { enabled: true },
       });
-      vi.unstubAllEnvs();
     });
 
-    it('should not include triggers in POST body when FF_CONNEX_TRIGGERS is unset', async () => {
-      vi.stubEnv('FF_CONNEX_TRIGGERS', '');
+    it('should send triggers: { enabled: false } when --triggers is not passed', async () => {
       let postBody: any;
       client.scenario.post('/v1/connex/clients/managed', (req, res) => {
         postBody = req.body;
@@ -381,8 +386,7 @@ describe('connex create', () => {
       const exitCode = await connex(client);
 
       expect(exitCode).toBe(0);
-      expect(postBody.triggers).toBeUndefined();
-      vi.unstubAllEnvs();
+      expect(postBody.triggers).toEqual({ enabled: false });
     });
   });
 
