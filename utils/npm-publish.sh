@@ -11,6 +11,7 @@ set -euo pipefail
 #     OIDC trusted publishing, which eliminates the need for long-lived NPM_TOKEN
 #     secrets. pnpm publish does not support OIDC.
 
+NPM_TAG=${1:-}
 TARBALL_DIR=$(mktemp -d)
 trap 'rm -rf "$TARBALL_DIR"' EXIT
 
@@ -29,6 +30,17 @@ skipped=0
 while IFS=$'\t' read -r name pkg_path; do
   version=$(jq -r '.version' "$pkg_path/package.json")
 
+  if [ -n "$NPM_TAG" ]; then
+    case "$version" in
+      *-"$NPM_TAG"-* | *-"$NPM_TAG".*) ;;
+      *)
+        echo "skip: $name@$version (does not match tag: $NPM_TAG)"
+        skipped=$((skipped + 1))
+        continue
+        ;;
+    esac
+  fi
+
   # Check if this exact version is already on npm
   if npm view "$name@$version" version >/dev/null 2>&1; then
     echo "skip: $name@$version (already published)"
@@ -36,11 +48,19 @@ while IFS=$'\t' read -r name pkg_path; do
     continue
   fi
 
-  echo "publishing: $name@$version"
+  if [ -n "$NPM_TAG" ]; then
+    echo "publishing: $name@$version (tag: $NPM_TAG)"
+  else
+    echo "publishing: $name@$version"
+  fi
 
   # pnpm pack resolves workspace:* to real versions and outputs the full path
   tarball=$(pnpm pack --pack-destination="$TARBALL_DIR" -C "$pkg_path" 2>/dev/null | tail -1)
-  npm publish "$tarball" --access public --provenance
+  if [ -n "$NPM_TAG" ]; then
+    npm publish "$tarball" --tag "$NPM_TAG" --access public --provenance
+  else
+    npm publish "$tarball" --access public --provenance
+  fi
 
   published=$((published + 1))
 done <<< "$packages"
