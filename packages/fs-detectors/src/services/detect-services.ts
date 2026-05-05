@@ -73,7 +73,7 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
     }
 
     if (typeof service.routePrefix === 'string') {
-      serviceConfig.routePrefix = service.routePrefix;
+      serviceConfig.mount = service.routePrefix;
     }
 
     // Keep the framework setting only for frontend services
@@ -94,7 +94,7 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
 /**
  * Detect and resolve services within a project.
  *
- * Reads vercel.json and resolves `experimentalServices` into Service objects.
+ * Reads vercel.json and resolves configured services into Service objects.
  * Returns an error if no services are configured.
  */
 export async function detectServices(
@@ -119,7 +119,8 @@ export async function detectServices(
     });
   }
 
-  const configuredServices = vercelConfig?.experimentalServices;
+  const configuredServices =
+    vercelConfig?.services ?? vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -218,8 +219,7 @@ export async function detectServices(
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
+          message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
       warnings: [],

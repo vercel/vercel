@@ -51,7 +51,7 @@ describe('tryDetectServices()', () => {
     expect(result).toBeNull();
   });
 
-  it('should return null when vercel.json has no experimentalServices and no service found', async () => {
+  it('should return null when vercel.json has no services and no service found', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({ buildCommand: 'npm run build' })
@@ -66,9 +66,9 @@ describe('tryDetectServices()', () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
-        experimentalServices: {
-          frontend: { framework: 'nextjs', routePrefix: '/' },
-          backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
+        services: {
+          frontend: { framework: 'nextjs', mount: '/' },
+          backend: { entrypoint: 'api/index.py', mount: '/api' },
         },
       })
     );
@@ -96,13 +96,13 @@ describe('tryDetectServices()', () => {
     await mkdir(join(tempDir, 'api'), { recursive: true });
     await writeFile(
       join(tempDir, 'vercel.toml'),
-      `[experimentalServices.frontend]
+      `[services.frontend]
 framework = "nextjs"
-routePrefix = "/"
+mount = "/"
 
-[experimentalServices.backend]
+[services.backend]
 entrypoint = "api/index.py"
-routePrefix = "/api"`
+mount = "/api"`
     );
     await writeFile(
       join(tempDir, 'api/index.py'),
@@ -128,8 +128,8 @@ routePrefix = "/api"`
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
-        experimentalServices: {
-          // Missing routePrefix for web service
+        services: {
+          // Missing mount for web service
           'invalid-service': { entrypoint: 'index.ts' },
         },
       })
@@ -192,11 +192,11 @@ routePrefix = "/api"`
     );
     expect(vercelConfig).toEqual({
       buildCommand: 'npm run build',
-      experimentalServices: {
-        frontend: { framework: 'nextjs', routePrefix: '/' },
+      services: {
+        frontend: { framework: 'nextjs', mount: '/' },
         api: {
           entrypoint: 'services/api',
-          routePrefix: '/_/api',
+          mount: '/_/api',
         },
       },
     });
@@ -219,9 +219,9 @@ routePrefix = "/api"`
     expect(configFileName).toBe('vercel.toml');
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
     expect(content).toContain('buildCommand = "npm run build"');
-    expect(content).toContain('[experimentalServices.frontend]');
+    expect(content).toContain('[services.frontend]');
     expect(content).toContain('framework = "nextjs"');
-    expect(content).toContain('[experimentalServices.api]');
+    expect(content).toContain('[services.api]');
     expect(content).toContain('entrypoint = "services/api"');
   });
 
@@ -234,7 +234,7 @@ routePrefix = "/api"`
 
     expect(configFileName).toBe('vercel.toml');
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
-    expect(content).toContain('[experimentalServices.frontend]');
+    expect(content).toContain('[services.frontend]');
     expect(content).toContain('framework = "nextjs"');
     // Should not start with a blank line
     expect(content).not.toMatch(/^\n/);
@@ -275,7 +275,7 @@ routePrefix = "/api"`
     expect(content).toContain('buildCommand = "npm run build" # custom build');
     expect(content).toContain('# Output settings');
     expect(content).toContain('outputDirectory = "dist"');
-    expect(content).toContain('[experimentalServices.frontend]');
+    expect(content).toContain('[services.frontend]');
   });
 
   it('should separate existing and new content with a double newline in vercel.toml', async () => {
@@ -289,9 +289,7 @@ routePrefix = "/api"`
     });
 
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
-    expect(content).toMatch(
-      /buildCommand = "npm run build"\n\n\[experimentalServices/
-    );
+    expect(content).toMatch(/buildCommand = "npm run build"\n\n\[services/);
   });
 
   it('should trim trailing newlines from existing vercel.toml before appending', async () => {
@@ -307,9 +305,7 @@ routePrefix = "/api"`
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
     // Should have exactly one blank line between old and new, not multiple
     expect(content).not.toMatch(/buildCommand = "npm run build"\n\n\n/);
-    expect(content).toMatch(
-      /buildCommand = "npm run build"\n\n\[experimentalServices/
-    );
+    expect(content).toMatch(/buildCommand = "npm run build"\n\n\[services/);
   });
 
   it('should treat whitespace-only vercel.toml as empty', async () => {
@@ -321,7 +317,7 @@ routePrefix = "/api"`
 
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
     // Should not start with whitespace from the original file
-    expect(content).toMatch(/^\[experimentalServices/);
+    expect(content).toMatch(/^\[services/);
   });
 
   it('should not report vercel.toml key overlap as a services config write blocker', async () => {
@@ -359,14 +355,14 @@ routePrefix = "/api"`
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     });
 
-    it('should return services when vercel.json has experimentalServices', async () => {
+    it('should return services when vercel.json has services', async () => {
       await mkdir(join(tempDir, 'api'), { recursive: true });
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          experimentalServices: {
-            frontend: { framework: 'nextjs', routePrefix: '/' },
-            backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
+          services: {
+            frontend: { framework: 'nextjs', mount: '/' },
+            backend: { entrypoint: 'api/index.py', mount: '/api' },
           },
         })
       );
@@ -380,7 +376,7 @@ routePrefix = "/api"`
       expect(result?.services).toHaveLength(2);
     });
 
-    it('should return null when vercel.json has no experimentalServices', async () => {
+    it('should return null when vercel.json has no services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({ buildCommand: 'npm run build' })
@@ -401,12 +397,12 @@ routePrefix = "/api"`
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     });
 
-    it('should return true when vercel.json has experimentalServices', async () => {
+    it('should return true when vercel.json has services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          experimentalServices: {
-            frontend: { framework: 'nextjs', routePrefix: '/' },
+          services: {
+            frontend: { framework: 'nextjs', mount: '/' },
           },
         })
       );
@@ -419,7 +415,7 @@ routePrefix = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return false when vercel.json has no experimentalServices', async () => {
+    it('should return false when vercel.json has no services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({ buildCommand: 'npm run build' })
@@ -432,12 +428,12 @@ routePrefix = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
     });
 
-    it('should return true when vercel.ts has experimentalServices', async () => {
+    it('should return true when vercel.ts has services', async () => {
       await writeFile(
         join(tempDir, 'vercel.ts'),
         `export default {
-          experimentalServices: {
-            frontend: { framework: 'nextjs', routePrefix: '/' },
+          services: {
+            frontend: { framework: 'nextjs', mount: '/' },
           },
         };`
       );
@@ -445,18 +441,18 @@ routePrefix = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return true when vercel.toml has experimentalServices', async () => {
+    it('should return true when vercel.toml has services', async () => {
       await writeFile(
         join(tempDir, 'vercel.toml'),
-        `[experimentalServices.frontend]
+        `[services.frontend]
 framework = "nextjs"
-routePrefix = "/"`
+mount = "/"`
       );
 
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return false when vercel.toml has no experimentalServices', async () => {
+    it('should return false when vercel.toml has no services', async () => {
       await writeFile(
         join(tempDir, 'vercel.toml'),
         `buildCommand = "npm run build"`

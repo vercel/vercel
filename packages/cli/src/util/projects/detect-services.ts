@@ -17,7 +17,7 @@ import { validateConfig } from '../validate-config';
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
 /**
- * Check if vercel.json in the given directory has experimentalServices configured
+ * Check if vercel.json in the given directory has services configured
  * or VERCEL_USE_EXPERIMENTAL_SERVICES environment variable is set.
  */
 export async function isExperimentalServicesEnabled(
@@ -40,8 +40,9 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
     );
     if (!config || config instanceof Error) return false;
     return (
-      config.experimentalServices != null &&
-      typeof config.experimentalServices === 'object'
+      (config.services != null && typeof config.services === 'object') ||
+      (config.experimentalServices != null &&
+        typeof config.experimentalServices === 'object')
     );
   } catch {
     return false;
@@ -52,7 +53,7 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
  * Detect services if experimental services are enabled.
  *
  * Returns the detection result if any of the following is true:
- * - vercel.json contains experimentalServices with valid services
+ * - vercel.json contains services or experimentalServices with valid services
  * - VERCEL_USE_EXPERIMENTAL_SERVICES env var is set (enables auto-detection of services)
  *
  * Returns null otherwise.
@@ -102,10 +103,44 @@ export async function getServicesConfigWriteBlocker(
 
 function toProjectServicesConfigPatch(
   config: ServicesConfig
-): Pick<VercelConfig, 'experimentalServices'> {
+): Pick<VercelConfig, 'services'> {
   return {
-    experimentalServices: config,
+    services: toPublicServicesConfig(config),
   };
+}
+
+function toPublicServicesConfig(
+  config: ServicesConfig
+): NonNullable<VercelConfig['services']> {
+  const services: NonNullable<VercelConfig['services']> = {};
+
+  for (const [name, service] of Object.entries(config)) {
+    const {
+      builder,
+      envPrefix,
+      installCommand,
+      mount,
+      routePrefix,
+      subdomain,
+      workspace,
+      ...publicService
+    } = service;
+    const publicMount =
+      typeof mount === 'string'
+        ? mount
+        : mount && typeof mount.path === 'string'
+          ? { path: mount.path }
+          : typeof routePrefix === 'string'
+            ? routePrefix
+            : undefined;
+
+    services[name] = {
+      ...publicService,
+      ...(publicMount !== undefined ? { mount: publicMount } : {}),
+    };
+  }
+
+  return services;
 }
 
 async function prepareServicesConfigWrite(
@@ -183,7 +218,9 @@ async function prepareTomlServicesConfigWrite(
   // with our new keys, since could cause trouble.
   if (existingContent.trim()) {
     const existingParsed = tomlParse(existingContent);
-    const overlapping = patchKeys.filter(key => key in existingParsed);
+    const overlapping = patchKeys
+      .concat('experimentalServices')
+      .filter(key => key in existingParsed);
     if (overlapping.length > 0) {
       const plural = overlapping.length > 1;
       const keyList = overlapping.map(k => `"${k}"`).join(', ');

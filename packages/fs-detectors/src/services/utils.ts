@@ -12,6 +12,7 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,
   ExperimentalServices,
+  Services,
   ServiceDetectionError,
   ResolvedService,
 } from './types';
@@ -194,7 +195,10 @@ export function inferServiceRuntime(config: {
 }
 
 export interface ReadVercelConfigResult {
-  config: { experimentalServices?: ExperimentalServices } | null;
+  config: {
+    services?: Services;
+    experimentalServices?: ExperimentalServices;
+  } | null;
   error: ServiceDetectionError | null;
 }
 

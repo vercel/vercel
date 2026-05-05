@@ -1239,21 +1239,29 @@ async function doBuild(
         isScheduleTriggeredService(service) &&
         !('crons' in buildResult && buildResult.crons?.length)
       ) {
+        const staticSchedules =
+          typeof service.schedule === 'string'
+            ? [service.schedule]
+            : Array.isArray(service.schedule)
+              ? service.schedule
+              : [];
         if (
           typeof service.runtime === 'string' &&
-          typeof service.schedule === 'string' &&
-          service.schedule !== '<dynamic>'
+          staticSchedules.length > 0 &&
+          staticSchedules.every(schedule => schedule !== '<dynamic>')
         ) {
           const cronEntrypoint =
             service.entrypoint || service.builder.src || 'index';
-          synthesizedServiceCrons.push({
-            path: getInternalServiceCronPath(
-              service.name,
-              cronEntrypoint,
-              service.handlerFunction || 'cron'
-            ),
-            schedule: service.schedule,
-          });
+          for (const schedule of staticSchedules) {
+            synthesizedServiceCrons.push({
+              path: getInternalServiceCronPath(
+                service.name,
+                cronEntrypoint,
+                service.handlerFunction || 'cron'
+              ),
+              schedule,
+            });
+          }
         } else {
           throw new NowBuildError({
             code: 'CRON_SERVICE_NO_CRONS',

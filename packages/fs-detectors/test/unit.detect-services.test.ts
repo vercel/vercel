@@ -78,10 +78,10 @@ describe('detectServices', () => {
       expect(result.inferred).toMatchObject({
         source: 'layout',
         config: {
-          frontend: { framework: 'nextjs', routePrefix: '/' },
+          frontend: { framework: 'nextjs', mount: '/' },
           backend: {
             entrypoint: 'backend',
-            routePrefix: '/_/backend',
+            mount: '/_/backend',
           },
         },
       });
@@ -100,6 +100,87 @@ describe('detectServices', () => {
       expect(result.services).toEqual([]);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+    });
+  });
+
+  describe('with services', () => {
+    it('should detect services configured with public mount syntax', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            web: {
+              framework: 'nextjs',
+              mount: '/',
+            },
+            api: {
+              entrypoint: 'api/index.ts',
+              mount: {
+                path: '/api',
+              },
+            },
+          },
+        }),
+        'api/index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(2);
+      expect(result.services.find(s => s.name === 'web')).toMatchObject({
+        framework: 'nextjs',
+        routePrefix: '/',
+      });
+      expect(result.services.find(s => s.name === 'api')).toMatchObject({
+        entrypoint: 'api/index.ts',
+        routePrefix: '/api',
+      });
+    });
+
+    it('should allow frontend frameworks without entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            web: {
+              framework: 'nextjs',
+              mount: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        name: 'web',
+        framework: 'nextjs',
+      });
+    });
+
+    it.each([
+      ['FastAPI framework', { framework: 'fastapi' }],
+      ['Express framework', { framework: 'express' }],
+      ['Python runtime', { runtime: 'python' }],
+      ['Node runtime', { runtime: 'node' }],
+      ['Go runtime', { runtime: 'go' }],
+    ])('should require entrypoint for %s services', async (_, serviceConfig) => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            api: {
+              mount: '/api',
+              ...serviceConfig,
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'MISSING_ENTRYPOINT',
+        serviceName: 'api',
+      });
     });
   });
 

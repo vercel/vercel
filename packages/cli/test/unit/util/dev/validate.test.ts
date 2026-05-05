@@ -61,6 +61,62 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with services mount config', async () => {
+    const config = {
+      services: {
+        frontend: {
+          framework: 'nextjs',
+          mount: '/',
+        },
+        api: {
+          entrypoint: 'api/index.ts',
+          mount: {
+            path: '/api',
+          },
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
+  it.each([
+    ['routePrefix', { routePrefix: '/api' }],
+    ['subdomain', { subdomain: 'api' }],
+    ['builder', { builder: '@vercel/node' }],
+    ['installCommand', { installCommand: 'pnpm install' }],
+    ['worker service', { type: 'worker' }],
+    ['mount.subdomain', { mount: { subdomain: 'api' } }],
+  ])('should reject deprecated services config field %s', (_, serviceConfig) => {
+    const error = validateConfig({
+      services: {
+        api: {
+          entrypoint: 'api/index.ts',
+          ...serviceConfig,
+        } as any,
+      },
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('should reject services and experimentalServices together', () => {
+    const error = validateConfig({
+      services: {
+        api: {
+          entrypoint: 'api/index.ts',
+          mount: '/api',
+        },
+      },
+      experimentalServices: {
+        legacy: {
+          entrypoint: 'legacy/index.ts',
+          routePrefix: '/legacy',
+        },
+      },
+    });
+    expect(error?.code).toBe('SERVICES_AND_EXPERIMENTAL_SERVICES');
+  });
+
   it('should not error with legacy cron service type', () => {
     const error = validateConfig({
       experimentalServices: {

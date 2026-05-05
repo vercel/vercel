@@ -726,20 +726,20 @@ export class ServicesOrchestrator {
       const crons =
         managed.crons && managed.crons.length > 0
           ? managed.crons
-          : service &&
-              isScheduleTriggeredService(service) &&
-              service.schedule &&
-              service.schedule !== '<dynamic>'
-            ? [
-                {
+          : service && isScheduleTriggeredService(service) && service.schedule
+            ? (Array.isArray(service.schedule)
+                ? service.schedule
+                : [service.schedule]
+              )
+                .filter(schedule => schedule !== '<dynamic>')
+                .map(schedule => ({
                   path: getInternalServiceCronPath(
                     name,
                     service.entrypoint || service.builder.src || 'index',
                     service.handlerFunction || 'cron'
                   ),
-                  schedule: service.schedule,
-                },
-              ]
+                  schedule,
+                }))
             : [];
       if (crons.length === 0) continue;
 
