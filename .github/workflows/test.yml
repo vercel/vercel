@@ -286,8 +286,10 @@ jobs:
         with:
           path: ${{ steps.pnpm-store-path.outputs.path }}
           key: pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-${{ runner.arch }}-
+          # No restore-keys fallback: a partial cache restore leaves platform-specific
+          # optional bindings (e.g. rolldown .node files) missing. pnpm --frozen-lockfile
+          # trusts the store and skips re-downloading them, causing build failures.
+          # On a cache miss we pay for a full fresh install, which is correct.
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
@@ -430,8 +432,10 @@ jobs:
         with:
           path: ${{ steps.pnpm-store-path.outputs.path }}
           key: pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-${{ runner.arch }}-
+          # No restore-keys fallback: a partial cache restore leaves platform-specific
+          # optional bindings (e.g. rolldown .node files) missing. pnpm --frozen-lockfile
+          # trusts the store and skips re-downloading them, causing build failures.
+          # On a cache miss we pay for a full fresh install, which is correct.
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
