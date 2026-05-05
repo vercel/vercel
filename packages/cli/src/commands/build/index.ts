@@ -694,6 +694,7 @@ async function doBuild(
 
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: Service[] | undefined;
   let isZeroConfig = false;
 
@@ -758,6 +759,7 @@ async function doBuild(
       phase: 'error',
     });
     zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+    zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
@@ -1508,10 +1510,17 @@ async function doBuild(
       routes: zeroConfigRoutes,
     });
   }
-  const mergedRoutes = mergeRoutes({
+  let mergedRoutes = mergeRoutes({
     userRoutes: routesResult.routes,
     builds: builderRoutes,
   });
+  if (zeroConfigFallbackRoutes.length) {
+    mergedRoutes = appendRoutesToPhase({
+      routes: mergedRoutes,
+      newRoutes: zeroConfigFallbackRoutes,
+      phase: 'filesystem',
+    });
+  }
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(
@@ -2129,9 +2138,10 @@ function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {
 }
 
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
   for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    chunks.push(Uint8Array.from(buffer));
   }
   return Buffer.concat(chunks).toString('utf-8');
 }

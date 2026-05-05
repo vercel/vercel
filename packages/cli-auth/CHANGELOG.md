@@ -1,5 +1,17 @@
 # @vercel/cli-auth
 
+## 0.2.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 0.1.1
+
+### Patch Changes
+
+- bf07448: Revert "auth: Make it possible to store CLI credentials in OS keychain (#16083)"
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,5 +1,25 @@
 # @vercel/fs-detectors
 
+## 6.1.1
+
+### Patch Changes
+
+- 8a5aa6a: Ensure synthetic SPA fallbacks are merged after builder-produced routes.
+
+## 6.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/routing-utils@6.2.0
+  - @vercel/build-utils@13.21.0
+  - @vercel/error-utils@2.1.0
+  - @vercel/frameworks@3.25.0
+
 ## 6.0.1
 
 ### Patch Changes

@@ -7,16 +7,8 @@ export const defaultGlobalConfig: GlobalConfig = {
     'https://vercel.com/docs/projects/project-configuration/global-configuration#config.json',
 };
 
-export function getDefaultAuthConfig(
-  tokenStoredInSystemKeychain: boolean = false
-): AuthConfig {
-  return {
-    '// Note': tokenStoredInSystemKeychain
-      ? 'Your auth token is stored in your system keychain.'
-      : 'This is your Vercel credentials file. DO NOT SHARE!',
-    '// Docs':
-      'https://vercel.com/docs/projects/project-configuration/global-configuration#auth.json',
-  };
-}
-
-export const defaultAuthConfig: AuthConfig = getDefaultAuthConfig();
+export const defaultAuthConfig: AuthConfig = {
+  '// Note': 'This is your Vercel credentials file. DO NOT SHARE!',
+  '// Docs':
+    'https://vercel.com/docs/projects/project-configuration/global-configuration#auth.json',
+};

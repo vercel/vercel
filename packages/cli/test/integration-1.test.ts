@@ -291,7 +291,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
   expect(json.buildCommand).toBe('mkdir public && echo "1" > public/index.txt');
 });
 
-test('deploy using only now.json with `redirects` defined', async () => {
+test('deploy using only vercel.json with `redirects` defined', async () => {
   const target = await setupE2EFixture('redirects-v2');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
