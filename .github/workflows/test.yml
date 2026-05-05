@@ -272,7 +272,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
-          cache: 'pnpm'
+
+      # Cache the pnpm store with an arch-aware key so platform-specific optional
+      # dependencies (e.g. rolldown native .node bindings) are never cross-restored
+      # between incompatible architectures (darwin-arm64 vs darwin-x64).
+      - name: Get pnpm store path
+        id: pnpm-store-path
+        shell: bash
+        run: echo "path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store-path.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
@@ -401,7 +416,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
-          cache: 'pnpm'
+
+      # Cache the pnpm store with an arch-aware key so platform-specific optional
+      # dependencies (e.g. rolldown native .node bindings) are never cross-restored
+      # between incompatible architectures (darwin-arm64 vs darwin-x64).
+      - name: Get pnpm store path
+        id: pnpm-store-path
+        shell: bash
+        run: echo "path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store-path.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-${{ runner.arch }}-
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
