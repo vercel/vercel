@@ -7,6 +7,7 @@ import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 let spawnMock: ReturnType<typeof vi.fn>;
+const OIDC_HEADER = 'x-vercel-trusted-oidc-idp-token';
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
 }));
@@ -23,15 +24,30 @@ describe('httpstat', () => {
 
     useUser();
     useTeams('team_dummy');
-    useProject({
-      id: 'static',
-      name: 'static-project',
-      latestDeployments: [
+    useProject(
+      {
+        id: 'static',
+        name: 'static-project',
+        latestDeployments: [
+          {
+            url: 'static-project-abc123.vercel.app',
+          },
+        ],
+      } as any,
+      [
         {
-          url: 'static-project-abc123.vercel.app',
-        },
-      ],
-    });
+          type: 'plain',
+          id: 'oidc-token',
+          key: 'VERCEL_OIDC_TOKEN',
+          value: 'oidc-token',
+          target: ['development'],
+          gitBranch: null,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        } as any,
+      ]
+    );
   };
 
   beforeEach(async () => {
@@ -96,24 +112,24 @@ describe('httpstat', () => {
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
-        'Execute httpstat with automatic deployment URL and protection bypass'
+        'Execute httpstat against Vercel deployments with automatic auth'
       );
     });
   });
 
   describe('argument parsing', () => {
-    it('should reject when no path is provided', async () => {
+    it('should reject when no URL or path is provided', async () => {
       client.setArgv('httpstat');
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
-    it('should reject when only -- is provided without a path', async () => {
+    it('should reject when only -- is provided without a URL or path', async () => {
       client.setArgv('httpstat', '--', '-H', 'Content-Type: application/json');
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
     it('should accept / as a valid path', async () => {
@@ -136,25 +152,52 @@ describe('httpstat', () => {
       ]);
     });
 
-    it('should reject when a full https URL is provided as the path', async () => {
-      client.setArgv('httpstat', 'https://example.com/api/hello');
+    it('should accept a full https URL as the target', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'httpstat',
+        'https://static-project-abc123.vercel.app/api/hello'
+      );
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        [
+          'https://static-project-abc123.vercel.app/api/hello',
+          '-H',
+          `${OIDC_HEADER}: oidc-token`,
+        ],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
     });
 
-    it('should reject when a full http URL is provided as the path', async () => {
+    it('should accept a full http URL as the target', async () => {
+      await setupLinkedProject();
+
       client.setArgv('httpstat', 'http://localhost:3000/');
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        ['http://localhost:3000/', '-H', `${OIDC_HEADER}: oidc-token`],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
     });
 
-    it('should reject unrecognized flags before --', async () => {
+    it('should pass through unrecognized curl flags without --', async () => {
+      await setupLinkedProject();
+
       client.setArgv('httpstat', '/api/hello', '--invalid-flag');
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('unknown or unexpected option');
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        expect.arrayContaining(['--invalid-flag']),
+        expect.anything()
+      );
     });
 
     it('should handle process.argv parsing for httpstat flags after --', () => {

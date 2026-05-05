@@ -4,17 +4,27 @@ import type Client from '../../util/client';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
-import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
 import { getDeploymentUrlById } from './deployment-url';
-import type { ProjectLinked } from '@vercel-internals/types';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import toHost from '../../util/to-host';
+import getTeams from '../../util/teams/get-teams';
+import type {
+  Deployment,
+  Project,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import { help } from '../help';
 import { getCommandName } from '../../util/pkg-name';
 import type { Command } from '../help';
-import type arg from 'arg';
+import { URLSearchParams } from 'url';
+
+const TRUSTED_OIDC_HEADER = 'x-vercel-trusted-oidc-idp-token';
+const PROTECTION_BYPASS_HEADER = 'x-vercel-protection-bypass';
+
+interface AuthHeader {
+  name: string;
+  value: string;
+}
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
@@ -24,12 +34,13 @@ export interface DeploymentUrlOptions {
 
 export interface DeploymentUrlResult {
   fullUrl: string;
-  deploymentProtectionToken: string | null;
+  authHeader: AuthHeader | null;
   link: ProjectLinked;
 }
 
 export interface CommandSetupResult {
-  path: string;
+  target: string;
+  isFullUrl: boolean;
   deploymentFlag?: string;
   protectionBypassFlag?: string;
   toolFlags: string[];
@@ -40,6 +51,171 @@ export interface CommandTelemetryClient {
   trackCliArgumentPath(path: string | undefined): void;
   trackCliOptionDeployment(deploymentId: string | undefined): void;
   trackCliOptionProtectionBypass(secret: string | undefined): void;
+}
+
+function isArgTerminator(arg: string | undefined): boolean {
+  return arg === undefined || arg.startsWith('-');
+}
+
+function looksLikeHostname(target: string): boolean {
+  const firstSegment = target.split('/')[0];
+  return firstSegment.includes('.') && !firstSegment.startsWith('.');
+}
+
+const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
+const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help']);
+
+const GLOBAL_STRING_FLAGS = new Set([
+  '--cwd',
+  '--scope',
+  '--token',
+  '--team',
+  '--local-config',
+  '--global-config',
+  '--api',
+]);
+const GLOBAL_BOOLEAN_FLAGS = new Set([
+  '--debug',
+  '--no-color',
+  '--non-interactive',
+  '--version',
+]);
+
+const CURL_FLAGS_WITH_VALUES = new Set([
+  '-A',
+  '--user-agent',
+  '-b',
+  '--cookie',
+  '-c',
+  '--cookie-jar',
+  '-d',
+  '--data',
+  '--data-raw',
+  '--data-binary',
+  '--data-urlencode',
+  '-e',
+  '--referer',
+  '-F',
+  '--form',
+  '--form-string',
+  '-H',
+  '--header',
+  '-o',
+  '--output',
+  '-T',
+  '--upload-file',
+  '-u',
+  '--user',
+  '-w',
+  '--write-out',
+  '-X',
+  '--request',
+  '--connect-timeout',
+  '--max-time',
+  '--proxy',
+  '--resolve',
+  '--retry',
+  '--url',
+]);
+
+function flagName(arg: string): string {
+  const eqIdx = arg.indexOf('=');
+  return eqIdx === -1 ? arg : arg.slice(0, eqIdx);
+}
+
+function takesSeparateValue(arg: string): boolean {
+  return !arg.includes('=') && CURL_FLAGS_WITH_VALUES.has(flagName(arg));
+}
+
+export function parseCurlLikeArgs(
+  rawArgs: string[],
+  commandName: string
+): {
+  target?: string;
+  deployment?: string;
+  protectionBypass?: string;
+  yes: boolean;
+  help: boolean;
+  toolFlags: string[];
+} {
+  const result = {
+    target: undefined as string | undefined,
+    deployment: undefined as string | undefined,
+    protectionBypass: undefined as string | undefined,
+    yes: false,
+    help: false,
+    toolFlags: [] as string[],
+  };
+
+  const commandIndex = rawArgs.indexOf(commandName);
+  const args =
+    commandIndex === -1 ? [...rawArgs] : rawArgs.slice(commandIndex + 1);
+  const separatorIndex = args.indexOf('--');
+  const beforeSeparator =
+    separatorIndex === -1 ? args : args.slice(0, separatorIndex);
+  const afterSeparator =
+    separatorIndex === -1 ? [] : args.slice(separatorIndex + 1);
+
+  for (let i = 0; i < beforeSeparator.length; i++) {
+    const arg = beforeSeparator[i];
+    const name = flagName(arg);
+    const eqValue = arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : null;
+
+    if (VC_STRING_FLAGS.has(name)) {
+      const next = beforeSeparator[i + 1];
+      const value = eqValue ?? (isArgTerminator(next) ? undefined : next);
+      if (eqValue === null && value !== undefined) {
+        i++;
+      }
+      if (name === '--deployment') result.deployment = value;
+      if (name === '--protection-bypass') result.protectionBypass = value;
+      continue;
+    }
+
+    if (!result.target && VC_BOOLEAN_FLAGS.has(name)) {
+      if (name === '--yes') result.yes = true;
+      if (name === '--help') result.help = true;
+      continue;
+    }
+
+    if (!result.target && GLOBAL_STRING_FLAGS.has(name)) {
+      if (eqValue === null && !isArgTerminator(beforeSeparator[i + 1])) {
+        i++;
+      }
+      continue;
+    }
+
+    if (!result.target && GLOBAL_BOOLEAN_FLAGS.has(name)) {
+      continue;
+    }
+
+    if (!result.target && name === '--url') {
+      const next = beforeSeparator[i + 1];
+      result.target = eqValue ?? (isArgTerminator(next) ? undefined : next);
+      if (eqValue === null && result.target !== undefined) {
+        i++;
+      }
+      continue;
+    }
+
+    if (arg.startsWith('-')) {
+      result.toolFlags.push(arg);
+      if (takesSeparateValue(arg) && i + 1 < beforeSeparator.length) {
+        result.toolFlags.push(beforeSeparator[++i]);
+      }
+      continue;
+    }
+
+    if (!result.target) {
+      result.target = arg;
+    } else {
+      result.toolFlags.push(arg);
+    }
+  }
+
+  result.toolFlags.push(...afterSeparator);
+
+  return result;
 }
 
 /**
@@ -53,77 +229,173 @@ export function setupCurlLikeCommand(
 ): CommandSetupResult | number {
   const { print } = output;
 
-  let parsedArgs = null;
+  const parsed = parseCurlLikeArgs(client.argv.slice(2), command.name);
 
-  const flagsSpecification = getFlagsSpecification(command.options) as arg.Spec;
-
-  try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (err) {
-    printError(err);
-    return 1;
-  }
-
-  const { flags } = parsedArgs;
-
-  if (parsedArgs.flags['--help']) {
+  if (parsed.help) {
     print(help(command, { columns: client.stderr.columns }));
     return 2;
   }
 
-  // Remove command name from the args list
-  if (parsedArgs.args[0] === command.name) {
-    parsedArgs.args.shift();
+  const target = parsed.target;
+
+  telemetryClient.trackCliArgumentPath(target);
+
+  if (parsed.deployment) {
+    telemetryClient.trackCliOptionDeployment(parsed.deployment);
   }
 
-  const separatorIndex = process.argv.indexOf('--');
-  const path = parsedArgs.args[0];
-
-  telemetryClient.trackCliArgumentPath(path);
-
-  const deploymentFlag = flags['--deployment'];
-  if (deploymentFlag) {
-    telemetryClient.trackCliOptionDeployment(deploymentFlag);
+  if (parsed.protectionBypass) {
+    telemetryClient.trackCliOptionProtectionBypass(parsed.protectionBypass);
   }
 
-  const protectionBypassFlag = flags['--protection-bypass'];
-  if (protectionBypassFlag) {
-    telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
-  }
-
-  if (!path || path === '--' || path.startsWith('-')) {
+  if (!target) {
     output.error(
-      `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
+      `${getCommandName(`${command.name} <url|path>`)} requires a URL or API path (e.g., 'https://my-app.vercel.app/api/hello' or '/api/hello')`
     );
     print(help(command, { columns: client.stderr.columns }));
     return 1;
   }
 
-  // Disallow passing a full URL as the path arg to avoid duplicating the base URL
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    output.error(
-      `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
-    );
-    output.print(
-      `To target a specific deployment within the currently linked project, use the --deployment <id|url> flag.`
-    );
-    print(help(command, { columns: client.stderr.columns }));
-    return 1;
+  let isFullUrl = target.startsWith('http://') || target.startsWith('https://');
+  if (!isFullUrl && looksLikeHostname(target)) {
+    isFullUrl = true;
   }
 
-  const toolFlags =
-    separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
   output.debug(
-    `${command.name} flags (${toolFlags.length} args): ${JSON.stringify(toolFlags)}`
+    `${command.name} target: ${target} (fullUrl=${isFullUrl}), toolFlags (${parsed.toolFlags.length} args): ${JSON.stringify(parsed.toolFlags)}`
   );
 
   return {
-    path,
-    deploymentFlag,
-    protectionBypassFlag,
-    toolFlags,
-    yes: !!flags['--yes'],
+    target:
+      isFullUrl && !target.startsWith('http') ? `https://${target}` : target,
+    isFullUrl,
+    deploymentFlag: parsed.deployment,
+    protectionBypassFlag: parsed.protectionBypass,
+    toolFlags: parsed.toolFlags,
+    yes: parsed.yes,
   };
+}
+
+async function pullProjectOidcToken(
+  client: Client,
+  projectId: string,
+  accountId?: string
+): Promise<string | null> {
+  const query = new URLSearchParams({ source: 'vercel-cli:curl' });
+  try {
+    const result = await client.fetch<{
+      env: Record<string, string>;
+      buildEnv: Record<string, string>;
+    }>(`/v3/env/pull/${projectId}?${query}`, { accountId });
+    return result.env.VERCEL_OIDC_TOKEN ?? null;
+  } catch (err) {
+    output.debug(
+      `Failed to fetch project OIDC token: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return null;
+  }
+}
+
+async function resolveProjectFromUrl(
+  client: Client,
+  fullUrl: string
+): Promise<{ project: Project; ownerId: string } | null> {
+  type Result = { project: Project; ownerId: string } | null;
+  const host = toHost(fullUrl);
+
+  const deploymentLookup = async (): Promise<Result> => {
+    for (const useCurrentTeam of [undefined, false] as const) {
+      try {
+        const deployment = await client.fetch<Deployment>(
+          `/v13/deployments/${encodeURIComponent(host)}`,
+          { useCurrentTeam }
+        );
+        if (deployment?.projectId && deployment?.ownerId) {
+          const project = await client.fetch<Project>(
+            `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+            { accountId: deployment.ownerId }
+          );
+          if (project) return { project, ownerId: deployment.ownerId };
+        }
+      } catch (err) {
+        output.debug(
+          `Deployment lookup failed for ${host}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+    return null;
+  };
+
+  const aliasLookup = async (): Promise<Result> => {
+    try {
+      const teams = await getTeams(client);
+      const aliasUrl = `/now/aliases/${encodeURIComponent(host)}`;
+      const results = await Promise.all(
+        teams.map(team =>
+          client
+            .fetch<{
+              projectId?: string;
+              ownerId?: string;
+            }>(aliasUrl, { accountId: team.id })
+            .catch(() => null)
+        )
+      );
+
+      const alias = results.find(r => r?.projectId && r?.ownerId);
+      if (alias?.projectId && alias?.ownerId) {
+        const project = await client.fetch<Project>(
+          `/v9/projects/${encodeURIComponent(alias.projectId)}`,
+          { accountId: alias.ownerId }
+        );
+        if (project) return { project, ownerId: alias.ownerId };
+      }
+    } catch (err) {
+      output.debug(
+        `Alias lookup failed for ${host}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+    return null;
+  };
+
+  const [fromDeployment, fromAlias] = await Promise.all([
+    deploymentLookup(),
+    aliasLookup(),
+  ]);
+
+  return fromDeployment ?? fromAlias;
+}
+
+export async function resolveFullUrlAuthHeader(
+  client: Client,
+  fullUrl: string,
+  protectionBypassFlag?: string
+): Promise<AuthHeader | null> {
+  if (protectionBypassFlag) {
+    return { name: PROTECTION_BYPASS_HEADER, value: protectionBypassFlag };
+  }
+
+  const resolved = await resolveProjectFromUrl(client, fullUrl);
+  if (resolved) {
+    const token = await pullProjectOidcToken(
+      client,
+      resolved.project.id,
+      resolved.ownerId
+    );
+    if (token) return { name: TRUSTED_OIDC_HEADER, value: token };
+  }
+
+  const linkedProject = await getLinkedProject(client, client.cwd);
+  if (linkedProject.status === 'linked' && linkedProject.project) {
+    const token = await pullProjectOidcToken(
+      client,
+      linkedProject.project.id,
+      linkedProject.org.id
+    );
+    if (token) return { name: TRUSTED_OIDC_HEADER, value: token };
+  }
+
+  output.debug(`No OIDC token available for ${toHost(fullUrl)}`);
+  return null;
 }
 
 /**
@@ -221,25 +493,29 @@ export async function getDeploymentUrlAndToken(
 
   output.debug(`${chalk.cyan('Target URL:')} ${chalk.bold(fullUrl)}`);
 
-  // Get or create protection bypass secret
-  let deploymentProtectionToken: string | null = null;
+  let authHeader: AuthHeader | null = null;
 
   if (project.id) {
-    try {
-      deploymentProtectionToken =
-        protectionBypassFlag ??
-        (await getOrCreateDeploymentProtectionToken(client, link));
-    } catch (err) {
-      output.error(
-        `Failed to get deployment protection bypass token: ${err instanceof Error ? err.message : String(err)}`
+    if (protectionBypassFlag) {
+      authHeader = {
+        name: PROTECTION_BYPASS_HEADER,
+        value: protectionBypassFlag,
+      };
+    } else {
+      const oidcToken = await pullProjectOidcToken(
+        client,
+        project.id,
+        link.org.id
       );
-      return 1;
+      if (oidcToken) {
+        authHeader = { name: TRUSTED_OIDC_HEADER, value: oidcToken };
+      }
     }
   }
 
   return {
     fullUrl,
-    deploymentProtectionToken,
+    authHeader,
     link,
   };
 }

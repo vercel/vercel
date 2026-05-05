@@ -4,7 +4,11 @@ import { curlCommand } from './command';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
-import { getDeploymentUrlAndToken, setupCurlLikeCommand } from './shared';
+import {
+  getDeploymentUrlAndToken,
+  resolveFullUrlAuthHeader,
+  setupCurlLikeCommand,
+} from './shared';
 
 export default async function curl(client: Client): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({
@@ -19,27 +23,38 @@ export default async function curl(client: Client): Promise<number> {
     return setup;
   }
 
-  const { path, deploymentFlag, protectionBypassFlag, toolFlags } = setup;
+  const { target, isFullUrl, deploymentFlag, protectionBypassFlag, toolFlags } =
+    setup;
 
-  const result = await getDeploymentUrlAndToken(client, 'curl', path, {
-    deploymentFlag,
-    protectionBypassFlag,
-    autoConfirm: setup.yes,
-  });
+  let fullUrl: string;
+  let authHeader: { name: string; value: string } | null = null;
 
-  if (typeof result === 'number') {
-    return result;
+  if (isFullUrl) {
+    fullUrl = target;
+    authHeader = await resolveFullUrlAuthHeader(
+      client,
+      fullUrl,
+      protectionBypassFlag
+    );
+  } else {
+    const result = await getDeploymentUrlAndToken(client, 'curl', target, {
+      deploymentFlag,
+      protectionBypassFlag,
+      autoConfirm: setup.yes,
+    });
+
+    if (typeof result === 'number') {
+      return result;
+    }
+
+    fullUrl = result.fullUrl;
+    authHeader = result.authHeader;
   }
-
-  const { fullUrl, deploymentProtectionToken } = result;
 
   const curlFlags = [...toolFlags];
 
-  if (deploymentProtectionToken) {
-    curlFlags.unshift(
-      '--header',
-      `x-vercel-protection-bypass: ${deploymentProtectionToken}`
-    );
+  if (authHeader) {
+    curlFlags.unshift('--header', `${authHeader.name}: ${authHeader.value}`);
   }
 
   curlFlags.unshift('--url', fullUrl);

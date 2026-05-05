@@ -5,7 +5,7 @@ export const httpstatCommand = {
   name: 'httpstat',
   aliases: [],
   description:
-    'Execute httpstat with automatic deployment URL and protection bypass to visualize HTTP timing statistics.',
+    'Execute httpstat against Vercel deployments with automatic auth to visualize HTTP timing statistics.',
   arguments: [
     {
       name: 'path',
@@ -43,15 +43,19 @@ export const httpstatCommand = {
     },
     {
       name: 'Make a POST request with data and see timing details',
-      value: `${packageName} httpstat /api/users -- -X POST -d '{"name": "John"}'`,
+      value: `${packageName} httpstat /api/users -X POST -d '{"name": "John"}'`,
+    },
+    {
+      name: 'Visualize timing for a deployment URL or alias',
+      value: `${packageName} httpstat https://your-project.vercel.app/api/hello`,
     },
     {
       name: 'Target a specific deployment by ID',
       value: `${packageName} httpstat /api/status --deployment ERiL45NJvP8ghWxgbvCM447bmxwV`,
     },
     {
-      name: 'Use curl flags after the separator',
-      value: `${packageName} httpstat /api/test -- -H "Content-Type: application/json" -X PUT`,
+      name: 'Use curl flags directly',
+      value: `${packageName} httpstat /api/test -H "Content-Type: application/json" -X PUT`,
     },
     {
       name: 'Use with protection bypass secret',

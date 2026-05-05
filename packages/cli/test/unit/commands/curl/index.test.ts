@@ -2,13 +2,19 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
-import { getDeploymentUrlAndToken } from '../../../../src/commands/curl/shared';
+import {
+  getDeploymentUrlAndToken,
+  parseCurlLikeArgs,
+} from '../../../../src/commands/curl/shared';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import assert from 'assert';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
+const OIDC_HEADER = 'x-vercel-trusted-oidc-idp-token';
+const BYPASS_HEADER = 'x-vercel-protection-bypass';
 
 let spawnMock: ReturnType<typeof vi.fn>;
 vi.mock('child_process', () => ({
@@ -27,15 +33,30 @@ describe('curl', () => {
 
     useUser();
     useTeams('team_dummy');
-    useProject({
-      id: 'static',
-      name: 'static-project',
-      latestDeployments: [
+    useProject(
+      {
+        id: 'static',
+        name: 'static-project',
+        latestDeployments: [
+          {
+            url: 'static-project-abc123.vercel.app',
+          },
+        ],
+      } as any,
+      [
         {
-          url: 'static-project-abc123.vercel.app',
-        },
-      ],
-    });
+          type: 'plain',
+          id: 'oidc-token',
+          key: 'VERCEL_OIDC_TOKEN',
+          value: 'oidc-token',
+          target: ['development'],
+          gitBranch: null,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        } as any,
+      ]
+    );
   };
 
   beforeEach(async () => {
@@ -100,20 +121,20 @@ describe('curl', () => {
       const exitCode = await curl(client);
       expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
-        'Execute curl with automatic deployment URL and protection bypass'
+        'Execute curl against Vercel deployments with automatic auth'
       );
     });
   });
 
   describe('argument parsing', () => {
-    it('should reject when no path is provided', async () => {
+    it('should reject when no URL or path is provided', async () => {
       client.setArgv('curl');
       const exitCode = await curl(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
-    it('should reject when only -- is provided without a path', async () => {
+    it('should reject when only -- is provided without a URL or path', async () => {
       client.setArgv(
         'curl',
         '--',
@@ -122,7 +143,7 @@ describe('curl', () => {
       );
       const exitCode = await curl(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
     it('should accept / as a valid path', async () => {
@@ -145,25 +166,120 @@ describe('curl', () => {
       ]);
     });
 
-    it('should reject when a full https URL is provided as the path', async () => {
-      client.setArgv('curl', 'https://example.com/api/hello');
+    it('should accept a full https URL as the target', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        'https://static-project-abc123.vercel.app/api/hello'
+      );
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://static-project-abc123.vercel.app/api/hello',
+          '--header',
+          `${OIDC_HEADER}: oidc-token`,
+        ],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
     });
 
-    it('should reject when a full http URL is provided as the path', async () => {
+    it('should accept a full http URL as the target', async () => {
+      await setupLinkedProject();
+
       client.setArgv('curl', 'http://localhost:3000/');
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'http://localhost:3000/',
+          '--header',
+          `${OIDC_HEADER}: oidc-token`,
+        ],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
     });
 
-    it('should reject unrecognized flags before --', async () => {
+    it('should pass through unrecognized curl flags without --', async () => {
+      await setupLinkedProject();
+
       client.setArgv('curl', '/api/hello', '--invalid-flag');
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('unknown or unexpected option');
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining(['--invalid-flag']),
+        expect.anything()
+      );
+    });
+
+    it('should parse curl-like args without requiring --', () => {
+      expect(
+        parseCurlLikeArgs(
+          [
+            'curl',
+            '/api/hello',
+            '-X',
+            'POST',
+            '-H',
+            'Content-Type: application/json',
+            '-d',
+            '{"name":"John"}',
+            '-T',
+            'file.txt',
+            '--help',
+          ],
+          'curl'
+        )
+      ).toEqual({
+        target: '/api/hello',
+        deployment: undefined,
+        protectionBypass: undefined,
+        yes: false,
+        help: false,
+        toolFlags: [
+          '-X',
+          'POST',
+          '-H',
+          'Content-Type: application/json',
+          '-d',
+          '{"name":"John"}',
+          '-T',
+          'file.txt',
+          '--help',
+        ],
+      });
+    });
+
+    it('should treat curl --url as the target', () => {
+      expect(
+        parseCurlLikeArgs(
+          ['curl', '--url', 'https://example.com/api/hello', '-v'],
+          'curl'
+        )
+      ).toMatchObject({
+        target: 'https://example.com/api/hello',
+        toolFlags: ['-v'],
+      });
+    });
+
+    it('should ignore Vercel globals before the command and pass short flags after the target to curl', () => {
+      expect(
+        parseCurlLikeArgs(
+          ['--debug', '--scope', 'team_slug', 'curl', '/api/hello', '-v'],
+          'curl'
+        )
+      ).toMatchObject({
+        target: '/api/hello',
+        toolFlags: ['-v'],
+      });
     });
 
     it('should handle process.argv parsing for curl flags after --', () => {
@@ -407,32 +523,108 @@ describe('curl', () => {
       const bypassIndex = client.argv.indexOf('--protection-bypass');
       expect(client.argv[bypassIndex + 1]).toBe(secretWithSpecialChars);
     });
+
+    it('should use an explicit protection bypass secret as a fallback header', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        'https://static-project-abc123.vercel.app/api/hello',
+        '--protection-bypass',
+        'manual-secret'
+      );
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://static-project-abc123.vercel.app/api/hello',
+          '--header',
+          `${BYPASS_HEADER}: manual-secret`,
+        ],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
+    });
+  });
+
+  describe('full URL auth resolution', () => {
+    it('should resolve aliases across teams and use the alias project OIDC token', async () => {
+      useUser();
+      const teams = useTeams('team_one');
+      assert(Array.isArray(teams));
+      const teamA = teams[0];
+      const teamB = createTeam('team_two');
+      client.scenario.get('/now/aliases/custom.example.com', (req, res) => {
+        if (req.query.teamId === teamA.id) {
+          return res.status(404).json({ error: { message: 'not found' } });
+        }
+        if (req.query.teamId === teamB.id) {
+          return res.json({ projectId: 'alias-project', ownerId: teamB.id });
+        }
+        return res.status(404).json({ error: { message: 'not found' } });
+      });
+      useProject({ id: 'alias-project', name: 'alias-project' } as any, [
+        {
+          type: 'plain',
+          id: 'alias-oidc-token',
+          key: 'VERCEL_OIDC_TOKEN',
+          value: 'alias-oidc-token',
+          target: ['development'],
+          gitBranch: null,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        } as any,
+      ]);
+
+      client.setArgv('curl', 'https://custom.example.com/api/hello');
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://custom.example.com/api/hello',
+          '--header',
+          `${OIDC_HEADER}: alias-oidc-token`,
+        ],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
+    });
+
+    it('should add https:// to bare host targets', async () => {
+      await setupLinkedProject();
+
+      client.setArgv('curl', 'static-project-abc123.vercel.app/api/hello');
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--url',
+          'https://static-project-abc123.vercel.app/api/hello',
+        ]),
+        expect.anything()
+      );
+    });
   });
 
   describe('error handling', () => {
-    it('should handle getOrCreateDeploymentProtectionToken failure gracefully', async () => {
-      // Import setupUnitFixture to use a real fixture
+    it('should continue without an auth header when OIDC token pull is unavailable', async () => {
       const { setupUnitFixture } = await import(
         '../../../helpers/setup-unit-fixture'
       );
       const cwd = setupUnitFixture('commands/deploy/static');
       client.cwd = cwd;
 
-      // Mock the bypass-token module to throw an error
-      const bypassTokenModule = await import(
-        '../../../../src/commands/curl/bypass-token'
-      );
-
-      const mockSpy = vi
-        .spyOn(bypassTokenModule, 'getOrCreateDeploymentProtectionToken')
-        .mockRejectedValue(
-          new Error('Failed to create deployment protection bypass token')
-        );
-
       useUser();
-      useTeams('team_dummy'); // Matches the orgId in the fixture
+      useTeams('team_dummy');
       useProject({
-        id: 'static', // Matches the projectId in the fixture
+        id: 'static',
         name: 'static-project',
         latestDeployments: [
           {
@@ -442,19 +634,14 @@ describe('curl', () => {
       });
 
       client.setArgv('curl', '/api/hello');
-
       const exitCode = await curl(client);
 
-      expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput(
-        'Failed to get deployment protection bypass token'
+      expect(exitCode).toBe(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://static-project-abc123.vercel.app/api/hello'],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
       );
-
-      // Verify the mock was called
-      expect(mockSpy).toHaveBeenCalled();
-
-      // Restore the mock
-      mockSpy.mockRestore();
     });
   });
 

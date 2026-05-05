@@ -55,11 +55,11 @@ export const help = () => `
       certs                [cmd]       Manages your SSL certificates${connexLine}
       contract                         Show contract information for billing periods
       cron | crons         [cmd]       Manage cron jobs for a project [beta]
-      curl                 [path]      cURL requests to your linked project's deployment [beta]
+      curl                 [url|path]  cURL requests to Vercel deployments [beta]
       deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
-      httpstat             path        Visualize HTTP timing statistics for deployments
+      httpstat             [url|path]  Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team
       mcp                              Set up MCP agents and configuration

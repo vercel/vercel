@@ -185,9 +185,93 @@ const main = async () => {
     process.stdin.isTTY = true;
   }
 
+  const getInitialParseArgv = () => {
+    const argv = process.argv;
+    const postCommandStringFlags = new Set([
+      '--cwd',
+      '--scope',
+      '--token',
+      '--team',
+      '--local-config',
+      '--global-config',
+      '--api',
+      '--deployment',
+      '--protection-bypass',
+    ]);
+    const preCommandStringFlags = new Set([
+      ...postCommandStringFlags,
+      '-A',
+      '-Q',
+      '-S',
+      '-T',
+      '-t',
+    ]);
+    const postCommandBooleanFlags = new Set([
+      '--debug',
+      '--no-color',
+      '--non-interactive',
+      '--yes',
+      '--help',
+      '--version',
+    ]);
+    const preCommandBooleanFlags = new Set([
+      ...postCommandBooleanFlags,
+      '-d',
+      '-h',
+      '-v',
+    ]);
+
+    let commandIndex = -1;
+    for (let i = 2; i < argv.length; i++) {
+      const arg = argv[i];
+      const name = arg.includes('=') ? arg.slice(0, arg.indexOf('=')) : arg;
+
+      if (preCommandStringFlags.has(name)) {
+        if (!arg.includes('=') && i + 1 < argv.length) {
+          i++;
+        }
+        continue;
+      }
+
+      if (preCommandBooleanFlags.has(name)) {
+        continue;
+      }
+
+      commandIndex = i;
+      break;
+    }
+
+    const subcommand = commandIndex === -1 ? undefined : argv[commandIndex];
+    if (subcommand !== 'curl' && subcommand !== 'httpstat') {
+      return argv;
+    }
+
+    const truncated = argv.slice(0, commandIndex + 1);
+
+    for (let i = commandIndex + 1; i < argv.length; i++) {
+      const arg = argv[i];
+      const name = arg.includes('=') ? arg.slice(0, arg.indexOf('=')) : arg;
+      if (postCommandStringFlags.has(name)) {
+        truncated.push(arg);
+        if (!arg.includes('=') && i + 1 < argv.length) {
+          truncated.push(argv[++i]);
+        }
+        continue;
+      }
+      if (postCommandBooleanFlags.has(name)) {
+        truncated.push(arg);
+        continue;
+      }
+      truncated.push(arg);
+      break;
+    }
+
+    return truncated;
+  };
+
   const parseInitialArgs = () =>
     parseArguments(
-      process.argv,
+      getInitialParseArgv(),
       {
         '--version': Boolean,
         '-v': '--version',

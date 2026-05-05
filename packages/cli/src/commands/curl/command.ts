@@ -4,8 +4,7 @@ import { yesOption } from '../../util/arg-common';
 export const curlCommand = {
   name: 'curl',
   aliases: [],
-  description:
-    'Execute curl with automatic deployment URL and protection bypass.',
+  description: 'Execute curl against Vercel deployments with automatic auth.',
   arguments: [
     {
       name: 'path',
@@ -43,7 +42,11 @@ export const curlCommand = {
     },
     {
       name: 'Make a POST request with data',
-      value: `${packageName} curl /api/users -- --request POST --data '{"name": "John"}'`,
+      value: `${packageName} curl /api/users --request POST --data '{"name": "John"}'`,
+    },
+    {
+      name: 'Make a request to a deployment URL or alias',
+      value: `${packageName} curl https://your-project.vercel.app/api/hello`,
     },
     {
       name: 'Target a specific deployment by ID',
@@ -54,8 +57,8 @@ export const curlCommand = {
       value: `${packageName} curl /api/status --deployment https://your-project-abc123.vercel.app`,
     },
     {
-      name: 'Use curl flags after the separator',
-      value: `${packageName} curl /api/test -- --header "Content-Type: application/json" --request PUT`,
+      name: 'Use curl flags directly',
+      value: `${packageName} curl /api/test --header "Content-Type: application/json" --request PUT`,
     },
     {
       name: 'Use with protection bypass secret',
