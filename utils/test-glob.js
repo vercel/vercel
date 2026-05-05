@@ -55,6 +55,17 @@ function expandTestPattern(packageRoot, pattern, defaultTestPatterns) {
     matches = matches.filter(isTestFile);
   }
 
+  // Exclude *.spec.* files under fixtures/ directories — those are framework
+  // source files (Angular, Aurelia, etc.) that happen to use the *.spec.*
+  // convention but are not meant to be run by the CLI's test runner.
+  matches = matches.filter(
+    filePath =>
+      !(
+        filePath.replace(/\\/g, '/').includes('/fixtures/') &&
+        isSpecFile(filePath)
+      )
+  );
+
   return matches;
 }
 
@@ -70,6 +81,10 @@ function isTestFile(filePath) {
   return TEST_FILE_NAME_PARTS.some(name =>
     new RegExp(`\\.${name}\\.[^.]+$`).test(filePath)
   );
+}
+
+function isSpecFile(filePath) {
+  return /\.spec\.[^.]+$/.test(filePath);
 }
 
 function globPatternToRegExp(pattern) {
