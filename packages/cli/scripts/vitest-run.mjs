@@ -2,11 +2,17 @@
 // instead of CLI arguments. This bypasses the Windows cmd.exe ~8191 char arg limit
 // that turbo hits when passing many test paths through package.json scripts.
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
-const vitestBin = fileURLToPath(
-  new URL('../../../node_modules/.bin/vitest', import.meta.url)
-);
+// Resolve vitest's actual JS entry point from its package.json bin field.
+// node_modules/.bin/vitest is a pnpm shell shim — running it directly with
+// node causes a SyntaxError because node tries to parse shell script as JS.
+const require = createRequire(import.meta.url);
+const vitestPkg = require('../../../node_modules/vitest/package.json');
+const vitestBin = new URL(
+  `../../../node_modules/vitest/${vitestPkg.bin.vitest}`,
+  import.meta.url
+).pathname;
 
 // Paths come from VITEST_TEST_FILES (CI, space-separated) or direct CLI args (local dev)
 const envFiles = (process.env.VITEST_TEST_FILES ?? '')
