@@ -3738,22 +3738,6 @@ describe('entrypoint diagnostic error messages', () => {
     fs.removeSync(workPath);
   });
 
-  it('reports nearby .py files with non-standard names', async () => {
-    const workPath = path.join(tmpdir(), `python-diag-nearby-${Date.now()}`);
-    fs.mkdirSync(workPath, { recursive: true });
-    fs.writeFileSync(
-      path.join(workPath, 'helpers.py'),
-      'def add(a, b):\n    return a + b\n'
-    );
-
-    const result = await detectPythonEntrypoint('fastapi', workPath);
-    expect(result?.error).toBeDefined();
-    expect(result!.error!.message).toMatch(/Found Python files:.*helpers\.py/i);
-    expect(result!.error!.link).toBe(fastapiEntrypointDocsUrl);
-
-    fs.removeSync(workPath);
-  });
-
   it('reports pyproject.toml scripts.app pointing to missing module', async () => {
     const workPath = path.join(tmpdir(), `python-diag-scripts-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });

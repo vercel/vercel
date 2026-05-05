@@ -50,8 +50,6 @@ const SKIP_DIRS = new Set(['__pycache__', 'node_modules']);
 interface EntrypointDiagnostics {
   /** Candidate files that exist on disk but don't export app/application/handler */
   existingWithoutEntrypoint: string[];
-  /** Non-candidate .py files found in candidate directories */
-  otherPyFiles: string[];
   /** Raw scripts.app value from pyproject.toml, if present */
   pyprojectAppScript?: string;
   /** Module paths checked for pyproject.toml scripts.app resolution */
@@ -157,36 +155,6 @@ async function checkEntrypoint(
   if (!(await fileExists(absPath))) return null;
   const content = await fs.promises.readFile(absPath, 'utf-8');
   return findAppOrHandler(content);
-}
-
-/**
- * Find .py files in candidate directories that are NOT in the candidate list.
- * Only called on error paths to provide better diagnostics.
- */
-async function findOtherPyFiles(
-  workPath: string,
-  dirs: string[],
-  candidateSet: Set<string>
-): Promise<string[]> {
-  const results: string[] = [];
-  for (const dir of dirs) {
-    const dirPath = join(workPath, dir);
-    try {
-      const entries = await fs.promises.readdir(dirPath);
-      for (const entry of entries) {
-        if (!entry.endsWith('.py')) continue;
-        const relPath = dir ? pathPosix.join(dir, entry) : entry;
-        if (candidateSet.has(relPath)) continue;
-        const stat = await fs.promises.stat(join(dirPath, entry));
-        if (stat.isFile()) {
-          results.push(relPath);
-        }
-      }
-    } catch {
-      // Directory doesn't exist, skip
-    }
-  }
-  return results;
 }
 
 /**
@@ -434,9 +402,6 @@ function makeDiagnosticError(
     if (suggestion) message += `\n\n${suggestion}`;
   } else if (suggestion) {
     message = `No ${framework} entrypoint found in default locations, ${suggestion}`;
-  } else if (diagnostics.otherPyFiles.length > 0) {
-    const fileList = diagnostics.otherPyFiles.slice(0, 5).join(', ');
-    message = `No ${displayName} entrypoint found in standard locations. Found Python files: ${fileList}. Rename one to app.py or set "tool.vercel.entrypoint" in pyproject.toml.`;
   } else {
     const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     message = `No ${displayName} entrypoint found. Set "tool.vercel.entrypoint" in pyproject.toml or define an entrypoint in one of: ${searchedList}.`;
@@ -478,7 +443,6 @@ export async function detectGenericPythonEntrypoint(workPath: string): Promise<{
 export async function detectDjangoPythonEntrypoint(workPath: string): Promise<{
   detected: DetectedPythonEntrypoint | null;
   findDiagnostics: FindResult;
-  dirs: string[];
 }> {
   const emptyResult = {
     detected: null,
@@ -486,7 +450,6 @@ export async function detectDjangoPythonEntrypoint(workPath: string): Promise<{
       entrypoint: null,
       existingWithoutEntrypoint: [],
     } as FindResult,
-    dirs: PYTHON_ENTRYPOINT_DIRS,
   };
   try {
     // Get root directories (workPath root + immediate subdirs)
@@ -502,7 +465,6 @@ export async function detectDjangoPythonEntrypoint(workPath: string): Promise<{
         return {
           detected: { baseDir: rootDir },
           findDiagnostics: { entrypoint: null, existingWithoutEntrypoint: [] },
-          dirs: rootDirs,
         };
       }
     }
@@ -514,7 +476,6 @@ export async function detectDjangoPythonEntrypoint(workPath: string): Promise<{
     return {
       detected: result.entrypoint ? { entrypoint: result.entrypoint } : null,
       findDiagnostics: result,
-      dirs: rootDirs,
     };
   } catch {
     debug('Failed to discover Django Python entrypoint');
@@ -591,13 +552,11 @@ export async function detectPythonEntrypoint(
 
   // Then do a framework-specific search, collecting diagnostics for better error messages
   let findDiagnostics: FindResult;
-  let searchDirs: string[];
   let djangoManageBaseDir: string | undefined;
 
   if (framework === 'django') {
     const djangoResult = await detectDjangoPythonEntrypoint(workPath);
     findDiagnostics = djangoResult.findDiagnostics;
-    searchDirs = djangoResult.dirs;
     if (djangoResult.detected) {
       if (djangoResult.detected.entrypoint) return djangoResult.detected;
       djangoManageBaseDir = djangoResult.detected.baseDir;
@@ -605,7 +564,6 @@ export async function detectPythonEntrypoint(
   } else {
     const genericResult = await detectGenericPythonEntrypoint(workPath);
     findDiagnostics = genericResult.findDiagnostics;
-    searchDirs = PYTHON_ENTRYPOINT_DIRS;
     if (genericResult.detected) return genericResult.detected;
   }
 
@@ -618,14 +576,9 @@ export async function detectPythonEntrypoint(
   // No entrypoint found — build a targeted error from collected diagnostics.
   // Run a recursive AST-validated scan to surface valid candidates outside
   // the standard locations and suggest a tool.vercel.entrypoint snippet.
-  const candidateSet = new Set(getCandidateEntrypointsInDirs(searchDirs));
-  const [otherPyFiles, validCandidatesElsewhere] = await Promise.all([
-    findOtherPyFiles(workPath, searchDirs, candidateSet),
-    findEntrypointCandidates(workPath),
-  ]);
+  const validCandidatesElsewhere = await findEntrypointCandidates(workPath);
   const diagnostics: EntrypointDiagnostics = {
     existingWithoutEntrypoint: findDiagnostics.existingWithoutEntrypoint,
-    otherPyFiles,
     pyprojectAppScript: pyprojectResult.appScript,
     pyprojectCheckedPaths: pyprojectResult.checkedPaths,
     validCandidatesElsewhere,
