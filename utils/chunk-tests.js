@@ -126,12 +126,31 @@ const packageOptionsOverrides = {
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
 const DEFAULT_TEST_NAME_PATTERNS = ['test', 'spec'];
 
+// Packages whose build requires the Rust toolchain (cargo + wasm32-wasip2).
+// @vercel/python-analysis compiles a wasm binary; @vercel/build-utils depends on
+// it and is in turn a dependency of almost every other builder package.
+// Rather than walking the full dep graph at chunk time, we enumerate the roots:
+// any package that directly depends on one of these will get needsRust=true via
+// the dep-check below.
+const RUST_BUILD_ROOTS = new Set([
+  '@vercel/python-analysis',
+  '@vercel/build-utils',
+]);
+
 function readPackageManifest(rootPath, packageJsonPath) {
   const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const allDeps = {
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+  };
+  const needsRust =
+    RUST_BUILD_ROOTS.has(manifest.name) ||
+    Object.keys(allDeps).some(dep => RUST_BUILD_ROOTS.has(dep));
   return {
     packagePath: path.relative(rootPath, path.dirname(packageJsonPath)),
     packageJson: manifest,
     packageName: manifest.name,
+    needsRust,
   };
 }
 
@@ -325,7 +344,7 @@ async function getChunkedTests() {
         affectedPackageSet.size === 0 || affectedPackageSet.has(packageName)
       );
     })
-    .forEach(({ packageJson, packageName, packagePath }) => {
+    .forEach(({ packageJson, packageName, packagePath, needsRust }) => {
       for (const scriptName of scripts) {
         const patterns = getScriptTestPatterns(packageJson, scriptName);
         if (patterns.length === 0) {
@@ -342,7 +361,9 @@ async function getChunkedTests() {
         }
 
         const packagePathAndName = `${packagePath},${packageName}`;
-        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {};
+        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
+          needsRust,
+        };
         testsToRun[packagePathAndName][scriptName] = testPaths;
       }
     });
@@ -350,7 +371,9 @@ async function getChunkedTests() {
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
+      const { needsRust } = scriptNames;
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
+        if (scriptName === 'needsRust') return [];
         const runnerOptions = getRunnerOptions(scriptName, packageName);
         const {
           runners,
@@ -391,6 +414,7 @@ async function getChunkedTests() {
                   chunkNumber: chunkNumber + 1,
                   allChunksLength: allChunks.length,
                   useEnvPaths,
+                  needsRust,
                   label,
                 };
               });
