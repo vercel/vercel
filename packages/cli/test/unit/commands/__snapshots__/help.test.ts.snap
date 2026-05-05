@@ -763,6 +763,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
   -n,  --name <NAME>      Name of the Connex client                                                                     
+       --triggers         Enable webhook triggers for this client                                                       
 
 
   Global Options:
@@ -788,6 +789,10 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with a custom name
 
     $ vercel connex create slack --name my-bot
+
+  - Create with webhook triggers enabled
+
+    $ vercel connex create slack --name my-bot --triggers
 
   - Output as JSON
 
