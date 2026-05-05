@@ -1587,6 +1587,9 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
   );
 }
 
+const LAMBDA_SIZE_LIMIT_MB = 250;
+const CLOSE_TO_LIMIT_MB = LAMBDA_SIZE_LIMIT_MB - 5;
+
 function printFileSizeBreakdown(files: Map<string, number>): void {
   // Group files by package or directory structure
   const dependencies = new Map<string, number>();
@@ -1650,24 +1653,19 @@ async function analyzeVcConfigFiles(
     (r): r is NonNullable<typeof r> => r !== null
   );
 
-  const LAMBDA_SIZE_LIMIT_MB = 250;
-  const CLOSE_TO_LIMIT_MB = LAMBDA_SIZE_LIMIT_MB - 5;
-
   // Sort by size descending (largest first)
   const sortedResults = validResults.sort((a, b) => b.size - a.size);
-  const exceededFunctions = sortedResults.filter(
-    r => r.size >= LAMBDA_SIZE_LIMIT_MB
-  );
 
   output.print(chalk.bold(`\nServerless function size info:\n`));
 
-  // Display each function with appropriate status
+  let numExceeded = 0;
   for (const result of sortedResults) {
     const exceeded = result.size >= LAMBDA_SIZE_LIMIT_MB;
     const close = result.size >= CLOSE_TO_LIMIT_MB && !exceeded;
 
     // Print warning if function exceeded or is close to limit
     if (exceeded) {
+      numExceeded++;
       output.print(
         chalk.yellow(
           `\n⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached\n`
@@ -1689,10 +1687,10 @@ async function analyzeVcConfigFiles(
   }
 
   // Throw error if any functions exceeded the limit
-  if (exceededFunctions.length > 0) {
+  if (numExceeded > 0) {
     throw new NowBuildError({
       code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
-      message: `${exceededFunctions.length} function${exceededFunctions.length === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
+      message: `${numExceeded} function${numExceeded === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
       link: 'https://vercel.link/serverless-function-size',
       action: 'Learn More',
     });
