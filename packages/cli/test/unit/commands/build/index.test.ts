@@ -1314,7 +1314,10 @@ describe.skipIf(flakey)('build', () => {
     expect(serverRouteIndex).toBeLessThan(fallbackRouteIndex);
   });
 
-  it('should fail build when schedule-triggered job uses a dynamic schedule without builder crons', async () => {
+  it('should fail build when a dynamic-schedule entrypoint is not a cron registry', async () => {
+    // `<dynamic>` requires the entrypoint's default export to be a
+    // function returning {handler, schedule}[]. A bare HTTP server has
+    // no default export at all, so detection fails.
     const cwd = await createTempServicesProject({
       experimentalServices: {
         cleanup: {
@@ -1343,7 +1346,7 @@ createServer((_req, res) => {
 
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds.error.message).toContain(
-        'Dynamic cron schedules ("<dynamic>") are not yet supported for JavaScript/TypeScript services'
+        'cron entrypoint must default-export a function'
       );
     } finally {
       // Tolerate EBUSY on Windows when the builder still holds file handles.
