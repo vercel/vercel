@@ -56,6 +56,8 @@
     "ci:publish": "node utils/publish-runtimes.mjs && bash utils/npm-publish.sh && changeset tag",
     "ci:version:canary": "node utils/changeset-version-canary.js && pnpm install --no-frozen-lockfile",
     "ci:publish:canary": "bash utils/npm-publish.sh canary",
+    "ci:version:canary-prerelease": "node utils/changeset-prerelease-canary.js",
+    "ci:publish:canary-prerelease": "node utils/publish-runtimes.mjs && bash utils/npm-publish.sh canary && changeset tag",
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
   "lint-staged": {

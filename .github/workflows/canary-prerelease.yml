@@ -1,0 +1,104 @@
+name: Canary Prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      forcePackage:
+        description: Optional package to force-bump when there are no pending canary changesets
+        required: false
+        type: string
+
+env:
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  canary-prerelease:
+    name: Canary Prerelease
+    runs-on: ubuntu-latest
+    environment: release # Required for trusted publishing if this run publishes PyPI packages
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Validate Branch
+        run: |
+          if [ "$GITHUB_REF_NAME" != "canary" ]; then
+            echo "Run this workflow from the canary branch, not $GITHUB_REF_NAME."
+            exit 1
+          fi
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Necessary for the publish step to work since it uses HEAD^ to determine if the version has changed
+          fetch-depth: 2
+
+      - name: Fetch git tags
+        run: git fetch origin 'refs/tags/*:refs/tags/*'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        with:
+          targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - name: install npm@11
+        run: npm i -g npm@11
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Create Canary Prerelease Pull Request or Publish
+        id: changesets
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf
+        with:
+          version: pnpm ci:version:canary-prerelease
+          publish: pnpm ci:publish:canary-prerelease
+          title: Version Packages (canary)
+          commit: Version Packages (canary)
+          commitMode: 'github-api'
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+          CANARY_PRERELEASE_PACKAGE: ${{ github.event.inputs.forcePackage }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+  summary:
+    name: Summary (canary prerelease)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - canary-prerelease
+    steps:
+      - name: Check All
+        run: echo OK

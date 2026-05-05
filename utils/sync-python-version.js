@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 
 const VERSION_TS_PATH = 'packages/python/src/package-versions.ts';
+const SHOULD_MAP_PRERELEASE = process.argv.includes('--pep440-prerelease');
 
 const PYTHON_PACKAGES = [
   {
@@ -29,6 +30,47 @@ const PYTHON_PACKAGES = [
   },
 ];
 
+function toPep440Version(version) {
+  if (!SHOULD_MAP_PRERELEASE) {
+    return version;
+  }
+
+  const match = version.match(/^(\d+\.\d+\.\d+)(?:-([a-zA-Z]+)\.?(\d+))?$/);
+
+  if (!match) {
+    return version;
+  }
+
+  const [, baseVersion, prereleaseLabel, prereleaseNumber] = match;
+
+  if (!prereleaseLabel) {
+    return version;
+  }
+
+  const number = prereleaseNumber ?? '0';
+  const normalizedLabel = prereleaseLabel.toLowerCase();
+
+  if (normalizedLabel === 'canary' || normalizedLabel === 'dev') {
+    return `${baseVersion}.dev${number}`;
+  }
+
+  if (normalizedLabel === 'alpha' || normalizedLabel === 'a') {
+    return `${baseVersion}a${number}`;
+  }
+
+  if (normalizedLabel === 'beta' || normalizedLabel === 'b') {
+    return `${baseVersion}b${number}`;
+  }
+
+  if (normalizedLabel === 'rc') {
+    return `${baseVersion}rc${number}`;
+  }
+
+  throw new Error(
+    `Cannot map npm prerelease version "${version}" to a PEP 440 version`
+  );
+}
+
 function syncVersion(packageConfig) {
   const { name, packageJsonPath, pyprojectPath } = packageConfig;
 
@@ -44,11 +86,17 @@ function syncVersion(packageConfig) {
   }
 
   const packageJson = JSON.parse(fs.readFileSync(packageJsonFullPath, 'utf8'));
-  const version = packageJson.version;
+  const packageVersion = packageJson.version;
 
-  if (!version) {
+  if (!packageVersion) {
     console.log(`Skipping ${name}: no version found in package.json`);
     return { updated: false, version: null };
+  }
+
+  const version = toPep440Version(packageVersion);
+
+  if (packageVersion !== version) {
+    console.log(`${name}: mapped npm ${packageVersion} -> Python ${version}`);
   }
 
   // Read pyproject.toml
