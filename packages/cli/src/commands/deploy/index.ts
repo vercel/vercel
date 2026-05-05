@@ -802,6 +802,7 @@ async function handleContinueSubcommand(
 
   const idFlag = parsedArguments.flags['--id'];
   const parsedArchive = parsedArguments.flags['--archive'];
+  const errorMessage = parsedArguments.flags['--error'];
 
   if (typeof parsedArchive === 'string' && !isValidArchive(parsedArchive)) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
@@ -809,6 +810,16 @@ async function handleContinueSubcommand(
   }
 
   telemetryClient.trackCliOptionArchive(parsedArchive);
+
+  if (parsedArchive && errorMessage !== undefined) {
+    output.error(`Cannot use ${param('--archive')} with ${param('--error')}`);
+    return 1;
+  }
+
+  if (errorMessage !== undefined && errorMessage.trim() === '') {
+    output.error(`${param('--error')} requires an error message`);
+    return 1;
+  }
 
   if (!idFlag) {
     if (client.nonInteractive) {
@@ -874,6 +885,22 @@ async function handleContinueSubcommand(
     cwd = link.repoRoot;
   }
 
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  if (errorMessage !== undefined) {
+    try {
+      await client.fetch(`/deployments/${idFlag}/continue`, {
+        method: 'POST',
+        body: { errorMessage },
+      });
+      output.success(`Marked deployment ${idFlag} as errored`);
+      return 0;
+    } catch (error) {
+      printError(error);
+      return 1;
+    }
+  }
+
   // Resolve vercelOutputDir - prebuilt is implicit for continue
   let vercelOutputDir: string = join(cwd, '.vercel/output');
   if (link.repoRoot && link.project.rootDirectory) {
@@ -916,8 +943,6 @@ async function handleContinueSubcommand(
       return 1;
     }
   }
-
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const deployStamp = stamp();
 
