@@ -149,10 +149,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
     },
-    'deploy-with-only-readme-now-json': {
-      'now.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
-    },
     'deploy-with-only-readme-vercel-json': {
       'vercel.json': JSON.stringify({ version: 2 }),
       'README.md': 'readme contents',

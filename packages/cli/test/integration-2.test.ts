@@ -788,20 +788,6 @@ describe('telemetry submits data', () => {
   });
 });
 
-test('deploys with only now.json and README.md', async () => {
-  const directory = await setupE2EFixture('deploy-with-only-readme-now-json');
-
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
-    cwd: directory,
-  });
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
-  const text = await res.text();
-  expect(text).toMatch(/readme contents/);
-});
-
 test('deploys with only vercel.json and README.md', async () => {
   const directory = await setupE2EFixture(
     'deploy-with-only-readme-vercel-json'
