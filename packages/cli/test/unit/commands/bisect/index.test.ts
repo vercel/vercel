@@ -438,5 +438,40 @@ describe('bisect', () => {
 
       await expect(bisectPromise).resolves.toEqual(1);
     });
+
+    it('should explain which deployments have mismatched targets', async () => {
+      const user = useUser();
+      const now = Date.now();
+      const goodDeployment = useDeployment({
+        creator: user,
+        createdAt: now,
+        target: 'staging',
+      });
+      const badDeployment = useDeployment({
+        creator: user,
+        createdAt: now + 10000,
+        target: 'production',
+      });
+
+      client.setArgv(
+        'bisect',
+        '--good',
+        `https://${goodDeployment.url}`,
+        '--bad',
+        `https://${badDeployment.url}`,
+        '--path',
+        '/docs'
+      );
+      const bisectPromise = bisect(client);
+
+      await expect(client.stderr).toOutput(
+        `Error: Cannot bisect deployments from different targets.\n\n` +
+          `Known bad:  https://${badDeployment.url} (target: production)\n` +
+          `Known good: https://${goodDeployment.url} (target: staging)\n\n` +
+          `Production and staging deployments have separate histories.`
+      );
+
+      await expect(bisectPromise).resolves.toEqual(1);
+    });
   });
 });
