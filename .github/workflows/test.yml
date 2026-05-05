@@ -265,9 +265,14 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
+      - uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5
+        with:
+          version: 8.3.1
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
+          cache: 'pnpm'
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
@@ -279,15 +284,12 @@ jobs:
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
-
       - name: install uv@0.10.11
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
         with:
           version: '0.10.11'
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
@@ -392,24 +394,26 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.setup.outputs.headSha }}
+      - uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5
+        with:
+          version: 8.3.1
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
+          cache: 'pnpm'
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
-
-      - name: Install uv
+      - name: install uv@0.10.11
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
         with:
           version: '0.10.11'
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
