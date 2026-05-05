@@ -7,7 +7,7 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { duplicateWithConfig } = require('../utils');
+const { duplicateWithConfig } = await import('../utils');
 const { streamToBuffer } = require('@vercel/build-utils');
 const { createHash } = require('crypto');
 

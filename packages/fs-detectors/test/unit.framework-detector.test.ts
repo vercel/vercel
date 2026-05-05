@@ -1,5 +1,5 @@
 import { join } from 'path';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import workspaceManagers from '../src/workspaces/workspace-managers';
 import {
   detectFramework,

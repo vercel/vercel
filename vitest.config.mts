@@ -7,6 +7,11 @@ export default defineConfig({
     pool: 'forks',
     testTimeout: 12 * 60 * 1000,
     hookTimeout: 12 * 60 * 1000,
+    include: [
+      '**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      // Legacy e2e entrypoints that predate the *.test.* naming convention.
+      '**/test/test.js',
+    ],
     env: {
       // Vitest supresses color output when `process.env.CI` is true
       // so override that behavior
