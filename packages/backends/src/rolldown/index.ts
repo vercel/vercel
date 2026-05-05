@@ -6,7 +6,7 @@ import { build as rolldownBuild } from 'rolldown';
 import { builtinModules } from 'node:module';
 import { join, dirname, relative, extname } from 'node:path';
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { type Files, FileBlob, isBackendFramework } from '@vercel/build-utils';
 import { nft } from './nft.js';
 import { exports as resolveExports } from 'resolve.exports';
@@ -340,3 +340,44 @@ module.exports = requireFromContext('${pkgName}');
   );
   return { files, handler, framework, localBuildFiles };
 };
+
+/**
+ * Materialize an in-memory `Files` map (typically rolldown's `write:
+ * false` output) onto disk under `workPath`. The directory is placed
+ * inside `workPath` so externalized npm imports walk up to the project's
+ * `node_modules`. Caller owns cleanup of the returned path.
+ */
+export async function stageBundleOnDisk(opts: {
+  files: Files;
+  workPath: string;
+  /** Prefix for the mkdtemp suffix; defaults to `.vc-bundle-`. */
+  prefix?: string;
+}): Promise<string> {
+  const dir = await mkdtemp(join(opts.workPath, opts.prefix ?? '.vc-bundle-'));
+  for (const [relPath, file] of Object.entries(opts.files)) {
+    const data = await readFileData(file);
+    if (data === undefined) continue;
+    const absPath = join(dir, relPath);
+    await mkdir(dirname(absPath), { recursive: true });
+    await writeFile(absPath, data);
+  }
+  return dir;
+}
+
+async function readFileData(
+  file: unknown
+): Promise<Buffer | string | undefined> {
+  if (file && typeof file === 'object') {
+    if ('data' in file) {
+      const data = (file as { data: unknown }).data;
+      if (typeof data === 'string' || Buffer.isBuffer(data)) return data;
+    }
+    if (
+      'fsPath' in file &&
+      typeof (file as { fsPath: unknown }).fsPath === 'string'
+    ) {
+      return readFile((file as { fsPath: string }).fsPath);
+    }
+  }
+  return undefined;
+}
