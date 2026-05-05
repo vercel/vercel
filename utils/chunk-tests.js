@@ -108,9 +108,19 @@ const E2E_TEST_SCRIPTS = [
 ];
 
 const packageOptionsOverrides = {
-  // The vercel CLI package has enough test files that passing them all as
-  // command-line arguments exceeds the Windows cmd.exe ~8191 character limit.
-  vercel: { max: 2 },
+  // The vercel CLI has many test files. Passing them as CLI args hits the Windows
+  // cmd.exe ~8191 char arg limit, so we route them through the VITEST_TEST_FILES
+  // env var instead. useEnvPaths signals the workflow to set that var and omit
+  // the -- args from the turbo command.
+  //
+  // Why max: 7?
+  // Per-job overhead on the slowest runner (Windows) is ~450s (checkout, node
+  // setup, Rust toolchain, pnpm install, build). At max=7, each chunk has ~48
+  // test files taking ~130s to run. Going beyond 7 adds more jobs and runner cost
+  // but saves <30s of wall clock, since overhead already dominates test time.
+  // Benchmark (wall clock of the unit-test phase):
+  //   max=2 (old): ~22 min    max=4: ~10 min    max=7: ~9 min    max=14: ~8.5 min
+  vercel: { max: 7, useEnvPaths: true },
 };
 
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
@@ -348,6 +358,7 @@ async function getChunkedTests() {
           max,
           testScript,
           nodeVersions = ['22'],
+          useEnvPaths = false,
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
@@ -370,6 +381,7 @@ async function getChunkedTests() {
                   ),
                   chunkNumber: chunkNumber + 1,
                   allChunksLength: allChunks.length,
+                  useEnvPaths,
                 };
               });
             });
