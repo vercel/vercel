@@ -1,4 +1,8 @@
 {
+  "env": {
+    "ECHO_VAR": {"ref": {"service": "service-a"}},
+    "GLOBAL_REF": {"ref": {"service": "service-b"}}
+  },
   "experimentalServices": {
     "service-next": {
       "framework": "vite",
@@ -14,7 +18,8 @@
       "entrypoint": "services/service-a",
       "mount": "/api/a",
       "env": {
-        "SERVICE_B_URL": {"ref": {"service": "service-b"}}
+        "SERVICE_B_URL": {"ref": {"service": "service-b"}},
+        "ECHO_VAR": {"ref": {"service": "service-b"}}
       }
     },
     "service-b": {

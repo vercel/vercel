@@ -698,6 +698,100 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
       await dev.kill();
     }
   });
+
+  test('[vercel dev] env precedence: per-service ref beats top-level ref', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const res = await nodeFetch(
+        `http://localhost:${port}/api/a/env?name=ECHO_VAR`
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json).toEqual({
+        name: 'ECHO_VAR',
+        value: `http://localhost:${port}/api/b`,
+      });
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] env precedence: shell env beats per-service and top-level refs', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          ECHO_VAR: 'http://from-shell',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const res = await nodeFetch(
+        `http://localhost:${port}/api/a/env?name=ECHO_VAR`
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json).toEqual({
+        name: 'ECHO_VAR',
+        value: 'http://from-shell',
+      });
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] env precedence: top-level ref applies when no per-service override', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const res = await nodeFetch(
+        `http://localhost:${port}/api/a/env?name=GLOBAL_REF`
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json).toEqual({
+        name: 'GLOBAL_REF',
+        value: `http://localhost:${port}/api/b`,
+      });
+    } finally {
+      await dev.kill();
+    }
+  });
 });
 
 describe('[vercel dev] Multi-service auto-detection', () => {
