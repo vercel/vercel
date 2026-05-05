@@ -828,7 +828,7 @@ export interface TriggerEvent extends TriggerEventBase {
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
-export type ServiceType = 'web' | 'job' | 'cron' | 'worker';
+export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
 
 export interface ExperimentalServiceMount {
   /** URL path prefix where the service is mounted. */
