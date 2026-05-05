@@ -366,6 +366,15 @@ async function getChunkedTests() {
           (chunk, chunkNumber, allChunks) => {
             return nodeVersions.flatMap(nodeVersion => {
               return runners.map(runner => {
+                const runnerShort = runner
+                  .replace('ubuntu-latest', 'linux')
+                  .replace('macos-14', 'mac')
+                  .replace('windows-latest', 'win');
+                const chunkSuffix =
+                  allChunks.length > 1
+                    ? ` [${chunkNumber + 1}/${allChunks.length}]`
+                    : '';
+                const label = `${packageName} (${runnerShort}/node${nodeVersion})${chunkSuffix}`;
                 return {
                   runner,
                   packagePath,
@@ -382,6 +391,7 @@ async function getChunkedTests() {
                   chunkNumber: chunkNumber + 1,
                   allChunksLength: allChunks.length,
                   useEnvPaths,
+                  label,
                 };
               });
             });

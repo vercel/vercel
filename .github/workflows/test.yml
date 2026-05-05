@@ -251,7 +251,7 @@ jobs:
   unit-test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
-    name: Unit / ${{ matrix.packageName }} / chunk ${{ matrix.chunkNumber }} / ${{ matrix.runner }} / Node v${{ matrix.nodeVersion }}
+    name: Unit / ${{ matrix.label }}
     if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
     needs:
       - setup
@@ -378,7 +378,7 @@ jobs:
   e2e-test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
-    name: E2E / ${{ matrix.packageName }} / chunk ${{ matrix.chunkNumber }} / ${{ matrix.runner }} / Node v${{ matrix.nodeVersion }}
+    name: E2E / ${{ matrix.label }}
     if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
     needs:
       - setup
