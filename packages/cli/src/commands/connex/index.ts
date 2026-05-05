@@ -11,11 +11,15 @@ import {
   createSubcommand,
   listSubcommand,
   tokenSubcommand,
+  removeSubcommand,
+  openSubcommand,
   connexCommand,
 } from './command';
 import { create } from './create';
 import { list } from './list';
 import { token } from './token';
+import { remove } from './remove';
+import { openClient } from './open';
 import {
   buildCommandWithGlobalFlags,
   outputAgentError,
@@ -27,6 +31,8 @@ const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
+  remove: getCommandAliases(removeSubcommand),
+  open: getCommandAliases(openSubcommand),
 };
 
 export default async function connex(client: Client): Promise<number> {
@@ -113,6 +119,45 @@ export default async function connex(client: Client): Promise<number> {
         const tokenFlagsSpec = getFlagsSpecification(tokenSubcommand.options);
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
         return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
+      }
+      case 'remove': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(removeSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandRemove(subcommandOriginal);
+
+        const removeFlagsSpec = getFlagsSpecification(removeSubcommand.options);
+        const removeParsedArgs = parseArguments(subArgs, removeFlagsSpec);
+        telemetry.trackCliArgumentClient(removeParsedArgs.args[0]);
+        telemetry.trackCliFlagYes(removeParsedArgs.flags['--yes']);
+        telemetry.trackCliFlagDisconnectAll(
+          removeParsedArgs.flags['--disconnect-all']
+        );
+        telemetry.trackCliOptionFormat(removeParsedArgs.flags['--format']);
+        return await remove(
+          client,
+          removeParsedArgs.args,
+          removeParsedArgs.flags
+        );
+      }
+      case 'open': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(openSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandOpen(subcommandOriginal);
+
+        const openFlagsSpec = getFlagsSpecification(openSubcommand.options);
+        const openParsedArgs = parseArguments(subArgs, openFlagsSpec);
+        telemetry.trackCliOptionFormat(openParsedArgs.flags['--format']);
+        return await openClient(
+          client,
+          openParsedArgs.args,
+          openParsedArgs.flags
+        );
       }
       default: {
         const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');

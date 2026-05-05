@@ -398,7 +398,8 @@ export default async function processDeployment({
 }
 
 export class FunctionsSizeLimitError extends Error {
-  link = 'https://vercel.com/docs/errors/FUNCTIONS_BETA';
+  link =
+    'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
 }
 
 export function handleErrorSolvableWithFunctionsBeta(error: unknown) {

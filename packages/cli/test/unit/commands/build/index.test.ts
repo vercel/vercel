@@ -1185,6 +1185,59 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
+  it('should append services SPA fallback after builder output routes', async () => {
+    const cwd = await createTempServicesProject({
+      experimentalServices: {
+        api: {
+          framework: 'nitro',
+          entrypoint: '.',
+          routePrefix: '/',
+        },
+      },
+      files: {
+        'package.json': JSON.stringify({
+          scripts: {
+            build: 'node build.mjs',
+          },
+        }),
+        'build.mjs': `
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+
+          const outputDir = join(process.cwd(), '.vercel', 'output');
+          mkdirSync(outputDir, { recursive: true });
+          writeFileSync(
+            join(outputDir, 'config.json'),
+            JSON.stringify({
+              version: 3,
+              routes: [
+                { handle: 'filesystem' },
+                { src: '/(.*)', dest: '/__server' },
+              ],
+            })
+          );
+        `,
+      },
+    });
+    const output = join(cwd, '.vercel/output');
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    const serverRouteIndex = config.routes.findIndex(
+      (route: { dest?: string }) => route.dest === '/__server'
+    );
+    const fallbackRouteIndex = config.routes.findIndex(
+      (route: { dest?: string }) => route.dest === '/index.html'
+    );
+
+    expect(serverRouteIndex).toBeGreaterThan(-1);
+    expect(fallbackRouteIndex).toBeGreaterThan(-1);
+    expect(serverRouteIndex).toBeLessThan(fallbackRouteIndex);
+  });
+
   it('should fail build when schedule-triggered job uses a dynamic schedule without builder crons', async () => {
     const cwd = await createTempServicesProject({
       experimentalServices: {

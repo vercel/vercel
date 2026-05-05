@@ -804,10 +804,12 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create  type  Create a new Connex client                              
-  list          List Connex clients for the current team                
-  token   id    Get a token for a Connex client (accepts a client ID    
-                like scl_abc or a UID like slack/my-bot)                
+  create  type    Create a new Connex client                            
+  list            List Connex clients for the current team              
+  token   id      Get a token for a Connex client (accepts a client ID  
+                  like scl_abc or a UID like slack/my-bot)              
+  remove  client  Delete a Connex client                                
+  open    id      Open a Connex client in the Vercel dashboard          
 
 
   Global Options:
@@ -839,6 +841,10 @@ exports[`help command > connex help output snapshots > connex help column width 
   - Get a token
 
     $ vercel connex token scl_abc123
+
+  - Open a client in the dashboard
+
+    $ vercel connex open scl_abc123
 
 "
 `;
@@ -887,6 +893,48 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
   - Output as JSON
 
     $ vercel connex list --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex open subcommand > connex open subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex open id [options]
+
+  Open a Connex client in the Vercel dashboard                                                                          
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Open a client by ID
+
+    $ vercel connex open scl_abc123
+
+  - Open a client by UID
+
+    $ vercel connex open slack/my-bot
+
+  - Print the dashboard URL as JSON
+
+    $ vercel connex open scl_abc123 --format=json
 
 "
 `;
@@ -4805,8 +4853,6 @@ exports[`help command > login help output snapshots > login help column width 40
   -S,  --scope                Set a     
                               custom    
                               scope     
-  -t,  --token <TOKEN>        Login     
-                              token     
   -v,  --version              Output the
                               version   
                               number    
@@ -4839,7 +4885,6 @@ exports[`help command > login help output snapshots > login help column width 80
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
   -S,  --scope                Set a custom scope                                
-  -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
 
 
@@ -4868,7 +4913,6 @@ exports[`help command > login help output snapshots > login help column width 12
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 
@@ -6675,7 +6719,6 @@ exports[`help command > teams help output snapshots > teams switch help output s
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 

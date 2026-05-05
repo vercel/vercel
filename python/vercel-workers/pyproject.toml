@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vercel-workers"
-version = "0.0.17"
+version = "0.0.22"
 description = "Python SDK for Vercel Workers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,6 +12,7 @@ license = "MIT"
 dependencies = [
     "httpx>=0.27.0",
     "anyio>=4.0.0",
+    "pydantic>=2.7.0",
     "python-dotenv",
     "vercel>=0.3.7",
 ]

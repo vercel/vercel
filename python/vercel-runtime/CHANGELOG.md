@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.13.1
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
 ## 0.13.0
 
 ### Minor Changes

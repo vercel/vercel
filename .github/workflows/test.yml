@@ -1,9 +1,17 @@
-name: Unit Tests
+name: Tests
 
 on:
-  repository_dispatch:
-    types:
-      - vercel.project.QmcQ2AGNAWeR6ZJCWAhqhbixxvWbgvsR2LMT4fzmTfY9SK.deployment.ready
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  checks: read
+  deployments: read
+  issues: write
+  pull-requests: write
+  statuses: write
 
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
@@ -12,19 +20,18 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.client_payload.git.ref }}
-  cancel-in-progress: ${{ github.event.client_payload.git.ref != 'refs/heads/main' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   setup:
     name: Find Changes
-    if: github.event.client_payload.environment == 'preview'
     runs-on: ubuntu-latest
     outputs:
-      tests: ${{ steps['set-tests'].outputs['tests'] }}
-      dplUrl: ${{ github.event.client_payload.url }}
+      unitTests: ${{ steps['set-tests'].outputs['unitTests'] }}
+      e2eTests: ${{ steps['set-tests'].outputs['e2eTests'] }}
       baseSha: ${{ steps.pr-context.outputs.baseSha }}
-      headSha: ${{ github.event.client_payload.git.sha }}
+      headSha: ${{ steps.pr-context.outputs.headSha }}
       prNumber: ${{ steps.pr-context.outputs.prNumber }}
       affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
       testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
@@ -37,23 +44,40 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          SHA="${{ github.event.client_payload.git.sha }}"
-          PR_JSON=$(gh api "repos/${{ github.repository }}/commits/${SHA}/pulls" --jq '.[0]')
-          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
-          BASE_SHA=$(echo "$PR_JSON" | jq -r '.base.sha')
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           echo "prNumber=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "baseSha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "headSha=$HEAD_SHA" >> $GITHUB_OUTPUT
+      # The `context` here MUST exactly match the one written by the
+      # `Report status to PR commit` step in the `summary` job below.
+      # GitHub commit statuses are upserted by `(sha, context)`, so a
+      # mismatch would create a second row instead of overwriting this
+      # pending one with the final result.
+      - name: Post pending Summary status to PR commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ steps.pr-context.outputs.headSha }}',
+              state: 'pending',
+              context: 'Summary',
+              target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+              description: 'Tests in progress',
+            });
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.client_payload.git.sha }}
+          ref: ${{ steps.pr-context.outputs.headSha }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
-      - run: pnpm install
+      - name: install turbo@2.5.0
+        run: npm i -g turbo@2.5.0
       - id: affected-packages
         run: |
           # Set base SHA for affected package detection
@@ -94,17 +118,21 @@ jobs:
           echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
-          TESTS_ARRAY=$(node utils/chunk-tests.js)
+          UNIT_TESTS_ARRAY=$(TEST_TYPE=unit node utils/chunk-tests.js)
+          E2E_TESTS_ARRAY=$(TEST_TYPE=e2e node utils/chunk-tests.js)
           echo "Unit tests to run:"
-          echo "$TESTS_ARRAY"
-          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+          echo "$UNIT_TESTS_ARRAY"
+          echo "E2E tests to run:"
+          echo "$E2E_TESTS_ARRAY"
+          echo "unitTests=$UNIT_TESTS_ARRAY" >> $GITHUB_OUTPUT
+          echo "e2eTests=$E2E_TESTS_ARRAY" >> $GITHUB_OUTPUT
         env:
           TURBO_BASE_SHA: ${{ steps.pr-context.outputs.baseSha }}
-          TEST_TYPE: unit
 
   comment-test-strategy:
     name: Comment Test Strategy
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs:
       - setup
     steps:
@@ -145,7 +173,7 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All affected packages will run unit tests\n';
-              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
+              message += '- **E2E tests**: Running in parallel in this workflow\n';
               message += '- **Type checks**: All affected packages will run type checks';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
@@ -159,14 +187,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: Only affected packages will run unit tests\n';
-              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
+              message += '- **E2E tests**: Running in parallel in this workflow\n';
               message += '- **Type checks**: Only affected packages will run type checks';
             } else if (strategy === 'no-tests') {
               message += '**Strategy**: No tests needed\n\n';
               message += '✨ No packages affected - skipping tests\n\n';
               message += '### Results\n\n';
               message += '- **Unit tests**: None\n';
-              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
+              message += '- **E2E tests**: Running in parallel in this workflow\n';
               message += '- **Type checks**: None';
             } else if (strategy === 'test-all') {
               message += '**Strategy**: Full unit test suite\n\n';
@@ -180,14 +208,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All packages will run unit tests\n';
-              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
+              message += '- **E2E tests**: Running in parallel in this workflow\n';
               message += '- **Type checks**: All packages will run type checks';
             } else {
               message += '**Strategy**: Unknown\n\n';
               message += `⚠️ Unknown strategy: ${strategy}\n\n`;
               message += '### Results\n\n';
               message += '- **Unit tests**: Unknown\n';
-              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
+              message += '- **E2E tests**: Running in parallel in this workflow\n';
               message += '- **Type checks**: Unknown';
             }
 
@@ -220,18 +248,18 @@ jobs:
               });
             }
 
-  test:
+  unit-test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
-    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
-    if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    name: Unit / ${{ matrix.packageName }} / chunk ${{ matrix.chunkNumber }} / ${{ matrix.runner }} / Node v${{ matrix.nodeVersion }}
+    if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
     needs:
       - setup
     strategy:
       fail-fast: false
       max-parallel: 75
       matrix:
-        include: ${{ fromJson(needs.setup.outputs['tests']) }}
+        include: ${{ fromJson(needs.setup.outputs['unitTests']) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -242,9 +270,8 @@ jobs:
           node-version: ${{ matrix.nodeVersion }}
 
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
         with:
-          toolchain: stable
           targets: wasm32-wasip2
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
@@ -266,10 +293,145 @@ jobs:
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: '1'
+      - name: Test ${{matrix.packageName}}
+        run: |
+          attempt=1
+          max_attempts=2
+          export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Tests failed after $max_attempts attempts."
+              exit 1
+            fi
+
+            echo "Tests failed; retrying once..."
+            attempt=$((attempt+1))
+          done
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
+          FORCE_COLOR: '1'
+          # Datadog Test Optimization: emit per-test spans correlated to the
+          # GitHub Actions job span, replacing the previous post-hoc JUnit
+          # upload. See test/lib/deployment/metrics.js for the legacy
+          # DATADOG_API_KEY consumer (custom transient-error metrics).
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DD_ENV: ci
+          DD_SERVICE: vercel-cli
+          DD_PROFILING_ENABLED: 'false'
+          DD_NATIVE_METRICS: 'false'
+
+  e2e-test:
+    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    name: E2E / ${{ matrix.packageName }} / chunk ${{ matrix.chunkNumber }} / ${{ matrix.runner }} / Node v${{ matrix.nodeVersion }}
+    if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      max-parallel: 75
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['e2eTests']) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.setup.outputs.headSha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.nodeVersion }}
+
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - run: pnpm install
+
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        env:
+          FORCE_COLOR: '1'
+      - name: Wait for deployment tarballs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ needs.setup.outputs.headSha }}
+        run: |
+          set -euo pipefail
+
+          # E2E needs the CLI and Python wheel tarballs produced by the Vercel
+          # preview deployment, but the workflow now starts on pull_request so
+          # tests can begin before the deployment-ready repository_dispatch.
+          # Vercel already reports successful deployments back to GitHub via
+          # deployment statuses and commit statuses. We poll those GitHub-owned
+          # records for candidate public URLs, then trust a URL only after the
+          # actual tarball endpoint responds. That final HTTP check is the
+          # readiness gate, so stale/unrelated status URLs are harmless.
+          validate_deployment_url() {
+            local url="${1%/}"
+            if [ -z "$url" ]; then
+              return 1
+            fi
+
+            if curl -fsI "$url/tarballs/vercel.tgz" >/dev/null; then
+              echo "DPL_URL=$url" >> "$GITHUB_ENV"
+              echo "VERCEL_CLI_VERSION=$url/tarballs/vercel.tgz" >> "$GITHUB_ENV"
+              echo "Deployment tarball is ready at $url/tarballs/vercel.tgz"
+              return 0
+            fi
+
+            return 1
+          }
+
+          get_candidate_urls() {
+            gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${HEAD_SHA}&per_page=20" \
+              --jq '.[].id' | while IFS= read -r deployment_id; do
+                gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
+                  --jq '.[] | select(.state == "success" and .environment_url != null and .environment_url != "") | .environment_url'
+              done
+
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" \
+              --jq '.statuses[] | select(.state == "success" and .target_url != null and .target_url != "") | .target_url'
+          }
+
+          for attempt in {1..120}; do
+            while IFS= read -r candidate_url; do
+              if validate_deployment_url "$candidate_url"; then
+                exit 0
+              fi
+            done < <(get_candidate_urls | sort -u)
+
+            echo "Deployment tarball is not ready yet (attempt $attempt/120)."
+            sleep 10
+          done
+
+          echo "Timed out waiting for deployment tarball."
+          exit 1
       - name: Resolve Python wheel URLs
         shell: bash
         run: |
-          DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
+          DEPLOYMENT_URL="$DPL_URL"
 
           PACKAGES_JSON="$(node utils/get-python-packages.js)"
           if [ -z "$PACKAGES_JSON" ] || [ "$PACKAGES_JSON" = "[]" ]; then
@@ -293,6 +455,7 @@ jobs:
         run: |
           attempt=1
           max_attempts=2
+          export NODE_OPTIONS="--require=${GITHUB_WORKSPACE}/utils/dd-trace-ci-init.js"
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
@@ -314,27 +477,21 @@ jobs:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
           # VERCEL_WORKERS_PYTHON) are also available here, injected into
           # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
-          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
-          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
-          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
           FORCE_COLOR: '1'
-      - name: 'Determine Turbo HIT or MISS'
-        if: ${{ !cancelled() }}
-        id: turbo-summary
-        shell: bash
-        run: |
-          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
-          echo "MISS COUNT: $TURBO_MISS_COUNT"
-          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
-      - name: 'Upload Test Report to Datadog'
-        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
-        run: 'pnpm dlx @datadog/datadog-ci@4.2.2 junit upload --service vercel-cli .junit-reports'
-        env:
-          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          # Datadog Test Optimization: emit per-test spans correlated to the
+          # GitHub Actions job span, replacing the previous post-hoc JUnit
+          # upload. See test/lib/deployment/metrics.js for the legacy
+          # DATADOG_API_KEY consumer (custom transient-error metrics).
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: 'true'
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_CLI }}
           DD_ENV: ci
+          DD_SERVICE: vercel-cli
+          DD_PROFILING_ENABLED: 'false'
+          DD_NATIVE_METRICS: 'false'
 
   summary:
     name: Summary
@@ -343,7 +500,8 @@ jobs:
     if: always()
     needs:
       - setup
-      - test
+      - unit-test
+      - e2e-test
     permissions:
       statuses: write
     steps:
@@ -361,8 +519,12 @@ jobs:
             fi
           done
           echo "state=success" >> $GITHUB_OUTPUT
+      # The `context` here MUST exactly match the one written by the
+      # `Post pending Summary status to PR commit` step in the `setup`
+      # job above so this final write overwrites that pending row
+      # instead of creating a duplicate.
       - name: Report status to PR commit
-        if: ${{ always() && github.event.client_payload.git.sha }}
+        if: ${{ always() && needs.setup.outputs.headSha }}
         uses: actions/github-script@v7
         env:
           CHECK_STATE: ${{ steps.check-all.outputs.state }}
@@ -372,7 +534,7 @@ jobs:
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: '${{ github.event.client_payload.git.sha }}',
+              sha: '${{ needs.setup.outputs.headSha }}',
               state,
               context: 'Summary',
               target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
