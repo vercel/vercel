@@ -477,6 +477,7 @@ export interface BuilderV2 {
   diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
 }
 
 export interface BuilderV3 {
