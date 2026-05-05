@@ -8,6 +8,12 @@ async def app(scope, receive, send):
     path = scope.get("path", "/")
     method = scope.get("method", "GET")
     body = f"{method} {path}".encode()
+    if path == "/oidc":
+        headers = {
+            key.decode(): value.decode()
+            for key, value in scope.get("headers", [])
+        }
+        body = headers.get("x-vercel-oidc-token", "").encode()
 
     await send(
         {

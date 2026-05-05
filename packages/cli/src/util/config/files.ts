@@ -3,13 +3,6 @@ import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
 import { accessSync, constants } from 'fs';
 import { fileNameSymbol } from '@vercel/client';
-import {
-  clearAllCredentialsStrict,
-  hasCredentials,
-  readCredentials,
-  resolveAuthTokenStorage,
-  writeCredentials,
-} from '@vercel/cli-auth/credentials-store.js';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
@@ -17,14 +10,12 @@ import highlight from '../output/highlight';
 import type { VercelConfig } from '../dev/types';
 import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
+import { isErrnoException, isError } from '@vercel/error-utils';
 import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
 import {
   VERCEL_CONFIG_EXTENSIONS,
   DEFAULT_VERCEL_CONFIG_FILENAME,
 } from '../compile-vercel-config';
-import { getDefaultAuthConfig } from './get-default';
-import hp from '../humanize-path';
 
 import output from '../../output-manager';
 
@@ -34,14 +25,7 @@ const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
 
 // reads "global config" file atomically
 export const readConfigFile = (): GlobalConfig => {
-  const config = loadJSON.sync(CONFIG_FILE_PATH) as GlobalConfig & {
-    authTokenStorage?: unknown;
-  };
-
-  if ('authTokenStorage' in config) {
-    config.authTokenStorage = resolveAuthTokenStorage(config.authTokenStorage);
-  }
-
+  const config = loadJSON.sync(CONFIG_FILE_PATH);
   return config;
 };
 
@@ -72,53 +56,41 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
   }
 };
 
-function getAuthStoreConfig(config: GlobalConfig) {
-  return {
-    authTokenStorage: resolveAuthTokenStorage(config.authTokenStorage),
-  };
-}
-
-function toPersistedAuthConfig(authConfig: AuthConfig): AuthConfig {
-  const { skipWrite, tokenSource, ...persistedAuthConfig } = authConfig;
-  return persistedAuthConfig;
-}
-
-export const readAuthConfigFile = (config: GlobalConfig): AuthConfig => {
-  return {
-    ...getDefaultAuthConfig(),
-    ...readCredentials(VERCEL_DIR, getAuthStoreConfig(config)),
-  };
+// reads "auth config" file atomically
+export const readAuthConfigFile = (): AuthConfig => {
+  const config = loadJSON.sync(AUTH_CONFIG_FILE_PATH);
+  return config;
 };
 
-export const persistAuthConfig = (
-  authConfig: AuthConfig,
-  config: GlobalConfig
-) => {
+export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
   if (authConfig.skipWrite) {
     return;
   }
-
-  const persistedAuthConfig = toPersistedAuthConfig(authConfig);
-
   try {
-    if (!hasCredentials(persistedAuthConfig)) {
-      clearAllCredentialsStrict(VERCEL_DIR);
-      return;
+    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, authConfig, {
+      indent: 2,
+      mode: 0o600,
+    });
+  } catch (err: unknown) {
+    if (isErrnoException(err)) {
+      if (err.code === 'EPERM') {
+        output.error(
+          `Not able to create ${highlight(
+            AUTH_CONFIG_FILE_PATH
+          )} (operation not permitted).`
+        );
+        process.exit(1);
+      } else if (err.code === 'EBADF') {
+        output.error(
+          `Not able to create ${highlight(
+            AUTH_CONFIG_FILE_PATH
+          )} (bad file descriptor).`
+        );
+        process.exit(1);
+      }
     }
 
-    return writeCredentials(
-      VERCEL_DIR,
-      persistedAuthConfig,
-      getAuthStoreConfig(config)
-    );
-  } catch (err: unknown) {
-    const wrappedError = new Error(
-      `An unexpected error occurred while trying to write the auth config to "${hp(
-        AUTH_CONFIG_FILE_PATH
-      )}" ${errorToString(err)}`
-    );
-    (wrappedError as Error & { cause?: unknown }).cause = err;
-    throw wrappedError;
+    throw err;
   }
 };
 
