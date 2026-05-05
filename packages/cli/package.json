@@ -31,6 +31,10 @@
     "vc": "./dist/vc.js",
     "vercel": "./dist/vc.js"
   },
+  "exports": {
+    "./build-worker": "./dist/build-container-build-worker.js",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist"
   ],

@@ -36,15 +36,15 @@ describe('programmatic build entrypoint', () => {
     }
   });
 
-  it('builds through the shared build command implementation', async () => {
+  it('runs a build from a prewarmed build worker import', async () => {
+    const buildWorkerModule = import('../../../../src/build-worker');
     const cwd = fixture('env-from-vc-pull');
     outputDir = join(await getWriteableDirectory(), 'programmatic-output');
     const argv = [process.execPath, 'cli.js', 'build', '--output', outputDir];
     const originalCwd = process.cwd();
-    const originalClientCwd = client.cwd;
-    const originalClientArgv = client.argv;
+    const { runBuildWorker } = await buildWorkerModule;
 
-    const exitCode = await runBuildWithInput(client, {
+    const exitCode = await runBuildWorker({
       argv,
       cwd,
       env: {
@@ -55,8 +55,6 @@ describe('programmatic build entrypoint', () => {
 
     expect(exitCode).toEqual(0);
     expect(process.cwd()).toEqual(originalCwd);
-    expect(client.cwd).toEqual(originalClientCwd);
-    expect(client.argv).toEqual(originalClientArgv);
     expect(process.env.PROGRAMMATIC_ONLY).toBeUndefined();
 
     const env = await fs.readJSON(join(outputDir, 'static', 'env.json'));
