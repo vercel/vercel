@@ -23,6 +23,7 @@ import {
   runNpmInstall,
   getServiceUrlEnvVars,
   getExperimentalServiceUrlEnvVars,
+  type BuilderV2,
   type BuilderV3,
   type BuilderVX,
   type Config,
@@ -612,14 +613,16 @@ export class ServicesOrchestrator {
       const builders = await importBuilders(new Set([builderSpec]), this.cwd);
       const builderWithPkg = builders.get(builderSpec);
       const builder = builderWithPkg?.builder as
+        | BuilderV2
         | BuilderV3
         | BuilderVX
         | undefined;
 
-      if (
-        (builder?.version !== 3 && builder?.version !== -1) ||
-        !builder?.startDevServer
-      ) {
+      const versionAccepted =
+        builder?.version === 3 ||
+        builder?.version === -1 ||
+        builder?.version === 2;
+      if (!versionAccepted || !builder?.startDevServer) {
         return null;
       }
 
