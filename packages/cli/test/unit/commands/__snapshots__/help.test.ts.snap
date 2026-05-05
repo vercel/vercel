@@ -804,11 +804,12 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create  type  Create a new Connex client                              
-  list          List Connex clients for the current team                
-  token   id    Get a token for a Connex client (accepts a client ID    
-                like scl_abc or a UID like slack/my-bot)                
-  open    id    Open a Connex client in the Vercel dashboard            
+  create  type    Create a new Connex client                            
+  list            List Connex clients for the current team              
+  token   id      Get a token for a Connex client (accepts a client ID  
+                  like scl_abc or a UID like slack/my-bot)              
+  remove  client  Delete a Connex client                                
+  open    id      Open a Connex client in the Vercel dashboard          
 
 
   Global Options:
@@ -4852,8 +4853,6 @@ exports[`help command > login help output snapshots > login help column width 40
   -S,  --scope                Set a     
                               custom    
                               scope     
-  -t,  --token <TOKEN>        Login     
-                              token     
   -v,  --version              Output the
                               version   
                               number    
@@ -4886,7 +4885,6 @@ exports[`help command > login help output snapshots > login help column width 80
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
   -S,  --scope                Set a custom scope                                
-  -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
 
 
@@ -4915,7 +4913,6 @@ exports[`help command > login help output snapshots > login help column width 12
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 
@@ -6722,7 +6719,6 @@ exports[`help command > teams help output snapshots > teams switch help output s
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 

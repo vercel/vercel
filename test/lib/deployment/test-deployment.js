@@ -491,7 +491,7 @@ async function testDeployment(fixturePath, opts = {}) {
 async function nowDeployIndexTgz(file) {
   const bodies = {
     'index.tgz': fs.readFileSync(file),
-    'now.json': Buffer.from(JSON.stringify({ version: 2 })),
+    'vercel.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
   return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;

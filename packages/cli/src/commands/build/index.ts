@@ -694,6 +694,7 @@ async function doBuild(
 
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: Service[] | undefined;
   let isZeroConfig = false;
 
@@ -776,6 +777,7 @@ async function doBuild(
       phase: 'error',
     });
     zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+    zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
@@ -1494,10 +1496,17 @@ async function doBuild(
       routes: zeroConfigRoutes,
     });
   }
-  const mergedRoutes = mergeRoutes({
+  let mergedRoutes = mergeRoutes({
     userRoutes: routesResult.routes,
     builds: builderRoutes,
   });
+  if (zeroConfigFallbackRoutes.length) {
+    mergedRoutes = appendRoutesToPhase({
+      routes: mergedRoutes,
+      newRoutes: zeroConfigFallbackRoutes,
+      phase: 'filesystem',
+    });
+  }
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(
