@@ -927,7 +927,7 @@ export const firewallCommand = {
   aliases: [],
   description:
     "Manage your project's firewall rules, IP blocks, and system bypass configuration",
-  hidden: true as const,
+
   arguments: [],
   subcommands: [
     overviewSubcommand,
