@@ -226,7 +226,17 @@ export const tokenSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption],
+  options: [
+    yesOption,
+    {
+      name: 'decode',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Decode the OIDC token header and payload as JSON without verifying the signature',
+    },
+  ],
   examples: [
     {
       name: 'Get a development OIDC token for the linked project',
@@ -235,6 +245,10 @@ export const tokenSubcommand = {
     {
       name: 'Get a development OIDC token for the project named "my-project"',
       value: `${packageName} project token my-project`,
+    },
+    {
+      name: 'Decode the development OIDC token for the linked project',
+      value: `${packageName} project token --decode`,
     },
   ],
 } as const;

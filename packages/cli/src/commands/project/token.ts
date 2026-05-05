@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { decodeJwt, decodeProtectedHeader } from 'jose';
 import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
@@ -52,7 +53,15 @@ export default async function getOidcToken(client: Client, argv: string[]) {
         },
       }
     );
-    output.print(res.token);
+    if (flags['--decode']) {
+      const decodedToken = {
+        header: decodeProtectedHeader(res.token),
+        payload: decodeJwt(res.token),
+      };
+      output.print(JSON.stringify(decodedToken, null, 2));
+    } else {
+      output.print(res.token);
+    }
     output.print('\n');
     return 0;
   } catch (err: unknown) {
