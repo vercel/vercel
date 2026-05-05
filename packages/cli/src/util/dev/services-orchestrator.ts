@@ -173,7 +173,7 @@ export class ServicesOrchestrator {
   private services: Service[];
   private cwd: string;
   private repoRoot: string;
-  private env: NodeJS.ProcessEnv;
+  private envFilesValues: NodeJS.ProcessEnv;
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
@@ -185,7 +185,7 @@ export class ServicesOrchestrator {
     this.repoRoot = options.repoRoot;
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
-    this.env = options.env;
+    this.envFilesValues = options.env;
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
@@ -332,6 +332,8 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
+    const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
+
     const perServiceEnv = service.env
       ? getServiceUrlEnvVars({
           requestedEnv: service.env,
@@ -339,19 +341,21 @@ export class ServicesOrchestrator {
           services: this.services,
           frameworkList,
           origin: this.proxyOrigin,
-          currentEnv: this.env,
+          currentEnv: effectiveProcessEnv,
         })
       : {};
 
-    // Precedence: process env > per-service env > config env
+    // Precedence: process env > env* files > per-service env > config env > defaults
+    //
+    // per-service env already contains config env that is folded into it during
+    // service's resolution
     const env = cloneEnv(
       {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
       perServiceEnv,
-      process.env,
-      this.env
+      effectiveProcessEnv
     );
     env.VERCEL_SERVICE_TYPE = service.type;
     if (service.trigger) {
