@@ -87,7 +87,10 @@ export function getServiceUrlEnvVars(
     if (name in currentEnv) {
       continue;
     }
-    const target = servicesByName.get(envVar.ref.service);
+    if (envVar.type !== 'service-ref') {
+      continue;
+    }
+    const target = servicesByName.get(envVar.service);
     if (!target || target.type !== 'web' || !target.routePrefix) {
       continue;
     }

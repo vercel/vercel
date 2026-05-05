@@ -532,22 +532,23 @@ export function validateServiceConfig(
       if (!envVar || typeof envVar !== 'object' || Array.isArray(envVar)) {
         return {
           code: 'INVALID_ENV_VAR',
-          message: `Service "${name}" has invalid env["${envVarName}"]. Must be an object of shape { ref: { service: string } }.`,
+          message: `Service "${name}" has invalid env["${envVarName}"]. Must be an object with a "type" discriminator.`,
           serviceName: name,
         };
       }
-      const ref = envVar.ref;
-      if (!ref || typeof ref !== 'object' || Array.isArray(ref)) {
+      const envVarType = (envVar as { type?: unknown }).type;
+      if (envVarType !== 'service-ref') {
         return {
-          code: 'INVALID_ENV_VAR_REF',
-          message: `Service "${name}" env["${envVarName}"] must have a "ref" object.`,
+          code: 'INVALID_ENV_VAR_TYPE',
+          message: `Service "${name}" env["${envVarName}"] has unknown type "${envVarType}".`,
           serviceName: name,
         };
       }
-      if (typeof ref.service !== 'string' || ref.service.length === 0) {
+      const refService = (envVar as { service?: unknown }).service;
+      if (typeof refService !== 'string' || refService.length === 0) {
         return {
           code: 'INVALID_ENV_VAR_REF',
-          message: `Service "${name}" env["${envVarName}"].ref must specify "service" as a non-empty string.`,
+          message: `Service "${name}" env["${envVarName}"] must specify "service" as a non-empty string.`,
           serviceName: name,
         };
       }
@@ -1043,7 +1044,9 @@ function validateEnvRefs(
   serviceName?: string
 ): void {
   for (const [envVarName, envVar] of Object.entries(env)) {
-    const refName = envVar.ref.service;
+    if (envVar.type !== 'service-ref') continue;
+
+    const refName = envVar.service;
     const target = servicesByName.get(refName);
     if (!target) {
       errors.push({

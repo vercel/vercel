@@ -38,7 +38,7 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/',
         framework: 'nextjs',
         env: {
-          NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
+          NEXT_PUBLIC_API_BASE_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -62,7 +62,7 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/',
         framework: 'nextjs',
         env: {
-          API_BASE_URL: { ref: { service: 'api' } },
+          API_BASE_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -86,8 +86,8 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/',
         framework: 'nextjs',
         env: {
-          API_BASE_URL: { ref: { service: 'api' } },
-          NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
+          API_BASE_URL: { type: 'service-ref', service: 'api' },
+          NEXT_PUBLIC_API_BASE_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -112,8 +112,11 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/api',
         framework: 'fastapi',
         env: {
-          DASHBOARD_URL: { ref: { service: 'frontend' } },
-          NEXT_PUBLIC_DASHBOARD_URL: { ref: { service: 'frontend' } },
+          DASHBOARD_URL: { type: 'service-ref', service: 'frontend' },
+          NEXT_PUBLIC_DASHBOARD_URL: {
+            type: 'service-ref',
+            service: 'frontend',
+          },
         },
       }),
       createService({ name: 'frontend', routePrefix: '/' }),
@@ -139,8 +142,8 @@ describe('getServiceUrlEnvVars', () => {
         name: 'consumer',
         routePrefix: '/svc',
         env: {
-          API_URL: { ref: { service: 'api' } },
-          NEXT_PUBLIC_API_URL: { ref: { service: 'api' } },
+          API_URL: { type: 'service-ref', service: 'api' },
+          NEXT_PUBLIC_API_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -167,7 +170,7 @@ describe('getServiceUrlEnvVars', () => {
         env: {
           // Different framework's prefix — should NOT trigger relative
           // resolution in a Next.js consumer.
-          VITE_API_BASE_URL: { ref: { service: 'api' } },
+          VITE_API_BASE_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -191,7 +194,7 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/',
         framework: 'nextjs',
         env: {
-          NEXT_PUBLIC_: { ref: { service: 'api' } },
+          NEXT_PUBLIC_: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -215,8 +218,8 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/admin',
         framework: 'vite',
         env: {
-          SITE_URL: { ref: { service: 'site' } },
-          VITE_SITE_URL: { ref: { service: 'site' } },
+          SITE_URL: { type: 'service-ref', service: 'site' },
+          VITE_SITE_URL: { type: 'service-ref', service: 'site' },
         },
       }),
       createService({ name: 'site', routePrefix: '/' }),
@@ -241,8 +244,8 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/',
         framework: 'nextjs',
         env: {
-          API_BASE_URL: { ref: { service: 'api' } },
-          NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
+          API_BASE_URL: { type: 'service-ref', service: 'api' },
+          NEXT_PUBLIC_API_BASE_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -269,8 +272,8 @@ describe('getServiceUrlEnvVars', () => {
         routePrefix: '/',
         framework: 'nextjs',
         env: {
-          API_BASE_URL: { ref: { service: 'api' } },
-          NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
+          API_BASE_URL: { type: 'service-ref', service: 'api' },
+          NEXT_PUBLIC_API_BASE_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -294,7 +297,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         env: {
-          API_URL: { ref: { service: 'api' } },
+          API_URL: { type: 'service-ref', service: 'api' },
         },
       }),
       createService({ name: 'api', routePrefix: '/api' }),
@@ -314,7 +317,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         env: {
-          API_URL: { ref: { service: 'missing' } },
+          API_URL: { type: 'service-ref', service: 'missing' },
         },
       }),
     ];
@@ -334,7 +337,7 @@ describe('getServiceUrlEnvVars', () => {
         name: 'frontend',
         routePrefix: '/',
         env: {
-          WORKER_URL: { ref: { service: 'worker' } },
+          WORKER_URL: { type: 'service-ref', service: 'worker' },
         },
       }),
       createService({ name: 'worker', type: 'worker', routePrefix: undefined }),

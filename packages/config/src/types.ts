@@ -183,13 +183,12 @@ export interface ServiceQueueTopic {
   initialDelaySeconds?: number;
 }
 
-export interface EnvVarRef {
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
   service: string;
 }
 
-export interface EnvVar {
-  ref: EnvVarRef;
-}
+export type EnvVar = ServiceRefEnvVar;
 
 export interface GitDeploymentConfig {
   [branch: string]: boolean;

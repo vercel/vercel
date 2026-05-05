@@ -235,28 +235,28 @@ const envVarNamesSchema = {
   maxLength: 256,
 };
 
-const envVarRecordSchema = {
-  type: 'object',
-  additionalProperties: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['ref'],
-    properties: {
-      ref: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['service'],
-        properties: {
-          service: {
-            type: 'string',
-            minLength: 1,
-            maxLength: 64,
-            pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
-          },
+const envVarSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'service'],
+      properties: {
+        type: { const: 'service-ref' },
+        service: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 64,
+          pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
         },
       },
     },
-  },
+  ],
+};
+
+const envVarRecordSchema = {
+  type: 'object',
+  additionalProperties: envVarSchema,
   propertyNames: envVarNamesSchema,
 };
 

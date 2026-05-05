@@ -1201,7 +1201,10 @@ describe('detectServices', () => {
                 entrypoint: 'client/index.ts',
                 routePrefix: '/',
                 env: {
-                  NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
+                  NEXT_PUBLIC_API_BASE_URL: {
+                    type: 'service-ref',
+                    service: 'api',
+                  },
                 },
               },
               api: {
@@ -1219,7 +1222,7 @@ describe('detectServices', () => {
         expect(result.services).toHaveLength(2);
         const frontend = result.services.find(s => s.name === 'frontend');
         expect(frontend?.env).toEqual({
-          NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
+          NEXT_PUBLIC_API_BASE_URL: { type: 'service-ref', service: 'api' },
         });
       });
 
@@ -1231,14 +1234,17 @@ describe('detectServices', () => {
                 entrypoint: 'client/index.ts',
                 routePrefix: '/',
                 env: {
-                  NEXT_PUBLIC_API_BASE_URL: { ref: { service: 'api' } },
+                  NEXT_PUBLIC_API_BASE_URL: {
+                    type: 'service-ref',
+                    service: 'api',
+                  },
                 },
               },
               api: {
                 entrypoint: 'server/index.ts',
                 routePrefix: '/api',
                 env: {
-                  DASHBOARD_URL: { ref: { service: 'frontend' } },
+                  DASHBOARD_URL: { type: 'service-ref', service: 'frontend' },
                 },
               },
             },
@@ -1260,7 +1266,7 @@ describe('detectServices', () => {
                 entrypoint: 'client/index.ts',
                 routePrefix: '/',
                 env: {
-                  API_URL: { ref: { service: 'missing' } },
+                  API_URL: { type: 'service-ref', service: 'missing' },
                 },
               },
             },
@@ -1285,7 +1291,7 @@ describe('detectServices', () => {
                 entrypoint: 'client/index.ts',
                 routePrefix: '/',
                 env: {
-                  WORKER_URL: { ref: { service: 'worker' } },
+                  WORKER_URL: { type: 'service-ref', service: 'worker' },
                 },
               },
               worker: {
@@ -1319,7 +1325,7 @@ describe('detectServices', () => {
                 entrypoint: 'client/index.ts',
                 routePrefix: '/',
                 env: {
-                  '1BAD NAME': { ref: { service: 'api' } },
+                  '1BAD NAME': { type: 'service-ref', service: 'api' },
                 },
               },
               api: {
@@ -1340,7 +1346,7 @@ describe('detectServices', () => {
         });
       });
 
-      it('should error on missing ref.service', async () => {
+      it('should error on missing service for a service-ref entry', async () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({
             experimentalServices: {
@@ -1348,7 +1354,7 @@ describe('detectServices', () => {
                 entrypoint: 'client/index.ts',
                 routePrefix: '/',
                 env: {
-                  API_URL: { ref: {} },
+                  API_URL: { type: 'service-ref' },
                 },
               },
             },
@@ -1363,6 +1369,30 @@ describe('detectServices', () => {
           serviceName: 'frontend',
         });
       });
+
+      it('should error on unknown env var type', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  API_URL: { type: 'unknown-ref', project: 'foo' },
+                },
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatchObject({
+          code: 'INVALID_ENV_VAR_TYPE',
+          serviceName: 'frontend',
+        });
+      });
     });
 
     describe('top-level env refs', () => {
@@ -1370,7 +1400,7 @@ describe('detectServices', () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({
             env: {
-              API_URL: { ref: { service: 'api' } },
+              API_URL: { type: 'service-ref', service: 'api' },
             },
             experimentalServices: {
               frontend: {
@@ -1396,7 +1426,7 @@ describe('detectServices', () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({
             env: {
-              API_URL: { ref: { service: 'missing' } },
+              API_URL: { type: 'service-ref', service: 'missing' },
             },
             experimentalServices: {
               frontend: {
@@ -1424,7 +1454,7 @@ describe('detectServices', () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({
             env: {
-              WORKER_URL: { ref: { service: 'worker' } },
+              WORKER_URL: { type: 'service-ref', service: 'worker' },
             },
             experimentalServices: {
               frontend: {
@@ -1480,7 +1510,7 @@ describe('detectServices', () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({
             env: {
-              API_URL: { ref: { service: 'api' } },
+              API_URL: { type: 'service-ref', service: 'api' },
             },
             experimentalServices: {
               frontend: {
@@ -1502,10 +1532,10 @@ describe('detectServices', () => {
         const frontend = result.services.find(s => s.name === 'frontend');
         const api = result.services.find(s => s.name === 'api');
         expect(frontend?.env).toEqual({
-          API_URL: { ref: { service: 'api' } },
+          API_URL: { type: 'service-ref', service: 'api' },
         });
         expect(api?.env).toEqual({
-          API_URL: { ref: { service: 'api' } },
+          API_URL: { type: 'service-ref', service: 'api' },
         });
       });
 
@@ -1513,7 +1543,7 @@ describe('detectServices', () => {
         const fs = new VirtualFilesystem({
           'vercel.json': JSON.stringify({
             env: {
-              API_URL: { ref: { service: 'api' } },
+              API_URL: { type: 'service-ref', service: 'api' },
             },
             experimentalServices: {
               frontend: {
@@ -1521,7 +1551,7 @@ describe('detectServices', () => {
                 routePrefix: '/',
                 env: {
                   // Override the top-level entry with a different target.
-                  API_URL: { ref: { service: 'admin' } },
+                  API_URL: { type: 'service-ref', service: 'admin' },
                 },
               },
               api: {
@@ -1544,7 +1574,7 @@ describe('detectServices', () => {
         const frontend = result.services.find(s => s.name === 'frontend');
         // Per-service entry wins.
         expect(frontend?.env).toEqual({
-          API_URL: { ref: { service: 'admin' } },
+          API_URL: { type: 'service-ref', service: 'admin' },
         });
       });
     });

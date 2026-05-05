@@ -1,7 +1,7 @@
 {
   "env": {
-    "ECHO_VAR": {"ref": {"service": "service-a"}},
-    "GLOBAL_REF": {"ref": {"service": "service-b"}}
+    "ECHO_VAR": {"type": "service-ref", "service": "service-a"},
+    "GLOBAL_REF": {"type": "service-ref", "service": "service-b"}
   },
   "experimentalServices": {
     "service-next": {
@@ -9,8 +9,8 @@
       "entrypoint": "apps/web",
       "mount": "/",
       "env": {
-        "VITE_SERVICE_A_URL": {"ref": {"service": "service-a"}},
-        "VITE_SERVICE_B_URL": {"ref": {"service": "service-b"}}
+        "VITE_SERVICE_A_URL": {"type": "service-ref", "service": "service-a"},
+        "VITE_SERVICE_B_URL": {"type": "service-ref", "service": "service-b"}
       }
     },
     "service-a": {
@@ -18,8 +18,8 @@
       "entrypoint": "services/service-a",
       "mount": "/api/a",
       "env": {
-        "SERVICE_B_URL": {"ref": {"service": "service-b"}},
-        "ECHO_VAR": {"ref": {"service": "service-b"}}
+        "SERVICE_B_URL": {"type": "service-ref", "service": "service-b"},
+        "ECHO_VAR": {"type": "service-ref", "service": "service-b"}
       }
     },
     "service-b": {

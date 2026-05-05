@@ -586,14 +586,13 @@ export type ServiceTopics = string[] | ServiceQueueTopic[];
 export const JOB_TRIGGERS = ['queue', 'schedule', 'workflow'] as const;
 export type JobTrigger = (typeof JOB_TRIGGERS)[number];
 
-export interface EnvVarRef {
-  /** Name of another service in `experimentalServices` whose URL to inject. */
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
   service: string;
 }
 
-export interface EnvVar {
-  ref: EnvVarRef;
-}
+// union (in the future) type to handle all possible variants
+export type EnvVar = ServiceRefEnvVar;
 
 export type EnvVars = Record<string, EnvVar>;
 
