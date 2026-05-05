@@ -1,4 +1,3 @@
-/* eslint-env jest */
 const path = require('path');
 const cheerio = require('cheerio');
 const setCookieParser = require('set-cookie-parser');

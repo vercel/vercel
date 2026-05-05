@@ -177,11 +177,6 @@ function getScriptTestPatterns(packageJson, scriptName) {
     return pnpmTestPatterns;
   }
 
-  const jestPatterns = getPatternsAfterCommand(script, 'jest');
-  if (jestPatterns.length > 0) {
-    return jestPatterns;
-  }
-
   if (script === 'pnpm test') {
     return getDefaultTestPatterns();
   }

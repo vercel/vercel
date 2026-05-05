@@ -20,7 +20,7 @@ const SIMPLE_PROJECT = path.resolve(
   '00-middleware'
 );
 
-jest.setTimeout(360000);
+vi.setConfig({ testTimeout: 360000, hookTimeout: 360000 });
 
 function sharedTests(ctx) {
   it('worker uses `middleware` or `middlewarePath` keyword as route path', async () => {
