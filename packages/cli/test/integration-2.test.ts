@@ -269,7 +269,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
   }
 });
 
-test('should prefill "project name" prompt with now.json `name`', async () => {
+test('should prefill "project name" prompt with vercel.json `name`', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
@@ -479,7 +479,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   expect(pageResponse1.status).toBe(200);
   expect(await pageResponse1.text()).toMatch(/I am a website/gm);
 
-  // Ensures that the `now.json` file has been applied
+  // Ensures that the `vercel.json` file has been applied
   const pageResponse2 = await nodeFetch(`${secondResult.stdout}/i-do-exist`);
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
