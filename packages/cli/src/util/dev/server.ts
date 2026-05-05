@@ -967,9 +967,21 @@ export default class DevServer {
       output.print(`${chalk.cyan('>')} Available at:\n`);
       for (const service of this.services || []) {
         if (service.type !== 'web') continue;
-        const servicePath = service.routePrefix || '/';
-        const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
-        output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
+        if (service.routePrefix) {
+          const serviceUrl = `${addressFormatted}${service.routePrefix === '/' ? '' : service.routePrefix}`;
+          output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
+          continue;
+        }
+
+        const routingUrls =
+          service.routingPaths?.map(routingPath =>
+            link(`${addressFormatted}${routingPath === '/' ? '' : routingPath}`)
+          ) || [];
+        const renderedTargets =
+          routingUrls.length > 0
+            ? routingUrls.join(', ')
+            : link(addressFormatted);
+        output.print(`  ${chalk.bold(service.name)}: ${renderedTargets}\n`);
       }
     } else {
       devCommandPromise = this.runDevCommand();

@@ -99,6 +99,14 @@ export interface ServiceDetectionError {
   serviceName?: string;
 }
 
+/**
+ * Result of resolving a user-provided entrypoint string to a filesystem path.
+ */
+export interface ResolvedEntrypointPath {
+  normalized: string;
+  isDirectory: boolean;
+}
+
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   node: '@vercel/backends',
   python: '@vercel/python',
