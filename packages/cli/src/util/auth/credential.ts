@@ -1,3 +1,5 @@
+import { decodeJwt, decodeProtectedHeader } from 'jose';
+
 export interface JwtPayload {
   iss?: unknown;
   sub?: unknown;
@@ -34,37 +36,11 @@ export function getJwtPayload(token: string): JwtPayload | null {
 }
 
 function maybeDecodeJwt(token: string): DecodedJwt | null {
-  const tokenParts = token.split('.');
-  if (tokenParts.length !== 3) {
-    return null;
-  }
-
-  const [encodedHeader, encodedBody] = tokenParts;
-  if (!encodedHeader || !encodedBody) {
-    return null;
-  }
-
   try {
-    const header: unknown = JSON.parse(
-      Buffer.from(encodedHeader, 'base64url').toString('utf8')
-    );
-    const body: unknown = JSON.parse(
-      Buffer.from(encodedBody, 'base64url').toString('utf8')
-    );
-
-    if (
-      header &&
-      typeof header === 'object' &&
-      !Array.isArray(header) &&
-      body &&
-      typeof body === 'object' &&
-      !Array.isArray(body)
-    ) {
-      return {
-        header: header as Record<string, unknown>,
-        payload: body as JwtPayload,
-      };
-    }
+    return {
+      header: decodeProtectedHeader(token) as Record<string, unknown>,
+      payload: decodeJwt(token) as JwtPayload,
+    };
   } catch {}
 
   return null;
