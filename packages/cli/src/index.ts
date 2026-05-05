@@ -80,7 +80,11 @@ import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
 import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
-import { processTokenResponse, tokenExchangeRequest } from './util/oauth';
+import {
+  isOAuthError,
+  processTokenResponse,
+  tokenExchangeRequest,
+} from './util/oauth';
 import {
   getPlatformEnv,
   Span,
@@ -738,17 +742,18 @@ const main = async () => {
       );
 
       if (!teamId) {
+        telemetry.trackOidcTokenExchangeFailure('missing_team_id');
         output.prettyError({
           message:
             `You defined ${param('--token')} with an OIDC token, but OIDC token exchange requires a team id. ` +
             `Provide ${param('--scope')} with a team id, link the project, or set VERCEL_ORG_ID.`,
-          link: 'https://err.sh/vercel/oidc-token-exchange-team-required',
         });
 
         return finishWithExitCode(1);
       }
 
       try {
+        telemetry.trackOidcTokenExchangeAttempt();
         const exchangeResponse = await tokenExchangeRequest({
           subject_token: token,
           team_id: teamId,
@@ -757,9 +762,14 @@ const main = async () => {
           await processTokenResponse(exchangeResponse);
 
         if (exchangeError) {
+          telemetry.trackOidcTokenExchangeFailure(
+            getOidcTokenExchangeFailureReason(exchangeError)
+          );
           output.prettyError(exchangeError);
           return finishWithExitCode(1);
         }
+
+        telemetry.trackOidcTokenExchangeSuccess();
 
         client.authConfig = {
           token: exchangedToken.access_token,
@@ -768,6 +778,7 @@ const main = async () => {
           tokenSource,
         };
       } catch (err: unknown) {
+        telemetry.trackOidcTokenExchangeFailure('request_error');
         printError(err);
         trackAgenticErrorTelemetry(err);
         return finishWithExitCode(1);
@@ -1352,6 +1363,18 @@ async function resolveOidcTokenExchangeTeamId(
   if (orgId?.startsWith('team_')) {
     return orgId;
   }
+}
+
+function getOidcTokenExchangeFailureReason(error: unknown): string {
+  if (isOAuthError(error)) {
+    return `oauth_${error.code}`;
+  }
+
+  if (error instanceof TypeError) {
+    return 'invalid_response';
+  }
+
+  return 'unknown';
 }
 
 main()

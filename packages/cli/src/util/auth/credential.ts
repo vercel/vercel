@@ -7,23 +7,30 @@ export interface JwtPayload {
 
 interface DecodedJwt {
   header: Record<string, unknown>;
-  body: JwtPayload;
+  payload: JwtPayload;
+}
+
+interface SubjectTokenClaims {
+  iss: string;
+  sub: string | undefined;
+  aud: unknown;
+  exp: unknown;
 }
 
 export function isOidcJwtLike(token: string): boolean {
-  const { header, body } = maybeDecodeJwt(token) ?? {};
+  const decodedJwt = maybeDecodeJwt(token);
+  const claims = decodeSubjectTokenClaims(token);
 
   return (
-    typeof header?.alg === 'string' &&
-    typeof body?.iss === 'string' &&
-    typeof body.sub === 'string' &&
-    hasAudience(body.aud) &&
-    typeof body.exp === 'number'
+    typeof decodedJwt?.header.alg === 'string' &&
+    typeof claims?.sub === 'string' &&
+    hasAudience(claims.aud) &&
+    typeof claims.exp === 'number'
   );
 }
 
 export function getJwtPayload(token: string): JwtPayload | null {
-  return maybeDecodeJwt(token)?.body ?? null;
+  return maybeDecodeJwt(token)?.payload ?? null;
 }
 
 function maybeDecodeJwt(token: string): DecodedJwt | null {
@@ -55,12 +62,27 @@ function maybeDecodeJwt(token: string): DecodedJwt | null {
     ) {
       return {
         header: header as Record<string, unknown>,
-        body: body as JwtPayload,
+        payload: body as JwtPayload,
       };
     }
   } catch {}
 
   return null;
+}
+
+function decodeSubjectTokenClaims(token: string): SubjectTokenClaims | null {
+  const payload = getJwtPayload(token);
+
+  if (typeof payload?.iss !== 'string') {
+    return null;
+  }
+
+  return {
+    iss: payload.iss,
+    sub: typeof payload.sub === 'string' ? payload.sub : undefined,
+    aud: payload.aud,
+    exp: payload.exp,
+  };
 }
 
 function hasAudience(aud: unknown): boolean {

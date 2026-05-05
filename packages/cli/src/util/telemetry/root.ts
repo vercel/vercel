@@ -506,6 +506,18 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackErrorServerMessage(serverMessage);
   }
 
+  trackOidcTokenExchangeAttempt() {
+    this.trackOidcTokenExchange('attempt');
+  }
+
+  trackOidcTokenExchangeSuccess() {
+    this.trackOidcTokenExchange('success');
+  }
+
+  trackOidcTokenExchangeFailure(reason: string) {
+    this.trackOidcTokenExchange(`failure:${reason}`);
+  }
+
   trackCliOptionCwd(cwd: string | undefined) {
     if (cwd) {
       this.trackCliOption({ option: 'cwd', value: this.redactedValue });
