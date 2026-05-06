@@ -513,6 +513,9 @@ importers:
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
+      zod:
+        specifier: 3.22.4
+        version: 3.22.4
     devDependencies:
       '@edge-runtime/node-utils':
         specifier: 2.3.0

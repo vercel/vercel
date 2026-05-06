@@ -92,15 +92,22 @@ const jsoncParserPlugin = {
 
 // Build entry points:
 // - src/index.ts (main entry)
+// - src/command-worker.ts (command worker prewarm export)
 // - src/help.ts (standalone help for fast --help)
 // - src/commands-bulk.ts (non-priority commands bundle)
 // - src/commands/[priority]/index.ts (priority command entry points)
-const entryPoints = [
-  join(cwd, 'src/index.ts'),
-  join(cwd, 'src/help.ts'),
-  join(cwd, 'src/commands-bulk.ts'),
-  ...PRIORITY_COMMANDS.map(cmd => join(cwd, `src/commands/${cmd}/index.ts`)),
-];
+const entryPoints = {
+  index: join(cwd, 'src/index.ts'),
+  'command-worker': join(cwd, 'src/command-worker.ts'),
+  help: join(cwd, 'src/help.ts'),
+  'commands-bulk': join(cwd, 'src/commands-bulk.ts'),
+  ...Object.fromEntries(
+    PRIORITY_COMMANDS.map(cmd => [
+      cmd,
+      join(cwd, `src/commands/${cmd}/index.ts`),
+    ])
+  ),
+};
 
 const distDir = join(cwd, 'dist');
 

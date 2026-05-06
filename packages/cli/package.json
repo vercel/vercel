@@ -31,6 +31,10 @@
     "vc": "./dist/vc.js",
     "vercel": "./dist/vc.js"
   },
+  "exports": {
+    "./command-worker": "./dist/command-worker.js",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist"
   ],
@@ -50,6 +54,7 @@
     "luxon": "^3.4.0",
     "proxy-agent": "6.4.0",
     "sandbox": "2.5.6",
+    "zod": "3.22.4",
     "@vercel/backends": "workspace:*",
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",
