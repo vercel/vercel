@@ -71,8 +71,6 @@ export interface SetupAndLinkOptions {
   v0?: boolean;
   /** When true, search matching projects across teams before standard linking flow */
   searchAcrossTeams?: boolean;
-  /** When true, start setup immediately without asking "Set up <path>?" */
-  skipSetupConfirmation?: boolean;
 }
 
 function formatMatchReason(match: CrossTeamMatch): string {
@@ -370,7 +368,6 @@ export default async function setupAndLink(
     pullEnv = true,
     v0,
     searchAcrossTeams = false,
-    skipSetupConfirmation = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -404,7 +401,6 @@ export default async function setupAndLink(
   const shouldStartSetup =
     autoConfirm ||
     nonInteractive ||
-    skipSetupConfirmation ||
     (await client.input.confirm(
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true

@@ -141,7 +141,6 @@ export default async function link(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
       searchAcrossTeams: !explicitScopeProvided,
-      skipSetupConfirmation: true,
     });
 
     if (typeof link === 'number') {
