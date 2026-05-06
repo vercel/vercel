@@ -81,50 +81,9 @@ const GLOBAL_BOOLEAN_FLAGS = new Set([
   '--version',
 ]);
 
-const CURL_FLAGS_WITH_VALUES = new Set([
-  '-A',
-  '--user-agent',
-  '-b',
-  '--cookie',
-  '-c',
-  '--cookie-jar',
-  '-d',
-  '--data',
-  '--data-raw',
-  '--data-binary',
-  '--data-urlencode',
-  '-e',
-  '--referer',
-  '-F',
-  '--form',
-  '--form-string',
-  '-H',
-  '--header',
-  '-o',
-  '--output',
-  '-T',
-  '--upload-file',
-  '-u',
-  '--user',
-  '-w',
-  '--write-out',
-  '-X',
-  '--request',
-  '--connect-timeout',
-  '--max-time',
-  '--proxy',
-  '--resolve',
-  '--retry',
-  '--url',
-]);
-
 function flagName(arg: string): string {
   const eqIdx = arg.indexOf('=');
   return eqIdx === -1 ? arg : arg.slice(0, eqIdx);
-}
-
-function takesSeparateValue(arg: string): boolean {
-  return !arg.includes('=') && CURL_FLAGS_WITH_VALUES.has(flagName(arg));
 }
 
 export function parseCurlLikeArgs(
@@ -200,9 +159,6 @@ export function parseCurlLikeArgs(
 
     if (arg.startsWith('-')) {
       result.toolFlags.push(arg);
-      if (takesSeparateValue(arg) && i + 1 < beforeSeparator.length) {
-        result.toolFlags.push(beforeSeparator[++i]);
-      }
       continue;
     }
 

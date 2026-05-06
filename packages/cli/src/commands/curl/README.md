@@ -29,6 +29,8 @@ Curl arguments can be passed directly after the target:
 vercel curl /api/users --request POST --header "Content-Type: application/json" --data '{"name":"John"}'
 ```
 
+Put the target first, or use curl's `--url <target>` option. `vercel curl` does not try to parse arbitrary curl options before the target.
+
 The legacy `--` separator still works:
 
 ```bash

@@ -220,7 +220,7 @@ describe('curl', () => {
       );
     });
 
-    it('should parse curl-like args without requiring --', () => {
+    it('should pass all args after the target through without requiring --', () => {
       expect(
         parseCurlLikeArgs(
           [
@@ -258,15 +258,27 @@ describe('curl', () => {
       });
     });
 
+    it('should not try to parse curl flags before the target', () => {
+      expect(
+        parseCurlLikeArgs(
+          ['curl', '-X', 'POST', 'https://example.com/api/hello'],
+          'curl'
+        )
+      ).toMatchObject({
+        target: 'POST',
+        toolFlags: ['-X', 'https://example.com/api/hello'],
+      });
+    });
+
     it('should treat curl --url as the target', () => {
       expect(
         parseCurlLikeArgs(
-          ['curl', '--url', 'https://example.com/api/hello', '-v'],
+          ['curl', '--url', 'https://example.com/api/hello', '-X', 'POST'],
           'curl'
         )
       ).toMatchObject({
         target: 'https://example.com/api/hello',
-        toolFlags: ['-v'],
+        toolFlags: ['-X', 'POST'],
       });
     });
 
