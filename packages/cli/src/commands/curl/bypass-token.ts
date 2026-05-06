@@ -8,6 +8,8 @@ import type {
 import chalk from 'chalk';
 import sleep from '../../util/sleep';
 
+// TODO(curl): Remove this automatic bypass-token flow once `vercel curl` fully
+// relies on Trusted OIDC auth for deployment protection.
 async function createDeploymentProtectionToken(
   client: Client,
   projectId: string,
