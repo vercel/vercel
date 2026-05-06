@@ -290,11 +290,6 @@ jobs:
 
       - run: pnpm install
 
-      - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
-        env:
-          FORCE_COLOR: '1'
-
       - name: "Print test manifest (chunk ${{matrix.chunkNumber}}/${{matrix.allChunksLength}})"
         shell: bash
         env:
@@ -340,9 +335,9 @@ jobs:
             # When VITEST_TEST_FILES is set, the test script reads paths from that env var
             # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
             if [ -n "$VITEST_TEST_FILES" ]; then
-              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}}"
+              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --log-prefix=none --filter=${{matrix.packageName}}"
             else
-              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}"
+              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --log-prefix=none --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}"
             fi
 
             if eval "$run_cmd"; then
@@ -412,10 +407,6 @@ jobs:
 
       - run: pnpm install
 
-      - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
-        env:
-          FORCE_COLOR: '1'
       - name: Wait for deployment tarballs
         shell: bash
         env:
@@ -504,7 +495,7 @@ jobs:
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
 
-            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --log-prefix=none --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
               exit 0
             fi
 
