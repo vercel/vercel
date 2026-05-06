@@ -79,15 +79,21 @@ describe('alias set', () => {
     it('tracks arguments', async () => {
       const user = useUser();
       const { url } = useDeployment({ creator: user });
+      let deploymentIdOrHost: string | undefined;
+      let aliasTarget: string | undefined;
       client.scenario.post(
         '/:version/deployments/:id/aliases',
         (request, response) => {
+          deploymentIdOrHost = request.params.id;
+          aliasTarget = request.body.alias;
           response.json({});
         }
       );
       client.setArgv('alias', 'set', url, 'custom');
       const exitCode = await alias(client);
       expect(exitCode, 'exit code of "alias"').toEqual(0);
+      expect(deploymentIdOrHost).toEqual(url);
+      expect(aliasTarget).toEqual('custom');
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

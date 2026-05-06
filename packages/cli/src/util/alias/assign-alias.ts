@@ -8,7 +8,8 @@ export default async function assignAlias(
   client: Client,
   deployment: Deployment,
   alias: string,
-  contextName: string
+  contextName: string,
+  deploymentIdOrHost?: string
 ) {
   let externalDomain = false;
 
@@ -35,7 +36,8 @@ export default async function assignAlias(
     contextName,
     deployment,
     alias,
-    externalDomain
+    externalDomain,
+    deploymentIdOrHost
   );
 
   return record;
