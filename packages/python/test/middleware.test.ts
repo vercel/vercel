@@ -5,7 +5,7 @@ import execa from 'execa';
 // @ts-expect-error - node-fetch types not available
 import nodeFetch from 'node-fetch';
 
-jest.setTimeout(120 * 1000);
+vi.setConfig({ testTimeout: 120 * 1000, hookTimeout: 120 * 1000 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 const fixturePath = path.join(fixturesPath, '42-fastapi-middleware');

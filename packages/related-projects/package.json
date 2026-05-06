@@ -14,15 +14,17 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail --coverage",
+    "test": "vitest run --config ../../vitest.config.mts --coverage",
     "test-unit": "pnpm test",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
   },
   "devDependencies": {
-    "@types/jest": "27.4.1",
     "@types/node": "20.11.0",
+    "@vitest/coverage-v8": "2.0.3",
     "ajv": "^6.12.3",
-    "jest-junit": "16.0.0"
+    "vitest": "2.0.3"
   },
   "optionalDependencies": {
     "ajv": "^6.12.3"
