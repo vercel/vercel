@@ -12,6 +12,8 @@ try {
   }
 }
 
+const bump = () => {}
+
 {
   const SILENCED_ERRORS = [
     'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
