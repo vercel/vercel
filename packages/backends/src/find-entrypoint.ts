@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 
 const frameworks = [
   'express',
@@ -111,4 +112,15 @@ export const findEntrypointOrThrow = async (cwd: string): Promise<string> => {
     );
   }
   return entrypoint;
+};
+
+/**
+ * Normalized entrypoint detector for Node services. Wraps {@link findEntrypoint}
+ * and returns the result in the shared {@link DetectedEntrypoint} shape consumed
+ * by services auto-detection.
+ */
+export const detectEntrypoint: DetectEntrypointFn = async ({ workPath }) => {
+  const file = await findEntrypoint(workPath);
+  if (!file) return null;
+  return { kind: 'file', entrypoint: file };
 };
