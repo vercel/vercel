@@ -5241,6 +5241,7 @@ exports[`help command > project help output snapshots > project list help output
 
   Options:
 
+  -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
@@ -5269,6 +5270,10 @@ exports[`help command > project help output snapshots > project list help output
   - List projects using a deprecated Node.js version in JSON format
 
     $ vercel project ls --update-required --format=json
+
+  - Filter projects by name
+
+    $ vercel project ls --filter my-app
 
 "
 `;
