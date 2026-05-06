@@ -724,6 +724,61 @@ test('invalid deployment, projects and alias names', async () => {
   ]);
 });
 
+test('alias set accepts an alias URL as the source', async () => {
+  const directory = await setupE2EFixture('static-deployment');
+  const projectName = `alias-source-url-${session}`;
+  const firstAlias = `${projectName}-first.vercel.app`;
+  const secondAlias = `${projectName}-second.vercel.app`;
+  const aliasesToRemove: string[] = [];
+
+  try {
+    const deployment = await execCli(binaryPath, [
+      directory,
+      '--public',
+      '--name',
+      projectName,
+      '--force',
+      '--yes',
+    ]);
+
+    expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
+
+    const deploymentUrl = pickUrl(deployment.stdout);
+    await waitForDeployment(`${deploymentUrl}/index.txt`);
+
+    const firstAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      deploymentUrl,
+      firstAlias,
+    ]);
+    expect(firstAliasOutput.exitCode, formatOutput(firstAliasOutput)).toBe(0);
+    aliasesToRemove.push(firstAlias);
+
+    await waitForDeployment(`https://${firstAlias}/index.txt`);
+
+    const secondAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      `https://${firstAlias}`,
+      secondAlias,
+    ]);
+    expect(secondAliasOutput.exitCode, formatOutput(secondAliasOutput)).toBe(0);
+    aliasesToRemove.push(secondAlias);
+
+    await waitForDeployment(`https://${secondAlias}/index.txt`);
+
+    const response = await nodeFetch(`https://${secondAlias}/index.txt`);
+    expect(await response.text()).toBe('Hello World');
+  } finally {
+    await Promise.all(
+      aliasesToRemove.map(alias =>
+        execCli(binaryPath, ['alias', 'rm', alias, '--yes'])
+      )
+    );
+  }
+});
+
 test('vercel certs ls', async () => {
   const output = await execCli(binaryPath, ['certs', 'ls']);
 
