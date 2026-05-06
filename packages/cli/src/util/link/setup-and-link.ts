@@ -222,11 +222,13 @@ async function searchSelectedLimitedTeams({
   client,
   path,
   projectName,
+  gitProjectName,
   teams,
 }: {
   client: Client;
   path: string;
   projectName: string;
+  gitProjectName?: string;
   teams: Team[];
 }): Promise<CrossTeamMatch[]> {
   const selectedTeams = await promptForLimitedTeams(client, teams);
@@ -239,6 +241,7 @@ async function searchSelectedLimitedTeams({
     const result = await searchProjectAcrossTeams(client, projectName, path, {
       teams: selectedTeams,
       skipLimited: false,
+      gitProjectName,
     });
     printCrossTeamSearchScope({
       searchedTeamSlugs: result.searchedTeamSlugs,
@@ -363,7 +366,7 @@ export default async function setupAndLink(
     link,
     successEmoji = 'link',
     setupMsg = 'Set up',
-    projectName = basename(path),
+    projectName,
     nonInteractive = false,
     pullEnv = true,
     v0,
@@ -371,6 +374,8 @@ export default async function setupAndLink(
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
+  const gitProjectName = projectName;
+  projectName = projectName ?? basename(path);
 
   if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
@@ -427,6 +432,7 @@ export default async function setupAndLink(
         {
           autoConfirm,
           nonInteractive,
+          gitProjectName,
         }
       );
       crossTeamMatches = searchResult.matches;
@@ -464,6 +470,7 @@ export default async function setupAndLink(
         client,
         path,
         projectName,
+        gitProjectName,
         teams: skippedLimitedTeams,
       });
       const linkedLimitedMatch = await linkCrossTeamMatches({

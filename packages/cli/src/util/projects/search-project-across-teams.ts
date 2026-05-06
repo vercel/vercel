@@ -39,11 +39,13 @@ export default async function searchProjectAcrossTeams(
     nonInteractive = false,
     teams,
     skipLimited,
+    gitProjectName,
   }: {
     autoConfirm?: boolean;
     nonInteractive?: boolean;
     teams?: Team[];
     skipLimited?: boolean;
+    gitProjectName?: string;
   } = {}
 ): Promise<CrossTeamSearchResult> {
   const teamsToSearch = teams ?? (await getTeams(client));
@@ -80,6 +82,7 @@ export default async function searchProjectAcrossTeams(
   const repoMatchesPromise = searchProjectsByRepoRoot({
     client,
     cwd,
+    gitProjectName,
     orgs,
     autoConfirm,
     nonInteractive,
@@ -130,12 +133,14 @@ export default async function searchProjectAcrossTeams(
 async function searchProjectsByRepoRoot({
   client,
   cwd,
+  gitProjectName,
   orgs,
   autoConfirm,
   nonInteractive,
 }: {
   client: Client;
   cwd: string;
+  gitProjectName?: string;
   orgs: Org[];
   autoConfirm: boolean;
   nonInteractive: boolean;
@@ -170,12 +175,19 @@ async function searchProjectsByRepoRoot({
           remote.repoUrl,
           org.id
         );
-        const repoProjectConfigs = projects.map(project => ({
-          id: project.id,
-          name: project.name,
-          directory: project.rootDirectory || '.',
-          orgId: org.id,
-        }));
+        const repoProjectConfigs = projects
+          .filter(
+            project =>
+              !gitProjectName ||
+              project.id === gitProjectName ||
+              project.name === gitProjectName
+          )
+          .map(project => ({
+            id: project.id,
+            name: project.name,
+            directory: project.rootDirectory || '.',
+            orgId: org.id,
+          }));
         const matchingProjects = findProjectsFromPath(
           repoProjectConfigs,
           relativePath
