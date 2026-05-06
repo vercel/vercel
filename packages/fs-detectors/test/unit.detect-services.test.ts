@@ -78,10 +78,10 @@ describe('detectServices', () => {
       expect(result.inferred).toMatchObject({
         source: 'layout',
         config: {
-          frontend: { framework: 'nextjs', mount: '/' },
+          frontend: { framework: 'nextjs', routePrefix: '/' },
           backend: {
             entrypoint: 'backend',
-            mount: '/_/backend',
+            routePrefix: '/_/backend',
           },
         },
       });
