@@ -73,7 +73,7 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
     }
 
     if (typeof service.routePrefix === 'string') {
-      serviceConfig.routePrefix = service.routePrefix;
+      serviceConfig.mount = service.routePrefix;
     }
 
     // Keep the framework setting only for frontend services

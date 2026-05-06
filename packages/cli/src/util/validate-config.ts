@@ -204,29 +204,6 @@ const servicesMountSchema = {
   ],
 };
 
-const experimentalServicesRoutingSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['paths'],
-  properties: {
-    flag: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
-    },
-    paths: {
-      type: 'array',
-      minItems: 1,
-      maxItems: 100,
-      items: {
-        type: 'string',
-        minLength: 1,
-        maxLength: 512,
-      },
-    },
-  },
-};
-
 const serviceScheduleSchema = {
   oneOf: [
     {
@@ -372,7 +349,6 @@ const experimentalServicesCommonProperties = {
 
 const experimentalServicesRoutableProperties = {
   mount: experimentalServicesMountSchema,
-  routing: experimentalServicesRoutingSchema,
   routePrefix: {
     type: 'string',
     minLength: 1,
