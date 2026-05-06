@@ -1892,10 +1892,10 @@ describe('detectServices', () => {
       expect(isStaticBuild(result.services[0])).toBe(true);
       expect(result.errors).toEqual([]);
 
-      // Root static service gets filesystem handler + SPA fallback in defaults
-      expect(result.routes.defaults).toHaveLength(2);
-      expect(result.routes.defaults[0]).toEqual({ handle: 'filesystem' });
-      expect(result.routes.defaults[1]).toEqual({
+      // Root static service gets an explicit SPA fallback bucket.
+      expect(result.routes.defaults).toEqual([]);
+      expect(result.routes.fallbacks).toHaveLength(1);
+      expect(result.routes.fallbacks[0]).toEqual({
         src: '/(.*)',
         dest: '/index.html',
       });
@@ -1920,9 +1920,10 @@ describe('detectServices', () => {
       expect(isStaticBuild(result.services[0])).toBe(true);
       expect(result.errors).toEqual([]);
 
-      // Prefixed static service gets SPA fallback in rewrites
-      expect(result.routes.rewrites).toHaveLength(1);
-      expect(result.routes.rewrites[0]).toEqual({
+      // Prefixed static service gets an explicit SPA fallback bucket.
+      expect(result.routes.rewrites).toEqual([]);
+      expect(result.routes.fallbacks).toHaveLength(1);
+      expect(result.routes.fallbacks[0]).toEqual({
         src: '^(?=/admin(?:/|$))(?:/admin(?:/.*)?$)',
         dest: '/admin/index.html',
       });
@@ -1947,7 +1948,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
       expect(result.errors).toEqual([]);
 
-      const staticRoute = result.routes.rewrites.find(
+      const staticRoute = result.routes.fallbacks.find(
         (route): route is Route & { src: string; dest: string } =>
           'src' in route &&
           typeof route.src === 'string' &&
@@ -2052,24 +2053,23 @@ describe('detectServices', () => {
       // Go entrypoint should be a function
       expect(isStaticBuild(ginApi!)).toBe(false);
 
-      // Function service and prefixed static service get rewrites
-      expect(result.routes.rewrites).toHaveLength(2);
+      // Function services get rewrites. Static services get fallbacks.
+      expect(result.routes.rewrites).toHaveLength(1);
       expect(result.routes.rewrites).toContainEqual({
         src: '^(?=/api(?:/|$))(?:/api(?:/.*)?$)',
         dest: '/_svc/gin-api/index',
         check: true,
       });
-      expect(result.routes.rewrites).toContainEqual({
+      expect(result.routes.fallbacks).toContainEqual({
         src: '^(?=/admin(?:/|$))(?:/admin(?:/.*)?$)',
         dest: '/admin/index.html',
       });
 
-      // Root static service gets filesystem + SPA fallback in defaults.
+      // Root static service gets a SPA fallback.
       // The SPA catch-all excludes prefixes owned by other services
       // so they fall through to their own route tables (e.g. error phases).
-      expect(result.routes.defaults).toHaveLength(2);
-      expect(result.routes.defaults).toContainEqual({ handle: 'filesystem' });
-      expect(result.routes.defaults).toContainEqual({
+      expect(result.routes.defaults).toEqual([]);
+      expect(result.routes.fallbacks).toContainEqual({
         src: '^(?!/admin(?:/|$))(?!/api(?:/|$))(?:/(.*))',
         dest: '/index.html',
       });
@@ -2253,6 +2253,7 @@ describe('detectServices', () => {
     let services: Awaited<ReturnType<typeof detectServices>>['services'];
     let rewrites: Route[];
     let defaults: Route[];
+    let fallbacks: Route[];
 
     beforeAll(async () => {
       const fs = new VirtualFilesystem({
@@ -2272,6 +2273,7 @@ describe('detectServices', () => {
       services = result.services;
       rewrites = result.routes.rewrites;
       defaults = result.routes.defaults;
+      fallbacks = result.routes.fallbacks;
     });
 
     // -- Builder category classification --
@@ -2306,7 +2308,7 @@ describe('detectServices', () => {
     it('should NOT generate synthetic routes for route-owning builders', () => {
       // Next.js services (web at /, dashboard at /dashboard) should have
       // no synthetic rewrites or defaults generated for them.
-      const allRoutes = [...rewrites, ...defaults];
+      const allRoutes = [...rewrites, ...defaults, ...fallbacks];
       for (const route of allRoutes) {
         if ('dest' in route && typeof route.dest === 'string') {
           // No route should point to Next.js builder sources
@@ -2316,10 +2318,14 @@ describe('detectServices', () => {
       }
     });
 
-    it('should generate rewrite routes for non-root static and runtime services', () => {
-      // admin (static), docs (static), gin-api (runtime), fastapi-api (runtime)
-      // All are non-root, so they get rewrites (not defaults).
-      expect(rewrites.length).toBe(4);
+    it('should generate rewrite routes for non-root runtime services', () => {
+      // gin-api and fastapi-api are runtime services, so they get rewrites.
+      expect(rewrites.length).toBe(2);
+    });
+
+    it('should generate fallback routes for non-root static services', () => {
+      // admin and docs are static services, so they get SPA fallbacks.
+      expect(fallbacks.length).toBe(2);
     });
 
     it('should generate no default routes (root is route-owning Next.js)', () => {
@@ -2336,7 +2342,7 @@ describe('detectServices', () => {
         ['/admin/settings', 'admin'],
         ['/admin/users/123', 'admin'],
       ])('should match "%s" to admin service SPA fallback', pathname => {
-        const match = findMatchingRoute(rewrites, pathname);
+        const match = findMatchingRoute(fallbacks, pathname);
         expect(match).toBeDefined();
         expect(match!.dest).toBe('/admin/index.html');
         expect(match).not.toHaveProperty('check');
@@ -2348,7 +2354,7 @@ describe('detectServices', () => {
         ['/docs/getting-started', 'docs'],
         ['/docs/architecture/api-services', 'docs'],
       ])('should match "%s" to docs service SPA fallback', pathname => {
-        const match = findMatchingRoute(rewrites, pathname);
+        const match = findMatchingRoute(fallbacks, pathname);
         expect(match).toBeDefined();
         expect(match!.dest).toBe('/docs/index.html');
         expect(match).not.toHaveProperty('check');
@@ -2393,7 +2399,7 @@ describe('detectServices', () => {
 
       it('should not match /admin-panel to admin service', () => {
         // /admin-panel is NOT under /admin/ — it's a different path
-        const match = findMatchingRoute(rewrites, '/admin-panel');
+        const match = findMatchingRoute(fallbacks, '/admin-panel');
         expect(match).toBeUndefined();
       });
 

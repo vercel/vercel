@@ -159,6 +159,14 @@ export const continueSubcommand = {
       description:
         'Compress the deployment code into an archive before uploading it',
     },
+    {
+      name: 'error',
+      shorthand: null,
+      type: String,
+      argument: 'MESSAGE',
+      deprecated: false,
+      description: 'Mark the deployment as errored with a message',
+    },
   ],
   examples: [
     {

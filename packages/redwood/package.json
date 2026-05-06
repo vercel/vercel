@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "vitest-run": "vitest -c ../../vitest.config.mts"
   },
   "dependencies": {
     "@vercel/nft": "1.5.0",
@@ -30,6 +31,6 @@
     "@vercel/routing-utils": "workspace:*",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
-    "jest-junit": "16.0.0"
+    "vitest": "2.0.3"
   }
 }

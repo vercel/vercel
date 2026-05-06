@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 6.1.1
+
+### Patch Changes
+
+- 8a5aa6a: Ensure synthetic SPA fallbacks are merged after builder-produced routes.
+
 ## 6.1.0
 
 ### Minor Changes

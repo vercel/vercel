@@ -1,4 +1,3 @@
-/* eslint-env jest */
 process.env.NEXT_BUILDER_INTEGRATION = '1';
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
@@ -10,7 +9,7 @@ const {
 
 const runBuildLambda = createRunBuildLambda(builder);
 
-jest.setTimeout(360000);
+vi.setConfig({ testTimeout: 360000, hookTimeout: 360000 });
 
 describe('Static Metadata Integration Test', () => {
   // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled

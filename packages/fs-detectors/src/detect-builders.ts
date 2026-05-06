@@ -134,6 +134,7 @@ export async function detectBuilders(
   warnings: ErrorResponse[];
   hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
+  fallbackRoutes?: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;

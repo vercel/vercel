@@ -251,7 +251,7 @@ jobs:
   unit-test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
-    name: Unit / ${{ matrix.packageName }} / chunk ${{ matrix.chunkNumber }} / ${{ matrix.runner }} / Node v${{ matrix.nodeVersion }}
+    name: Unit / ${{ matrix.label }}
     if: ${{ needs.setup.outputs['unitTests'] != '[]' }}
     needs:
       - setup
@@ -270,6 +270,7 @@ jobs:
           node-version: ${{ matrix.nodeVersion }}
 
       - name: Setup Rust toolchain
+        if: ${{ matrix.needsRust == true }}
         uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
         with:
           targets: wasm32-wasip2
@@ -289,10 +290,39 @@ jobs:
 
       - run: pnpm install
 
-      - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+      - name: "Print test manifest (chunk ${{matrix.chunkNumber}}/${{matrix.allChunksLength}})"
+        shell: bash
         env:
-          FORCE_COLOR: '1'
+          VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
+        run: |
+          # Resolve the file list the same way the test step does
+          if [ -n "$VITEST_TEST_FILES" ]; then
+            files="$VITEST_TEST_FILES"
+            source="VITEST_TEST_FILES env var"
+          else
+            files="${{ join(matrix.testPaths, ' ') }}"
+            source="CLI args"
+          fi
+
+          count=$(echo "$files" | tr ' ' '\n' | grep -c .)
+          echo "Chunk ${{matrix.chunkNumber}} of ${{matrix.allChunksLength}} — $count files via $source"
+          echo "$files" | tr ' ' '\n' | grep . | sort | sed 's/^/  /'
+
+          {
+            echo "## Chunk ${{matrix.chunkNumber}}/${{matrix.allChunksLength}} — \`${{matrix.packageName}}\`"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Runner | \`${{matrix.runner}}\` / Node v\`${{matrix.nodeVersion}}\` |"
+            echo "| Files | $count (via $source) |"
+            echo ""
+            echo "<details><summary>File list</summary>"
+            echo ""
+            echo '```'
+            echo "$files" | tr ' ' '\n' | grep . | sort
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Test ${{matrix.packageName}}
         run: |
           attempt=1
@@ -302,7 +332,15 @@ jobs:
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
 
-            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+            # When VITEST_TEST_FILES is set, the test script reads paths from that env var
+            # instead of CLI args, avoiding the Windows cmd.exe ~8191 char arg limit.
+            if [ -n "$VITEST_TEST_FILES" ]; then
+              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}}"
+            else
+              run_cmd="node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir='.turbo' --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}"
+            fi
+
+            if eval "$run_cmd"; then
               exit 0
             fi
 
@@ -320,6 +358,7 @@ jobs:
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
           FORCE_COLOR: '1'
+          VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
           # Datadog Test Optimization: emit per-test spans correlated to the
           # GitHub Actions job span, replacing the previous post-hoc JUnit
           # upload. See test/lib/deployment/metrics.js for the legacy
@@ -335,7 +374,7 @@ jobs:
   e2e-test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
-    name: E2E / ${{ matrix.packageName }} / chunk ${{ matrix.chunkNumber }} / ${{ matrix.runner }} / Node v${{ matrix.nodeVersion }}
+    name: E2E / ${{ matrix.label }}
     if: ${{ needs.setup.outputs['e2eTests'] != '[]' }}
     needs:
       - setup
@@ -368,10 +407,6 @@ jobs:
 
       - run: pnpm install
 
-      - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
-        env:
-          FORCE_COLOR: '1'
       - name: Wait for deployment tarballs
         shell: bash
         env:
