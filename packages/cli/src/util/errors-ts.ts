@@ -733,10 +733,21 @@ export class ConflictingConfigFiles extends NowBuildError {
       code: 'CONFLICTING_CONFIG_FILES',
       message:
         message ||
-        'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+        'Multiple config files found. Please use only one configuration file.',
       link: link || 'https://vercel.link/combining-old-and-new-config',
     });
     this.files = files;
+  }
+}
+
+export class DeprecatedNowJson extends NowBuildError {
+  constructor(_file: string) {
+    super({
+      code: 'DEPRECATED_NOW_JSON',
+      message:
+        'The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.',
+      link: 'https://vercel.com/docs/projects/project-configuration',
+    });
   }
 }
 

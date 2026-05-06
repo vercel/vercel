@@ -1,7 +1,7 @@
 import { join, basename, dirname } from 'path';
 import loadJSON from 'load-json-file';
-import writeJSON from 'write-json-file';
 import { accessSync, constants } from 'fs';
+import * as config from '@vercel/cli-config';
 import { fileNameSymbol } from '@vercel/client';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
@@ -20,19 +20,18 @@ import {
 import output from '../../output-manager';
 
 const VERCEL_DIR = getGlobalPathConfig();
-const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
-const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
+const CONFIG_FILE_PATH = config.getConfigFilePath(VERCEL_DIR);
+const AUTH_CONFIG_FILE_PATH = config.getAuthConfigFilePath(VERCEL_DIR);
 
 // reads "global config" file atomically
 export const readConfigFile = (): GlobalConfig => {
-  const config = loadJSON.sync(CONFIG_FILE_PATH);
-  return config;
+  return config.readGlobalConfigFile(CONFIG_FILE_PATH);
 };
 
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
   try {
-    writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+    config.writeGlobalConfigFile(CONFIG_FILE_PATH, stuff);
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (isErrnoException(err) && err.code === 'EPERM') {
@@ -58,19 +57,12 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
 
 // reads "auth config" file atomically
 export const readAuthConfigFile = (): AuthConfig => {
-  const config = loadJSON.sync(AUTH_CONFIG_FILE_PATH);
-  return config;
+  return config.readAuthConfigFile(AUTH_CONFIG_FILE_PATH);
 };
 
 export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
-  if (authConfig.skipWrite) {
-    return;
-  }
   try {
-    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, authConfig, {
-      indent: 2,
-      mode: 0o600,
-    });
+    return config.writeAuthConfigFile(AUTH_CONFIG_FILE_PATH, authConfig);
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (err.code === 'EPERM') {

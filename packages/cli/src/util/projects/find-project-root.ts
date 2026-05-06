@@ -75,7 +75,7 @@ export async function resolveProjectCwd(cwd: string): Promise<string> {
   }
 
   const result = await tryDetectServices(projectRoot);
-  if (result && result.services.length > 0) {
+  if (result && (result.services?.length ?? 0) > 0) {
     output.debug(`Running from project root: ${chalk.cyan(projectRoot)}`);
     return projectRoot;
   }

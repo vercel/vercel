@@ -398,7 +398,7 @@ test('ensure the `scope` property works with username', async () => {
   expect(contentType).toBe('text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong now.json', async () => {
+test('reject deprecated now.json during deploy', async () => {
   const directory = await setupE2EFixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
@@ -410,10 +410,10 @@ test('try to create a builds deployments with wrong now.json', async () => {
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
-    'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
+    'Error: The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.'
   );
   expect(stderr).toContain(
-    'https://vercel.com/docs/concepts/projects/project-configuration'
+    'https://vercel.com/docs/projects/project-configuration'
   );
 });
 
