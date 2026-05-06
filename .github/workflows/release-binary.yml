@@ -111,6 +111,35 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: node scripts/build-binary.mjs
 
+      - name: Install rcodesign
+        if: ${{ runner.os == 'macOS' }}
+        run: cargo install apple-codesign --locked
+
+      - name: Write Apple signing certificate
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERT_PATH: ${{ runner.temp }}/apple-certificate.p12
+        run: |
+          set -euo pipefail
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$APPLE_CERT_PATH"
+          echo "APPLE_CERT_PATH=$APPLE_CERT_PATH" >> "$GITHUB_ENV"
+
+      - name: Sign binary
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        working-directory: packages/cli
+        env:
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          rcodesign sign \
+            --for-notarization \
+            --entitlements-xml-path ../../entitlements.plist \
+            --p12-file "$APPLE_CERT_PATH" \
+            --p12-password "$APPLE_CERT_PASSWORD" \
+            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+
       - name: Smoke test binary version
         if: ${{ matrix.target == 'bun-darwin-arm64' || matrix.target == 'bun-darwin-x64' || matrix.target == 'bun-linux-x64' || matrix.target == 'bun-windows-x64' }}
         shell: bash
