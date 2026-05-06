@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import { join } from 'path';
+import { Readable } from 'stream';
 import { getWriteableDirectory } from '@vercel/build-utils';
-import { runBuildWithInput } from '../../../../src/commands/build';
+import buildCommand from '../../../../src/commands/build';
+import { runCommandWithInput } from '../../../../src/command-worker';
 import { client } from '../../../mocks/client';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
@@ -36,22 +38,28 @@ describe('programmatic build entrypoint', () => {
     }
   });
 
-  it('runs a build from a prewarmed build worker import', async () => {
-    const buildWorkerModule = import('../../../../src/build-worker');
+  it('runs a build from a prewarmed command worker import', async () => {
+    const commandWorkerModule = import('../../../../src/command-worker');
     const cwd = fixture('env-from-vc-pull');
     outputDir = join(await getWriteableDirectory(), 'programmatic-output');
     const argv = [process.execPath, 'cli.js', 'build', '--output', outputDir];
     const originalCwd = process.cwd();
-    const { runBuildWorker } = await buildWorkerModule;
+    const { parseCommandWorkerInput, runCommandWorker } =
+      await commandWorkerModule;
+    const input = await parseCommandWorkerInput(
+      Readable.from([
+        JSON.stringify({
+          argv,
+          cwd,
+          env: {
+            ...getStringProcessEnv(),
+            PROGRAMMATIC_ONLY: '1',
+          },
+        }),
+      ])
+    );
 
-    const exitCode = await runBuildWorker({
-      argv,
-      cwd,
-      env: {
-        ...getStringProcessEnv(),
-        PROGRAMMATIC_ONLY: '1',
-      },
-    });
+    const exitCode = await runCommandWorker(input);
 
     expect(exitCode).toEqual(0);
     expect(process.cwd()).toEqual(originalCwd);
@@ -71,14 +79,18 @@ describe('programmatic build entrypoint', () => {
     const originalClientArgv = client.argv;
 
     await expect(
-      runBuildWithInput(client, {
-        argv: [process.execPath, 'cli.js', 'build'],
-        cwd: join(fixture('env-from-vc-pull'), 'missing'),
-        env: {
-          ...getStringProcessEnv(),
-          PROGRAMMATIC_ONLY: '1',
+      runCommandWithInput(
+        client,
+        {
+          argv: [process.execPath, 'cli.js', 'build'],
+          cwd: join(fixture('env-from-vc-pull'), 'missing'),
+          env: {
+            ...getStringProcessEnv(),
+            PROGRAMMATIC_ONLY: '1',
+          },
         },
-      })
+        buildCommand
+      )
     ).rejects.toThrow();
 
     expect(process.cwd()).toEqual(originalCwd);

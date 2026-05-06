@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Add a build worker entrypoint for prewarmed builds.
+Add a command worker export for prewarmed CLI commands.

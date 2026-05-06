@@ -32,7 +32,7 @@
     "vercel": "./dist/vc.js"
   },
   "exports": {
-    "./build-worker": "./dist/build-container-build-worker.js",
+    "./command-worker": "./dist/command-worker.js",
     "./package.json": "./package.json"
   },
   "files": [

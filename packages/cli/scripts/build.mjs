@@ -92,13 +92,13 @@ const jsoncParserPlugin = {
 
 // Build entry points:
 // - src/index.ts (main entry)
-// - src/build-worker.ts (build worker prewarm entry)
+// - src/command-worker.ts (command worker prewarm export)
 // - src/help.ts (standalone help for fast --help)
 // - src/commands-bulk.ts (non-priority commands bundle)
 // - src/commands/[priority]/index.ts (priority command entry points)
 const entryPoints = {
   index: join(cwd, 'src/index.ts'),
-  'build-container-build-worker': join(cwd, 'src/build-worker.ts'),
+  'command-worker': join(cwd, 'src/command-worker.ts'),
   help: join(cwd, 'src/help.ts'),
   'commands-bulk': join(cwd, 'src/commands-bulk.ts'),
   ...Object.fromEntries(

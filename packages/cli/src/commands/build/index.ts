@@ -169,63 +169,6 @@ export interface BuildsManifest {
   };
 }
 
-export interface ProgrammaticBuildInput {
-  argv: string[];
-  cwd: string;
-  env: Record<string, string>;
-}
-
-export function replaceProcessEnv(env: Record<string, string>): () => void {
-  const originalEnv = { ...process.env };
-
-  for (const key of Object.keys(process.env)) {
-    if (!Object.prototype.hasOwnProperty.call(env, key)) {
-      delete process.env[key];
-    }
-  }
-
-  for (const [key, value] of Object.entries(env)) {
-    process.env[key] = value;
-  }
-
-  return () => {
-    for (const key of Object.keys(process.env)) {
-      if (!Object.prototype.hasOwnProperty.call(originalEnv, key)) {
-        delete process.env[key];
-      }
-    }
-
-    Object.assign(process.env, originalEnv);
-  };
-}
-
-/**
- * Runs `vercel build` from within an existing process.
- * This is designed to run in a separate child process because it replaces the
- * current environment while the build is running.
- */
-export async function runBuildWithInput(
-  client: Client,
-  input: ProgrammaticBuildInput
-): Promise<number> {
-  const restoreEnv = replaceProcessEnv(input.env);
-  const originalCwd = process.cwd();
-  const originalClientArgv = client.argv;
-  const originalClientCwd = client.cwd;
-
-  try {
-    process.chdir(input.cwd);
-    client.cwd = input.cwd;
-    client.argv = input.argv;
-    return await main(client);
-  } finally {
-    client.argv = originalClientArgv;
-    client.cwd = originalClientCwd;
-    process.chdir(originalCwd);
-    restoreEnv();
-  }
-}
-
 export default async function main(client: Client): Promise<number> {
   const telemetryClient = new BuildTelemetryClient({
     opts: {
