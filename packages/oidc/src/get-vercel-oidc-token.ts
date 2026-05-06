@@ -31,7 +31,7 @@ export interface GetVercelOidcTokenOptions {
  * This function is used to retrieve the OIDC token from the request context or the environment variable.
  * It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
  *
- * Unlike the `getVercelOidcTokenSync` function, this function will refresh the token if it is expired in a development environment.
+ * Unlike the `getVercelOidcTokenFromContext` function, this function will refresh the token if it is expired in a development environment.
  *
  * @param {GetVercelOidcTokenOptions} [options] - Optional configuration for token retrieval.
  * @returns {Promise<string>} A promise that resolves to the OIDC token.
@@ -68,7 +68,7 @@ export async function getVercelOidcToken(
   let err: any;
 
   try {
-    token = getVercelOidcTokenSync();
+    token = getVercelOidcTokenFromContext();
   } catch (error) {
     err = error;
   }
@@ -85,7 +85,7 @@ export async function getVercelOidcToken(
       isExpired(getTokenPayload(token), options?.expirationBufferMs)
     ) {
       await refreshToken(options);
-      token = getVercelOidcTokenSync();
+      token = getVercelOidcTokenFromContext();
     }
   } catch (error) {
     let message = err instanceof Error ? err.message : '';
@@ -101,14 +101,14 @@ export async function getVercelOidcToken(
 }
 
 /**
- * Gets the current OIDC token from the request context or the environment variable.
+ * Reads the current OIDC token from the request context or the environment variable.
  *
  * Do not cache this value, as it is subject to change in production!
  *
  * This function is used to retrieve the OIDC token from the request context or the environment variable.
  * It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
  *
- * This function will not refresh the token if it is expired. For refreshing the token, use the @{link getVercelOidcToken} function.
+ * This function will not refresh the token if it is expired. For refreshing the token, use the {@link getVercelOidcToken} function.
  *
  * @returns {string} The OIDC token.
  * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
@@ -117,11 +117,11 @@ export async function getVercelOidcToken(
  *
  * ```js
  * // Using the OIDC token
- * const token = getVercelOidcTokenSync();
+ * const token = getVercelOidcTokenFromContext();
  * console.log('OIDC Token:', token);
  * ```
  */
-export function getVercelOidcTokenSync(): string {
+export function getVercelOidcTokenFromContext(): string {
   const token =
     getContext().headers?.['x-vercel-oidc-token'] ??
     process.env.VERCEL_OIDC_TOKEN;
@@ -133,4 +133,13 @@ export function getVercelOidcTokenSync(): string {
   }
 
   return token;
+}
+
+/**
+ * @deprecated Use {@link getVercelOidcTokenFromContext} instead. The `Sync` suffix
+ * was misleading because the async {@link getVercelOidcToken} is not a sync/async pair
+ * with this function — it additionally refreshes the token when expired.
+ */
+export function getVercelOidcTokenSync(): string {
+  return getVercelOidcTokenFromContext();
 }
