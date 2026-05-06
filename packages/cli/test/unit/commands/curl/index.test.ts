@@ -168,6 +168,12 @@ describe('curl', () => {
 
     it('should accept a full https URL as the target', async () => {
       await setupLinkedProject();
+      client.scenario.get(
+        '/v13/deployments/static-project-abc123.vercel.app',
+        (_req, res) => {
+          res.json({ projectId: 'static', ownerId: 'team_dummy' });
+        }
+      );
 
       client.setArgv(
         'curl',
