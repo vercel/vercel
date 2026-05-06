@@ -1,5 +1,63 @@
 # @vercel/next
 
+## 4.17.1
+
+### Patch Changes
+
+- 34e7b09: Update to latest Next.js adapter
+
+## 4.17.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 4.16.8
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15970](https://github.com/vercel/vercel/pull/15970))
+
+## 4.16.7
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15456](https://github.com/vercel/vercel/pull/15456))
+
+## 4.16.6
+
+### Patch Changes
+
+- Remove the `x-nextjs-data` request header for non-`/_next/data` routes before Next.js data route normalization. ([#15894](https://github.com/vercel/vercel/pull/15894))
+
+## 4.16.5
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15775](https://github.com/vercel/vercel/pull/15775))
+
+## 4.16.4
+
+### Patch Changes
+
+- Copy post-build public files into V3 build output so they are included in Git-driven deploys ([#15780](https://github.com/vercel/vercel/pull/15780))
+
+## 4.16.3
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+- fix(next): merge next-minimal-server.js.nft.json into server trace for prebuilt deployments ([#15688](https://github.com/vercel/vercel/pull/15688))
+
+- Update to latest Next.js adapter ([#15695](https://github.com/vercel/vercel/pull/15695))
+
+## 4.16.2
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
 ## 4.16.1
 
 ### Patch Changes

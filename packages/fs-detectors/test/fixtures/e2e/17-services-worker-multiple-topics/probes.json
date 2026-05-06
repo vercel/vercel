@@ -1,0 +1,33 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Flask web service (multiple topics)"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/enqueue",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/worker/index",
+      "method": "POST",
+      "body": {},
+      "status": 404,
+      "mustContain": "404 from Flask web service"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Flask web service"
+    }
+  ]
+}

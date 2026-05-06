@@ -41,9 +41,11 @@ export interface ServicesRoutes {
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
   defaults: Route[];
+  /** SPA fallback routes for static web services */
+  fallbacks: Route[];
   /**
-   * Internal routes for cron services.
-   * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
+   * Internal routes for schedule-triggered job services.
+   * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the scheduled job function.
    */
   crons: Route[];
   /**
@@ -64,7 +66,7 @@ export interface ResolvedServicesResult {
 }
 
 export interface InferredServicesResult {
-  source: 'layout' | 'procfile';
+  source: 'layout' | 'procfile' | 'railway';
   config: ServicesConfig;
   services: Service[];
   warnings: ServiceDetectionWarning[];

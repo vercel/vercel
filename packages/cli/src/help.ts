@@ -4,8 +4,8 @@ import chalk from 'chalk';
 const packageName = 'vercel';
 const logo = '▲';
 
-const metricsLine = process.env.FF_METRICS
-  ? '\n      metrics                          Queries observability metrics for your project or team'
+const connexLine = process.env.FF_CONNEX_ENABLED
+  ? '\n      connex               [cmd]       Manage Vercel Connect OAuth clients'
   : '';
 
 export const help = () => `
@@ -44,24 +44,40 @@ export const help = () => `
 
     ${chalk.dim('Advanced')}
 
+      activity                         List user activity events
+      agent                [init]      Generate AGENTS.md with Vercel best practices
+      alerts                           List alerts for a project or team
       alias                [cmd]       Manages your domain aliases
       api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
       bisect                           Use binary search to find the deployment that introduced a bug
-      certs                [cmd]       Manages your SSL certificates
+      blob                 [cmd]       Manages your Blob stores and files
+      buy                  [cmd]       Purchase Vercel products for your team
+      certs                [cmd]       Manages your SSL certificates${connexLine}
+      contract                         Show contract information for billing periods
+      cron | crons         [cmd]       Manage cron jobs for a project [beta]
       curl                 [path]      cURL requests to your linked project's deployment [beta]
+      deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
-      logs                 [url]       Displays the logs for a deployment${metricsLine}
+      firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
+      httpstat             path        Visualize HTTP timing statistics for deployments
+      logs                 [url]       Displays the logs for a deployment
+      metrics              <metric>    Queries observability metrics for your project or team
+      mcp                              Set up MCP agents and configuration
       microfrontends                   Manages your microfrontends
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project
       rm | remove          [id]        Removes a deployment
       routes               [cmd]       Manages routing rules for your current Project
+      rr | rolling-release [cmd]       Manage rolling releases for gradual traffic shifting
+      skills               [query]     Discover agent skills relevant to your project
+      target               [cmd]       Manage custom environments for your Project
       teams                            Manages your teams
+      telemetry            [cmd]       Enable or disable telemetry collection
       upgrade                          Upgrade the Vercel CLI to the latest version
-      whoami                           Shows the username of the currently logged in user
-      blob                 [cmd]       Manages your Blob stores and files
+      usage                            Show billing usage for the current billing period
       webhooks             [cmd]       Manages webhooks [beta]
+      whoami                           Shows the username of the currently logged in user
 
   ${chalk.dim('Global Options:')}
 

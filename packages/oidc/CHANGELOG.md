@@ -1,5 +1,37 @@
 # @vercel/oidc
 
+## 3.4.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 3.3.1
+
+### Patch Changes
+
+- bf07448: Revert "auth: Make it possible to store CLI credentials in OS keychain (#16083)"
+
+## 3.3.0
+
+### Minor Changes
+
+- 24686d0: Add configurable auth token storage with keyring-backed persistence and file fallback support.
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [d36ee35]
+- Updated dependencies [56c9f89]
+  - @vercel/cli-auth@0.1.0
+
+## 3.2.1
+
+### Patch Changes
+
+- Pin `typedoc-plugin-markdown` to `3.15.2` and `typedoc-plugin-mdn-links` to `3.0.3` to match the version used by `@vercel/edge`. The previous `4.1.2` version requires `typedoc@0.26.x` as a peer dependency but was paired with `typedoc@0.24.6`, which caused CI failures whenever pnpm hoisted the 4.x plugin (the plugin calls `app.internationalization.addTranslations`, which does not exist in typedoc 0.24). The choice of which plugin version got hoisted was non-deterministic, which is why the failure appeared as flaky `Build @vercel/<pkg>` steps in CI. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
 ## 3.2.0
 
 ### Minor Changes

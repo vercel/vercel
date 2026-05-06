@@ -35,6 +35,109 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with experimentalServices mount config', async () => {
+    const config = {
+      experimentalServices: {
+        frontend: {
+          framework: 'nextjs',
+          mount: '/',
+        },
+        api: {
+          entrypoint: 'api/index.ts',
+          mount: {
+            path: '/api',
+            subdomain: 'api',
+          },
+        },
+        docs: {
+          framework: 'nextjs',
+          mount: {
+            subdomain: 'docs',
+          },
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with legacy cron service type', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        cleanup: {
+          type: 'cron',
+          entrypoint: 'cleanup.py',
+          schedule: '0 0 * * *',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with schedule-triggered job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        cleanup: {
+          type: 'job',
+          trigger: 'schedule',
+          entrypoint: 'cleanup.py',
+          schedule: '0 0 * * *',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with queue-triggered job services using topic objects', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        processor: {
+          type: 'job',
+          trigger: 'queue',
+          entrypoint: 'worker.py',
+          topics: [
+            {
+              topic: 'orders',
+              retryAfterSeconds: 10,
+              initialDelaySeconds: 5,
+            },
+          ],
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with workflow-triggered job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        workflow: {
+          type: 'job',
+          trigger: 'workflow',
+          entrypoint: 'src/workflow.ts',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should reject unsupported beat config for job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        processor: {
+          type: 'job',
+          trigger: 'queue',
+          entrypoint: 'worker.py',
+          topics: ['orders'],
+          beat: {
+            schedule: '0 * * * *',
+          },
+        } as any,
+      },
+    });
+    expect(error).not.toBeNull();
+  });
+
   it('should not error with builds and routes', async () => {
     const config = {
       builds: [{ src: 'api/index.js', use: '@vercel/node' }],

@@ -1,5 +1,168 @@
 # @vercel/build-utils
 
+## 13.21.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 13.20.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Add shared build output deserialization helpers for existing callers. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 13.19.1
+
+### Patch Changes
+
+- [build-utils] simplify streaming lambda check ([#15795](https://github.com/vercel/vercel/pull/15795))
+
+## 13.19.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Added a shared build result validation helper in `@vercel/build-utils` for existing callers. ([#16030](https://github.com/vercel/vercel/pull/16030))
+
+## 13.18.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 13.17.2
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 13.17.1
+
+### Patch Changes
+
+- Align deserialize logic with existing callers. ([#16002](https://github.com/vercel/vercel/pull/16002))
+
+## 13.17.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 13.16.0
+
+### Minor Changes
+
+- Add shared deserialization and build-result collection utilities. ([#15961](https://github.com/vercel/vercel/pull/15961))
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+- Add a new flag to vercel deploy to let users deploy to hive ([#15892](https://github.com/vercel/vercel/pull/15892))
+
+## 13.15.0
+
+### Minor Changes
+
+- [services] allow multiple v2beta triggers for a single Lambda when config is coming from services ([#15890](https://github.com/vercel/vercel/pull/15890))
+
+### Patch Changes
+
+- Add deserialization utilities ([#15927](https://github.com/vercel/vercel/pull/15927))
+
+## 13.14.2
+
+### Patch Changes
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+## 13.14.1
+
+### Patch Changes
+
+- Restore `finalizeLambda()` to return `zipPath: null` for the default in-memory path, preserving the existing caller-facing result contract while keeping custom ZIP strategies supported. ([#15887](https://github.com/vercel/vercel/pull/15887))
+
+- feat(node): filter non-entrypoint Node.js files in `/api` directory ([#15873](https://github.com/vercel/vercel/pull/15873))
+
+## 13.14.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+## 13.13.0
+
+### Minor Changes
+
+- Extend `finalizeLambda` with pluggable ZIP strategy (`createZip`), pre-digest validation hook (`validateZip`), and optional trace tags. Widen `getLambdaEnvironment` buffer param to `{ byteLength: number }`. ([#15856](https://github.com/vercel/vercel/pull/15856))
+
+## 13.12.2
+
+### Patch Changes
+
+- Extract finalize/validate function utils for build-utils ([#15776](https://github.com/vercel/vercel/pull/15776))
+
+## 13.12.1
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
+## 13.12.0
+
+### Minor Changes
+
+- Add hash utilities (`streamToDigestAsync`, `sha256`, `md5`) and build result helpers (`getBuildResultMetadata`, `getLambdaByOutputPath`, `isRouteMiddleware`, `getPrerenderChain`, `streamWithExtendedPayload`) for shared use. ([#15726](https://github.com/vercel/vercel/pull/15726))
+
+## 13.11.0
+
+### Minor Changes
+
+- Add `process-serverless` utilities: `getLambdaEnvironment`, `getLambdaPreloadScripts`, `getLambdaSupportsStreaming`, and `getEncryptedEnv`. ([#15712](https://github.com/vercel/vercel/pull/15712))
+
+## 13.10.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Namespace diagnostics keys by builder and service workspace, and aggregate per-builder `package-manifest.json` files into a single `project-manifest.json` ([#15399](https://github.com/vercel/vercel/pull/15399))
+
+- Updated dependencies [[`ac87d5a5ef5d79b55765e094efc957de987d7ac4`](https://github.com/vercel/vercel/commit/ac87d5a5ef5d79b55765e094efc957de987d7ac4), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/python-analysis@0.11.0
+
+## 13.9.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
+## 13.8.2
+
+### Patch Changes
+
+- [services] allow services to share builder source ([#15631](https://github.com/vercel/vercel/pull/15631))
+
+- Updated dependencies [[`8e8110d2eca5832e109f5efb64b192690100927d`](https://github.com/vercel/vercel/commit/8e8110d2eca5832e109f5efb64b192690100927d)]:
+  - @vercel/python-analysis@0.10.1
+
 ## 13.8.1
 
 ### Patch Changes

@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
       - name: install pnpm@8.3.1
@@ -46,9 +46,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
         with:
-          toolchain: stable
           targets: wasm32-wasip2
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
@@ -78,7 +77,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pyyaml
+      - run: python -m pip install pyyaml==6.0.3 zizmor==1.24.1
       - name: Enforce actions/checkout ref
         shell: python
         run: |
@@ -116,6 +115,10 @@ jobs:
               print("\n".join(errors))
               sys.exit(1)
           print("All actions/checkout steps have a 'ref' specified.")
+      - name: Run zizmor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: zizmor --collect=workflows --color=never .github/workflows/
 
   summary:
     name: Summary (lint)

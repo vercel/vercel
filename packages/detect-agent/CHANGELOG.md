@@ -1,5 +1,17 @@
 # @vercel/detect-agent
 
+## 1.2.3
+
+### Patch Changes
+
+- Add v0 to detect-agent supported agents ([#16016](https://github.com/vercel/vercel/pull/16016))
+
+## 1.2.2
+
+### Patch Changes
+
+- Detect Cursor agent execution when `CURSOR_EXTENSION_HOST_ROLE=agent-exec` is set so tools launched from Cursor still report the `cursor-cli` agent when `CURSOR_AGENT` is not present. ([#15879](https://github.com/vercel/vercel/pull/15879))
+
 ## 1.2.1
 
 ### Patch Changes

@@ -63,8 +63,8 @@ describe('prepareFlagsDefinitions', () => {
     expect(await outputExists('index.js')).toBe(false);
   });
 
-  it('should fetch definitions for a direct vf_ key and write files', async () => {
-    const sdkKey = 'vf_test_abc123def456';
+  it('should fetch definitions for a direct vf_server_ key and write files', async () => {
+    const sdkKey = 'vf_server_test_abc123def456';
     const definitions = { flag1: { variants: ['on', 'off'] } };
 
     const fetch = mockFetch([{ data: definitions }]);
@@ -101,7 +101,7 @@ describe('prepareFlagsDefinitions', () => {
   });
 
   it('should extract SDK key from flags: format', async () => {
-    const sdkKey = 'vf_flags_format_key';
+    const sdkKey = 'vf_server_flags_format_key';
     const definitions = { flag1: {} };
 
     const fetch = mockFetch([{ data: definitions }]);
@@ -124,7 +124,7 @@ describe('prepareFlagsDefinitions', () => {
   });
 
   it('should deduplicate SDK keys across env vars', async () => {
-    const sdkKey = 'vf_duplicate_key';
+    const sdkKey = 'vf_server_duplicate_key';
     const definitions = { flag1: {} };
 
     const fetch = mockFetch([{ data: definitions }]);
@@ -143,8 +143,8 @@ describe('prepareFlagsDefinitions', () => {
   });
 
   it('should handle multiple distinct SDK keys', async () => {
-    const key1 = 'vf_key_one_abcdef';
-    const key2 = 'vf_key_two_ghijkl';
+    const key1 = 'vf_server_key_one_abcdef';
+    const key2 = 'vf_server_key_two_ghijkl';
     const defs1 = { flagA: { enabled: true } };
     const defs2 = { flagB: { enabled: false } };
 
@@ -168,8 +168,8 @@ describe('prepareFlagsDefinitions', () => {
   });
 
   it('should deduplicate identical definitions across keys', async () => {
-    const key1 = 'vf_key_one_abcdef';
-    const key2 = 'vf_key_two_ghijkl';
+    const key1 = 'vf_server_key_one_abcdef';
+    const key2 = 'vf_server_key_two_ghijkl';
     const sameDefs = { flagA: { enabled: true } };
 
     const fetch = mockFetch([{ data: sameDefs }, { data: sameDefs }]);
@@ -192,7 +192,7 @@ describe('prepareFlagsDefinitions', () => {
   });
 
   it('should produce a valid module structure', async () => {
-    const sdkKey = 'vf_structure_test_key_123';
+    const sdkKey = 'vf_server_structure_test_key_123';
     const definitions = { myFlag: { variants: ['a', 'b'] } };
 
     const fetch = mockFetch([{ data: definitions }]);
@@ -227,7 +227,7 @@ describe('prepareFlagsDefinitions', () => {
   });
 
   it('should include Vercel metadata headers when env vars are set', async () => {
-    const sdkKey = 'vf_meta_key_test';
+    const sdkKey = 'vf_server_meta_key_test';
 
     const fetch = mockFetch([{ data: {} }]);
 
@@ -257,7 +257,7 @@ describe('prepareFlagsDefinitions', () => {
   });
 
   it('should throw when fetch fails', async () => {
-    const sdkKey = 'vf_fail_key_abcdef123';
+    const sdkKey = 'vf_server_fail_key_abcdef123';
 
     const fetch = mockFetch([{ data: null, ok: false }]);
 
@@ -280,7 +280,7 @@ describe('prepareFlagsDefinitions', () => {
         PATH: '/usr/bin',
         NODE_ENV: 'production',
         FLAGS_VAR: 'flags:other=value',
-        PARTIAL: 'flags:sdkKey=not_vf_prefix',
+        PARTIAL: 'flags:sdkKey=no_vf_server_prefix',
       },
       fetch,
     });
@@ -293,7 +293,7 @@ describe('prepareFlagsDefinitions', () => {
 
     await prepareFlagsDefinitions({
       cwd,
-      env: { KEY: 'vf_version_test' },
+      env: { KEY: 'vf_server_version_test' },
       fetch,
     });
 

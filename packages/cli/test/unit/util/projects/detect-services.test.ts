@@ -12,10 +12,12 @@ import {
 
 describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+  const originalTomlEnv = process.env.VERCEL_TOML_CONFIG_ENABLED;
   let tempDir: string;
 
   beforeEach(async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+    process.env.VERCEL_TOML_CONFIG_ENABLED = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
@@ -25,6 +27,11 @@ describe('tryDetectServices()', () => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     } else {
       process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
+    }
+    if (originalTomlEnv === undefined) {
+      delete process.env.VERCEL_TOML_CONFIG_ENABLED;
+    } else {
+      process.env.VERCEL_TOML_CONFIG_ENABLED = originalTomlEnv;
     }
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -64,6 +71,38 @@ describe('tryDetectServices()', () => {
           backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
         },
       })
+    );
+    await writeFile(
+      join(tempDir, 'api/index.py'),
+      'def app():\n  return None\n'
+    );
+
+    const result = await tryDetectServices(tempDir);
+    expect(result).not.toBeNull();
+    expect(result?.services).toHaveLength(2);
+    expect(result?.services.find(s => s.name === 'frontend')).toMatchObject({
+      name: 'frontend',
+      framework: 'nextjs',
+      routePrefix: '/',
+    });
+    expect(result?.services.find(s => s.name === 'backend')).toMatchObject({
+      name: 'backend',
+      entrypoint: 'api/index.py',
+      routePrefix: '/api',
+    });
+  });
+
+  it('should return services when configured via vercel.toml', async () => {
+    await mkdir(join(tempDir, 'api'), { recursive: true });
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      `[experimentalServices.frontend]
+framework = "nextjs"
+routePrefix = "/"
+
+[experimentalServices.backend]
+entrypoint = "api/index.py"
+routePrefix = "/api"`
     );
     await writeFile(
       join(tempDir, 'api/index.py'),
@@ -163,6 +202,158 @@ describe('tryDetectServices()', () => {
     });
   });
 
+  it('should write inferred services config into vercel.toml', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n'
+    );
+
+    const { configFileName } = await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+      api: {
+        entrypoint: 'services/api',
+        routePrefix: '/_/api',
+      },
+    });
+
+    expect(configFileName).toBe('vercel.toml');
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toContain('buildCommand = "npm run build"');
+    expect(content).toContain('[experimentalServices.frontend]');
+    expect(content).toContain('framework = "nextjs"');
+    expect(content).toContain('[experimentalServices.api]');
+    expect(content).toContain('entrypoint = "services/api"');
+  });
+
+  it('should write services config into empty vercel.toml', async () => {
+    await writeFile(join(tempDir, 'vercel.toml'), '');
+
+    const { configFileName } = await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    expect(configFileName).toBe('vercel.toml');
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toContain('[experimentalServices.frontend]');
+    expect(content).toContain('framework = "nextjs"');
+    // Should not start with a blank line
+    expect(content).not.toMatch(/^\n/);
+  });
+
+  it('should throw when vercel.toml already has experimentalServices', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      `[experimentalServices.existing]\nframework = "nextjs"\nroutePrefix = "/"\n`
+    );
+
+    await expect(
+      writeServicesConfig(tempDir, {
+        frontend: { framework: 'nextjs', routePrefix: '/' },
+      })
+    ).rejects.toThrow(
+      'Cannot automatically update vercel.toml: key "experimentalServices" already exists.'
+    );
+  });
+
+  it('should preserve comments in vercel.toml when writing services config', async () => {
+    const existingContent = [
+      '# This is my project config',
+      'buildCommand = "npm run build" # custom build',
+      '',
+      '# Output settings',
+      'outputDirectory = "dist"',
+      '',
+    ].join('\n');
+    await writeFile(join(tempDir, 'vercel.toml'), existingContent);
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toContain('# This is my project config');
+    expect(content).toContain('buildCommand = "npm run build" # custom build');
+    expect(content).toContain('# Output settings');
+    expect(content).toContain('outputDirectory = "dist"');
+    expect(content).toContain('[experimentalServices.frontend]');
+  });
+
+  it('should separate existing and new content with a double newline in vercel.toml', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n'
+    );
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toMatch(
+      /buildCommand = "npm run build"\n\n\[experimentalServices/
+    );
+  });
+
+  it('should trim trailing newlines from existing vercel.toml before appending', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n\n\n'
+    );
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    // Should have exactly one blank line between old and new, not multiple
+    expect(content).not.toMatch(/buildCommand = "npm run build"\n\n\n/);
+    expect(content).toMatch(
+      /buildCommand = "npm run build"\n\n\[experimentalServices/
+    );
+  });
+
+  it('should treat whitespace-only vercel.toml as empty', async () => {
+    await writeFile(join(tempDir, 'vercel.toml'), '   \n\n  \n');
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    // Should not start with whitespace from the original file
+    expect(content).toMatch(/^\[experimentalServices/);
+  });
+
+  it('should not report vercel.toml key overlap as a services config write blocker', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      `[experimentalServices.existing]\nframework = "nextjs"\nroutePrefix = "/"\n`
+    );
+
+    const blocker = await getServicesConfigWriteBlocker(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+    // Overlap errors are not mapped to 'builds' or 'functions' blockers
+    expect(blocker).toBeNull();
+  });
+
+  it('should reject vercel.toml when VERCEL_TOML_CONFIG_ENABLED is not set', async () => {
+    delete process.env.VERCEL_TOML_CONFIG_ENABLED;
+
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n'
+    );
+
+    // With TOML disabled, the toml file is ignored entirely.
+    // writeServicesConfig falls through to the vercel.json path and
+    // creates a new vercel.json (no error, since there's nothing to compile).
+    const { configFileName } = await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+    expect(configFileName).toBe('vercel.json');
+  });
+
   describe('without VERCEL_USE_EXPERIMENTAL_SERVICES env var', () => {
     beforeEach(() => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
@@ -238,6 +429,39 @@ describe('tryDetectServices()', () => {
     });
 
     it('should return false when no vercel.json exists', async () => {
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
+    });
+
+    it('should return true when vercel.ts has experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.ts'),
+        `export default {
+          experimentalServices: {
+            frontend: { framework: 'nextjs', routePrefix: '/' },
+          },
+        };`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
+
+    it('should return true when vercel.toml has experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.toml'),
+        `[experimentalServices.frontend]
+framework = "nextjs"
+routePrefix = "/"`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
+
+    it('should return false when vercel.toml has no experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.toml'),
+        `buildCommand = "npm run build"`
+      );
+
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
     });
   });

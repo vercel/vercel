@@ -1,5 +1,23 @@
 # @vercel/routing-utils
 
+## 6.2.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 6.1.1
+
+### Patch Changes
+
+- Redirect sources now support domains ([#15670](https://github.com/vercel/vercel/pull/15670))
+
+## 6.1.0
+
+### Minor Changes
+
+- Removed bulkRedirectsSchema ([#14340](https://github.com/vercel/vercel/pull/14340))
+
 ## 6.0.2
 
 ### Patch Changes

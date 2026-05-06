@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 from typing import TYPE_CHECKING
 
@@ -75,14 +74,14 @@ class PollingWorker:
 
     def _process_message(self, msg: queue_callback.ReceivedMessage) -> None:
         message_id = msg["messageId"]
-        ticket = msg["ticket"]
+        receipt_handle = msg["receipt_handle"]
         payload = msg["payload"]
 
         try:
             if self.debug:
                 try:
                     print(
-                        "[vercelqueue polling] received message",
+                        "[vercel polling] received message",
                         json.dumps(
                             {
                                 "queue": self.queue_name,
@@ -91,7 +90,7 @@ class PollingWorker:
                                 "deliveryCount": msg.get("deliveryCount"),
                                 "createdAt": msg.get("createdAt"),
                                 "contentType": msg.get("contentType"),
-                                "ticket": ticket,
+                                "receipt_handle": receipt_handle,
                                 "payload": payload,
                             },
                             indent=2,
@@ -100,7 +99,7 @@ class PollingWorker:
                     )
                 except Exception:
                     print(
-                        "[vercelqueue polling] received message (unserialisable payload)",
+                        "[vercel polling] received message (unserialisable payload)",
                         {
                             "queue": self.queue_name,
                             "consumer": self.consumer_group,
@@ -118,7 +117,7 @@ class PollingWorker:
                     self.queue_name,
                     self.consumer_group,
                     message_id,
-                    ticket,
+                    receipt_handle,
                     int(timeout_seconds),
                 )
             else:
@@ -126,12 +125,12 @@ class PollingWorker:
                     self.queue_name,
                     self.consumer_group,
                     message_id,
-                    ticket,
+                    receipt_handle,
                 )
         except Exception:
             if self.debug:
                 print(
-                    "[vercelqueue polling] error executing message",
+                    "[vercel polling] error executing message",
                     {
                         "queue": self.queue_name,
                         "consumer": self.consumer_group,
@@ -146,7 +145,7 @@ class PollingWorker:
                         self.queue_name,
                         self.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                     )
                 except Exception:
                     pass
@@ -158,65 +157,10 @@ class PollingWorker:
                         self.queue_name,
                         self.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         int(self.on_error_visibility_timeout_seconds),
                     )
                 except Exception:
                     pass
             if self.crash_on_error:
                 raise
-
-
-def _env_flag(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value not in {"0", "false", "FALSE", "no", "NO"}
-
-
-def resolve_queue_name(celery_app: CeleryApp, queue_name: str | None) -> str:
-    resolved_queue_name = queue_name
-    if not resolved_queue_name:
-        cfg_queue = getattr(getattr(celery_app, "conf", None), "task_default_queue", None)
-        if isinstance(cfg_queue, str) and cfg_queue:
-            resolved_queue_name = cfg_queue
-
-    if not resolved_queue_name:
-        raise ValueError(
-            "queue_name is required. Pass queue_name=... "
-            "or set celery_app.conf.task_default_queue.",
-        )
-    return resolved_queue_name
-
-
-class PollingWorkerFactory:
-    def __init__(self, celery_app: CeleryApp) -> None:
-        self._celery_app = celery_app
-
-    def __call__(
-        self,
-        *,
-        queue_name: str | None = None,
-        consumer_group: str = "default",
-        limit: int = 1,
-        visibility_timeout_seconds: int = 60,
-        poll_interval_seconds: float = 1.0,
-        on_error_visibility_timeout_seconds: int | None = None,
-        timeout: float | None = 10.0,
-        debug: bool = False,
-        crash_on_error: bool = False,
-        ack_on_error: bool = False,
-    ) -> PollingWorker:
-        return PollingWorker(
-            self._celery_app,
-            queue_name=resolve_queue_name(self._celery_app, queue_name),
-            consumer_group=consumer_group,
-            limit=limit,
-            visibility_timeout_seconds=visibility_timeout_seconds,
-            poll_interval_seconds=poll_interval_seconds,
-            on_error_visibility_timeout_seconds=on_error_visibility_timeout_seconds,
-            timeout=timeout,
-            debug=debug,
-            crash_on_error=crash_on_error,
-            ack_on_error=ack_on_error,
-        )

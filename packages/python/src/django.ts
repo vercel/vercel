@@ -7,9 +7,12 @@ import { getVenvPythonBin } from './utils';
 const scriptPath = join(__dirname, '..', 'templates', 'vc_django_settings.py');
 const script = fs.readFileSync(scriptPath, 'utf-8');
 
+export type DjangoVersion = [major: number, minor: number, patch: number];
+
 export interface DjangoSettingsResult {
   settingsModule: string;
   djangoSettings: Record<string, unknown>;
+  djangoVersion: DjangoVersion | null;
 }
 
 /**
@@ -21,25 +24,24 @@ export interface DjangoSettingsResult {
 export async function getDjangoSettings(
   projectDir: string,
   env: NodeJS.ProcessEnv
-): Promise<DjangoSettingsResult | null> {
-  try {
-    const { stdout } = await execa('python', ['-c', script], {
-      env,
-      cwd: projectDir,
-    });
-    const parsed = JSON.parse(stdout) as {
-      settings_module: string;
-      django_settings: Record<string, unknown>;
-    } | null;
-    if (!parsed) return null;
-    return {
-      settingsModule: parsed.settings_module,
-      djangoSettings: parsed.django_settings,
-    };
-  } catch (err) {
-    debug(`Django hook: failed to discover settings from manage.py: ${err}`);
-    return null;
+): Promise<DjangoSettingsResult> {
+  const { stdout } = await execa('python', ['-c', script], {
+    env,
+    cwd: projectDir,
+  });
+  const parsed = JSON.parse(stdout) as {
+    settings_module: string;
+    django_settings: Record<string, unknown>;
+    django_version?: DjangoVersion;
+  } | null;
+  if (!parsed) {
+    throw new Error('manage.py did not return any settings');
   }
+  return {
+    settingsModule: parsed.settings_module,
+    djangoSettings: parsed.django_settings,
+    djangoVersion: parsed.django_version ?? null,
+  };
 }
 
 export interface DjangoCollectStaticResult {
@@ -47,6 +49,11 @@ export interface DjangoCollectStaticResult {
   staticSourceDirs: string[];
   /** Absolute path of STATIC_ROOT to exclude from the Lambda bundle. */
   staticRoot: string | null;
+  /**
+   * Absolute path to the directory where CDN static files were written,
+   * or null if not applicable (e.g. django-storages handles upload itself).
+   */
+  cdnOutputDir: string | null;
   /**
    * workPath-relative path to `staticfiles.json` to inject into the Lambda
    * bundle, or null if the storage backend doesn't use a manifest.
@@ -76,18 +83,27 @@ export async function runDjangoCollectStatic(
   env: NodeJS.ProcessEnv,
   outputStaticDir: string,
   settingsModule: string,
-  djangoSettings: Record<string, unknown>
+  djangoSettings: Record<string, unknown>,
+  djangoVersion: DjangoVersion | null
 ): Promise<DjangoCollectStaticResult | null> {
   const pythonPath = getVenvPythonBin(venvPath);
 
   // Resolve storage backend
   // First check STORAGES (Django 4.2+) then the legacy STATICFILES_STORAGE setting.
+  // STATICFILES_STORAGE was removed in Django 5.1.
   const storages = djangoSettings['STORAGES'] as
     | { staticfiles?: { BACKEND?: string } }
     | undefined;
+  const useLegacySetting =
+    !djangoVersion ||
+    djangoVersion[0] < 5 ||
+    (djangoVersion[0] === 5 && djangoVersion[1] < 1);
+  const legacyBackend = useLegacySetting
+    ? (djangoSettings['STATICFILES_STORAGE'] as string | undefined)
+    : undefined;
   const storageBackend: string =
     storages?.staticfiles?.BACKEND ??
-    (djangoSettings['STATICFILES_STORAGE'] as string | undefined) ??
+    legacyBackend ??
     'django.contrib.staticfiles.storage.StaticFilesStorage';
 
   const staticUrl =
@@ -128,6 +144,7 @@ export async function runDjangoCollectStatic(
     return {
       staticSourceDirs,
       staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
+      cdnOutputDir: null,
       manifestRelPath: null,
     };
   }
@@ -193,6 +210,7 @@ export async function runDjangoCollectStatic(
   return {
     staticSourceDirs,
     staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
+    cdnOutputDir: outputStaticDir,
     manifestRelPath,
   };
 }

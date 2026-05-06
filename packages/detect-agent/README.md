@@ -34,6 +34,7 @@ This package can detect the following AI agents and development environments:
 - **Antigravity** (Google DeepMind)
 - **GitHub Copilot** (via `AI_AGENT=github-copilot|github-copilot-cli`, `COPILOT_MODEL`, `COPILOT_ALLOW_ALL`, or `COPILOT_GITHUB_TOKEN`)
 - **Replit** (online IDE)
+- **v0** (Vercel's AI assistant, via `AI_AGENT=v0`)
 
 ## The AI_AGENT Standard
 

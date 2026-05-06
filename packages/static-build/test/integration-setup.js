@@ -6,7 +6,7 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(12 * 60 * 1000);
+vi.setConfig({ testTimeout: 12 * 60 * 1000, hookTimeout: 12 * 60 * 1000 });
 
 module.exports = function setupTests(groupIndex) {
   const fixturesPath = path.resolve(__dirname, 'fixtures');
@@ -70,7 +70,7 @@ module.exports = function setupTests(groupIndex) {
 
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
-      it(`should fail to build ${fixture}`, async () => {
+      it.concurrent(`should fail to build ${fixture}`, async () => {
         try {
           await testDeployment(path.join(fixturesPath, fixture));
         } catch (err) {
@@ -81,7 +81,7 @@ module.exports = function setupTests(groupIndex) {
       });
       continue;
     }
-    it(`should build ${fixture}`, async () => {
+    it.concurrent(`should build ${fixture}`, async () => {
       await expect(
         testDeployment(path.join(fixturesPath, fixture))
       ).resolves.toBeDefined();

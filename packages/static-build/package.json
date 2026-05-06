@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "2.9.1",
+  "version": "2.9.22",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
@@ -14,10 +14,13 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
+    "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "pnpm test test/build.test.ts test/hugo.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
     "test-e2e": "pnpm test test/integration-*.test.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/build.test.ts' 'test/hugo.test.ts' 'test/gatsby.test.ts' 'test/prepare-cache.test.ts'",
+    "vitest-e2e": "glob --absolute 'test/integration-*.test.js'"
   },
   "dependencies": {
     "@vercel/gatsby-plugin-vercel-analytics": "workspace:*",
@@ -29,7 +32,6 @@
     "@types/aws-lambda": "8.10.64",
     "@types/cross-spawn": "6.0.0",
     "@types/fs-extra": "9.0.13",
-    "@types/jest": "27.4.1",
     "@types/ms": "0.7.31",
     "@types/node": "20.11.0",
     "@types/node-fetch": "2.5.4",
@@ -44,11 +46,11 @@
     "fs-extra": "10.0.0",
     "get-port": "5.0.0",
     "is-port-reachable": "2.0.1",
-    "jest-junit": "16.0.0",
     "ms": "2.1.2",
     "node-fetch": "2.6.7",
     "rc9": "1.2.0",
     "semver": "7.5.2",
-    "tree-kill": "1.2.2"
+    "tree-kill": "1.2.2",
+    "vitest": "2.0.3"
   }
 }

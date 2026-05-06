@@ -3,21 +3,26 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal
 
+from .. import _queue
 from ..client import send
-from .utils import _extract_task_from_kombu_message
+from .utils import _extract_task_from_kombu_message, _parse_iso_datetime
 
 try:
     from kombu.transport import TRANSPORT_ALIASES, virtual  # type: ignore[import-untyped]
 except Exception as e:
     raise RuntimeError(
-        "kombu is required for vercelqueue:// broker support. "
+        "kombu is required for vercel:// broker support. "
         "Make sure Celery and its dependencies are installed.",
     ) from e
 
 
-def install_kombu_transport_alias(alias: str = "vercelqueue") -> None:
+DEFAULT_BROKER_ALIAS = "vercel"
+
+
+def install_kombu_transport_alias(alias: str = DEFAULT_BROKER_ALIAS) -> None:
     """
     Register the Kombu transport alias for this package.
 
@@ -27,7 +32,7 @@ def install_kombu_transport_alias(alias: str = "vercelqueue") -> None:
 
     After calling this, users can set:
 
-        broker_url = "vercelqueue://"
+        broker_url = "vercel://"
     """
 
     # Use the actual import path so vendored/relocated packages keep working.
@@ -45,8 +50,8 @@ class TransportConfig:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention_seconds: int | None = None
-    deployment_id: str | None = None
+    retention: _queue.Duration | None = None
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
     include_raw_message: bool = False
     # Consumption defaults (serverless callback / local polling)
@@ -66,8 +71,8 @@ class TransportConfig:
                 "use_task_id_as_idempotency_key": True,
                 "token": "...",
                 "base_url": "https://vercel-queue.com",
-                "base_path": "/api/v2/messages",
-                "retention_seconds": 86400,
+                "base_path": "/api/v3/topic",
+                "retention": 86400,
                 "deployment_id": "...",
                 "timeout": 10.0,
                 "include_raw_message": False,
@@ -98,10 +103,12 @@ class TransportConfig:
         if isinstance(base_path, str) and base_path:
             cfg.base_path = base_path
 
-        retention = options.get("retention_seconds")
-        if isinstance(retention, int):
-            cfg.retention_seconds = retention
+        retention = options.get("retention")
+        if _queue.is_duration(retention):
+            cfg.retention = retention
 
+        if "deployment_id" in options and options.get("deployment_id") is None:
+            cfg.deployment_id = None
         deployment_id = options.get("deployment_id")
         if isinstance(deployment_id, str) and deployment_id:
             cfg.deployment_id = deployment_id
@@ -154,32 +161,41 @@ class Channel(virtual.Channel):
         # Use Celery's task id for idempotency by default.
         idempotency_key = task_id if self._cfg.use_task_id_as_idempotency_key else None
 
+        # Compute send-time delay from ETA if present.
+        delay_duration: int | None = None
+        eta = _parse_iso_datetime(envelope.get("eta"))
+        if eta is not None:
+            delta = (eta - datetime.now(UTC)).total_seconds()
+            if delta > 0:
+                delay_duration = int(delta)
+
         if os.environ.get("VWC_DEBUG_PUBLISH") not in {None, "", "0", "false", "FALSE"}:
             try:
                 print(
-                    "[vercelqueue publish] kombu message keys/types:",
+                    "[vercel publish] kombu message keys/types:",
                     {k: type(v).__name__ for k, v in message.items()},
                 )
                 print(
-                    "[vercelqueue publish] kombu message headers:",
+                    "[vercel publish] kombu message headers:",
                     message.get("headers"),
                 )
                 print(
-                    "[vercelqueue publish] kombu message body type:",
+                    "[vercel publish] kombu message body type:",
                     type(message.get("body")).__name__,
                 )
                 print(
-                    "[vercelqueue publish] envelope:",
+                    "[vercel publish] envelope:",
                     json.dumps(envelope, indent=2, default=str),
                 )
             except Exception:
-                print("[vercelqueue publish] debug print failed")
+                print("[vercel publish] debug print failed")
 
         send(
             queue,
             envelope,
             idempotency_key=idempotency_key,
-            retention_seconds=self._cfg.retention_seconds,
+            retention=self._cfg.retention,
+            delay=delay_duration,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,
@@ -204,12 +220,13 @@ class Channel(virtual.Channel):
 
 class Transport(virtual.Transport):
     Channel = Channel
-    driver_type = "vercelqueue"
-    driver_name = "vercelqueue"
+    driver_type = DEFAULT_BROKER_ALIAS
+    driver_name = DEFAULT_BROKER_ALIAS
     default_port = 0
 
 
 __all__ = [
+    "DEFAULT_BROKER_ALIAS",
     "Transport",
     "install_kombu_transport_alias",
 ]

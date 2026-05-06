@@ -1,6 +1,19 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import metrics from '../../../../src/commands/metrics';
+
+const { mockQuery, mockSchema } = vi.hoisted(() => ({
+  mockQuery: vi.fn().mockResolvedValue(0),
+  mockSchema: vi.fn().mockResolvedValue(0),
+}));
+
+vi.mock('../../../../src/commands/metrics/query', () => ({
+  default: mockQuery,
+}));
+
+vi.mock('../../../../src/commands/metrics/schema', () => ({
+  default: mockSchema,
+}));
 
 describe('metrics', () => {
   beforeEach(() => {
@@ -18,8 +31,8 @@ describe('metrics', () => {
       const output = client.stderr.getFullOutput();
       // Shows schema subcommand
       expect(output).toContain('schema');
-      // Shows default subcommand options
-      expect(output).toContain('--event');
+      // Shows positional metric examples
+      expect(output).toContain('metrics vercel.function_invocation.count');
     });
 
     it('should track telemetry for help', async () => {
@@ -39,22 +52,29 @@ describe('metrics', () => {
 
       const exitCode = await metrics(client);
 
-      // schema lists events, exit 0
       expect(exitCode).toBe(0);
-      const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('Events found');
+      expect(mockSchema).toHaveBeenCalledWith(
+        client,
+        expect.objectContaining({
+          trackCliSubcommandSchema: expect.any(Function),
+        })
+      );
+      expect(mockQuery).not.toHaveBeenCalled();
     });
 
     it('should route to query as default subcommand', async () => {
-      // Without explicit "query", should route to query.
-      // Will fail validation since no --event, but that proves routing works.
-      client.setArgv('metrics', '--event', 'bogus_event_for_test');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await metrics(client);
 
-      // Unknown event → error
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('Unknown event');
+      expect(exitCode).toBe(0);
+      expect(mockQuery).toHaveBeenCalledWith(
+        client,
+        expect.objectContaining({
+          trackCliSubcommandSchema: expect.any(Function),
+        })
+      );
+      expect(mockSchema).not.toHaveBeenCalled();
     });
 
     it('should track schema subcommand telemetry', async () => {
@@ -66,5 +86,16 @@ describe('metrics', () => {
         { key: 'subcommand:schema', value: 'schema' },
       ]);
     });
+  });
+
+  it('shows help when no metric is provided for query', async () => {
+    client.setArgv('metrics');
+
+    const exitCode = await metrics(client);
+
+    expect(exitCode).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      'metrics vercel.function_invocation.count'
+    );
   });
 });

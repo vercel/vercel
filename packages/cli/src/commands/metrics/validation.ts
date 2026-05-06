@@ -1,87 +1,5 @@
 import type { ValidationResult, ValidatedResult } from './types';
-import type { MetricsAggregation } from './schema-data';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
-import {
-  getEventNames,
-  getEvent,
-  getMeasures,
-  getAggregations,
-  getDimensions,
-} from './schema-data';
-
-export function validateEvent(event: string): ValidationResult {
-  if (getEvent(event)) {
-    return { valid: true };
-  }
-  return {
-    valid: false,
-    code: 'UNKNOWN_EVENT',
-    message: `Unknown event "${event}".`,
-    allowedValues: getEventNames(),
-  };
-}
-
-export function validateMeasure(
-  event: string,
-  measure: string
-): ValidationResult {
-  const measures = getMeasures(event);
-  if (measures.some(m => m.name === measure)) {
-    return { valid: true };
-  }
-  return {
-    valid: false,
-    code: 'UNKNOWN_MEASURE',
-    message: `Measure "${measure}" is not available for event "${event}".`,
-    allowedValues: measures.map(m => m.name),
-  };
-}
-
-export function validateAggregation(
-  event: string,
-  measure: string,
-  aggregation: string
-): ValidatedResult<MetricsAggregation> {
-  const aggs = getAggregations(event, measure);
-  const found = aggs.find(agg => agg === aggregation);
-  if (found) {
-    return { valid: true, value: found };
-  }
-  return {
-    valid: false,
-    code: 'INVALID_AGGREGATION',
-    message: `Aggregation "${aggregation}" is not valid for measure "${measure}" on event "${event}".`,
-    allowedValues: [...aggs],
-  };
-}
-
-export function validateGroupBy(
-  event: string,
-  dims: string[]
-): ValidationResult {
-  const dimensions = getDimensions(event);
-  for (const dim of dims) {
-    const found = dimensions.find(d => d.name === dim);
-    if (!found) {
-      return {
-        valid: false,
-        code: 'UNKNOWN_DIMENSION',
-        message: `Dimension "${dim}" is not available for event "${event}".`,
-        allowedValues: dimensions.map(d => d.name),
-      };
-    }
-    if (found.filterOnly) {
-      return {
-        valid: false,
-        code: 'FILTER_ONLY_DIMENSION',
-        message:
-          `Dimension "${dim}" on event "${event}" is filter-only and cannot be used in --group-by.\n` +
-          `Use it with --filter instead: --filter "${dim} eq '<value>'"`,
-      };
-    }
-  }
-  return { valid: true };
-}
 
 export function validateMutualExclusivity(
   all: boolean | undefined,
@@ -90,16 +8,16 @@ export function validateMutualExclusivity(
   return validateAllProjectMutualExclusivity(all, project);
 }
 
-export function validateRequiredEvent(
-  event: string | undefined
+export function validateRequiredMetric(
+  metric: string | undefined
 ): ValidatedResult<string> {
-  if (event) {
-    return { valid: true, value: event };
+  if (metric) {
+    return { valid: true, value: metric };
   }
   return {
     valid: false,
-    code: 'MISSING_EVENT',
+    code: 'MISSING_METRIC',
     message:
-      "Missing required flag --event. Specify the event type to query.\n\nRun 'vercel metrics schema' to see available events.",
+      "Missing required metric. Specify the metric to query.\n\nRun 'vercel metrics schema' to see available metrics.",
   };
 }

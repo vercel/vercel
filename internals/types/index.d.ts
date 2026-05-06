@@ -32,6 +32,8 @@ export interface AuthConfig {
   skipWrite?: boolean;
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
+  /** The ID of the currently authenticated user, cached from `/v2/user`. */
+  userId?: string;
   /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
   refreshToken?: string;
   /**
@@ -66,6 +68,7 @@ type Billing = {
   period: { start: number; end: number };
   plan: string;
   platform: string;
+  status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
   trial: { start: number; end: number };
 };
 
@@ -98,6 +101,12 @@ export interface Team {
       state: string;
     };
   };
+  /**
+   * Team-wide policy for enforcing sensitive Environment Variables.
+   * When set to "on", the API silently promotes `encrypted` Production and
+   * Preview Environment Variables to `sensitive` on create.
+   */
+  sensitiveEnvironmentVariablePolicy?: 'default' | 'on' | 'off';
 }
 
 export type Domain = {
@@ -181,6 +190,14 @@ export type Deployment = {
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   checksState?: 'completed' | 'registered' | 'running';
   checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
   createdAt: number;

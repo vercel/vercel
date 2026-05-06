@@ -4,7 +4,6 @@ import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
 import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
-import getTeams from '../../util/teams/get-teams';
 import { type Command, help } from '../help';
 import { addSubcommand, linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -12,6 +11,8 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
+import getScope from '../../util/get-scope';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -69,6 +70,10 @@ export default async function link(client: Client) {
       return 1;
     }
 
+    await autoInstallVercelPlugin(client, {
+      autoConfirm: yes,
+    });
+
     return 0;
   }
 
@@ -120,24 +125,7 @@ export default async function link(client: Client) {
       return 1;
     }
   } else {
-    // Prefer the validated team ID set by the global handler (--team/--scope). When it is not set
-    // (e.g. no scope passed), currentTeam may be undefined or from saved config. If the user passed
-    // --team to link but currentTeam is still unset, resolve to a team ID and set it so selectOrg
-    // has a default; never set a raw slug (always use team ID).
-    const teamFlag = parsedArgs.flags['--team'];
-    if (typeof teamFlag === 'string' && !client.config.currentTeam) {
-      try {
-        const teams = await getTeams(client);
-        const related = teams.find(
-          t => t.id === teamFlag || t.slug === teamFlag
-        );
-        if (related) {
-          client.config.currentTeam = related.id;
-        }
-      } catch {
-        // Let ensureLink/selectOrg handle missing team or API errors
-      }
-    }
+    const scopeContext = await getScope(client, { resolveLocalScope: true });
 
     // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
     const linkNonInteractive =
@@ -149,12 +137,17 @@ export default async function link(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
+      searchAcrossTeams: !scopeContext.explicitScopeProvided,
     });
 
     if (typeof link === 'number') {
       return link;
     }
   }
+
+  await autoInstallVercelPlugin(client, {
+    autoConfirm: yes,
+  });
 
   return 0;
 }

@@ -21,6 +21,8 @@ packages/cli/test/dev/fixtures/**/dist
 packages/cli/test/dev/fixtures/**/public
 packages/cli/test/dev/fixtures/**/.now
 packages/cli/test/dev/fixtures/**/.vercel
+packages/cli/test/**/.vercel/builders/package.json
+packages/cli/test/**/.vercel/builders/package-lock.json
 !packages/cli/test/fixtures/unit/commands/build/monorepo-detection/**/yarn.lock
 packages/cli/test/fixtures/integration
 test/lib/deployment/failed-page.txt
@@ -43,3 +45,5 @@ junit.xml
 # CLI target command tests
 !packages/cli/test/unit/commands/target/
 !packages/cli/test/unit/commands/target/**
+.claude/settings.local.json
+.pnpm-store

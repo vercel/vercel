@@ -1,12 +1,11 @@
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import indent from '../../util/output/indent';
-import { getMeasures } from './schema-data';
 import { getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
 import type {
+  Aggregation,
   Granularity,
-  MetricsAggregation,
   MetricsDataRow,
   MetricsQueryResponse,
   Scope,
@@ -43,15 +42,14 @@ interface SummaryTableOptions {
   rows: SummaryTableRow[];
   groupByFields: string[];
   measureType: MeasureType;
-  aggregation: MetricsAggregation;
+  aggregation: Aggregation;
   periodStart: Date;
   periodEnd: Date;
 }
 
 interface MetadataHeaderOptions {
-  event: string;
-  measure: string;
-  aggregation: MetricsAggregation;
+  metric: string;
+  aggregation: Aggregation;
   periodStart: string;
   periodEnd: string;
   granularity: Granularity;
@@ -64,9 +62,9 @@ interface MetadataHeaderOptions {
 }
 
 export interface FormatTextOptions {
-  event: string;
-  measure: string;
-  aggregation: MetricsAggregation;
+  metric: string;
+  metricUnit?: string;
+  aggregation: Aggregation;
   groupBy: string[];
   filter?: string;
   scope: Scope;
@@ -85,11 +83,13 @@ const MAX_SPARKLINE_LENGTH = 120;
 type TableAlignment = 'l' | 'c' | 'r';
 type StatColumn = 'total' | 'avg' | 'min' | 'max';
 
-const COUNT_UNITS = new Set(['count', 'us dollars', 'dollars']);
+const COUNT_UNITS = new Set(['count', 'usd', 'us dollars', 'dollars']);
 const DURATION_UNITS = new Set(['milliseconds', 'seconds']);
 const BYTES_UNITS = new Set([
   'bytes',
   'megabytes',
+  'gigabyte hour',
+  'gigabyte_hour',
   'gigabyte hours',
   'gigabyte_hours',
 ]);
@@ -157,8 +157,10 @@ function formatUnitLabel(unit: string): string {
       return 'ms';
     case 'seconds':
       return 's';
+    case 'usd':
     case 'us dollars':
       return 'USD';
+    case 'gigabyte hour':
     case 'gigabyte hours':
       return 'GB-h';
     default:
@@ -173,7 +175,7 @@ function formatUnitLabel(unit: string): string {
  */
 function isCountIntegerDisplay(
   measureType: MeasureType,
-  aggregation: MetricsAggregation
+  aggregation: Aggregation
 ): boolean {
   // Count + sum should read like totals (integers), while count-persecond /
   // count-percent stay decimal.
@@ -192,7 +194,7 @@ function isCountIntegerDisplay(
 function formatNumber(
   value: number,
   measureType: MeasureType,
-  aggregation: MetricsAggregation,
+  aggregation: Aggregation,
   opts?: { preserveFractionalCountSum?: boolean }
 ): string {
   if (isCountIntegerDisplay(measureType, aggregation)) {
@@ -204,12 +206,12 @@ function formatNumber(
   return formatDecimal(value);
 }
 
-/** Chooses summary statistic columns for a given measure type. */
-function getStatColumns(measureType: MeasureType): StatColumn[] {
-  if (measureType === 'duration' || measureType === 'ratio') {
-    return ['avg', 'min', 'max'];
+/** Chooses summary statistic columns based on aggregation. */
+function getStatColumns(aggregation: Aggregation): StatColumn[] {
+  if (aggregation === 'sum') {
+    return ['total', 'avg', 'min', 'max'];
   }
-  return ['total', 'avg', 'min', 'max'];
+  return ['avg', 'min', 'max'];
 }
 
 /** Parses API cell values into finite numbers or null for missing/invalid. */
@@ -270,7 +272,7 @@ function formatStatCell(
   column: StatColumn,
   stats: GroupStats,
   measureType: MeasureType,
-  aggregation: MetricsAggregation,
+  aggregation: Aggregation,
   periodStart: Date,
   periodEnd: Date
 ): string {
@@ -636,7 +638,7 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
   const rows: Array<{ key: string; value: string }> = [
     {
       key: 'Metric',
-      value: `${opts.event} / ${opts.measure} ${opts.aggregation}`,
+      value: `${opts.metric} ${opts.aggregation}`,
     },
     {
       key: 'Period',
@@ -652,15 +654,15 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     rows.push({ key: 'Filter', value: opts.filter });
   }
 
-  if (opts.scope.type === 'project-with-slug') {
+  if (opts.scope.type === 'project') {
     rows.push({
       key: 'Project',
-      value: `${opts.projectName ?? opts.scope.projectName} (${opts.teamName ?? opts.scope.teamSlug})`,
+      value: `${opts.projectName ?? opts.scope.projectIds[0]} (${opts.teamName ?? opts.scope.ownerId})`,
     });
   } else {
     rows.push({
       key: 'Team',
-      value: `${opts.teamName ?? opts.scope.teamSlug} (all projects)`,
+      value: `${opts.teamName ?? opts.scope.ownerId} (all projects)`,
     });
   }
 
@@ -680,7 +682,7 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
 
 /** Renders the summary table section. */
 export function formatSummaryTable(opts: SummaryTableOptions): string {
-  const statColumns = getStatColumns(opts.measureType);
+  const statColumns = getStatColumns(opts.aggregation);
   const header = [...opts.groupByFields, ...statColumns];
   const rows: string[][] = [header.map(name => chalk.bold(chalk.cyan(name)))];
 
@@ -767,6 +769,38 @@ export function formatSparklineSection(
 }
 
 /**
+ * Computes the display unit and measure type based on the base unit and
+ * aggregation. Certain aggregations transform the output semantics:
+ * - `percent` → values are 0-100 percentages regardless of base unit
+ * - `persecond` → values are rates in base unit per second
+ * - `unique` → values are distinct counts, unit is hidden
+ * - all others → values stay in the original unit
+ */
+export function getEffectiveDisplay(
+  baseUnit: string | undefined,
+  aggregation: Aggregation
+): { displayUnit: string | undefined; measureType: MeasureType } {
+  switch (aggregation) {
+    case 'percent':
+      return { displayUnit: '%', measureType: 'ratio' };
+    case 'persecond': {
+      const label = baseUnit ? formatUnitLabel(baseUnit) : undefined;
+      return {
+        displayUnit: label ? `${label}/s` : undefined,
+        measureType: getMeasureType(baseUnit ?? 'ratio'),
+      };
+    }
+    case 'unique':
+      return { displayUnit: undefined, measureType: 'count' };
+    default:
+      return {
+        displayUnit: baseUnit,
+        measureType: getMeasureType(baseUnit ?? 'ratio'),
+      };
+  }
+}
+
+/**
  * Composes final text output:
  * metadata + summary table + sparklines.
  * If there is no data, returns metadata and a deterministic `No data` line.
@@ -775,12 +809,11 @@ export function formatText(
   response: MetricsQueryResponse,
   opts: FormatTextOptions
 ): string {
-  const rollupColumn = getRollupColumnName(opts.measure, opts.aggregation);
-  const measureSchema = getMeasures(opts.event).find(
-    m => m.name === opts.measure
+  const rollupColumn = getRollupColumnName(opts.metric, opts.aggregation);
+  const { displayUnit, measureType } = getEffectiveDisplay(
+    opts.metricUnit,
+    opts.aggregation
   );
-  const measureUnit = measureSchema?.unit;
-  const measureType = getMeasureType(measureUnit ?? 'ratio');
   const granularityMs = toGranularityMsFromDuration(opts.granularity);
 
   const { groups, series, groupValues } = extractGroupedSeries(
@@ -793,8 +826,7 @@ export function formatText(
   );
 
   const metadata = formatMetadataHeader({
-    event: opts.event,
-    measure: opts.measure,
+    metric: opts.metric,
     aggregation: opts.aggregation,
     periodStart: opts.periodStart,
     periodEnd: opts.periodEnd,
@@ -803,7 +835,7 @@ export function formatText(
     scope: opts.scope,
     projectName: opts.projectName,
     teamName: opts.teamName,
-    unit: measureUnit,
+    unit: displayUnit,
     groupCount: opts.groupBy.length > 0 ? groups.length : undefined,
   });
 

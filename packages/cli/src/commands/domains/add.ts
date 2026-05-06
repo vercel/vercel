@@ -22,6 +22,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { errorToString } from '@vercel/error-utils';
 import {
+  openUrlInBrowserCommand,
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
@@ -34,12 +35,6 @@ function withGlobalFlags(client: Client, commandTemplate: string): string {
 }
 
 const VERCEL_DOMAINS_DASHBOARD = 'https://vercel.com/dashboard/domains';
-
-function openUrlInBrowserCommand(url: string): string {
-  if (process.platform === 'win32') return `start ${url}`;
-  if (process.platform === 'darwin') return `open '${url}'`;
-  return `xdg-open '${url}'`;
-}
 
 /**
  * Extra next[] entries when add fails—often user doesn't own the domain yet

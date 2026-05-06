@@ -4,6 +4,10 @@ import ms from 'ms';
 import { randomBytes } from 'crypto';
 import nodeFetch from 'node-fetch';
 import type { Service } from '@vercel/fs-detectors';
+import {
+  getServiceQueueTopicConfigs,
+  isQueueTriggeredService,
+} from '@vercel/build-utils';
 import output from '../../output-manager';
 
 interface StoredMessage {
@@ -16,6 +20,7 @@ interface StoredMessage {
 }
 
 interface ConsumerGroup {
+  id: string;
   name: string;
   topicPattern: string;
   topicRegex: RegExp;
@@ -30,9 +35,18 @@ type DeliveryStatus = 'pending' | 'in-flight' | 'acked';
 interface DeliveryState {
   status: DeliveryStatus;
   deliveryCount: number;
-  ticket: string;
+  receiptHandle: string;
   visibleAt: number;
   leaseExpiresAt: number;
+}
+
+export interface ReceivedMessage {
+  messageId: string;
+  payload: Buffer;
+  contentType: string;
+  deliveryCount: number;
+  createdAt: string;
+  receiptHandle: string;
 }
 
 const DEFAULT_RETRY_AFTER = ms('1m');
@@ -69,21 +83,32 @@ export class QueueBroker {
     private getServiceOrigin: (name: string) => string | null
   ) {
     for (const service of services) {
-      if (service.type !== 'worker') continue;
+      if (!isQueueTriggeredService(service)) continue;
 
-      const topicPattern = service.topic || 'default';
-      const group: ConsumerGroup = {
-        name: service.name,
-        topicPattern,
-        topicRegex: topicPatternToRegex(topicPattern),
-        serviceOriginFn: () => this.getServiceOrigin(service.name),
-        retryAfterMs: DEFAULT_RETRY_AFTER,
-        maxDeliveries: DEFAULT_MAX_DELIVERIES,
-        initialDelayMs: DEFAULT_INITIAL_DELAY,
-      };
+      const topicConfigs = getServiceQueueTopicConfigs(service);
+      for (const topicConfig of topicConfigs) {
+        const topicPattern = topicConfig.topic;
+        const id = `${service.name}::${topicPattern}`;
+        const group: ConsumerGroup = {
+          id,
+          name: service.name,
+          topicPattern,
+          topicRegex: topicPatternToRegex(topicPattern),
+          serviceOriginFn: () => this.getServiceOrigin(service.name),
+          retryAfterMs:
+            topicConfig.retryAfterSeconds !== undefined
+              ? topicConfig.retryAfterSeconds * 1000
+              : DEFAULT_RETRY_AFTER,
+          maxDeliveries: DEFAULT_MAX_DELIVERIES,
+          initialDelayMs:
+            topicConfig.initialDelaySeconds !== undefined
+              ? topicConfig.initialDelaySeconds * 1000
+              : DEFAULT_INITIAL_DELAY,
+        };
 
-      this.consumerGroups.push(group);
-      this.deliveryState.set(group.name, new Map());
+        this.consumerGroups.push(group);
+        this.deliveryState.set(group.id, new Map());
+      }
     }
 
     this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
@@ -128,7 +153,7 @@ export class QueueBroker {
     }
 
     for (const group of matchingGroups) {
-      const groupDeliveries = this.deliveryState.get(group.name)!;
+      const groupDeliveries = this.deliveryState.get(group.id)!;
       const delayMs = delaySeconds > 0 ? delaySeconds * 1000 : 0;
       const effectiveDelayMs = Math.max(delayMs, group.initialDelayMs);
       const visibleAt =
@@ -137,7 +162,7 @@ export class QueueBroker {
       groupDeliveries.set(messageId, {
         status: 'pending',
         deliveryCount: 0,
-        ticket: '',
+        receiptHandle: '',
         visibleAt,
         leaseExpiresAt: 0,
       });
@@ -156,45 +181,95 @@ export class QueueBroker {
   receiveById(
     messageId: string,
     consumerGroup: string
-  ): {
-    payload: Buffer;
-    contentType: string;
-    deliveryCount: number;
-    createdAt: string;
-    ticket: string;
-  } | null {
+  ): ReceivedMessage | null {
     const message = this.messages.get(messageId);
     if (!message) return null;
 
-    const groupDeliveries = this.deliveryState.get(consumerGroup);
-    if (!groupDeliveries) return null;
-
-    const state = groupDeliveries.get(messageId);
+    const { state } = this.findDeliveryState(messageId, consumerGroup);
     if (!state) return null;
 
     return {
+      messageId: message.messageId,
       payload: message.payload,
       contentType: message.contentType,
       deliveryCount: state.deliveryCount,
       createdAt: message.createdAt,
-      ticket: state.ticket,
+      receiptHandle: state.receiptHandle,
     };
+  }
+
+  receiveMessages(
+    queueName: string,
+    consumerGroup: string,
+    options?: {
+      limit?: number;
+      visibilityTimeoutSeconds?: number;
+    }
+  ): ReceivedMessage[] {
+    const group = this.consumerGroups.find(g => g.name === consumerGroup);
+    if (!group) return [];
+
+    const groupDeliveries = this.deliveryState.get(group.id);
+    if (!groupDeliveries) return [];
+
+    const now = Date.now();
+    const limit = Math.min(Math.max(options?.limit ?? 1, 1), 10);
+    const visibilityTimeoutMs =
+      (options?.visibilityTimeoutSeconds ?? DEFAULT_VISIBILITY_TIMEOUT / 1000) *
+      1000;
+    const results: ReceivedMessage[] = [];
+
+    for (const [messageId, state] of groupDeliveries) {
+      const message = this.messages.get(messageId);
+      if (!message) {
+        groupDeliveries.delete(messageId);
+        continue;
+      }
+
+      if (
+        message.queueName !== queueName ||
+        state.status !== 'pending' ||
+        state.visibleAt > now
+      ) {
+        continue;
+      }
+
+      // Lease the message
+      const receiptHandle = randomBytes(16).toString('hex');
+      state.status = 'in-flight';
+      state.receiptHandle = receiptHandle;
+      state.deliveryCount++;
+      state.leaseExpiresAt = Date.now() + visibilityTimeoutMs;
+
+      results.push({
+        messageId: message.messageId,
+        payload: message.payload,
+        contentType: message.contentType,
+        deliveryCount: state.deliveryCount,
+        createdAt: message.createdAt,
+        receiptHandle,
+      });
+
+      if (results.length >= limit) break;
+    }
+
+    return results;
   }
 
   acknowledge(
     messageId: string,
     consumerGroup: string,
-    ticket: string
+    receiptHandle: string
   ): boolean {
-    const groupDeliveries = this.deliveryState.get(consumerGroup);
-    if (!groupDeliveries) return false;
+    const { deliveries: groupDeliveries, state } = this.findDeliveryState(
+      messageId,
+      consumerGroup
+    );
+    if (!groupDeliveries || !state) return false;
 
-    const state = groupDeliveries.get(messageId);
-    if (!state) return false;
-
-    if (state.ticket && state.ticket !== ticket) {
+    if (state.receiptHandle && state.receiptHandle !== receiptHandle) {
       output.debug(
-        `queues: ACK rejected for ${messageId} in group "${consumerGroup}" - ticket mismatch`
+        `queues: ACK rejected for ${messageId} in group "${consumerGroup}" - receipt handle mismatch`
       );
       return false;
     }
@@ -213,16 +288,14 @@ export class QueueBroker {
   changeVisibility(
     messageId: string,
     consumerGroup: string,
-    ticket: string,
+    receiptHandle: string,
     timeoutSeconds: number
   ): boolean {
-    const groupDeliveries = this.deliveryState.get(consumerGroup);
-    if (!groupDeliveries) return false;
-
-    const state = groupDeliveries.get(messageId);
+    const { state } = this.findDeliveryState(messageId, consumerGroup);
     if (!state || state.status !== 'in-flight') return false;
 
-    if (state.ticket && state.ticket !== ticket) return false;
+    if (state.receiptHandle && state.receiptHandle !== receiptHandle)
+      return false;
 
     state.leaseExpiresAt = Date.now() + timeoutSeconds * 1000;
     output.debug(
@@ -231,11 +304,47 @@ export class QueueBroker {
     return true;
   }
 
+  findMessageIdByReceiptHandle(
+    consumerGroup: string,
+    receiptHandle: string
+  ): string | null {
+    for (const group of this.consumerGroups) {
+      if (group.name !== consumerGroup) continue;
+
+      const deliveries = this.deliveryState.get(group.id);
+      if (!deliveries) continue;
+
+      for (const [messageId, state] of deliveries) {
+        if (state.receiptHandle === receiptHandle) {
+          return messageId;
+        }
+      }
+    }
+    return null;
+  }
+
+  private findDeliveryState(
+    messageId: string,
+    serviceName: string
+  ): {
+    deliveries: Map<string, DeliveryState> | null;
+    state: DeliveryState | null;
+  } {
+    for (const group of this.consumerGroups) {
+      if (group.name !== serviceName) continue;
+      const deliveries = this.deliveryState.get(group.id);
+      if (!deliveries) continue;
+      const state = deliveries.get(messageId);
+      if (state) return { deliveries, state };
+    }
+    return { deliveries: null, state: null };
+  }
+
   private async dispatchToConsumer(
     message: StoredMessage,
     group: ConsumerGroup
   ): Promise<void> {
-    const groupDeliveries = this.deliveryState.get(group.name);
+    const groupDeliveries = this.deliveryState.get(group.id);
     if (!groupDeliveries) return;
 
     const state = groupDeliveries.get(message.messageId);
@@ -257,35 +366,41 @@ export class QueueBroker {
       return;
     }
 
-    const ticket = randomBytes(16).toString('hex');
+    const receiptHandle = randomBytes(16).toString('hex');
     state.status = 'in-flight';
-    state.ticket = ticket;
+    state.receiptHandle = receiptHandle;
     state.deliveryCount++;
     state.leaseExpiresAt = Date.now() + DEFAULT_VISIBILITY_TIMEOUT;
 
-    const cloudEvent = JSON.stringify({
-      type: 'com.vercel.queue.v1beta',
-      specversion: '1.0',
-      source: 'vc-dev',
-      id: message.messageId,
-      time: new Date().toISOString(),
-      datacontenttype: 'application/json',
-      data: {
-        queueName: message.queueName,
-        consumerGroup: group.name,
-        messageId: message.messageId,
-      },
-    });
+    const now = new Date().toISOString();
+    const expiresAt = new Date(
+      new Date(message.createdAt).getTime() + message.retentionMs
+    ).toISOString();
 
     output.debug(
-      `queues: dispatching CloudEvent to worker "${group.name}" at ${upstream}`
+      `queues: dispatching v2beta callback to worker "${group.name}" at ${upstream}`
     );
 
     try {
       const response = await nodeFetch(`${upstream}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/cloudevents+json' },
-        body: cloudEvent,
+        headers: {
+          'content-type': message.contentType,
+          'ce-type': 'com.vercel.queue.v2beta',
+          'ce-specversion': '1.0',
+          'ce-source': `/topic/${message.queueName}/consumer/${group.name}`,
+          'ce-id': message.messageId,
+          'ce-time': now,
+          'ce-vqsmessageid': message.messageId,
+          'ce-vqsqueuename': message.queueName,
+          'ce-vqsconsumergroup': group.name,
+          'ce-vqsreceipthandle': receiptHandle,
+          'ce-vqsdeliverycount': String(state.deliveryCount),
+          'ce-vqscreatedat': message.createdAt,
+          'ce-vqsexpiresat': expiresAt,
+          'ce-vqsregion': 'dev1',
+        },
+        body: message.payload,
       });
 
       if (!response.ok) {
@@ -303,7 +418,7 @@ export class QueueBroker {
   }
 
   private handleDeliveryFailure(messageId: string, group: ConsumerGroup): void {
-    const groupDeliveries = this.deliveryState.get(group.name);
+    const groupDeliveries = this.deliveryState.get(group.id);
     if (!groupDeliveries) return;
 
     const state = groupDeliveries.get(messageId);
@@ -318,7 +433,7 @@ export class QueueBroker {
     const now = Date.now();
 
     for (const group of this.consumerGroups) {
-      const groupDeliveries = this.deliveryState.get(group.name);
+      const groupDeliveries = this.deliveryState.get(group.id);
       if (!groupDeliveries) continue;
 
       for (const [messageId, state] of groupDeliveries) {

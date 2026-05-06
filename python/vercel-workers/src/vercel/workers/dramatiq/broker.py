@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, cast
 
+from .. import _queue
 from ..client import send
 
 try:
+    import dramatiq
     from dramatiq.broker import Broker, Consumer, MessageProxy
-    from dramatiq.common import current_millis, dq_name
+    from dramatiq.common import current_millis
+    from dramatiq.encoder import Encoder
     from dramatiq.message import Message
 except Exception as e:
     raise RuntimeError(
@@ -20,10 +23,33 @@ except Exception as e:
 
 
 __all__ = [
+    "VercelDramatiqEncoder",
     "VercelQueuesBroker",
     "VercelQueuesBrokerOptions",
     "DramatiqTaskEnvelope",
 ]
+
+
+class VercelDramatiqEncoder(Encoder):
+    """Dramatiq message encoder that handles common Python types."""
+
+    _json_encoder: type[json.JSONEncoder]
+
+    def __init__(self, json_encoder: type[json.JSONEncoder] | None = None) -> None:
+        self._json_encoder = json_encoder or _queue.WorkerJSONEncoder
+
+    def encode(self, data: dict[str, Any]) -> bytes:
+        return json.dumps(
+            data,
+            cls=self._json_encoder,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+    def decode(self, data: bytes) -> dict[str, Any]:
+        try:
+            return json.loads(data.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise dramatiq.DecodeError(f"could not decode message: {data!r}", data, e) from None
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,8 +62,8 @@ class VercelQueuesBrokerOptions:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention_seconds: int | None = None
-    deployment_id: str | None = None
+    retention: _queue.Duration | None = None
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
     # Consumption defaults (serverless callback / local polling)
@@ -47,8 +73,8 @@ class VercelQueuesBrokerOptions:
     # Use message_id as idempotency key by default
     use_message_id_as_idempotency_key: bool = True
 
-    # Use custom JSON encoder class to send data
-    json_encoder: type[json.JSONEncoder] | None = None
+    # Custom dramatiq Encoder instance (overrides the default VercelDramatiqEncoder)
+    encoder: Encoder | None = None
 
     @classmethod
     def from_dict(cls, options: dict[str, Any]) -> VercelQueuesBrokerOptions:
@@ -69,10 +95,12 @@ class VercelQueuesBrokerOptions:
         if isinstance(base_path, str) and base_path:
             cfg = replace(cfg, base_path=base_path)
 
-        retention = options.get("retention_seconds")
-        if isinstance(retention, int):
-            cfg = replace(cfg, retention_seconds=retention)
+        retention = options.get("retention")
+        if _queue.is_duration(retention):
+            cfg = replace(cfg, retention=retention)
 
+        if "deployment_id" in options and options.get("deployment_id") is None:
+            cfg = replace(cfg, deployment_id=None)
         deployment_id = options.get("deployment_id")
         if isinstance(deployment_id, str) and deployment_id:
             cfg = replace(cfg, deployment_id=deployment_id)
@@ -93,9 +121,9 @@ class VercelQueuesBrokerOptions:
         if isinstance(use_msg_id, bool):
             cfg = replace(cfg, use_message_id_as_idempotency_key=use_msg_id)
 
-        json_encoder = options.get("json_encoder")
-        if isinstance(json_encoder, type) and issubclass(json_encoder, json.JSONEncoder):
-            cfg = replace(cfg, json_encoder=json_encoder)
+        encoder = options.get("encoder")
+        if isinstance(encoder, Encoder):
+            cfg = replace(cfg, encoder=encoder)
 
         return cfg
 
@@ -120,20 +148,24 @@ class DramatiqTaskEnvelope(dict):
     pass
 
 
-def _message_to_envelope(message: Message, queue_name: str) -> DramatiqTaskEnvelope:
+def _message_to_envelope(
+    message: Message,
+    queue_name: str,
+    encoder: Encoder | None = None,
+) -> DramatiqTaskEnvelope:
     """
     Convert a Dramatiq Message to a Vercel Queues envelope.
+
+    Serialization goes through the provided `encoder` or the global
+    dramatiq encoder when `encoder` is None so that ephemeral
+    options and custom types are handled correctly.
     """
-    return DramatiqTaskEnvelope(
-        vercel={"kind": "dramatiq", "version": 1},
-        queue_name=queue_name,
-        actor_name=message.actor_name,
-        message_id=message.message_id,
-        message_timestamp=message.message_timestamp,
-        args=list(message.args) if message.args else [],
-        kwargs=dict(message.kwargs) if message.kwargs else {},
-        options=dict(message.options) if message.options else {},
-    )
+    if encoder is None:
+        encoder = dramatiq.get_encoder()
+    data = json.loads(encoder.encode(message.asdict()))
+    data["queue_name"] = queue_name
+    data["vercel"] = {"kind": "dramatiq", "version": 1}
+    return DramatiqTaskEnvelope(data)
 
 
 def _envelope_to_message(envelope: dict[str, Any]) -> Message:
@@ -222,6 +254,11 @@ class VercelQueuesBroker(Broker):
         # may call get_declared_queues() during initialization.
         self._queues: set[str] = set()
         self._cfg = VercelQueuesBrokerOptions.from_dict(options or {})
+
+        # Per-instance encoder that handles UUID, datetime, Decimal out of
+        # the box.
+        self.encoder: Encoder = self._cfg.encoder or VercelDramatiqEncoder()
+
         super().__init__(middleware=middleware)
 
     @property
@@ -281,11 +318,11 @@ class VercelQueuesBroker(Broker):
         """
         queue_name = message.queue_name
 
-        # Handle delay queues (Dramatiq uses separate delay queues)
+        # Handle delayed messages. Usually Dramatiq uses separate
+        # ".DQ" delay queues, but Vercel Queues handles delays natively
+        # via eta, so no need for a separate queue name.
         if delay is not None and delay > 0:
-            queue_name = dq_name(queue_name)
             message = message.copy(
-                queue_name=queue_name,
                 options={
                     **message.options,
                     "eta": current_millis() + delay,
@@ -294,12 +331,15 @@ class VercelQueuesBroker(Broker):
 
         self.emit_before("enqueue", message, delay)
 
-        envelope = _message_to_envelope(message, queue_name)
+        envelope = _message_to_envelope(message, queue_name, encoder=self.encoder)
 
         # Use message_id for idempotency by default
         idempotency_key = (
             message.message_id if self._cfg.use_message_id_as_idempotency_key else None
         )
+
+        # Compute send-time delay from the delay parameter (milliseconds).
+        delay_duration = int(delay / 1000) if delay and delay > 0 else None
 
         if os.environ.get("VWD_DEBUG_PUBLISH") not in {None, "", "0", "false", "FALSE"}:
             try:
@@ -314,13 +354,13 @@ class VercelQueuesBroker(Broker):
             queue_name,
             envelope,
             idempotency_key=idempotency_key,
-            retention_seconds=self._cfg.retention_seconds,
+            retention=self._cfg.retention,
+            delay=delay_duration,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,
             base_path=self._cfg.base_path,
             timeout=self._cfg.timeout,
-            json_encoder=self._cfg.json_encoder,
         )
 
         self.emit_after("enqueue", message, delay)
@@ -344,15 +384,19 @@ class VercelQueuesBroker(Broker):
 
     def get_declared_actors(self) -> set[str]:
         """Get the set of declared actor names."""
-        return set()
+        actors = cast("Mapping[str, object]", self.actors)
+        return set(actors)
 
     def get_declared_queues(self) -> set[str]:
         """Get the set of declared queue names."""
         return self._queues.copy()
 
     def get_declared_delay_queues(self) -> set[str]:
-        """Get the set of declared delay queue names."""
-        return {dq_name(q) for q in self._queues}
+        """Get the set of declared delay queue names.
+
+        Note: Vercel Queues handles delays natively using the original queue.
+        """
+        return set()
 
     def join(self, queue_name: str, *, timeout: int | None = None) -> None:
         """

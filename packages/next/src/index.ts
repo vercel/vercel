@@ -44,6 +44,7 @@ import { Sema } from 'async-sema';
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
 import {
+  copy,
   lstat,
   pathExists,
   readdir,
@@ -589,6 +590,28 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   if (buildOutputVersion) {
+    // Files generated into public/ after `next build` (e.g. service workers
+    // from Serwist) won't be in .vercel/output/static/ yet because Next.js
+    // only copies public/ at build-start.  Sync any missing files now so
+    // they are included in the deploy.
+    const publicDir = path.join(entryPath, 'public');
+    const staticOutputDir = path.join(
+      entryPath,
+      outputDirectory,
+      'output/static'
+    );
+
+    if (await pathExists(publicDir)) {
+      const publicFiles = await glob('**/*', publicDir);
+      for (const fileName of Object.keys(publicFiles)) {
+        const destPath = path.join(staticOutputDir, fileName);
+        if (!(await pathExists(destPath))) {
+          const srcPath = publicFiles[fileName].fsPath;
+          await copy(srcPath, destPath);
+        }
+      }
+    }
+
     return {
       buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,

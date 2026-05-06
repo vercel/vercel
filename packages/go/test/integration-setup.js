@@ -6,7 +6,7 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(4 * 60 * 1000);
+vi.setConfig({ testTimeout: 4 * 60 * 1000, hookTimeout: 4 * 60 * 1000 });
 
 module.exports = function setupTests(groupIndex) {
   const fixturesPath = path.resolve(__dirname, 'fixtures');
@@ -19,7 +19,7 @@ module.exports = function setupTests(groupIndex) {
   }
 
   for (const fixture of fixtures) {
-    it(`should build ${fixture}`, async () => {
+    it.concurrent(`should build ${fixture}`, async () => {
       await expect(
         testDeployment(path.join(fixturesPath, fixture))
       ).resolves.toBeDefined();

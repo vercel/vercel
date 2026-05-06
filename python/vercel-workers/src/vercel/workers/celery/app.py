@@ -8,20 +8,16 @@ from .. import callback as queue_callback
 from ..asgi import build_asgi_app
 from ..exceptions import VQSError
 from ..wsgi import build_wsgi_app, status_reason
-from .transport import TransportConfig, install_kombu_transport_alias
+from .transport import TransportConfig
 from .utils import _execute_envelope
-from .worker import PollingWorker as _PollingWorker, resolve_queue_name
 
 try:
     from celery import Celery as CeleryApp  # type: ignore[import-untyped]
 except Exception as e:
     raise RuntimeError(
-        "celery is required to use vercel.workers.celery.Celery. "
+        "celery is required to use vercel.workers.celery. "
         "Install it with `pip install 'vercel-workers[celery]'` or `pip install celery`.",
     ) from e
-
-DEFAULT_BROKER_ALIAS = "vercelqueue"
-
 
 ASGI = Callable[
     [
@@ -34,122 +30,26 @@ ASGI = Callable[
 WSGI = Callable[[dict[str, Any], Callable[..., Any]], list[bytes]]
 
 
-class Celery(CeleryApp):
-    """
-    Drop-in replacement for :class:`celery.Celery` that defaults to Vercel Queues.
-
-    Usage (same shape as Celery):
-        from vercel.workers.celery import Celery
-        app = Celery("myapp")  # broker defaults to vercelqueue://
-
-    Notes:
-    - If you pass an explicit broker (positional or keyword), it will be respected.
-    - This installs the Kombu transport alias automatically so the broker scheme resolves.
-    """
-
-    def __init__(
-        self,
-        *args: Any,
-        broker_alias: str = DEFAULT_BROKER_ALIAS,
-        configure_defaults: bool = True,
-        queue_name: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        # Ensure the broker scheme resolves before constructing the Celery app.
-        install_kombu_transport_alias(alias=broker_alias)
-
-        args_list = list(args)
-        if "broker" in kwargs:
-            kwargs["broker"] = (
-                broker_url(alias=broker_alias) if kwargs["broker"] is None else kwargs["broker"]
-            )
-        elif len(args_list) >= 2:
-            args_list[1] = broker_url(alias=broker_alias) if args_list[1] is None else args_list[1]
-        else:
-            # No broker provided (positional or keyword): default to vercelqueue://
-            kwargs["broker"] = broker_url(alias=broker_alias)
-
-        super().__init__(*args_list, **kwargs)
-
-        if configure_defaults:
-            # Only allow JSON (avoid pickle), UTC timezone
-            self.conf.update(
-                task_serializer="json",
-                accept_content=["json"],
-                result_serializer="json",
-                enable_utc=True,
-                timezone="UTC",
-            )
-
-        if queue_name:
-            self.conf.task_default_queue = queue_name
-
-    def PollingWorker(
-        self,
-        *,
-        queue_name: str | None = None,
-        consumer_group: str = "default",
-        limit: int = 1,
-        visibility_timeout_seconds: int = 60,
-        poll_interval_seconds: float = 1.0,
-        on_error_visibility_timeout_seconds: int | None = None,
-        timeout: float | None = 10.0,
-        debug: bool = False,
-        crash_on_error: bool = False,
-        ack_on_error: bool = False,
-    ) -> _PollingWorker:
-        """
-        Construct a local polling worker bound to this Celery app.
-
-        This is intended for local development or non-serverless environments.
-        """
-
-        return _PollingWorker(
-            self,
-            queue_name=resolve_queue_name(self, queue_name),
-            consumer_group=consumer_group,
-            limit=limit,
-            visibility_timeout_seconds=visibility_timeout_seconds,
-            poll_interval_seconds=poll_interval_seconds,
-            on_error_visibility_timeout_seconds=on_error_visibility_timeout_seconds,
-            timeout=timeout,
-            debug=debug,
-            crash_on_error=crash_on_error,
-            ack_on_error=ack_on_error,
-        )
-
-    def get_wsgi_app(self) -> WSGI:
-        """Return a WSGI app that executes Celery tasks from Vercel Queue callbacks."""
-
-        return build_wsgi_app(lambda raw_body: handle_queue_callback(self, raw_body))
-
-    def get_asgi_app(self) -> ASGI:
-        """Return an ASGI app that executes Celery tasks from Vercel Queue callbacks."""
-
-        return build_asgi_app(lambda raw_body: handle_queue_callback(self, raw_body))
-
-
 def get_wsgi_app(celery_app: CeleryApp) -> WSGI:
     """Return a WSGI app that executes Celery tasks from Vercel Queue callbacks."""
 
-    return build_wsgi_app(lambda raw_body: handle_queue_callback(celery_app, raw_body))
+    return build_wsgi_app(
+        lambda raw_body, environ: handle_queue_callback(celery_app, raw_body, environ)
+    )
 
 
 def get_asgi_app(celery_app: CeleryApp) -> ASGI:
     """Return an ASGI app that executes Celery tasks from Vercel Queue callbacks."""
 
-    return build_asgi_app(lambda raw_body: handle_queue_callback(celery_app, raw_body))
-
-
-def broker_url(alias: str = "vercelqueue") -> str:
-    """Return the broker URL for the installed Kombu transport alias."""
-
-    return f"{alias}://"
+    return build_asgi_app(
+        lambda raw_body, environ: handle_queue_callback(celery_app, raw_body, environ)
+    )
 
 
 def handle_queue_callback(
     celery_app: CeleryApp,
     raw_body: bytes,
+    environ: dict[str, Any] | None = None,
 ) -> tuple[int, list[tuple[str, str]], bytes]:
     """
     Core callback handler shared by WSGI/ASGI wrappers.
@@ -159,27 +59,43 @@ def handle_queue_callback(
 
     extender: queue_callback.VisibilityExtender | None = None
     try:
-        queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
-
         conf = getattr(celery_app, "conf", None)
         transport_options = getattr(conf, "broker_transport_options", None)
         cfg = TransportConfig.from_transport_options(
             transport_options if isinstance(transport_options, dict) else {},
         )
 
-        payload, delivery_count, created_at, ticket = queue_callback.receive_message_by_id(
-            queue_name,
-            consumer_group,
-            message_id,
-            visibility_timeout_seconds=cfg.visibility_timeout_seconds,
-            timeout=cfg.timeout,
-        )
+        is_v2beta = queue_callback.is_v2beta_callback(environ or {})
+
+        if is_v2beta:
+            v2 = queue_callback.parse_v2beta_callback(raw_body, environ or {})
+            queue_name = v2["queueName"]
+            consumer_group = v2["consumerGroup"]
+            message_id = v2["messageId"]
+            receipt_handle = v2["receiptHandle"]
+            delivery_count = v2["deliveryCount"]
+            created_at = v2["createdAt"]
+            payload: Any = v2["payload"]
+        else:
+            queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
+            (
+                payload,
+                delivery_count,
+                created_at,
+                receipt_handle,
+            ) = queue_callback.receive_message_by_id(
+                queue_name,
+                consumer_group,
+                message_id,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
 
         extender = queue_callback.VisibilityExtender(
             queue_name,
             consumer_group,
             message_id,
-            ticket,
+            receipt_handle,
             visibility_timeout_seconds=cfg.visibility_timeout_seconds,
             refresh_interval_seconds=cfg.visibility_refresh_interval_seconds,
             timeout=cfg.timeout,
@@ -191,7 +107,7 @@ def handle_queue_callback(
         timeout_seconds = outcome.get("timeoutSeconds")
 
         # Ack or delay
-        if ticket:
+        if receipt_handle:
             if timeout_seconds is not None:
                 if extender is not None:
                     extender.finalize(
@@ -199,7 +115,7 @@ def handle_queue_callback(
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             int(timeout_seconds),
                             timeout=cfg.timeout,
                         ),
@@ -209,7 +125,7 @@ def handle_queue_callback(
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         int(timeout_seconds),
                         timeout=cfg.timeout,
                     )
@@ -220,7 +136,7 @@ def handle_queue_callback(
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             timeout=cfg.timeout,
                         ),
                     )
@@ -229,7 +145,7 @@ def handle_queue_callback(
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         timeout=cfg.timeout,
                     )
 

@@ -1,5 +1,10 @@
 import { frameworkList } from '@vercel/frameworks';
 import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
+import {
+  getServiceQueueTopics,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
+} from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
 
@@ -63,12 +68,24 @@ interface ServiceDescriptionInfo {
   colorFn: (text: string) => string;
 }
 
+const jobTriggerLabels: Record<string, string> = {
+  queue: 'Job/Queue',
+  schedule: 'Job/Schedule',
+  workflow: 'Job/Workflow',
+};
+
 function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
-  // Cron and worker services aren't framework apps, so we'll just show type + runtime for them
-  // e.g. [Cron/Python] or [Worker/Python]
-  if (service.type === 'cron' || service.type === 'worker') {
-    const typeLabel = service.type === 'cron' ? 'Cron' : 'Worker';
-    const typeColorFn = service.type === 'cron' ? chalk.yellow : chalk.magenta;
+  if (
+    service.type === 'worker' ||
+    service.type === 'job' ||
+    service.type === 'cron'
+  ) {
+    const typeLabel =
+      service.type === 'worker'
+        ? 'Worker'
+        : (jobTriggerLabels[service.trigger ?? ''] ?? 'Job');
+    const typeColorFn = service.type === 'worker' ? chalk.magenta : chalk.cyan;
+
     if (service.runtime) {
       const runtimeName =
         service.runtime.charAt(0).toUpperCase() + service.runtime.slice(1);
@@ -96,16 +113,22 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
 }
 
 function getServiceTarget(service: Service): string {
-  switch (service.type) {
-    case 'cron':
-      return `schedule: ${service.schedule ?? 'none'}`;
-    case 'worker':
-      return `topic: ${service.topic ?? 'none'}`;
-    default:
-      return service.routePrefix
-        ? formatRoutePrefix(service.routePrefix)
-        : 'no route';
+  if (isScheduleTriggeredService(service)) {
+    return `schedule: ${service.schedule ?? 'none'}`;
   }
+
+  if (isQueueTriggeredService(service)) {
+    const topics = getServiceQueueTopics(service);
+    return `topics: ${topics.join(', ')}`;
+  }
+
+  if (service.type === 'job' && service.trigger === 'workflow') {
+    return 'workflow';
+  }
+
+  return service.routePrefix
+    ? formatRoutePrefix(service.routePrefix)
+    : 'no route';
 }
 
 /**
@@ -114,12 +137,17 @@ function getServiceTarget(service: Service): string {
  *   frontend          [Next.js]   →  /
  *   api               [python]    →  /api/*
  *   cleanup           [node]      →  schedule: 0 0 * * *
- *   processor         [node]      →  topic: jobs
+ *   processor         [node]      →  topics: jobs
  */
 export function displayDetectedServices(services: Service[]): void {
   output.print(`Detected services:\n`);
 
-  const outputOrder: Record<string, number> = { web: 0, cron: 1, worker: 2 };
+  const outputOrder: Record<string, number> = {
+    web: 0,
+    cron: 1,
+    job: 1,
+    worker: 2,
+  };
   const sorted = [...services].sort(
     (a, b) => (outputOrder[a.type] ?? 3) - (outputOrder[b.type] ?? 3)
   );
@@ -140,8 +168,12 @@ export function displayDetectedServices(services: Service[]): void {
   output.print(`${tableOutput}\n`);
 }
 
-export function displayServicesConfigNote(): void {
-  output.print(`\n${chalk.dim('Services are configured via vercel.json.')}\n`);
+export function displayServicesConfigNote(
+  configFileName = 'vercel.json'
+): void {
+  output.print(
+    `\n${chalk.dim(`Services are configured via ${configFileName}.`)}\n`
+  );
 }
 
 export function displayServiceErrors(errors: ServiceDetectionError[]): void {

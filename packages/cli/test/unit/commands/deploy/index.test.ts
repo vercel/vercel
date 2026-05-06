@@ -55,6 +55,32 @@ describe('deploy', () => {
       logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
+
+    it('outputs error JSON when deploy continue is missing --id', async () => {
+      vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', 'continue');
+      const exitCodePromise = deploy(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_id',
+        message: expect.stringMatching(/--id|required/),
+        next: expect.any(Array),
+      });
+
+      vi.restoreAllMocks();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
   });
 
   describe('--help', () => {
@@ -303,8 +329,138 @@ describe('deploy', () => {
         key: 'option:archive',
         value: 'tgz',
       },
+      { key: 'target_environment', value: 'preview' },
       { key: 'output:deployment-id', value: 'dpl_archive_test' },
     ]);
+  });
+
+  it('should send a tgz file when `deploy continue --archive=tgz`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static-with-build-output');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--archive=tgz'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    const fileNames = body?.files?.map((f: any) => f.file);
+    expect(fileNames).toContain('.vercel/source.tgz.part1');
+    expect(fileNames).toContain('.vercel/output/provision.json');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:continue',
+        value: 'continue',
+      },
+      {
+        key: 'option:archive',
+        value: 'tgz',
+      },
+    ]);
+  });
+
+  it('should mark a manual deployment as errored with `deploy continue --error`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    let teamId: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      teamId = req.query.teamId;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        inspectorUrl: 'https://vercel.com/test/continue',
+        readyState: 'ERROR',
+        errorCode: 'BUILD_FAILED',
+        errorMessage: body.errorMessage,
+        aliasAssigned: false,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--error',
+      'External CI failed'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toEqual({ errorMessage: 'External CI failed' });
+    expect(teamId).toEqual('team_dummy');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:continue',
+        value: 'continue',
+      },
+    ]);
+  });
+
+  it('should mark a manual deployment as errored with `deploy continue --error=...`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        readyState: 'ERROR',
+        errorCode: 'BUILD_FAILED',
+        errorMessage: body.errorMessage,
+        aliasAssigned: false,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--error=External CI failed'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toEqual({ errorMessage: 'External CI failed' });
   });
 
   it('should pass flag to skip custom domain assignment', async () => {
@@ -356,6 +512,7 @@ describe('deploy', () => {
         key: 'flag:skip-domain',
         value: 'TRUE',
       },
+      { key: 'target_environment', value: 'production' },
       { key: 'output:deployment-id', value: 'dpl_archive_test' },
     ]);
   });
@@ -793,6 +950,7 @@ describe('deploy', () => {
           key: 'flag:logs',
           value: 'TRUE',
         },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: expect.any(String) },
       ]);
     });
@@ -880,6 +1038,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:force', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -897,6 +1056,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:with-cache', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -914,6 +1074,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:public', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -933,6 +1094,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:env', value: '[REDACTED]' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -958,6 +1120,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:build-env', value: '[REDACTED]' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -977,6 +1140,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:meta', value: '[REDACTED]' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -996,6 +1160,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:regions', value: '[REDACTED]' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1016,6 +1181,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:prebuilt', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1033,6 +1199,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:archive', value: 'tgz' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1050,6 +1217,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:archive', value: 'split-tgz' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1069,6 +1237,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:no-wait', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1110,6 +1279,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:prod', value: 'TRUE' },
         { key: 'flag:skip-domain', value: 'TRUE' },
+        { key: 'target_environment', value: 'production' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1131,6 +1301,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:target', value: 'production' },
         { key: 'flag:skip-domain', value: 'TRUE' },
+        { key: 'target_environment', value: 'production' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1150,6 +1321,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:yes', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1169,6 +1341,7 @@ describe('deploy', () => {
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:logs', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1180,6 +1353,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:guidance', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1191,6 +1365,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:name', value: '[REDACTED]' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1202,6 +1377,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:no-clipboard', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1225,6 +1401,7 @@ describe('deploy', () => {
           key: 'option:target',
           value: 'preview',
         },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1248,6 +1425,7 @@ describe('deploy', () => {
           key: 'option:target',
           value: 'production',
         },
+        { key: 'target_environment', value: 'production' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1271,6 +1449,7 @@ describe('deploy', () => {
           key: 'option:target',
           value: '[REDACTED]',
         },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
@@ -1294,8 +1473,36 @@ describe('deploy', () => {
           key: 'flag:prod',
           value: 'TRUE',
         },
+        { key: 'target_environment', value: 'production' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
+    });
+    it('--prod with --non-interactive', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            target: 'production',
+          }),
+        })
+      );
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload).toMatchObject({
+        status: 'ok',
+        deployment: expect.objectContaining({
+          id: expect.any(String),
+          readyState: expect.any(String),
+        }),
+      });
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
     it('passes agentName from client', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
@@ -1324,6 +1531,7 @@ describe('deploy', () => {
           key: 'flag:confirm',
           value: 'TRUE',
         },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
@@ -1340,6 +1548,7 @@ describe('deploy', () => {
       expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'target_environment', value: 'preview' },
         {
           key: 'output:deployment-id',
           value: 'dpl_archive_test',
@@ -1806,6 +2015,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:json', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: deploymentId },
       ]);
     });
@@ -1817,6 +2027,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:format', value: 'json' },
+        { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: deploymentId },
       ]);
     });
@@ -2105,6 +2316,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:init', value: 'init' },
         { key: 'flag:json', value: 'TRUE' },
+        { key: 'target_environment', value: 'preview' },
       ]);
     });
 
@@ -2116,6 +2328,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:init', value: 'init' },
         { key: 'option:format', value: 'json' },
+        { key: 'target_environment', value: 'preview' },
       ]);
     });
 
@@ -2145,6 +2358,347 @@ describe('deploy', () => {
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
       });
+    });
+  });
+
+  describe('deployment checks', () => {
+    // v1 checks: checksConclusion === 'failed'
+    it('should error when v1 checks fail', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_v1',
+          url: 'checks-v1.vercel.app',
+          target: 'production',
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_checks_v1`, (_req, res) => {
+        callCount++;
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_v1',
+          url: 'checks-v1.vercel.app',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: false,
+          checksState: callCount > 1 ? 'completed' : 'running',
+          checksConclusion: callCount > 1 ? 'failed' : undefined,
+          target: 'production',
+          alias: [],
+        });
+      });
+
+      client.scenario.get(
+        `/v1/deployments/dpl_checks_v1/checks`,
+        (_req, res) => {
+          res.json({
+            checks: [
+              {
+                id: 'chk_1',
+                name: 'Lint',
+                status: 'completed',
+                conclusion: 'failed',
+                startedAt: Date.now(),
+                completedAt: Date.now(),
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                integrationId: 'int_1',
+                rerequestable: false,
+              },
+              {
+                id: 'chk_2',
+                name: 'Tests',
+                status: 'completed',
+                conclusion: 'succeeded',
+                startedAt: Date.now(),
+                completedAt: Date.now(),
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                integrationId: 'int_2',
+                rerequestable: false,
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_checks_v1/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stderrOutput = client.stderr.read().toString();
+      expect(stderrOutput).toContain('1 failed');
+      expect(stderrOutput).toContain('1 succeeded');
+    });
+
+    // v2 checks: deployment.checks['deployment-alias'].state === 'failed'
+    it('should error when v2 deployment checks fail', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_v2',
+          url: 'checks-v2.vercel.app',
+          target: 'production',
+          checks: { 'deployment-alias': { state: 'pending' } },
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_checks_v2`, (_req, res) => {
+        callCount++;
+        const isFailed = callCount > 2;
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_v2',
+          url: 'checks-v2.vercel.app',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: false,
+          target: 'production',
+          alias: [],
+          checks: {
+            'deployment-alias': {
+              state: isFailed ? 'failed' : 'pending',
+            },
+          },
+        });
+      });
+
+      client.scenario.get(
+        `/v2/deployments/dpl_checks_v2/check-runs`,
+        (_req, res) => {
+          res.json({
+            runs: [
+              {
+                id: 'cr_1',
+                name: 'E2E Tests',
+                status: 'completed',
+                conclusion: 'failed',
+                source: 'vercel',
+              },
+              {
+                id: 'cr_2',
+                name: 'Smoke Test',
+                status: 'completed',
+                conclusion: 'skipped',
+                source: 'github',
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_checks_v2/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stderrOutput = client.stderr.read().toString();
+      expect(stderrOutput).toContain('Running Checks');
+      expect(stderrOutput).toContain('1 failed');
+      expect(stderrOutput).toContain('1 skipped');
+      expect(stderrOutput).toContain('E2E Tests');
+    });
+
+    // v2 checks failure in non-interactive mode
+    it('should output failed check runs as JSON in non-interactive mode', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_ni',
+          url: 'checks-ni.vercel.app',
+          inspectorUrl: 'https://vercel.com/test/dpl_checks_ni',
+          target: 'production',
+          checks: { 'deployment-alias': { state: 'pending' } },
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(`/v13/deployments/dpl_checks_ni`, (_req, res) => {
+        callCount++;
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_ni',
+          url: 'checks-ni.vercel.app',
+          inspectorUrl: 'https://vercel.com/test/dpl_checks_ni',
+          readyState: callCount === 1 ? 'BUILDING' : 'READY',
+          aliasAssigned: false,
+          target: 'production',
+          alias: [],
+          checks: {
+            'deployment-alias': {
+              state: callCount > 2 ? 'failed' : 'pending',
+            },
+          },
+        });
+      });
+
+      client.scenario.get(
+        `/v2/deployments/dpl_checks_ni/check-runs`,
+        (_req, res) => {
+          res.json({
+            runs: [
+              {
+                id: 'cr_fail',
+                name: 'Lint',
+                status: 'completed',
+                conclusion: 'failed',
+                source: 'vercel',
+              },
+            ],
+          });
+        }
+      );
+
+      client.scenario.get(
+        `/v2/deployments/dpl_checks_ni/check-runs/cr_fail/logs`,
+        (_req, res) => {
+          res.type('text/plain');
+          res.send(
+            [
+              '{"level":"command","timestamp":1700000000000,"message":"npm run lint"}',
+              '{"level":"error","timestamp":1700000001000,"message":"Exited with code 1."}',
+              '{"level":"eof","timestamp":1700000002000,"message":""}',
+            ].join('\n')
+          );
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_checks_ni/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+      expect(json.status).toBe('error');
+      expect(json.reason).toBe('checks_failed');
+      expect(json.failedCheckRuns).toHaveLength(1);
+      expect(json.failedCheckRuns[0].name).toBe('Lint');
+      expect(json.failedCheckRuns[0].url).toBe(
+        'https://vercel.com/test/dpl_checks_ni?checkRunLog=cr_fail'
+      );
+      expect(json.failedCheckRuns[0].logs).toEqual([
+        { level: 'command', timestamp: 1700000000000, message: 'npm run lint' },
+        {
+          level: 'error',
+          timestamp: 1700000001000,
+          message: 'Exited with code 1.',
+        },
+      ]);
+    });
+
+    // v2 checks pending → shows "Running Checks..." spinner
+    it('should show Running Checks spinner when v2 checks are pending', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: 'dpl_checks_pending',
+          url: 'checks-pending.vercel.app',
+          target: 'production',
+          checks: { 'deployment-alias': { state: 'pending' } },
+        });
+      });
+
+      let callCount = 0;
+      client.scenario.get(
+        `/v13/deployments/dpl_checks_pending`,
+        (_req, res) => {
+          callCount++;
+          const isReady = callCount > 1;
+          const isAliased = callCount > 2;
+          res.json({
+            creator: { uid: user.id, username: user.username },
+            id: 'dpl_checks_pending',
+            url: 'checks-pending.vercel.app',
+            readyState: isReady ? 'READY' : 'BUILDING',
+            aliasAssigned: isAliased,
+            target: 'production',
+            alias: isAliased ? ['my-app.vercel.app'] : [],
+            checks: {
+              'deployment-alias': {
+                state: isAliased ? 'succeeded' : 'pending',
+              },
+            },
+          });
+        }
+      );
+
+      client.scenario.get(
+        `/v3/now/deployments/dpl_checks_pending/events`,
+        (_req, res) => {
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Running Checks...');
+      await expect(client.stderr).toOutput('Aliased:');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
     });
   });
 });

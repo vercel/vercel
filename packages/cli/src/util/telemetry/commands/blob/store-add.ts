@@ -32,4 +32,19 @@ export class BlobAddStoreTelemetryClient
       });
     }
   }
+
+  trackCliFlagYes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliOptionEnvironment(value: string[] | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'environment',
+        value: value.join(','),
+      });
+    }
+  }
 }

@@ -1,5 +1,55 @@
 # vercel-runtime
 
+## 0.13.1
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
+## 0.13.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+## 0.12.0
+
+### Minor Changes
+
+- Fix django static file serving for manifest storage backends. ([#15709](https://github.com/vercel/vercel/pull/15709))
+
+### Patch Changes
+
+- [django] Fix vc dev when staticfiles is not used ([#15772](https://github.com/vercel/vercel/pull/15772))
+
+## 0.11.0
+
+### Minor Changes
+
+- Update uv to v0.10.11 ([#15623](https://github.com/vercel/vercel/pull/15623))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix a flakey unit test ([#15647](https://github.com/vercel/vercel/pull/15647))
+
+## 0.10.1
+
+### Patch Changes
+
+- Use hardlink link mode instead of copy. ([#15639](https://github.com/vercel/vercel/pull/15639))
+
+## 0.10.0
+
+### Minor Changes
+
+- Make specifying a different entry point variable actually work ([#15614](https://github.com/vercel/vercel/pull/15614))
+
+### Patch Changes
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
 ## 0.9.0
 
 ### Minor Changes

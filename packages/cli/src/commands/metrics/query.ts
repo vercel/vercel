@@ -6,19 +6,11 @@ import output from '../../output-manager';
 import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
-  validateRequiredEvent,
-  validateEvent,
-  validateMeasure,
-  validateAggregation,
-  validateGroupBy,
   validateMutualExclusivity,
+  validateRequiredMetric,
 } from './validation';
-import { getDefaultAggregation, getQueryEngineEventName } from './schema-data';
-import {
-  formatQueryJson,
-  formatErrorJson,
-  getRollupColumnName,
-} from './output';
+import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
+import { formatErrorJson, formatQueryJson, handleApiError } from './output';
 import { formatText } from './text-output';
 import {
   computeGranularity,
@@ -28,14 +20,16 @@ import {
 import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import type {
+  Aggregation,
   Scope,
   ValidationError,
   MetricsQueryRequest,
   MetricsQueryResponse,
 } from './types';
 import { getLinkedProject } from '../../util/projects/link';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getScope from '../../util/get-scope';
-import { isAPIError } from '../../util/errors-ts';
+import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 
 function handleValidationError(
   result: ValidationError,
@@ -48,52 +42,6 @@ function handleValidationError(
     );
   } else {
     output.error(result.message);
-    if (result.allowedValues && result.allowedValues.length > 0) {
-      output.print(
-        `\nAvailable ${result.code === 'UNKNOWN_EVENT' ? 'events' : result.code === 'UNKNOWN_MEASURE' ? 'measures' : result.code === 'INVALID_AGGREGATION' ? 'aggregations' : 'dimensions'}: ${result.allowedValues.join(', ')}\n`
-      );
-    }
-  }
-  return 1;
-}
-
-function handleApiError(
-  err: { status: number; code?: string; serverMessage?: string },
-  jsonOutput: boolean,
-  client: Client
-): number {
-  let code: string;
-  let message: string;
-
-  switch (err.status) {
-    case 402:
-      code = 'PAYMENT_REQUIRED';
-      message =
-        'This feature requires an Observability Plus subscription. Upgrade at https://vercel.com/dashboard/settings/billing';
-      break;
-    case 403:
-      code = 'FORBIDDEN';
-      message =
-        'You do not have permission to query metrics for this project/team.';
-      break;
-    case 500:
-      code = 'INTERNAL_ERROR';
-      message = 'An internal error occurred. Please try again later.';
-      break;
-    case 504:
-      code = 'TIMEOUT';
-      message =
-        'The query timed out. Try a shorter time range or fewer groups.';
-      break;
-    default:
-      code = err.code || 'BAD_REQUEST';
-      message = err.serverMessage || `API error (${err.status})`;
-  }
-
-  if (jsonOutput) {
-    client.stdout.write(formatErrorJson(code, message));
-  } else {
-    output.error(message);
   }
   return 1;
 }
@@ -105,8 +53,15 @@ async function resolveQueryScope(
     all: boolean | undefined;
     jsonOutput: boolean;
   }
-): Promise<{ scope: Scope; accountId: string } | number> {
-  // --project or --all: resolve team context via getScope
+): Promise<
+  | {
+      scope: Scope;
+      accountId: string;
+      teamName?: string;
+      projectName?: string;
+    }
+  | number
+> {
   if (opts.project || opts.all) {
     const { team } = await getScope(client);
     if (!team) {
@@ -122,29 +77,42 @@ async function resolveQueryScope(
 
     if (opts.all) {
       return {
-        scope: { type: 'team-with-slug', teamSlug: team.slug },
+        scope: { type: 'owner', ownerId: team.id },
         accountId: team.id,
+        teamName: team.slug,
       };
+    }
+
+    const project = await getProjectByNameOrId(client, opts.project!, team.id);
+    if (project instanceof ProjectNotFound) {
+      const errMsg = `Project "${opts.project}" was not found in team "${team.slug}".`;
+      if (opts.jsonOutput) {
+        client.stdout.write(formatErrorJson('PROJECT_NOT_FOUND', errMsg));
+      } else {
+        output.error(errMsg);
+      }
+      return 1;
     }
 
     return {
       scope: {
-        type: 'project-with-slug',
-        teamSlug: team.slug,
-        projectName: opts.project!,
+        type: 'project',
+        ownerId: team.id,
+        projectIds: [project.id],
       },
       accountId: team.id,
+      teamName: team.slug,
+      projectName: project.name,
     };
   }
 
-  // Default: use linked project
   const linkedProject = await getLinkedProject(client);
   if (linkedProject.status === 'error') {
     return linkedProject.exitCode;
   }
   if (linkedProject.status === 'not_linked') {
     const errMsg =
-      'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.';
+      'No linked project found. Run `vercel link` to link a project, or use --project <name-or-id> or --all.';
     if (opts.jsonOutput) {
       client.stdout.write(formatErrorJson('NOT_LINKED', errMsg));
     } else {
@@ -155,11 +123,13 @@ async function resolveQueryScope(
 
   return {
     scope: {
-      type: 'project-with-slug',
-      teamSlug: linkedProject.org.slug,
-      projectName: linkedProject.project.name,
+      type: 'project',
+      ownerId: linkedProject.org.id,
+      projectIds: [linkedProject.project.id],
     },
     accountId: linkedProject.org.id,
+    teamName: linkedProject.org.slug,
+    projectName: linkedProject.project.name,
   };
 }
 
@@ -177,6 +147,9 @@ export default async function query(
   }
 
   const flags = parsedArgs.flags;
+  const positionalArgs = parsedArgs.args.slice(1);
+  const positionalMetric =
+    positionalArgs[0] === 'query' ? positionalArgs[1] : positionalArgs[0];
 
   // Validate output format
   const formatResult = validateJsonOutput(flags);
@@ -187,8 +160,7 @@ export default async function query(
   const jsonOutput = formatResult.jsonOutput;
 
   // Extract raw flag values
-  const eventFlag = flags['--event'];
-  const measure = flags['--measure'] ?? 'count';
+  const metricFlag = positionalMetric;
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
@@ -200,8 +172,7 @@ export default async function query(
   const all = flags['--all'];
 
   // Track telemetry
-  telemetry.trackCliOptionEvent(eventFlag);
-  telemetry.trackCliOptionMeasure(flags['--measure']);
+  telemetry.trackCliArgumentMetricId(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
@@ -213,49 +184,18 @@ export default async function query(
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  // Validate --event (required)
-  const requiredResult = validateRequiredEvent(eventFlag);
-  if (!requiredResult.valid) {
-    return handleValidationError(requiredResult, jsonOutput, client);
+  // Validate that a metric id was provided.
+  const requiredMetric = validateRequiredMetric(metricFlag);
+  if (!requiredMetric.valid) {
+    return handleValidationError(requiredMetric, jsonOutput, client);
   }
-  const event = requiredResult.value;
+  const metric = requiredMetric.value;
 
-  // Compute aggregation after event is validated
-  const aggregationInput =
-    aggregationFlag ?? getDefaultAggregation(event, measure);
-
-  // Validate event name
-  const eventResult = validateEvent(event);
-  if (!eventResult.valid) {
-    return handleValidationError(eventResult, jsonOutput, client);
-  }
-
-  // Validate measure
-  const measureResult = validateMeasure(event, measure);
-  if (!measureResult.valid) {
-    return handleValidationError(measureResult, jsonOutput, client);
-  }
-
-  // Validate aggregation
-  const aggResult = validateAggregation(event, measure, aggregationInput);
-  if (!aggResult.valid) {
-    return handleValidationError(aggResult, jsonOutput, client);
-  }
-  const aggregation = aggResult.value;
-
-  // Validate group-by dimensions
-  const groupByResult = validateGroupBy(event, groupBy);
-  if (!groupByResult.valid) {
-    return handleValidationError(groupByResult, jsonOutput, client);
-  }
-
-  // Validate mutual exclusivity
   const mutualResult = validateMutualExclusivity(all, project);
   if (!mutualResult.valid) {
     return handleValidationError(mutualResult, jsonOutput, client);
   }
 
-  // Resolve scope
   const scopeResult = await resolveQueryScope(client, {
     project,
     all,
@@ -264,7 +204,23 @@ export default async function query(
   if (typeof scopeResult === 'number') {
     return scopeResult;
   }
-  const { scope, accountId } = scopeResult;
+  const { scope, accountId, teamName, projectName } = scopeResult;
+
+  const detailOrExitCode = await fetchMetricDetailOrExit(
+    client,
+    accountId,
+    metric,
+    jsonOutput
+  );
+  // fetchMetricDetailOrExit() returns a numeric exit code when it already
+  // handled the error output for us.
+  if (typeof detailOrExitCode === 'number') {
+    return detailOrExitCode;
+  }
+
+  const aggregationInput =
+    aggregationFlag ?? getDefaultAggregation(detailOrExitCode, metric) ?? 'sum';
+  const aggregation = aggregationInput;
 
   // Resolve time range
   let startTime: Date;
@@ -298,12 +254,10 @@ export default async function query(
   );
 
   // Build request body
-  const rollupColumn = getRollupColumnName(measure, aggregation);
   const body: MetricsQueryRequest = {
-    reason: 'agent' as const,
     scope,
-    event: getQueryEngineEventName(event),
-    rollups: { [rollupColumn]: { measure, aggregation } },
+    metric,
+    aggregation: aggregation as Aggregation,
     startTime: rounded.start.toISOString(),
     endTime: rounded.end.toISOString(),
     granularity: granResult.duration,
@@ -312,24 +266,19 @@ export default async function query(
     limit: limit ?? 10,
   };
 
-  // Make API call
-  // The observability metrics API is on vercel.com, not api.vercel.com
-  // In tests, client.apiUrl points to the mock server, so use that
-  const baseUrl =
-    client.apiUrl === 'https://api.vercel.com'
-      ? 'https://vercel.com'
-      : client.apiUrl;
-  const metricsUrl = `${baseUrl}/api/observability/metrics`;
-
   output.spinner('Querying metrics...');
   let response: MetricsQueryResponse;
   try {
-    response = await client.fetch<MetricsQueryResponse>(metricsUrl, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      headers: { 'Content-Type': 'application/json' },
-      accountId,
-    });
+    response = await client.fetch<MetricsQueryResponse>(
+      '/v2/observability/query',
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+        accountId,
+        bailOn429: true,
+      }
+    );
   } catch (err: unknown) {
     if (isAPIError(err)) {
       return handleApiError(err, jsonOutput, client);
@@ -350,9 +299,8 @@ export default async function query(
     client.stdout.write(
       formatQueryJson(
         {
-          event,
-          measure,
-          aggregation,
+          metric,
+          aggregation: aggregation as Aggregation,
           groupBy,
           filter,
           startTime: rounded.start.toISOString(),
@@ -365,15 +313,15 @@ export default async function query(
   } else {
     client.stdout.write(
       formatText(response, {
-        event,
-        measure,
-        aggregation,
+        metric,
+        metricUnit:
+          detailOrExitCode.find(item => item.id === metric)?.unit ?? 'count',
+        aggregation: aggregation as Aggregation,
         groupBy,
         filter,
         scope,
-        projectName:
-          scope.type === 'project-with-slug' ? scope.projectName : undefined,
-        teamName: scope.teamSlug,
+        projectName,
+        teamName,
         periodStart: rounded.start.toISOString(),
         periodEnd: rounded.end.toISOString(),
         granularity: granResult.duration,

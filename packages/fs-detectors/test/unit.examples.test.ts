@@ -12,8 +12,6 @@ const overrides = new Map([
   ['starlette', 'python'],
   // Sinatra is a Ruby framework without a dedicated framework preset
   ['sinatra', 'ruby'],
-  // Axum is a Rust framework without a dedicated framework preset
-  ['axum', 'rust'],
   // Gin is a Go framework without a dedicated framework preset
   ['gin', 'go'],
 ]);
@@ -24,6 +22,7 @@ const experimentalExamples = new Set([
   'starlette',
   'sinatra',
   'axum',
+  'actix-web',
   'gin',
   'django',
 ]);

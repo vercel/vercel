@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.0.47",
+  "version": "0.3.0",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -32,7 +32,9 @@
   ],
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
-    "@vercel/nft": "1.3.0",
+    "@yarnpkg/parsers": "^3.0.0",
+    "js-yaml": "^3.13.1",
+    "@vercel/nft": "1.5.0",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "oxc-transform": "0.111.0",
@@ -49,12 +51,10 @@
   "devDependencies": {
     "@types/express": "5.0.3",
     "@types/fs-extra": "11",
-    "@types/jest": "27.5.1",
+    "@types/js-yaml": "3.12.1",
     "@types/node": "20.11.0",
     "hono": "4.10.1",
-    "jest-junit": "16.0.0",
     "tsdown": "0.16.3",
-    "typescript": "4.9.5",
     "vite": "^5.1.6",
     "vitest": "^2.0.1"
   },

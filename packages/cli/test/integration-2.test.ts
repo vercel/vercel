@@ -5,7 +5,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
 import { apiFetch } from './helpers/api-fetch';
-import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
+import fs, { writeFile, readFile, remove, ensureDir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
@@ -21,7 +21,7 @@ import type { CLIProcess } from './helpers/types';
 import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
@@ -269,7 +269,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
   }
 });
 
-test('should prefill "project name" prompt with now.json `name`', async () => {
+test('should prefill "project name" prompt with vercel.json `name`', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
@@ -479,7 +479,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   expect(pageResponse1.status).toBe(200);
   expect(await pageResponse1.text()).toMatch(/I am a website/gm);
 
-  // Ensures that the `now.json` file has been applied
+  // Ensures that the `vercel.json` file has been applied
   const pageResponse2 = await nodeFetch(`${secondResult.stdout}/i-do-exist`);
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
@@ -550,6 +550,8 @@ test('add a sensitive env var', async () => {
   expect(output.stderr).toContain(
     'Added Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('override an existing env var', async () => {
@@ -612,6 +614,8 @@ test('override an existing env var', async () => {
   expect(outputOverride.stderr).toContain(
     'Overrode Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
@@ -784,20 +788,6 @@ describe('telemetry submits data', () => {
   });
 });
 
-test('deploys with only now.json and README.md', async () => {
-  const directory = await setupE2EFixture('deploy-with-only-readme-now-json');
-
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
-    cwd: directory,
-  });
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
-  const text = await res.text();
-  expect(text).toMatch(/readme contents/);
-});
-
 test('deploys with only vercel.json and README.md', async () => {
   const directory = await setupE2EFixture(
     'deploy-with-only-readme-vercel-json'
@@ -938,6 +928,15 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   });
 });
 
+// The deploy refuses for one of two reasons depending on whether the team has
+// SAML enforcement: either the API returns a plain `forbidden` 403 (handled by
+// `getLinkedProject` in `src/util/projects/link.ts`), or it returns a SAML
+// challenge that we now bail on in `src/util/login/reauthenticate.ts` (see the
+// non-interactive / external-token guards). Both messages are acceptable; what
+// matters for these tests is that the deploy exits 1 and tells the user why.
+const unauthorizedDeployErrorRe =
+  /Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\.|(?:SAML )?[Rr]e-authentication is required for .* scope/;
+
 test('reject deploying with wrong team .vercel config', async () => {
   const directory = await setupE2EFixture('unauthorized-vercel-config');
 
@@ -946,9 +945,7 @@ test('reject deploying with wrong team .vercel config', async () => {
   });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toContain(
-    'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
-  );
+  expect(stderr).toMatch(unauthorizedDeployErrorRe);
 });
 
 test('reject deploying with invalid token', async () => {
@@ -958,9 +955,7 @@ test('reject deploying with invalid token', async () => {
   });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toMatch(
-    /Error: Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\./g
-  );
+  expect(stderr).toMatch(unauthorizedDeployErrorRe);
 });
 
 test('[vc link] should detect frameworks in project rootDirectory', async () => {
@@ -1338,7 +1333,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // Step 1. Create a simple static deployment with no configuration.
   // Deployment should succeed and page should display "0"
 
-  await mkdir(path.join(directory, 'public'));
+  await ensureDir(path.join(directory, 'public'));
   await writeFile(path.join(directory, 'public/index.txt'), '0');
 
   // auto-confirm this deployment
@@ -1369,7 +1364,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   expect(text).toBe('1\n');
 
   // // Step 3. Do a more complex deployment using a framework this time
-  await mkdir(`${directory}/pages`);
+  await ensureDir(`${directory}/pages`);
   await writeFile(
     `${directory}/pages/index.js`,
     `export default () => 'Next.js Test'`
@@ -1414,6 +1409,9 @@ test.each([
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
   expectedStatus,
+}: {
+  vercelAuth: 'none' | 'standard';
+  expectedStatus: number;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${

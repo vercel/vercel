@@ -17,7 +17,7 @@ export type FilesMap = Map<string | undefined, DeploymentFile>;
  * @return {String} hex digest
  */
 export function hash(buf: Buffer): string {
-  return createHash('sha1').update(buf).digest('hex');
+  return createHash('sha1').update(Uint8Array.from(buf)).digest('hex');
 }
 
 /**

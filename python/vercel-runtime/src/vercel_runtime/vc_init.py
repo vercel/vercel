@@ -23,8 +23,12 @@ from vercel_runtime.crons import (
     is_cron_service,
 )
 from vercel_runtime.headers import (
+    INTERNAL_OIDC_HEADER_NAME,
+    OIDC_HEADER_NAME,
+    append_oidc_header_if_missing,
     clear_vercel_headers_context,
     decode_header_bytes,
+    get_oidc_token_for_request,
     normalize_event_header_pairs,
     normalize_event_headers,
     set_vercel_headers_from_asgi_pairs,
@@ -41,9 +45,9 @@ from vercel_runtime.routing import (
     split_request_target,
 )
 from vercel_runtime.workers import (
-    bootstrap_worker_service_app,
-    is_celery_app,
     is_worker_service,
+    maybe_bootstrap_worker_service_app,
+    prepare_worker_environment,
 )
 
 if TYPE_CHECKING:
@@ -56,6 +60,22 @@ type _ASGISend = Callable[[dict[str, Any]], Awaitable[None]]
 type _ASGIApp = Callable[[_ASGIScope, _ASGIReceive, _ASGISend], Awaitable[None]]
 
 _original_stderr = sys.stderr
+
+# --- IPC socket & send_message (must be available before _fatal) ----------
+_ipc_sock: socket.socket | None = None
+if "VERCEL_IPC_PATH" in os.environ:
+    _ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    with contextlib.suppress(Exception):
+        _ipc_sock.connect(os.environ["VERCEL_IPC_PATH"])
+
+
+def send_message(message: _IpcMessage) -> None:
+    if _ipc_sock is not None:
+        with contextlib.suppress(Exception):
+            _ipc_sock.sendall((json.dumps(message) + "\0").encode())
+
+
+# -------------------------------------------------------------------------
 
 
 def _stderr(message: str) -> None:
@@ -104,7 +124,7 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
-_entrypoint_varname = os.environ.get("__VC_HANDLER_VARIABLE_NAME", "")
+_entrypoint_varname = _must_getenv("__VC_HANDLER_VARIABLE_NAME")
 
 
 def setup_logging(
@@ -259,17 +279,12 @@ def setup_logging(
 # If running in the platform (IPC present), logging must be
 # setup before importing user code so that logs happening
 # outside the request context are emitted correctly.
-ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 storage: contextvars.ContextVar[dict[str, str | int] | None] = (
     contextvars.ContextVar(
         "storage",
         default=None,
     )
 )
-
-
-def send_message(message: _IpcMessage) -> None:
-    return None
 
 
 # Buffer for pre-handshake logs (to avoid blocking IPC on startup)
@@ -338,15 +353,8 @@ def flush_init_log_buf_to_stderr() -> None:
 atexit.register(flush_init_log_buf_to_stderr)
 
 
-if "VERCEL_IPC_PATH" in os.environ:
-    with contextlib.suppress(Exception):
-        ipc_sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
-
-        def send_message(message: _IpcMessage) -> None:
-            with contextlib.suppress(Exception):
-                ipc_sock.sendall((json.dumps(message) + "\0").encode())
-
-        setup_logging(send_message, storage)
+if _ipc_sock is not None:
+    setup_logging(send_message, storage)
 
 
 # Runtime dependency installation for large Lambda functions
@@ -393,6 +401,9 @@ if os.path.exists(_runtime_config_path):
             # Use uv sync --inexact --frozen to install only the
             # missing public packages. --inexact avoids removing
             # packages already present in _vendor (bundled deps).
+            # --link-mode hardlink lets the temporary download cache
+            # and the target venv share inode blocks on /tmp, reducing
+            # peak disk usage on Lambda's limited ephemeral storage.
             _sync_cmd = [
                 _uv_path,
                 "sync",
@@ -406,7 +417,7 @@ if os.path.exists(_runtime_config_path):
                 "--no-cache",
                 "--no-progress",
                 "--link-mode",
-                "copy",
+                "hardlink",
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
@@ -459,30 +470,22 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
+    prepare_worker_environment()
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
     _fatal_exc(f'could not import "{_entrypoint_rel}"')
 
 if is_worker_service():
-    if "handler" not in __vc_variables and "Handler" not in __vc_variables:
-        should_bootstrap_worker_app = (
-            "app" not in __vc_variables
-            or is_celery_app(getattr(__vc_module, "app", None))
-        )
-    else:
-        should_bootstrap_worker_app = False
-
-    if should_bootstrap_worker_app:
-        try:
-            __vc_module.__dict__["app"] = bootstrap_worker_service_app(
-                __vc_module
-            )
+    try:
+        worker_app = maybe_bootstrap_worker_service_app(__vc_module)
+        if worker_app is not None:
+            __vc_module.__dict__["app"] = worker_app
             __vc_variables = dir(__vc_module)
-        except Exception:
-            _stderr("Error bootstrapping worker service app:")
-            _stderr(traceback.format_exc())
-            exit(1)
+    except Exception:
+        _stderr("Error bootstrapping worker service app:")
+        _stderr(traceback.format_exc())
+        exit(1)
 
 if is_cron_service():
     try:
@@ -559,7 +562,7 @@ class ASGIMiddleware:
         new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
-        internal_oidc_token = ""
+        internal_oidc_token: str | None = None
 
         for raw_k, raw_v in headers_list:
             key_bytes = raw_k if isinstance(raw_k, bytes) else raw_k.encode()
@@ -577,20 +580,15 @@ class ASGIMiddleware:
                 "x-vercel-internal-trace-id",
             ):
                 continue
-            if key == "x-vercel-internal-oidc-token":
+            if key == INTERNAL_OIDC_HEADER_NAME:
                 internal_oidc_token = val
                 continue
             new_headers.append((key_bytes, val_bytes))
 
-        if internal_oidc_token:
-            has_oidc_header = any(
-                decode_header_bytes(k).lower() == "x-vercel-oidc-token"
-                for k, _ in new_headers
-            )
-            if not has_oidc_header:
-                new_headers.append(
-                    (b"x-vercel-oidc-token", internal_oidc_token.encode())
-                )
+        append_oidc_header_if_missing(
+            new_headers,
+            internal_oidc_token=internal_oidc_token,
+        )
 
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
@@ -739,17 +737,22 @@ if "VERCEL_IPC_PATH" in os.environ:
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
             del self.headers["x-vercel-internal-trace-id"]
-            internal_oidc_token = self.headers.get(
-                "x-vercel-internal-oidc-token"
+            raw_internal_oidc_token = self.headers.get(
+                INTERNAL_OIDC_HEADER_NAME
             )
-            if (
-                isinstance(internal_oidc_token, str)
-                and internal_oidc_token
-                and not self.headers.get("x-vercel-oidc-token")
-            ):
-                self.headers["x-vercel-oidc-token"] = internal_oidc_token
+            internal_oidc_token = (
+                raw_internal_oidc_token
+                if isinstance(raw_internal_oidc_token, str)
+                else None
+            )
+            oidc_token = get_oidc_token_for_request(
+                has_public_oidc=bool(self.headers.get(OIDC_HEADER_NAME)),
+                internal_oidc_token=internal_oidc_token,
+            )
+            if oidc_token:
+                self.headers[OIDC_HEADER_NAME] = oidc_token
             with contextlib.suppress(Exception):
-                del self.headers["x-vercel-internal-oidc-token"]
+                del self.headers[INTERNAL_OIDC_HEADER_NAME]
 
             send_message(
                 {
@@ -789,19 +792,20 @@ if "VERCEL_IPC_PATH" in os.environ:
                     }
                 )
 
-    if "handler" in __vc_variables or "Handler" in __vc_variables:
-        base = (
-            __vc_module.handler
-            if "handler" in __vc_variables
-            else __vc_module.Handler
+    try:
+        app_name, app_obj = resolve_app(
+            __vc_module, _entrypoint_modname, _entrypoint_varname
         )
-        if not issubclass(base, BaseHTTPRequestHandler):
-            _fatal(
-                "Handler must inherit from BaseHTTPRequestHandler\n"
-                "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-            )
+    except RuntimeError as exc:
+        _fatal(str(exc))
 
-        class Handler(BaseHandler, base):  # type: ignore[valid-type,misc]
+    if (
+        app_name.lower() == "handler"
+        and isinstance(app_obj, type)
+        and issubclass(app_obj, BaseHTTPRequestHandler)
+    ):
+
+        class Handler(BaseHandler, app_obj):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
                 mname = "do_" + self.command
                 if not hasattr(self, mname):
@@ -814,19 +818,15 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method()
                 self.wfile.flush()
 
-    elif (
-        "app" in __vc_variables
-        or "application" in __vc_variables
-        or _entrypoint_varname in __vc_variables
-    ):
-        app_name, app_obj = resolve_app(
-            __vc_module, _entrypoint_modname, _entrypoint_varname
-        )
-        detection_result = detect_app_type(
-            app_obj,
-            _entrypoint_modname,
-            app_name,
-        )
+    else:
+        try:
+            detection_result = detect_app_type(
+                app_obj,  # pyright: ignore[reportUnknownArgumentType]
+                _entrypoint_modname,
+                app_name,
+            )
+        except RuntimeError as exc:
+            _fatal(str(exc))
         if detection_result[0] == "wsgi":
             from io import BytesIO
 
@@ -961,29 +961,24 @@ if "VERCEL_IPC_PATH" in os.environ:
         _flush_init_log_buf()
         server.serve_forever()  # type: ignore[attr-defined]
 
-    _fatal(
-        f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".\n'
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
+try:
+    app_name, app_obj = resolve_app(
+        __vc_module, _entrypoint_modname, _entrypoint_varname
     )
+except RuntimeError as exc:
+    _fatal(str(exc))
 
-if "handler" in __vc_variables or "Handler" in __vc_variables:
-    base = (
-        __vc_module.handler
-        if "handler" in __vc_variables
-        else __vc_module.Handler
-    )
-    if not issubclass(base, BaseHTTPRequestHandler):
-        _fatal(
-            "Handler must inherit from BaseHTTPRequestHandler\n"
-            "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-        )
-
+if (
+    app_name.lower() == "handler"
+    and isinstance(app_obj, type)
+    and issubclass(app_obj, BaseHTTPRequestHandler)
+):
     _stderr("using HTTP Handler")
     import _thread  # noqa: PLC2701
     import http.client
     from http.server import HTTPServer
 
-    server = HTTPServer(("127.0.0.1", 0), base)  # type: ignore[assignment]
+    server = HTTPServer(("127.0.0.1", 0), app_obj)  # type: ignore[assignment]
     port = server.server_address[1]  # type: ignore[attr-defined]
 
     def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1024,19 +1019,15 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         return return_dict
 
-elif (
-    "app" in __vc_variables
-    or "application" in __vc_variables
-    or _entrypoint_varname in __vc_variables
-):
-    app_name, app_obj = resolve_app(
-        __vc_module, _entrypoint_modname, _entrypoint_varname
-    )
-    detection_result = detect_app_type(
-        app_obj,
-        _entrypoint_modname,
-        app_name,
-    )
+else:
+    try:
+        detection_result = detect_app_type(
+            app_obj,  # pyright: ignore[reportUnknownArgumentType]
+            _entrypoint_modname,
+            app_name,
+        )
+    except RuntimeError as exc:
+        _fatal(str(exc))
     if detection_result[0] == "wsgi":
         _stderr("using Web Server Gateway Interface (WSGI)")
         from io import BytesIO
@@ -1407,10 +1398,3 @@ elif (
                 return response
             finally:
                 clear_vercel_headers_context()
-
-else:
-    _fatal(
-        f"Missing variable `handler`, `app`, or `application` "
-        f'in file "{_entrypoint_rel}".\n'
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-    )
