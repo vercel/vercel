@@ -20,7 +20,8 @@ const vanillaGlob = promisify(vanillaGlob_);
 export default async function glob(
   pattern: string,
   opts: GlobOptions | string,
-  mountpoint?: string
+  mountpoint?: string,
+  fileHashes?: Record<string, string>
 ): Promise<Record<string, FileFsRef>> {
   const options = typeof opts === 'string' ? { cwd: opts } : opts;
 
@@ -92,7 +93,11 @@ export default async function glob(
         finalPath = path.join(mountpoint, finalPath);
       }
 
-      results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });
+      results[finalPath] = new FileFsRef({
+        mode: stat.mode,
+        fsPath,
+        contentHash: fileHashes?.[relativePath],
+      });
     }
   }
 
