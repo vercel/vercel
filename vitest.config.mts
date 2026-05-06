@@ -4,6 +4,11 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ['./vitest.setup.mts'],
+    // Suppress empty log lines — vitest renders blank stderr/stdout writes as
+    // "<empty line>" which clutters CI output from parallel deployment tests.
+    onConsoleLog: (log) => {
+      if (log.trim() === '') return false;
+    },
     // Use of process.chdir prohibits usage of the default "threads". https://vitest.dev/config/#forks
     pool: 'forks',
     testTimeout: 12 * 60 * 1000,
