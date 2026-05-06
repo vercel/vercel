@@ -17,7 +17,7 @@ export default async function createAlias(
   deployment: Deployment,
   alias: string,
   externalDomain: boolean,
-  sourceIdOrHost = deployment.id
+  deploymentOrAliasIdOrUrl = deployment.id
 ) {
   output.spinner(`Creating alias`);
   const result = await performCreateAlias(
@@ -25,7 +25,7 @@ export default async function createAlias(
     contextName,
     deployment,
     alias,
-    sourceIdOrHost
+    deploymentOrAliasIdOrUrl
   );
   output.stopSpinner();
 
@@ -46,7 +46,7 @@ export default async function createAlias(
       contextName,
       deployment,
       alias,
-      sourceIdOrHost
+      deploymentOrAliasIdOrUrl
     );
     output.stopSpinner();
     return secondTry;
@@ -60,11 +60,13 @@ async function performCreateAlias(
   contextName: string,
   deployment: Deployment,
   alias: string,
-  sourceIdOrHost = deployment.id
+  deploymentOrAliasIdOrUrl = deployment.id
 ) {
   try {
     return await client.fetch<AliasRecord>(
-      `/now/deployments/${encodeURIComponent(sourceIdOrHost)}/aliases`,
+      `/now/deployments/${encodeURIComponent(
+        deploymentOrAliasIdOrUrl
+      )}/aliases`,
       {
         method: 'POST',
         body: { alias },
@@ -81,7 +83,7 @@ async function performCreateAlias(
       if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
-          id: sourceIdOrHost,
+          id: deploymentOrAliasIdOrUrl,
         });
       }
       if (err.code === 'gone') {
