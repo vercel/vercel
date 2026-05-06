@@ -337,6 +337,25 @@ class TestHTTPHandler(_RuntimeTestCase):
             self.assertEqual(resp.status, 501)
             resp.read()
 
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
     async def test_malformed_request_line(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
         async with _run_runtime(
@@ -411,6 +430,24 @@ class TestWSGIApp(_RuntimeTestCase):
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "GET /close-test")
 
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
 
 class TestASGIApp(_RuntimeTestCase):
     """Tests for ASGI app entrypoints."""
@@ -477,6 +514,24 @@ class TestASGIApp(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"200", data)
+
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
 
 
 class TestCronService(_RuntimeTestCase):

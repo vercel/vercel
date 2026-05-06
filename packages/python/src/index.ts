@@ -62,6 +62,8 @@ import {
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
+const PYTHON_ENTRYPOINT_DOCS_URL =
+  'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
 
 import {
   detectPythonEntrypoint,
@@ -187,7 +189,22 @@ export async function downloadFilesInWorkPath({
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev && entrypoint) {
-    // Old versions of the CLI don't assign this property.
+    const normalizedEntrypoint = entrypoint.endsWith('.py')
+      ? entrypoint
+      : `${entrypoint}.py`;
+    if (
+      !hasProp(downloadedFiles, entrypoint) &&
+      !hasProp(downloadedFiles, normalizedEntrypoint)
+    ) {
+      throw new NowBuildError({
+        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+        message: `Configured Python entrypoint "${normalizedEntrypoint}" was not found.`,
+        link: PYTHON_ENTRYPOINT_DOCS_URL,
+        action: 'Learn More',
+      });
+    }
+
+    // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
     // Replace dots in the entrypoint basename with underscores so the cache
     // directory name doesn't collide with the entrypoint file itself.
@@ -348,6 +365,14 @@ export const build: BuildVX = async ({
     : join(workPath, '.vercel', 'python', '.venv');
   const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
   const hasCachedUv = fs.existsSync(uvCacheDir);
+  const restoredCache =
+    hasCachedVenv && hasCachedUv
+      ? 'both'
+      : hasCachedVenv
+        ? 'venv'
+        : hasCachedUv
+          ? 'uv'
+          : 'none';
   if (hasCachedVenv || hasCachedUv) {
     debug(
       `Build cache detected: venv=${hasCachedVenv}, uv-cache=${hasCachedUv}`
@@ -408,6 +433,8 @@ export const build: BuildVX = async ({
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
       installCommand: projectInstallCommand || undefined,
+      runtime: 'python',
+      'python.cache.restored': restoredCache,
     })
     .trace(async () => {
       if (projectInstallCommand) {
@@ -849,12 +876,6 @@ export const prepareCache: PrepareCache = async ({
   repoRootPath,
   workPath,
 }) => {
-  // Feature-gated: only enabled when the platform sets this env var.
-  // This allows incremental rollout to specific teams before general availability.
-  if (process.env.VERCEL_PYTHON_PREPARE_CACHE !== '1') {
-    return {};
-  }
-
   const root = repoRootPath || workPath;
   const ignore = ['**/*.pyc', '**/__pycache__/**'];
 

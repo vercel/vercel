@@ -1243,7 +1243,7 @@ test = [
 
 [[package]]
 name = "vercel-workers"
-version = "0.0.21"
+version = "0.0.22"
 source = { editable = "python/vercel-workers" }
 dependencies = [
     { name = "anyio" },

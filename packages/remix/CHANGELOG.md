@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.8.1
+
+### Patch Changes
+
+- 97f87f7: Emit `.data` function entries for React Router single-fetch routes so per-route function config is preserved. Also emits a `_root.data` entry for the root index route, which uses that URL (not `/index.data`) for its single-fetch document loader.
+
 ## 5.8.0
 
 ### Minor Changes
