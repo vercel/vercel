@@ -466,6 +466,11 @@ export default async function setupAndLink(
     }
 
     if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
+      if (crossTeamMatches.length === 0) {
+        output.log(
+          'No matching projects found in teams available to your current session.'
+        );
+      }
       const limitedTeamMatches = await searchSelectedLimitedTeams({
         client,
         path,
