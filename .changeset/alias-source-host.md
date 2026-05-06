@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Preserve the source alias or deployment host when assigning aliases from the CLI.
+Preserve the source deployment or alias URL when assigning aliases from the CLI.
