@@ -228,6 +228,55 @@ describe('detectServices', () => {
       });
     });
 
+    it('should allow Python module:function entrypoint for backend services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            api: {
+              runtime: 'python',
+              entrypoint: 'api.app:app',
+              mount: '/api',
+            },
+          },
+        }),
+        'api/app.py': 'def app(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        type: 'web',
+        runtime: 'python',
+        entrypoint: 'api/app.py',
+        handlerFunction: 'app',
+        routePrefix: '/api',
+      });
+    });
+
+    it('should error for Python module:function entrypoint when services module file does not exist', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            api: {
+              runtime: 'python',
+              entrypoint: 'api.missing:app',
+              mount: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'ENTRYPOINT_NOT_FOUND',
+        serviceName: 'api',
+      });
+    });
+
     it('should keep legacy experimentalServices backend framework behavior', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
