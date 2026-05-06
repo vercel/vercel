@@ -16,7 +16,7 @@ import type { CLIProcess } from './helpers/types';
 import { randomBytes } from 'crypto';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 

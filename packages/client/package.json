@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test": "vitest run --config ../../vitest.config.mts",
     "vitest-run": "vitest -c ./vitest.config.mts",
     "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
     "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
@@ -27,14 +27,12 @@
   "devDependencies": {
     "@types/async-retry": "1.4.5",
     "@types/fs-extra": "7.0.0",
-    "@types/jest": "27.4.1",
     "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
     "@types/node": "20.11.0",
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
-    "jest-junit": "16.0.0",
     "vitest": "2.0.1"
   },
   "dependencies": {

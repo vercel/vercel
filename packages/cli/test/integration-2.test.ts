@@ -21,7 +21,7 @@ import type { CLIProcess } from './helpers/types';
 import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
@@ -1409,6 +1409,9 @@ test.each([
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
   expectedStatus,
+}: {
+  vercelAuth: 'none' | 'standard';
+  expectedStatus: number;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${
