@@ -212,7 +212,7 @@ export function applyScopeFromLink(client: Client, link: { org: Org }): void {
     : undefined;
 }
 
-function detectExplicitScope(client: Client): boolean {
+export function detectExplicitScope(client: Client): boolean {
   const argv = client.argv;
   for (const arg of argv) {
     if (

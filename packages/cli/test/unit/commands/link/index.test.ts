@@ -2108,6 +2108,48 @@ describe('link', () => {
       reauthSpy.mockRestore();
     });
 
+    it('should not resolve the default team before unscoped cross-team search', async () => {
+      const defaultTeamId = 'team_default';
+      useUser({ version: 'northstar', defaultTeamId });
+      const cwd = setupTmpDir();
+      const projectName = 'project-x';
+
+      const [teamA] = useTeams('team_a') as Team[];
+      const projectA = {
+        ...defaultProject,
+        id: 'proj-on-a',
+        name: projectName,
+      };
+
+      client.scenario.get(`/teams/${defaultTeamId}`, (_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'team_unauthorized',
+            message:
+              'Not authorized: Trying to access resource under scope "default-team".',
+          },
+        });
+      });
+      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+        if (req.query.teamId === teamA.id) {
+          return res.json(projectA);
+        }
+
+        res.status(404).json({ error: { code: 'not_found' } });
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', projectName, '--yes');
+
+      const exitCode = await link(client);
+
+      expect(exitCode).toEqual(0);
+      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.orgId).toEqual(teamA.id);
+      expect(projectJson.projectId).toEqual(projectA.id);
+    });
+
     it('should skip SAML-limited teams during cross-team search', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();

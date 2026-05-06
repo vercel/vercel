@@ -12,7 +12,7 @@ import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
 import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
-import getScope from '../../util/get-scope';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -125,7 +125,10 @@ export default async function link(client: Client) {
       return 1;
     }
   } else {
-    const scopeContext = await getScope(client, { resolveLocalScope: true });
+    const explicitScopeProvided = detectExplicitScope(client);
+    if (explicitScopeProvided) {
+      await getScope(client, { resolveLocalScope: true });
+    }
 
     // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
     const linkNonInteractive =
@@ -137,7 +140,7 @@ export default async function link(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
-      searchAcrossTeams: !scopeContext.explicitScopeProvided,
+      searchAcrossTeams: !explicitScopeProvided,
     });
 
     if (typeof link === 'number') {
