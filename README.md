@@ -170,7 +170,7 @@ Sometimes you want to test changes to a Builder against an existing project, may
 
 **Note:** You will need to turn off vercel authentication in settings -> deployment protection so the builder can be downloaded
 
-## Reference
+## References
 
 - [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
 - [Contributing Guidelines](./.github/CONTRIBUTING.md)
