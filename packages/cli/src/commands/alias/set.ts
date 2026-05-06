@@ -142,14 +142,14 @@ export default async function set(client: Client, argv: string[]) {
     return 0;
   }
 
-  const [deploymentIdOrHost, aliasTarget] = args;
-  telemetryClient.trackCliArgumentDeployment(deploymentIdOrHost);
+  const [sourceIdOrHost, aliasTarget] = args;
+  telemetryClient.trackCliArgumentDeployment(sourceIdOrHost);
   telemetryClient.trackCliArgumentAlias(aliasTarget);
-  const deploymentSource = deploymentIdOrHost.includes('.')
-    ? toHost(deploymentIdOrHost)
-    : deploymentIdOrHost;
+  const normalizedSourceIdOrHost = sourceIdOrHost.includes('.')
+    ? toHost(sourceIdOrHost)
+    : sourceIdOrHost;
   const deployment = handleCertError(
-    await getDeployment(client, contextName, deploymentIdOrHost)
+    await getDeployment(client, contextName, sourceIdOrHost)
   );
 
   if (deployment === 1) {
@@ -171,7 +171,7 @@ export default async function set(client: Client, argv: string[]) {
     deployment,
     aliasTarget,
     contextName,
-    deploymentSource
+    normalizedSourceIdOrHost
   );
   const handleResult = handleSetupDomainError(handleCreateAliasError(record));
   if (handleResult === 1) {
