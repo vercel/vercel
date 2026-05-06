@@ -8,13 +8,13 @@ test('getPackageJSON caches read operations', () => {
   );
   expect(expected.name).toBe('@vercel-internals/get-package-json');
 
-  const readFileSyncSpy = jest.spyOn(fs, 'readFileSync');
+  const readFileSyncSpy = vi.spyOn(fs, 'readFileSync');
 
   const actual = getPackageJSON();
   expect(actual).toStrictEqual(expected);
-  expect(readFileSyncSpy).toBeCalledTimes(1);
+  expect(readFileSyncSpy).toHaveBeenCalledTimes(1);
 
   const cacheHit = getPackageJSON();
   expect(cacheHit).toStrictEqual(expected);
-  expect(readFileSyncSpy).toBeCalledTimes(1);
+  expect(readFileSyncSpy).toHaveBeenCalledTimes(1);
 });

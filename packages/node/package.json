@@ -11,11 +11,12 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --env node --verbose --bail --runInBand",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts",
     "test-e2e": "pnpm test test/integration",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'"
+    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
+    "vitest-e2e": "glob --absolute 'test/integration'"
   },
   "files": [
     "dist"
@@ -53,7 +54,6 @@
     "@types/content-type": "1.1.5",
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
-    "@types/jest": "29.5.0",
     "@types/mime-types": "2.1.4",
     "@vercel/functions": "workspace:*",
     "@vitest/expect": "1.4.0",
@@ -63,7 +63,6 @@
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "glob": "10.3.16",
-    "jest-junit": "16.0.0",
     "source-map-support": "0.5.12",
     "tree-kill": "1.2.2",
     "vite": "^5.1.6",

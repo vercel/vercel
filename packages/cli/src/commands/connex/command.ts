@@ -20,6 +20,13 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Name of the Connex client',
     },
+    {
+      name: 'triggers',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Enable webhook triggers for this client',
+    },
     formatOption,
   ],
   examples: [
@@ -30,6 +37,10 @@ export const createSubcommand = {
     {
       name: 'Create with a custom name',
       value: `${packageName} connex create slack --name my-bot`,
+    },
+    {
+      name: 'Create with webhook triggers enabled',
+      value: `${packageName} connex create slack --name my-bot --triggers`,
     },
     {
       name: 'Output as JSON',

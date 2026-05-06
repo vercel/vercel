@@ -9,7 +9,7 @@ import stripAnsi from 'strip-ansi';
 import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 import { spawnSync, execFileSync } from 'child_process';
 
-jest.setTimeout(10 * 60 * 1000);
+vi.setConfig({ testTimeout: 10 * 60 * 1000, hookTimeout: 10 * 60 * 1000 });
 
 const isCI = !!process.env.CI;
 

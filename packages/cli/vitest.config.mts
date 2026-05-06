@@ -1,5 +1,5 @@
 import { mergeConfig } from 'vite';
-import rootConfig from '../../vitest.config.mjs';
+import rootConfig from '../../vitest.config.mts';
 import { readFileSync } from 'fs';
 
 // Get peer dependencies to externalize them (they may not be installed in CI)
