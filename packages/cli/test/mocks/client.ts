@@ -347,10 +347,12 @@ export class MockClient extends Client {
 
   setArgv(argv: string[]): void;
   setArgv(...argv: string[]): void;
-  setArgv(argvOrFirst: string[] | string, ...rest: string[]) {
+  setArgv(argvOrFirst?: string[] | string, ...rest: string[]) {
     const argv = Array.isArray(argvOrFirst)
       ? argvOrFirst
-      : [argvOrFirst, ...rest];
+      : typeof argvOrFirst === 'string'
+        ? [argvOrFirst, ...rest]
+        : [];
 
     super.setArgv([process.execPath, 'cli.js', ...argv]);
 
