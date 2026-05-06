@@ -93,6 +93,7 @@ describe('connex create', () => {
     expect(postBody).toMatchObject({
       service: 'slack',
       name: 'my-bot',
+      triggers: { enabled: false },
     });
     expect(typeof postBody.request_code).toBe('string');
     expect(pollHit).toBe(false);
@@ -342,6 +343,51 @@ describe('connex create', () => {
 
     expect(exitCode).toBe(0);
     expect(writeConfigSpy).not.toHaveBeenCalled();
+  });
+
+  describe('--triggers flag', () => {
+    it('should send triggers: { enabled: true } when --triggers is passed', async () => {
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(
+          fakeConnexClient({ id: 'scl_triggers1', uid: 'uid_triggers1' })
+        );
+      });
+
+      client.setArgv(
+        'connex',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--triggers'
+      );
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody).toMatchObject({
+        service: 'slack',
+        name: 'my-bot',
+        triggers: { enabled: true },
+      });
+    });
+
+    it('should send triggers: { enabled: false } when --triggers is not passed', async () => {
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(fakeConnexClient({ id: 'scl_notrig', uid: 'uid_notrig' }));
+      });
+
+      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody.triggers).toEqual({ enabled: false });
+    });
   });
 
   it('should tolerate early 404s during polling after 422', async () => {

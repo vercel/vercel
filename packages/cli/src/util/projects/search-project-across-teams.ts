@@ -1,10 +1,10 @@
 import type Client from '../client';
 import type { Project, Org } from '@vercel-internals/types';
-import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
 import getProjectByIdOrName from './get-project-by-id-or-name';
 import { ProjectNotFound } from '../errors-ts';
 import slugify from '@sindresorhus/slugify';
+import output from '../../output-manager';
 
 export interface CrossTeamMatch {
   project: Project;
@@ -15,18 +15,32 @@ export default async function searchProjectAcrossTeams(
   client: Client,
   projectName: string
 ): Promise<CrossTeamMatch[]> {
-  const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
+  const teams = await getTeams(client);
 
-  const orgs: Org[] = [
-    ...(user.version === 'northstar'
-      ? []
-      : [{ type: 'user' as const, id: user.id, slug: user.username }]),
-    ...teams.map(t => ({
-      type: 'team' as const,
-      id: t.id,
-      slug: t.slug,
-    })),
-  ];
+  // Skip "limited" (SAML-enforced) teams here to avoid forcing re-auth
+  // during auto-detect. If nothing matches, `setupAndLink` falls through to
+  // `selectOrg`, where picking a limited team triggers re-auth deliberately.
+  const accessibleTeams: typeof teams = [];
+  const skippedSlugs: string[] = [];
+  for (const t of teams) {
+    if (t.limited) {
+      skippedSlugs.push(t.slug);
+    } else {
+      accessibleTeams.push(t);
+    }
+  }
+
+  if (skippedSlugs.length > 0) {
+    output.debug(
+      `Skipping limited teams during cross-team project search: ${skippedSlugs.join(', ')}`
+    );
+  }
+
+  const orgs: Org[] = accessibleTeams.map(t => ({
+    type: 'team' as const,
+    id: t.id,
+    slug: t.slug,
+  }));
 
   const slugifiedName = slugify(projectName);
   const searchNames = [projectName];

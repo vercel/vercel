@@ -177,11 +177,6 @@ function getScriptTestPatterns(packageJson, scriptName) {
     return pnpmTestPatterns;
   }
 
-  const jestPatterns = getPatternsAfterCommand(script, 'jest');
-  if (jestPatterns.length > 0) {
-    return jestPatterns;
-  }
-
   if (script === 'pnpm test') {
     return getDefaultTestPatterns();
   }
@@ -291,6 +286,28 @@ function getRunnerOptions(scriptName, packageName) {
   return runnerOptions;
 }
 
+function getRunnerShort(runner) {
+  switch (runner) {
+    case 'ubuntu-latest':
+      return 'linux';
+    case 'macos-14':
+      return 'mac';
+    case 'windows-latest':
+      return 'win';
+    default:
+      return runner;
+  }
+}
+
+function getPackageDisplayName(packageName) {
+  switch (packageName) {
+    case 'vercel':
+      return 'CLI';
+    default:
+      return packageName;
+  }
+}
+
 async function getChunkedTests() {
   let scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
@@ -389,15 +406,13 @@ async function getChunkedTests() {
           (chunk, chunkNumber, allChunks) => {
             return nodeVersions.flatMap(nodeVersion => {
               return runners.map(runner => {
-                const runnerShort = runner
-                  .replace('ubuntu-latest', 'linux')
-                  .replace('macos-14', 'mac')
-                  .replace('windows-latest', 'win');
+                const runnerShort = getRunnerShort(runner);
+                const packageDisplayName = getPackageDisplayName(packageName);
                 const chunkSuffix =
                   allChunks.length > 1
                     ? ` [${chunkNumber + 1}/${allChunks.length}]`
                     : '';
-                const label = `${packageName} (${runnerShort}/node${nodeVersion})${chunkSuffix}`;
+                const label = `${packageDisplayName} (${runnerShort}/node${nodeVersion})${chunkSuffix}`;
                 return {
                   runner,
                   packagePath,

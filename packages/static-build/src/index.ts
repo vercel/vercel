@@ -3,7 +3,7 @@ import path from 'path';
 import nodeFetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
-import frameworks, { Framework } from '@vercel/frameworks';
+import { frameworkList as frameworks, Framework } from '@vercel/frameworks';
 import {
   spawn,
   spawnSync,
