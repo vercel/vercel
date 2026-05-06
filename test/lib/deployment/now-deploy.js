@@ -152,9 +152,12 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
       break;
     }
     if (i % 25 === 0) {
-      console.log(
-        `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
-      );
+      const msg = `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`;
+      if (IS_CI && process.env.RUNNER_DEBUG !== '1') {
+        // suppress polling noise in CI — only meaningful state (READY/ERROR) is logged
+      } else {
+        console.log(msg);
+      }
     }
     await new Promise(r => setTimeout(r, 1000));
   }

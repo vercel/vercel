@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   test: {
     globals: true,
+    setupFiles: ['./vitest.setup.mts'],
     // Use of process.chdir prohibits usage of the default "threads". https://vitest.dev/config/#forks
     pool: 'forks',
     testTimeout: 12 * 60 * 1000,
