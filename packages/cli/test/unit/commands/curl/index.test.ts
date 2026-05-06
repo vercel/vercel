@@ -608,6 +608,173 @@ describe('curl', () => {
       );
     });
 
+    it('should skip limited teams when resolving aliases across teams', async () => {
+      useUser();
+      const teams = useTeams('team_one');
+      assert(Array.isArray(teams));
+      const teamA = teams[0];
+      const teamB = createTeam('team_two');
+      const teamC = createTeam('team_three', 'team-three');
+      (teamC as typeof teamC & { limited?: boolean }).limited = true;
+
+      const queriedTeamIds: (string | undefined)[] = [];
+      client.scenario.get('/now/aliases/limited.example.com', (req, res) => {
+        const teamId = req.query.teamId as string | undefined;
+        queriedTeamIds.push(teamId);
+
+        if (teamId === teamA.id) {
+          return res.status(404).json({ error: { message: 'not found' } });
+        }
+        if (teamId === teamB.id) {
+          return res.json({ projectId: 'alias-project', ownerId: teamB.id });
+        }
+        if (teamId === teamC.id) {
+          return res.status(403).json({ error: { message: 'saml required' } });
+        }
+        return res.status(404).json({ error: { message: 'not found' } });
+      });
+      useProject({ id: 'alias-project', name: 'alias-project' } as any, [
+        {
+          type: 'plain',
+          id: 'alias-oidc-token',
+          key: 'VERCEL_OIDC_TOKEN',
+          value: 'alias-oidc-token',
+          target: ['development'],
+          gitBranch: null,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        } as any,
+      ]);
+
+      client.setArgv('curl', 'https://limited.example.com/api/hello');
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(queriedTeamIds).toContain(teamA.id);
+      expect(queriedTeamIds).toContain(teamB.id);
+      expect(queriedTeamIds).not.toContain(teamC.id);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://limited.example.com/api/hello',
+          '--header',
+          `${OIDC_HEADER}: alias-oidc-token`,
+        ],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
+    });
+
+    it('should retry alias lookup with a selected limited team', async () => {
+      useUser();
+      const teams = useTeams('team_one');
+      assert(Array.isArray(teams));
+      const teamA = teams[0];
+      const teamB = createTeam('team_two', 'team-two');
+      (teamB as typeof teamB & { limited?: boolean }).limited = true;
+
+      const queriedTeamIds: (string | undefined)[] = [];
+      client.scenario.get('/now/aliases/retry.example.com', (req, res) => {
+        const teamId = req.query.teamId as string | undefined;
+        queriedTeamIds.push(teamId);
+
+        if (teamId === teamA.id) {
+          return res.status(404).json({ error: { message: 'not found' } });
+        }
+        if (teamId === teamB.id) {
+          return res.json({ projectId: 'alias-project', ownerId: teamB.id });
+        }
+        return res.status(404).json({ error: { message: 'not found' } });
+      });
+      useProject({ id: 'alias-project', name: 'alias-project' } as any, [
+        {
+          type: 'plain',
+          id: 'alias-oidc-token',
+          key: 'VERCEL_OIDC_TOKEN',
+          value: 'alias-oidc-token',
+          target: ['development'],
+          gitBranch: null,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        } as any,
+      ]);
+
+      const selectSpy = vi
+        .spyOn(client.input, 'select')
+        .mockResolvedValue(teamB as never);
+      const reauthSpy = vi
+        .spyOn(client, 'reauthenticate')
+        .mockResolvedValue(undefined);
+
+      client.setArgv('curl', 'https://retry.example.com/api/hello');
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(selectSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Which team should Vercel use to resolve this URL?',
+        })
+      );
+      expect(reauthSpy).toHaveBeenCalledWith({
+        teamId: teamB.id,
+        scope: teamB.slug,
+        enforced: false,
+      });
+      expect(queriedTeamIds).toEqual([teamA.id, teamB.id]);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://retry.example.com/api/hello',
+          '--header',
+          `${OIDC_HEADER}: alias-oidc-token`,
+        ],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
+
+      selectSpy.mockRestore();
+      reauthSpy.mockRestore();
+    });
+
+    it('should not prompt for limited team retry in non-interactive mode', async () => {
+      useUser();
+      const teams = useTeams('team_one');
+      assert(Array.isArray(teams));
+      const teamA = teams[0];
+      const teamB = createTeam('team_two', 'team-two');
+      (teamB as typeof teamB & { limited?: boolean }).limited = true;
+
+      const queriedTeamIds: (string | undefined)[] = [];
+      client.scenario.get('/now/aliases/plain.example.com', (req, res) => {
+        queriedTeamIds.push(req.query.teamId as string | undefined);
+        return res.status(404).json({ error: { message: 'not found' } });
+      });
+
+      const selectSpy = vi.spyOn(client.input, 'select');
+      const reauthSpy = vi.spyOn(client, 'reauthenticate');
+
+      client.setArgv('curl', 'https://plain.example.com/api/hello');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(queriedTeamIds).toEqual([teamA.id]);
+      expect(queriedTeamIds).not.toContain(teamB.id);
+      expect(selectSpy).not.toHaveBeenCalled();
+      expect(reauthSpy).not.toHaveBeenCalled();
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://plain.example.com/api/hello'],
+        expect.objectContaining({ stdio: 'inherit', shell: false })
+      );
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+      selectSpy.mockRestore();
+      reauthSpy.mockRestore();
+    });
+
     it('should add https:// to bare host targets', async () => {
       await setupLinkedProject();
 

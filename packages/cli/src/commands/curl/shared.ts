@@ -12,6 +12,7 @@ import type {
   Deployment,
   Project,
   ProjectLinked,
+  Team,
 } from '@vercel-internals/types';
 import { help } from '../help';
 import { getCommandName } from '../../util/pkg-name';
@@ -255,9 +256,13 @@ async function pullProjectOidcToken(
 async function resolveProjectFromUrl(
   client: Client,
   fullUrl: string
-): Promise<{ project: Project; ownerId: string } | null> {
+): Promise<{
+  result: { project: Project; ownerId: string } | null;
+  skippedLimitedTeams: Team[];
+}> {
   type Result = { project: Project; ownerId: string } | null;
   const host = toHost(fullUrl);
+  const skippedLimitedTeams: Team[] = [];
 
   const deploymentLookup = async (): Promise<Result> => {
     for (const useCurrentTeam of [undefined, false] as const) {
@@ -285,9 +290,19 @@ async function resolveProjectFromUrl(
   const aliasLookup = async (): Promise<Result> => {
     try {
       const teams = await getTeams(client);
+      const accessibleTeams = teams.filter(team => !team.limited);
+      skippedLimitedTeams.push(...teams.filter(team => team.limited));
+      const skippedSlugs = skippedLimitedTeams.map(team => team.slug);
+
+      if (skippedSlugs.length > 0) {
+        output.debug(
+          `Skipping limited teams during alias lookup: ${skippedSlugs.join(', ')}`
+        );
+      }
+
       const aliasUrl = `/now/aliases/${encodeURIComponent(host)}`;
       const results = await Promise.all(
-        teams.map(team =>
+        accessibleTeams.map(team =>
           client
             .fetch<{
               projectId?: string;
@@ -318,7 +333,65 @@ async function resolveProjectFromUrl(
     aliasLookup(),
   ]);
 
-  return fromDeployment ?? fromAlias;
+  return { result: fromDeployment ?? fromAlias, skippedLimitedTeams };
+}
+
+async function retryAliasLookupWithTeam(
+  client: Client,
+  fullUrl: string,
+  team: Team
+): Promise<{ project: Project; ownerId: string } | null> {
+  const host = toHost(fullUrl);
+  const aliasUrl = `/now/aliases/${encodeURIComponent(host)}`;
+
+  try {
+    const alias = await client.fetch<{
+      projectId?: string;
+      ownerId?: string;
+    }>(aliasUrl, { accountId: team.id });
+
+    if (alias?.projectId && alias?.ownerId) {
+      const project = await client.fetch<Project>(
+        `/v9/projects/${encodeURIComponent(alias.projectId)}`,
+        { accountId: alias.ownerId }
+      );
+      if (project) return { project, ownerId: alias.ownerId };
+    }
+  } catch (err) {
+    output.debug(
+      `Alias lookup failed for ${host} in ${team.slug}: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  return null;
+}
+
+async function retryWithLimitedTeam(
+  client: Client,
+  fullUrl: string,
+  skippedLimitedTeams: Team[]
+): Promise<{ project: Project; ownerId: string } | null> {
+  if (skippedLimitedTeams.length === 0 || client.nonInteractive) {
+    return null;
+  }
+
+  const team = await client.input.select({
+    message: 'Which team should Vercel use to resolve this URL?',
+    choices: skippedLimitedTeams.map(team => ({
+      name: team.name || team.slug,
+      value: team,
+    })),
+    default: skippedLimitedTeams[0],
+  });
+
+  const samlEnabled = team.saml?.connection?.state === 'active';
+  await client.reauthenticate({
+    teamId: team.id,
+    scope: team.slug,
+    enforced: samlEnabled && team.saml?.enforced === true,
+  });
+
+  return retryAliasLookupWithTeam(client, fullUrl, team);
 }
 
 export async function resolveFullUrlAuthHeader(
@@ -330,7 +403,13 @@ export async function resolveFullUrlAuthHeader(
     return { name: PROTECTION_BYPASS_HEADER, value: protectionBypassFlag };
   }
 
-  const resolved = await resolveProjectFromUrl(client, fullUrl);
+  const { result, skippedLimitedTeams } = await resolveProjectFromUrl(
+    client,
+    fullUrl
+  );
+  const resolved =
+    result ??
+    (await retryWithLimitedTeam(client, fullUrl, skippedLimitedTeams));
   if (resolved) {
     const token = await pullProjectOidcToken(
       client,
