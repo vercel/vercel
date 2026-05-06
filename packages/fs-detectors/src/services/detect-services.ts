@@ -119,8 +119,11 @@ export async function detectServices(
     });
   }
 
-  const configuredServices =
-    vercelConfig?.services ?? vercelConfig?.experimentalServices;
+  const hasPublicServicesConfig =
+    vercelConfig?.services && Object.keys(vercelConfig.services).length > 0;
+  const configuredServices = hasPublicServicesConfig
+    ? vercelConfig.services
+    : vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -230,7 +233,10 @@ export async function detectServices(
   const result = await resolveAllConfiguredServices(
     configuredServices,
     scopedFs,
-    'configured'
+    'configured',
+    {
+      requireFileEntrypointForBackendRuntimes: Boolean(hasPublicServicesConfig),
+    }
   );
 
   // Generate routes

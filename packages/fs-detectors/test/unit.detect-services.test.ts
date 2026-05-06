@@ -182,6 +182,71 @@ describe('detectServices', () => {
         serviceName: 'api',
       });
     });
+
+    it('should require backend services entrypoint to be a file path', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            api: {
+              entrypoint: 'apps/api',
+              framework: 'fastapi',
+              mount: '/api',
+            },
+          },
+        }),
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_ENTRYPOINT',
+        serviceName: 'api',
+      });
+    });
+
+    it('should require auto-detected backend services entrypoint to be a file path', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            api: {
+              entrypoint: 'apps/api',
+              mount: '/api',
+            },
+          },
+        }),
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_ENTRYPOINT',
+        serviceName: 'api',
+      });
+    });
+
+    it('should keep legacy experimentalServices backend framework behavior', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              framework: 'fastapi',
+              routePrefix: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        framework: 'fastapi',
+      });
+    });
   });
 
   describe('with experimentalServices', () => {

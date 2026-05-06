@@ -141,6 +141,31 @@ function getEntrypointRequiredRuntime(
   return inferRuntimeFromFramework(config.framework);
 }
 
+function validateBackendFileEntrypoint(
+  name: string,
+  config: ConfiguredServiceConfig,
+  resolvedEntrypoint: ResolvedEntrypointPath | undefined,
+  options: ResolveAllConfiguredServicesOptions
+): ServiceDetectionError | null {
+  if (
+    !options.requireFileEntrypointForBackendRuntimes ||
+    !resolvedEntrypoint?.isDirectory
+  ) {
+    return null;
+  }
+
+  const runtime = getEntrypointRequiredRuntime(config);
+  if (!runtime || !ENTRYPOINT_REQUIRED_RUNTIMES.has(runtime)) {
+    return null;
+  }
+
+  return {
+    code: 'INVALID_ENTRYPOINT',
+    message: `Service "${name}" must specify a file "entrypoint" when using "${config.runtime ? 'runtime' : 'framework'}" "${config.runtime || config.framework}".`,
+    serviceName: name,
+  };
+}
+
 async function resolveEntrypointPath({
   fs,
   serviceName,
@@ -184,6 +209,10 @@ interface ResolveConfiguredServiceOptions {
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
   routePrefixSource?: RoutePrefixSource;
+}
+
+interface ResolveAllConfiguredServicesOptions {
+  requireFileEntrypointForBackendRuntimes?: boolean;
 }
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
@@ -410,7 +439,8 @@ function resolveServiceRoutingConfig(
  */
 export function validateServiceConfig(
   name: string,
-  config: ConfiguredServiceConfig
+  config: ConfiguredServiceConfig,
+  options: ResolveAllConfiguredServicesOptions = {}
 ): ServiceDetectionError | null {
   if (!SERVICE_NAME_REGEX.test(name)) {
     return {
@@ -600,6 +630,7 @@ export function validateServiceConfig(
     };
   }
   if (
+    options.requireFileEntrypointForBackendRuntimes &&
     !hasEntrypoint &&
     entrypointRequiredRuntime &&
     ENTRYPOINT_REQUIRED_RUNTIMES.has(entrypointRequiredRuntime)
@@ -887,7 +918,8 @@ export async function resolveConfiguredService(
 export async function resolveAllConfiguredServices(
   services: ConfiguredServices,
   fs: DetectorFilesystem,
-  routePrefixSource: RoutePrefixSource = 'configured'
+  routePrefixSource: RoutePrefixSource = 'configured',
+  options: ResolveAllConfiguredServicesOptions = {}
 ): Promise<{
   services: Service[];
   errors: ServiceDetectionError[];
@@ -899,7 +931,7 @@ export async function resolveAllConfiguredServices(
   for (const name of Object.keys(services)) {
     const serviceConfig = services[name];
 
-    const validationError = validateServiceConfig(name, serviceConfig);
+    const validationError = validateServiceConfig(name, serviceConfig, options);
     if (validationError) {
       errors.push(validationError);
       continue;
@@ -941,6 +973,17 @@ export async function resolveAllConfiguredServices(
         errors.push(entrypointError);
         continue;
       }
+    }
+
+    const explicitBackendEntrypointError = validateBackendFileEntrypoint(
+      name,
+      serviceConfig,
+      resolvedEntrypoint,
+      options
+    );
+    if (explicitBackendEntrypointError) {
+      errors.push(explicitBackendEntrypointError);
+      continue;
     }
 
     let resolvedConfig = serviceConfig;
@@ -1001,6 +1044,17 @@ export async function resolveAllConfiguredServices(
           }
         }
       }
+    }
+
+    const backendEntrypointError = validateBackendFileEntrypoint(
+      name,
+      resolvedConfig,
+      resolvedEntrypoint,
+      options
+    );
+    if (backendEntrypointError) {
+      errors.push(backendEntrypointError);
+      continue;
     }
 
     const service = await resolveConfiguredService({
