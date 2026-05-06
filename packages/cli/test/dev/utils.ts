@@ -8,6 +8,7 @@ import { satisfies } from 'semver';
 import stripAnsi from 'strip-ansi';
 import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 import { spawnSync, execFileSync } from 'child_process';
+import { debugLog } from '../helpers/debug-log';
 
 vi.setConfig({ testTimeout: 10 * 60 * 1000, hookTimeout: 10 * 60 * 1000 });
 
@@ -19,11 +20,11 @@ export function sleep(ms: number) {
 
 const BASE_PORT = 3000;
 const PORTS_PER_WORKER = 1000;
-const rawWorkerId = Number.parseInt(process.env.JEST_WORKER_ID || '1', 10);
+const rawWorkerId = Number.parseInt(process.env.VITEST_WORKER_ID || '1', 10);
 const workerId =
   Number.isFinite(rawWorkerId) && rawWorkerId > 0 ? rawWorkerId : 1;
 
-// Jest may run dev integration files in parallel workers. Keep each worker
+// Vitest may run dev integration files in parallel workers. Keep each worker
 // in its own port range to avoid cross-worker collisions.
 let port = BASE_PORT + (workerId - 1) * PORTS_PER_WORKER;
 
@@ -109,21 +110,31 @@ export function formatOutput({
 }
 
 function printOutput(fixture: string, stdout: string, stderr: string) {
-  const lines = (
-    `\nOutput for "${fixture}"\n` +
-    `\n----- stdout -----\n` +
-    stdout +
-    `\n----- stderr -----\n` +
-    stderr
-  ).split('\n');
+  if (process.env.CI) {
+    // GitHub Actions log folding — collapsed by default, expandable on click
+    console.log(`::group::Output for "${fixture}"`);
+    console.log('----- stdout -----');
+    console.log(stdout);
+    console.log('----- stderr -----');
+    console.log(stderr);
+    console.log('::endgroup::');
+  } else {
+    const lines = (
+      `\nOutput for "${fixture}"\n` +
+      `\n----- stdout -----\n` +
+      stdout +
+      `\n----- stderr -----\n` +
+      stderr
+    ).split('\n');
 
-  const getPrefix = (nr: number) => {
-    return nr === 0 ? '╭' : nr === lines.length - 1 ? '╰' : '│';
-  };
+    const getPrefix = (nr: number) => {
+      return nr === 0 ? '╭' : nr === lines.length - 1 ? '╰' : '│';
+    };
 
-  console.log(
-    lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n')
-  );
+    console.log(
+      lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n')
+    );
+  }
 }
 
 export function shouldSkip(name: string, versions: string) {
@@ -181,7 +192,7 @@ async function runNpmInstall(fixturePath: string) {
     await execa(command, ['install'], {
       cwd: fixturePath,
       shell: true,
-      stdio: 'inherit',
+      stdio: process.env.CI ? 'pipe' : 'inherit',
     });
   }
 }
@@ -488,9 +499,6 @@ export function testFixtureStdio(
       dev.stdout.setEncoding('utf8');
       dev.stderr.setEncoding('utf8');
 
-      dev.stdout.pipe(process.stdout);
-      dev.stderr.pipe(process.stderr);
-
       dev.stdout.on('data', data => {
         stdout += data;
       });
@@ -572,7 +580,7 @@ async function ps(parentPid: number, pids: Record<string, Array<number>> = {}) {
     }
   } catch (err) {
     const error = err as Error;
-    console.log(`Failed to get processes: ${error.toString()}`);
+    debugLog(`Failed to get processes: ${error.toString()}`);
   }
   return pids;
 }
@@ -583,7 +591,7 @@ async function nukePID(
   retries: number = 10
 ) {
   if (retries === 0) {
-    console.log(`pid ${pid} won't die, giving up`);
+    debugLog(`pid ${pid} won't die, giving up`);
     return;
   }
 
@@ -593,7 +601,7 @@ async function nukePID(
   } catch (_e) {
     // process does not exist
 
-    console.log(`pid ${pid} is not running`);
+    debugLog(`pid ${pid} is not running`);
     return;
   }
 
@@ -603,11 +611,11 @@ async function nukePID(
     // check if killed
     process.kill(pid, 0);
   } catch (_e) {
-    console.log(`pid ${pid} is not running`);
+    debugLog(`pid ${pid} is not running`);
     return;
   }
 
-  console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
+  debugLog(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
   await nukePID(pid, 'SIGKILL', retries - 1);
 }
 
@@ -623,7 +631,7 @@ async function nukeProcessTree(pid: number, signal?: string) {
     [pid]: [],
   });
 
-  console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
+  debugLog(`Nuking pids: ${Object.keys(pids).join(', ')}`);
   await Promise.all(Object.keys(pids).map(pid => nukePID(Number(pid), signal)));
 }
 
@@ -634,7 +642,7 @@ beforeEach(() => {
 afterEach(async () => {
   await Promise.all(
     Array.from(processList).map(async ([_procId, proc]) => {
-      console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
+      debugLog(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
       try {
         await nukeProcessTree(proc.pid);
