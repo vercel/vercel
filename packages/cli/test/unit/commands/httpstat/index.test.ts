@@ -173,7 +173,7 @@ describe('httpstat', () => {
       );
     });
 
-    it('should accept a full http URL as the target', async () => {
+    it('should not send linked project OIDC token to unresolved full URLs', async () => {
       await setupLinkedProject();
 
       client.setArgv('httpstat', 'http://localhost:3000/');
@@ -182,7 +182,7 @@ describe('httpstat', () => {
       expect(exitCode).toEqual(0);
       expect(spawnMock).toHaveBeenCalledWith(
         'httpstat',
-        ['http://localhost:3000/', '-H', `${OIDC_HEADER}: oidc-token`],
+        ['http://localhost:3000/'],
         expect.objectContaining({ stdio: 'inherit', shell: false })
       );
     });

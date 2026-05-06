@@ -340,16 +340,6 @@ export async function resolveFullUrlAuthHeader(
     if (token) return { name: TRUSTED_OIDC_HEADER, value: token };
   }
 
-  const linkedProject = await getLinkedProject(client, client.cwd);
-  if (linkedProject.status === 'linked' && linkedProject.project) {
-    const token = await pullProjectOidcToken(
-      client,
-      linkedProject.project.id,
-      linkedProject.org.id
-    );
-    if (token) return { name: TRUSTED_OIDC_HEADER, value: token };
-  }
-
   output.debug(`No OIDC token available for ${toHost(fullUrl)}`);
   return null;
 }

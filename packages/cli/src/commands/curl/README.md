@@ -103,5 +103,5 @@ If no OIDC token is available, the command still runs without an auth header. Th
 ## Requirements
 
 - **curl**: Must be installed and available in your system PATH.
-- **Vercel project**: Required for relative paths; full URLs can be used without a linked project, but linked-project OIDC auth is used as a fallback.
+- **Vercel project**: Required for relative paths. Full URLs can be used without a linked project; OIDC auth is only added when the URL resolves to an accessible Vercel deployment or alias.
 - **Deployment**: Relative paths require at least one deployment for the linked project.

@@ -188,7 +188,7 @@ describe('curl', () => {
       );
     });
 
-    it('should accept a full http URL as the target', async () => {
+    it('should not send linked project OIDC token to unresolved full URLs', async () => {
       await setupLinkedProject();
 
       client.setArgv('curl', 'http://localhost:3000/');
@@ -197,12 +197,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(spawnMock).toHaveBeenCalledWith(
         'curl',
-        [
-          '--url',
-          'http://localhost:3000/',
-          '--header',
-          `${OIDC_HEADER}: oidc-token`,
-        ],
+        ['--url', 'http://localhost:3000/'],
         expect.objectContaining({ stdio: 'inherit', shell: false })
       );
     });
