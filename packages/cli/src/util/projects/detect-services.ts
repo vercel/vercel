@@ -103,44 +103,10 @@ export async function getServicesConfigWriteBlocker(
 
 function toProjectServicesConfigPatch(
   config: ServicesConfig
-): Pick<VercelConfig, 'services'> {
+): Pick<VercelConfig, 'experimentalServices'> {
   return {
-    services: toPublicServicesConfig(config),
+    experimentalServices: config,
   };
-}
-
-function toPublicServicesConfig(
-  config: ServicesConfig
-): NonNullable<VercelConfig['services']> {
-  const services: NonNullable<VercelConfig['services']> = {};
-
-  for (const [name, service] of Object.entries(config)) {
-    const {
-      builder,
-      envPrefix,
-      installCommand,
-      mount,
-      routePrefix,
-      subdomain,
-      workspace,
-      ...publicService
-    } = service;
-    const publicMount =
-      typeof mount === 'string'
-        ? mount
-        : mount && typeof mount.path === 'string'
-          ? { path: mount.path }
-          : typeof routePrefix === 'string'
-            ? routePrefix
-            : undefined;
-
-    services[name] = {
-      ...publicService,
-      ...(publicMount !== undefined ? { mount: publicMount } : {}),
-    };
-  }
-
-  return services;
 }
 
 async function prepareServicesConfigWrite(
@@ -218,9 +184,7 @@ async function prepareTomlServicesConfigWrite(
   // with our new keys, since could cause trouble.
   if (existingContent.trim()) {
     const existingParsed = tomlParse(existingContent);
-    const overlapping = patchKeys
-      .concat('experimentalServices')
-      .filter(key => key in existingParsed);
+    const overlapping = patchKeys.filter(key => key in existingParsed);
     if (overlapping.length > 0) {
       const plural = overlapping.length > 1;
       const keyList = overlapping.map(k => `"${k}"`).join(', ');

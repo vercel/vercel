@@ -192,11 +192,11 @@ mount = "/api"`
     );
     expect(vercelConfig).toEqual({
       buildCommand: 'npm run build',
-      services: {
-        frontend: { framework: 'nextjs', mount: '/' },
+      experimentalServices: {
+        frontend: { framework: 'nextjs', routePrefix: '/' },
         api: {
           entrypoint: 'services/api',
-          mount: '/_/api',
+          routePrefix: '/_/api',
         },
       },
     });
@@ -219,9 +219,9 @@ mount = "/api"`
     expect(configFileName).toBe('vercel.toml');
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
     expect(content).toContain('buildCommand = "npm run build"');
-    expect(content).toContain('[services.frontend]');
+    expect(content).toContain('[experimentalServices.frontend]');
     expect(content).toContain('framework = "nextjs"');
-    expect(content).toContain('[services.api]');
+    expect(content).toContain('[experimentalServices.api]');
     expect(content).toContain('entrypoint = "services/api"');
   });
 
@@ -234,7 +234,7 @@ mount = "/api"`
 
     expect(configFileName).toBe('vercel.toml');
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
-    expect(content).toContain('[services.frontend]');
+    expect(content).toContain('[experimentalServices.frontend]');
     expect(content).toContain('framework = "nextjs"');
     // Should not start with a blank line
     expect(content).not.toMatch(/^\n/);
@@ -275,7 +275,7 @@ mount = "/api"`
     expect(content).toContain('buildCommand = "npm run build" # custom build');
     expect(content).toContain('# Output settings');
     expect(content).toContain('outputDirectory = "dist"');
-    expect(content).toContain('[services.frontend]');
+    expect(content).toContain('[experimentalServices.frontend]');
   });
 
   it('should separate existing and new content with a double newline in vercel.toml', async () => {
@@ -289,7 +289,9 @@ mount = "/api"`
     });
 
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
-    expect(content).toMatch(/buildCommand = "npm run build"\n\n\[services/);
+    expect(content).toMatch(
+      /buildCommand = "npm run build"\n\n\[experimentalServices/
+    );
   });
 
   it('should trim trailing newlines from existing vercel.toml before appending', async () => {
@@ -305,7 +307,9 @@ mount = "/api"`
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
     // Should have exactly one blank line between old and new, not multiple
     expect(content).not.toMatch(/buildCommand = "npm run build"\n\n\n/);
-    expect(content).toMatch(/buildCommand = "npm run build"\n\n\[services/);
+    expect(content).toMatch(
+      /buildCommand = "npm run build"\n\n\[experimentalServices/
+    );
   });
 
   it('should treat whitespace-only vercel.toml as empty', async () => {
@@ -317,7 +321,7 @@ mount = "/api"`
 
     const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
     // Should not start with whitespace from the original file
-    expect(content).toMatch(/^\[services/);
+    expect(content).toMatch(/^\[experimentalServices/);
   });
 
   it('should not report vercel.toml key overlap as a services config write blocker', async () => {
