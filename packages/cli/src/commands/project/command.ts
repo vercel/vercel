@@ -166,6 +166,14 @@ export const listSubcommand = {
       type: Boolean,
       deprecated: false,
     },
+    {
+      name: 'filter',
+      shorthand: 'f',
+      type: String,
+      argument: 'NAME',
+      description: 'Filter projects by name (substring match)',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -175,6 +183,10 @@ export const listSubcommand = {
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
       value: `${packageName} project ls --update-required --format=json`,
+    },
+    {
+      name: 'Filter projects by name',
+      value: `${packageName} project ls --filter my-app`,
     },
   ],
 } as const;

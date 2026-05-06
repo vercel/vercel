@@ -50,7 +50,7 @@
       "hash": "5d8590c998bec75a",
       "inputs": {
         "CHANGELOG.md": "bf7445d194d8a0080f7b98b0181e1f0ac4ef0ef3",
-        "jest.config.js": "36fb3c7c6ce1cee41bbfeb93108375e0e0ea94ef",
+        "vitest.config.mts": "36fb3c7c6ce1cee41bbfeb93108375e0e0ea94ef",
         "package.json": "f0510070d5f969e9cc0d9981c85f5428d4b622c2",
         "src/index.ts": "adb0bba2a3bc0c86ee6d309b70c26e4ba8d7bbc0",
         "test/index.test.ts": "982b4a5705dacb00beeadd56ee39402573b1bae6",
@@ -116,7 +116,7 @@
       "hash": "5bb22ba520f1cbe8",
       "inputs": {
         "CHANGELOG.md": "bf7445d194d8a0080f7b98b0181e1f0ac4ef0ef3",
-        "jest.config.js": "36fb3c7c6ce1cee41bbfeb93108375e0e0ea94ef",
+        "vitest.config.mts": "36fb3c7c6ce1cee41bbfeb93108375e0e0ea94ef",
         "package.json": "f0510070d5f969e9cc0d9981c85f5428d4b622c2",
         "src/index.ts": "adb0bba2a3bc0c86ee6d309b70c26e4ba8d7bbc0",
         "test/index.test.ts": "982b4a5705dacb00beeadd56ee39402573b1bae6",
@@ -131,7 +131,7 @@
         "source": "REMOTE",
         "timeSaved": 4572
       },
-      "command": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
+      "command": "vitest run --config ../../vitest.config.mts --coverage",
       "cliArguments": ["test/index.test.ts"],
       "outputs": null,
       "excludedOutputs": null,
