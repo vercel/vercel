@@ -30,17 +30,13 @@ async function readStream(stream: Readable): Promise<string> {
   return input;
 }
 
-export interface ProgrammaticCommandInput {
-  argv: string[];
-  cwd: string;
-  env: Record<string, string>;
-}
-
-const commandWorkerInputSchema = z.object({
+export const commandWorkerInputSchema = z.object({
   argv: z.array(z.string()),
   cwd: z.string().min(1),
   env: z.record(z.string()),
 });
+
+export type ProgrammaticCommandInput = z.infer<typeof commandWorkerInputSchema>;
 
 export async function parseCommandWorkerInput(
   stream: Readable
