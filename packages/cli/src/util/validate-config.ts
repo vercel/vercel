@@ -612,7 +612,27 @@ const vercelConfigSchema = {
 const ajv = new Ajv();
 const validate = ajv.compile(vercelConfigSchema);
 
+function isPublicServicesEnabled(): boolean {
+  return (
+    process.env.VERCEL_USE_SERVICES === '1' ||
+    process.env.VERCEL_USE_SERVICES?.toLowerCase() === 'true'
+  );
+}
+
 export function validateConfig(config: VercelConfig): NowBuildError | null {
+  if (
+    Object.prototype.hasOwnProperty.call(config, 'services') &&
+    !isPublicServicesEnabled()
+  ) {
+    const fileName = config[fileNameSymbol] || 'vercel.json';
+    const niceError = getPrettyError({
+      dataPath: '',
+      params: { additionalProperty: 'services' },
+    });
+    niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+    return niceError;
+  }
+
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];

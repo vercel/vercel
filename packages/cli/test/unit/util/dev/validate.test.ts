@@ -1,7 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
+  const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
+
+  afterEach(() => {
+    if (originalServicesEnv === undefined) {
+      delete process.env.VERCEL_USE_SERVICES;
+    } else {
+      process.env.VERCEL_USE_SERVICES = originalServicesEnv;
+    }
+  });
+
   it('should not error with empty config', async () => {
     const config = {};
     const error = validateConfig(config);
@@ -62,6 +72,7 @@ describe('validateConfig', () => {
   });
 
   it('should not error with services mount config', async () => {
+    process.env.VERCEL_USE_SERVICES = '1';
     const config = {
       services: {
         frontend: {
@@ -80,6 +91,21 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should reject services when VERCEL_USE_SERVICES is not set', async () => {
+    delete process.env.VERCEL_USE_SERVICES;
+    const error = validateConfig({
+      services: {
+        frontend: {
+          framework: 'nextjs',
+          mount: '/',
+        },
+      },
+    });
+    expect(error?.message).toEqual(
+      'Invalid vercel.json - should NOT have additional property `services`. Please remove it.'
+    );
+  });
+
   it.each([
     ['routePrefix', { routePrefix: '/api' }],
     ['subdomain', { subdomain: 'api' }],
@@ -88,6 +114,7 @@ describe('validateConfig', () => {
     ['worker service', { type: 'worker' }],
     ['mount.subdomain', { mount: { subdomain: 'api' } }],
   ])('should reject deprecated services config field %s', (_, serviceConfig) => {
+    process.env.VERCEL_USE_SERVICES = '1';
     const error = validateConfig({
       services: {
         api: {
@@ -100,6 +127,7 @@ describe('validateConfig', () => {
   });
 
   it('should reject services and experimentalServices together', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
     const error = validateConfig({
       services: {
         api: {
