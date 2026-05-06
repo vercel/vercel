@@ -1,5 +1,6 @@
 import stripAnsi from 'strip-ansi';
 import type { CLIProcess } from './types';
+import { debugLog } from './debug-log';
 
 function getPromptErrorDetails(
   rawAssertion: string | Function | RegExp,
@@ -27,7 +28,7 @@ export default async function waitForPrompt(
   return new Promise<void>((resolve, reject) => {
     let mostRecentChunk = 'NO CHUNKS SO FAR';
 
-    console.log('Waiting for prompt...');
+    debugLog('Waiting for prompt...');
     const handleTimeout = setTimeout(() => {
       cleanup();
       const promptErrorDetails = getPromptErrorDetails(
