@@ -165,7 +165,7 @@ export const continueSubcommand = {
       type: String,
       argument: 'MESSAGE',
       deprecated: false,
-      // No description — keeps it hidden from --help output
+      description: 'Mark the deployment as errored with a message',
     },
   ],
   examples: [
