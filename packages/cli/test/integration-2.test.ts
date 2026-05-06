@@ -815,7 +815,7 @@ test('deploys with only vercel.json and README.md', async () => {
   expect(text).toMatch(/readme contents/);
 });
 
-test('reject conflicting `vercel.json` and `now.json` files', async () => {
+test('reject deprecated `now.json` files', async () => {
   const directory = await setupE2EFixture('conflicting-now-json-vercel-json');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
@@ -824,7 +824,7 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
-    'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    'The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.'
   );
 });
 

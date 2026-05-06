@@ -47,6 +47,7 @@ import {
   DomainNotVerified,
   DomainPermissionDenied,
   DomainVerificationFailed,
+  DeprecatedNowJson,
   InvalidDomain,
   isAPIError,
   MissingBuildScript,
@@ -225,7 +226,10 @@ async function handleInitDeployment(
   }
 
   await compileVercelConfig(paths[0]);
-  let localConfig = client.localConfig || readLocalConfig(paths[0]);
+  const shouldUseEarlyLocalConfig = paths[0] === client.cwd;
+  let localConfig = shouldUseEarlyLocalConfig
+    ? client.localConfig || readLocalConfig(paths[0])
+    : readLocalConfig(paths[0]);
 
   if (localConfig) {
     client.localConfig = localConfig;
@@ -728,7 +732,14 @@ async function handleInitDeployment(
       return 0;
     }
 
-    return printDeploymentStatus(deployment, deployStamp, noWait, false, true);
+    return printDeploymentStatus(
+      client,
+      deployment,
+      deployStamp,
+      noWait,
+      false,
+      true
+    );
   } catch (err: unknown) {
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
@@ -768,7 +779,8 @@ async function handleInitDeployment(
       err instanceof MissingBuildScript ||
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment ||
-      err instanceof ConflictingConfigFiles
+      err instanceof ConflictingConfigFiles ||
+      err instanceof DeprecatedNowJson
     ) {
       handleCreateDeployError(err, localConfig);
       return 1;
@@ -1049,9 +1061,23 @@ async function handleDefaultDeploy(
   // #endregion
 
   // #region Config loading
-  await compileVercelConfig(paths[0]);
+  try {
+    await compileVercelConfig(paths[0]);
+  } catch (err) {
+    if (
+      err instanceof ConflictingConfigFiles ||
+      err instanceof DeprecatedNowJson
+    ) {
+      output.prettyError(err);
+      return 1;
+    }
+    throw err;
+  }
 
-  let localConfig = client.localConfig || readLocalConfig(paths[0]);
+  const shouldUseEarlyLocalConfig = paths[0] === client.cwd;
+  let localConfig = shouldUseEarlyLocalConfig
+    ? client.localConfig || readLocalConfig(paths[0])
+    : readLocalConfig(paths[0]);
 
   if (localConfig) {
     client.localConfig = localConfig;
@@ -1929,7 +1955,13 @@ async function handleDefaultDeploy(
 
   const { isAgent } = await determineAgent();
   const guidanceMode = parsedArguments.flags['--guidance'] ?? isAgent;
-  return printDeploymentStatus(deployment, deployStamp, noWait, guidanceMode);
+  return printDeploymentStatus(
+    client,
+    deployment,
+    deployStamp,
+    noWait,
+    guidanceMode
+  );
 }
 
 function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
@@ -1994,7 +2026,8 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
     error instanceof MissingBuildScript ||
     error instanceof ConflictingFilePath ||
     error instanceof ConflictingPathSegment ||
-    error instanceof ConflictingConfigFiles
+    error instanceof ConflictingConfigFiles ||
+    error instanceof DeprecatedNowJson
   ) {
     output.error(error.message);
     return 1;
@@ -2128,6 +2161,7 @@ async function handleContinueDeployment({
 
         if (noWait) {
           return printDeploymentStatus(
+            client,
             finalDeployment,
             deployStamp,
             noWait,
@@ -2185,7 +2219,13 @@ async function handleContinueDeployment({
       return 1;
     }
 
-    return printDeploymentStatus(finalDeployment, deployStamp, noWait, false);
+    return printDeploymentStatus(
+      client,
+      finalDeployment,
+      deployStamp,
+      noWait,
+      false
+    );
   } catch (err: unknown) {
     output.stopSpinner();
     if (isError(err)) {

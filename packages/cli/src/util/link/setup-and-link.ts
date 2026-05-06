@@ -23,7 +23,7 @@ import {
 } from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
-import { isDirectory } from '../config/global-path';
+import { isDirectory } from '../fs';
 import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';

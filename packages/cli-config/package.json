@@ -1,0 +1,43 @@
+{
+  "name": "@vercel/cli-config",
+  "version": "0.0.1",
+  "description": "Shared core utilities for Vercel global configuration",
+  "license": "Apache-2.0",
+  "homepage": "https://vercel.com/docs/projects/project-configuration/global-configuration",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/cli-config"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "private": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "pnpm generate:schemas && tsc",
+    "generate:schemas": "ts-to-zod src/types.ts src/schema.zod.ts",
+    "test": "pnpm test-unit",
+    "test-unit": "pnpm run vitest-run -- test",
+    "vitest-run": "vitest run -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/*.test.ts'",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.1.11",
+    "xdg-app-paths": "5"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "ts-to-zod": "^3",
+    "vite": "7.1.7",
+    "vitest": "2.1.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

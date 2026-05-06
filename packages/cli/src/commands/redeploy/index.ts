@@ -269,7 +269,13 @@ export default async function redeploy(client: Client): Promise<number> {
       }
     }
 
-    return printDeploymentStatus(deployment, deployStamp, noWait, false);
+    return printDeploymentStatus(
+      client,
+      deployment,
+      deployStamp,
+      noWait,
+      false
+    );
   } catch (err: unknown) {
     output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {

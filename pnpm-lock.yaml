@@ -185,6 +185,9 @@ importers:
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../../packages/build-utils
+      '@vercel/cli-config':
+        specifier: workspace:*
+        version: link:../../packages/cli-config
       '@vercel/routing-utils':
         specifier: workspace:*
         version: link:../../packages/routing-utils
@@ -429,6 +432,9 @@ importers:
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
+      '@vercel/cli-config':
+        specifier: workspace:*
+        version: link:../cli-config
       '@vercel/detect-agent':
         specifier: workspace:*
         version: link:../detect-agent
@@ -513,6 +519,9 @@ importers:
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
+      zod:
+        specifier: 4.1.11
+        version: 4.1.11
     devDependencies:
       '@edge-runtime/node-utils':
         specifier: 2.3.0
@@ -917,6 +926,28 @@ importers:
       memfs:
         specifier: 4.14.0
         version: 4.14.0
+      vite:
+        specifier: 7.1.7
+        version: 7.1.7(@types/node@20.11.0)
+      vitest:
+        specifier: 2.1.4
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)
+
+  packages/cli-config:
+    dependencies:
+      xdg-app-paths:
+        specifier: '5'
+        version: 5.1.0
+      zod:
+        specifier: 4.1.11
+        version: 4.1.11
+    devDependencies:
+      '@types/node':
+        specifier: 20.11.0
+        version: 20.11.0
+      ts-to-zod:
+        specifier: ^3
+        version: 3.15.0(@types/node@20.11.0)
       vite:
         specifier: 7.1.7
         version: 7.1.7(@types/node@20.11.0)
@@ -5849,7 +5880,7 @@ packages:
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
     engines: {node: '>=18.0.0'}
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   /@istanbuljs/schema@0.1.3:
     resolution: {integrity: sha512-ZXRY4jNvVgSVQ8DL3LTcakaAtXwTVUxE81hslsyD2AtoXW/wVob10HkOJ1X/pAlcI7D+2YoZKg5do8G/w6RYgA==}
@@ -12208,8 +12239,8 @@ packages:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
     dev: true
 
-  /effect@3.19.14:
-    resolution: {integrity: sha512-3vwdq0zlvQOxXzXNKRIPKTqZNMyGCdaFUBfMPqpsyzZDre67kgC1EEHDV4EoQTovJ4w5fmJW756f86kkuz7WFA==}
+  /effect@3.21.2:
+    resolution: {integrity: sha512-rXd2FGDM8KdjSIrc+mqEELo7ScW7xTVxEf1iInmPSpIde9/nyGuFM710cjTo7/EreGXiUX2MOonPpprbz2XHCg==}
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
@@ -13817,6 +13848,7 @@ packages:
   /glob@10.2.3:
     resolution: {integrity: sha512-Kb4rfmBVE3eQTAimgmeqc2LwSnN0wIOkkUL6HmxEFxNJ4fHghYHVbFba/HcGcRjE6s9KoMNK3rSOwkL4PioZjg==}
     engines: {node: '>=16 || 14 >=14.17'}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
     dependencies:
       foreground-child: 3.3.1
@@ -13860,9 +13892,9 @@ packages:
       foreground-child: 3.3.1
       jackspeak: 4.2.3
       minimatch: 10.1.1
-      minipass: 7.1.2
+      minipass: 7.1.3
       package-json-from-dist: 1.0.1
-      path-scurry: 2.0.1
+      path-scurry: 2.0.2
     dev: true
 
   /glob@13.0.0:
@@ -13870,8 +13902,8 @@ packages:
     engines: {node: 20 || >=22}
     dependencies:
       minimatch: 10.1.1
-      minipass: 7.1.2
-      path-scurry: 2.0.1
+      minipass: 7.1.3
+      path-scurry: 2.0.2
     dev: false
 
   /glob@7.2.3:
@@ -15729,11 +15761,15 @@ packages:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
 
+  /minipass@7.1.3:
+    resolution: {integrity: sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==}
+    engines: {node: '>=16 || 14 >=14.17'}
+
   /minizlib@3.1.0:
     resolution: {integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==}
     engines: {node: '>= 18'}
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   /mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
@@ -16642,15 +16678,15 @@ packages:
     engines: {node: '>=16 || 14 >=14.18'}
     dependencies:
       lru-cache: 10.4.3
-      minipass: 7.1.2
+      minipass: 7.1.3
     dev: true
 
-  /path-scurry@2.0.1:
-    resolution: {integrity: sha512-oWyT4gICAu+kaA7QWk/jvCHWarMKNs6pXOGWKDTr7cw4IGcUbW+PeTfbaQiLGheFRpjo6O9J0PmyMfQPjH71oA==}
-    engines: {node: 20 || >=22}
+  /path-scurry@2.0.2:
+    resolution: {integrity: sha512-3O/iVVsJAPsOnpwWIeD+d6z/7PmqApyQePUtCndjatj/9I5LylHvt5qluFaBT3I5h3r1ejfR056c+FCv+NnNXg==}
+    engines: {node: 18 || 20 || >=22}
     dependencies:
       lru-cache: 11.2.2
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   /path-to-regexp@0.1.10:
     resolution: {integrity: sha512-7lf7qcQidTku0Gu3YDPc8DJ1q7OOucfa/BSsIwjuh56VU7katFvuM8hULfkwB3Fns/rsVF7PwPKVw1sl5KQS9w==}
@@ -18626,7 +18662,7 @@ packages:
       chalk-template: 1.1.2
       commander: 13.1.0
       cosmiconfig: 9.0.0(typescript@5.9.3)
-      effect: 3.19.14
+      effect: 3.21.2
       enquirer: 2.4.1
       fast-check: 3.23.2
       globby: 14.1.0
@@ -18730,7 +18766,7 @@ packages:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
-      minipass: 7.1.2
+      minipass: 7.1.3
       minizlib: 3.1.0
       yallist: 5.0.0
     dev: false
@@ -20006,9 +20042,9 @@ packages:
       '@vitest/spy': 2.1.4
       '@vitest/utils': 2.1.4
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3(supports-color@8.1.1)
       expect-type: 1.2.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       std-env: 3.9.0
       tinybench: 2.9.0

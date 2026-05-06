@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "53.1.1",
+  "version": "53.2.0",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -38,6 +38,7 @@
     "node": ">= 18"
   },
   "dependencies": {
+    "@vercel/cli-config": "workspace:*",
     "@vercel/blob": "2.3.0",
     "@vercel/build-utils": "workspace:*",
     "@vercel/detect-agent": "workspace:*",
@@ -50,6 +51,7 @@
     "luxon": "^3.4.0",
     "proxy-agent": "6.4.0",
     "sandbox": "2.5.6",
+    "zod": "4.1.11",
     "@vercel/backends": "workspace:*",
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",
