@@ -110,5 +110,24 @@ describe('alias set', () => {
         },
       ]);
     });
+
+    it('passes source URLs through to the alias endpoint', async () => {
+      useUser();
+      const sourceUrl = 'https://my-alias.vercel.app';
+      let deploymentOrAliasIdOrUrl: string | undefined;
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          deploymentOrAliasIdOrUrl = request.params.id;
+          response.json({});
+        }
+      );
+
+      client.setArgv('alias', 'set', sourceUrl, 'custom');
+      const exitCode = await alias(client);
+
+      expect(exitCode, 'exit code of "alias"').toEqual(0);
+      expect(deploymentOrAliasIdOrUrl).toEqual(sourceUrl);
+    });
   });
 });

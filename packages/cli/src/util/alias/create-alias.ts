@@ -1,8 +1,12 @@
-import type { Deployment } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
 import type Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 import output from '../../output-manager';
+
+export type AliasSource = {
+  id: string;
+  url?: string;
+};
 
 export type AliasRecord = {
   uid: string;
@@ -14,19 +18,12 @@ export type AliasRecord = {
 export default async function createAlias(
   client: Client,
   contextName: string,
-  deployment: Deployment,
+  source: AliasSource,
   alias: string,
-  externalDomain: boolean,
-  deploymentOrAliasIdOrUrl = deployment.id
+  externalDomain: boolean
 ) {
   output.spinner(`Creating alias`);
-  const result = await performCreateAlias(
-    client,
-    contextName,
-    deployment,
-    alias,
-    deploymentOrAliasIdOrUrl
-  );
+  const result = await performCreateAlias(client, contextName, source, alias);
   output.stopSpinner();
 
   if (result instanceof ERRORS.CertMissing) {
@@ -44,9 +41,8 @@ export default async function createAlias(
     const secondTry = await performCreateAlias(
       client,
       contextName,
-      deployment,
-      alias,
-      deploymentOrAliasIdOrUrl
+      source,
+      alias
     );
     output.stopSpinner();
     return secondTry;
@@ -58,15 +54,12 @@ export default async function createAlias(
 async function performCreateAlias(
   client: Client,
   contextName: string,
-  deployment: Deployment,
-  alias: string,
-  deploymentOrAliasIdOrUrl = deployment.id
+  source: AliasSource,
+  alias: string
 ) {
   try {
     return await client.fetch<AliasRecord>(
-      `/now/deployments/${encodeURIComponent(
-        deploymentOrAliasIdOrUrl
-      )}/aliases`,
+      `/now/deployments/${encodeURIComponent(source.id)}/aliases`,
       {
         method: 'POST',
         body: { alias },
@@ -83,7 +76,7 @@ async function performCreateAlias(
       if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
-          id: deploymentOrAliasIdOrUrl,
+          id: source.id,
         });
       }
       if (err.code === 'gone') {
@@ -93,7 +86,9 @@ async function performCreateAlias(
         return new ERRORS.InvalidAlias(alias);
       }
       if (err.code === 'deployment_not_ready') {
-        return new ERRORS.DeploymentNotReady({ url: deployment.url });
+        return new ERRORS.DeploymentNotReady({
+          url: getSourceUrlForError(source),
+        });
       }
       if (err.status === 403) {
         if (err.code === 'alias_in_use') {
@@ -107,4 +102,8 @@ async function performCreateAlias(
 
     throw err;
   }
+}
+
+function getSourceUrlForError(source: AliasSource) {
+  return (source.url || source.id).replace(/^(?:.*?:\/\/)?([^/]+).*/, '$1');
 }

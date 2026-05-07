@@ -4,7 +4,6 @@ import type { AliasRecord } from '../../util/alias/create-alias';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import type Client from '../../util/client';
-import getDeployment from '../../util/get-deployment';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
 import type setupDomain from '../../util/domains/setup-domain';
@@ -145,35 +144,15 @@ export default async function set(client: Client, argv: string[]) {
   const [deploymentOrAliasIdOrUrl, aliasTarget] = args;
   telemetryClient.trackCliArgumentDeployment(deploymentOrAliasIdOrUrl);
   telemetryClient.trackCliArgumentAlias(aliasTarget);
-  const normalizedDeploymentOrAliasIdOrUrl = deploymentOrAliasIdOrUrl.includes(
-    '.'
-  )
-    ? toHost(deploymentOrAliasIdOrUrl)
-    : deploymentOrAliasIdOrUrl;
-  const deployment = handleCertError(
-    await getDeployment(client, contextName, deploymentOrAliasIdOrUrl)
-  );
 
-  if (deployment === 1) {
-    return deployment;
-  }
-
-  if (deployment === null) {
-    output.error(
-      `Couldn't find a deployment to alias. Please provide one as an argument.`
-    );
-    return 1;
-  }
-
-  output.log(`Assigning alias ${aliasTarget} to deployment ${deployment.url}`);
+  output.log(`Assigning alias ${aliasTarget} to ${deploymentOrAliasIdOrUrl}`);
 
   const isWildcard = isWildcardAlias(aliasTarget);
   const record = await assignAlias(
     client,
-    deployment,
+    { id: deploymentOrAliasIdOrUrl },
     aliasTarget,
-    contextName,
-    normalizedDeploymentOrAliasIdOrUrl
+    contextName
   );
   const handleResult = handleSetupDomainError(handleCreateAliasError(record));
   if (handleResult === 1) {
@@ -183,9 +162,9 @@ export default async function set(client: Client, argv: string[]) {
   const prefix = isWildcard ? '' : 'https://';
 
   output.success(
-    `${chalk.bold(`${prefix}${handleResult.alias}`)} now points to https://${
-      deployment.url
-    } ${setStamp()}`
+    `${chalk.bold(
+      `${prefix}${handleResult.alias}`
+    )} now points to ${deploymentOrAliasIdOrUrl} ${setStamp()}`
   );
 
   return 0;
