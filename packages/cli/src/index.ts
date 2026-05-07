@@ -56,7 +56,7 @@ import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
-import { defaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
+import { getDefaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
@@ -306,29 +306,35 @@ const main = async () => {
     }
   }
 
+  // Check for explicit tokens before reading persisted credentials so CI/headless
+  // usage does not depend on local auth storage such as an OS keyring.
+  let tokenSource: 'flag' | 'env' | undefined;
+  let explicitToken: string | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    explicitToken = parsedArgs.flags['--token'];
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
+    explicitToken = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
+  }
+
   let authConfig: AuthConfig;
-  try {
-    authConfig = configFiles.readAuthConfigFile();
-  } catch (err: unknown) {
-    if (isErrnoException(err) && err.code === 'ENOENT') {
-      authConfig = defaultAuthConfig;
-      try {
-        configFiles.writeToAuthConfigFile(authConfig);
-      } catch (err: unknown) {
+  if (tokenSource) {
+    authConfig = getDefaultAuthConfig();
+  } else {
+    try {
+      authConfig = configFiles.readAuthConfigFile(config);
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
+        authConfig = getDefaultAuthConfig();
+      } else {
         output.error(
-          `An unexpected error occurred while trying to write the auth config to "${hp(
+          `An unexpected error occurred while trying to read the auth config in "${hp(
             VERCEL_AUTH_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
         return 1;
       }
-    } else {
-      output.error(
-        `An unexpected error occurred while trying to read the auth config in "${hp(
-          VERCEL_AUTH_CONFIG_PATH
-        )}" ${errorToString(err)}`
-      );
-      return 1;
     }
   }
 
@@ -642,14 +648,10 @@ const main = async () => {
     subcommandsWithoutToken.push('flags');
   }
 
-  // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  // Track where the token came from for better error messages
-  let tokenSource: 'flag' | 'env' | undefined;
-  if (typeof parsedArgs.flags['--token'] === 'string') {
-    tokenSource = 'flag';
-  } else if (process.env.VERCEL_TOKEN) {
-    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
-    tokenSource = 'env';
+  // Apply VERCEL_TOKEN after telemetry so env-provided tokens are not reported
+  // as if the user supplied `--token` on the command line.
+  if (tokenSource === 'env' && explicitToken) {
+    parsedArgs.flags['--token'] = explicitToken;
   }
 
   // Prompt for login if there is no current token
@@ -657,7 +659,7 @@ const main = async () => {
     (!authConfig || !authConfig.token) &&
     !client.argv.includes('-h') &&
     !client.argv.includes('--help') &&
-    !parsedArgs.flags['--token'] &&
+    typeof parsedArgs.flags['--token'] !== 'string' &&
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {

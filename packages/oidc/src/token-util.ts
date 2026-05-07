@@ -1,27 +1,19 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import { execVercelCli, VercelCliError } from '@vercel/cli-exec';
+import {
+  getGlobalPathConfig,
+  tryReadAuthConfig,
+  writeAuthConfig,
+  type AuthConfig,
+} from '@vercel/cli-config';
 import { VercelOidcTokenError } from './token-error';
 import { findRootDir, getUserDataDir } from './token-io';
-import {
-  readAuthConfig,
-  writeAuthConfig,
-  isValidAccessToken,
-  type AuthConfig,
-} from './auth-config';
 import { refreshTokenRequest, processTokenResponse } from './oauth';
 import {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
 } from './auth-errors';
-
-export function getVercelDataDir(): string | null {
-  const vercelFolder = 'com.vercel.cli';
-  const dataDir = getUserDataDir();
-  if (!dataDir) {
-    return null;
-  }
-  return path.join(dataDir, vercelFolder);
-}
 
 export interface GetVercelTokenOptions {
   /**
@@ -35,18 +27,20 @@ export interface GetVercelTokenOptions {
 export async function getVercelToken(
   options?: GetVercelTokenOptions
 ): Promise<string> {
-  const authConfig = readAuthConfig();
-  if (!authConfig?.token) {
+  const configDir = getGlobalPathConfig();
+  const authConfig = tryReadAuthConfig(configDir);
+
+  if (!authConfig || (!authConfig.token && !authConfig.refreshToken)) {
     throw new AccessTokenMissingError();
   }
 
   if (isValidAccessToken(authConfig, options?.expirationBufferMs)) {
-    return authConfig.token;
+    return authConfig.token!;
   }
 
   if (!authConfig.refreshToken) {
     // No refresh token available, clear auth and throw
-    writeAuthConfig({});
+    writeAuthConfig(configDir, {});
     throw new RefreshAccessTokenFailedError('No refresh token available');
   }
 
@@ -59,7 +53,7 @@ export async function getVercelToken(
 
     if (tokensError || !tokens) {
       // Refresh failed - clear auth
-      writeAuthConfig({});
+      writeAuthConfig(configDir, {});
       throw new RefreshAccessTokenFailedError(tokensError);
     }
 
@@ -67,18 +61,15 @@ export async function getVercelToken(
     const updatedConfig: AuthConfig = {
       token: tokens.access_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+      refreshToken: tokens.refresh_token ?? authConfig.refreshToken,
     };
 
-    if (tokens.refresh_token) {
-      updatedConfig.refreshToken = tokens.refresh_token;
-    }
-
-    writeAuthConfig(updatedConfig);
+    writeAuthConfig(configDir, updatedConfig);
     // Token is guaranteed to be defined since we just set it from tokens.access_token
     return updatedConfig.token!;
   } catch (error) {
     // Network error or other failure - clear auth
-    writeAuthConfig({});
+    writeAuthConfig(configDir, {});
     if (
       error instanceof AccessTokenMissingError ||
       error instanceof RefreshAccessTokenFailedError
@@ -89,8 +80,75 @@ export async function getVercelToken(
   }
 }
 
+function isValidAccessToken(
+  authConfig: AuthConfig,
+  expirationBufferMs = 0
+): boolean {
+  if (!authConfig.token) return false;
+
+  // When `--token` is passed to a command, `expiresAt` will be missing.
+  // We assume the token is valid in this case and handle errors further down.
+  if (typeof authConfig.expiresAt !== 'number') return true;
+
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  const bufferInSeconds = expirationBufferMs / 1000;
+  return authConfig.expiresAt >= nowInSeconds + bufferInSeconds;
+}
+
 interface VercelTokenResponse {
   token: string;
+}
+
+export async function getVercelOidcTokenFromCli(
+  projectId: string,
+  teamId?: string
+): Promise<VercelTokenResponse> {
+  const args = ['project', 'token', projectId, '--format=json'];
+
+  if (teamId) {
+    args.push('--scope', teamId);
+  }
+
+  try {
+    const { stdout } = await execVercelCli(args);
+    let parsedOutput: unknown;
+
+    if (typeof stdout !== 'string') {
+      throw new VercelOidcTokenError(
+        'Failed to refresh OIDC token: `vercel project token` did not return stdout'
+      );
+    }
+
+    try {
+      parsedOutput = JSON.parse(stdout);
+    } catch {
+      throw new VercelOidcTokenError(
+        'Failed to refresh OIDC token: `vercel project token` returned invalid JSON: ' +
+          stdout
+      );
+    }
+
+    assertVercelOidcTokenResponse(parsedOutput);
+    return parsedOutput;
+  } catch (error) {
+    if (error instanceof VercelOidcTokenError) {
+      throw error;
+    }
+
+    let message = error instanceof Error ? error.message : '';
+    const stderr =
+      error instanceof VercelCliError ? error.stderr?.trim() : undefined;
+
+    if (stderr && !message.includes(stderr)) {
+      message = `${message}\n${stderr}`.trim();
+    }
+
+    throw new VercelOidcTokenError(
+      message
+        ? `Failed to refresh OIDC token with the Vercel CLI: ${message}`
+        : 'Failed to refresh OIDC token with the Vercel CLI'
+    );
+  }
 }
 
 export async function getVercelOidcToken(
@@ -119,13 +177,11 @@ export function assertVercelOidcTokenResponse(
   res: unknown
 ): asserts res is VercelTokenResponse {
   if (!res || typeof res !== 'object') {
-    throw new TypeError(
-      'Vercel OIDC token is malformed. Expected an object. Please run `vc env pull` and try again'
-    );
+    throw new TypeError('Vercel OIDC token is malformed. Expected an object.');
   }
   if (!('token' in res) || typeof res.token !== 'string') {
     throw new TypeError(
-      'Vercel OIDC token is malformed. Expected a string-valued token property. Please run `vc env pull` and try again'
+      'Vercel OIDC token is malformed. Expected a string-valued token property.'
     );
   }
 }
@@ -192,9 +248,7 @@ interface TokenPayload {
 export function getTokenPayload(token: string): TokenPayload {
   const tokenParts = token.split('.');
   if (tokenParts.length !== 3) {
-    throw new VercelOidcTokenError(
-      'Invalid token. Please run `vc env pull` and try again'
-    );
+    throw new VercelOidcTokenError('Invalid token.');
   }
 
   const base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');

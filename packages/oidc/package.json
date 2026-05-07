@@ -26,6 +26,10 @@
   "bugs": {
     "url": "https://github.com/vercel/vercel/issues"
   },
+  "dependencies": {
+    "@vercel/cli-config": "workspace:*",
+    "@vercel/cli-exec": "workspace:*"
+  },
   "devDependencies": {
     "prettier": "3.8.3",
     "tinyspawn": "1.3.1",

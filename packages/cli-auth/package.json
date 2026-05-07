@@ -25,9 +25,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@napi-rs/keyring": "1.2.0",
+    "@vercel/cli-config": "workspace:*",
     "async-listen": "3.0.0",
     "open": "8.4.0",
-    "xdg-app-paths": "5",
     "zod": "4.1.11"
   },
   "devDependencies": {

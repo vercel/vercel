@@ -30,7 +30,7 @@ import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
-import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
+import { persistAuthConfig, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
 import type { Span } from '@vercel/build-utils';
 import type {
@@ -267,7 +267,7 @@ export default class Client extends EventEmitter implements Stdio {
     if (!hasRefreshToken(authConfig)) {
       output.debug('No refresh token found, emptying auth config.');
       this.emptyAuthConfig();
-      this.writeToAuthConfigFile();
+      this.persistAuthConfig();
       return;
     }
 
@@ -282,7 +282,7 @@ export default class Client extends EventEmitter implements Stdio {
     if (tokensError) {
       output.debug('Error refreshing token, emptying auth config.');
       this.emptyAuthConfig();
-      this.writeToAuthConfigFile();
+      this.persistAuthConfig();
       return;
     }
 
@@ -297,7 +297,7 @@ export default class Client extends EventEmitter implements Stdio {
       this.updateAuthConfig({ refreshToken: tokens.refresh_token });
     }
 
-    this.writeToAuthConfigFile();
+    this.persistAuthConfig();
     this.writeToConfigFile();
 
     output.debug('Tokens refreshed successfully.');
@@ -357,8 +357,8 @@ export default class Client extends EventEmitter implements Stdio {
     this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
-  writeToAuthConfigFile() {
-    writeToAuthConfigFile(this.authConfig);
+  persistAuthConfig() {
+    persistAuthConfig(this.authConfig, this.config);
   }
 
   /**
