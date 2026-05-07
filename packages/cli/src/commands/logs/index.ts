@@ -251,6 +251,8 @@ async function resolveLogsTarget(
       return { exitCode: 1 };
     }
 
+    // `getDeployment()` already resolved under `client.config.currentTeam` via
+    // `client.fetch()`, and project/log lookups should stay in that same scope.
     output.spinner(`Fetching project "${deployment.projectId}"`, 1000);
     const project = await getProjectByIdOrName(client, deployment.projectId);
     output.stopSpinner();
@@ -297,11 +299,7 @@ async function resolveLogsTarget(
 
   if (projectOption) {
     output.spinner(`Fetching project "${projectOption}"`, 1000);
-    const project = await getProjectByIdOrName(
-      client,
-      projectOption,
-      client.config.currentTeam
-    );
+    const project = await getProjectByIdOrName(client, projectOption);
     output.stopSpinner();
 
     if (project instanceof ProjectNotFound) {
