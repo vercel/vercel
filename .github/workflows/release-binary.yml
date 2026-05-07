@@ -145,7 +145,7 @@ jobs:
         run: |
           rcodesign sign \
             --for-notarization \
-            --entitlements-xml-path ../../entitlements.plist \
+            --entitlements-xml-path entitlements.plist \
             --p12-file "$APPLE_CERT_PATH" \
             --p12-password "$APPLE_CERT_PASSWORD" \
             "dist-bin/${{ matrix.asset }}${{ matrix.ext }}"

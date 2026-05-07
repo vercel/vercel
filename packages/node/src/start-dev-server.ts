@@ -202,8 +202,7 @@ export const startDevServer: StartDevServer = async opts => {
     if (!ts) {
       throw new Error(
         `Could not locate a TypeScript installation for "${entrypoint}". ` +
-          `Install \`typescript\` in your project dependencies, or ensure ` +
-          `\`@vercel/node\` has a bundled copy available next to its own module.`
+          `Install \`typescript\` in your project dependencies.`
       );
     }
 
