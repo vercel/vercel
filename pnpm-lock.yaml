@@ -475,8 +475,8 @@ importers:
         specifier: workspace:*
         version: link:../node
       '@vercel/prepare-flags-definitions':
-        specifier: 0.2.1
-        version: 0.2.1
+        specifier: https://67qyyqfpszu3ptbw.public.blob.vercel-storage.com/oidc/vercel-prepare-flags-definitions-0.2.1-DsTWOmJ4rdcSCAGrUjIxLyTybtR7nQ.tgz
+        version: '@67qyyqfpszu3ptbw.public.blob.vercel-storage.com/oidc/vercel-prepare-flags-definitions-0.2.1-DsTWOmJ4rdcSCAGrUjIxLyTybtR7nQ.tgz'
       '@vercel/python':
         specifier: workspace:*
         version: link:../python
@@ -9813,10 +9813,6 @@ packages:
   /@vercel/oidc@3.2.0:
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
     engines: {node: '>= 20'}
-
-  /@vercel/prepare-flags-definitions@0.2.1:
-    resolution: {integrity: sha512-ouXTsqn7I9xZ1KKezgvn/w3tZeQHL/tc52j9GHiOYi6kT8xgdbT8s2x8C9BQr44iceX0hfhtZwk9q7NuI2Tqbw==}
-    dev: false
 
   /@vercel/sandbox@1.8.1:
     resolution: {integrity: sha512-txohjI20aMxZiAzBL/KJi5EqTYsesBdOyIOtpTIyebPLTqYtDYfNhQ4OeYiUcPMUo0XBt8gSet/rIdLQEjj3/A==}
@@ -20410,4 +20406,10 @@ packages:
 
   /zod@4.1.11:
     resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
+    dev: false
+
+  '@67qyyqfpszu3ptbw.public.blob.vercel-storage.com/oidc/vercel-prepare-flags-definitions-0.2.1-DsTWOmJ4rdcSCAGrUjIxLyTybtR7nQ.tgz':
+    resolution: {tarball: https://67qyyqfpszu3ptbw.public.blob.vercel-storage.com/oidc/vercel-prepare-flags-definitions-0.2.1-DsTWOmJ4rdcSCAGrUjIxLyTybtR7nQ.tgz}
+    name: '@vercel/prepare-flags-definitions'
+    version: 0.2.1
     dev: false
