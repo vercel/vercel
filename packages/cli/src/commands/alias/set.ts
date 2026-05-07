@@ -51,17 +51,13 @@ export default async function set(client: Client, argv: string[]) {
   // If there are more than two args we have to error
   if (args.length > 2) {
     output.error(
-      `${getCommandName(
-        'alias <deployment-or-url> <target>'
-      )} accepts at most two arguments`
+      `${getCommandName('alias <id-or-url> <target>')} accepts at most two arguments`
     );
     return 1;
   }
 
   if (args.length >= 1 && !isValidName(args[0])) {
-    output.error(
-      `The provided argument "${args[0]}" is not a valid deployment or URL`
-    );
+    output.error(`The provided argument "${args[0]}" is not a valid ID or URL`);
     return 1;
   }
 
@@ -86,7 +82,6 @@ export default async function set(client: Client, argv: string[]) {
     const deployment = handleCertError(
       await getDeploymentForAlias(
         client,
-        args,
         opts['--local-config'],
         user,
         contextName,
@@ -124,7 +119,7 @@ export default async function set(client: Client, argv: string[]) {
       const record = await assignAlias(
         client,
         {
-          deploymentOrAliasIdOrUrl: deployment.id,
+          idOrUrl: deployment.id,
           deploymentUrl: deployment.url,
         },
         target,
@@ -149,19 +144,17 @@ export default async function set(client: Client, argv: string[]) {
     return 0;
   }
 
-  const [deploymentOrAliasIdOrUrl, aliasTarget] = args;
-  telemetryClient.trackCliArgumentDeploymentOrUrl(deploymentOrAliasIdOrUrl);
+  const [idOrUrl, aliasTarget] = args;
+  telemetryClient.trackCliArgumentIdOrUrl(idOrUrl);
   telemetryClient.trackCliArgumentAlias(aliasTarget);
 
-  output.log(`Assigning alias ${aliasTarget} to ${deploymentOrAliasIdOrUrl}`);
+  output.log(`Assigning alias ${aliasTarget} to ${idOrUrl}`);
 
   const isWildcard = isWildcardAlias(aliasTarget);
-  const deploymentOrAliasIdOrUrlForRequest = getDeploymentOrAliasIdOrUrl(
-    deploymentOrAliasIdOrUrl
-  );
+  const idOrUrlForRequest = getIdOrUrlForAliasRequest(idOrUrl);
   const record = await assignAlias(
     client,
-    { deploymentOrAliasIdOrUrl: deploymentOrAliasIdOrUrlForRequest },
+    { idOrUrl: idOrUrlForRequest },
     aliasTarget,
     contextName
   );
@@ -175,7 +168,7 @@ export default async function set(client: Client, argv: string[]) {
   output.success(
     `${chalk.bold(
       `${prefix}${handleResult.alias}`
-    )} now points to ${deploymentOrAliasIdOrUrl} ${setStamp()}`
+    )} now points to ${idOrUrl} ${setStamp()}`
   );
 
   return 0;
@@ -300,9 +293,9 @@ function handleCreateAliasError<T>(
 
   if (error instanceof ERRORS.DeploymentNotFound) {
     output.error(
-      `Failed to find deployment or URL ${chalk.dim(
-        error.meta.id
-      )} under ${chalk.bold(error.meta.context)}`
+      `Failed to find ID or URL ${chalk.dim(error.meta.id)} under ${chalk.bold(
+        error.meta.context
+      )}`
     );
     return 1;
   }
@@ -314,7 +307,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.DeploymentPermissionDenied) {
     output.error(
-      `No permission to access deployment or URL ${chalk.dim(
+      `No permission to access ID or URL ${chalk.dim(
         error.meta.id
       )} under ${chalk.bold(error.meta.context)}`
     );
@@ -357,14 +350,14 @@ function handleCreateAliasError<T>(
   return error;
 }
 
-function getDeploymentOrAliasIdOrUrl(deploymentOrAliasIdOrUrl: string) {
+function getIdOrUrlForAliasRequest(idOrUrl: string) {
   try {
-    new URL(deploymentOrAliasIdOrUrl);
+    new URL(idOrUrl);
   } catch {
-    return deploymentOrAliasIdOrUrl;
+    return idOrUrl;
   }
 
-  return toHost(deploymentOrAliasIdOrUrl);
+  return toHost(idOrUrl);
 }
 
 function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {

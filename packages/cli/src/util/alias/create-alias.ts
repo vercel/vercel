@@ -4,7 +4,7 @@ import createCertForAlias from '../certs/create-cert-for-alias';
 import output from '../../output-manager';
 
 export type DeploymentOrAlias = {
-  deploymentOrAliasIdOrUrl: string;
+  idOrUrl: string;
   deploymentUrl?: string;
 };
 
@@ -65,7 +65,7 @@ async function performCreateAlias(
   try {
     return await client.fetch<AliasRecord>(
       `/now/deployments/${encodeURIComponent(
-        deploymentOrAlias.deploymentOrAliasIdOrUrl
+        deploymentOrAlias.idOrUrl
       )}/aliases`,
       {
         method: 'POST',
@@ -82,14 +82,14 @@ async function performCreateAlias(
       }
       if (err.code === 'invalid_deployment_id' || err.code === 'invalid_url') {
         return new ERRORS.InvalidDeploymentId(
-          deploymentOrAlias.deploymentOrAliasIdOrUrl,
+          deploymentOrAlias.idOrUrl,
           err.message
         );
       }
       if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
-          id: deploymentOrAlias.deploymentOrAliasIdOrUrl,
+          id: deploymentOrAlias.idOrUrl,
         });
       }
       if (err.code === 'gone') {
@@ -118,8 +118,8 @@ async function performCreateAlias(
 }
 
 function getDeploymentOrAliasUrlForError(deploymentOrAlias: DeploymentOrAlias) {
-  return (
-    deploymentOrAlias.deploymentUrl ||
-    deploymentOrAlias.deploymentOrAliasIdOrUrl
-  ).replace(/^(?:.*?:\/\/)?([^/]+).*/, '$1');
+  return (deploymentOrAlias.deploymentUrl || deploymentOrAlias.idOrUrl).replace(
+    /^(?:.*?:\/\/)?([^/]+).*/,
+    '$1'
+  );
 }

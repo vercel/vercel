@@ -75,16 +75,16 @@ describe('alias set', () => {
     });
   });
 
-  describe('[deployment or URL] [custom domain]', () => {
+  describe('[ID or URL] [custom domain]', () => {
     it('tracks arguments', async () => {
       const user = useUser();
       const { url } = useDeployment({ creator: user });
-      let deploymentOrAliasIdOrUrl: string | undefined;
+      let idOrUrl: string | undefined;
       let aliasTarget: string | undefined;
       client.scenario.post(
         '/:version/deployments/:id/aliases',
         (request, response) => {
-          deploymentOrAliasIdOrUrl = request.params.id;
+          idOrUrl = request.params.id;
           aliasTarget = request.body.alias;
           response.json({});
         }
@@ -92,7 +92,7 @@ describe('alias set', () => {
       client.setArgv('alias', 'set', url, 'custom');
       const exitCode = await alias(client);
       expect(exitCode, 'exit code of "alias"').toEqual(0);
-      expect(deploymentOrAliasIdOrUrl).toEqual(url);
+      expect(idOrUrl).toEqual(url);
       expect(aliasTarget).toEqual('custom');
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -101,7 +101,7 @@ describe('alias set', () => {
           value: 'set',
         },
         {
-          key: `argument:deployment-or-url`,
+          key: `argument:id-or-url`,
           value: '[REDACTED]',
         },
         {
@@ -114,11 +114,11 @@ describe('alias set', () => {
     it('passes valid URLs as hosts to the alias endpoint', async () => {
       useUser();
       const url = 'https://my-alias.vercel.app';
-      let deploymentOrAliasIdOrUrl: string | undefined;
+      let idOrUrl: string | undefined;
       client.scenario.post(
         '/:version/deployments/:id/aliases',
         (request, response) => {
-          deploymentOrAliasIdOrUrl = request.params.id;
+          idOrUrl = request.params.id;
           response.json({});
         }
       );
@@ -127,7 +127,7 @@ describe('alias set', () => {
       const exitCode = await alias(client);
 
       expect(exitCode, 'exit code of "alias"').toEqual(0);
-      expect(deploymentOrAliasIdOrUrl).toEqual('my-alias.vercel.app');
+      expect(idOrUrl).toEqual('my-alias.vercel.app');
     });
 
     it('outputs the API error for invalid URLs', async () => {

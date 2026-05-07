@@ -21,10 +21,10 @@ export class AliasSetTelemetryClient
     }
   }
 
-  trackCliArgumentDeploymentOrUrl(deploymentOrUrl: string | undefined) {
-    if (deploymentOrUrl) {
+  trackCliArgumentIdOrUrl(idOrUrl: string | undefined) {
+    if (idOrUrl) {
       this.trackCliArgument({
-        arg: 'deployment-or-url',
+        arg: 'id-or-url',
         value: this.redactedValue,
       });
     }
