@@ -34,9 +34,6 @@
   "dependencies": {
     "@vercel/backends": "workspace:*"
   },
-  "peerDependencies": {
-    "typescript": "^4.0.0 || ^5.0.0"
-  },
   "devDependencies": {
     "@types/node": "20.11.0",
     "tsdown": "0.16.3",
