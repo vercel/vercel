@@ -93,6 +93,7 @@ import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
 import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import { getEffectiveRootDirectory } from '../../util/projects/effective-root-directory';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -456,7 +457,16 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
+          doBuild(
+            client,
+            project,
+            projectRootDirectory,
+            buildsJson,
+            cwd,
+            outputDir,
+            span,
+            standalone
+          )
         );
     } finally {
       await rootSpan.stop();
@@ -548,6 +558,7 @@ export default async function main(client: Client): Promise<number> {
 async function doBuild(
   client: Client,
   project: ProjectLinkAndSettings,
+  repoProjectDirectory: string | undefined,
   buildsJson: BuildsManifest,
   cwd: string,
   outputDir: string,
@@ -559,7 +570,11 @@ async function doBuild(
   // Regex pattern for validating deploymentId characters: alphanumeric, hyphen, underscore
   const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
-  const workPath = join(cwd, project.settings.rootDirectory || '.');
+  const effectiveRootDirectory = getEffectiveRootDirectory({
+    projectRootDirectory: project.settings.rootDirectory,
+    repoProjectDirectory,
+  });
+  const workPath = join(cwd, effectiveRootDirectory || '.');
 
   const sourceConfigFile = await findSourceVercelConfigFile(workPath);
   let corepackShimDir: string | null | undefined;
@@ -651,8 +666,7 @@ async function doBuild(
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
     pkg?.scripts?.['vercel-build'] === undefined &&
-    projectSettings.rootDirectory !== null &&
-    projectSettings.rootDirectory !== '.'
+    effectiveRootDirectory !== ''
   ) {
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }

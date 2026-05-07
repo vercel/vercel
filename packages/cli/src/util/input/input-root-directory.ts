@@ -7,7 +7,8 @@ import type Client from '../client';
 export async function inputRootDirectory(
   client: Client,
   cwd: string,
-  autoConfirm = false
+  autoConfirm = false,
+  defaultRootDirectory?: string | null
 ) {
   if (autoConfirm) {
     return null;
@@ -16,6 +17,7 @@ export async function inputRootDirectory(
   while (true) {
     const rootDirectory = await client.input.text({
       message: `In which directory is your code located?`,
+      default: defaultRootDirectory ?? undefined,
       transformer: (input: string) => {
         return `${chalk.dim(`./`)}${input}`;
       },

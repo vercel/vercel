@@ -1707,7 +1707,7 @@ createServer((_req, res) => {
       ...defaultProject,
       id: 'QmbKpqpiUqbcke',
       name: 'monorepo-dashboard',
-      rootDirectory: 'dashboard',
+      rootDirectory: null,
       outputDirectory: 'dist',
       framework: null,
     });

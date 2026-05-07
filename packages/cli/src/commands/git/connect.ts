@@ -20,6 +20,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
+import { linkRepoProject } from '../../util/link/repo';
 
 interface ConnectArgParams {
   client: Client;
@@ -162,6 +163,15 @@ export default async function connect(client: Client, argv: string[]) {
   if (typeof result === 'number') {
     return result;
   }
+  const remoteName = getRemoteNameForRepo(remoteUrls, repoInfo);
+  if (remoteName) {
+    await linkRepoProject(client, cwd, {
+      project,
+      orgId: org.id,
+      orgSlug: org.slug,
+      remoteName,
+    });
+  }
 
   return 0;
 }
@@ -232,10 +242,37 @@ async function connectArgWithLocalGit({
       if (typeof result === 'number') {
         return result;
       }
+      const remoteName = getRemoteNameForRepo(remoteUrls, repoInfo);
+      if (remoteName) {
+        await linkRepoProject(client, client.cwd, {
+          project,
+          orgId: org.id,
+          orgSlug: org.slug,
+          remoteName,
+        });
+      }
     }
     return 0;
   }
   return await connectArg({ client, confirm, org, project, repoInfo });
+}
+
+function getRemoteNameForRepo(
+  remoteUrls: Dictionary<string>,
+  repoInfo: RepoInfo
+): string | null {
+  for (const [name, url] of Object.entries(remoteUrls)) {
+    const parsed = parseRepoUrl(url);
+    if (
+      parsed &&
+      parsed.provider === repoInfo.provider &&
+      parsed.org === repoInfo.org &&
+      parsed.repo === repoInfo.repo
+    ) {
+      return name;
+    }
+  }
+  return null;
 }
 
 async function promptConnectArg({
