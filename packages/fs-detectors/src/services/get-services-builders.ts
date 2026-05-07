@@ -46,9 +46,7 @@ export async function getServicesBuilders(
 ): Promise<ServicesBuildersResult> {
   const { workPath, configuredServices, projectFramework } = options;
   const hasServiceDefinitions =
-    configuredServices != null &&
-    typeof configuredServices === 'object' &&
-    Object.keys(configuredServices).length > 0;
+    configuredServices != null && Object.keys(configuredServices).length > 0;
 
   if (
     projectFramework === 'services' &&
