@@ -62,9 +62,9 @@ export class ConnexTelemetryClient
     }
   }
 
-  trackCliFlagAll(v: boolean | undefined) {
+  trackCliFlagAllProjects(v: boolean | undefined) {
     if (v) {
-      this.trackCliFlag('all');
+      this.trackCliFlag('all-projects');
     }
   }
 

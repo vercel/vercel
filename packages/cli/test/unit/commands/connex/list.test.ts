@@ -33,16 +33,7 @@ describe('connex list', () => {
     client.config.currentTeam = team.id;
   });
 
-  describe('without --all (project-scoped)', () => {
-    it('should error when no project is linked', async () => {
-      client.setArgv('connex', 'list');
-
-      const exitCode = await connex(client);
-
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('No project linked');
-    });
-
+  describe('default (project-scoped when linked)', () => {
     it('should request clients filtered by the linked projectId', async () => {
       const project = {
         ...defaultProject,
@@ -103,11 +94,54 @@ describe('connex list', () => {
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('No Connex clients linked to');
       expect(stderr).toContain(project.name);
-      expect(stderr).toContain('--all');
+      expect(stderr).toContain('--all-projects');
+    });
+
+    it('should fall back to unscoped list when no project is linked', async () => {
+      let requestUrl = '';
+      client.scenario.get('/v1/connex/clients', (req, res) => {
+        requestUrl = req.url ?? '';
+        res.json({
+          clients: [
+            {
+              id: 'scl_abc123',
+              uid: 'slack/my-bot',
+              name: 'My Bot',
+              type: 'slack',
+              typeName: 'Slack',
+              createdAt: Date.now() - 60_000,
+              includes: {
+                projects: {
+                  items: [
+                    {
+                      projectId: 'proj_1',
+                      project: { id: 'proj_1', name: 'web' },
+                    },
+                  ],
+                  hasMore: false,
+                  cursor: null,
+                },
+              },
+            },
+          ],
+        });
+      });
+
+      client.setArgv('connex', 'list');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestUrl).toContain('include=projects');
+      expect(requestUrl).not.toContain('projectId=');
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Projects');
+      expect(stderr).toContain('web');
+      expect(stderr).not.toContain('Connex clients linked to');
     });
   });
 
-  describe('with --all', () => {
+  describe('with --all-projects', () => {
     it('should request clients with include=projects', async () => {
       let requestUrl = '';
       client.scenario.get('/v1/connex/clients', (req, res) => {
@@ -122,23 +156,27 @@ describe('connex list', () => {
               typeName: 'Slack',
               createdAt: Date.now() - 60_000,
               includes: {
-                projects: [
-                  {
-                    projectId: 'proj_1',
-                    project: { id: 'proj_1', name: 'web' },
-                  },
-                  {
-                    projectId: 'proj_2',
-                    project: { id: 'proj_2', name: 'docs' },
-                  },
-                ],
+                projects: {
+                  items: [
+                    {
+                      projectId: 'proj_1',
+                      project: { id: 'proj_1', name: 'web' },
+                    },
+                    {
+                      projectId: 'proj_2',
+                      project: { id: 'proj_2', name: 'docs' },
+                    },
+                  ],
+                  hasMore: false,
+                  cursor: null,
+                },
               },
             },
           ],
         });
       });
 
-      client.setArgv('connex', 'list', '--all');
+      client.setArgv('connex', 'list', '--all-projects');
 
       const exitCode = await connex(client);
 
@@ -151,7 +189,7 @@ describe('connex list', () => {
       expect(stderr).not.toContain('+ more');
     });
 
-    it('should append "+ more" when hasMoreProjects is true', async () => {
+    it('should append "+ more" when includes.projects.hasMore is true', async () => {
       client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({
           clients: [
@@ -163,20 +201,23 @@ describe('connex list', () => {
               typeName: 'Slack',
               createdAt: Date.now() - 60_000,
               includes: {
-                projects: [
-                  {
-                    projectId: 'proj_1',
-                    project: { id: 'proj_1', name: 'web' },
-                  },
-                ],
-                hasMoreProjects: true,
+                projects: {
+                  items: [
+                    {
+                      projectId: 'proj_1',
+                      project: { id: 'proj_1', name: 'web' },
+                    },
+                  ],
+                  hasMore: true,
+                  cursor: 'p_cursor',
+                },
               },
             },
           ],
         });
       });
 
-      client.setArgv('connex', 'list', '--all');
+      client.setArgv('connex', 'list', '--all-projects');
 
       const exitCode = await connex(client);
 
@@ -198,21 +239,25 @@ describe('connex list', () => {
               typeName: 'Slack',
               createdAt: Date.now() - 60_000,
               includes: {
-                projects: [
-                  {
-                    projectId: 'proj_live',
-                    project: { id: 'proj_live', name: 'live-app' },
-                  },
-                  // deleted project — no `project` field
-                  { projectId: 'proj_gone' },
-                ],
+                projects: {
+                  items: [
+                    {
+                      projectId: 'proj_live',
+                      project: { id: 'proj_live', name: 'live-app' },
+                    },
+                    // deleted project — no `project` field
+                    { projectId: 'proj_gone' },
+                  ],
+                  hasMore: false,
+                  cursor: null,
+                },
               },
             },
           ],
         });
       });
 
-      client.setArgv('connex', 'list', '--all');
+      client.setArgv('connex', 'list', '--all-projects');
 
       const exitCode = await connex(client);
 
@@ -227,7 +272,7 @@ describe('connex list', () => {
         res.json({ clients: [] });
       });
 
-      client.setArgv('connex', 'list', '--all');
+      client.setArgv('connex', 'list', '--all-projects');
 
       const exitCode = await connex(client);
 
@@ -243,7 +288,7 @@ describe('connex list', () => {
         res.json({ error: { code: 'not_found', message: 'Not Found' } });
       });
 
-      client.setArgv('connex', 'list', '--all');
+      client.setArgv('connex', 'list', '--all-projects');
 
       const exitCode = await connex(client);
 
@@ -263,15 +308,18 @@ describe('connex list', () => {
               typeName: 'OAuth',
               createdAt: 1_700_000_000_000,
               includes: {
-                projects: [
-                  {
-                    projectId: 'proj_1',
-                    project: { id: 'proj_1', name: 'web' },
-                  },
-                  // deleted — gets dropped from json projects
-                  { projectId: 'proj_gone' },
-                ],
-                hasMoreProjects: true,
+                projects: {
+                  items: [
+                    {
+                      projectId: 'proj_1',
+                      project: { id: 'proj_1', name: 'web' },
+                    },
+                    // deleted — gets dropped from json projects
+                    { projectId: 'proj_gone' },
+                  ],
+                  hasMore: true,
+                  cursor: 'p_cursor',
+                },
               },
             },
           ],
@@ -279,7 +327,7 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list', '--all', '--format=json');
+      client.setArgv('connex', 'list', '--all-projects', '--format=json');
 
       const exitCode = await connex(client);
 
@@ -295,7 +343,7 @@ describe('connex list', () => {
       expect(first.hasMoreProjects).toBe(true);
     });
 
-    it('should print --all in next-page hint when the response has a cursor', async () => {
+    it('should print --all-projects in next-page hint when the response has a cursor', async () => {
       client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({
           clients: [
@@ -306,20 +354,22 @@ describe('connex list', () => {
               type: 'slack',
               typeName: 'Slack',
               createdAt: Date.now(),
-              includes: { projects: [] },
+              includes: {
+                projects: { items: [], hasMore: false, cursor: null },
+              },
             },
           ],
           cursor: 'cursor-abc',
         });
       });
 
-      client.setArgv('connex', 'list', '--all');
+      client.setArgv('connex', 'list', '--all-projects');
 
       const exitCode = await connex(client);
 
       expect(exitCode).toBe(0);
       expect(client.stderr.getFullOutput()).toContain(
-        'connex list --all --next cursor-abc'
+        'connex list --all-projects --next cursor-abc'
       );
     });
 
@@ -333,7 +383,7 @@ describe('connex list', () => {
       client.setArgv(
         'connex',
         'list',
-        '--all',
+        '--all-projects',
         '--limit',
         '5',
         '--next',

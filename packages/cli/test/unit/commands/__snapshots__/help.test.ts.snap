@@ -810,8 +810,9 @@ exports[`help command > connex help output snapshots > connex help column width 
   Commands:
 
   create  type    Create a new Connex client                            
-  list            List Connex clients linked to the current project (use
-                  --all for every client in the team)                   
+  list            List Connex clients linked to the current project     
+                  (falls back to every client in the team when no       
+                  project is linked or when --all-projects is set)      
   token   id      Get a token for a Connex client (accepts a client ID  
                   like scl_abc or a UID like slack/my-bot)              
   remove  client  Delete a Connex client                                
@@ -859,11 +860,12 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 "
   ▲ vercel connex list [options]
 
-  List Connex clients linked to the current project (use --all for every client in the team)                            
+  List Connex clients linked to the current project (falls back to every client in the team when no project is linked   
+  or when --all-projects is set)                                                                                        
 
   Options:
 
-       --all              List every Connex client in the team, regardless of project link                              
+       --all-projects     List every Connex client in the team, regardless of project link                              
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
        --limit <COUNT>    Number of clients to return per page                                                          
        --next <CURSOR>    Cursor for the next page of results                                                           
@@ -891,7 +893,7 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   - List every Connex client in the team
 
-    $ vercel connex list --all
+    $ vercel connex list --all-projects
 
   - Limit the number of results
 
