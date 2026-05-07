@@ -1,14 +1,40 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { useTeam, useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useDeployment } from '../../../mocks/deployment';
 import logs from '../../../../src/commands/logs';
 import { join } from 'path';
 
-const fixture = (name: string) =>
-  join(__dirname, '../../../fixtures/unit/commands/logs', name);
+const logsFixturesDir = join(__dirname, '../../../fixtures/unit/commands/logs');
+
+const fixture = (name: string) => join(logsFixturesDir, name);
+
+const logsProject = {
+  ...defaultProject,
+  id: 'prj_logstest',
+  name: 'logs-test-project',
+  accountId: 'team_dummy',
+};
+
+function useLogsDeployment(creator: ReturnType<typeof useUser>) {
+  const deployment = useDeployment({
+    creator: {
+      id: logsProject.accountId,
+      email: creator.email,
+      name: 'Vercel',
+      username: 'vercel',
+    },
+    project: logsProject,
+  });
+  deployment.team = {
+    id: logsProject.accountId,
+    name: 'Vercel',
+    slug: 'vercel',
+  };
+  return deployment;
+}
 
 // API response format (what the server returns)
 interface ApiLogEntry {
@@ -678,16 +704,12 @@ describe('logs', () => {
     beforeEach(() => {
       useUser();
       useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
+      useProject(logsProject);
     });
 
     it('should filter by deployment ID with --no-follow', async () => {
       const user = useUser();
-      const deployment = useDeployment({ creator: user });
+      const deployment = useLogsDeployment(user);
 
       let receivedDeploymentId: string | undefined;
       client.scenario.get('/api/logs/request-logs', (req, res) => {
@@ -708,7 +730,7 @@ describe('logs', () => {
 
     it('should track telemetry for --deployment option', async () => {
       const user = useUser();
-      const deployment = useDeployment({ creator: user });
+      const deployment = useLogsDeployment(user);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
@@ -734,22 +756,47 @@ describe('logs', () => {
         },
       ]);
     });
+
+    it('should error when --project does not match the deployment project', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      useProject({
+        ...defaultProject,
+        id: 'prj_other',
+        name: 'other-project',
+        accountId: logsProject.accountId,
+      });
+
+      client.cwd = logsFixturesDir;
+      client.setArgv(
+        'logs',
+        '--deployment',
+        deployment.id,
+        '--project',
+        'other-project',
+        '--no-follow'
+      );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        `The deployment "${deployment.id}" does not belong to "other-project". Remove either the deployment selection or the --project option.`
+      );
+    });
   });
 
   describe('positional deployment argument (implicit --follow)', () => {
+    let logsTeam: ReturnType<typeof useTeam>;
+
     beforeEach(() => {
       useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
+      logsTeam = useTeam(logsProject.accountId);
+      useProject(logsProject);
     });
 
     it('should enable --follow implicitly when deployment ID is specified', async () => {
       const user = useUser();
-      const deployment = useDeployment({ creator: user });
+      const deployment = useLogsDeployment(user);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
@@ -768,7 +815,7 @@ describe('logs', () => {
 
     it('should allow --no-follow to disable implicit follow', async () => {
       const user = useUser();
-      const deployment = useDeployment({ creator: user });
+      const deployment = useLogsDeployment(user);
 
       let receivedDeploymentId: string | undefined;
       client.scenario.get('/api/logs/request-logs', (req, res) => {
@@ -789,7 +836,7 @@ describe('logs', () => {
 
     it('should extract hostname from URL positional argument', async () => {
       const user = useUser();
-      const deployment = useDeployment({ creator: user });
+      const deployment = useLogsDeployment(user);
 
       client.scenario.get(`/v13/deployments/${deployment.url}`, (_req, res) => {
         res.json(deployment);
@@ -810,9 +857,116 @@ describe('logs', () => {
       expect(exitCode).toEqual(0);
     });
 
+    it('should stream logs for a deployment URL without a linked project', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+
+      let receivedTeamId: string | undefined;
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (req, res) => {
+          receivedTeamId = req.query.teamId as string;
+          res.status(200);
+          res.end();
+        }
+      );
+
+      client.config.currentTeam = logsTeam.id;
+      client.cwd = logsFixturesDir;
+      client.setArgv('logs', `https://${deployment.url}`);
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedTeamId).toEqual(logsProject.accountId);
+    });
+
+    it('should fetch historical logs for a deployment URL without a linked project', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      let receivedQuery:
+        | {
+            projectId?: string;
+            ownerId?: string;
+            deploymentId?: string;
+            teamId?: string;
+          }
+        | undefined;
+
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedQuery = {
+          projectId: req.query.projectId as string,
+          ownerId: req.query.ownerId as string,
+          deploymentId: req.query.deploymentId as string,
+          teamId: req.query.teamId as string,
+        };
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.config.currentTeam = logsTeam.id;
+      client.cwd = logsFixturesDir;
+      client.setArgv('logs', `https://${deployment.url}`, '--no-follow');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedQuery).toEqual({
+        projectId: logsProject.id,
+        ownerId: logsProject.accountId,
+        deploymentId: deployment.id,
+        teamId: logsProject.accountId,
+      });
+    });
+
+    it('should use the current scope when the deployment project cannot be found', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      deployment.projectId = 'prj_missing_logs';
+
+      client.scenario.get('/v9/projects/prj_missing_logs', (_req, res) => {
+        res.status(404).json({ error: { code: 'not_found' } });
+      });
+
+      client.config.currentTeam = logsTeam.id;
+      client.cwd = logsFixturesDir;
+      client.setArgv('logs', deployment.id, '--no-follow');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        `Project not found: prj_missing_logs under ${logsTeam.slug}`
+      );
+    });
+
+    it('should use the current scope when an explicit project cannot be found', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+
+      client.scenario.get('/v9/projects/missing-project', (_req, res) => {
+        res.status(404).json({ error: { code: 'not_found' } });
+      });
+
+      client.config.currentTeam = logsTeam.id;
+      client.cwd = logsFixturesDir;
+      client.setArgv(
+        'logs',
+        deployment.id,
+        '--project',
+        'missing-project',
+        '--no-follow'
+      );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        `Project not found: missing-project under ${logsTeam.slug}`
+      );
+    });
+
     it('should prioritize positional argument over --deployment flag', async () => {
       const user = useUser();
-      const deployment = useDeployment({ creator: user });
+      const deployment = useLogsDeployment(user);
 
       client.scenario.get(
         `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
@@ -884,6 +1038,22 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput("isn't linked to a project");
+    });
+
+    it('should include the current scope when a deployment is not found', async () => {
+      const user = useUser();
+      const team = useTeam(logsProject.accountId);
+      useLogsDeployment(user);
+
+      client.config.currentTeam = team.id;
+      client.cwd = logsFixturesDir;
+      client.setArgv('logs', 'dpl_missing');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        `Deployment not found: dpl_missing under ${team.slug}`
+      );
     });
   });
 
