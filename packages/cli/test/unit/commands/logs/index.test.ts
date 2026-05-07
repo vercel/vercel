@@ -919,7 +919,7 @@ describe('logs', () => {
       });
     });
 
-    it('should use the current scope when the deployment project cannot be found', async () => {
+    it('should include the searched scope in error message when the deployment project cannot be found', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
       deployment.projectId = 'prj_missing_logs';
@@ -939,7 +939,7 @@ describe('logs', () => {
       );
     });
 
-    it('should use the current scope when an explicit project cannot be found', async () => {
+    it('should include the searched scope in error message when an explicit project cannot be found', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
