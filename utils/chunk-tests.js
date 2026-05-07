@@ -15,7 +15,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['20', '22'],
+      nodeVersions: ['22'],
     },
   ],
   [
@@ -24,7 +24,7 @@ const runnersMap = new Map([
       min: 1,
       max: 1,
       testScript: 'vitest-run',
-      runners: ['ubuntu-latest', 'macos-14'],
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['24'],
     },
   ],
@@ -38,13 +38,13 @@ const runnersMap = new Map([
     },
   ],
   [
-    'vitest-e2e-node-20',
+    'vitest-e2e-node-24',
     {
       min: 1,
       max: 7,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest'],
-      nodeVersions: ['20'],
+      nodeVersions: ['24'],
     },
   ],
   [
@@ -72,7 +72,7 @@ const runnersMap = new Map([
       max: 7,
       testScript: 'test',
       runners: ['ubuntu-latest'],
-      nodeVersions: ['20', '22', '24'],
+      nodeVersions: ['22', '24'],
     },
   ],
   [
@@ -100,7 +100,7 @@ const runnersMap = new Map([
 const UNIT_TEST_SCRIPTS = ['vitest-unit', 'vitest-unit-node-24', 'test-unit'];
 const E2E_TEST_SCRIPTS = [
   'vitest-e2e',
-  'vitest-e2e-node-20',
+  'vitest-e2e-node-24',
   'test-e2e',
   'test-e2e-node-all-versions',
   'test-next-local',
