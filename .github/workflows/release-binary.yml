@@ -121,11 +121,19 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         shell: bash
         env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
           APPLE_CERT_PATH: ${{ runner.temp }}/apple-certificate.p12
         run: |
           set -euo pipefail
-          echo "$APPLE_CERTIFICATE" | base64 --decode > "$APPLE_CERT_PATH"
+          if [[ -z "$APPLE_CERT_DATA" ]]; then
+            echo "::error::APPLE_CERT_DATA secret is empty or unavailable"
+            exit 1
+          fi
+          echo "$APPLE_CERT_DATA" | base64 --decode > "$APPLE_CERT_PATH"
+          if [[ ! -s "$APPLE_CERT_PATH" ]]; then
+            echo "::error::Decoded Apple certificate is empty"
+            exit 1
+          fi
           echo "APPLE_CERT_PATH=$APPLE_CERT_PATH" >> "$GITHUB_ENV"
 
       - name: Sign binary
@@ -176,6 +184,7 @@ jobs:
 
       # Changesets creates the release in release.yml; wait so we don't clobber it.
       - name: Wait for GitHub Release
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -193,6 +202,7 @@ jobs:
           exit 1
 
       - name: Upload to GitHub Release
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
         shell: bash
         working-directory: packages/cli
         env:
@@ -208,6 +218,7 @@ jobs:
   publish-native-npm:
     name: Publish native npm packages
     needs: build
+    if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     environment: release
     steps:
