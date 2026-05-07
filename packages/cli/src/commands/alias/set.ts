@@ -119,6 +119,8 @@ export default async function set(client: Client, argv: string[]) {
       const record = await assignAlias(
         client,
         {
+          // The one-argument shorthand resolves the deployment locally before
+          // assigning the requested alias.
           idOrUrl: deployment.id,
           deploymentUrl: deployment.url,
         },
