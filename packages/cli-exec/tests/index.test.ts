@@ -403,6 +403,110 @@ test('can execute the locally installed vercel package bin', async () => {
   });
 });
 
+test('passes input through to execa', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
+  const binPath = path.join(root, 'node_modules', '.bin', binName);
+
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(binPath, {
+    win32:
+      "@echo off\r\nnode -e \"let data='';process.stdin.on('data',chunk=>data+=chunk);process.stdin.on('end',()=>process.stdout.write(data.toUpperCase()))\"\r\n",
+    posix:
+      "#!/bin/sh\nnode -e \"let data='';process.stdin.on('data',chunk=>data+=chunk);process.stdin.on('end',()=>process.stdout.write(data.toUpperCase()))\"\n",
+  });
+
+  await expect(
+    execVercelCli([], { cwd, input: 'hello', stdin: 'pipe' })
+  ).resolves.toMatchObject({
+    stdout: 'HELLO',
+    invocation: {
+      command: realpathSync(binPath),
+      source: 'local-bin',
+    },
+  });
+});
+
+test('passes stdout and stderr options through to execa', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
+  const binPath = path.join(root, 'node_modules', '.bin', binName);
+
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(binPath, {
+    win32:
+      "@echo off\r\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\r\n",
+    posix:
+      "#!/bin/sh\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\n",
+  });
+
+  await expect(
+    execVercelCli([], {
+      cwd,
+      stdout: 'ignore',
+      stderr: 'pipe',
+    })
+  ).resolves.toMatchObject({
+    stdout: undefined,
+    stderr: 'err',
+    invocation: {
+      command: realpathSync(binPath),
+      source: 'local-bin',
+    },
+  });
+});
+
+test('passes stdio through to execa', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
+  const binPath = path.join(root, 'node_modules', '.bin', binName);
+
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(binPath, {
+    win32:
+      "@echo off\r\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\r\n",
+    posix:
+      "#!/bin/sh\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\n",
+  });
+
+  await expect(execVercelCli([], { cwd, stdio: 'ignore' })).resolves.toEqual({
+    stdout: undefined,
+    stderr: undefined,
+    invocation: {
+      command: realpathSync(binPath),
+      commandArgs: [],
+      source: 'local-bin',
+    },
+  });
+});
+
+test('passes timeout through to execa', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
+  const binPath = path.join(root, 'node_modules', '.bin', binName);
+
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(binPath, {
+    win32: '@echo off\r\nnode -e "setTimeout(() => {}, 1000)"\r\n',
+    posix: '#!/bin/sh\nnode -e "setTimeout(() => {}, 1000)"\n',
+  });
+
+  await expect(execVercelCli([], { cwd, timeout: 10 })).rejects.toEqual(
+    expect.objectContaining<VercelCliError>({
+      code: 'VERCEL_CLI_TIMED_OUT',
+      invocation: {
+        command: realpathSync(binPath),
+        commandArgs: [],
+        source: 'local-bin',
+      },
+    })
+  );
+});
+
 test('adds node to PATH when executing a local bin with a sanitized env', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');

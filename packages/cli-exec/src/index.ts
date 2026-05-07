@@ -14,9 +14,18 @@ export interface VercelCliInvocation {
 /**
  * Options for executing the resolved Vercel CLI.
  */
-export interface ExecVercelCliOptions {
-  cwd?: string;
-  env?: NodeJS.ProcessEnv;
+export interface ExecVercelCliOptions
+  extends Pick<
+    execa.Options,
+    | 'cwd'
+    | 'env'
+    | 'input'
+    | 'stdio'
+    | 'stdin'
+    | 'stdout'
+    | 'stderr'
+    | 'timeout'
+  > {
   signal?: AbortSignal;
 }
 
@@ -24,8 +33,8 @@ export interface ExecVercelCliOptions {
  * Captured output and invocation details from a successful CLI execution.
  */
 export interface ExecVercelCliResult {
-  stdout: string;
-  stderr: string;
+  stdout?: string;
+  stderr?: string;
   invocation: VercelCliInvocation;
 }
 
@@ -165,6 +174,12 @@ export async function execVercelCli(
 
     try {
       const execaOptions: ExecaOptions = {
+        input: options.input,
+        stdio: options.stdio,
+        stdin: options.stdin,
+        stdout: options.stdout,
+        stderr: options.stderr,
+        timeout: options.timeout,
         cwd,
         env: prependLocalBinsToEnvPath(cwd, env),
         windowsHide: true,
