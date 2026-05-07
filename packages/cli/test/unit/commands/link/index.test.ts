@@ -989,7 +989,9 @@ describe('link', () => {
           routePrefix: '/',
         },
         api: {
+          framework: 'fastapi',
           root: 'services/api',
+          entrypoint: 'index:app',
           routePrefix: '/_/api',
         },
       },
@@ -1214,7 +1216,9 @@ describe('link', () => {
           routePrefix: '/',
         },
         api: {
+          framework: 'fastapi',
           root: 'services/api',
+          entrypoint: 'index:app',
           routePrefix: '/_/api',
         },
       },
@@ -1296,7 +1300,9 @@ describe('link', () => {
           routePrefix: '/',
         },
         api: {
+          framework: 'fastapi',
           root: 'services/api',
+          entrypoint: 'index:app',
           routePrefix: '/_/api',
         },
       },
