@@ -23,7 +23,7 @@ import {
   type RequestLogMessage,
 } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { logsCommand } from './command';
@@ -226,12 +226,19 @@ function isNonLiveTerminalDeployment(deployment: Deployment): boolean {
   );
 }
 
+// Both forms wrap the command in backticks. `plain: true` uses literal
+// backticks with no color (suitable for embedding in JSON output); the default
+// uses gray backticks and cyan text for terminal display.
 function getInspectCommand(
   deployment: Deployment,
-  contextName?: string
+  contextName?: string,
+  { plain = false }: { plain?: boolean } = {}
 ): string {
   const scopeOption = contextName ? ` --scope ${contextName}` : '';
-  return `vc inspect https://${deployment.url}${scopeOption}`;
+  const command = `inspect https://${deployment.url}${scopeOption}`;
+  return plain
+    ? `\`${getCommandNamePlain(command)}\``
+    : getCommandName(command);
 }
 
 function printNonLiveDeploymentError(
@@ -239,16 +246,12 @@ function printNonLiveDeploymentError(
   contextName?: string
 ): void {
   const inspectCommand = getInspectCommand(deployment, contextName);
-  const message = [
+  output.error(
     `Logs are unavailable because deployment ${chalk.bold(
       deployment.id
-    )} never reached ${chalk.bold('READY')} (${deployment.readyState}).`,
-    `Run ${chalk.cyan(inspectCommand)} for deployment details.`,
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  output.error(message);
+    )} never reached READY and ended in ${deployment.readyState}.\n` +
+      `Run ${inspectCommand} for deployment details.`
+  );
 }
 
 async function resolveLogsTarget(
@@ -507,13 +510,15 @@ export default async function logs(client: Client) {
     const inspectContextName = detectExplicitScope(client)
       ? contextName
       : undefined;
-    const inspectCommand = getInspectCommand(deployment, inspectContextName);
+    const inspectCommand = getInspectCommand(deployment, inspectContextName, {
+      plain: true,
+    });
 
     if (jsonOption) {
       client.stdout.write(
         `${JSON.stringify({
           type: 'deployment_error',
-          message: `Logs are unavailable because deployment ${deployment.id} never reached READY (${deployment.readyState}). Run ${inspectCommand} for deployment details.`,
+          message: `Logs are unavailable because deployment ${deployment.id} never reached READY and ended in ${deployment.readyState}. Run ${inspectCommand} for deployment details.`,
         })}\n`
       );
     } else {

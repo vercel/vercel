@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Show deployment failure details instead of querying logs for deployments that never reached Ready.
+Show a clearer error instead of querying logs for deployments that never reached Ready.

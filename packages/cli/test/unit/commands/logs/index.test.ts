@@ -18,7 +18,10 @@ const logsProject = {
   accountId: 'team_dummy',
 };
 
-function useLogsDeployment(creator: ReturnType<typeof useUser>) {
+function useLogsDeployment(
+  creator: ReturnType<typeof useUser>,
+  state?: Parameters<typeof useDeployment>[0]['state']
+) {
   const deployment = useDeployment({
     creator: {
       id: logsProject.accountId,
@@ -27,6 +30,7 @@ function useLogsDeployment(creator: ReturnType<typeof useUser>) {
       username: 'vercel',
     },
     project: logsProject,
+    state,
   });
   deployment.team = {
     id: logsProject.accountId,
@@ -91,15 +95,6 @@ function useRequestLogs(logs: ApiLogEntry[] = []) {
       hasMoreRows: false,
     });
   });
-}
-
-function addDeploymentErrorDetails(
-  deployment: ReturnType<typeof useDeployment>
-) {
-  deployment.errorCode = 'BUILD_FAILED';
-  deployment.errorMessage = 'Build failed during deployment';
-  deployment.errorStep = 'build';
-  deployment.errorLink = 'https://vercel.com/docs/deployments/troubleshoot';
 }
 
 describe('logs', () => {
@@ -795,10 +790,7 @@ describe('logs', () => {
 
     it('should show deployment error for errored deployment with --deployment', async () => {
       const user = useUser();
-      const deployment = useLogsDeployment(user);
-      deployment.readyState = 'ERROR';
-      deployment.status = 'ERROR';
-      addDeploymentErrorDetails(deployment);
+      const deployment = useLogsDeployment(user, 'ERROR');
       const runtimeLogsSpy = vi.fn();
 
       client.scenario.get(
@@ -818,14 +810,10 @@ describe('logs', () => {
       const output = client.getFullOutput();
       expect(output).toContain('Logs are unavailable');
       expect(output).toContain(
-        `deployment ${deployment.id} never reached READY (ERROR)`
+        `deployment ${deployment.id} never reached READY and ended in ERROR`
       );
-      expect(output).not.toContain('Reason:');
-      expect(output).not.toContain('Code:');
-      expect(output).not.toContain('Step:');
-      expect(output).not.toContain('Details:');
       expect(output).toContain(
-        `Run vc inspect https://${deployment.url} for deployment details.`
+        `Run \`vercel inspect https://${deployment.url}\` for deployment details.`
       );
     });
   });
@@ -860,10 +848,7 @@ describe('logs', () => {
 
     it('should show deployment error and skip runtime logs for errored deployment', async () => {
       const user = useUser();
-      const deployment = useLogsDeployment(user);
-      deployment.readyState = 'ERROR';
-      deployment.status = 'ERROR';
-      addDeploymentErrorDetails(deployment);
+      const deployment = useLogsDeployment(user, 'ERROR');
       const runtimeLogsSpy = vi.fn();
 
       client.scenario.get(
@@ -881,16 +866,13 @@ describe('logs', () => {
       expect(exitCode).toEqual(1);
       expect(runtimeLogsSpy).not.toHaveBeenCalled();
       expect(client.getFullOutput()).toContain(
-        `deployment ${deployment.id} never reached READY (ERROR)`
+        `deployment ${deployment.id} never reached READY and ended in ERROR`
       );
     });
 
     it('should include explicit scope in the inspect command for errored deployment', async () => {
       const user = useUser();
-      const deployment = useLogsDeployment(user);
-      deployment.readyState = 'ERROR';
-      deployment.status = 'ERROR';
-      addDeploymentErrorDetails(deployment);
+      const deployment = useLogsDeployment(user, 'ERROR');
 
       client.config.currentTeam = logsTeam.id;
       client.cwd = logsFixturesDir;
@@ -899,16 +881,13 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(1);
       expect(client.getFullOutput()).toContain(
-        `Run vc inspect https://${deployment.url} --scope ${logsTeam.slug} for deployment details.`
+        `Run \`vercel inspect https://${deployment.url} --scope ${logsTeam.slug}\` for deployment details.`
       );
     });
 
     it('should show deployment error and skip request logs for errored deployment with --no-follow', async () => {
       const user = useUser();
-      const deployment = useLogsDeployment(user);
-      deployment.readyState = 'ERROR';
-      deployment.status = 'ERROR';
-      addDeploymentErrorDetails(deployment);
+      const deployment = useLogsDeployment(user, 'ERROR');
       const requestLogsSpy = vi.fn();
 
       client.scenario.get('/api/logs/request-logs', (_req, res) => {
@@ -926,15 +905,13 @@ describe('logs', () => {
       expect(exitCode).toEqual(1);
       expect(requestLogsSpy).not.toHaveBeenCalled();
       expect(client.getFullOutput()).toContain(
-        `deployment ${deployment.id} never reached READY (ERROR)`
+        `deployment ${deployment.id} never reached READY and ended in ERROR`
       );
     });
 
     it('should show deployment error for canceled deployment', async () => {
       const user = useUser();
-      const deployment = useLogsDeployment(user);
-      deployment.readyState = 'CANCELED';
-      deployment.status = 'CANCELED';
+      const deployment = useLogsDeployment(user, 'CANCELED');
       const requestLogsSpy = vi.fn();
 
       client.scenario.get('/api/logs/request-logs', (_req, res) => {
@@ -949,16 +926,13 @@ describe('logs', () => {
       expect(exitCode).toEqual(1);
       expect(requestLogsSpy).not.toHaveBeenCalled();
       expect(client.getFullOutput()).toContain(
-        `deployment ${deployment.id} never reached READY (CANCELED)`
+        `deployment ${deployment.id} never reached READY and ended in CANCELED`
       );
     });
 
     it('should output structured JSON for errored deployment', async () => {
       const user = useUser();
-      const deployment = useLogsDeployment(user);
-      deployment.readyState = 'ERROR';
-      deployment.status = 'ERROR';
-      addDeploymentErrorDetails(deployment);
+      const deployment = useLogsDeployment(user, 'ERROR');
       const runtimeLogsSpy = vi.fn();
 
       client.scenario.get(
@@ -977,7 +951,7 @@ describe('logs', () => {
       expect(runtimeLogsSpy).not.toHaveBeenCalled();
       expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
         type: 'deployment_error',
-        message: `Logs are unavailable because deployment ${deployment.id} never reached READY (ERROR). Run vc inspect https://${deployment.url} for deployment details.`,
+        message: `Logs are unavailable because deployment ${deployment.id} never reached READY and ended in ERROR. Run \`vercel inspect https://${deployment.url}\` for deployment details.`,
       });
     });
 
