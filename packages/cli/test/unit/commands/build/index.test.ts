@@ -1836,7 +1836,7 @@ createServer((_req, res) => {
         join(definitionsDir, 'index.js'),
         'utf8'
       );
-      expect(indexJs).toContain('export function get(hashedSdkKey)');
+      expect(indexJs).toContain('export function get(key)');
     });
 
     it('should not emit flags-definitions module when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
