@@ -76,11 +76,15 @@ describe('validateConfig', () => {
     const config = {
       services: {
         frontend: {
+          type: 'web',
+          root: '.',
           framework: 'nextjs',
           mount: '/',
         },
         api: {
-          entrypoint: 'api/index.ts',
+          type: 'web',
+          root: 'api',
+          entrypoint: 'index.ts',
           mount: {
             path: '/api',
           },
@@ -89,6 +93,34 @@ describe('validateConfig', () => {
     } satisfies Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  it('should require type in services config', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        api: {
+          root: '.',
+          entrypoint: 'api/index.ts',
+          mount: '/api',
+        } as any,
+      },
+    });
+    expect(error?.message).toContain('missing required property `type`');
+  });
+
+  it('should require root in services config', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        api: {
+          type: 'web',
+          entrypoint: 'api/index.ts',
+          mount: '/api',
+        } as any,
+      },
+    });
+    expect(error?.message).toContain('missing required property `root`');
   });
 
   it('should reject services when VERCEL_USE_SERVICES is not set', async () => {
@@ -118,6 +150,8 @@ describe('validateConfig', () => {
     const error = validateConfig({
       services: {
         api: {
+          type: 'web',
+          root: '.',
           entrypoint: 'api/index.ts',
           ...serviceConfig,
         } as any,
@@ -131,6 +165,8 @@ describe('validateConfig', () => {
     const error = validateConfig({
       services: {
         api: {
+          type: 'web',
+          root: '.',
           entrypoint: 'api/index.ts',
           mount: '/api',
         },

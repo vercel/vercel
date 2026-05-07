@@ -379,6 +379,8 @@ const servicesRoutableProperties = {
   mount: servicesMountSchema,
 };
 
+const servicesRequiredProperties = ['type', 'root'];
+
 const experimentalServicesServiceConfigSchema = {
   oneOf: [
     {
@@ -486,6 +488,7 @@ const servicesServiceConfigSchema = {
     {
       type: 'object',
       additionalProperties: false,
+      required: servicesRequiredProperties,
       properties: {
         ...servicesCommonProperties,
         ...servicesRoutableProperties,
@@ -497,7 +500,7 @@ const servicesServiceConfigSchema = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['type', 'trigger'],
+      required: [...servicesRequiredProperties, 'trigger'],
       properties: {
         ...servicesCommonProperties,
         type: {
@@ -512,7 +515,7 @@ const servicesServiceConfigSchema = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['type', 'trigger'],
+      required: [...servicesRequiredProperties, 'trigger'],
       properties: {
         ...servicesCommonProperties,
         type: {
@@ -527,7 +530,7 @@ const servicesServiceConfigSchema = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['type', 'trigger', 'entrypoint'],
+      required: [...servicesRequiredProperties, 'trigger', 'entrypoint'],
       properties: {
         ...servicesCommonProperties,
         type: {
