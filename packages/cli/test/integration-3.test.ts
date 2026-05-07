@@ -729,6 +729,7 @@ test('alias set accepts an alias URL as the first argument', async () => {
   const projectName = `alias-url-${session}`;
   const firstAlias = `${projectName}-first.vercel.app`;
   const secondAlias = `${projectName}-second.vercel.app`;
+  const thirdAlias = `${projectName}-third.vercel.app`;
   const aliasesToRemove: string[] = [];
 
   try {
@@ -760,11 +761,20 @@ test('alias set accepts an alias URL as the first argument', async () => {
     const secondAliasOutput = await execCli(binaryPath, [
       'alias',
       'set',
-      `https://${firstAlias}`,
+      firstAlias,
       secondAlias,
     ]);
     expect(secondAliasOutput.exitCode, formatOutput(secondAliasOutput)).toBe(0);
     aliasesToRemove.push(secondAlias);
+
+    const thirdAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      `https://${firstAlias}`,
+      thirdAlias,
+    ]);
+    expect(thirdAliasOutput.exitCode, formatOutput(thirdAliasOutput)).toBe(0);
+    aliasesToRemove.push(thirdAlias);
   } finally {
     await Promise.all(
       aliasesToRemove.map(alias =>
