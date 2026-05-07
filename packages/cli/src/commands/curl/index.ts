@@ -4,11 +4,7 @@ import { curlCommand } from './command';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
-import {
-  getDeploymentUrlAndToken,
-  resolveFullUrlAuthHeader,
-  setupCurlLikeCommand,
-} from './shared';
+import { resolveCurlLikeTarget, setupCurlLikeCommand } from './shared';
 
 export default async function curl(client: Client): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({
@@ -23,41 +19,22 @@ export default async function curl(client: Client): Promise<number> {
     return setup;
   }
 
-  const { target, isFullUrl, deploymentFlag, protectionBypassFlag, toolFlags } =
-    setup;
+  const target = await resolveCurlLikeTarget(client, 'curl', setup);
 
-  let fullUrl: string;
-  let authHeader: { name: string; value: string } | null = null;
+  if (typeof target === 'number') {
+    return target;
+  }
 
-  if (isFullUrl) {
-    fullUrl = target;
-    authHeader = await resolveFullUrlAuthHeader(
-      client,
-      fullUrl,
-      protectionBypassFlag
+  const curlFlags = [...setup.toolFlags];
+
+  if (target.authHeader) {
+    curlFlags.unshift(
+      '--header',
+      `${target.authHeader.name}: ${target.authHeader.value}`
     );
-  } else {
-    const result = await getDeploymentUrlAndToken(client, 'curl', target, {
-      deploymentFlag,
-      protectionBypassFlag,
-      autoConfirm: setup.yes,
-    });
-
-    if (typeof result === 'number') {
-      return result;
-    }
-
-    fullUrl = result.fullUrl;
-    authHeader = result.authHeader;
   }
 
-  const curlFlags = [...toolFlags];
-
-  if (authHeader) {
-    curlFlags.unshift('--header', `${authHeader.name}: ${authHeader.value}`);
-  }
-
-  curlFlags.unshift('--url', fullUrl);
+  curlFlags.unshift('--url', target.fullUrl);
 
   output.debug(`Executing: curl ${curlFlags.map(requoteArgs).join(' ')}`);
 

@@ -205,59 +205,9 @@ describe('httpstat', () => {
         expect.anything()
       );
     });
-
-    it('should handle process.argv parsing for httpstat flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'httpstat',
-        '/api/hello',
-        '--',
-        '-H',
-        'Content-Type: application/json',
-        '-X',
-        'POST',
-      ];
-
-      const separatorIndex = process.argv.indexOf('--');
-      const httpstatFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(httpstatFlags).toEqual([
-        '-H',
-        'Content-Type: application/json',
-        '-X',
-        'POST',
-      ]);
-    });
   });
 
   describe('--deployment flag', () => {
-    it('should accept deployment ID with dpl_ prefix', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const separatorIndex = client.argv.indexOf('--');
-      expect(separatorIndex).toBe(-1);
-    });
-
-    it('should accept deployment ID without dpl_ prefix', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--deployment',
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-    });
-
     it('should accept a full deployment URL', async () => {
       await setupLinkedProject();
 

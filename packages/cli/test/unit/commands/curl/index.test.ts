@@ -283,111 +283,17 @@ describe('curl', () => {
       });
     });
 
-    it('should ignore Vercel globals before the command and pass short flags after the target to curl', () => {
+    it('should pass short flags after the target to curl', () => {
       expect(
-        parseCurlLikeArgs(
-          ['--debug', '--scope', 'team_slug', 'curl', '/api/hello', '-v'],
-          'curl'
-        )
+        parseCurlLikeArgs(['curl', '/api/hello', '-v'], 'curl')
       ).toMatchObject({
         target: '/api/hello',
         toolFlags: ['-v'],
       });
     });
-
-    it('should handle process.argv parsing for curl flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'curl',
-        '/api/hello',
-        '--',
-        '--header',
-        'Content-Type: application/json',
-        '--request',
-        'POST',
-      ];
-
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(curlFlags).toEqual([
-        '--header',
-        'Content-Type: application/json',
-        '--request',
-        'POST',
-      ]);
-    });
-
-    it('should preserve arguments with spaces in process.argv', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'curl',
-        '/api/hello',
-        '--',
-        '--header',
-        'X-Custom-Header: value with spaces',
-      ];
-
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(curlFlags).toEqual([
-        '--header',
-        'X-Custom-Header: value with spaces',
-      ]);
-      expect(curlFlags[1]).toBe('X-Custom-Header: value with spaces');
-    });
   });
 
   describe('--deployment flag', () => {
-    it('should accept deployment ID with dpl_ prefix', async () => {
-      client.setArgv(
-        'curl',
-        '/api/hello',
-        '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const separatorIndex = client.argv.indexOf('--');
-      expect(separatorIndex).toBe(-1); // No -- separator in this case
-    });
-
-    it('should accept deployment ID without dpl_ prefix', async () => {
-      client.setArgv(
-        'curl',
-        '/api/hello',
-        '--deployment',
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-    });
-
-    it('should work with --deployment and curl flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'curl',
-        '/api/hello',
-        '--deployment',
-        'ERiL45NJvP8ghWxgbvCM447bmxwV',
-        '--',
-        '--header',
-        'Content-Type: application/json',
-      ];
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(curlFlags).toEqual(['--header', 'Content-Type: application/json']);
-    });
-
     it('should accept a full deployment URL', async () => {
       await setupLinkedProject();
 

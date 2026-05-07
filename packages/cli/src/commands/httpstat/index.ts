@@ -4,11 +4,7 @@ import { httpstatCommand } from './command';
 import output from '../../output-manager';
 import { requoteArgs } from '../curl/utils';
 import { HttpstatTelemetryClient } from '../../util/telemetry/commands/httpstat';
-import {
-  getDeploymentUrlAndToken,
-  resolveFullUrlAuthHeader,
-  setupCurlLikeCommand,
-} from '../curl/shared';
+import { resolveCurlLikeTarget, setupCurlLikeCommand } from '../curl/shared';
 
 export default async function httpstat(client: Client): Promise<number> {
   const telemetryClient = new HttpstatTelemetryClient({
@@ -23,41 +19,22 @@ export default async function httpstat(client: Client): Promise<number> {
     return setup;
   }
 
-  const { target, isFullUrl, deploymentFlag, protectionBypassFlag, toolFlags } =
-    setup;
+  const target = await resolveCurlLikeTarget(client, 'httpstat', setup);
 
-  let fullUrl: string;
-  let authHeader: { name: string; value: string } | null = null;
+  if (typeof target === 'number') {
+    return target;
+  }
 
-  if (isFullUrl) {
-    fullUrl = target;
-    authHeader = await resolveFullUrlAuthHeader(
-      client,
-      fullUrl,
-      protectionBypassFlag
+  const httpstatFlags = [...setup.toolFlags];
+
+  if (target.authHeader) {
+    httpstatFlags.unshift(
+      '-H',
+      `${target.authHeader.name}: ${target.authHeader.value}`
     );
-  } else {
-    const result = await getDeploymentUrlAndToken(client, 'httpstat', target, {
-      deploymentFlag,
-      protectionBypassFlag,
-      autoConfirm: setup.yes,
-    });
-
-    if (typeof result === 'number') {
-      return result;
-    }
-
-    fullUrl = result.fullUrl;
-    authHeader = result.authHeader;
   }
 
-  const httpstatFlags = [...toolFlags];
-
-  if (authHeader) {
-    httpstatFlags.unshift('-H', `${authHeader.name}: ${authHeader.value}`);
-  }
-
-  httpstatFlags.unshift(fullUrl);
+  httpstatFlags.unshift(target.fullUrl);
 
   output.debug(
     `Executing: httpstat ${httpstatFlags.map(requoteArgs).join(' ')}`

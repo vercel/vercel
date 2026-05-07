@@ -22,15 +22,24 @@ import { URLSearchParams } from 'url';
 const TRUSTED_OIDC_HEADER = 'x-vercel-trusted-oidc-idp-token';
 const PROTECTION_BYPASS_HEADER = 'x-vercel-protection-bypass';
 
-interface AuthHeader {
+export interface AuthHeader {
   name: string;
   value: string;
+}
+
+export interface ResolvedCurlLikeTarget {
+  fullUrl: string;
+  authHeader: AuthHeader | null;
 }
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
   protectionBypassFlag?: string;
   autoConfirm?: boolean;
+}
+
+interface OidcTokenOptions {
+  warnOnMissing?: boolean;
 }
 
 export interface DeploymentUrlResult {
@@ -65,22 +74,6 @@ function looksLikeHostname(target: string): boolean {
 
 const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
 const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help']);
-
-const GLOBAL_STRING_FLAGS = new Set([
-  '--cwd',
-  '--scope',
-  '--token',
-  '--team',
-  '--local-config',
-  '--global-config',
-  '--api',
-]);
-const GLOBAL_BOOLEAN_FLAGS = new Set([
-  '--debug',
-  '--no-color',
-  '--non-interactive',
-  '--version',
-]);
 
 function flagName(arg: string): string {
   const eqIdx = arg.indexOf('=');
@@ -135,17 +128,6 @@ export function parseCurlLikeArgs(
     if (!result.target && VC_BOOLEAN_FLAGS.has(name)) {
       if (name === '--yes') result.yes = true;
       if (name === '--help') result.help = true;
-      continue;
-    }
-
-    if (!result.target && GLOBAL_STRING_FLAGS.has(name)) {
-      if (eqValue === null && !isArgTerminator(beforeSeparator[i + 1])) {
-        i++;
-      }
-      continue;
-    }
-
-    if (!result.target && GLOBAL_BOOLEAN_FLAGS.has(name)) {
       continue;
     }
 
@@ -236,19 +218,30 @@ export function setupCurlLikeCommand(
 async function pullProjectOidcToken(
   client: Client,
   projectId: string,
-  accountId?: string
+  accountId?: string,
+  opts: OidcTokenOptions = {}
 ): Promise<string | null> {
+  const warn = () => {
+    if (opts.warnOnMissing) {
+      output.warn(
+        'Could not retrieve a Trusted OIDC token. Continuing without deployment protection auth.'
+      );
+    }
+  };
   const query = new URLSearchParams({ source: 'vercel-cli:curl' });
   try {
     const result = await client.fetch<{
       env: Record<string, string>;
       buildEnv: Record<string, string>;
     }>(`/v3/env/pull/${projectId}?${query}`, { accountId });
-    return result.env.VERCEL_OIDC_TOKEN ?? null;
+    const token = result.env.VERCEL_OIDC_TOKEN ?? null;
+    if (!token) warn();
+    return token;
   } catch (err) {
     output.debug(
       `Failed to fetch project OIDC token: ${err instanceof Error ? err.message : String(err)}`
     );
+    warn();
     return null;
   }
 }
@@ -414,13 +407,48 @@ export async function resolveFullUrlAuthHeader(
     const token = await pullProjectOidcToken(
       client,
       resolved.project.id,
-      resolved.ownerId
+      resolved.ownerId,
+      { warnOnMissing: true }
     );
     if (token) return { name: TRUSTED_OIDC_HEADER, value: token };
   }
 
   output.debug(`No OIDC token available for ${toHost(fullUrl)}`);
   return null;
+}
+
+export async function resolveCurlLikeTarget(
+  client: Client,
+  commandName: string,
+  setup: CommandSetupResult
+): Promise<ResolvedCurlLikeTarget | number> {
+  const { target, deploymentFlag, protectionBypassFlag } = setup;
+
+  if (setup.isFullUrl) {
+    return {
+      fullUrl: target,
+      authHeader: await resolveFullUrlAuthHeader(
+        client,
+        target,
+        protectionBypassFlag
+      ),
+    };
+  }
+
+  const result = await getDeploymentUrlAndToken(client, commandName, target, {
+    deploymentFlag,
+    protectionBypassFlag,
+    autoConfirm: setup.yes,
+  });
+
+  if (typeof result === 'number') {
+    return result;
+  }
+
+  return {
+    fullUrl: result.fullUrl,
+    authHeader: result.authHeader,
+  };
 }
 
 /**
@@ -530,7 +558,8 @@ export async function getDeploymentUrlAndToken(
       const oidcToken = await pullProjectOidcToken(
         client,
         project.id,
-        link.org.id
+        link.org.id,
+        { warnOnMissing: true }
       );
       if (oidcToken) {
         authHeader = { name: TRUSTED_OIDC_HEADER, value: oidcToken };
