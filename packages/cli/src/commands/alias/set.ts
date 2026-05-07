@@ -122,7 +122,6 @@ export default async function set(client: Client, argv: string[]) {
           // The one-argument shorthand resolves the deployment locally before
           // assigning the requested alias.
           idOrUrl: deployment.id,
-          deploymentUrl: deployment.url,
         },
         target,
         contextName

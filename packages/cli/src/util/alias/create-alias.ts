@@ -5,7 +5,6 @@ import output from '../../output-manager';
 
 export type DeploymentOrAlias = {
   idOrUrl: string;
-  deploymentUrl?: string;
 };
 
 export type AliasRecord = {
@@ -100,7 +99,7 @@ async function performCreateAlias(
       }
       if (err.code === 'deployment_not_ready') {
         return new ERRORS.DeploymentNotReady({
-          url: getDeploymentOrAliasUrlForError(deploymentOrAlias),
+          url: getUrlForError(deploymentOrAlias),
         });
       }
       if (err.status === 403) {
@@ -117,9 +116,6 @@ async function performCreateAlias(
   }
 }
 
-function getDeploymentOrAliasUrlForError(deploymentOrAlias: DeploymentOrAlias) {
-  return (deploymentOrAlias.deploymentUrl || deploymentOrAlias.idOrUrl).replace(
-    /^(?:.*?:\/\/)?([^/]+).*/,
-    '$1'
-  );
+function getUrlForError(deploymentOrAlias: DeploymentOrAlias) {
+  return deploymentOrAlias.idOrUrl.replace(/^(?:.*?:\/\/)?([^/]+).*/, '$1');
 }
