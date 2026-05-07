@@ -774,18 +774,35 @@ test('alias set accepts a URL as the first argument', async () => {
   }
 });
 
-test('alias set rejects invalid URLs as the first argument', async () => {
-  const invalidUrl = 'https://%';
-  const output = await execCli(binaryPath, [
-    'alias',
-    'set',
-    invalidUrl,
-    `invalid-url-${session}.vercel.app`,
-  ]);
+test.each([
+  {
+    name: 'malformed URL',
+    idOrUrl: 'https://%',
+    expectedIdOrUrl: 'https://%',
+    target: `malformed-source-url-${session}.vercel.app`,
+  },
+  {
+    name: 'unknown ID',
+    idOrUrl: `unknown-source-id-${session}`,
+    expectedIdOrUrl: `unknown-source-id-${session}`,
+    target: `unknown-source-id-${session}.vercel.app`,
+  },
+  {
+    name: 'unknown URL',
+    idOrUrl: `https://unknown-source-url-${session}.vercel.app`,
+    expectedIdOrUrl: `unknown-source-url-${session}.vercel.app`,
+    target: `unknown-source-url-target-${session}.vercel.app`,
+  },
+])('alias set rejects $name as the first argument', async ({
+  idOrUrl,
+  expectedIdOrUrl,
+  target,
+}) => {
+  const output = await execCli(binaryPath, ['alias', 'set', idOrUrl, target]);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toContain(invalidUrl);
-  expect(output.stderr).toMatch(/invalid|not valid/i);
+  expect(output.stderr).toContain(`Failed to find ID or URL`);
+  expect(output.stderr).toContain(expectedIdOrUrl);
 });
 
 test('vercel certs ls', async () => {
