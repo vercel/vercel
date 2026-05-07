@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam, useTeams } from '../../../mocks/team';
@@ -91,6 +91,15 @@ function useRequestLogs(logs: ApiLogEntry[] = []) {
       hasMoreRows: false,
     });
   });
+}
+
+function addDeploymentErrorDetails(
+  deployment: ReturnType<typeof useDeployment>
+) {
+  deployment.errorCode = 'BUILD_FAILED';
+  deployment.errorMessage = 'Build failed during deployment';
+  deployment.errorStep = 'build';
+  deployment.errorLink = 'https://vercel.com/docs/deployments/troubleshoot';
 }
 
 describe('logs', () => {
@@ -783,6 +792,42 @@ describe('logs', () => {
         `The deployment "${deployment.id}" does not belong to "other-project" project. Remove either the deployment selection or the --project option.`
       );
     });
+
+    it('should show deployment error for errored deployment with --deployment', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      deployment.readyState = 'ERROR';
+      deployment.status = 'ERROR';
+      addDeploymentErrorDetails(deployment);
+      const runtimeLogsSpy = vi.fn();
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (_req, res) => {
+          runtimeLogsSpy();
+          res.end();
+        }
+      );
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--deployment', deployment.id);
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      expect(runtimeLogsSpy).not.toHaveBeenCalled();
+      const output = client.getFullOutput();
+      expect(output).toContain('Logs are unavailable');
+      expect(output).toContain(
+        `deployment ${deployment.id} never reached READY (ERROR)`
+      );
+      expect(output).not.toContain('Reason:');
+      expect(output).not.toContain('Code:');
+      expect(output).not.toContain('Step:');
+      expect(output).not.toContain('Details:');
+      expect(output).toContain(
+        `Run vc inspect https://${deployment.url} for deployment details.`
+      );
+    });
   });
 
   describe('positional deployment argument (implicit --follow)', () => {
@@ -811,6 +856,129 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
+    });
+
+    it('should show deployment error and skip runtime logs for errored deployment', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      deployment.readyState = 'ERROR';
+      deployment.status = 'ERROR';
+      addDeploymentErrorDetails(deployment);
+      const runtimeLogsSpy = vi.fn();
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (_req, res) => {
+          runtimeLogsSpy();
+          res.end();
+        }
+      );
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id);
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      expect(runtimeLogsSpy).not.toHaveBeenCalled();
+      expect(client.getFullOutput()).toContain(
+        `deployment ${deployment.id} never reached READY (ERROR)`
+      );
+    });
+
+    it('should include explicit scope in the inspect command for errored deployment', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      deployment.readyState = 'ERROR';
+      deployment.status = 'ERROR';
+      addDeploymentErrorDetails(deployment);
+
+      client.config.currentTeam = logsTeam.id;
+      client.cwd = logsFixturesDir;
+      client.setArgv('logs', deployment.id, '--scope', logsTeam.slug);
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.getFullOutput()).toContain(
+        `Run vc inspect https://${deployment.url} --scope ${logsTeam.slug} for deployment details.`
+      );
+    });
+
+    it('should show deployment error and skip request logs for errored deployment with --no-follow', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      deployment.readyState = 'ERROR';
+      deployment.status = 'ERROR';
+      addDeploymentErrorDetails(deployment);
+      const requestLogsSpy = vi.fn();
+
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        requestLogsSpy();
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--no-follow');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      expect(requestLogsSpy).not.toHaveBeenCalled();
+      expect(client.getFullOutput()).toContain(
+        `deployment ${deployment.id} never reached READY (ERROR)`
+      );
+    });
+
+    it('should show deployment error for canceled deployment', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      deployment.readyState = 'CANCELED';
+      deployment.status = 'CANCELED';
+      const requestLogsSpy = vi.fn();
+
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        requestLogsSpy();
+        res.json({ rows: [], hasMoreRows: false });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--no-follow');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      expect(requestLogsSpy).not.toHaveBeenCalled();
+      expect(client.getFullOutput()).toContain(
+        `deployment ${deployment.id} never reached READY (CANCELED)`
+      );
+    });
+
+    it('should output structured JSON for errored deployment', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+      deployment.readyState = 'ERROR';
+      deployment.status = 'ERROR';
+      addDeploymentErrorDetails(deployment);
+      const runtimeLogsSpy = vi.fn();
+
+      client.scenario.get(
+        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
+        (_req, res) => {
+          runtimeLogsSpy();
+          res.end();
+        }
+      );
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--json');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      expect(runtimeLogsSpy).not.toHaveBeenCalled();
+      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+        type: 'deployment_error',
+        message: `Logs are unavailable because deployment ${deployment.id} never reached READY (ERROR). Run vc inspect https://${deployment.url} for deployment details.`,
+      });
     });
 
     it('should allow --no-follow to disable implicit follow', async () => {

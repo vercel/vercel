@@ -1,4 +1,5 @@
 import { isErrnoException } from '@vercel/error-utils';
+import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import { format } from 'date-fns';
 import type Client from '../../util/client';
@@ -6,7 +7,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
 import { formatProject } from '../../util/projects/format-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { getLinkedProject } from '../../util/projects/link';
@@ -38,7 +39,7 @@ interface LogsTarget {
   projectSlug: string;
   orgSlug: string;
   ownerId: string;
-  deploymentId?: string;
+  deployment?: Deployment;
 }
 
 interface ResolveLogsTargetOptions {
@@ -219,6 +220,37 @@ function parseSources(sources?: string | string[]): string[] {
   return sources;
 }
 
+function isNonLiveTerminalDeployment(deployment: Deployment): boolean {
+  return (
+    deployment.readyState === 'ERROR' || deployment.readyState === 'CANCELED'
+  );
+}
+
+function getInspectCommand(
+  deployment: Deployment,
+  contextName?: string
+): string {
+  const scopeOption = contextName ? ` --scope ${contextName}` : '';
+  return `vc inspect https://${deployment.url}${scopeOption}`;
+}
+
+function printNonLiveDeploymentError(
+  deployment: Deployment,
+  contextName?: string
+): void {
+  const inspectCommand = getInspectCommand(deployment, contextName);
+  const message = [
+    `Logs are unavailable because deployment ${chalk.bold(
+      deployment.id
+    )} never reached ${chalk.bold('READY')} (${deployment.readyState}).`,
+    `Run ${chalk.cyan(inspectCommand)} for deployment details.`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  output.error(message);
+}
+
 async function resolveLogsTarget(
   client: Client,
   { contextName, deploymentOption, projectOption }: ResolveLogsTargetOptions
@@ -293,7 +325,7 @@ async function resolveLogsTarget(
       projectSlug: project.name,
       orgSlug: contextName,
       ownerId: project.accountId,
-      deploymentId: deployment.id,
+      deployment,
     };
   }
 
@@ -468,8 +500,27 @@ export default async function logs(client: Client) {
     return logsTarget.exitCode;
   }
 
-  const { projectId, projectSlug, orgSlug, ownerId } = logsTarget;
-  let { deploymentId } = logsTarget;
+  const { projectId, projectSlug, orgSlug, ownerId, deployment } = logsTarget;
+  let deploymentId = deployment?.id;
+
+  if (deployment && isNonLiveTerminalDeployment(deployment)) {
+    const inspectContextName = detectExplicitScope(client)
+      ? contextName
+      : undefined;
+    const inspectCommand = getInspectCommand(deployment, inspectContextName);
+
+    if (jsonOption) {
+      client.stdout.write(
+        `${JSON.stringify({
+          type: 'deployment_error',
+          message: `Logs are unavailable because deployment ${deployment.id} never reached READY (${deployment.readyState}). Run ${inspectCommand} for deployment details.`,
+        })}\n`
+      );
+    } else {
+      printNonLiveDeploymentError(deployment, inspectContextName);
+    }
+    return 1;
+  }
 
   // Determine branch filter:
   // - If --branch is explicitly set (string), use it
