@@ -3,7 +3,7 @@ import type Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 import output from '../../output-manager';
 
-export type AliasSource = {
+export type DeploymentOrAlias = {
   deploymentOrAliasIdOrUrl: string;
   deploymentUrl?: string;
 };
@@ -18,12 +18,17 @@ export type AliasRecord = {
 export default async function createAlias(
   client: Client,
   contextName: string,
-  source: AliasSource,
+  deploymentOrAlias: DeploymentOrAlias,
   alias: string,
   externalDomain: boolean
 ) {
   output.spinner(`Creating alias`);
-  const result = await performCreateAlias(client, contextName, source, alias);
+  const result = await performCreateAlias(
+    client,
+    contextName,
+    deploymentOrAlias,
+    alias
+  );
   output.stopSpinner();
 
   if (result instanceof ERRORS.CertMissing) {
@@ -41,7 +46,7 @@ export default async function createAlias(
     const secondTry = await performCreateAlias(
       client,
       contextName,
-      source,
+      deploymentOrAlias,
       alias
     );
     output.stopSpinner();
@@ -54,13 +59,13 @@ export default async function createAlias(
 async function performCreateAlias(
   client: Client,
   contextName: string,
-  source: AliasSource,
+  deploymentOrAlias: DeploymentOrAlias,
   alias: string
 ) {
   try {
     return await client.fetch<AliasRecord>(
       `/now/deployments/${encodeURIComponent(
-        source.deploymentOrAliasIdOrUrl
+        deploymentOrAlias.deploymentOrAliasIdOrUrl
       )}/aliases`,
       {
         method: 'POST',
@@ -77,14 +82,14 @@ async function performCreateAlias(
       }
       if (err.code === 'invalid_deployment_id' || err.code === 'invalid_url') {
         return new ERRORS.InvalidDeploymentId(
-          source.deploymentOrAliasIdOrUrl,
+          deploymentOrAlias.deploymentOrAliasIdOrUrl,
           err.message
         );
       }
       if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
-          id: source.deploymentOrAliasIdOrUrl,
+          id: deploymentOrAlias.deploymentOrAliasIdOrUrl,
         });
       }
       if (err.code === 'gone') {
@@ -95,7 +100,7 @@ async function performCreateAlias(
       }
       if (err.code === 'deployment_not_ready') {
         return new ERRORS.DeploymentNotReady({
-          url: getSourceUrlForError(source),
+          url: getDeploymentOrAliasUrlForError(deploymentOrAlias),
         });
       }
       if (err.status === 403) {
@@ -112,9 +117,9 @@ async function performCreateAlias(
   }
 }
 
-function getSourceUrlForError(source: AliasSource) {
-  return (source.deploymentUrl || source.deploymentOrAliasIdOrUrl).replace(
-    /^(?:.*?:\/\/)?([^/]+).*/,
-    '$1'
-  );
+function getDeploymentOrAliasUrlForError(deploymentOrAlias: DeploymentOrAlias) {
+  return (
+    deploymentOrAlias.deploymentUrl ||
+    deploymentOrAlias.deploymentOrAliasIdOrUrl
+  ).replace(/^(?:.*?:\/\/)?([^/]+).*/, '$1');
 }

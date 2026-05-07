@@ -52,7 +52,7 @@ export default async function set(client: Client, argv: string[]) {
   if (args.length > 2) {
     output.error(
       `${getCommandName(
-        'alias <deployment> <target>'
+        'alias <deployment-or-url> <target>'
       )} accepts at most two arguments`
     );
     return 1;
@@ -60,7 +60,7 @@ export default async function set(client: Client, argv: string[]) {
 
   if (args.length >= 1 && !isValidName(args[0])) {
     output.error(
-      `The provided argument "${args[0]}" is not a valid deployment`
+      `The provided argument "${args[0]}" is not a valid deployment or URL`
     );
     return 1;
   }
@@ -150,18 +150,18 @@ export default async function set(client: Client, argv: string[]) {
   }
 
   const [deploymentOrAliasIdOrUrl, aliasTarget] = args;
-  telemetryClient.trackCliArgumentDeployment(deploymentOrAliasIdOrUrl);
+  telemetryClient.trackCliArgumentDeploymentOrUrl(deploymentOrAliasIdOrUrl);
   telemetryClient.trackCliArgumentAlias(aliasTarget);
 
   output.log(`Assigning alias ${aliasTarget} to ${deploymentOrAliasIdOrUrl}`);
 
   const isWildcard = isWildcardAlias(aliasTarget);
-  const sourceForAliasRequest = getDeploymentOrAliasIdOrUrl(
+  const deploymentOrAliasIdOrUrlForRequest = getDeploymentOrAliasIdOrUrl(
     deploymentOrAliasIdOrUrl
   );
   const record = await assignAlias(
     client,
-    { deploymentOrAliasIdOrUrl: sourceForAliasRequest },
+    { deploymentOrAliasIdOrUrl: deploymentOrAliasIdOrUrlForRequest },
     aliasTarget,
     contextName
   );
@@ -300,9 +300,9 @@ function handleCreateAliasError<T>(
 
   if (error instanceof ERRORS.DeploymentNotFound) {
     output.error(
-      `Failed to find deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(
-        error.meta.context
-      )}`
+      `Failed to find deployment or URL ${chalk.dim(
+        error.meta.id
+      )} under ${chalk.bold(error.meta.context)}`
     );
     return 1;
   }
@@ -314,7 +314,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.DeploymentPermissionDenied) {
     output.error(
-      `No permission to access deployment ${chalk.dim(
+      `No permission to access deployment or URL ${chalk.dim(
         error.meta.id
       )} under ${chalk.bold(error.meta.context)}`
     );
@@ -357,14 +357,14 @@ function handleCreateAliasError<T>(
   return error;
 }
 
-function getDeploymentOrAliasIdOrUrl(source: string) {
+function getDeploymentOrAliasIdOrUrl(deploymentOrAliasIdOrUrl: string) {
   try {
-    new URL(source);
+    new URL(deploymentOrAliasIdOrUrl);
   } catch {
-    return source;
+    return deploymentOrAliasIdOrUrl;
   }
 
-  return toHost(source);
+  return toHost(deploymentOrAliasIdOrUrl);
 }
 
 function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {

@@ -1,11 +1,11 @@
 import type Client from '../client';
-import createAlias, { type AliasSource } from './create-alias';
+import createAlias, { type DeploymentOrAlias } from './create-alias';
 import isDomainExternal from '../domains/is-domain-external';
 import setupDomain from '../domains/setup-domain';
 
 export default async function assignAlias(
   client: Client,
-  source: AliasSource,
+  deploymentOrAlias: DeploymentOrAlias,
   alias: string,
   contextName: string
 ) {
@@ -32,7 +32,7 @@ export default async function assignAlias(
   const record = await createAlias(
     client,
     contextName,
-    source,
+    deploymentOrAlias,
     alias,
     externalDomain
   );

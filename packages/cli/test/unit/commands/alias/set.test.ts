@@ -75,7 +75,7 @@ describe('alias set', () => {
     });
   });
 
-  describe('[deployment url] [custom domain]', () => {
+  describe('[deployment or URL] [custom domain]', () => {
     it('tracks arguments', async () => {
       const user = useUser();
       const { url } = useDeployment({ creator: user });
@@ -101,7 +101,7 @@ describe('alias set', () => {
           value: 'set',
         },
         {
-          key: `argument:deployment-url`,
+          key: `argument:deployment-or-url`,
           value: '[REDACTED]',
         },
         {
@@ -111,9 +111,9 @@ describe('alias set', () => {
       ]);
     });
 
-    it('passes valid source URLs as hosts to the alias endpoint', async () => {
+    it('passes valid URLs as hosts to the alias endpoint', async () => {
       useUser();
-      const sourceUrl = 'https://my-alias.vercel.app';
+      const url = 'https://my-alias.vercel.app';
       let deploymentOrAliasIdOrUrl: string | undefined;
       client.scenario.post(
         '/:version/deployments/:id/aliases',
@@ -123,21 +123,21 @@ describe('alias set', () => {
         }
       );
 
-      client.setArgv('alias', 'set', sourceUrl, 'custom');
+      client.setArgv('alias', 'set', url, 'custom');
       const exitCode = await alias(client);
 
       expect(exitCode, 'exit code of "alias"').toEqual(0);
       expect(deploymentOrAliasIdOrUrl).toEqual('my-alias.vercel.app');
     });
 
-    it('outputs the API error for invalid source URLs', async () => {
+    it('outputs the API error for invalid URLs', async () => {
       useUser();
-      const sourceUrl = 'https://%';
-      const errorMessage = `Invalid source URL "${sourceUrl}"`;
+      const url = 'https://%';
+      const errorMessage = `Invalid URL "${url}"`;
       client.scenario.post(
         '/:version/deployments/:id/aliases',
         (request, response) => {
-          expect(request.params.id).toEqual(sourceUrl);
+          expect(request.params.id).toEqual(url);
           response.status(400).json({
             error: {
               code: 'invalid_url',
@@ -147,7 +147,7 @@ describe('alias set', () => {
         }
       );
 
-      client.setArgv('alias', 'set', sourceUrl, 'custom');
+      client.setArgv('alias', 'set', url, 'custom');
       const exitCode = await alias(client);
 
       expect(exitCode, 'exit code of "alias"').toEqual(1);

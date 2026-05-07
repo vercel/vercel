@@ -724,9 +724,9 @@ test('invalid deployment, projects and alias names', async () => {
   ]);
 });
 
-test('alias set accepts an alias URL as the source', async () => {
+test('alias set accepts a URL as the first argument', async () => {
   const directory = await setupE2EFixture('static-deployment');
-  const projectName = `alias-source-url-${session}`;
+  const projectName = `alias-url-${session}`;
   const firstAlias = `${projectName}-first.vercel.app`;
   const secondAlias = `${projectName}-second.vercel.app`;
   const aliasesToRemove: string[] = [];
@@ -774,17 +774,17 @@ test('alias set accepts an alias URL as the source', async () => {
   }
 });
 
-test('alias set rejects invalid source URLs', async () => {
-  const invalidSourceUrl = 'https://%';
+test('alias set rejects invalid URLs as the first argument', async () => {
+  const invalidUrl = 'https://%';
   const output = await execCli(binaryPath, [
     'alias',
     'set',
-    invalidSourceUrl,
-    `invalid-source-url-${session}.vercel.app`,
+    invalidUrl,
+    `invalid-url-${session}.vercel.app`,
   ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toContain(invalidSourceUrl);
+  expect(output.stderr).toContain(invalidUrl);
   expect(output.stderr).toMatch(/invalid|not valid/i);
 });
 
