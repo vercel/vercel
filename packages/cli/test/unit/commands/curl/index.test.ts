@@ -13,7 +13,6 @@ import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import assert from 'assert';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
-const OIDC_HEADER = 'x-vercel-trusted-oidc-idp-token';
 const BYPASS_HEADER = 'x-vercel-protection-bypass';
 
 let spawnMock: ReturnType<typeof vi.fn>;
@@ -33,30 +32,22 @@ describe('curl', () => {
 
     useUser();
     useTeams('team_dummy');
-    useProject(
-      {
-        id: 'static',
-        name: 'static-project',
-        latestDeployments: [
-          {
-            url: 'static-project-abc123.vercel.app',
-          },
-        ],
-      } as any,
-      [
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      protectionBypass: {
+        'automatic-bypass-secret': {
+          scope: 'automation-bypass',
+          createdAt: Date.now(),
+          createdBy: 'test-user',
+        },
+      },
+      latestDeployments: [
         {
-          type: 'plain',
-          id: 'oidc-token',
-          key: 'VERCEL_OIDC_TOKEN',
-          value: 'oidc-token',
-          target: ['development'],
-          gitBranch: null,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        } as any,
-      ]
-    );
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
   };
 
   beforeEach(async () => {
@@ -171,7 +162,12 @@ describe('curl', () => {
       client.scenario.get(
         '/v13/deployments/static-project-abc123.vercel.app',
         (_req, res) => {
-          res.json({ projectId: 'static', ownerId: 'team_dummy' });
+          res.json({
+            id: 'dpl_static_production',
+            projectId: 'static',
+            ownerId: 'team_dummy',
+            target: 'production',
+          });
         }
       );
 
@@ -188,13 +184,13 @@ describe('curl', () => {
           '--url',
           'https://static-project-abc123.vercel.app/api/hello',
           '--header',
-          `${OIDC_HEADER}: oidc-token`,
+          `${BYPASS_HEADER}: automatic-bypass-secret`,
         ],
         expect.objectContaining({ stdio: 'inherit', shell: false })
       );
     });
 
-    it('should not send linked project OIDC token to unresolved full URLs', async () => {
+    it('should not send linked project protection bypass token to unresolved full URLs', async () => {
       await setupLinkedProject();
 
       client.setArgv('curl', 'http://localhost:3000/');
@@ -469,7 +465,7 @@ describe('curl', () => {
   });
 
   describe('full URL auth resolution', () => {
-    it('should resolve aliases across teams and use the alias project OIDC token', async () => {
+    it('should resolve aliases across teams and use the alias project protection bypass token', async () => {
       useUser();
       const teams = useTeams('team_one');
       assert(Array.isArray(teams));
@@ -484,19 +480,17 @@ describe('curl', () => {
         }
         return res.status(404).json({ error: { message: 'not found' } });
       });
-      useProject({ id: 'alias-project', name: 'alias-project' } as any, [
-        {
-          type: 'plain',
-          id: 'alias-oidc-token',
-          key: 'VERCEL_OIDC_TOKEN',
-          value: 'alias-oidc-token',
-          target: ['development'],
-          gitBranch: null,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        } as any,
-      ]);
+      useProject({
+        id: 'alias-project',
+        name: 'alias-project',
+        protectionBypass: {
+          'alias-bypass-secret': {
+            scope: 'automation-bypass',
+            createdAt: Date.now(),
+            createdBy: 'test-user',
+          },
+        },
+      } as any);
 
       client.setArgv('curl', 'https://custom.example.com/api/hello');
       const exitCode = await curl(client);
@@ -508,7 +502,7 @@ describe('curl', () => {
           '--url',
           'https://custom.example.com/api/hello',
           '--header',
-          `${OIDC_HEADER}: alias-oidc-token`,
+          `${BYPASS_HEADER}: alias-bypass-secret`,
         ],
         expect.objectContaining({ stdio: 'inherit', shell: false })
       );
@@ -539,19 +533,17 @@ describe('curl', () => {
         }
         return res.status(404).json({ error: { message: 'not found' } });
       });
-      useProject({ id: 'alias-project', name: 'alias-project' } as any, [
-        {
-          type: 'plain',
-          id: 'alias-oidc-token',
-          key: 'VERCEL_OIDC_TOKEN',
-          value: 'alias-oidc-token',
-          target: ['development'],
-          gitBranch: null,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        } as any,
-      ]);
+      useProject({
+        id: 'alias-project',
+        name: 'alias-project',
+        protectionBypass: {
+          'alias-bypass-secret': {
+            scope: 'automation-bypass',
+            createdAt: Date.now(),
+            createdBy: 'test-user',
+          },
+        },
+      } as any);
 
       client.setArgv('curl', 'https://limited.example.com/api/hello');
       const exitCode = await curl(client);
@@ -566,7 +558,7 @@ describe('curl', () => {
           '--url',
           'https://limited.example.com/api/hello',
           '--header',
-          `${OIDC_HEADER}: alias-oidc-token`,
+          `${BYPASS_HEADER}: alias-bypass-secret`,
         ],
         expect.objectContaining({ stdio: 'inherit', shell: false })
       );
@@ -593,19 +585,17 @@ describe('curl', () => {
         }
         return res.status(404).json({ error: { message: 'not found' } });
       });
-      useProject({ id: 'alias-project', name: 'alias-project' } as any, [
-        {
-          type: 'plain',
-          id: 'alias-oidc-token',
-          key: 'VERCEL_OIDC_TOKEN',
-          value: 'alias-oidc-token',
-          target: ['development'],
-          gitBranch: null,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        } as any,
-      ]);
+      useProject({
+        id: 'alias-project',
+        name: 'alias-project',
+        protectionBypass: {
+          'alias-bypass-secret': {
+            scope: 'automation-bypass',
+            createdAt: Date.now(),
+            createdBy: 'test-user',
+          },
+        },
+      } as any);
 
       const selectSpy = vi
         .spyOn(client.input, 'select')
@@ -635,7 +625,7 @@ describe('curl', () => {
           '--url',
           'https://retry.example.com/api/hello',
           '--header',
-          `${OIDC_HEADER}: alias-oidc-token`,
+          `${BYPASS_HEADER}: alias-bypass-secret`,
         ],
         expect.objectContaining({ stdio: 'inherit', shell: false })
       );
@@ -700,7 +690,7 @@ describe('curl', () => {
   });
 
   describe('error handling', () => {
-    it('should continue without an auth header when OIDC token pull is unavailable', async () => {
+    it('should error when automatic protection bypass token creation fails', async () => {
       const { setupUnitFixture } = await import(
         '../../../helpers/setup-unit-fixture'
       );
@@ -720,14 +710,11 @@ describe('curl', () => {
       });
 
       client.setArgv('curl', '/api/hello');
-      const exitCode = await curl(client);
 
-      expect(exitCode).toBe(0);
-      expect(spawnMock).toHaveBeenCalledWith(
-        'curl',
-        ['--url', 'https://static-project-abc123.vercel.app/api/hello'],
-        expect.objectContaining({ stdio: 'inherit', shell: false })
+      await expect(curl(client)).rejects.toThrow(
+        'Failed to create deployment protection bypass token'
       );
+      expect(spawnMock).not.toHaveBeenCalled();
     });
   });
 

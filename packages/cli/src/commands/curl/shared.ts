@@ -17,9 +17,8 @@ import type {
 import { help } from '../help';
 import { getCommandName } from '../../util/pkg-name';
 import type { Command } from '../help';
-import { URLSearchParams } from 'url';
+import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 
-const TRUSTED_OIDC_HEADER = 'x-vercel-trusted-oidc-idp-token';
 const PROTECTION_BYPASS_HEADER = 'x-vercel-protection-bypass';
 
 export interface AuthHeader {
@@ -38,9 +37,10 @@ export interface DeploymentUrlOptions {
   autoConfirm?: boolean;
 }
 
-interface OidcTokenOptions {
-  warnOnMissing?: boolean;
-}
+type ResolvedProject = {
+  project: Project;
+  ownerId: string;
+};
 
 export interface DeploymentUrlResult {
   fullUrl: string;
@@ -215,45 +215,14 @@ export function setupCurlLikeCommand(
   };
 }
 
-async function pullProjectOidcToken(
-  client: Client,
-  projectId: string,
-  accountId?: string,
-  opts: OidcTokenOptions = {}
-): Promise<string | null> {
-  const warn = () => {
-    if (opts.warnOnMissing) {
-      output.warn(
-        'Could not retrieve a Trusted OIDC token. Continuing without deployment protection auth.'
-      );
-    }
-  };
-  const query = new URLSearchParams({ source: 'vercel-cli:curl' });
-  try {
-    const result = await client.fetch<{
-      env: Record<string, string>;
-      buildEnv: Record<string, string>;
-    }>(`/v3/env/pull/${projectId}?${query}`, { accountId });
-    const token = result.env.VERCEL_OIDC_TOKEN ?? null;
-    if (!token) warn();
-    return token;
-  } catch (err) {
-    output.debug(
-      `Failed to fetch project OIDC token: ${err instanceof Error ? err.message : String(err)}`
-    );
-    warn();
-    return null;
-  }
-}
-
 async function resolveProjectFromUrl(
   client: Client,
   fullUrl: string
 ): Promise<{
-  result: { project: Project; ownerId: string } | null;
+  result: ResolvedProject | null;
   skippedLimitedTeams: Team[];
 }> {
-  type Result = { project: Project; ownerId: string } | null;
+  type Result = ResolvedProject | null;
   const host = toHost(fullUrl);
   const skippedLimitedTeams: Team[] = [];
 
@@ -269,7 +238,12 @@ async function resolveProjectFromUrl(
             `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
             { accountId: deployment.ownerId }
           );
-          if (project) return { project, ownerId: deployment.ownerId };
+          if (project) {
+            return {
+              project,
+              ownerId: deployment.ownerId,
+            };
+          }
         }
       } catch (err) {
         output.debug(
@@ -333,7 +307,7 @@ async function retryAliasLookupWithTeam(
   client: Client,
   fullUrl: string,
   team: Team
-): Promise<{ project: Project; ownerId: string } | null> {
+): Promise<ResolvedProject | null> {
   const host = toHost(fullUrl);
   const aliasUrl = `/now/aliases/${encodeURIComponent(host)}`;
 
@@ -363,7 +337,7 @@ async function retryWithLimitedTeam(
   client: Client,
   fullUrl: string,
   skippedLimitedTeams: Team[]
-): Promise<{ project: Project; ownerId: string } | null> {
+): Promise<ResolvedProject | null> {
   if (skippedLimitedTeams.length === 0 || client.nonInteractive) {
     return null;
   }
@@ -404,16 +378,17 @@ export async function resolveFullUrlAuthHeader(
     result ??
     (await retryWithLimitedTeam(client, fullUrl, skippedLimitedTeams));
   if (resolved) {
-    const token = await pullProjectOidcToken(
-      client,
-      resolved.project.id,
-      resolved.ownerId,
-      { warnOnMissing: true }
-    );
-    if (token) return { name: TRUSTED_OIDC_HEADER, value: token };
+    const token = await getOrCreateDeploymentProtectionToken(client, {
+      status: 'linked',
+      project: resolved.project,
+      org: { type: 'team', id: resolved.ownerId, slug: resolved.ownerId },
+    });
+    return { name: PROTECTION_BYPASS_HEADER, value: token };
   }
 
-  output.debug(`No OIDC token available for ${toHost(fullUrl)}`);
+  output.debug(
+    `No deployment protection bypass token available for ${toHost(fullUrl)}`
+  );
   return null;
 }
 
@@ -555,15 +530,8 @@ export async function getDeploymentUrlAndToken(
         value: protectionBypassFlag,
       };
     } else {
-      const oidcToken = await pullProjectOidcToken(
-        client,
-        project.id,
-        link.org.id,
-        { warnOnMissing: true }
-      );
-      if (oidcToken) {
-        authHeader = { name: TRUSTED_OIDC_HEADER, value: oidcToken };
-      }
+      const token = await getOrCreateDeploymentProtectionToken(client, link);
+      authHeader = { name: PROTECTION_BYPASS_HEADER, value: token };
     }
   }
 

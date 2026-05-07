@@ -7,7 +7,7 @@ import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 let spawnMock: ReturnType<typeof vi.fn>;
-const OIDC_HEADER = 'x-vercel-trusted-oidc-idp-token';
+const BYPASS_HEADER = 'x-vercel-protection-bypass';
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
 }));
@@ -24,30 +24,22 @@ describe('httpstat', () => {
 
     useUser();
     useTeams('team_dummy');
-    useProject(
-      {
-        id: 'static',
-        name: 'static-project',
-        latestDeployments: [
-          {
-            url: 'static-project-abc123.vercel.app',
-          },
-        ],
-      } as any,
-      [
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      protectionBypass: {
+        'automatic-bypass-secret': {
+          scope: 'automation-bypass',
+          createdAt: Date.now(),
+          createdBy: 'test-user',
+        },
+      },
+      latestDeployments: [
         {
-          type: 'plain',
-          id: 'oidc-token',
-          key: 'VERCEL_OIDC_TOKEN',
-          value: 'oidc-token',
-          target: ['development'],
-          gitBranch: null,
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        } as any,
-      ]
-    );
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
   };
 
   beforeEach(async () => {
@@ -157,7 +149,12 @@ describe('httpstat', () => {
       client.scenario.get(
         '/v13/deployments/static-project-abc123.vercel.app',
         (_req, res) => {
-          res.json({ projectId: 'static', ownerId: 'team_dummy' });
+          res.json({
+            id: 'dpl_static_production',
+            projectId: 'static',
+            ownerId: 'team_dummy',
+            target: 'production',
+          });
         }
       );
 
@@ -173,13 +170,13 @@ describe('httpstat', () => {
         [
           'https://static-project-abc123.vercel.app/api/hello',
           '-H',
-          `${OIDC_HEADER}: oidc-token`,
+          `${BYPASS_HEADER}: automatic-bypass-secret`,
         ],
         expect.objectContaining({ stdio: 'inherit', shell: false })
       );
     });
 
-    it('should not send linked project OIDC token to unresolved full URLs', async () => {
+    it('should not send linked project protection bypass token to unresolved full URLs', async () => {
       await setupLinkedProject();
 
       client.setArgv('httpstat', 'http://localhost:3000/');
