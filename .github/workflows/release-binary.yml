@@ -31,7 +31,7 @@ jobs:
             target: bun-darwin-arm64
             asset: vercel-darwin-arm64
             ext: ''
-          - runner: macos-13
+          - runner: macos-15-intel
             target: bun-darwin-x64
             asset: vercel-darwin-x64
             ext: ''
