@@ -5,6 +5,7 @@ import type {
   ProjectLinkResult,
   ProjectSettings,
   Org,
+  Team,
 } from '@vercel-internals/types';
 import {
   getLinkedProject,
@@ -13,9 +14,11 @@ import {
   VERCEL_DIR_README,
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
+import { linkRepoProject } from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
+import pull from '../../commands/env/pull';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
 import {
   selectAndParseRemoteUrl,
@@ -70,6 +73,290 @@ export interface SetupAndLinkOptions {
   searchAcrossTeams?: boolean;
 }
 
+function formatMatchReason(match: CrossTeamMatch): string {
+  if (match.reason === 'repo-root') {
+    return chalk.gray('(linked by git)');
+  }
+  return chalk.gray('(folder name)');
+}
+
+function formatCrossTeamMatch(match: CrossTeamMatch): string {
+  return `${chalk.blue(match.org.slug)}/${match.project.name} ${formatMatchReason(
+    match
+  )}`;
+}
+
+function formatTeamList(slugs: string[]): string {
+  const shown = slugs.slice(0, 5);
+  const suffix =
+    slugs.length > shown.length
+      ? `, and ${slugs.length - shown.length} more`
+      : '';
+  return `${shown.join(', ')}${suffix}`;
+}
+
+function printCrossTeamSearchScope({
+  searchedTeamSlugs,
+  skippedLimitedTeamSlugs,
+}: {
+  searchedTeamSlugs: string[];
+  skippedLimitedTeamSlugs: string[];
+}): void {
+  if (searchedTeamSlugs.length > 0) {
+    output.log(`Searched teams: ${formatTeamList(searchedTeamSlugs)}`);
+  }
+  if (skippedLimitedTeamSlugs.length > 0) {
+    output.log(
+      `Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}`
+    );
+  }
+}
+
+async function maybePullEnvAfterLink(
+  client: Client,
+  path: string,
+  autoConfirm: boolean,
+  pullEnv: boolean
+): Promise<void> {
+  if (!pullEnv || !client.stdin.isTTY || client.nonInteractive) {
+    return;
+  }
+
+  const pullEnvConfirmed =
+    autoConfirm ||
+    (await client.input.confirm(
+      'Would you like to pull environment variables now?',
+      true
+    ));
+
+  if (!pullEnvConfirmed) {
+    return;
+  }
+
+  const originalCwd = client.cwd;
+  try {
+    client.cwd = path;
+    const args = autoConfirm ? ['--yes'] : [];
+    const exitCode = await pull(client, args, 'vercel-cli:link');
+
+    if (exitCode !== 0) {
+      output.error(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+    }
+  } catch (_error) {
+    output.error(
+      'Failed to pull environment variables. You can run `vc env pull` manually.'
+    );
+  } finally {
+    client.cwd = originalCwd;
+  }
+}
+
+async function linkCrossTeamMatch({
+  client,
+  path,
+  match,
+  successEmoji,
+  autoConfirm,
+  pullEnv,
+}: {
+  client: Client;
+  path: string;
+  match: CrossTeamMatch;
+  successEmoji: EmojiLabel;
+  autoConfirm: boolean;
+  pullEnv: boolean;
+}): Promise<ProjectLinkResult> {
+  client.config.currentTeam =
+    match.org.type === 'team' ? match.org.id : undefined;
+
+  if (match.reason === 'repo-root' && match.repo) {
+    await linkRepoProject(client, path, {
+      project: match.project,
+      orgId: match.org.id,
+      orgSlug: match.org.slug,
+      remoteName: match.repo.remoteName,
+      successEmoji,
+    });
+    await maybePullEnvAfterLink(client, path, autoConfirm, pullEnv);
+    return {
+      status: 'linked',
+      org: match.org,
+      project: match.project,
+      repoRoot: match.repo.rootPath,
+    };
+  }
+
+  await linkFolderToProject(
+    client,
+    path,
+    { projectId: match.project.id, orgId: match.org.id },
+    match.project.name,
+    match.org.slug,
+    successEmoji,
+    autoConfirm,
+    pullEnv
+  );
+  return { status: 'linked', org: match.org, project: match.project };
+}
+
+async function promptForLimitedTeams(
+  client: Client,
+  teams: Team[]
+): Promise<Team[]> {
+  if (teams.length === 0) {
+    return [];
+  }
+
+  return await client.input.checkbox<Team>({
+    message: 'Which SSO-protected teams should be searched?',
+    choices: teams.map(team => ({
+      name: team.name ? `${team.name} (${team.slug})` : team.slug,
+      value: team,
+    })),
+  });
+}
+
+async function searchSelectedLimitedTeams({
+  client,
+  path,
+  projectName,
+  gitProjectName,
+  teams,
+}: {
+  client: Client;
+  path: string;
+  projectName: string;
+  gitProjectName?: string;
+  teams: Team[];
+}): Promise<CrossTeamMatch[]> {
+  const selectedTeams = await promptForLimitedTeams(client, teams);
+  if (selectedTeams.length === 0) {
+    return [];
+  }
+
+  output.spinner('Searching selected SSO-protected teams…', 1000);
+  try {
+    const result = await searchProjectAcrossTeams(client, projectName, path, {
+      teams: selectedTeams,
+      skipLimited: false,
+      gitProjectName,
+    });
+    printCrossTeamSearchScope({
+      searchedTeamSlugs: result.searchedTeamSlugs,
+      skippedLimitedTeamSlugs: [],
+    });
+    return result.matches;
+  } catch (err) {
+    output.debug(`Selected SSO-protected team search failed: ${err}`);
+    return [];
+  } finally {
+    output.stopSpinner();
+  }
+}
+
+async function linkCrossTeamMatches({
+  client,
+  path,
+  matches,
+  successEmoji,
+  autoConfirm,
+  nonInteractive,
+  pullEnv,
+}: {
+  client: Client;
+  path: string;
+  matches: CrossTeamMatch[];
+  successEmoji: EmojiLabel;
+  autoConfirm: boolean;
+  nonInteractive: boolean;
+  pullEnv: boolean;
+}): Promise<ProjectLinkResult | null> {
+  if (matches.length === 0) {
+    return null;
+  }
+
+  if (matches.length === 1) {
+    const match = matches[0];
+
+    if (autoConfirm || nonInteractive) {
+      return await linkCrossTeamMatch({
+        client,
+        path,
+        match,
+        successEmoji,
+        autoConfirm,
+        pullEnv,
+      });
+    }
+
+    const confirmed = await client.input.confirm(
+      `Found project ${formatCrossTeamMatch(match)}. Link to it?`,
+      true
+    );
+    if (confirmed) {
+      return await linkCrossTeamMatch({
+        client,
+        path,
+        match,
+        successEmoji,
+        autoConfirm,
+        pullEnv,
+      });
+    }
+    return null;
+  }
+
+  const currentTeamMatch = matches.find(
+    match => match.org.id === client.config.currentTeam
+  );
+
+  if (autoConfirm && currentTeamMatch) {
+    return await linkCrossTeamMatch({
+      client,
+      path,
+      match: currentTeamMatch,
+      successEmoji,
+      autoConfirm,
+      pullEnv,
+    });
+  }
+
+  if (nonInteractive) {
+    return null;
+  }
+
+  const choices = matches.map(match => ({
+    name: formatCrossTeamMatch(match),
+    value: match as CrossTeamMatch | null,
+  }));
+  choices.push({
+    name: 'Not one of these projects',
+    value: null,
+  });
+
+  const selected = await client.input.select<CrossTeamMatch | null>({
+    message:
+      'Found matching projects across teams. Which one do you want to link?',
+    choices,
+    default: currentTeamMatch ?? undefined,
+  });
+
+  if (!selected) {
+    return null;
+  }
+
+  return await linkCrossTeamMatch({
+    client,
+    path,
+    match: selected,
+    successEmoji,
+    autoConfirm,
+    pullEnv,
+  });
+}
+
 export default async function setupAndLink(
   client: Client,
   path: string,
@@ -79,7 +366,7 @@ export default async function setupAndLink(
     link,
     successEmoji = 'link',
     setupMsg = 'Set up',
-    projectName = basename(path),
+    projectName,
     nonInteractive = false,
     pullEnv = true,
     v0,
@@ -87,6 +374,8 @@ export default async function setupAndLink(
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
+  const gitProjectName = projectName;
+  projectName = projectName ?? basename(path);
 
   if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
@@ -131,124 +420,87 @@ export default async function setupAndLink(
   if (searchAcrossTeams) {
     // Search for existing projects across all teams
     let crossTeamMatches: CrossTeamMatch[] = [];
+    let searchedTeamSlugs: string[] = [];
+    let skippedLimitedTeamSlugs: string[] = [];
+    let skippedLimitedTeams: Team[] = [];
     output.spinner('Searching for existing projects…', 1000);
     try {
-      crossTeamMatches = await searchProjectAcrossTeams(client, projectName);
+      const searchResult = await searchProjectAcrossTeams(
+        client,
+        projectName,
+        path,
+        {
+          autoConfirm,
+          nonInteractive,
+          gitProjectName,
+        }
+      );
+      crossTeamMatches = searchResult.matches;
+      searchedTeamSlugs = searchResult.searchedTeamSlugs;
+      skippedLimitedTeamSlugs = searchResult.skippedLimitedTeamSlugs;
+      skippedLimitedTeams = searchResult.skippedLimitedTeams;
     } catch (err) {
       output.debug(`Cross-team search failed: ${err}`);
     } finally {
       output.stopSpinner();
     }
 
-    if (crossTeamMatches.length === 1) {
-      const match = crossTeamMatches[0];
+    if (crossTeamMatches.length > 0 && !autoConfirm && !nonInteractive) {
+      printCrossTeamSearchScope({
+        searchedTeamSlugs,
+        skippedLimitedTeamSlugs,
+      });
+    }
 
-      if (autoConfirm || nonInteractive) {
-        config.currentTeam =
-          match.org.type === 'team' ? match.org.id : undefined;
-        await linkFolderToProject(
-          client,
-          path,
-          { projectId: match.project.id, orgId: match.org.id },
-          match.project.name,
-          match.org.slug,
-          successEmoji,
-          autoConfirm,
-          pullEnv
-        );
-        return { status: 'linked', org: match.org, project: match.project };
-      }
+    const linkedMatch = await linkCrossTeamMatches({
+      client,
+      path,
+      matches: crossTeamMatches,
+      successEmoji,
+      autoConfirm,
+      nonInteractive,
+      pullEnv,
+    });
+    if (linkedMatch) {
+      return linkedMatch;
+    }
 
-      const confirmed = await client.input.confirm(
-        `Found project ${chalk.blue(match.org.slug)}/${match.project.name}. Link to it?`,
-        true
-      );
-      if (confirmed) {
-        config.currentTeam =
-          match.org.type === 'team' ? match.org.id : undefined;
-        await linkFolderToProject(
-          client,
-          path,
-          { projectId: match.project.id, orgId: match.org.id },
-          match.project.name,
-          match.org.slug,
-          successEmoji,
-          autoConfirm,
-          pullEnv
+    if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
+      if (crossTeamMatches.length === 0) {
+        output.log(
+          `No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.`
         );
-        return { status: 'linked', org: match.org, project: match.project };
       }
+      const limitedTeamMatches = await searchSelectedLimitedTeams({
+        client,
+        path,
+        projectName,
+        gitProjectName,
+        teams: skippedLimitedTeams,
+      });
+      const linkedLimitedMatch = await linkCrossTeamMatches({
+        client,
+        path,
+        matches: limitedTeamMatches,
+        successEmoji,
+        autoConfirm,
+        nonInteractive,
+        pullEnv,
+      });
+      if (linkedLimitedMatch) {
+        return linkedLimitedMatch;
+      }
+      if (limitedTeamMatches.length === 0) {
+        output.log(
+          'No matching projects found in the selected SSO-protected teams.'
+        );
+      }
+      skipAutoDetect =
+        skipAutoDetect ||
+        crossTeamMatches.length > 0 ||
+        limitedTeamMatches.length > 0;
+    } else if (crossTeamMatches.length > 0) {
       skipAutoDetect = true;
-    } else if (crossTeamMatches.length > 1) {
-      // Auto-link only when there's an unambiguous match on the current team
-      const currentTeamMatch = autoConfirm
-        ? crossTeamMatches.find(m => m.org.id === config.currentTeam)
-        : undefined;
-
-      if (currentTeamMatch) {
-        config.currentTeam =
-          currentTeamMatch.org.type === 'team'
-            ? currentTeamMatch.org.id
-            : undefined;
-        await linkFolderToProject(
-          client,
-          path,
-          {
-            projectId: currentTeamMatch.project.id,
-            orgId: currentTeamMatch.org.id,
-          },
-          currentTeamMatch.project.name,
-          currentTeamMatch.org.slug,
-          successEmoji,
-          autoConfirm,
-          pullEnv
-        );
-        return {
-          status: 'linked',
-          org: currentTeamMatch.org,
-          project: currentTeamMatch.project,
-        };
-      }
-
-      if (!nonInteractive) {
-        // Multiple matches and no unambiguous current-team match: prompt user to select
-        const choices = crossTeamMatches.map(m => ({
-          name: `${chalk.blue(m.org.slug)}/${m.project.name}`,
-          value: m as CrossTeamMatch | null,
-        }));
-        choices.push({
-          name: "Don't link to an existing project",
-          value: null,
-        });
-
-        const selected = await client.input.select<CrossTeamMatch | null>({
-          message:
-            'Found matching projects across teams. Which one do you want to link?',
-          choices,
-        });
-
-        if (selected) {
-          config.currentTeam =
-            selected.org.type === 'team' ? selected.org.id : undefined;
-          await linkFolderToProject(
-            client,
-            path,
-            { projectId: selected.project.id, orgId: selected.org.id },
-            selected.project.name,
-            selected.org.slug,
-            successEmoji,
-            autoConfirm,
-            pullEnv
-          );
-          return {
-            status: 'linked',
-            org: selected.org,
-            project: selected.project,
-          };
-        }
-        skipAutoDetect = true;
-      }
-      // nonInteractive with multiple matches: fall through to selectOrg
     }
   }
 
