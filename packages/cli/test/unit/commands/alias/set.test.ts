@@ -130,6 +130,25 @@ describe('alias set', () => {
       expect(idOrUrl).toEqual('my-alias.vercel.app');
     });
 
+    it('passes IDs unchanged to the alias endpoint', async () => {
+      useUser();
+      const id = 'abc123';
+      let idOrUrl: string | undefined;
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          idOrUrl = request.params.id;
+          response.json({});
+        }
+      );
+
+      client.setArgv('alias', 'set', id, 'custom');
+      const exitCode = await alias(client);
+
+      expect(exitCode, 'exit code of "alias"').toEqual(0);
+      expect(idOrUrl).toEqual(id);
+    });
+
     it('outputs the API error for invalid URLs', async () => {
       useUser();
       const url = 'https://%';

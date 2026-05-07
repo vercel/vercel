@@ -148,7 +148,7 @@ export default async function set(client: Client, argv: string[]) {
   output.log(`Assigning alias ${aliasTarget} to ${idOrUrl}`);
 
   const isWildcard = isWildcardAlias(aliasTarget);
-  const idOrUrlForRequest = getIdOrUrlForAliasRequest(idOrUrl);
+  const idOrUrlForRequest = idOrUrl.includes('.') ? toHost(idOrUrl) : idOrUrl;
   const record = await assignAlias(
     client,
     idOrUrlForRequest,
@@ -345,16 +345,6 @@ function handleCreateAliasError<T>(
   }
 
   return error;
-}
-
-function getIdOrUrlForAliasRequest(idOrUrl: string) {
-  try {
-    new URL(idOrUrl);
-  } catch {
-    return idOrUrl;
-  }
-
-  return toHost(idOrUrl);
 }
 
 function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
