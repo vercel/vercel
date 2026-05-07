@@ -657,7 +657,12 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING !== '1') {
+  const vercelFlagsVersion =
+    await getInstalledPackageVersion('@flags-sdk/vercel');
+  if (
+    vercelFlagsVersion &&
+    process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING !== '1'
+  ) {
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
