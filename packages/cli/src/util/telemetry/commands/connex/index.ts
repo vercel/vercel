@@ -62,6 +62,12 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliFlagAll(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('all');
+    }
+  }
+
   trackCliOptionLimit(v: number | undefined) {
     if (v !== undefined) {
       this.trackCliOption({

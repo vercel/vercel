@@ -52,9 +52,18 @@ export const createSubcommand = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List Connex clients for the current team',
+  description:
+    'List Connex clients linked to the current project (use --all for every client in the team)',
   arguments: [],
   options: [
+    {
+      name: 'all',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'List every Connex client in the team, regardless of project link',
+    },
     {
       name: 'limit',
       shorthand: null,
@@ -75,8 +84,12 @@ export const listSubcommand = {
   ],
   examples: [
     {
-      name: 'List Connex clients for the current team',
+      name: 'List Connex clients linked to the current project',
       value: `${packageName} connex list`,
+    },
+    {
+      name: 'List every Connex client in the team',
+      value: `${packageName} connex list --all`,
     },
     {
       name: 'Limit the number of results',
