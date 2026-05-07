@@ -8,9 +8,14 @@ import { getLinkedProject } from '../../util/projects/link';
 import table from '../../util/output/table';
 import { packageName } from '../../util/pkg-name';
 
-interface ConnexClientProject {
+interface LinkedProject {
   id: string;
   name: string;
+}
+
+interface ConnexClientProjectLink {
+  projectId: string;
+  project?: LinkedProject;
 }
 
 interface ConnexClient {
@@ -20,7 +25,10 @@ interface ConnexClient {
   type: string;
   typeName?: string;
   createdAt: number;
-  projects?: ConnexClientProject[];
+  includes?: {
+    projects?: ConnexClientProjectLink[];
+    hasMoreProjects?: boolean;
+  };
 }
 
 interface ListClientsResponse {
@@ -118,7 +126,8 @@ export async function list(
         type: string;
         typeName?: string;
         createdAt: number;
-        projects?: ConnexClientProject[];
+        projects?: LinkedProject[];
+        hasMoreProjects?: boolean;
       } = {
         uid: c.uid,
         id: c.id,
@@ -128,7 +137,10 @@ export async function list(
         createdAt: c.createdAt,
       };
       if (all) {
-        item.projects = c.projects ?? [];
+        item.projects = (c.includes?.projects ?? [])
+          .map(p => p.project)
+          .filter((p): p is LinkedProject => Boolean(p));
+        item.hasMoreProjects = c.includes?.hasMoreProjects === true;
       }
       return item;
     });
@@ -167,8 +179,20 @@ export async function list(
       c.typeName || c.type,
     ];
     if (all) {
-      const names = (c.projects ?? []).map(p => p.name).filter(Boolean);
-      row.push(names.length ? names.join(', ') : chalk.gray('–'));
+      const names = (c.includes?.projects ?? [])
+        .map(p => p.project?.name)
+        .filter((n): n is string => Boolean(n));
+      const more = c.includes?.hasMoreProjects === true;
+      let cell: string;
+      if (names.length === 0 && !more) {
+        cell = chalk.gray('–');
+      } else {
+        const parts: string[] = [];
+        if (names.length) parts.push(names.join(', '));
+        if (more) parts.push(chalk.gray('+ more'));
+        cell = parts.join(' ');
+      }
+      row.push(cell);
     }
     return row;
   });

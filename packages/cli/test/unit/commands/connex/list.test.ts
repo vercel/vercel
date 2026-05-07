@@ -121,10 +121,18 @@ describe('connex list', () => {
               type: 'slack',
               typeName: 'Slack',
               createdAt: Date.now() - 60_000,
-              projects: [
-                { id: 'proj_1', name: 'web' },
-                { id: 'proj_2', name: 'docs' },
-              ],
+              includes: {
+                projects: [
+                  {
+                    projectId: 'proj_1',
+                    project: { id: 'proj_1', name: 'web' },
+                  },
+                  {
+                    projectId: 'proj_2',
+                    project: { id: 'proj_2', name: 'docs' },
+                  },
+                ],
+              },
             },
           ],
         });
@@ -140,6 +148,78 @@ describe('connex list', () => {
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('Projects');
       expect(stderr).toContain('web, docs');
+      expect(stderr).not.toContain('+ more');
+    });
+
+    it('should append "+ more" when hasMoreProjects is true', async () => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
+        res.json({
+          clients: [
+            {
+              id: 'scl_abc123',
+              uid: 'slack/my-bot',
+              name: 'My Bot',
+              type: 'slack',
+              typeName: 'Slack',
+              createdAt: Date.now() - 60_000,
+              includes: {
+                projects: [
+                  {
+                    projectId: 'proj_1',
+                    project: { id: 'proj_1', name: 'web' },
+                  },
+                ],
+                hasMoreProjects: true,
+              },
+            },
+          ],
+        });
+      });
+
+      client.setArgv('connex', 'list', '--all');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('web');
+      expect(stderr).toContain('+ more');
+    });
+
+    it('should skip deleted projects when rendering names', async () => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
+        res.json({
+          clients: [
+            {
+              id: 'scl_abc123',
+              uid: 'slack/my-bot',
+              name: 'My Bot',
+              type: 'slack',
+              typeName: 'Slack',
+              createdAt: Date.now() - 60_000,
+              includes: {
+                projects: [
+                  {
+                    projectId: 'proj_live',
+                    project: { id: 'proj_live', name: 'live-app' },
+                  },
+                  // deleted project — no `project` field
+                  { projectId: 'proj_gone' },
+                ],
+              },
+            },
+          ],
+        });
+      });
+
+      client.setArgv('connex', 'list', '--all');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('live-app');
+      expect(stderr).not.toContain('proj_gone');
     });
 
     it('should render empty-state without project context', async () => {
@@ -171,7 +251,7 @@ describe('connex list', () => {
       expect(client.stderr.getFullOutput()).toContain('Connex is not enabled');
     });
 
-    it('should output JSON with projects when --format=json is used', async () => {
+    it('should output JSON with projects and hasMoreProjects when --format=json is used', async () => {
       client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({
           clients: [
@@ -182,7 +262,17 @@ describe('connex list', () => {
               type: 'oauth',
               typeName: 'OAuth',
               createdAt: 1_700_000_000_000,
-              projects: [{ id: 'proj_1', name: 'web' }],
+              includes: {
+                projects: [
+                  {
+                    projectId: 'proj_1',
+                    project: { id: 'proj_1', name: 'web' },
+                  },
+                  // deleted — gets dropped from json projects
+                  { projectId: 'proj_gone' },
+                ],
+                hasMoreProjects: true,
+              },
             },
           ],
           cursor: 'next-page',
@@ -202,6 +292,7 @@ describe('connex list', () => {
       expect(Object.keys(first)[0]).toBe('uid');
       expect(first.uid).toBe('oauth/my-client');
       expect(first.projects).toEqual([{ id: 'proj_1', name: 'web' }]);
+      expect(first.hasMoreProjects).toBe(true);
     });
 
     it('should print --all in next-page hint when the response has a cursor', async () => {
@@ -215,7 +306,7 @@ describe('connex list', () => {
               type: 'slack',
               typeName: 'Slack',
               createdAt: Date.now(),
-              projects: [],
+              includes: { projects: [] },
             },
           ],
           cursor: 'cursor-abc',
@@ -289,5 +380,6 @@ describe('connex list', () => {
     const [first] = parsed.clients;
     expect(first.uid).toBe('oauth/my-client');
     expect(first).not.toHaveProperty('projects');
+    expect(first).not.toHaveProperty('hasMoreProjects');
   });
 });
