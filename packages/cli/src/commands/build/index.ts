@@ -659,8 +659,10 @@ async function doBuild(
 
   const vercelFlagsVersion =
     await getInstalledPackageVersion('@flags-sdk/vercel');
+  const vercelFlagsCoreVersion =
+    await getInstalledPackageVersion('@vercel/flags-core');
   if (
-    vercelFlagsVersion &&
+    (vercelFlagsVersion || vercelFlagsCoreVersion) &&
     process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING !== '1'
   ) {
     const { prepareFlagsDefinitions } = await import(
