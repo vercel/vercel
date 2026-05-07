@@ -41,6 +41,13 @@ export async function hasFile(
   }
 }
 
+export function isPublicServicesEnabled(): boolean {
+  return (
+    process.env.VERCEL_USE_SERVICES === '1' ||
+    process.env.VERCEL_USE_SERVICES?.toLowerCase() === 'true'
+  );
+}
+
 /**
  * Reserved internal namespace used by the dev queue proxy.
  */

@@ -104,6 +104,43 @@ describe('detectServices', () => {
   });
 
   describe('with services', () => {
+    const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
+
+    beforeEach(() => {
+      process.env.VERCEL_USE_SERVICES = '1';
+    });
+
+    afterEach(() => {
+      if (originalServicesEnv === undefined) {
+        delete process.env.VERCEL_USE_SERVICES;
+      } else {
+        process.env.VERCEL_USE_SERVICES = originalServicesEnv;
+      }
+    });
+
+    it('should reject services when VERCEL_USE_SERVICES is not set', async () => {
+      delete process.env.VERCEL_USE_SERVICES;
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            web: {
+              framework: 'nextjs',
+              mount: '/',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toEqual({
+        code: 'INVALID_VERCEL_CONFIG',
+        message:
+          'Invalid vercel.json - should NOT have additional property `services`. Please remove it.',
+      });
+    });
+
     it('should detect services configured with public mount syntax', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
