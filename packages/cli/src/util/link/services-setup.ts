@@ -18,6 +18,7 @@ import {
   type ServicesConfigWriteBlocker,
   writeServicesConfig,
 } from '../projects/detect-services';
+import { createDetectEntrypoint } from '../projects/detect-entrypoint';
 
 const SERVICES_DOCS_URL = 'https://vercel.com/docs/services';
 const INFERRED_SERVICES_PROMPT =
@@ -40,6 +41,7 @@ export async function getServicesSetupState(
 ): Promise<ServicesSetupState> {
   const detectServicesResult = await detectServices({
     fs: new LocalFileSystemDetector(workPath),
+    detectEntrypoint: createDetectEntrypoint(workPath),
   });
   const hasConfiguredServices =
     detectServicesResult.resolved.source === 'configured';
