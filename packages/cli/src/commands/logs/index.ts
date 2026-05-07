@@ -280,7 +280,7 @@ async function resolveLogsTarget(
 
       if (explicitProject.id !== project.id) {
         output.error(
-          `The deployment "${deploymentOption}" does not belong to "${projectOption}". Remove either the deployment selection or the ${chalk.bold(
+          `The deployment "${deploymentOption}" does not belong to "${projectOption}" project. Remove either the deployment selection or the ${chalk.bold(
             '--project'
           )} option.`
         );

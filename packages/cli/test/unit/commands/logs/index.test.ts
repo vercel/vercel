@@ -780,7 +780,7 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        `The deployment "${deployment.id}" does not belong to "other-project". Remove either the deployment selection or the --project option.`
+        `The deployment "${deployment.id}" does not belong to "other-project" project. Remove either the deployment selection or the --project option.`
       );
     });
   });
