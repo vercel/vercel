@@ -85,7 +85,7 @@ async function performCreateAlias(
       }
       if (err.code === 'deployment_not_ready') {
         return new ERRORS.DeploymentNotReady({
-          url: getUrlForError(idOrUrl),
+          url: idOrUrl,
         });
       }
       if (err.status === 403) {
@@ -100,8 +100,4 @@ async function performCreateAlias(
 
     throw err;
   }
-}
-
-function getUrlForError(idOrUrl: string) {
-  return idOrUrl.replace(/^(?:.*?:\/\/)?([^/]+).*/, '$1');
 }
