@@ -724,7 +724,7 @@ test('invalid deployment, projects and alias names', async () => {
   ]);
 });
 
-test('alias set accepts a URL as the first argument', async () => {
+test('alias set accepts an alias URL as the first argument', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const projectName = `alias-url-${session}`;
   const firstAlias = `${projectName}-first.vercel.app`;
