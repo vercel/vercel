@@ -5,10 +5,8 @@ import getProjectByIdOrName from './get-project-by-id-or-name';
 import { ProjectNotFound } from '../errors-ts';
 import slugify from '@sindresorhus/slugify';
 import output from '../../output-manager';
-import { relative } from 'path';
 import {
   fetchProjectsForRepoUrl,
-  findProjectsFromPath,
   findRepoRoot,
   resolveGitRemote,
   type ResolvedGitRemote,
@@ -166,7 +164,6 @@ async function searchProjectsByRepoRoot({
     return [];
   }
 
-  const relativePath = relative(rootPath, cwd);
   const results = await Promise.all(
     orgs.map(async org => {
       try {
@@ -188,11 +185,7 @@ async function searchProjectsByRepoRoot({
             directory: project.rootDirectory || '.',
             orgId: org.id,
           }));
-        const matchingProjects = findProjectsFromPath(
-          repoProjectConfigs,
-          relativePath
-        );
-        return matchingProjects
+        return repoProjectConfigs
           .map(match => {
             const project = projects.find(p => p.id === match.id);
             if (!project) {

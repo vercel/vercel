@@ -860,9 +860,6 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
     await expect(client.stderr).toOutput('Link to it?');
     client.stdin.write('y\n');
 
@@ -893,9 +890,6 @@ describe('link', () => {
 
     client.cwd = cwd;
     const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
@@ -952,9 +946,6 @@ describe('link', () => {
 
     client.cwd = cwd;
     const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
@@ -1031,9 +1022,6 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
@@ -1100,9 +1088,6 @@ describe('link', () => {
 
     client.cwd = cwd;
     const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
@@ -1190,9 +1175,6 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
@@ -1277,9 +1259,6 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
@@ -1344,9 +1323,6 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
@@ -1403,9 +1379,6 @@ describe('link', () => {
 
     client.cwd = cwd;
     const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
@@ -1572,9 +1545,6 @@ describe('link', () => {
 
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
 
@@ -1614,9 +1584,6 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1654,9 +1621,6 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1693,9 +1657,6 @@ describe('link', () => {
       client.cwd = cwd;
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -1741,9 +1702,6 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1785,9 +1743,6 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1827,9 +1782,6 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1868,9 +1820,6 @@ describe('link', () => {
       const originalCwd = client.cwd;
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -1934,9 +1883,6 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1972,9 +1918,6 @@ describe('link', () => {
       client.cwd = cwd;
       client.setArgv();
       const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
       // Decline cross-team match
       await expect(client.stderr).toOutput('Link to it?');
@@ -2017,9 +1960,6 @@ describe('link', () => {
 
       client.cwd = cwd;
       const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
       // No match found during cross-team search, should go to selectOrg
       await expect(client.stderr).toOutput(
@@ -2253,21 +2193,13 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Which teams should be searched?');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Searched teams:');
-      await expect(client.stderr).toOutput('Skipped 1 SSO-protected team');
-      await expect(client.stderr).toOutput('Found project');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${projectA.name}`
+        'Linked 1 Project from Git repository'
       );
-      await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
-      );
-      client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2393,19 +2325,9 @@ describe('link', () => {
       client.setArgv('--project', expectedProject.name);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Found project');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${expectedProject.name}`
+        'Linked 1 Project from Git repository'
       );
-      await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
-      );
-      client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2421,7 +2343,7 @@ describe('link', () => {
       ]);
     });
 
-    it('should show repo-root and folder-name matches together', async () => {
+    it('should auto-link all Git-linked projects before folder-name matches', async () => {
       useUser({ version: 'northstar' });
       const repoRoot = setupTmpDir();
       const projectDir = join(repoRoot, 'apps/web');
@@ -2442,6 +2364,12 @@ describe('link', () => {
         name: 'dashboard',
         rootDirectory: 'apps/web',
       };
+      const secondRepoProject = {
+        ...defaultProject,
+        id: 'proj-repo-team-b',
+        name: 'dashboard-team-b',
+        rootDirectory: 'apps/api',
+      };
       const folderProject = {
         ...defaultProject,
         id: 'proj-folder',
@@ -2451,6 +2379,9 @@ describe('link', () => {
       client.scenario.get('/v9/projects', (req, res) => {
         if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
           return res.json({ projects: [repoProject], pagination: {} });
+        }
+        if (req.query.teamId === teamB.id && req.query.repoUrl === repoUrl) {
+          return res.json({ projects: [secondRepoProject], pagination: {} });
         }
         return res.json({ projects: [], pagination: {} });
       });
@@ -2465,22 +2396,31 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput('Not one of these projects');
+      await expect(client.stderr).toOutput('Which teams should be searched?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${repoProject.name}`
+        'Linked 2 Projects from Git repository'
       );
-      await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
-      );
-      client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
+      expect(repoJson.projects).toEqual([
+        {
+          directory: 'apps/web',
+          id: repoProject.id,
+          name: repoProject.name,
+          orgId: teamA.id,
+        },
+        {
+          directory: 'apps/api',
+          id: secondRepoProject.id,
+          name: secondRepoProject.name,
+          orgId: teamB.id,
+        },
+      ]);
     });
 
     it('should search selected SSO-protected teams after no first-pass matches', async () => {
@@ -2512,13 +2452,8 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        'Which SSO-protected teams should be searched?'
-      );
-      client.stdin.write(' \n');
+      await expect(client.stderr).toOutput('Which teams should be searched?');
+      client.stdin.write('a\n');
 
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
@@ -2664,8 +2599,8 @@ describe('link', () => {
         client.cwd = cwd;
         const exitCodePromise = link(client);
 
-        await expect(client.stderr).toOutput('Set up');
-        client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Which teams should be searched?');
+        client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
           'Found matching projects across teams'
@@ -2721,8 +2656,8 @@ describe('link', () => {
         client.cwd = cwd;
         const exitCodePromise = link(client);
 
-        await expect(client.stderr).toOutput('Set up');
-        client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Which teams should be searched?');
+        client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
           'Found matching projects across teams'

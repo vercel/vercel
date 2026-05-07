@@ -223,6 +223,84 @@ export async function linkRepoProject(
   };
 }
 
+export async function linkRepoProjects(
+  client: Client,
+  cwd: string,
+  {
+    projects,
+    remoteName,
+    successEmoji = 'link',
+  }: {
+    projects: Array<{
+      project: Project;
+      orgId: string;
+      orgSlug: string;
+    }>;
+    remoteName: string;
+    successEmoji?: EmojiLabel;
+  }
+): Promise<RepoLink> {
+  const repoLink = await getRepoLink(client, cwd);
+  if (!repoLink) {
+    throw new Error('Could not determine Git repository root directory');
+  }
+
+  const projectConfigs: RepoProjectConfig[] = projects.map(
+    ({ project, orgId }) => ({
+      id: project.id,
+      name: project.name,
+      directory: normalizePath(project.rootDirectory || '.'),
+      orgId,
+    })
+  );
+  const projectIds = new Set(projectConfigs.map(project => project.id));
+  const existingProjects = repoLink.repoConfig?.projects ?? [];
+  const filteredProjects = existingProjects.filter(
+    project => !projectIds.has(project.id)
+  );
+  const repoConfig: RepoProjectsConfig = {
+    ...repoLink.repoConfig,
+    remoteName,
+    projects: [...filteredProjects, ...projectConfigs],
+  };
+
+  await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
+  await writeReadme(repoLink.rootPath);
+  const isGitIgnoreUpdated = await addToGitIgnore(repoLink.rootPath);
+
+  output.print(
+    prependEmoji(
+      `Linked ${pluralize(
+        'Project',
+        projectConfigs.length,
+        true
+      )} from Git repository (created ${VERCEL_DIR}${
+        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
+      })`,
+      emoji(successEmoji)
+    ) + '\n'
+  );
+  for (const [orgSlug, count] of countProjectsByOrgSlug(projects)) {
+    output.print(`  ${pluralize('Project', count, true)} from ${orgSlug}\n`);
+  }
+
+  return {
+    repoConfig,
+    repoConfigPath: repoLink.repoConfigPath,
+    rootPath: repoLink.rootPath,
+  };
+}
+
+function countProjectsByOrgSlug(
+  projects: Array<{ orgSlug: string }>
+): Array<[string, number]> {
+  const counts = new Map<string, number>();
+  for (const project of projects) {
+    counts.set(project.orgSlug, (counts.get(project.orgSlug) ?? 0) + 1);
+  }
+  return Array.from(counts.entries());
+}
+
 /**
  * Runs the project discovery flow: selects org, discovers/creates projects,
  * and returns the selected projects as `RepoProjectConfig[]`.
