@@ -4,7 +4,6 @@ import type { AliasRecord } from '../../util/alias/create-alias';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import type Client from '../../util/client';
-import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
 import type setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
@@ -21,7 +20,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { listSubcommand } from './command';
 import type { Domain } from '@vercel-internals/types';
-import type { VercelConfig } from '@vercel/client';
 
 export default async function set(client: Client, argv: string[]) {
   let parsedArguments;
@@ -38,7 +36,6 @@ export default async function set(client: Client, argv: string[]) {
   const { args, flags: opts } = parsedArguments;
 
   const setStamp = stamp();
-  const { localConfig } = client;
   const telemetryClient = new AliasSetTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -46,7 +43,7 @@ export default async function set(client: Client, argv: string[]) {
   });
   telemetryClient.trackCliFlagDebug(opts['--debug']);
   telemetryClient.trackCliOptionLocalConfig(opts['--local-config']);
-  const { contextName, user } = await getScope(client);
+  const { contextName } = await getScope(client);
 
   // If there are more than two args we have to error
   if (args.length > 2) {
@@ -75,73 +72,11 @@ export default async function set(client: Client, argv: string[]) {
     return 1;
   }
 
-  // For `vercel alias set <argument>`
   if (args.length === 1) {
-    const [aliasTarget] = args;
-    telemetryClient.trackCliArgumentAlias(aliasTarget);
-    const deployment = handleCertError(
-      await getDeploymentForAlias(
-        client,
-        opts['--local-config'],
-        user,
-        contextName,
-        localConfig
-      )
+    output.error(
+      `${getCommandName('alias <id-or-url> <target>')} requires two arguments`
     );
-
-    if (deployment === 1) {
-      return deployment;
-    }
-
-    if (deployment instanceof Error) {
-      output.error(deployment.message);
-      return 1;
-    }
-
-    if (!deployment) {
-      output.error(
-        `Couldn't find a deployment to alias. Please provide one as an argument.`
-      );
-      return 1;
-    }
-
-    // Find the targets to perform the alias
-    const targets = getTargetsForAlias(args, localConfig);
-
-    if (targets instanceof Error) {
-      output.prettyError(targets);
-      return 1;
-    }
-
-    for (const target of targets) {
-      output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
-
-      const record = await assignAlias(
-        client,
-        {
-          idOrUrl: deployment.id,
-          deploymentUrl: deployment.url,
-        },
-        target,
-        contextName
-      );
-
-      const handleResult = handleSetupDomainError(
-        handleCreateAliasError(record)
-      );
-
-      if (handleResult === 1) {
-        return 1;
-      }
-
-      output.success(
-        `${chalk.bold(
-          `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
-        )} now points to https://${deployment.url} ${setStamp()}`
-      );
-    }
-
-    return 0;
+    return 1;
   }
 
   const [idOrUrl, aliasTarget] = args;
@@ -358,23 +293,4 @@ function getIdOrUrlForAliasRequest(idOrUrl: string) {
   }
 
   return toHost(idOrUrl);
-}
-
-function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
-  if (args.length) {
-    return [args[args.length - 1]]
-      .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))
-      .filter((x): x is string => !!x && typeof x === 'string');
-  }
-
-  if (!alias) {
-    return new ERRORS.NoAliasInConfig();
-  }
-
-  // Check the type for the option aliases
-  if (typeof alias !== 'string' && !Array.isArray(alias)) {
-    return new ERRORS.InvalidAliasInConfig(alias);
-  }
-
-  return typeof alias === 'string' ? [alias] : alias;
 }
