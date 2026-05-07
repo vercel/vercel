@@ -1,4 +1,3 @@
-import type { Deployment } from '@vercel-internals/types';
 import type Client from '../client';
 import createAlias, { type AliasSource } from './create-alias';
 import isDomainExternal from '../domains/is-domain-external';
@@ -6,7 +5,7 @@ import setupDomain from '../domains/setup-domain';
 
 export default async function assignAlias(
   client: Client,
-  source: Deployment | AliasSource,
+  source: AliasSource,
   alias: string,
   contextName: string
 ) {

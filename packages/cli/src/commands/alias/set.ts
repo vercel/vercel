@@ -121,7 +121,15 @@ export default async function set(client: Client, argv: string[]) {
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
-      const record = await assignAlias(client, deployment, target, contextName);
+      const record = await assignAlias(
+        client,
+        {
+          deploymentOrAliasIdOrUrl: deployment.id,
+          deploymentUrl: deployment.url,
+        },
+        target,
+        contextName
+      );
 
       const handleResult = handleSetupDomainError(
         handleCreateAliasError(record)
@@ -148,9 +156,12 @@ export default async function set(client: Client, argv: string[]) {
   output.log(`Assigning alias ${aliasTarget} to ${deploymentOrAliasIdOrUrl}`);
 
   const isWildcard = isWildcardAlias(aliasTarget);
+  const sourceForAliasRequest = getDeploymentOrAliasIdOrUrl(
+    deploymentOrAliasIdOrUrl
+  );
   const record = await assignAlias(
     client,
-    { id: deploymentOrAliasIdOrUrl },
+    { deploymentOrAliasIdOrUrl: sourceForAliasRequest },
     aliasTarget,
     contextName
   );
@@ -344,6 +355,16 @@ function handleCreateAliasError<T>(
   }
 
   return error;
+}
+
+function getDeploymentOrAliasIdOrUrl(source: string) {
+  try {
+    new URL(source);
+  } catch {
+    return source;
+  }
+
+  return toHost(source);
 }
 
 function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {

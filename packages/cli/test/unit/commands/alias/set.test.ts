@@ -111,7 +111,7 @@ describe('alias set', () => {
       ]);
     });
 
-    it('passes source URLs through to the alias endpoint', async () => {
+    it('passes valid source URLs as hosts to the alias endpoint', async () => {
       useUser();
       const sourceUrl = 'https://my-alias.vercel.app';
       let deploymentOrAliasIdOrUrl: string | undefined;
@@ -127,7 +127,31 @@ describe('alias set', () => {
       const exitCode = await alias(client);
 
       expect(exitCode, 'exit code of "alias"').toEqual(0);
-      expect(deploymentOrAliasIdOrUrl).toEqual(sourceUrl);
+      expect(deploymentOrAliasIdOrUrl).toEqual('my-alias.vercel.app');
+    });
+
+    it('outputs the API error for invalid source URLs', async () => {
+      useUser();
+      const sourceUrl = 'https://%';
+      const errorMessage = `Invalid source URL "${sourceUrl}"`;
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          expect(request.params.id).toEqual(sourceUrl);
+          response.status(400).json({
+            error: {
+              code: 'invalid_url',
+              message: errorMessage,
+            },
+          });
+        }
+      );
+
+      client.setArgv('alias', 'set', sourceUrl, 'custom');
+      const exitCode = await alias(client);
+
+      expect(exitCode, 'exit code of "alias"').toEqual(1);
+      await expect(client.stderr).toOutput(errorMessage);
     });
   });
 });

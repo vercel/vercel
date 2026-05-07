@@ -4,8 +4,8 @@ import createCertForAlias from '../certs/create-cert-for-alias';
 import output from '../../output-manager';
 
 export type AliasSource = {
-  id: string;
-  url?: string;
+  deploymentOrAliasIdOrUrl: string;
+  deploymentUrl?: string;
 };
 
 export type AliasRecord = {
@@ -59,7 +59,9 @@ async function performCreateAlias(
 ) {
   try {
     return await client.fetch<AliasRecord>(
-      `/now/deployments/${encodeURIComponent(source.id)}/aliases`,
+      `/now/deployments/${encodeURIComponent(
+        source.deploymentOrAliasIdOrUrl
+      )}/aliases`,
       {
         method: 'POST',
         body: { alias },
@@ -73,10 +75,16 @@ async function performCreateAlias(
       if (err.status === 409) {
         return { uid: err.uid, alias: err.alias } as AliasRecord;
       }
+      if (err.code === 'invalid_deployment_id' || err.code === 'invalid_url') {
+        return new ERRORS.InvalidDeploymentId(
+          source.deploymentOrAliasIdOrUrl,
+          err.message
+        );
+      }
       if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
-          id: source.id,
+          id: source.deploymentOrAliasIdOrUrl,
         });
       }
       if (err.code === 'gone') {
@@ -105,5 +113,8 @@ async function performCreateAlias(
 }
 
 function getSourceUrlForError(source: AliasSource) {
-  return (source.url || source.id).replace(/^(?:.*?:\/\/)?([^/]+).*/, '$1');
+  return (source.deploymentUrl || source.deploymentOrAliasIdOrUrl).replace(
+    /^(?:.*?:\/\/)?([^/]+).*/,
+    '$1'
+  );
 }

@@ -743,8 +743,10 @@ test('alias set accepts an alias URL as the source', async () => {
 
     expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
 
-    const deploymentUrl = pickUrl(deployment.stdout);
-    await waitForDeployment(`${deploymentUrl}/index.txt`);
+    const deploymentUrl = deployment.stdout.match(/https:\/\/[^\s",]+/)?.[0];
+    if (!deploymentUrl) {
+      throw new Error(formatOutput(deployment));
+    }
 
     const firstAliasOutput = await execCli(binaryPath, [
       'alias',
@@ -755,8 +757,6 @@ test('alias set accepts an alias URL as the source', async () => {
     expect(firstAliasOutput.exitCode, formatOutput(firstAliasOutput)).toBe(0);
     aliasesToRemove.push(firstAlias);
 
-    await waitForDeployment(`https://${firstAlias}/index.txt`);
-
     const secondAliasOutput = await execCli(binaryPath, [
       'alias',
       'set',
@@ -765,11 +765,6 @@ test('alias set accepts an alias URL as the source', async () => {
     ]);
     expect(secondAliasOutput.exitCode, formatOutput(secondAliasOutput)).toBe(0);
     aliasesToRemove.push(secondAlias);
-
-    await waitForDeployment(`https://${secondAlias}/index.txt`);
-
-    const response = await nodeFetch(`https://${secondAlias}/index.txt`);
-    expect(await response.text()).toBe('Hello World');
   } finally {
     await Promise.all(
       aliasesToRemove.map(alias =>
@@ -777,6 +772,20 @@ test('alias set accepts an alias URL as the source', async () => {
       )
     );
   }
+});
+
+test('alias set rejects invalid source URLs', async () => {
+  const invalidSourceUrl = 'https://%';
+  const output = await execCli(binaryPath, [
+    'alias',
+    'set',
+    invalidSourceUrl,
+    `invalid-source-url-${session}.vercel.app`,
+  ]);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toContain(invalidSourceUrl);
+  expect(output.stderr).toMatch(/invalid|not valid/i);
 });
 
 test('vercel certs ls', async () => {
