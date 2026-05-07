@@ -466,9 +466,9 @@ describe('bisect', () => {
 
       await expect(client.stderr).toOutput(
         `Error: Cannot bisect deployments from different targets.\n\n` +
-          `Known bad:  https://${badDeployment.url} (target: production)\n` +
-          `Known good: https://${goodDeployment.url} (target: staging)\n\n` +
-          `Production and staging deployments have separate histories.`
+          `Known bad:  https://${badDeployment.url} (production)\n` +
+          `Known good: https://${goodDeployment.url} (staging)\n\n` +
+          `Use a known good URL from production, or use a known bad URL from staging.`
       );
 
       await expect(bisectPromise).resolves.toEqual(1);

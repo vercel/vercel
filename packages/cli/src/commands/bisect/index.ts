@@ -183,16 +183,14 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   if (badDeployment.target !== goodDeployment.target) {
-    const badTargetName = getDeploymentTargetName(badDeployment);
-    const goodTargetName = getDeploymentTargetName(goodDeployment);
-    const badTarget = formatDeploymentTarget(badTargetName);
-    const goodTarget = formatDeploymentTarget(goodTargetName);
+    const badTarget = badDeployment.target || 'preview';
+    const goodTarget = goodDeployment.target || 'preview';
 
     output.error(
       `Cannot bisect deployments from different targets.\n\n` +
         `Known bad:  ${link(`https://${badDeployment.url}`)} (${badTarget})\n` +
         `Known good: ${link(`https://${goodDeployment.url}`)} (${goodTarget})\n\n` +
-        `${capitalize(badTargetName)} and ${goodTargetName} deployments have separate histories. Use a known good URL from ${badTarget}, or use a known bad URL from ${goodTarget}.`
+        `Use a known good URL from ${badTarget}, or use a known bad URL from ${goodTarget}.`
     );
     return 1;
   }
@@ -363,16 +361,4 @@ function getCommit(deployment: Deployment) {
     deployment.meta?.gitlabCommitMessage ||
     deployment.meta?.bitbucketCommitMessage;
   return { sha, message };
-}
-
-function getDeploymentTargetName(deployment: Deployment) {
-  return deployment.target || 'preview';
-}
-
-function formatDeploymentTarget(target: string) {
-  return `target: ${target}`;
-}
-
-function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
