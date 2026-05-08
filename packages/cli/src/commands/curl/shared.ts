@@ -65,7 +65,8 @@ function orgFromOwner(id: string, slug = id): ProjectLinked['org'] {
 export function setupCurlLikeCommand(
   client: Client,
   command: Command,
-  telemetryClient: CommandTelemetryClient
+  telemetryClient: CommandTelemetryClient,
+  options: { allowFullUrl?: boolean } = {}
 ): CommandSetupResult | number {
   const { print } = output;
 
@@ -108,9 +109,15 @@ export function setupCurlLikeCommand(
   }
 
   if (!path || path === '--' || path.startsWith('-')) {
-    output.error(
-      `${getCommandName(`${command.name} <url|path>`)} requires a URL or API path (e.g., 'https://example.vercel.app/api/hello' or '/api/hello')`
-    );
+    if (options.allowFullUrl) {
+      output.error(
+        `${getCommandName(`${command.name} <url|path>`)} requires a URL or API path (e.g., 'https://example.vercel.app/api/hello' or '/api/hello')`
+      );
+    } else {
+      output.error(
+        `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
+      );
+    }
     print(help(command, { columns: client.stderr.columns }));
     return 1;
   }
@@ -118,6 +125,17 @@ export function setupCurlLikeCommand(
   let isFullUrl = path.startsWith('http://') || path.startsWith('https://');
   if (!isFullUrl && looksLikeHostname(path)) {
     isFullUrl = true;
+  }
+
+  if (isFullUrl && !options.allowFullUrl) {
+    output.error(
+      `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
+    );
+    output.print(
+      `To target a specific deployment within the currently linked project, use the --deployment <id|url> flag.`
+    );
+    print(help(command, { columns: client.stderr.columns }));
+    return 1;
   }
 
   const toolFlags =

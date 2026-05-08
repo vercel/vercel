@@ -17,7 +17,9 @@ export default async function curl(client: Client): Promise<number> {
     },
   });
 
-  const setup = setupCurlLikeCommand(client, curlCommand, telemetryClient);
+  const setup = setupCurlLikeCommand(client, curlCommand, telemetryClient, {
+    allowFullUrl: true,
+  });
 
   if (typeof setup === 'number') {
     return setup;
