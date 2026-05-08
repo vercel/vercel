@@ -149,9 +149,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
     },
-    'deploy-with-only-readme-vercel-json': {
+    'deploy-with-only-content-vercel-json': {
       'vercel.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
+      'content.txt': 'content file contents',
     },
     'deploy-default-with-sub-directory': {
       'vercel.json': JSON.stringify({ version: 2 }),

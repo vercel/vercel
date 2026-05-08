@@ -788,9 +788,9 @@ describe('telemetry submits data', () => {
   });
 });
 
-test('deploys with only vercel.json and README.md', async () => {
+test('deploys with only vercel.json and a static file', async () => {
   const directory = await setupE2EFixture(
-    'deploy-with-only-readme-vercel-json'
+    'deploy-with-only-content-vercel-json'
   );
 
   const { exitCode, stdout, stderr } = await execCli(
@@ -810,9 +810,9 @@ test('deploys with only vercel.json and README.md', async () => {
   );
 
   const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
+  const res = await nodeFetch(`https://${host}/content.txt`);
   const text = await res.text();
-  expect(text).toMatch(/readme contents/);
+  expect(text).toMatch(/content file contents/);
 });
 
 test('reject deprecated `now.json` files', async () => {
