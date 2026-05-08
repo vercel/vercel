@@ -181,6 +181,57 @@ describe('validateConfig', () => {
     expect(error?.code).toBe('SERVICES_AND_EXPERIMENTAL_SERVICES');
   });
 
+  it('should not error with public service static schedule arrays', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        cleanup: {
+          type: 'job',
+          root: '.',
+          trigger: 'schedule',
+          runtime: 'python',
+          entrypoint: 'jobs/cleanup.py',
+          schedule: ['0 0 * * *', '0 12 * * *'],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should reject dynamic schedules inside public service schedule arrays', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        cleanup: {
+          type: 'job',
+          root: '.',
+          trigger: 'schedule',
+          runtime: 'python',
+          entrypoint: 'jobs/cleanup.py',
+          schedule: ['<dynamic>'],
+        },
+      },
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('should not error with public service dynamic schedule string', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        cleanup: {
+          type: 'job',
+          root: '.',
+          trigger: 'schedule',
+          runtime: 'python',
+          entrypoint: 'jobs/cleanup.py',
+          schedule: '<dynamic>',
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
   it('should not error with legacy cron service type', () => {
     const error = validateConfig({
       experimentalServices: {

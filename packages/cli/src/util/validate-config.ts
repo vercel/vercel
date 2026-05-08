@@ -204,6 +204,13 @@ const servicesMountSchema = {
   ],
 };
 
+const staticServiceScheduleSchema = {
+  type: 'string',
+  minLength: 9,
+  maxLength: 256,
+  not: { const: '<dynamic>' },
+};
+
 const serviceScheduleSchema = {
   oneOf: [
     {
@@ -214,11 +221,7 @@ const serviceScheduleSchema = {
     {
       type: 'array',
       minItems: 1,
-      items: {
-        type: 'string',
-        minLength: 9,
-        maxLength: 256,
-      },
+      items: staticServiceScheduleSchema,
     },
   ],
 };
