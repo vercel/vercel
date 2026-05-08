@@ -5,6 +5,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
+import importEnv from './import';
 import ls from './ls';
 import pull from './pull';
 import rm from './rm';
@@ -13,6 +14,7 @@ import update from './update';
 import {
   envCommand,
   addSubcommand,
+  importSubcommand,
   listSubcommand,
   pullSubcommand,
   removeSubcommand,
@@ -28,6 +30,7 @@ import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   add: getCommandAliases(addSubcommand),
+  import: getCommandAliases(importSubcommand),
   rm: getCommandAliases(removeSubcommand),
   pull: getCommandAliases(pullSubcommand),
   run: getCommandAliases(runSubcommand),
@@ -92,6 +95,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       exitCode = await add(client, args);
+      break;
+    case 'import':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(importSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandImport(subcommandOriginal);
+      exitCode = await importEnv(client, args);
       break;
     case 'rm':
       if (needHelp) {
