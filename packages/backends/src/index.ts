@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
@@ -17,7 +15,7 @@ import {
   type NodejsLambdaOptions,
   isBunVersion,
 } from '@vercel/build-utils';
-import { findEntrypointOrThrow } from './cervel/index.js';
+import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
 import { applyServiceVcInit } from './service-vc-init.js';
 import { applyCronDispatch } from './cron-dispatch.js';
 import { buildCronRouteTable, getServiceCrons } from './crons.js';
@@ -46,6 +44,7 @@ import { Colors as c } from './cervel/utils.js';
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
 export { diagnostics } from './diagnostics.js';
+export { startDevServer } from './start-dev-server.js';
 
 export const version = 2;
 
@@ -90,20 +89,10 @@ export const build: BuildV2 = async args => {
   const buildSpan = span.child('vc.builder.backends.build');
 
   return buildSpan.trace(async () => {
-    // Use an explicit entrypoint when provided by CLI/fs-detectors.
-    // Fall back to candidate-list discovery when:
-    // - The CLI/framework passes the `package.json` sentinel.
-    // - The file doesn't exist (framework-preset placeholders like
-    //   `useRuntime.src: 'index.js'` reach us unreplaced under
-    //   VERCEL_EXPERIMENTAL_BACKENDS).
-    const explicit =
-      args.entrypoint && args.entrypoint !== 'package.json'
-        ? args.entrypoint
-        : null;
-    const entrypoint =
-      explicit && existsSync(join(args.workPath, explicit))
-        ? explicit
-        : await findEntrypointOrThrow(args.workPath);
+    const entrypoint = await findEntrypointWithHintOrThrow(
+      args.workPath,
+      args.entrypoint
+    );
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
 

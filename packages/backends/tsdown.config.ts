@@ -62,4 +62,10 @@ export default defineConfig([
     outDir: 'dist/introspection',
     format: 'esm',
   },
+  // Dev-mode HTTP host spawned by startDevServer.
+  {
+    entry: 'src/dev/cron-host.ts',
+    outDir: 'dist/dev',
+    format: 'esm',
+  },
 ]);
