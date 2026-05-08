@@ -807,6 +807,10 @@ test.each([
   idOrUrl,
   expectedIdOrUrl,
   target,
+}: {
+  idOrUrl: string;
+  expectedIdOrUrl: string;
+  target: string;
 }) => {
   const output = await execCli(binaryPath, ['alias', 'set', idOrUrl, target]);
 
