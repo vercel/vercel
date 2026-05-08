@@ -601,9 +601,10 @@ export const build = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    const supportsResponseStreaming =
-      (staticConfig?.supportsResponseStreaming ??
-        staticConfig?.experimentalResponseStreaming) === true
+    const supportsResponseStreaming = awsLambdaHandler
+      ? false
+      : (staticConfig?.supportsResponseStreaming ??
+            staticConfig?.experimentalResponseStreaming) === true
         ? true
         : undefined;
 
