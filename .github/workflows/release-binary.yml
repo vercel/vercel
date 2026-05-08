@@ -164,6 +164,7 @@ jobs:
         run: |
           rcodesign sign \
             --for-notarization \
+            --binary-identifier com.vercel.vercel-cli \
             --entitlements-xml-path entitlements.plist \
             --p12-file "$APPLE_CERT_PATH" \
             --p12-password "$APPLE_CERT_PASSWORD" \
