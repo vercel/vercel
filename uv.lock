@@ -1216,7 +1216,7 @@ wheels = [
 
 [[package]]
 name = "vercel-runtime"
-version = "0.13.1"
+version = "0.13.2"
 source = { editable = "python/vercel-runtime" }
 
 [package.dev-dependencies]

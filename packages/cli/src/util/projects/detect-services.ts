@@ -129,13 +129,6 @@ async function prepareServicesConfigWrite(
     );
   }
 
-  if (
-    compileResult.configPath &&
-    basename(compileResult.configPath) === 'now.json'
-  ) {
-    throw new Error('Cannot automatically update now.json.');
-  }
-
   let existingConfig: VercelConfig = {};
   if (
     compileResult.configPath &&

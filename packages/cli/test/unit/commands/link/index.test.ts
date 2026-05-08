@@ -2108,6 +2108,48 @@ describe('link', () => {
       reauthSpy.mockRestore();
     });
 
+    it('should not resolve the default team before unscoped cross-team search', async () => {
+      const defaultTeamId = 'team_default';
+      useUser({ version: 'northstar', defaultTeamId });
+      const cwd = setupTmpDir();
+      const projectName = 'project-x';
+
+      const [teamA] = useTeams('team_a') as Team[];
+      const projectA = {
+        ...defaultProject,
+        id: 'proj-on-a',
+        name: projectName,
+      };
+
+      client.scenario.get(`/teams/${defaultTeamId}`, (_req, res) => {
+        res.status(403).json({
+          error: {
+            code: 'team_unauthorized',
+            message:
+              'Not authorized: Trying to access resource under scope "default-team".',
+          },
+        });
+      });
+      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+        if (req.query.teamId === teamA.id) {
+          return res.json(projectA);
+        }
+
+        res.status(404).json({ error: { code: 'not_found' } });
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', projectName, '--yes');
+
+      const exitCode = await link(client);
+
+      expect(exitCode).toEqual(0);
+      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.orgId).toEqual(teamA.id);
+      expect(projectJson.projectId).toEqual(projectA.id);
+    });
+
     it('should skip SAML-limited teams during cross-team search', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
@@ -2172,6 +2214,329 @@ describe('link', () => {
       expect(projectJson.projectId).toEqual(projectA.id);
 
       reauthSpy.mockRestore();
+    });
+
+    it('should link repo root matches using repo.json', async () => {
+      useUser({ version: 'northstar' });
+      const repoRoot = setupTmpDir();
+      const projectDir = join(repoRoot, 'apps/web');
+      const repoUrl = 'https://github.com/user/repo.git';
+      await mkdirp(join(repoRoot, '.git'));
+      await mkdirp(projectDir);
+      await writeFile(
+        join(repoRoot, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      const [teamA] = useTeams('team_a') as Team[];
+      const limitedTeam = createTeam(
+        'team_limited',
+        'team-limited',
+        'Team Limited'
+      );
+      (limitedTeam as Team & { limited?: boolean }).limited = true;
+      const projectA = {
+        ...defaultProject,
+        id: 'proj-on-a',
+        name: 'dashboard',
+        rootDirectory: 'apps/web',
+      };
+
+      client.scenario.get('/v9/projects', (req, res) => {
+        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
+          return res.json({ projects: [projectA], pagination: {} });
+        }
+        return res.json({ projects: [], pagination: {} });
+      });
+      useUnknownProject();
+
+      client.cwd = projectDir;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Searched teams:');
+      await expect(client.stderr).toOutput('Skipped 1 SSO-protected team');
+      await expect(client.stderr).toOutput('Found project');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${teamA.slug}/${projectA.name}`
+      );
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
+      expect(repoJson).toEqual({
+        remoteName: 'origin',
+        projects: [
+          {
+            directory: 'apps/web',
+            id: projectA.id,
+            name: projectA.name,
+            orgId: teamA.id,
+          },
+        ],
+      });
+      expect(await pathExists(join(projectDir, '.vercel/project.json'))).toBe(
+        false
+      );
+    });
+
+    it('should preserve repo.json entries when adding a repo root match', async () => {
+      useUser({ version: 'northstar' });
+      const repoRoot = setupTmpDir();
+      const projectDir = join(repoRoot, 'apps/web');
+      const repoUrl = 'https://github.com/user/repo.git';
+      await mkdirp(join(repoRoot, '.git'));
+      await mkdirp(join(repoRoot, '.vercel'));
+      await mkdirp(projectDir);
+      await writeFile(
+        join(repoRoot, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+      await writeJSON(join(repoRoot, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [
+          {
+            directory: 'apps/api',
+            id: 'proj-api',
+            name: 'api',
+            orgId: 'team_a',
+          },
+        ],
+      });
+
+      const [teamA] = useTeams('team_a') as Team[];
+      const projectA = {
+        ...defaultProject,
+        id: 'proj-web',
+        name: 'web',
+        rootDirectory: 'apps/web',
+      };
+
+      client.scenario.get('/v9/projects', (req, res) => {
+        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
+          return res.json({ projects: [projectA], pagination: {} });
+        }
+        return res.json({ projects: [], pagination: {} });
+      });
+      useUnknownProject();
+
+      client.cwd = projectDir;
+      client.setArgv('--yes');
+      const exitCode = await link(client);
+
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
+      expect(repoJson.projects).toEqual([
+        {
+          directory: 'apps/api',
+          id: 'proj-api',
+          name: 'api',
+          orgId: 'team_a',
+        },
+        {
+          directory: 'apps/web',
+          id: projectA.id,
+          name: projectA.name,
+          orgId: teamA.id,
+        },
+      ]);
+    });
+
+    it('should respect --project when matching Git-linked projects', async () => {
+      useUser({ version: 'northstar' });
+      const repoRoot = setupTmpDir();
+      const projectDir = join(repoRoot, 'apps/web');
+      const repoUrl = 'https://github.com/user/repo.git';
+      await mkdirp(join(repoRoot, '.git'));
+      await mkdirp(projectDir);
+      await writeFile(
+        join(repoRoot, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      const [teamA] = useTeams('team_a') as Team[];
+      const wrongProject = {
+        ...defaultProject,
+        id: 'proj-wrong',
+        name: 'wrong-app',
+        rootDirectory: 'apps/web',
+      };
+      const expectedProject = {
+        ...defaultProject,
+        id: 'proj-expected',
+        name: 'expected-app',
+        rootDirectory: 'apps/web',
+      };
+
+      client.scenario.get('/v9/projects', (req, res) => {
+        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
+          return res.json({
+            projects: [wrongProject, expectedProject],
+            pagination: {},
+          });
+        }
+        return res.json({ projects: [], pagination: {} });
+      });
+      useUnknownProject();
+
+      client.cwd = projectDir;
+      client.setArgv('--project', expectedProject.name);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Found project');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${teamA.slug}/${expectedProject.name}`
+      );
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(repoRoot, '.vercel/repo.json'));
+      expect(repoJson.projects).toEqual([
+        {
+          directory: 'apps/web',
+          id: expectedProject.id,
+          name: expectedProject.name,
+          orgId: teamA.id,
+        },
+      ]);
+    });
+
+    it('should show repo-root and folder-name matches together', async () => {
+      useUser({ version: 'northstar' });
+      const repoRoot = setupTmpDir();
+      const projectDir = join(repoRoot, 'apps/web');
+      const repoUrl = 'https://github.com/user/repo.git';
+      const folderName = basename(projectDir);
+      await mkdirp(join(repoRoot, '.git'));
+      await mkdirp(projectDir);
+      await writeFile(
+        join(repoRoot, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      const [teamA] = useTeams('team_a') as Team[];
+      const teamB = createTeam('team_b', 'team-b', 'Team B');
+      const repoProject = {
+        ...defaultProject,
+        id: 'proj-repo',
+        name: 'dashboard',
+        rootDirectory: 'apps/web',
+      };
+      const folderProject = {
+        ...defaultProject,
+        id: 'proj-folder',
+        name: folderName,
+      };
+
+      client.scenario.get('/v9/projects', (req, res) => {
+        if (req.query.teamId === teamA.id && req.query.repoUrl === repoUrl) {
+          return res.json({ projects: [repoProject], pagination: {} });
+        }
+        return res.json({ projects: [], pagination: {} });
+      });
+      client.scenario.get(`/v9/projects/${folderName}`, (req, res) => {
+        if (req.query.teamId === teamB.id) {
+          return res.json(folderProject);
+        }
+        return res.status(404).json({ error: { code: 'not_found' } });
+      });
+      useUnknownProject();
+
+      client.cwd = projectDir;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Not one of these projects');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${teamA.slug}/${repoProject.name}`
+      );
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should search selected SSO-protected teams after no first-pass matches', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const projectName = basename(cwd);
+
+      useTeams('team_a');
+      const limitedTeam = createTeam(
+        'team_limited',
+        'team-limited',
+        'Team Limited'
+      );
+      (limitedTeam as Team & { limited?: boolean }).limited = true;
+      const limitedProject = {
+        ...defaultProject,
+        id: 'proj-limited',
+        name: projectName,
+      };
+
+      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+        if (req.query.teamId === limitedTeam.id) {
+          return res.json(limitedProject);
+        }
+        return res.status(404).json({ error: { code: 'not_found' } });
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which SSO-protected teams should be searched?'
+      );
+      client.stdin.write(' \n');
+
+      await expect(client.stderr).toOutput('Found project');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${limitedTeam.slug}/${limitedProject.name}`
+      );
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.projectId).toEqual(limitedProject.id);
+      expect(projectJson.orgId).toEqual(limitedTeam.id);
     });
 
     describe('multiple matches', () => {
@@ -2320,6 +2685,63 @@ describe('link', () => {
 
         const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
         expect(projectJson.projectId).toEqual('proj-on-a');
+      });
+
+      it('should default to the current team match when prompting interactively', async () => {
+        useUser();
+        const cwd = setupTmpDir();
+        const projectName = basename(cwd);
+
+        useTeams('team_a');
+        createTeam('team_b', 'team-b', 'Team B');
+
+        const projectA = {
+          ...defaultProject,
+          id: 'proj-on-a',
+          name: projectName,
+        };
+        const projectB = {
+          ...defaultProject,
+          id: 'proj-on-b',
+          name: projectName,
+        };
+
+        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+          if (req.query.teamId === 'team_a') {
+            return res.json(projectA);
+          }
+          if (req.query.teamId === 'team_b') {
+            return res.json(projectB);
+          }
+          res.status(404).json({ error: { code: 'not_found' } });
+        });
+        useUnknownProject();
+
+        client.config.currentTeam = 'team_b';
+        client.cwd = cwd;
+        const exitCodePromise = link(client);
+
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          'Found matching projects across teams'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Linked to');
+
+        await expect(client.stderr).toOutput(
+          'Would you like to pull environment variables now?'
+        );
+        client.stdin.write('n\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+
+        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+        expect(projectJson.projectId).toEqual('proj-on-b');
+        expect(projectJson.orgId).toEqual('team_b');
       });
 
       it('should fall through to selectOrg when non-interactive with multiple matches', async () => {

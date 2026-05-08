@@ -325,12 +325,12 @@ export default async function main(client: Client): Promise<number> {
     }
     const { argv: originalArgv } = client;
     client.cwd = join(cwd, projectRootDirectory);
-    client.argv = [
+    client.setArgv([
       ...originalArgv.slice(0, 2),
       'pull',
       `--environment`,
       target,
-    ];
+    ]);
     const result = await pullCommandLogic(
       client,
       client.cwd,
@@ -342,7 +342,7 @@ export default async function main(client: Client): Promise<number> {
       return result;
     }
     client.cwd = cwd;
-    client.argv = originalArgv;
+    client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
   }
 
@@ -606,16 +606,14 @@ async function doBuild(
     compileResult.configPath ||
     join(workPath, 'vercel.json');
 
-  const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
+  const [pkg, vercelConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(vercelConfigPath),
-    readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
-  if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
 
   if (hasInstrumentation) {
     output.debug(
@@ -628,11 +626,9 @@ async function doBuild(
     vercelConfig[fileNameSymbol] = compileResult.wasCompiled
       ? compileResult.sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME
       : 'vercel.json';
-  } else if (nowConfig) {
-    nowConfig[fileNameSymbol] = 'now.json';
   }
 
-  const localConfig = vercelConfig || nowConfig || {};
+  const localConfig = vercelConfig || {};
   const validateError = validateConfig(localConfig);
 
   if (validateError) {
