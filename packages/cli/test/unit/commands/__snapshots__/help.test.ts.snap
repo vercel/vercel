@@ -238,7 +238,7 @@ exports[`help command > alias help output snapshots > alias remove subcommand > 
 
 exports[`help command > alias help output snapshots > alias set subcommand > alias set subcommand help column width 120 1`] = `
 "
-  ▲ vercel alias set deployment alias
+  ▲ vercel alias set id-or-url alias
 
   Create a new alias                                                                                                    
 
