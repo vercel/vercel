@@ -2,6 +2,7 @@ import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
   defaultCachePathGlob,
+  getReportedServiceType,
   glob,
   NodejsLambda,
   debug,
@@ -164,6 +165,9 @@ export const build: BuildV2 = async args => {
         lockfilePath: downloadResult.lockfilePath,
         lockfileVersion: downloadResult.lockfileVersion,
         framework: rolldownResult.framework.slug || undefined,
+        serviceType: args.service
+          ? getReportedServiceType(args.service)
+          : undefined,
       });
     } catch (err) {
       debug(
