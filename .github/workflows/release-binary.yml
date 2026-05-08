@@ -160,15 +160,28 @@ jobs:
         shell: bash
         working-directory: packages/cli
         env:
+        env:
           APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          VERCEL_CLI_APPLE_SIGNING_IDENTIFIER: com.vercel.vercel-cli
         run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
           rcodesign sign \
             --for-notarization \
-            --binary-identifier com.vercel.vercel-cli \
+            --binary-identifier "$VERCEL_CLI_APPLE_SIGNING_IDENTIFIER" \
             --entitlements-xml-path entitlements.plist \
             --p12-file "$APPLE_CERT_PATH" \
             --p12-password "$APPLE_CERT_PASSWORD" \
-            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+            "$bin"
+
+          requirement=$(codesign -dr - "$bin" 2>&1)
+          printf '%s\n' "$requirement"
+          expected_identifier="identifier \"$VERCEL_CLI_APPLE_SIGNING_IDENTIFIER\""
+          if [[ "$requirement" != *"$expected_identifier"* ]]; then
+            echo "::error::Expected designated requirement to contain $expected_identifier"
+            exit 1
+          fi
+
 
       - name: Notarize binary
         if: ${{ runner.os == 'macOS' }}
