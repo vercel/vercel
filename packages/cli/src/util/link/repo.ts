@@ -10,7 +10,7 @@ import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
-import { emoji, prependEmoji, type EmojiLabel } from '../emoji';
+import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
@@ -48,12 +48,6 @@ export interface RepoLink {
   repoConfig?: RepoProjectsConfig;
 }
 
-export interface ResolvedGitRemote {
-  rootPath: string;
-  remoteName: string;
-  repoUrl: string;
-}
-
 export interface EnsureRepoLinkOptions {
   yes: boolean;
   overwrite: boolean;
@@ -88,139 +82,6 @@ export async function getRepoLink(
   );
 
   return { rootPath, repoConfig, repoConfigPath };
-}
-
-export async function resolveGitRemote(
-  client: Client,
-  rootPath: string,
-  {
-    yes,
-    existingRemoteName,
-  }: {
-    yes: boolean;
-    /** When set, skip remote selection and use this remote. */
-    existingRemoteName?: string;
-  }
-): Promise<ResolvedGitRemote | undefined> {
-  // Use getGitConfigPath to correctly resolve the config path for
-  // regular repos, worktrees, and submodules. Falls back to the
-  // traditional path if git commands fail.
-  const gitConfigPath =
-    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
-  const remoteUrls = await getRemoteUrls(gitConfigPath);
-  if (!remoteUrls) {
-    return undefined;
-  }
-
-  let remoteName: string;
-  if (existingRemoteName) {
-    // Re-use the remote from the existing repo.json
-    remoteName = existingRemoteName;
-    if (!remoteUrls[remoteName]) {
-      throw new Error(
-        `Git remote "${remoteName}" from repo.json no longer exists`
-      );
-    }
-  } else {
-    const remoteNames = Object.keys(remoteUrls).sort();
-    if (remoteNames.length === 1) {
-      remoteName = remoteNames[0];
-    } else {
-      const defaultRemote = remoteNames.includes('origin')
-        ? 'origin'
-        : remoteNames[0];
-      if (yes) {
-        remoteName = defaultRemote;
-      } else {
-        remoteName = await client.input.select({
-          message: 'Which Git remote should be used?',
-          choices: remoteNames.map(name => {
-            return { name: name, value: name };
-          }),
-          default: defaultRemote,
-        });
-      }
-    }
-  }
-
-  return { rootPath, remoteName, repoUrl: remoteUrls[remoteName] };
-}
-
-export async function fetchProjectsForRepoUrl(
-  client: Client,
-  repoUrl: string,
-  orgId: string
-): Promise<Project[]> {
-  const query = new URLSearchParams({ repoUrl });
-  const projectsIterator = client.fetchPaginated<{
-    projects: Project[];
-  }>(`/v9/projects?${query}`, { accountId: orgId });
-
-  let projects: Project[] = [];
-  for await (const chunk of projectsIterator) {
-    projects = projects.concat(chunk.projects);
-  }
-  return projects;
-}
-
-export async function linkRepoProject(
-  client: Client,
-  cwd: string,
-  {
-    project,
-    orgId,
-    orgSlug,
-    remoteName,
-    successEmoji = 'link',
-  }: {
-    project: Project;
-    orgId: string;
-    orgSlug: string;
-    remoteName: string;
-    successEmoji?: EmojiLabel;
-  }
-): Promise<RepoLink> {
-  const repoLink = await getRepoLink(client, cwd);
-  if (!repoLink) {
-    throw new Error('Could not determine Git repository root directory');
-  }
-
-  const directory = normalizePath(project.rootDirectory || '.');
-  const projectConfig: RepoProjectConfig = {
-    id: project.id,
-    name: project.name,
-    directory,
-    orgId,
-  };
-  const existingProjects = repoLink.repoConfig?.projects ?? [];
-  const filteredProjects = existingProjects.filter(
-    p => p.id !== project.id && normalizePath(p.directory) !== directory
-  );
-  const repoConfig: RepoProjectsConfig = {
-    remoteName,
-    projects: [...filteredProjects, projectConfig],
-  };
-
-  await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
-  await writeReadme(repoLink.rootPath);
-  const isGitIgnoreUpdated = await addToGitIgnore(repoLink.rootPath);
-
-  output.print(
-    prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${project.name}`
-      )} (created ${VERCEL_DIR}${
-        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-      })`,
-      emoji(successEmoji)
-    ) + '\n'
-  );
-
-  return {
-    repoConfig,
-    repoConfigPath: repoLink.repoConfigPath,
-    rootPath: repoLink.rootPath,
-  };
 }
 
 /**
@@ -284,14 +145,48 @@ async function discoverRepoProjects(
   );
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const remote = await resolveGitRemote(client, rootPath, {
-    yes,
-    existingRemoteName,
-  });
-  if (!remote) {
+  // Use getGitConfigPath to correctly resolve the config path for
+  // regular repos, worktrees, and submodules. Falls back to the
+  // traditional path if git commands fail.
+  const gitConfigPath =
+    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
+  const remoteUrls = await getRemoteUrls(gitConfigPath);
+  if (!remoteUrls) {
     throw new Error('Could not determine Git remote URLs');
   }
-  const { remoteName, repoUrl } = remote;
+
+  let remoteName: string;
+  if (existingRemoteName) {
+    // Re-use the remote from the existing repo.json
+    remoteName = existingRemoteName;
+    if (!remoteUrls[remoteName]) {
+      throw new Error(
+        `Git remote "${remoteName}" from repo.json no longer exists`
+      );
+    }
+  } else {
+    const remoteNames = Object.keys(remoteUrls).sort();
+    if (remoteNames.length === 1) {
+      remoteName = remoteNames[0];
+    } else {
+      // Prompt user to select which remote to use
+      const defaultRemote = remoteNames.includes('origin')
+        ? 'origin'
+        : remoteNames[0];
+      if (yes) {
+        remoteName = defaultRemote;
+      } else {
+        remoteName = await client.input.select({
+          message: 'Which Git remote should be used?',
+          choices: remoteNames.map(name => {
+            return { name: name, value: name };
+          }),
+          default: defaultRemote,
+        });
+      }
+    }
+  }
+  const repoUrl = remoteUrls[remoteName];
   const parsedRepoUrl = parseRepoUrl(repoUrl);
   if (!parsedRepoUrl) {
     throw new Error(`Failed to parse Git URL: ${repoUrl}`);
@@ -302,8 +197,18 @@ async function discoverRepoProjects(
   output.spinner(
     `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
   );
+  let projects: Project[] = [];
+  const query = new URLSearchParams({ repoUrl });
+  const projectsIterator = client.fetchPaginated<{
+    projects: Project[];
+  }>(`/v9/projects?${query}`);
   const detectedProjects = await detectedProjectsPromise;
-  let projects = await fetchProjectsForRepoUrl(client, repoUrl, org.id);
+  for await (const chunk of projectsIterator) {
+    projects = projects.concat(chunk.projects);
+    if (chunk.pagination.next) {
+      output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
+    }
+  }
 
   // Filter out projects that are already linked in repo.json (by ID or directory)
   if (existingProjectIds || existingDirectories) {
@@ -690,8 +595,5 @@ export function findProjectsFromPath(
   // selections (with the deepest directory depth), so pick the first
   // one and filter on those matches.
   const firstMatch = matches[0];
-  if (!firstMatch) {
-    return [];
-  }
   return matches.filter(match => match.directory === firstMatch.directory);
 }
