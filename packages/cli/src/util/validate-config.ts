@@ -274,11 +274,6 @@ const experimentalServicesCommonProperties = {
     minLength: 1,
     maxLength: 512,
   },
-  command: {
-    type: 'string',
-    minLength: 1,
-    maxLength: 2048,
-  },
   root: {
     type: 'string',
     minLength: 1,
@@ -366,7 +361,6 @@ const experimentalServicesRoutableProperties = {
 
 const servicesCommonProperties = {
   entrypoint: experimentalServicesCommonProperties.entrypoint,
-  command: experimentalServicesCommonProperties.command,
   root: experimentalServicesCommonProperties.root,
   framework: experimentalServicesCommonProperties.framework,
   runtime: experimentalServicesCommonProperties.runtime,

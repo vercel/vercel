@@ -870,7 +870,6 @@ export interface ExperimentalServiceConfig {
   /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
   runtime?: string;
 
-  command?: string;
   workspace?: string;
   buildCommand?: string;
   installCommand?: string;
