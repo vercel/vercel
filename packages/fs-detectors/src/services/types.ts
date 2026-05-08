@@ -60,7 +60,7 @@ export interface ServicesRoutes {
 }
 
 export type ConfiguredServices = Services | ExperimentalServices;
-export type ServicesConfig = ExperimentalServices;
+export type InferredServicesConfig = ExperimentalServices;
 
 export interface ResolvedServicesResult {
   services: Service[];
@@ -72,7 +72,7 @@ export interface ResolvedServicesResult {
 
 export interface InferredServicesResult {
   source: 'layout' | 'procfile' | 'railway';
-  config: ServicesConfig;
+  config: InferredServicesConfig;
   services: Service[];
   warnings: ServiceDetectionWarning[];
 }

@@ -5,8 +5,8 @@ import {
   detectServices,
   LocalFileSystemDetector,
   type DetectServicesResult,
-  type ServicesConfig,
 } from '@vercel/fs-detectors';
+import type { InferredServicesConfig } from '@vercel/fs-detectors';
 import type { VercelConfig } from '../dev/types';
 import { compileVercelConfig } from '../compile-vercel-config';
 import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
@@ -82,7 +82,7 @@ export async function tryDetectServices(
 
 export async function writeServicesConfig(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<{ configFileName: string }> {
   const prepared = await prepareServicesConfigWrite(cwd, config);
   await writeFile(prepared.configPath, prepared.content, 'utf8');
@@ -91,7 +91,7 @@ export async function writeServicesConfig(
 
 export async function getServicesConfigWriteBlocker(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<ServicesConfigWriteBlocker | null> {
   try {
     await prepareServicesConfigWrite(cwd, config);
@@ -102,7 +102,7 @@ export async function getServicesConfigWriteBlocker(
 }
 
 function toProjectServicesConfigPatch(
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Pick<VercelConfig, 'experimentalServices'> {
   return {
     experimentalServices: config,
@@ -111,7 +111,7 @@ function toProjectServicesConfigPatch(
 
 async function prepareServicesConfigWrite(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<{
   configPath: string;
   content: string;
@@ -158,7 +158,7 @@ async function prepareServicesConfigWrite(
 
 async function prepareTomlServicesConfigWrite(
   configPath: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<{ configPath: string; content: string }> {
   // Generate a toml file with our new config settings.
   // Append the new settings to the old file contents *textually*,

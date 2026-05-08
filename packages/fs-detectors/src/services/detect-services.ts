@@ -11,7 +11,7 @@ import {
   type InferredServicesResult,
   type ResolvedServicesResult,
   type Service,
-  type ServicesConfig,
+  type InferredServicesConfig,
   type ServicesRoutes,
 } from './types';
 import {
@@ -63,11 +63,13 @@ function withResolvedResult(
  * This lets us define the conventions of how we'd like the services configuration
  * to look like.
  */
-function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
-  const inferredConfig: ServicesConfig = {};
+function toInferredLayoutConfig(
+  services: InferredServicesConfig
+): InferredServicesConfig {
+  const inferredConfig: InferredServicesConfig = {};
 
   for (const [name, service] of Object.entries(services)) {
-    const serviceConfig: ServicesConfig[string] = {};
+    const serviceConfig: InferredServicesConfig[string] = {};
 
     if (typeof service.entrypoint === 'string') {
       serviceConfig.entrypoint = service.entrypoint;
