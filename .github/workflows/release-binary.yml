@@ -136,6 +136,25 @@ jobs:
           fi
           echo "APPLE_CERT_PATH=$APPLE_CERT_PATH" >> "$GITHUB_ENV"
 
+      - name: Write Apple notarization API key
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ runner.temp }}/apple-api-key.json
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_API_KEY" ]]; then
+            echo "::error::APPLE_API_KEY secret is empty or unavailable"
+            exit 1
+          fi
+          echo "$APPLE_API_KEY" | base64 --decode > "$APPLE_API_KEY_PATH"
+          if [[ ! -s "$APPLE_API_KEY_PATH" ]]; then
+            echo "::error::Decoded Apple API key is empty"
+            exit 1
+          fi
+          echo "APPLE_API_KEY_PATH=$APPLE_API_KEY_PATH" >> "$GITHUB_ENV"
+
       - name: Sign binary
         if: ${{ runner.os == 'macOS' }}
         shell: bash
@@ -149,6 +168,20 @@ jobs:
             --p12-file "$APPLE_CERT_PATH" \
             --p12-password "$APPLE_CERT_PASSWORD" \
             "dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+
+      - name: Notarize binary
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          zip_path="$RUNNER_TEMP/${{ matrix.asset }}${{ matrix.ext }}.zip"
+          ditto -c -k --keepParent "$bin" "$zip_path"
+          rcodesign notary-submit \
+            --api-key-file "$APPLE_API_KEY_PATH" \
+            --wait \
+            "$zip_path"
 
       - name: Smoke test binary version
         if: ${{ matrix.target == 'bun-darwin-arm64' || matrix.target == 'bun-darwin-x64' || matrix.target == 'bun-linux-x64' || matrix.target == 'bun-windows-x64' }}
