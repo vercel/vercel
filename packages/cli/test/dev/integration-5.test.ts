@@ -1111,15 +1111,20 @@ describe('[vercel dev] Worker service', () => {
   });
 });
 
-describe('[vercel dev] Schedule-triggered job service', () => {
-  const resultsDir = join(__dirname, 'fixtures', 'services-cron', '.results');
+describe('[vercel dev] Schedule-triggered Python job service', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-cron-py',
+    '.results'
+  );
 
   beforeEach(async () => {
     await fs.remove(resultsDir);
   });
 
-  test('[vercel dev] trigger schedule-triggered job via proxy', async () => {
-    const dir = fixture('services-cron');
+  test('[vercel dev] trigger schedule-triggered Python job via proxy', async () => {
+    const dir = fixture('services-cron-py');
     const { dev, port, readyResolver } = await testFixture(
       dir,
       {
