@@ -17,7 +17,11 @@ import {
   PythonAnalysisError,
   scanDistributions,
 } from '@vercel/python-analysis';
-import type { UvLockFile, UvLockPackage } from '@vercel/python-analysis';
+import type {
+  DistributionIndex,
+  UvLockFile,
+  UvLockPackage,
+} from '@vercel/python-analysis';
 import { getVenvSitePackagesDirs } from './install';
 import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
 import { detectPlatform } from './utils';
@@ -105,6 +109,12 @@ export class PythonDependencyExternalizer {
   private totalBundleSize: number = 0;
   private analyzed = false;
 
+  // Cached after first resolution in analyze().  The venv is immutable
+  // after construction so these paths and distribution indices do not
+  // change between analyze() and generateBundle().
+  private sitePackageDirsCache: string[] | null = null;
+  private distributionsCache: Map<string, DistributionIndex> | null = null;
+
   constructor(options: PythonDependencyExternalizerOptions) {
     this.venvPath = options.venvPath;
     this.vendorDir = options.vendorDir;
@@ -117,6 +127,39 @@ export class PythonDependencyExternalizer {
     this.pythonPath = options.pythonPath;
     this.hasCustomCommand = options.hasCustomCommand;
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
+  }
+
+  /**
+   * Resolve and cache site-packages directories and their distribution
+   * indices.  Safe to cache because the venv is not modified after
+   * construction (quirks run before the bundle span).
+   */
+  private async resolveDistributions(): Promise<{
+    sitePackageDirs: string[];
+    distributions: Map<string, DistributionIndex>;
+  }> {
+    if (this.sitePackageDirsCache && this.distributionsCache) {
+      return {
+        sitePackageDirs: this.sitePackageDirsCache,
+        distributions: this.distributionsCache,
+      };
+    }
+
+    const sitePackageDirs = await getVenvSitePackagesDirs(this.venvPath);
+    const distributions = new Map<string, DistributionIndex>();
+
+    for (const dir of sitePackageDirs) {
+      try {
+        await fs.promises.access(dir);
+      } catch {
+        continue;
+      }
+      distributions.set(dir, await scanDistributions(dir));
+    }
+
+    this.sitePackageDirsCache = sitePackageDirs;
+    this.distributionsCache = distributions;
+    return { sitePackageDirs, distributions };
   }
 
   shouldEnableRuntimeInstall(): boolean {
@@ -143,9 +186,14 @@ export class PythonDependencyExternalizer {
    * Must be called before generateBundle().
    */
   async analyze(files: Files): Promise<DependencyAnalysis> {
+    const { sitePackageDirs, distributions } =
+      await this.resolveDistributions();
+
     this.allVendorFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
+      sitePackageDirsCache: sitePackageDirs,
+      distributionsCache: distributions,
     });
 
     const tempFilesForSizing: Files = { ...files };
@@ -233,6 +281,11 @@ export class PythonDependencyExternalizer {
           'Runtime dependency installation requires a uv.lock file and project directory.',
       });
     }
+
+    // Resolve cached site-packages dirs and distributions (populated by
+    // analyze(), reused here to avoid redundant Python spawns and WASM scans).
+    const { sitePackageDirs, distributions } =
+      await this.resolveDistributions();
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
 
@@ -360,7 +413,11 @@ export class PythonDependencyExternalizer {
     }
 
     // Calculate per-package sizes for public packages
-    const packageSizes = await calculatePerPackageSizes(this.venvPath);
+    const packageSizes = await calculatePerPackageSizes(
+      this.venvPath,
+      sitePackageDirs,
+      distributions
+    );
 
     // Calculate fixed overhead: source files + private packages + vercel-runtime
     // + packages without compatible wheels.
@@ -380,6 +437,8 @@ export class PythonDependencyExternalizer {
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
       includePackages: alwaysBundled,
+      sitePackageDirsCache: sitePackageDirs,
+      distributionsCache: distributions,
     });
 
     const baseFiles: Files = { ...files };
@@ -458,6 +517,8 @@ export class PythonDependencyExternalizer {
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
       includePackages: allBundledPackages,
+      sitePackageDirsCache: sitePackageDirs,
+      distributionsCache: distributions,
     });
 
     for (const [p, f] of Object.entries(selectedVendorFiles)) {
@@ -763,10 +824,16 @@ export async function mirrorPackagesIntoVendor({
   venvPath,
   vendorDirName,
   includePackages,
+  sitePackageDirsCache,
+  distributionsCache,
 }: {
   venvPath: string;
   vendorDirName: string;
   includePackages?: string[];
+  /** Pre-resolved site-packages directories to avoid re-spawning Python. */
+  sitePackageDirsCache?: string[];
+  /** Pre-scanned distribution indices keyed by site-packages dir path. */
+  distributionsCache?: Map<string, DistributionIndex>;
 }): Promise<Files> {
   const vendorFiles: Files = {};
 
@@ -778,18 +845,33 @@ export async function mirrorPackagesIntoVendor({
     ? new Set(includePackages.map(normalizePackageName))
     : null;
 
-  const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+  const sitePackageDirs =
+    sitePackageDirsCache ?? (await getVenvSitePackagesDirs(venvPath));
+
+  // Collect all file entries first, then verify existence in parallel.
+  interface PendingEntry {
+    bundlePath: string;
+    srcFsPath: string;
+    recordSize: number | undefined;
+  }
+  const pending: PendingEntry[] = [];
+
   for (const dir of sitePackageDirs) {
-    if (!fs.existsSync(dir)) continue;
+    try {
+      await fs.promises.access(dir);
+    } catch {
+      continue;
+    }
 
     const resolvedDir = resolve(dir);
     const dirPrefix = resolvedDir + sep;
-    const distributions = await scanDistributions(dir);
+    const distributions =
+      distributionsCache?.get(dir) ?? (await scanDistributions(dir));
 
     for (const [name, dist] of distributions) {
       if (includeSet && !includeSet.has(name)) continue;
 
-      for (const { path: rawPath } of dist.files) {
+      for (const { path: rawPath, size: recordSize } of dist.files) {
         // Normalize forward slashes from RECORD (PEP 376) to platform separators.
         const filePath = rawPath.replaceAll('/', sep);
         // Skip files installed outside site-packages (e.g. ../../bin/fastapi)
@@ -803,13 +885,49 @@ export async function mirrorPackagesIntoVendor({
           continue;
         }
         const srcFsPath = join(dir, filePath);
-        // Skip files listed in RECORD but missing on disk (e.g. deleted by a custom install command)
-        if (!fs.existsSync(srcFsPath)) {
-          continue;
-        }
         const bundlePath = join(vendorDirName, filePath).replace(/\\/g, '/');
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
+        pending.push({
+          bundlePath,
+          srcFsPath,
+          // RECORD sizes are bigint; convert to number for FileFsRef.
+          recordSize:
+            recordSize !== undefined && recordSize !== null
+              ? Number(recordSize)
+              : undefined,
+        });
       }
+    }
+  }
+
+  // Verify file existence and resolve sizes in parallel.
+  // For files with a RECORD size, use fs.promises.access (cheaper than stat).
+  // For files without a RECORD size, use fs.promises.stat to get the size.
+  const results = await Promise.all(
+    pending.map(async ({ bundlePath, srcFsPath, recordSize }) => {
+      if (recordSize !== undefined) {
+        try {
+          await fs.promises.access(srcFsPath);
+          return { bundlePath, srcFsPath, size: recordSize };
+        } catch {
+          return null; // File missing on disk
+        }
+      } else {
+        try {
+          const stats = await fs.promises.stat(srcFsPath);
+          return { bundlePath, srcFsPath, size: stats.size };
+        } catch {
+          return null; // File missing on disk
+        }
+      }
+    })
+  );
+
+  for (const result of results) {
+    if (result) {
+      vendorFiles[result.bundlePath] = new FileFsRef({
+        fsPath: result.srcFsPath,
+        size: result.size,
+      });
     }
   }
 
@@ -822,29 +940,48 @@ export async function mirrorPackagesIntoVendor({
 
 /**
  * Calculate the total uncompressed size of files in a Files object.
+ *
+ * Uses `file.size` when already populated (e.g. from RECORD metadata)
+ * to avoid redundant stat calls.  Remaining files are stat'd in
+ * parallel for throughput.
  */
 export async function calculateBundleSize(files: Files): Promise<number> {
-  let totalSize = 0;
+  let knownSize = 0;
+  const statPromises: Promise<number>[] = [];
 
   for (const filePath of Object.keys(files)) {
     const file = files[filePath];
     if ('fsPath' in file && file.fsPath) {
-      try {
-        const stats = await fs.promises.stat(file.fsPath);
-        totalSize += stats.size;
-      } catch (err) {
-        console.warn(
-          `Warning: Failed to stat file ${file.fsPath}, size will not be included in bundle calculation: ${err}`
+      const fsRef = file as FileFsRef;
+      if (typeof fsRef.size === 'number') {
+        // Size already known (populated from RECORD or prior stat).
+        knownSize += fsRef.size;
+      } else {
+        statPromises.push(
+          fs.promises
+            .stat(fsRef.fsPath)
+            .then(stats => stats.size)
+            .catch(err => {
+              console.warn(
+                `Warning: Failed to stat file ${fsRef.fsPath}, size will not be included in bundle calculation: ${err}`
+              );
+              return 0;
+            })
         );
       }
     } else if ('data' in file) {
       // FileBlob with data
       const data = (file as { data: string | Buffer }).data;
-      totalSize +=
+      knownSize +=
         typeof data === 'string' ? Buffer.byteLength(data) : data.length;
     }
   }
 
+  const statSizes = await Promise.all(statPromises);
+  let totalSize = knownSize;
+  for (const s of statSizes) {
+    totalSize += s;
+  }
   return totalSize;
 }
 
@@ -884,26 +1021,38 @@ export function lambdaKnapsack(
 /**
  * Calculate the uncompressed size of each installed distribution.
  *
- * Returns a map of normalized package name to total size in bytes,
- * measured from the actual files on disk.
+ * Returns a map of normalized package name to total size in bytes.
+ * Uses RECORD sizes when available, falling back to stat for files
+ * without a recorded size.  All stat calls run in parallel.
  */
 async function calculatePerPackageSizes(
-  venvPath: string
+  venvPath: string,
+  sitePackageDirsCache?: string[],
+  distributionsCache?: Map<string, DistributionIndex>
 ): Promise<Map<string, number>> {
   const sizes = new Map<string, number>();
-  const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+  const sitePackageDirs =
+    sitePackageDirsCache ?? (await getVenvSitePackagesDirs(venvPath));
 
   for (const dir of sitePackageDirs) {
-    if (!fs.existsSync(dir)) continue;
+    try {
+      await fs.promises.access(dir);
+    } catch {
+      continue;
+    }
 
     const resolvedDir = resolve(dir);
     const dirPrefix = resolvedDir + sep;
-    const distributions = await scanDistributions(dir);
+    const distributions =
+      distributionsCache?.get(dir) ?? (await scanDistributions(dir));
 
     for (const [name, dist] of distributions) {
-      let totalSize = 0;
+      // Collect sizes: use RECORD size when available, otherwise
+      // queue a stat promise.
+      let knownSize = 0;
+      const statPromises: Promise<number>[] = [];
 
-      for (const { path: rawPath } of dist.files) {
+      for (const { path: rawPath, size: recordSize } of dist.files) {
         const filePath = rawPath.replaceAll('/', sep);
         // Skip files outside site-packages
         if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
@@ -916,12 +1065,23 @@ async function calculatePerPackageSizes(
         ) {
           continue;
         }
-        try {
-          const stats = await fs.promises.stat(join(dir, filePath));
-          totalSize += stats.size;
-        } catch {
-          // File listed in RECORD but missing on disk; skip it
+
+        if (recordSize !== undefined && recordSize !== null) {
+          knownSize += Number(recordSize);
+        } else {
+          statPromises.push(
+            fs.promises
+              .stat(join(dir, filePath))
+              .then(stats => stats.size)
+              .catch(() => 0)
+          );
         }
+      }
+
+      const statSizes = await Promise.all(statPromises);
+      let totalSize = knownSize;
+      for (const s of statSizes) {
+        totalSize += s;
       }
 
       sizes.set(name, totalSize);
