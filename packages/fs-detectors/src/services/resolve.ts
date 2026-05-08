@@ -9,6 +9,8 @@ import type {
 } from './types';
 import {
   getServiceQueueTopics,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
   JOB_TRIGGERS,
   JobTrigger,
 } from '@vercel/build-utils';
@@ -120,16 +122,7 @@ function getEffectiveJobTrigger(
   if (config.type !== 'job') {
     return undefined;
   }
-  if (config.trigger) {
-    return config.trigger;
-  }
-  if (config.schedule) {
-    return 'schedule';
-  }
-  if (config.topics) {
-    return 'queue';
-  }
-  return undefined;
+  return config.trigger;
 }
 
 function getEntrypointRequiredRuntime(
@@ -458,12 +451,15 @@ export function validateServiceConfig(
   }
   const serviceType = config.type || 'web';
   const effectiveTrigger = getEffectiveJobTrigger(config);
+  const effectiveService = {
+    type: serviceType,
+    trigger: effectiveTrigger,
+  };
+
   const isJobService = serviceType === 'job' || serviceType === 'cron';
-  const isScheduleJobService =
-    serviceType === 'cron' ||
-    (serviceType === 'job' && effectiveTrigger === 'schedule');
+  const isScheduleJobService = isScheduleTriggeredService(effectiveService);
   const isQueueJobService =
-    serviceType === 'job' && effectiveTrigger === 'queue';
+    serviceType === 'job' && isQueueTriggeredService(effectiveService);
   const isWorkflowService =
     serviceType === 'job' && effectiveTrigger === 'workflow';
   const isNonWebService = serviceType === 'worker' || isJobService;
