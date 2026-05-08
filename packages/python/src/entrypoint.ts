@@ -178,7 +178,7 @@ async function findPythonFilesRecursive(
     if (entry.isDirectory()) {
       results.push(...(await findPythonFilesRecursive(fullPath, rootDir)));
     } else if (entry.isFile() && entry.name.endsWith('.py')) {
-      results.push(relative(rootDir, fullPath));
+      results.push(relative(rootDir, fullPath).replace(/\\/g, '/'));
     }
   }
   return results;
