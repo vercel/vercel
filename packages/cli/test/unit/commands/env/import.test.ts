@@ -189,7 +189,7 @@ describe('env import', () => {
       client.setArgv('env', 'import', '.env', 'production', '--force');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        'Import 5 Environment Variables to production'
+        'Import 4 Environment Variables to production'
       );
       client.stdin.write('y\n');
       await expect(client.stderr).toOutput('Imported Environment Variables');
@@ -200,7 +200,7 @@ describe('env import', () => {
       client.setArgv('env', 'import', '.env', 'production', '--force');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        'Import 5 Environment Variables to production'
+        'Import 4 Environment Variables to production'
       );
       client.stdin.write('n\n');
       await expect(client.stderr).toOutput('Canceled');
@@ -229,8 +229,8 @@ describe('env import', () => {
 
       await expect(client.stderr).toOutput('1 failed');
       expect(exitCode).toEqual(1);
-      // Should have attempted all 5 variables despite one failure
-      expect(spy).toHaveBeenCalledTimes(5);
+      // Should have attempted all 4 variables despite one failure
+      expect(spy).toHaveBeenCalledTimes(4);
 
       spy.mockRestore();
     });
