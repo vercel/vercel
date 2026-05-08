@@ -497,7 +497,7 @@ const servicesServiceConfigSchema = {
     {
       type: 'object',
       additionalProperties: false,
-      required: [...servicesRequiredProperties, 'trigger'],
+      required: [...servicesRequiredProperties, 'trigger', 'schedule'],
       properties: {
         ...servicesCommonProperties,
         type: {
@@ -512,7 +512,7 @@ const servicesServiceConfigSchema = {
     {
       type: 'object',
       additionalProperties: false,
-      required: [...servicesRequiredProperties, 'trigger'],
+      required: [...servicesRequiredProperties, 'trigger', 'topics'],
       properties: {
         ...servicesCommonProperties,
         type: {
