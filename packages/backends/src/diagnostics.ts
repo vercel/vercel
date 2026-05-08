@@ -432,6 +432,7 @@ export async function generateProjectManifest({
   lockfilePath,
   lockfileVersion,
   framework,
+  serviceType,
 }: {
   workPath: string;
   nodeVersion: NodeVersion;
@@ -439,6 +440,7 @@ export async function generateProjectManifest({
   lockfilePath: string | undefined;
   lockfileVersion: number | undefined;
   framework?: string;
+  serviceType?: string;
 }): Promise<void> {
   try {
     const pkgJson = await readPackageJson(workPath);
@@ -513,6 +515,7 @@ export async function generateProjectManifest({
       version: MANIFEST_VERSION,
       runtime: 'node',
       ...(framework ? { framework } : {}),
+      ...(serviceType ? { serviceType } : {}),
       runtimeVersion,
       dependencies: [
         ...directDeps.sort((a, b) => a.name.localeCompare(b.name)),
