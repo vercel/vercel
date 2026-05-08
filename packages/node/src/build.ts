@@ -601,12 +601,15 @@ export const build = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    const supportsResponseStreaming = awsLambdaHandler
-      ? false
-      : (staticConfig?.supportsResponseStreaming ??
-            staticConfig?.experimentalResponseStreaming) === true
-        ? true
-        : undefined;
+    let supportsResponseStreaming: boolean | undefined;
+    if (awsLambdaHandler) {
+      supportsResponseStreaming = false;
+    } else if (
+      (staticConfig?.supportsResponseStreaming ??
+        staticConfig?.experimentalResponseStreaming) === true
+    ) {
+      supportsResponseStreaming = true;
+    }
 
     const enableBundling =
       process.env.VERCEL_API_FUNCTION_BUNDLING === '1' &&
