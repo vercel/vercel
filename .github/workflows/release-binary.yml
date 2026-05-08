@@ -160,7 +160,6 @@ jobs:
         shell: bash
         working-directory: packages/cli
         env:
-        env:
           APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
           VERCEL_CLI_APPLE_SIGNING_IDENTIFIER: com.vercel.vercel-cli
         run: |
@@ -181,7 +180,6 @@ jobs:
             echo "::error::Expected designated requirement to contain $expected_identifier"
             exit 1
           fi
-
 
       - name: Notarize binary
         if: ${{ runner.os == 'macOS' }}
