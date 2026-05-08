@@ -504,6 +504,12 @@ export default class Client extends EventEmitter implements Stdio {
 
         const error = await responseError(res);
 
+        if (error.code === 'mfa_enforced') {
+          error.message = "We're sorry! Please enable MFA to continue.";
+          error.link = 'https://vercel.com/account/security';
+          return bail(error);
+        }
+
         // we should force reauth only if error has a teamId
         if (isSAMLError(error) && error.teamId) {
           try {
