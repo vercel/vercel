@@ -113,11 +113,14 @@ function normalizeServiceEntrypoint(entrypoint: string): string {
   return normalized === '' ? '.' : normalized;
 }
 
-function getEffectiveJobTrigger(
+function getEffectiveServiceTrigger(
   config: ConfiguredServiceConfig
 ): JobTrigger | undefined {
   if (config.type === 'cron') {
     return 'schedule';
+  }
+  if (config.type === 'worker') {
+    return 'queue';
   }
   if (config.type !== 'job') {
     return undefined;
@@ -450,7 +453,7 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
-  const effectiveTrigger = getEffectiveJobTrigger(config);
+  const effectiveTrigger = getEffectiveServiceTrigger(config);
   const effectiveService = {
     type: serviceType,
     trigger: effectiveTrigger,
@@ -695,7 +698,7 @@ export async function resolveConfiguredService(
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
-  const trigger = getEffectiveJobTrigger(config);
+  const trigger = getEffectiveServiceTrigger(config);
   const rawEntrypoint = config.entrypoint;
 
   const moduleAttrParsed =
