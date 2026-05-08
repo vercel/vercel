@@ -4,7 +4,11 @@ import { curlCommand } from './command';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
-import { getDeploymentUrlAndToken, setupCurlLikeCommand } from './shared';
+import {
+  getDeploymentUrlAndToken,
+  getFullUrlAndToken,
+  setupCurlLikeCommand,
+} from './shared';
 
 export default async function curl(client: Client): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({
@@ -19,13 +23,16 @@ export default async function curl(client: Client): Promise<number> {
     return setup;
   }
 
-  const { path, deploymentFlag, protectionBypassFlag, toolFlags } = setup;
+  const { path, isFullUrl, deploymentFlag, protectionBypassFlag, toolFlags } =
+    setup;
 
-  const result = await getDeploymentUrlAndToken(client, 'curl', path, {
-    deploymentFlag,
-    protectionBypassFlag,
-    autoConfirm: setup.yes,
-  });
+  const result = isFullUrl
+    ? await getFullUrlAndToken(client, path, protectionBypassFlag)
+    : await getDeploymentUrlAndToken(client, 'curl', path, {
+        deploymentFlag,
+        protectionBypassFlag,
+        autoConfirm: setup.yes,
+      });
 
   if (typeof result === 'number') {
     return result;
