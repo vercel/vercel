@@ -216,6 +216,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      get-port:
+        specifier: 5.1.1
+        version: 5.1.1
       oxc-transform:
         specifier: 0.111.0
         version: 0.111.0
@@ -13631,7 +13634,6 @@ packages:
   /get-port@5.1.1:
     resolution: {integrity: sha512-g/Q1aTSDOxFpchXC4i8ZWvxA1lnPqx/JHqcpIw0/LX9T8x/GBbi6YnlN5nhaKIFkT8oFsscUKgDJYxfwfS6QsQ==}
     engines: {node: '>=8'}
-    dev: true
 
   /get-proto@1.0.1:
     resolution: {integrity: sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==}
