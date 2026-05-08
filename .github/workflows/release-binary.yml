@@ -2,8 +2,6 @@ name: Release Binary
 
 on:
   push:
-    branches:
-      - melkey/bun-working-branch
     tags:
       - 'vercel@*'
   workflow_dispatch:
