@@ -1,5 +1,4 @@
 import { isErrnoException } from '@vercel/error-utils';
-import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import { format } from 'date-fns';
 import type Client from '../../util/client';
@@ -7,7 +6,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope, { detectExplicitScope } from '../../util/get-scope';
+import getScope from '../../util/get-scope';
 import { formatProject } from '../../util/projects/format-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { getLinkedProject } from '../../util/projects/link';
@@ -23,7 +22,7 @@ import {
   type RequestLogMessage,
 } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { logsCommand } from './command';
@@ -39,7 +38,7 @@ interface LogsTarget {
   projectSlug: string;
   orgSlug: string;
   ownerId: string;
-  deployment?: Deployment;
+  deploymentId?: string;
 }
 
 interface ResolveLogsTargetOptions {
@@ -220,40 +219,6 @@ function parseSources(sources?: string | string[]): string[] {
   return sources;
 }
 
-function isNonLiveTerminalDeployment(deployment: Deployment): boolean {
-  return (
-    deployment.readyState === 'ERROR' || deployment.readyState === 'CANCELED'
-  );
-}
-
-// Both forms wrap the command in backticks. `plain: true` uses literal
-// backticks with no color (suitable for embedding in JSON output); the default
-// uses gray backticks and cyan text for terminal display.
-function getInspectCommand(
-  deployment: Deployment,
-  contextName?: string,
-  { plain = false }: { plain?: boolean } = {}
-): string {
-  const scopeOption = contextName ? ` --scope ${contextName}` : '';
-  const command = `inspect https://${deployment.url}${scopeOption}`;
-  return plain
-    ? `\`${getCommandNamePlain(command)}\``
-    : getCommandName(command);
-}
-
-function printNonLiveDeploymentError(
-  deployment: Deployment,
-  contextName?: string
-): void {
-  const inspectCommand = getInspectCommand(deployment, contextName);
-  output.error(
-    `Logs are unavailable because deployment ${chalk.bold(
-      deployment.id
-    )} never reached READY and ended in ${deployment.readyState}.\n` +
-      `Run ${inspectCommand} for deployment details.`
-  );
-}
-
 async function resolveLogsTarget(
   client: Client,
   { contextName, deploymentOption, projectOption }: ResolveLogsTargetOptions
@@ -328,7 +293,7 @@ async function resolveLogsTarget(
       projectSlug: project.name,
       orgSlug: contextName,
       ownerId: project.accountId,
-      deployment,
+      deploymentId: deployment.id,
     };
   }
 
@@ -503,29 +468,8 @@ export default async function logs(client: Client) {
     return logsTarget.exitCode;
   }
 
-  const { projectId, projectSlug, orgSlug, ownerId, deployment } = logsTarget;
-  let deploymentId = deployment?.id;
-
-  if (deployment && isNonLiveTerminalDeployment(deployment)) {
-    const inspectContextName = detectExplicitScope(client)
-      ? contextName
-      : undefined;
-    const inspectCommand = getInspectCommand(deployment, inspectContextName, {
-      plain: true,
-    });
-
-    if (jsonOption) {
-      client.stdout.write(
-        `${JSON.stringify({
-          type: 'deployment_error',
-          message: `Logs are unavailable because deployment ${deployment.id} never reached READY and ended in ${deployment.readyState}. Run ${inspectCommand} for deployment details.`,
-        })}\n`
-      );
-    } else {
-      printNonLiveDeploymentError(deployment, inspectContextName);
-    }
-    return 1;
-  }
+  const { projectId, projectSlug, orgSlug, ownerId } = logsTarget;
+  let { deploymentId } = logsTarget;
 
   // Determine branch filter:
   // - If --branch is explicitly set (string), use it
