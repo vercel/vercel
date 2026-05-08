@@ -100,6 +100,7 @@ import {
   type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
 import readJSONFile from '../../util/read-json-file';
+import { getStaticServiceSchedules } from '../../util/service-schedules';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
 import ua from '../../util/ua';
@@ -1235,17 +1236,8 @@ async function doBuild(
         isScheduleTriggeredService(service) &&
         !('crons' in buildResult && buildResult.crons?.length)
       ) {
-        const staticSchedules =
-          typeof service.schedule === 'string'
-            ? [service.schedule]
-            : Array.isArray(service.schedule)
-              ? service.schedule
-              : [];
-        if (
-          typeof service.runtime === 'string' &&
-          staticSchedules.length > 0 &&
-          staticSchedules.every(schedule => schedule !== '<dynamic>')
-        ) {
+        const staticSchedules = getStaticServiceSchedules(service.schedule);
+        if (typeof service.runtime === 'string' && staticSchedules.length > 0) {
           const cronEntrypoint =
             service.entrypoint || service.builder.src || 'index';
           for (const schedule of staticSchedules) {
