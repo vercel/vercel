@@ -286,13 +286,28 @@ async function hasProjectLink(
   return false;
 }
 
+export async function getRawProjectLink(
+  client: Client,
+  path: string,
+  projectName?: string
+): Promise<ProjectLink | null> {
+  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
+
+  if (VERCEL_ORG_ID && VERCEL_PROJECT_ID) {
+    return { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID };
+  }
+
+  path = await resolveProjectCwd(path);
+
+  return getProjectLink(client, path, projectName);
+}
+
 export async function getLinkedProject(
   client: Client,
   path = client.cwd,
   projectName?: string
 ): Promise<ProjectLinkResult> {
-  path = await resolveProjectCwd(path);
-
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
@@ -308,11 +323,7 @@ export async function getLinkedProject(
     return { status: 'error', exitCode: 1 };
   }
 
-  const link =
-    VERCEL_ORG_ID && VERCEL_PROJECT_ID
-      ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path, projectName);
-
+  const link = await getRawProjectLink(client, path, projectName);
   if (!link) {
     return { status: 'not_linked', org: null, project: null };
   }
