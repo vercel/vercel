@@ -198,15 +198,31 @@ export const startDevServer: StartDevServer = async opts => {
   return { port, pid, shutdown, crons: cronEntries };
 };
 
+const PENDING_INSTALLS = new Map<string, Promise<void>>();
+
 /**
- * Run `npm install` (or the equivalent for the detected package manager)
- * if the workspace has a package.json. No-op when the cron service is a
- * tiny project with no deps (only vercel.json + an entrypoint).
+ * Install workspace deps for a service before we spawn it, using the
+ * detected package manager.
+ *
+ * Two services that share the same workPath will race to install deps.
+ * The pending installs mechanism deduplicates the install, preventing
+ * potential races. The map clears on settle so subsequent calls re-run
+ * install rather than returning a stale "already installed" result.
  */
-async function maybeInstallDeps(workPath: string): Promise<void> {
+function maybeInstallDeps(workPath: string): Promise<void> {
   if (!existsSync(join(workPath, 'package.json'))) {
-    return;
+    return Promise.resolve();
   }
+  let pending = PENDING_INSTALLS.get(workPath);
+  if (!pending) {
+    pending = installDeps(workPath);
+    PENDING_INSTALLS.set(workPath, pending);
+    pending.finally(() => PENDING_INSTALLS.delete(workPath));
+  }
+  return pending;
+}
+
+async function installDeps(workPath: string): Promise<void> {
   const { cliType, lockfileVersion, packageJsonPackageManager } =
     await scanParentDirs(workPath, true);
   await runNpmInstall(workPath, [], {
