@@ -151,7 +151,7 @@ export async function detectBuilders(
   if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
-      configuredServices: services,
+      configuredServices: configuredServices,
       projectFramework: framework,
     });
   }
