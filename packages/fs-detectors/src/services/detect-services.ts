@@ -20,7 +20,6 @@ import {
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
-  isPublicServicesEnabled,
   readVercelConfig,
 } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
@@ -118,23 +117,6 @@ export async function detectServices(
       source: 'configured',
       routes: emptyRoutes(),
       errors: [configError],
-      warnings: [],
-    });
-  }
-
-  const hasPublicServicesConfig = vercelConfig?.services !== undefined;
-  if (hasPublicServicesConfig && !isPublicServicesEnabled()) {
-    return withResolvedResult({
-      services: [],
-      source: 'configured',
-      routes: emptyRoutes(),
-      errors: [
-        {
-          code: 'INVALID_VERCEL_CONFIG',
-          message:
-            'Invalid vercel.json - should NOT have additional property `services`. Please remove it.',
-        },
-      ],
       warnings: [],
     });
   }
