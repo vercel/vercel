@@ -108,8 +108,12 @@ export class PythonDependencyExternalizer {
   private allVendorFiles: Files = {};
   private totalBundleSize: number = 0;
   private analyzed = false;
-  private sitePackageDirsCache: string[] | null = null;
-  private distributionsCache: Map<string, DistributionIndex> | null = null;
+
+  // Resolved once at the start of analyze().  The venv is immutable
+  // after construction (quirks run before the bundle span) so these
+  // do not change between analyze() and generateBundle().
+  private sitePackageDirs: string[] | null = null;
+  private distributions: Map<string, DistributionIndex> | null = null;
 
   constructor(options: PythonDependencyExternalizerOptions) {
     this.venvPath = options.venvPath;
@@ -123,38 +127,6 @@ export class PythonDependencyExternalizer {
     this.pythonPath = options.pythonPath;
     this.hasCustomCommand = options.hasCustomCommand;
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
-  }
-
-  /**
-   * Resolve and cache site-packages directories and their distribution
-   * indices.
-   */
-  private async resolveDistributions(): Promise<{
-    sitePackageDirs: string[];
-    distributions: Map<string, DistributionIndex>;
-  }> {
-    if (this.sitePackageDirsCache && this.distributionsCache) {
-      return {
-        sitePackageDirs: this.sitePackageDirsCache,
-        distributions: this.distributionsCache,
-      };
-    }
-
-    const sitePackageDirs = await getVenvSitePackagesDirs(this.venvPath);
-    const distributions = new Map<string, DistributionIndex>();
-
-    for (const dir of sitePackageDirs) {
-      try {
-        await fs.promises.access(dir);
-      } catch {
-        continue;
-      }
-      distributions.set(dir, await scanDistributions(dir));
-    }
-
-    this.sitePackageDirsCache = sitePackageDirs;
-    this.distributionsCache = distributions;
-    return { sitePackageDirs, distributions };
   }
 
   shouldEnableRuntimeInstall(): boolean {
@@ -181,6 +153,20 @@ export class PythonDependencyExternalizer {
    * Must be called before generateBundle().
    */
   async analyze(files: Files): Promise<DependencyAnalysis> {
+    // Resolve site-packages dirs and scan distributions once.  Subsequent
+    // calls to mirrorPackagesIntoVendor() and calculatePerPackageSizes()
+    // read from these fields directly.
+    this.sitePackageDirs = await getVenvSitePackagesDirs(this.venvPath);
+    this.distributions = new Map<string, DistributionIndex>();
+    for (const dir of this.sitePackageDirs) {
+      try {
+        await fs.promises.access(dir);
+      } catch {
+        continue;
+      }
+      this.distributions.set(dir, await scanDistributions(dir));
+    }
+
     this.allVendorFiles = await this.mirrorPackagesIntoVendor({
       vendorDirName: this.vendorDir,
     });
@@ -706,9 +692,8 @@ export class PythonDependencyExternalizer {
    * name is in the list are included.  When omitted, every distribution is
    * included.
    *
-   * Uses cached site-packages dirs and distribution indices from
-   * `resolveDistributions()` to avoid redundant Python subprocess
-   * spawns and WASM scans.
+   * Reads `this.sitePackageDirs` and `this.distributions` which are
+   * resolved once at the start of `analyze()`.
    */
   async mirrorPackagesIntoVendor({
     vendorDirName,
@@ -727,9 +712,6 @@ export class PythonDependencyExternalizer {
       ? new Set(includePackages.map(normalizePackageName))
       : null;
 
-    const { sitePackageDirs, distributions } =
-      await this.resolveDistributions();
-
     // Collect all file entries first, then verify existence in parallel.
     interface PendingEntry {
       bundlePath: string;
@@ -738,8 +720,8 @@ export class PythonDependencyExternalizer {
     }
     const pending: PendingEntry[] = [];
 
-    for (const dir of sitePackageDirs) {
-      const dirDistributions = distributions.get(dir);
+    for (const dir of this.sitePackageDirs!) {
+      const dirDistributions = this.distributions!.get(dir);
       if (!dirDistributions) continue;
 
       const resolvedDir = resolve(dir);
@@ -824,11 +806,9 @@ export class PythonDependencyExternalizer {
    */
   async calculatePerPackageSizes(): Promise<Map<string, number>> {
     const sizes = new Map<string, number>();
-    const { sitePackageDirs, distributions } =
-      await this.resolveDistributions();
 
-    for (const dir of sitePackageDirs) {
-      const dirDistributions = distributions.get(dir);
+    for (const dir of this.sitePackageDirs!) {
+      const dirDistributions = this.distributions!.get(dir);
       if (!dirDistributions) continue;
 
       const resolvedDir = resolve(dir);
