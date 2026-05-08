@@ -790,7 +790,7 @@ describe('telemetry submits data', () => {
 
 test('deploys with only vercel.json and a static file', async () => {
   const directory = await setupE2EFixture(
-    'deploy-with-only-content-vercel-json'
+    'deploy-with-only-readme-vercel-json'
   );
 
   const { exitCode, stdout, stderr } = await execCli(
