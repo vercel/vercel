@@ -2,7 +2,6 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { createServer as createNetServer, type AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -15,28 +14,11 @@ import {
   scanParentDirs,
   type StartDevServer,
 } from '@vercel/build-utils';
+import getPort from 'get-port';
 import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
 import { applyCronDispatch } from './cron-dispatch.js';
 import { buildCronRouteTable, getServiceCrons } from './crons.js';
 import { resolveEntrypointAndFormat } from './rolldown/resolve-format.js';
-
-async function getFreePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const srv = createNetServer();
-    srv.unref();
-    srv.on('error', reject);
-    srv.listen(0, () => {
-      const addr = srv.address() as AddressInfo | null;
-      if (!addr || typeof addr === 'string') {
-        srv.close();
-        reject(new Error('could not allocate a free port'));
-        return;
-      }
-      const port = addr.port;
-      srv.close(() => resolve(port));
-    });
-  });
-}
 
 // Path to the host script (built by tsdown to dist/dev/cron-host.mjs).
 // Sibling of dist/index.mjs, which is where this module is bundled.
@@ -125,7 +107,7 @@ export const startDevServer: StartDevServer = async opts => {
   const shimAbs = join(tmpDir, shimFileName);
   await writeFile(shimAbs, shimSource, 'utf-8');
 
-  const port = typeof meta.port === 'number' ? meta.port : await getFreePort();
+  const port = typeof meta.port === 'number' ? meta.port : await getPort();
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   env.__VC_DISPATCH_SHIM_ABS = shimAbs;
   env.__VC_PORT = String(port);
