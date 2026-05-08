@@ -1707,7 +1707,7 @@ createServer((_req, res) => {
       ...defaultProject,
       id: 'QmbKpqpiUqbcke',
       name: 'monorepo-dashboard',
-      rootDirectory: null,
+      rootDirectory: 'dashboard',
       outputDirectory: 'dist',
       framework: null,
     });
@@ -1745,6 +1745,35 @@ createServer((_req, res) => {
     expect(
       (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
     ).toEqual('marketing');
+  });
+
+  it('should build with local repo.json directory when project rootDirectory is empty', async () => {
+    const cwd = fixture('../../monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'monorepo-dashboard',
+      rootDirectory: null,
+      outputDirectory: 'dist',
+      framework: null,
+    });
+
+    const output = join(cwd, 'dashboard/.vercel/output');
+    client.cwd = join(cwd, 'dashboard');
+    client.setArgv('build', '--yes');
+
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+    delete process.env.__VERCEL_BUILD_RUNNING;
+
+    const files = await fs.readdir(join(output, 'static'));
+    expect(files.sort()).toEqual(['index.txt']);
+    expect(
+      (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
+    ).toEqual('dashboard');
   });
 
   it('should write to flags.json', async () => {
