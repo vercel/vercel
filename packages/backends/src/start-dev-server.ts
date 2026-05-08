@@ -1,10 +1,14 @@
-import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
+import { rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+// Path to the host script (built by tsdown to dist/dev/cron-host.mjs).
+// Sibling of dist/index.mjs, which is where this module is bundled.
+const CRON_HOST_PATH = fileURLToPath(
+  new URL('./dev/cron-host.mjs', import.meta.url)
+);
+
 import {
   debug,
   FileBlob,
@@ -14,25 +18,11 @@ import {
   scanParentDirs,
   type StartDevServer,
 } from '@vercel/build-utils';
-import getPort from 'get-port';
 import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
 import { applyCronDispatch } from './cron-dispatch.js';
 import { buildCronRouteTable, getServiceCrons } from './crons.js';
+import { spawnCronHost } from './dev/spawn-cron-host.js';
 import { resolveEntrypointAndFormat } from './rolldown/resolve-format.js';
-
-// Path to the host script (built by tsdown to dist/dev/cron-host.mjs).
-// Sibling of dist/index.mjs, which is where this module is bundled.
-const CRON_HOST_PATH = fileURLToPath(
-  new URL('./dev/cron-host.mjs', import.meta.url)
-);
-
-// `tsx` is a runtime dependency of @vercel/backends; resolved here so the
-// spawned Node process can transpile .ts/.mts/.cts user entrypoints
-// transparently via `--import <tsx>`.
-const require_ = createRequire(import.meta.url);
-function resolveTsxBin(): string {
-  return require_.resolve('tsx');
-}
 
 /**
  * Dev-mode entrypoint for `@vercel/backends`. For schedule-triggered
@@ -100,48 +90,28 @@ export const startDevServer: StartDevServer = async opts => {
       message: `could not generate cron dispatcher shim for service "${service.name}"`,
     });
   }
-  const shimSource = shimEntry.data.toString();
-  const shimFileName = basename(dispatchResult.handler);
-
-  const tmpDir = await mkdtemp(join(tmpdir(), `vc-be-cron-${service.name}-`));
-  const shimAbs = join(tmpDir, shimFileName);
-  await writeFile(shimAbs, shimSource, 'utf-8');
-
-  const port = typeof meta.port === 'number' ? meta.port : await getPort();
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  env.__VC_DISPATCH_SHIM_ABS = shimAbs;
-  env.__VC_PORT = String(port);
-
-  let tsxBin: string;
+  let spawned;
   try {
-    tsxBin = resolveTsxBin();
-  } catch (err) {
-    await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
-    throw new NowBuildError({
-      code: 'BACKENDS_TSX_NOT_RESOLVABLE',
-      message: `could not resolve "tsx" runtime dependency: ${err instanceof Error ? err.message : String(err)}`,
+    spawned = await spawnCronHost({
+      hostPath: CRON_HOST_PATH,
+      shimSource: shimEntry.data.toString(),
+      shimFileName: basename(dispatchResult.handler),
+      cwd: dirname(userModuleAbs),
+      env,
+      port: typeof meta.port === 'number' ? meta.port : undefined,
     });
-  }
-  const args = ['--import', tsxBin, CRON_HOST_PATH];
-
-  debug(`Starting backends cron host: node ${args.join(' ')} [PORT=${port}]`);
-  debug(`  shim:       ${shimAbs}`);
-  debug(`  entrypoint: ${userModuleAbs}`);
-
-  const child: ChildProcess = spawn(process.execPath, args, {
-    cwd: dirname(userModuleAbs),
-    env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    detached: true,
-  });
-
-  if (!child.pid) {
-    await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
+  } catch (err) {
     throw new NowBuildError({
       code: 'BACKENDS_CRON_HOST_SPAWN_FAILED',
-      message: `could not spawn cron host for service "${service.name}"`,
+      message: `could not spawn cron host for service "${service.name}": ${err instanceof Error ? err.message : String(err)}`,
     });
   }
+  const { child, pid, port, shimDir } = spawned;
+
+  debug(`Started backends cron host [PORT=${port}, PID=${pid}]`);
+  debug(`  shim:       ${join(shimDir, basename(dispatchResult.handler))}`);
+  debug(`  entrypoint: ${userModuleAbs}`);
 
   child.stdout?.on('data', (chunk: Buffer) => {
     if (onStdout) onStdout(chunk);
@@ -169,12 +139,11 @@ export const startDevServer: StartDevServer = async opts => {
     /* surfaced via port timeout / shutdown path */
   });
 
-  const pid = child.pid;
   const shutdown = async () => {
     if (!child.killed) {
       child.kill('SIGTERM');
     }
-    await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
+    await rm(shimDir, { recursive: true, force: true }).catch(() => undefined);
   };
 
   return { port, pid, shutdown, crons: cronEntries };
