@@ -401,7 +401,7 @@ function makeDiagnosticError(
     message = `pyproject.toml [project.scripts] defines app = "${diagnostics.pyprojectAppScript}" but ${checked} was not found.`;
     if (suggestion) message += `\n\n${suggestion}`;
   } else if (suggestion) {
-    message = `No ${framework} entrypoint found in default locations, ${suggestion}`;
+    message = `No ${displayName} entrypoint found in default locations, ${suggestion}`;
   } else {
     const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     message = `No ${displayName} entrypoint found. Set "tool.vercel.entrypoint" in pyproject.toml or define an entrypoint in one of: ${searchedList}.`;
