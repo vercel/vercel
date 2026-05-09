@@ -359,7 +359,7 @@ export async function stageBundleOnDisk(opts: {
     if (data === undefined) continue;
     const absPath = join(dir, relPath);
     await mkdir(dirname(absPath), { recursive: true });
-    await writeFile(absPath, data);
+    await writeFile(absPath, data as string | NodeJS.ArrayBufferView);
   }
   return dir;
 }
