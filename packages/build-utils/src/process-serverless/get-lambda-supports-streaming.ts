@@ -116,6 +116,7 @@ function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
       buffers.push(buffer);
     });
     stream.on('end', () => {
+      // @ts-expect-error we cannot have a SharedArrayBuffer here
       resolve(Buffer.concat(buffers));
     });
   });
