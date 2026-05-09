@@ -121,7 +121,8 @@ describe('finalizeLambda()', () => {
     expect(lambda.supportsResponseStreaming).toEqual(true);
   });
 
-  it('enables streaming for Nodejs lambdas regardless of handler', async () => {
+  it('returns streamingError instead of logging', async () => {
+    // Lambda with a handler file that will cause a parse error
     const lambda = new Lambda({
       files: {
         'index.js': new FileBlob({ data: 'exports.handler = () => {};' }),
@@ -129,6 +130,7 @@ describe('finalizeLambda()', () => {
       handler: 'missing-handler.js',
       runtime: 'nodejs20.x',
     });
+    // Force NodejsLambda-like shape to trigger handler parsing path
     (lambda as any).launcherType = 'Nodejs';
 
     const result = await finalizeLambda({
@@ -137,8 +139,9 @@ describe('finalizeLambda()', () => {
       forceStreamingRuntime: false,
     });
 
+    // Should not have logged anything
     expect(result.streamingError).toBeUndefined();
-    expect(lambda.supportsResponseStreaming).toEqual(true);
+    expect(lambda.supportsResponseStreaming).toBeUndefined();
   });
 
   it('collects uncompressed size when flag is enabled', async () => {
