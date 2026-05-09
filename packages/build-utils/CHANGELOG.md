@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.22.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
 ## 13.21.0
 
 ### Minor Changes
