@@ -470,6 +470,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('connex link subcommand', () => {
+      it('connex link subcommand help column width 120', () => {
+        expect(
+          help(connex.linkSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration help output snapshots', () => {

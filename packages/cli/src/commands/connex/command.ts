@@ -253,6 +253,61 @@ export const openSubcommand = {
   ],
 } as const;
 
+export const linkSubcommand = {
+  name: 'link',
+  aliases: [],
+  description:
+    'Link a Vercel project to a Connex client for one or more environments',
+  arguments: [
+    {
+      name: 'client',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: [String],
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
+    },
+    {
+      name: 'project',
+      shorthand: 'p',
+      type: String,
+      argument: 'NAME_OR_ID',
+      deprecated: false,
+      description: 'Project name or ID (default: linked project)',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Link the current project to a client for all environments',
+      value: `${packageName} connex link scl_abc123`,
+    },
+    {
+      name: 'Restrict to specific environments',
+      value: `${packageName} connex link scl_abc123 -e production -e preview`,
+    },
+    {
+      name: 'Link a different project by name',
+      value: `${packageName} connex link slack/my-bot --project my-app`,
+    },
+    {
+      name: 'Non-interactive output as JSON',
+      value: `${packageName} connex link scl_abc123 --yes --format=json`,
+    },
+  ],
+} as const;
+
 export const connexCommand = {
   name: 'connex',
   aliases: [],
@@ -263,6 +318,7 @@ export const connexCommand = {
     createSubcommand,
     listSubcommand,
     tokenSubcommand,
+    linkSubcommand,
     removeSubcommand,
     openSubcommand,
   ],
@@ -278,6 +334,10 @@ export const connexCommand = {
     {
       name: 'Get a token',
       value: `${packageName} connex token scl_abc123`,
+    },
+    {
+      name: 'Link the current project to a client',
+      value: `${packageName} connex link scl_abc123`,
     },
     {
       name: 'Open a client in the dashboard',

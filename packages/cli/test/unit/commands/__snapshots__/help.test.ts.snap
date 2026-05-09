@@ -815,6 +815,8 @@ exports[`help command > connex help output snapshots > connex help column width 
                   project is linked or when --all-projects is set)      
   token   id      Get a token for a Connex client (accepts a client ID  
                   like scl_abc or a UID like slack/my-bot)              
+  link    client  Link a Vercel project to a Connex client for one or   
+                  more environments                                     
   remove  client  Delete a Connex client                                
   open    id      Open a Connex client in the Vercel dashboard          
 
@@ -849,9 +851,63 @@ exports[`help command > connex help output snapshots > connex help column width 
 
     $ vercel connex token scl_abc123
 
+  - Link the current project to a client
+
+    $ vercel connex link scl_abc123
+
   - Open a client in the dashboard
 
     $ vercel connex open scl_abc123
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex link subcommand > connex link subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex link client [options]
+
+  Link a Vercel project to a Connex client for one or more environments                                                 
+
+  Options:
+
+  -e,  --environment <ENV>     Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
+                               -e production,preview). Defaults to all environments.                                    
+  -F,  --format <FORMAT>       Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>  Project name or ID (default: linked project)                                             
+  -y,  --yes                   Skip the confirmation prompt                                                             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Link the current project to a client for all environments
+
+    $ vercel connex link scl_abc123
+
+  - Restrict to specific environments
+
+    $ vercel connex link scl_abc123 -e production -e preview
+
+  - Link a different project by name
+
+    $ vercel connex link slack/my-bot --project my-app
+
+  - Non-interactive output as JSON
+
+    $ vercel connex link scl_abc123 --yes --format=json
 
 "
 `;

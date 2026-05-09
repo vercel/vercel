@@ -11,6 +11,7 @@ import {
   createSubcommand,
   listSubcommand,
   tokenSubcommand,
+  linkSubcommand,
   removeSubcommand,
   openSubcommand,
   connexCommand,
@@ -18,6 +19,7 @@ import {
 import { create } from './create';
 import { list } from './list';
 import { token } from './token';
+import { link } from './link';
 import { remove } from './remove';
 import { openClient } from './open';
 import {
@@ -31,6 +33,7 @@ const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
+  link: getCommandAliases(linkSubcommand),
   remove: getCommandAliases(removeSubcommand),
   open: getCommandAliases(openSubcommand),
 };
@@ -122,6 +125,25 @@ export default async function connex(client: Client): Promise<number> {
         const tokenFlagsSpec = getFlagsSpecification(tokenSubcommand.options);
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
         return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
+      }
+      case 'link': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(linkSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandLink(subcommandOriginal);
+
+        const linkFlagsSpec = getFlagsSpecification(linkSubcommand.options);
+        const linkParsedArgs = parseArguments(subArgs, linkFlagsSpec);
+        telemetry.trackCliArgumentClient(linkParsedArgs.args[0]);
+        telemetry.trackCliOptionEnvironment(
+          linkParsedArgs.flags['--environment']
+        );
+        telemetry.trackCliOptionProject(linkParsedArgs.flags['--project']);
+        telemetry.trackCliFlagYes(linkParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(linkParsedArgs.flags['--format']);
+        return await link(client, linkParsedArgs.args, linkParsedArgs.flags);
       }
       case 'remove': {
         if (needHelp) {
