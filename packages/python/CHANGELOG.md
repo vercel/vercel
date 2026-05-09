@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.39.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
 ## 6.38.0
 
 ### Minor Changes
