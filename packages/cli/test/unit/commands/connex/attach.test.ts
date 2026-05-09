@@ -68,7 +68,7 @@ describe('connex attach', () => {
   });
 
   it('errors when no project is linked and --project is not provided', async () => {
-    // Intentionally no linkProjectInCwd — cwd has no .vercel/project.json.
+    // Intentionally no setupLinkedProject — cwd has no .vercel/project.json.
     client.cwd = setupTmpDir();
 
     client.setArgv('connex', 'attach', 'scl_abc123', '--yes');
@@ -96,7 +96,7 @@ describe('connex attach', () => {
     );
   });
 
-  it('links with --yes, defaults to all environments, and POSTs to the resolved scl_ id', async () => {
+  it('attaches with --yes, defaults to all environments, and POSTs to the resolved scl_ id', async () => {
     await setupLinkedProject(team);
     let postBody: { environments?: string[] } | undefined;
     let postClientId = '';
