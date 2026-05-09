@@ -1372,13 +1372,7 @@ describe.skipIf(flakey)('build', () => {
         },
       },
       files: {
-        'index.js': `const { createServer } = require('node:http');
-
-createServer((_req, res) => {
-  res.statusCode = 200;
-  res.end('ok');
-}).listen(3000);
-`,
+        'index.js': `module.exports.handler = function () {};\n`,
       },
     });
     const output = join(cwd, '.vercel', 'output');
