@@ -1,5 +1,11 @@
 # @vercel/cli-config
 
+## 0.1.1
+
+### Patch Changes
+
+- 82edff0: Bump only
+
 ## 0.1.0
 
 ### Minor Changes

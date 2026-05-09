@@ -1,5 +1,12 @@
 # vercel
 
+## 53.3.1
+
+### Patch Changes
+
+- Updated dependencies [82edff0]
+  - @vercel/cli-config@0.1.1
+
 ## 53.3.0
 
 ### Minor Changes

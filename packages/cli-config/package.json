@@ -1,6 +1,6 @@
 {
   "name": "@vercel/cli-config",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shared core utilities for Vercel global configuration",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/projects/project-configuration/global-configuration",
