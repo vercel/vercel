@@ -470,10 +470,10 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
-    describe('connex link subcommand', () => {
-      it('connex link subcommand help column width 120', () => {
+    describe('connex attach subcommand', () => {
+      it('connex attach subcommand help column width 120', () => {
         expect(
-          help(connex.linkSubcommand, {
+          help(connex.attachSubcommand, {
             columns: 120,
             parent: connex.connexCommand,
           })

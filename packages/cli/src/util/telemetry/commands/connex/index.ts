@@ -41,9 +41,9 @@ export class ConnexTelemetryClient
     });
   }
 
-  trackCliSubcommandLink(actual: string) {
+  trackCliSubcommandAttach(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'link',
+      subcommand: 'attach',
       value: actual,
     });
   }

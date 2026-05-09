@@ -11,7 +11,7 @@ import {
   createSubcommand,
   listSubcommand,
   tokenSubcommand,
-  linkSubcommand,
+  attachSubcommand,
   removeSubcommand,
   openSubcommand,
   connexCommand,
@@ -19,7 +19,7 @@ import {
 import { create } from './create';
 import { list } from './list';
 import { token } from './token';
-import { link } from './link';
+import { attach } from './attach';
 import { remove } from './remove';
 import { openClient } from './open';
 import {
@@ -33,7 +33,7 @@ const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
-  link: getCommandAliases(linkSubcommand),
+  attach: getCommandAliases(attachSubcommand),
   remove: getCommandAliases(removeSubcommand),
   open: getCommandAliases(openSubcommand),
 };
@@ -126,24 +126,28 @@ export default async function connex(client: Client): Promise<number> {
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
         return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
       }
-      case 'link': {
+      case 'attach': {
         if (needHelp) {
           telemetry.trackCliFlagHelp('connex', subcommandOriginal);
-          printHelp(linkSubcommand);
+          printHelp(attachSubcommand);
           return 0;
         }
-        telemetry.trackCliSubcommandLink(subcommandOriginal);
+        telemetry.trackCliSubcommandAttach(subcommandOriginal);
 
-        const linkFlagsSpec = getFlagsSpecification(linkSubcommand.options);
-        const linkParsedArgs = parseArguments(subArgs, linkFlagsSpec);
-        telemetry.trackCliArgumentClient(linkParsedArgs.args[0]);
+        const attachFlagsSpec = getFlagsSpecification(attachSubcommand.options);
+        const attachParsedArgs = parseArguments(subArgs, attachFlagsSpec);
+        telemetry.trackCliArgumentClient(attachParsedArgs.args[0]);
         telemetry.trackCliOptionEnvironment(
-          linkParsedArgs.flags['--environment']
+          attachParsedArgs.flags['--environment']
         );
-        telemetry.trackCliOptionProject(linkParsedArgs.flags['--project']);
-        telemetry.trackCliFlagYes(linkParsedArgs.flags['--yes']);
-        telemetry.trackCliOptionFormat(linkParsedArgs.flags['--format']);
-        return await link(client, linkParsedArgs.args, linkParsedArgs.flags);
+        telemetry.trackCliOptionProject(attachParsedArgs.flags['--project']);
+        telemetry.trackCliFlagYes(attachParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(attachParsedArgs.flags['--format']);
+        return await attach(
+          client,
+          attachParsedArgs.args,
+          attachParsedArgs.flags
+        );
       }
       case 'remove': {
         if (needHelp) {

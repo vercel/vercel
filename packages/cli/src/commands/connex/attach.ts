@@ -25,7 +25,15 @@ interface ConnexClientProject {
   environments: string[];
 }
 
-export async function link(
+function envSetsEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const aSet = new Set(a);
+  return b.every(env => aSet.has(env));
+}
+
+export async function attach(
   client: Client,
   args: string[],
   flags: {
@@ -52,7 +60,7 @@ export async function link(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing client ID or UID. Usage: vercel connex link <client>'
+      'Missing client ID or UID. Usage: vercel connex attach <client>'
     );
     return 1;
   }
@@ -144,10 +152,10 @@ export async function link(
 
   const displayName = target.uid || target.name || target.id;
 
-  // Pre-fetch existing link for the diff prompt.
-  let existingLink: ConnexClientProject | undefined;
+  // Pre-fetch existing attachment for the diff prompt and the no-op check.
+  let existingAttachment: ConnexClientProject | undefined;
   try {
-    existingLink = await client.fetch<ConnexClientProject>(
+    existingAttachment = await client.fetch<ConnexClientProject>(
       `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`
     );
   } catch (err: unknown) {
@@ -156,6 +164,35 @@ export async function link(
       printError(err);
       return 1;
     }
+  }
+
+  // No-op: already attached with the same environments. Skip the prompt and the POST.
+  if (
+    existingAttachment &&
+    envSetsEqual(existingAttachment.environments ?? [], environments)
+  ) {
+    if (asJson) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            clientId: target.id,
+            uid: target.uid,
+            projectId,
+            environments,
+            unchanged: true,
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 0;
+    }
+    output.log(
+      `Connex client ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+        projectName
+      )} for environments: ${environments.join(', ')}. Nothing to do.`
+    );
+    return 0;
   }
 
   // Confirmation.
@@ -167,11 +204,11 @@ export async function link(
   }
 
   if (!skipConfirmation) {
-    if (existingLink) {
-      const current = (existingLink.environments ?? []).join(', ') || '—';
+    if (existingAttachment) {
+      const current = (existingAttachment.environments ?? []).join(', ') || '—';
       const next = environments.join(', ');
       output.log(
-        `Connex client ${chalk.bold(displayName)} is already linked to ${chalk.bold(
+        `Connex client ${chalk.bold(displayName)} is already attached to ${chalk.bold(
           projectName
         )}.`
       );
@@ -179,7 +216,7 @@ export async function link(
       output.log(`  Will set: ${next}`);
     } else {
       output.log(
-        `Connex client ${chalk.bold(displayName)} will be linked to ${chalk.bold(
+        `Connex client ${chalk.bold(displayName)} will be attached to ${chalk.bold(
           projectName
         )} for environments: ${environments.join(', ')}.`
       );
@@ -192,8 +229,8 @@ export async function link(
     }
   }
 
-  // Upsert the link.
-  output.spinner('Linking project…');
+  // Upsert the attachment.
+  output.spinner('Attaching project…');
   try {
     await client.fetch<unknown>(
       `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
@@ -207,7 +244,7 @@ export async function link(
     const status = (err as { status?: number }).status;
     if (status === 403) {
       output.error(
-        `You don't have permission to link projects on this team. Owner or Member role required.`
+        `You don't have permission to attach projects on this team. Owner or Member role required.`
       );
       return 1;
     }
@@ -239,7 +276,7 @@ export async function link(
   }
 
   output.success(
-    `Linked Connex client ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
+    `Attached Connex client ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
   );
   return 0;
 }

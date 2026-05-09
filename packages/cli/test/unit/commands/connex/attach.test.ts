@@ -11,7 +11,7 @@ import connex from '../../../../src/commands/connex';
 const PROJECT_ID = 'prj_linked_test';
 const PROJECT_NAME = 'my-app';
 
-async function linkProjectInCwd(team: { id: string }): Promise<void> {
+async function setupLinkedProject(team: { id: string }): Promise<void> {
   const cwd = setupTmpDir();
   await mkdirp(join(cwd, '.vercel'));
   await writeJSON(join(cwd, '.vercel', 'project.json'), {
@@ -22,7 +22,7 @@ async function linkProjectInCwd(team: { id: string }): Promise<void> {
   client.cwd = cwd;
 }
 
-describe('connex link', () => {
+describe('connex attach', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -34,8 +34,8 @@ describe('connex link', () => {
   });
 
   it('errors when no client argument is provided', async () => {
-    await linkProjectInCwd(team);
-    client.setArgv('connex', 'link');
+    await setupLinkedProject(team);
+    client.setArgv('connex', 'attach');
 
     const exitCode = await connex(client);
 
@@ -44,8 +44,8 @@ describe('connex link', () => {
   });
 
   it('rejects --format=json without --yes', async () => {
-    await linkProjectInCwd(team);
-    client.setArgv('connex', 'link', 'scl_abc123', '--format=json');
+    await setupLinkedProject(team);
+    client.setArgv('connex', 'attach', 'scl_abc123', '--format=json');
 
     const exitCode = await connex(client);
 
@@ -56,8 +56,8 @@ describe('connex link', () => {
   });
 
   it('rejects an invalid --environment value', async () => {
-    await linkProjectInCwd(team);
-    client.setArgv('connex', 'link', 'scl_abc123', '-e', 'staging', '--yes');
+    await setupLinkedProject(team);
+    client.setArgv('connex', 'attach', 'scl_abc123', '-e', 'staging', '--yes');
 
     const exitCode = await connex(client);
 
@@ -71,7 +71,7 @@ describe('connex link', () => {
     // Intentionally no linkProjectInCwd — cwd has no .vercel/project.json.
     client.cwd = setupTmpDir();
 
-    client.setArgv('connex', 'link', 'scl_abc123', '--yes');
+    client.setArgv('connex', 'attach', 'scl_abc123', '--yes');
 
     const exitCode = await connex(client);
 
@@ -80,13 +80,13 @@ describe('connex link', () => {
   });
 
   it('errors with a friendly message when the client is not found', async () => {
-    await linkProjectInCwd(team);
+    await setupLinkedProject(team);
     client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connex', 'link', 'scl_missing', '--yes');
+    client.setArgv('connex', 'attach', 'scl_missing', '--yes');
 
     const exitCode = await connex(client);
 
@@ -97,7 +97,7 @@ describe('connex link', () => {
   });
 
   it('links with --yes, defaults to all environments, and POSTs to the resolved scl_ id', async () => {
-    await linkProjectInCwd(team);
+    await setupLinkedProject(team);
     let postBody: { environments?: string[] } | undefined;
     let postClientId = '';
     let postProjectId = '';
@@ -123,7 +123,7 @@ describe('connex link', () => {
       }
     );
 
-    client.setArgv('connex', 'link', 'slack/my-bot', '--yes');
+    client.setArgv('connex', 'attach', 'slack/my-bot', '--yes');
 
     const exitCode = await connex(client);
 
@@ -135,11 +135,11 @@ describe('connex link', () => {
       'preview',
       'development',
     ]);
-    expect(client.stderr.getFullOutput()).toContain('Linked Connex client');
+    expect(client.stderr.getFullOutput()).toContain('Attached Connex client');
   });
 
   it('parses comma-separated environments', async () => {
-    await linkProjectInCwd(team);
+    await setupLinkedProject(team);
     let postBody: { environments?: string[] } | undefined;
 
     client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
@@ -163,7 +163,7 @@ describe('connex link', () => {
 
     client.setArgv(
       'connex',
-      'link',
+      'attach',
       'scl_abc123',
       '-e',
       'production,preview',
@@ -176,8 +176,104 @@ describe('connex link', () => {
     expect(postBody?.environments).toEqual(['production', 'preview']);
   });
 
-  it('shows a diff prompt when the link already exists and the user accepts', async () => {
-    await linkProjectInCwd(team);
+  it('exits as a no-op when the project is already attached with the same environments', async () => {
+    await setupLinkedProject(team);
+    let postCalled = false;
+
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+      res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
+    });
+    client.scenario.get(
+      '/v1/connex/clients/:clientId/projects/:projectId',
+      (_req, res) => {
+        res.json({
+          clientId: 'scl_abc123',
+          projectId: PROJECT_ID,
+          // Order intentionally different from the request to confirm
+          // the comparison is set-based, not order-sensitive.
+          environments: ['preview', 'production'],
+        });
+      }
+    );
+    client.scenario.post(
+      '/v1/connex/clients/:clientId/projects/:projectId',
+      (_req, res) => {
+        postCalled = true;
+        res.statusCode = 200;
+        res.json({});
+      }
+    );
+
+    client.setArgv(
+      'connex',
+      'attach',
+      'scl_abc123',
+      '-e',
+      'production,preview'
+    );
+
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(postCalled).toBe(false);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('already attached');
+    expect(stderr).toContain('Nothing to do');
+    expect(stderr).not.toContain('Continue?');
+  });
+
+  it('emits unchanged:true JSON receipt on no-op with --yes --format=json', async () => {
+    await setupLinkedProject(team);
+    let postCalled = false;
+
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+      res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
+    });
+    client.scenario.get(
+      '/v1/connex/clients/:clientId/projects/:projectId',
+      (_req, res) => {
+        res.json({
+          clientId: 'scl_abc123',
+          projectId: PROJECT_ID,
+          environments: ['production'],
+        });
+      }
+    );
+    client.scenario.post(
+      '/v1/connex/clients/:clientId/projects/:projectId',
+      (_req, res) => {
+        postCalled = true;
+        res.statusCode = 200;
+        res.json({});
+      }
+    );
+
+    client.setArgv(
+      'connex',
+      'attach',
+      'scl_abc123',
+      '-e',
+      'production',
+      '--yes',
+      '--format=json'
+    );
+
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(postCalled).toBe(false);
+    const parsed = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(parsed).toEqual({
+      clientId: 'scl_abc123',
+      uid: 'slack/my-bot',
+      projectId: PROJECT_ID,
+      environments: ['production'],
+      unchanged: true,
+    });
+  });
+
+  it('shows a diff prompt when the attachment exists with different envs and the user accepts', async () => {
+    await setupLinkedProject(team);
     let postBody: { environments?: string[] } | undefined;
 
     client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
@@ -202,11 +298,17 @@ describe('connex link', () => {
       }
     );
 
-    client.setArgv('connex', 'link', 'scl_abc123', '-e', 'production,preview');
+    client.setArgv(
+      'connex',
+      'attach',
+      'scl_abc123',
+      '-e',
+      'production,preview'
+    );
 
     const exitCodePromise = connex(client);
 
-    await expect(client.stderr).toOutput('is already linked');
+    await expect(client.stderr).toOutput('is already attached');
     await expect(client.stderr).toOutput('Current:  production');
     await expect(client.stderr).toOutput('Will set: production, preview');
     await expect(client.stderr).toOutput('Continue?');
@@ -219,7 +321,7 @@ describe('connex link', () => {
   });
 
   it('cancels cleanly when the user declines the prompt', async () => {
-    await linkProjectInCwd(team);
+    await setupLinkedProject(team);
     let postCalled = false;
 
     client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
@@ -241,7 +343,7 @@ describe('connex link', () => {
       }
     );
 
-    client.setArgv('connex', 'link', 'scl_abc123');
+    client.setArgv('connex', 'attach', 'scl_abc123');
 
     const exitCodePromise = connex(client);
 
@@ -256,7 +358,7 @@ describe('connex link', () => {
   });
 
   it('requires --yes when stdin is not a TTY', async () => {
-    await linkProjectInCwd(team);
+    await setupLinkedProject(team);
     client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
@@ -268,7 +370,7 @@ describe('connex link', () => {
       }
     );
 
-    client.setArgv('connex', 'link', 'scl_abc123');
+    client.setArgv('connex', 'attach', 'scl_abc123');
     (client.stdin as unknown as { isTTY: boolean }).isTTY = false;
 
     const exitCode = await connex(client);
@@ -278,7 +380,7 @@ describe('connex link', () => {
   });
 
   it('emits a JSON receipt on --yes --format=json', async () => {
-    await linkProjectInCwd(team);
+    await setupLinkedProject(team);
     client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
@@ -299,7 +401,7 @@ describe('connex link', () => {
 
     client.setArgv(
       'connex',
-      'link',
+      'attach',
       'slack/my-bot',
       '-e',
       'production',
@@ -321,7 +423,7 @@ describe('connex link', () => {
   });
 
   it('surfaces a friendly error on 403 from the upsert endpoint', async () => {
-    await linkProjectInCwd(team);
+    await setupLinkedProject(team);
     client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
@@ -340,13 +442,13 @@ describe('connex link', () => {
       }
     );
 
-    client.setArgv('connex', 'link', 'scl_abc123', '--yes');
+    client.setArgv('connex', 'attach', 'scl_abc123', '--yes');
 
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      "don't have permission to link"
+      "don't have permission to attach"
     );
   });
 });
