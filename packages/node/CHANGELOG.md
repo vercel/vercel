@@ -1,5 +1,13 @@
 # @vercel/node
 
+## 5.7.17
+
+### Patch Changes
+
+- f0d7d32: Disable response streaming for lambdas with `awsLambdaHandler` set inside `getLambdaSupportsStreaming`. This closes a gap where non-Node builders (e.g. `@vercel/redwood`) constructed `NodejsLambda` with `awsLambdaHandler` but no explicit `supportsResponseStreaming`, causing `finalizeLambda` to silently flip streaming on for AWS custom handlers. With the gate now enforced centrally in `finalizeLambda`, the equivalent `@vercel/node` build-time check from #16266 is consolidated away — all builders go through the same gate.
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
 ## 5.7.16
 
 ### Patch Changes
