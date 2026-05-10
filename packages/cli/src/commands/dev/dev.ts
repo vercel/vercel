@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import { resolve, join } from 'path';
+import { resolve, join, sep } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
 
@@ -33,6 +33,25 @@ type Options = {
   '--local': boolean;
   '--yes': boolean;
 };
+
+/**
+ * Returns true if `cwd`'s trailing path segments match `suffix`. Used to
+ * avoid double-appending a project's `rootDirectory` when the user has
+ * already `cd`'d into it (e.g. a per-directory `.vercel/project.json`
+ * lives inside the project's root directory).
+ */
+function endsWithPath(cwd: string, suffix: string): boolean {
+  const cwdSegments = cwd.split(sep).filter(Boolean);
+  const suffixSegments = suffix.split(/[\\/]/).filter(Boolean);
+  if (
+    suffixSegments.length === 0 ||
+    suffixSegments.length > cwdSegments.length
+  ) {
+    return false;
+  }
+  const offset = cwdSegments.length - suffixSegments.length;
+  return suffixSegments.every((s, i) => s === cwdSegments[offset + i]);
+}
 
 export default async function dev(
   client: Client,
@@ -117,7 +136,7 @@ export default async function dev(
 
     projectSettings = project;
 
-    if (project.rootDirectory) {
+    if (project.rootDirectory && !endsWithPath(cwd, project.rootDirectory)) {
       cwd = join(cwd, project.rootDirectory);
     }
 

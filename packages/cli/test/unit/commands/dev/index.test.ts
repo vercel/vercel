@@ -6,9 +6,16 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { useProject } from '../../../mocks/project';
 
+const { devServerInstances } = vi.hoisted(() => ({
+  devServerInstances: [] as { cwd: string }[],
+}));
+
 vi.mock('../../../../src/util/dev/server', () => {
   class DevServer {
     devCommand = 'framework dev';
+    constructor(cwd: string) {
+      devServerInstances.push({ cwd });
+    }
     feed() {}
     stop() {
       return Promise.resolve();
@@ -34,6 +41,7 @@ afterEach(() => {
   // where `vercel dev` can be invoked several times in a row.
   vi.stubEnv('__VERCEL_DEV_RUNNING', undefined);
   vol.reset();
+  devServerInstances.length = 0;
 });
 
 describe('dev', () => {
@@ -200,6 +208,44 @@ describe('dev', () => {
           value: 'TRUE',
         },
       ]);
+    });
+  });
+
+  describe('rootDirectory', () => {
+    // Reproduces a bug where running `vercel dev` from inside a project
+    // subdirectory whose name matches the project's `rootDirectory`
+    // setting caused the CLI to append `rootDirectory` again, producing
+    // a non-existent path like `monorepo/project1/project1`.
+    it('does not double-append rootDirectory when cwd already ends with it', async () => {
+      const monorepoProjectId = 'prj_monorepo123';
+      const monorepoProjectName = 'monorepo-project';
+      const subdir = 'web';
+      const monorepoRoot = `/user/name/code/my-monorepo`;
+      const projectDir = `${monorepoRoot}/${subdir}`;
+
+      useProject({
+        id: monorepoProjectId,
+        name: monorepoProjectName,
+        rootDirectory: subdir,
+      });
+
+      vol.reset();
+      vol.fromJSON(
+        {
+          [`${projectDir}/.vercel/project.json`]: JSON.stringify({
+            projectId: monorepoProjectId,
+            orgId,
+          }),
+        },
+        '/'
+      );
+
+      client.setArgv('dev', projectDir);
+      const exitCodePromise = dev(client);
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+
+      expect(devServerInstances).toHaveLength(1);
+      expect(devServerInstances[0].cwd).toBe(projectDir);
     });
   });
 });
