@@ -601,6 +601,11 @@ export const build = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
+    // AWS custom handlers can't stream responses. The canonical gate
+    // lives in `@vercel/build-utils`'s `getLambdaSupportsStreaming`, but
+    // the build-container picks that up on its own rollout cadence —
+    // until then this build-time signal is what protects users on the
+    // Node builder. Keep this in sync with the central gate.
     let supportsResponseStreaming: boolean | undefined;
     if (awsLambdaHandler) {
       supportsResponseStreaming = false;
