@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { delimiter as pathDelimiter } from 'path';
 import execa from 'execa';
@@ -66,8 +66,9 @@ export class UvRunner {
   listInstalledPythons(): Set<string> {
     let output: string;
     try {
-      output = execSync(
-        `${this.uvPath} python list --only-installed --output-format json`,
+      output = execFileSync(
+        this.uvPath,
+        ['python', 'list', '--only-installed', '--output-format', 'json'],
         { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
       );
     } catch (err) {

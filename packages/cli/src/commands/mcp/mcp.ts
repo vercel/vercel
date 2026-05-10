@@ -1,6 +1,6 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { execSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { getLinkedProject } from '../../util/projects/link';
 import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -21,18 +21,37 @@ function getAvailableClients(): string[] {
   ];
 }
 
-function safeExecSync(
-  command: string,
+function safeExecFileSync(
+  file: string,
+  args: string[] = [],
   options: any = {}
 ): string | { error: string; stderr: string } {
   try {
-    return execSync(command, {
+    return execFileSync(file, args, {
       stdio: 'pipe',
       encoding: 'utf8',
       ...options,
     });
   } catch (error: any) {
     return { error: error.message, stderr: error.stderr?.toString() || '' };
+  }
+}
+
+function commandExists(file: string, args: string[] = []): boolean {
+  const result = spawnSync(file, args, {
+    stdio: 'ignore',
+    shell: false,
+  });
+  return !result.error && result.status === 0;
+}
+
+function openDeepLink(url: string): void {
+  if (process.platform === 'darwin') {
+    execFileSync('open', [url]);
+  } else if (process.platform === 'win32') {
+    execFileSync('explorer.exe', [url]);
+  } else {
+    execFileSync('xdg-open', [url]);
   }
 }
 
@@ -186,9 +205,14 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
         : 'vercel';
 
-      const result = safeExecSync(
-        `claude mcp add --transport http ${mcpName} ${mcpUrl}`
-      );
+      const result = safeExecFileSync('claude', [
+        'mcp',
+        'add',
+        '--transport',
+        'http',
+        mcpName,
+        mcpUrl,
+      ]);
 
       if (typeof result === 'object' && 'error' in result) {
         if (result.stderr?.includes('already exists')) {
@@ -249,15 +273,14 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       }
     } else if (clientName === 'Cursor') {
       // Check if Cursor is installed
-      const cursorCheck = safeExecSync(
+      const cursorInstalled =
         process.platform === 'darwin'
-          ? 'ls /Applications/Cursor.app'
+          ? commandExists('ls', ['/Applications/Cursor.app'])
           : process.platform === 'win32'
-            ? 'where cursor'
-            : 'which cursor'
-      );
+            ? commandExists('where', ['cursor'])
+            : commandExists('which', ['cursor']);
 
-      if (typeof cursorCheck === 'object' && 'error' in cursorCheck) {
+      if (!cursorInstalled) {
         if (!client.nonInteractive) {
           output.print('⚠️ Cursor not detected. Please install Cursor first.\n');
           output.print('   Download from: https://cursor.sh\n');
@@ -341,13 +364,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       // Try to open the one-click installer
       try {
-        if (process.platform === 'darwin') {
-          execSync(`open '${oneClickUrl}'`);
-        } else if (process.platform === 'win32') {
-          execSync(`start ${oneClickUrl}`);
-        } else {
-          execSync(`xdg-open '${oneClickUrl}'`);
-        }
+        openDeepLink(oneClickUrl);
 
         summary.push('✅ Cursor: One-click installer opened');
         if (!client.nonInteractive) {
@@ -373,11 +390,12 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       }
     } else if (clientName === 'VS Code with Copilot') {
       // Check if GitHub Copilot is installed
-      const copilotCheck = safeExecSync(
-        'code --list-extensions | grep -i copilot'
-      );
+      const copilotCheck = safeExecFileSync('code', ['--list-extensions']);
 
-      if (typeof copilotCheck === 'object' && 'error' in copilotCheck) {
+      if (
+        typeof copilotCheck === 'object' ||
+        !copilotCheck.toLowerCase().includes('copilot')
+      ) {
         if (!client.nonInteractive) {
           output.print(
             '⚠️ GitHub Copilot not detected. MCP functionality may be limited.\n'
@@ -463,13 +481,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       try {
         // Try to open the one-click installer
-        if (process.platform === 'darwin') {
-          execSync(`open '${oneClickUrl}'`);
-        } else if (process.platform === 'win32') {
-          execSync(`start ${oneClickUrl}`);
-        } else {
-          execSync(`xdg-open '${oneClickUrl}'`);
-        }
+        openDeepLink(oneClickUrl);
 
         summary.push('✅ VS Code: One-click installer opened');
         if (!client.nonInteractive) {
