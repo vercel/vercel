@@ -364,7 +364,7 @@ function handleCreateAliasError<T>(
 function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
   if (args.length) {
     return [args[args.length - 1]]
-      .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))
+      .map(target => (target.includes('.') ? toHost(target) : target))
       .filter((x): x is string => !!x && typeof x === 'string');
   }
 
