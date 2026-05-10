@@ -31,6 +31,58 @@ export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
 export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 
+// Maximum allowed ephemeral storage when MAXIMISE_TMP_SPACE=1 is enabled
+export const MAX_EPHEMERAL_STORAGE_BYTES = 1000 * 1024 * 1024;
+
+/**
+ * Returns the effective Lambda ephemeral storage limit in bytes.
+ *
+ * By default this is 500 MB. Users can override it by setting the
+ * `VERCEL_PYTHON_MAX_FUNC_MB` environment variable (range: 500–1000).
+ * The override requires `MAXIMISE_TMP_SPACE=1` to also be set.
+ */
+export function getLambdaEphemeralStorageBytes(): number {
+  const maxFuncMb = process.env.VERCEL_PYTHON_MAX_FUNC_MB;
+  if (maxFuncMb === undefined || maxFuncMb === '') {
+    return LAMBDA_EPHEMERAL_STORAGE_BYTES;
+  }
+
+  const parsed = Number(maxFuncMb);
+  if (isNaN(parsed) || !Number.isFinite(parsed)) {
+    throw new NowBuildError({
+      code: 'INVALID_FUNCTION_CONFIG',
+      message: `VERCEL_PYTHON_MAX_FUNC_MB must be a valid number, got "${maxFuncMb}".`,
+    });
+  }
+
+  if (process.env.MAXIMISE_TMP_SPACE !== '1') {
+    throw new NowBuildError({
+      code: 'INVALID_FUNCTION_CONFIG',
+      message:
+        `VERCEL_PYTHON_MAX_FUNC_MB requires MAXIMISE_TMP_SPACE=1 to be set. ` +
+        `Increasing the function size limit is only supported when tmp storage maximisation is enabled.`,
+    });
+  }
+
+  if (parsed > 1000) {
+    throw new NowBuildError({
+      code: 'INVALID_FUNCTION_CONFIG',
+      message:
+        `VERCEL_PYTHON_MAX_FUNC_MB cannot exceed 1000 (got ${parsed}). ` +
+        `The maximum supported Lambda ephemeral storage is 1000 MB.`,
+    });
+  }
+
+  if (parsed < 500) {
+    debug(
+      `VERCEL_PYTHON_MAX_FUNC_MB (${parsed}) is below the default (500). Using 500 MB.`
+    );
+    return LAMBDA_EPHEMERAL_STORAGE_BYTES;
+  }
+
+  return parsed * 1024 * 1024;
+}
+
 // Extended limit for Python on Hive (Functions Beta). All dependencies are
 // bundled directly into the Lambda instead of using runtime installation.
 export const HIVE_LAMBDA_SIZE_BYTES = 1 * 1024 * 1024 * 1024;
@@ -241,12 +293,12 @@ export class PythonDependencyExternalizer {
         `Enabling runtime dependency installation.`
     );
 
-    // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
-    if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-      const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
-        (1024 * 1024)
-      ).toFixed(0);
+    // Verify total deps won't exceed Lambda ephemeral storage
+    const ephemeralStorageBytes = getLambdaEphemeralStorageBytes();
+    if (this.totalBundleSize > ephemeralStorageBytes) {
+      const ephemeralLimitMB = (ephemeralStorageBytes / (1024 * 1024)).toFixed(
+        0
+      );
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message: shouldShowFunctionsBetaHint()
