@@ -29,7 +29,9 @@ export async function upgradeWebSocket(): Promise<WebSocket> {
         return;
       }
 
-      reject(new Error('WebSocket upgrade failed', { cause: err }));
+      const error = new Error('WebSocket upgrade failed');
+      (error as any).cause = err;
+      reject(error);
     };
 
     const resolveUpgrade = (ws: WebSocket) => {
