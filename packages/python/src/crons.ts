@@ -70,7 +70,7 @@ export async function getServiceCrons(opts: {
     type?: ServiceType;
     trigger?: JobTrigger;
     name?: string;
-    schedule?: string;
+    schedule?: string | string[];
   };
   entrypoint?: string;
   rawEntrypoint?: string;
@@ -85,7 +85,7 @@ export async function getServiceCrons(opts: {
   if (
     !isScheduledService ||
     !service.name ||
-    typeof service.schedule !== 'string'
+    (typeof service.schedule !== 'string' && !Array.isArray(service.schedule))
   ) {
     return undefined;
   }
@@ -119,7 +119,14 @@ export async function getServiceCrons(opts: {
   const resolvedHandler = handlerFunction
     ? `${moduleName}:${handlerFunction}`
     : moduleName;
-  return [{ path: cronPath, schedule: service.schedule, resolvedHandler }];
+  const schedules = Array.isArray(service.schedule)
+    ? service.schedule
+    : [service.schedule];
+  return schedules.map(schedule => ({
+    path: cronPath,
+    schedule,
+    resolvedHandler,
+  }));
 }
 
 async function getServiceCronsDynamic(opts: {

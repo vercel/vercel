@@ -100,6 +100,7 @@ import {
   type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
 import readJSONFile from '../../util/read-json-file';
+import { getStaticServiceSchedules } from '../../util/service-schedules';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
 import ua from '../../util/ua';
@@ -1235,21 +1236,20 @@ async function doBuild(
         isScheduleTriggeredService(service) &&
         !('crons' in buildResult && buildResult.crons?.length)
       ) {
-        if (
-          typeof service.runtime === 'string' &&
-          typeof service.schedule === 'string' &&
-          service.schedule !== '<dynamic>'
-        ) {
+        const staticSchedules = getStaticServiceSchedules(service.schedule);
+        if (typeof service.runtime === 'string' && staticSchedules.length > 0) {
           const cronEntrypoint =
             service.entrypoint || service.builder.src || 'index';
-          synthesizedServiceCrons.push({
-            path: getInternalServiceCronPath(
-              service.name,
-              cronEntrypoint,
-              service.handlerFunction || 'cron'
-            ),
-            schedule: service.schedule,
-          });
+          for (const schedule of staticSchedules) {
+            synthesizedServiceCrons.push({
+              path: getInternalServiceCronPath(
+                service.name,
+                cronEntrypoint,
+                service.handlerFunction || 'cron'
+              ),
+              schedule,
+            });
+          }
         } else {
           throw new NowBuildError({
             code: 'CRON_SERVICE_NO_CRONS',
