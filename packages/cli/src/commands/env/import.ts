@@ -111,6 +111,15 @@ export default async function importEnv(client: Client, argv: string[]) {
   const customEnvironments = await getCustomEnvironments(client, project.id);
 
   if (!envTargetArg) {
+    if (client.nonInteractive) {
+      output.error(
+        `Missing environment argument. Usage: ${getCommandName(
+          `env import <file> ${getEnvTargetPlaceholder()}`
+        )}`
+      );
+      return 1;
+    }
+
     const choices = [
       ...envTargetChoices.map(c => ({ name: c.name, value: c.value })),
       ...customEnvironments.map(c => ({ name: c.slug, value: c.id })),
@@ -159,6 +168,15 @@ export default async function importEnv(client: Client, argv: string[]) {
 
   // Confirmation prompt
   if (!skipConfirmation) {
+    if (client.nonInteractive) {
+      output.error(
+        `Confirmation required. Use ${getCommandName(
+          `env import ${filePath} ${envTargetArg} --yes`
+        )} to skip.`
+      );
+      return 1;
+    }
+
     const confirmMessage = `Import ${chalk.bold(
       String(entries.length)
     )} Environment Variable${entries.length === 1 ? '' : 's'} to ${chalk.bold(
