@@ -1,5 +1,5 @@
 ---
-'vercel': patch
+'vercel': major
 ---
 
-Require `--follow` for `vercel logs` to stream deployment logs, and use historical deployment log filtering by default.
+Require `--follow` for `vercel logs` to stream deployment logs. Passing a deployment argument or `--deployment` now uses historical deployment log filtering by default.
