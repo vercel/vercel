@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type { Deployment } from '@vercel-internals/types';
+import type Client from '../../util/client';
 
 import { isDeploying } from '../../util/deploy/is-deploying';
 import linkStyle from '../output/link';
@@ -13,6 +14,7 @@ import { showPluginTipIfNeeded } from '../agent/auto-install-agentic';
  * Prints (to `output`) warnings and errors, if any.
  */
 export async function printDeploymentStatus(
+  client: Client,
   {
     readyState,
     aliasError,
@@ -101,7 +103,7 @@ export async function printDeploymentStatus(
     );
   }
 
-  await showPluginTipIfNeeded();
+  await showPluginTipIfNeeded(client);
 
   return 0;
 }

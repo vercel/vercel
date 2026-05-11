@@ -1,8 +1,12 @@
 import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { join } from 'path';
+import { mkdirp, writeJSON } from 'fs-extra';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connex from '../../../../src/commands/connex';
+import * as configFilesUtil from '../../../../src/util/config/files';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 vi.setConfig({ testTimeout: 15000 });
@@ -26,9 +30,11 @@ function fakeConnexClient(overrides: Record<string, unknown> = {}) {
 
 describe('connex create', () => {
   let team: { id: string; slug: string };
+  const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
   beforeEach(() => {
     client.reset();
+    writeConfigSpy.mockClear();
     useUser();
     team = useTeam();
     client.config.currentTeam = team.id;
@@ -87,6 +93,7 @@ describe('connex create', () => {
     expect(postBody).toMatchObject({
       service: 'slack',
       name: 'my-bot',
+      triggers: { enabled: false },
     });
     expect(typeof postBody.request_code).toBe('string');
     expect(pollHit).toBe(false);
@@ -257,6 +264,130 @@ describe('connex create', () => {
 
     await expect(client.stderr).toOutput('Slack API error');
     expect(exitCode).toBe(1);
+  });
+
+  it('should persist team to config after interactive selection', async () => {
+    delete client.config.currentTeam;
+
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_persist', uid: 'uid_persist' }));
+    });
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCodePromise = connex(client);
+
+    await expect(client.stderr).toOutput(
+      'Select the team where you want to create this client'
+    );
+    // Arrow down past the personal account to select the team.
+    client.stdin.write('[B\n');
+
+    expect(await exitCodePromise).toBe(0);
+    expect(client.config.currentTeam).toBe(team.id);
+    expect(writeConfigSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ currentTeam: team.id })
+    );
+  });
+
+  it('should use team from .vercel/project.json without prompting', async () => {
+    client.reset();
+    useUser();
+    team = useTeam('team_linked');
+    delete client.config.currentTeam;
+
+    const cwd = setupTmpDir();
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: team.id,
+      projectId: 'proj_from_link',
+    });
+    client.cwd = cwd;
+
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_linked', uid: 'uid_linked' }));
+    });
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.config.currentTeam).toBe(team.id);
+    // No prompt means no persist path executed.
+    expect(writeConfigSpy).not.toHaveBeenCalled();
+  });
+
+  it('should error when user selects personal account instead of a team', async () => {
+    delete client.config.currentTeam;
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCodePromise = connex(client);
+
+    await expect(client.stderr).toOutput(
+      'Select the team where you want to create this client'
+    );
+    // Accept the default (personal account for non-northstar users).
+    client.stdin.write('\n');
+
+    expect(await exitCodePromise).toBe(1);
+    await expect(client.stderr).toOutput('Connex requires a team');
+    expect(writeConfigSpy).not.toHaveBeenCalled();
+  });
+
+  it('should not rewrite config when team is already set', async () => {
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_noop', uid: 'uid_noop' }));
+    });
+
+    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    const exitCode = await connex(client);
+
+    expect(exitCode).toBe(0);
+    expect(writeConfigSpy).not.toHaveBeenCalled();
+  });
+
+  describe('--triggers flag', () => {
+    it('should send triggers: { enabled: true } when --triggers is passed', async () => {
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(
+          fakeConnexClient({ id: 'scl_triggers1', uid: 'uid_triggers1' })
+        );
+      });
+
+      client.setArgv(
+        'connex',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--triggers'
+      );
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody).toMatchObject({
+        service: 'slack',
+        name: 'my-bot',
+        triggers: { enabled: true },
+      });
+    });
+
+    it('should send triggers: { enabled: false } when --triggers is not passed', async () => {
+      let postBody: any;
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+        postBody = req.body;
+        res.json(fakeConnexClient({ id: 'scl_notrig', uid: 'uid_notrig' }));
+      });
+
+      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+
+      const exitCode = await connex(client);
+
+      expect(exitCode).toBe(0);
+      expect(postBody.triggers).toEqual({ enabled: false });
+    });
   });
 
   it('should tolerate early 404s during polling after 422', async () => {

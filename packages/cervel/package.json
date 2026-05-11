@@ -1,6 +1,6 @@
 {
   "name": "@vercel/cervel",
-  "version": "0.0.55",
+  "version": "0.1.2",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
   "publishConfig": {
@@ -34,12 +34,8 @@
   "dependencies": {
     "@vercel/backends": "workspace:*"
   },
-  "peerDependencies": {
-    "typescript": "^4.0.0 || ^5.0.0"
-  },
   "devDependencies": {
     "@types/node": "20.11.0",
-    "typescript": "4.9.5",
     "tsdown": "0.16.3",
     "vitest": "^2.0.1"
   }

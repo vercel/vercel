@@ -18,6 +18,7 @@ import {
 } from '@vercel/build-utils';
 import {
   getPathFromRoute,
+  getReactRouterDataPaths,
   getRegExpFromPath,
   getPackageVersion,
   hasScript,
@@ -509,6 +510,12 @@ export const build: BuildV2 = async ({
     },
   ];
 
+  // React Router v7 single-fetch rewrites loader/action network requests from
+  // `<path>` to `<path>.data`. Without an entry for the `.data` variant, the
+  // filesystem handle misses and traffic falls through to the SSR catch-all,
+  // bypassing any per-route `runtime` / `memory` / `regions` overrides.
+  const isReactRouter = frameworkSettings.slug === 'react-router';
+
   for (const [id, functionId] of Object.entries(
     buildManifest.routeIdToServerBundleId ?? {}
   )) {
@@ -527,10 +534,31 @@ export const build: BuildV2 = async ({
     }
 
     output[path] = func;
+    if (isReactRouter) {
+      // Emit parallel entries so the filesystem handle resolves the
+      // single-fetch URL(s) for this route to the same bundle. Note that
+      // the root index route uses `/_root.data` rather than `/index.data`.
+      for (const dataPath of getReactRouterDataPaths(path)) {
+        output[dataPath] = func;
+      }
+    }
 
     // If this is a dynamic route then add a Vercel route
     const re = getRegExpFromPath(rePath);
     if (re) {
+      // Push the `.data` variant first so dynamic `.data` requests resolve to
+      // the `<path>.data` entry (preserving the suffix for the single-fetch
+      // handler) instead of matching the non-data rule, which would rewrite
+      // the URL and strip the suffix.
+      if (isReactRouter) {
+        const reData = getRegExpFromPath(`${rePath}.data`);
+        if (reData) {
+          routes.push({
+            src: reData.source,
+            dest: `${path}.data`,
+          });
+        }
+      }
       routes.push({
         src: re.source,
         dest: path,

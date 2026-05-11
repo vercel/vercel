@@ -3,6 +3,8 @@ import type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ServiceConfig,
+  Services,
   ServiceRuntime,
   ServiceType,
   Service,
@@ -14,6 +16,8 @@ export type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ServiceConfig,
+  Services,
   ServiceRuntime,
   ServiceType,
   Service,
@@ -41,6 +45,8 @@ export interface ServicesRoutes {
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
   defaults: Route[];
+  /** SPA fallback routes for static web services */
+  fallbacks: Route[];
   /**
    * Internal routes for schedule-triggered job services.
    * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the scheduled job function.
@@ -53,7 +59,8 @@ export interface ServicesRoutes {
   workers: Route[];
 }
 
-export type ServicesConfig = ExperimentalServices;
+export type ConfiguredServices = Services | ExperimentalServices;
+export type InferredServicesConfig = ExperimentalServices;
 
 export interface ResolvedServicesResult {
   services: Service[];
@@ -65,7 +72,7 @@ export interface ResolvedServicesResult {
 
 export interface InferredServicesResult {
   source: 'layout' | 'procfile' | 'railway';
-  config: ServicesConfig;
+  config: InferredServicesConfig;
   services: Service[];
   warnings: ServiceDetectionWarning[];
 }
@@ -73,7 +80,7 @@ export interface InferredServicesResult {
 export interface DetectServicesResult extends ResolvedServicesResult {
   /**
    * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
+   * - `configured`: loaded from explicit project configuration (`vercel.json#services` or legacy `experimentalServices`)
    * - `auto-detected`: inferred from project structure
    */
   // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.

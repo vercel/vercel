@@ -166,6 +166,14 @@ export const listSubcommand = {
       type: Boolean,
       deprecated: false,
     },
+    {
+      name: 'filter',
+      shorthand: 'f',
+      type: String,
+      argument: 'NAME',
+      description: 'Filter projects by name (substring match)',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -175,6 +183,10 @@ export const listSubcommand = {
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
       value: `${packageName} project ls --update-required --format=json`,
+    },
+    {
+      name: 'Filter projects by name',
+      value: `${packageName} project ls --filter my-app`,
     },
   ],
 } as const;
@@ -226,7 +238,7 @@ export const tokenSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption],
+  options: [yesOption, formatOption],
   examples: [
     {
       name: 'Get a development OIDC token for the linked project',
@@ -235,6 +247,10 @@ export const tokenSubcommand = {
     {
       name: 'Get a development OIDC token for the project named "my-project"',
       value: `${packageName} project token my-project`,
+    },
+    {
+      name: 'Get a development OIDC token as JSON',
+      value: `${packageName} project token my-project --format=json`,
     },
   ],
 } as const;

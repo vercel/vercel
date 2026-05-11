@@ -1,6 +1,6 @@
 import { detectFramework } from './detect-framework';
 import { DetectorFilesystem } from './detectors/filesystem';
-import frameworks from '@vercel/frameworks';
+import { frameworkList as frameworks } from '@vercel/frameworks';
 
 const MAX_DEPTH_TRAVERSE = 3;
 

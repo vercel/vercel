@@ -6,7 +6,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from typing import Any, cast
 
-from ..client import _DEPLOYMENT_ID_UNSET, WorkerJSONEncoder, _DeploymentIdOption, send
+from .. import _queue
+from ..client import send
 
 try:
     import dramatiq
@@ -35,7 +36,7 @@ class VercelDramatiqEncoder(Encoder):
     _json_encoder: type[json.JSONEncoder]
 
     def __init__(self, json_encoder: type[json.JSONEncoder] | None = None) -> None:
-        self._json_encoder = json_encoder or WorkerJSONEncoder
+        self._json_encoder = json_encoder or _queue.WorkerJSONEncoder
 
     def encode(self, data: dict[str, Any]) -> bytes:
         return json.dumps(
@@ -61,8 +62,8 @@ class VercelQueuesBrokerOptions:
     token: str | None = None
     base_url: str | None = None
     base_path: str | None = None
-    retention_seconds: int | None = None
-    deployment_id: _DeploymentIdOption = _DEPLOYMENT_ID_UNSET
+    retention: _queue.Duration | None = None
+    deployment_id: _queue.DeploymentIdOption = _queue.DEPLOYMENT_ID_UNSET
     timeout: float | None = 10.0
 
     # Consumption defaults (serverless callback / local polling)
@@ -94,9 +95,9 @@ class VercelQueuesBrokerOptions:
         if isinstance(base_path, str) and base_path:
             cfg = replace(cfg, base_path=base_path)
 
-        retention = options.get("retention_seconds")
-        if isinstance(retention, int):
-            cfg = replace(cfg, retention_seconds=retention)
+        retention = options.get("retention")
+        if _queue.is_duration(retention):
+            cfg = replace(cfg, retention=retention)
 
         if "deployment_id" in options and options.get("deployment_id") is None:
             cfg = replace(cfg, deployment_id=None)
@@ -338,7 +339,7 @@ class VercelQueuesBroker(Broker):
         )
 
         # Compute send-time delay from the delay parameter (milliseconds).
-        delay_seconds = int(delay / 1000) if delay and delay > 0 else None
+        delay_duration = int(delay / 1000) if delay and delay > 0 else None
 
         if os.environ.get("VWD_DEBUG_PUBLISH") not in {None, "", "0", "false", "FALSE"}:
             try:
@@ -353,8 +354,8 @@ class VercelQueuesBroker(Broker):
             queue_name,
             envelope,
             idempotency_key=idempotency_key,
-            retention_seconds=self._cfg.retention_seconds,
-            delay_seconds=delay_seconds,
+            retention=self._cfg.retention,
+            delay=delay_duration,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,

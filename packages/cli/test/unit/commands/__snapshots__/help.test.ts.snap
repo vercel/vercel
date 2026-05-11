@@ -763,6 +763,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
   -n,  --name <NAME>      Name of the Connex client                                                                     
+       --triggers         Enable webhook triggers for this client                                                       
 
 
   Global Options:
@@ -789,6 +790,10 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
     $ vercel connex create slack --name my-bot
 
+  - Create with webhook triggers enabled
+
+    $ vercel connex create slack --name my-bot --triggers
+
   - Output as JSON
 
     $ vercel connex create slack --format=json
@@ -804,10 +809,14 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create  type  Create a new Connex client                              
-  list          List Connex clients for the current team                
-  token   id    Get a token for a Connex client (accepts a client ID    
-                like scl_abc or a UID like slack/my-bot)                
+  create  type    Create a new Connex client                            
+  list            List Connex clients linked to the current project     
+                  (falls back to every client in the team when no       
+                  project is linked or when --all-projects is set)      
+  token   id      Get a token for a Connex client (accepts a client ID  
+                  like scl_abc or a UID like slack/my-bot)              
+  remove  client  Delete a Connex client                                
+  open    id      Open a Connex client in the Vercel dashboard          
 
 
   Global Options:
@@ -840,6 +849,10 @@ exports[`help command > connex help output snapshots > connex help column width 
 
     $ vercel connex token scl_abc123
 
+  - Open a client in the dashboard
+
+    $ vercel connex open scl_abc123
+
 "
 `;
 
@@ -847,10 +860,12 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 "
   ▲ vercel connex list [options]
 
-  List Connex clients for the current team                                                                              
+  List Connex clients linked to the current project (falls back to every client in the team when no project is linked   
+  or when --all-projects is set)                                                                                        
 
   Options:
 
+       --all-projects     List every Connex client in the team, regardless of project link                              
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
        --limit <COUNT>    Number of clients to return per page                                                          
        --next <CURSOR>    Cursor for the next page of results                                                           
@@ -872,9 +887,13 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   Examples:
 
-  - List Connex clients for the current team
+  - List Connex clients linked to the current project
 
     $ vercel connex list
+
+  - List every Connex client in the team
+
+    $ vercel connex list --all-projects
 
   - Limit the number of results
 
@@ -887,6 +906,48 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
   - Output as JSON
 
     $ vercel connex list --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex open subcommand > connex open subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex open id [options]
+
+  Open a Connex client in the Vercel dashboard                                                                          
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Open a client by ID
+
+    $ vercel connex open scl_abc123
+
+  - Open a client by UID
+
+    $ vercel connex open slack/my-bot
+
+  - Print the dashboard URL as JSON
+
+    $ vercel connex open scl_abc123 --format=json
 
 "
 `;
@@ -4805,8 +4866,6 @@ exports[`help command > login help output snapshots > login help column width 40
   -S,  --scope                Set a     
                               custom    
                               scope     
-  -t,  --token <TOKEN>        Login     
-                              token     
   -v,  --version              Output the
                               version   
                               number    
@@ -4839,7 +4898,6 @@ exports[`help command > login help output snapshots > login help column width 80
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
   -S,  --scope                Set a custom scope                                
-  -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
 
 
@@ -4868,7 +4926,6 @@ exports[`help command > login help output snapshots > login help column width 12
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 
@@ -5197,6 +5254,7 @@ exports[`help command > project help output snapshots > project list help output
 
   Options:
 
+  -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
@@ -5225,6 +5283,10 @@ exports[`help command > project help output snapshots > project list help output
   - List projects using a deprecated Node.js version in JSON format
 
     $ vercel project ls --update-required --format=json
+
+  - Filter projects by name
+
+    $ vercel project ls --filter my-app
 
 "
 `;
@@ -6675,7 +6737,6 @@ exports[`help command > teams help output snapshots > teams switch help output s
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 

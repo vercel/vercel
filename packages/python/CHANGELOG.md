@@ -1,5 +1,33 @@
 # @vercel/python
 
+## 6.39.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
+## 6.38.0
+
+### Minor Changes
+
+- fa5f57a: Enable Python build dependency caching by default.
+
+### Patch Changes
+
+- 8e29c9c: Improve Python entrypoint error messages and documentation links.
+- 2da36f3: Show a `--functions-beta`-aware hint at the Hive-extended 1 GB size-limit error path.
+
+## 6.37.0
+
+### Minor Changes
+
+- 25e84c6: Support specifying entrypoint in vercel.tool.entrypoint in pyproject.toml
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
 ## 6.36.1
 
 ### Patch Changes

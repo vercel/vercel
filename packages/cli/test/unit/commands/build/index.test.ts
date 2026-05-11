@@ -1156,6 +1156,82 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should build multiple JS cron services from nested entrypoints', async () => {
+    // Two cron services in one fixture, each with its own nested
+    // entrypoint under `jobs/`. Verifies the cron URL path includes
+    // the nested directories, that each service builds its own lambda
+    // mounted at `_svc/{name}/index`, and that each lambda's
+    // dispatcher shim ends up alongside the bundled handler.
+    const cwd = fixture('with-services-cron-nested');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual(
+      expect.arrayContaining([
+        {
+          path: '/_svc/cleanup/crons/jobs/cleanup/cron',
+          schedule: '0 0 * * *',
+        },
+        {
+          path: '/_svc/report/crons/jobs/report/cron',
+          schedule: '0 6 * * *',
+        },
+      ])
+    );
+
+    const cleanupConfig = await fs.readJSON(
+      join(output, 'functions/_svc/cleanup/index.func/.vc-config.json')
+    );
+    expect(cleanupConfig.handler).toContain('__vc_cron_dispatch');
+
+    const reportConfig = await fs.readJSON(
+      join(output, 'functions/_svc/report/index.func/.vc-config.json')
+    );
+    expect(reportConfig.handler).toContain('__vc_cron_dispatch');
+  });
+
+  it('should build a JS cron service through the cron dispatcher', async () => {
+    const cwd = fixture('with-services-cron-handler');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    // Same build-output as the legacy fixture
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/index/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/.*$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
+
+    // The lambda's handler points at the cron dispatcher shim, not the
+    // user file directly.
+    const funcDir = join(output, 'functions/_svc/cleanup/index.func');
+    const vcConfig = await fs.readJSON(join(funcDir, '.vc-config.json'));
+    expect(vcConfig.handler).toContain('__vc_cron_dispatch');
+
+    // The dispatcher shim file lives in the bundle and embeds the
+    // route table inline.
+    const shimFiles = (await fs.readdir(funcDir)).filter(name =>
+      name.includes('__vc_cron_dispatch')
+    );
+    expect(shimFiles).toHaveLength(1);
+    const shimSource = await fs.readFile(join(funcDir, shimFiles[0]), 'utf-8');
+    expect(shimSource).toContain(
+      `JSON.parse('{"/_svc/cleanup/crons/index/cron":"default"}')`
+    );
+  });
+
   it('should include job service schedules and queue triggers in build output', async () => {
     const cwd = fixture('with-services-job');
     const output = join(cwd, '.vercel', 'output');
@@ -1183,6 +1259,59 @@ describe.skipIf(flakey)('build', () => {
         initialDelaySeconds: 5,
       },
     ]);
+  });
+
+  it('should append services SPA fallback after builder output routes', async () => {
+    const cwd = await createTempServicesProject({
+      experimentalServices: {
+        api: {
+          framework: 'nitro',
+          entrypoint: '.',
+          routePrefix: '/',
+        },
+      },
+      files: {
+        'package.json': JSON.stringify({
+          scripts: {
+            build: 'node build.mjs',
+          },
+        }),
+        'build.mjs': `
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+
+          const outputDir = join(process.cwd(), '.vercel', 'output');
+          mkdirSync(outputDir, { recursive: true });
+          writeFileSync(
+            join(outputDir, 'config.json'),
+            JSON.stringify({
+              version: 3,
+              routes: [
+                { handle: 'filesystem' },
+                { src: '/(.*)', dest: '/__server' },
+              ],
+            })
+          );
+        `,
+      },
+    });
+    const output = join(cwd, '.vercel/output');
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    const serverRouteIndex = config.routes.findIndex(
+      (route: { dest?: string }) => route.dest === '/__server'
+    );
+    const fallbackRouteIndex = config.routes.findIndex(
+      (route: { dest?: string }) => route.dest === '/index.html'
+    );
+
+    expect(serverRouteIndex).toBeGreaterThan(-1);
+    expect(fallbackRouteIndex).toBeGreaterThan(-1);
+    expect(serverRouteIndex).toBeLessThan(fallbackRouteIndex);
   });
 
   it('should fail build when schedule-triggered job uses a dynamic schedule without builder crons', async () => {
@@ -1213,11 +1342,8 @@ createServer((_req, res) => {
       expect(exitCode).toBe(1);
 
       const builds = await fs.readJSON(join(output, 'builds.json'));
-      expect(builds.error).toMatchObject({
-        code: 'CRON_SERVICE_NO_CRONS',
-      });
       expect(builds.error.message).toContain(
-        'Scheduled service "cleanup" did not produce any cron entries.'
+        'Dynamic cron schedules ("<dynamic>") are not yet supported for JavaScript/TypeScript services'
       );
     } finally {
       // Tolerate EBUSY on Windows when the builder still holds file handles.

@@ -56,10 +56,7 @@ import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
-import {
-  defaultAuthConfig,
-  defaultGlobalConfig,
-} from './util/config/get-default';
+import { defaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';

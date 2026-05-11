@@ -21,7 +21,7 @@ import type { CLIProcess } from './helpers/types';
 import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
@@ -269,7 +269,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
   }
 });
 
-test('should prefill "project name" prompt with now.json `name`', async () => {
+test('should prefill "project name" prompt with vercel.json `name`', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
@@ -479,7 +479,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   expect(pageResponse1.status).toBe(200);
   expect(await pageResponse1.text()).toMatch(/I am a website/gm);
 
-  // Ensures that the `now.json` file has been applied
+  // Ensures that the `vercel.json` file has been applied
   const pageResponse2 = await nodeFetch(`${secondResult.stdout}/i-do-exist`);
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
@@ -788,21 +788,7 @@ describe('telemetry submits data', () => {
   });
 });
 
-test('deploys with only now.json and README.md', async () => {
-  const directory = await setupE2EFixture('deploy-with-only-readme-now-json');
-
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
-    cwd: directory,
-  });
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
-  const text = await res.text();
-  expect(text).toMatch(/readme contents/);
-});
-
-test('deploys with only vercel.json and README.md', async () => {
+test('deploys with only vercel.json and a static file', async () => {
   const directory = await setupE2EFixture(
     'deploy-with-only-readme-vercel-json'
   );
@@ -824,12 +810,12 @@ test('deploys with only vercel.json and README.md', async () => {
   );
 
   const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
+  const res = await nodeFetch(`https://${host}/content.txt`);
   const text = await res.text();
-  expect(text).toMatch(/readme contents/);
+  expect(text).toMatch(/content file contents/);
 });
 
-test('reject conflicting `vercel.json` and `now.json` files', async () => {
+test('reject deprecated `now.json` files', async () => {
   const directory = await setupE2EFixture('conflicting-now-json-vercel-json');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
@@ -838,7 +824,7 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
-    'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    'The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.'
   );
 });
 
@@ -1423,6 +1409,9 @@ test.each([
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
   expectedStatus,
+}: {
+  vercelAuth: 'none' | 'standard';
+  expectedStatus: number;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${

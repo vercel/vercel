@@ -131,8 +131,8 @@ export interface BuildOptions {
     subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
-    /** Cron schedule expression (e.g., "0 0 * * *"). Only present for cron services. */
-    schedule?: string;
+    /** Cron schedule expression(s) (e.g., "0 0 * * *"). Only present for cron services. */
+    schedule?: string | string[];
   };
 }
 
@@ -603,7 +603,7 @@ export interface Service {
   routePrefixSource?: 'configured' | 'generated';
   subdomain?: string;
   /* scheduled job config */
-  schedule?: string;
+  schedule?: string | string[];
   /* optional handler for a schedule-triggered job in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker/job service config */
@@ -650,6 +650,29 @@ export function isScheduleTriggeredService(service: {
     service.type === 'cron' ||
     (service.type === 'job' && service.trigger === 'schedule')
   );
+}
+
+export type ReportedServiceType = 'web' | 'schedule' | 'queue' | 'workflow';
+
+export function getReportedServiceType(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): ReportedServiceType | undefined {
+  switch (service.type) {
+    case 'web':
+      return 'web';
+    case 'cron':
+      return 'schedule';
+    case 'worker':
+      return 'queue';
+    case 'job':
+      if (service.trigger === 'schedule') return 'schedule';
+      if (service.trigger === 'queue') return 'queue';
+      if (service.trigger === 'workflow') return 'workflow';
+      return undefined;
+    default:
+      return undefined;
+  }
 }
 
 /** The framework which created the function */
@@ -830,11 +853,16 @@ export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
 export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
 
-export interface ServiceMount {
+export interface ExperimentalServiceMount {
   /** URL path prefix where the service is mounted. */
   path?: string;
   /** Optional subdomain this service is mounted on. */
   subdomain?: string;
+}
+
+export interface ServiceMount {
+  /** URL path prefix where the service is mounted. */
+  path: string;
 }
 
 /**
@@ -865,8 +893,10 @@ export interface ExperimentalServiceConfig {
   /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
   runtime?: string;
 
+  workspace?: string;
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
 
   /** Lambda config */
   memory?: number;
@@ -876,7 +906,7 @@ export interface ExperimentalServiceConfig {
 
   /* Web service config */
   /** Preferred routing config alias for routePrefix/subdomain. */
-  mount?: string | ServiceMount;
+  mount?: string | ExperimentalServiceMount;
   /** URL prefix for routing (deprecated, use mount instead) */
   routePrefix?: string;
   /** Subdomain this service should respond to (web services only). */
@@ -884,7 +914,7 @@ export interface ExperimentalServiceConfig {
 
   /* Scheduled job config */
   /** Cron schedule expression(s) (e.g., "0 0 * * *") */
-  schedule?: string;
+  schedule?: string | string[];
 
   /* Worker/job service config */
   topics?: ServiceTopics;
@@ -898,6 +928,56 @@ export interface ExperimentalServiceConfig {
  * @experimental This feature is experimental and may change.
  */
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
+
+/**
+ * Public configuration for a service in vercel.json.
+ */
+export interface ServiceConfig {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+  /**
+   * Path to the service's root directory relative to the project root.
+   * Should contain a manifest file (package.json, pyproject.toml, etc.).
+   * Defaults to ".".
+   */
+  root?: string;
+  /**
+   * Service entrypoint, relative to the service root directory.
+   * Can be either a file path (runtime entrypoint) or a directory path
+   * (service workspace for framework-based services).
+   */
+  entrypoint?: string;
+
+  /** Framework to use */
+  framework?: string;
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  runtime?: string;
+
+  buildCommand?: string;
+  preDeployCommand?: string;
+
+  /** Lambda config */
+  memory?: number;
+  maxDuration?: MaxDuration;
+  includeFiles?: string | string[];
+  excludeFiles?: string | string[];
+
+  /* Web service config */
+  /** Preferred routing config for route paths. */
+  mount?: string | ServiceMount;
+
+  /* Scheduled job config */
+  /** Cron schedule expression(s) (e.g., "0 0 * * *") */
+  schedule?: string | string[];
+
+  /* Queue-triggered job config */
+  topics?: ServiceTopics;
+}
+
+/**
+ * Map of service name to public service configuration.
+ */
+export type Services = Record<string, ServiceConfig>;
 
 /**
  * Map of service group name to array of service names belonging to that group.

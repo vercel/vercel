@@ -780,6 +780,62 @@ describe('generateProjectManifest', () => {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
     expect(manifest.framework).toBeUndefined();
   });
+
+  it('includes serviceType in manifest when provided', async () => {
+    const pkg = makePackage({ dependencies: ['fastapi'] });
+    const uvLockPath = writeUvLock(tempDir, [
+      { name: 'fastapi', version: '0.115.0', dependencies: [] },
+    ]);
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      pythonPackage: pkg,
+      pythonVersion,
+      uvLockPath,
+      serviceType: 'queue',
+    });
+
+    const manifestPath = path.join(tempDir, DIAGNOSTICS_PATH);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    expect(manifest.serviceType).toBe('queue');
+  });
+
+  it('omits serviceType from manifest when not provided', async () => {
+    const pkg = makePackage({ dependencies: ['requests'] });
+    const uvLockPath = writeUvLock(tempDir, [
+      { name: 'requests', version: '2.32.0', dependencies: [] },
+    ]);
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      pythonPackage: pkg,
+      pythonVersion,
+      uvLockPath,
+    });
+
+    const manifestPath = path.join(tempDir, DIAGNOSTICS_PATH);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    expect(manifest.serviceType).toBeUndefined();
+  });
+
+  it('omits serviceType from manifest when null provided', async () => {
+    const pkg = makePackage({ dependencies: ['requests'] });
+    const uvLockPath = writeUvLock(tempDir, [
+      { name: 'requests', version: '2.32.0', dependencies: [] },
+    ]);
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      pythonPackage: pkg,
+      pythonVersion,
+      uvLockPath,
+      serviceType: null,
+    });
+
+    const manifestPath = path.join(tempDir, DIAGNOSTICS_PATH);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    expect(manifest.serviceType).toBeUndefined();
+  });
 });
 
 describe('diagnostics callback', () => {

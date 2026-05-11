@@ -1,5 +1,36 @@
 # @vercel/backends
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
+## 0.4.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+- b4ada64: Implement scheduled jobs for JS/TS.
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [e53dd86]
+  - @vercel/build-utils@13.22.0
+
+## 0.3.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/build-utils@13.21.0
+
 ## 0.2.0
 
 ### Minor Changes
