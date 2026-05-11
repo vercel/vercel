@@ -1,5 +1,77 @@
 # vercel
 
+## 53.3.2
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+  - @vercel/node@5.7.17
+  - @vercel/backends@0.4.1
+  - @vercel/elysia@0.1.75
+  - @vercel/express@0.1.85
+  - @vercel/fastify@0.1.78
+  - @vercel/go@3.6.0
+  - @vercel/h3@0.1.84
+  - @vercel/hono@0.2.78
+  - @vercel/hydrogen@1.3.7
+  - @vercel/koa@0.1.58
+  - @vercel/nestjs@0.2.79
+  - @vercel/next@4.17.1
+  - @vercel/python@6.39.0
+  - @vercel/redwood@2.4.13
+  - @vercel/remix-builder@5.8.1
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.2.0
+  - @vercel/static-build@2.9.24
+
+## 53.3.1
+
+### Patch Changes
+
+- Updated dependencies [82edff0]
+  - @vercel/cli-config@0.1.1
+
+## 53.3.0
+
+### Minor Changes
+
+- dbfcc04: `vercel connex list` now defaults to clients linked to the current project. When no project is linked, it falls back to listing every Connex client in the team (same as `--all-projects`). Use `--all-projects` to force the team-wide view; the table includes a `Projects` column with the linked project names per client (with a `+ more` suffix when truncated).
+- 3b368bd: Add `--format=json` support to `vercel project token`, direct token output to stdout instead of stderr.
+- 34f595a: Extract CLI global config and auth config helpers into new `@vercel/cli-config`, use `@effect/schema` for config validation.
+- b4ada64: Implement scheduled jobs for JS/TS.
+
+### Patch Changes
+
+- 1dae59c: Allow `vc logs <deployment-url>` to resolve the project from the deployment instead of requiring a linked local project, and include the current scope in related lookup errors.
+- 7e64cc2: Show a clearer error instead of querying logs for deployments that never reached Ready.
+- 2dac1cb: Use Git repository and root directory matches before folder-name matches when linking projects.
+- Updated dependencies [e53dd86]
+- Updated dependencies [ae20217]
+- Updated dependencies [34f595a]
+- Updated dependencies [b4ada64]
+- Updated dependencies [94c29b8]
+  - @vercel/build-utils@13.22.0
+  - @vercel/backends@0.4.0
+  - @vercel/python@6.39.0
+  - @vercel/cli-config@0.1.0
+  - @vercel/node@5.7.16
+  - @vercel/elysia@0.1.74
+  - @vercel/express@0.1.84
+  - @vercel/fastify@0.1.77
+  - @vercel/go@3.6.0
+  - @vercel/h3@0.1.83
+  - @vercel/hono@0.2.77
+  - @vercel/hydrogen@1.3.7
+  - @vercel/koa@0.1.57
+  - @vercel/nestjs@0.2.78
+  - @vercel/next@4.17.1
+  - @vercel/redwood@2.4.13
+  - @vercel/remix-builder@5.8.1
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.2.0
+  - @vercel/static-build@2.9.23
+
 ## 53.2.0
 
 ### Minor Changes

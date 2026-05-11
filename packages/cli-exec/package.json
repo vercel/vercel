@@ -12,7 +12,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "0.0.1",
+  "version": "0.1.1",
   "repository": {
     "directory": "packages/cli-exec",
     "type": "git",
