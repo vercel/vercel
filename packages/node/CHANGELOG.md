@@ -1,5 +1,13 @@
 # @vercel/node
 
+## 5.7.16
+
+### Patch Changes
+
+- 94c29b8: Disable response streaming for AWS custom handler lambdas
+- Updated dependencies [e53dd86]
+  - @vercel/build-utils@13.22.0
+
 ## 5.7.15
 
 ### Patch Changes
