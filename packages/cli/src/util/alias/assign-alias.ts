@@ -15,7 +15,7 @@ export default async function assignAlias(
   // Check if the alias is a custom domain, because then
   // we have to configure the DNS records and certificate
   if (
-    alias.indexOf('.') !== -1 &&
+    alias.includes('.') &&
     !alias.endsWith('.now.sh') &&
     !alias.endsWith('.vercel.app')
   ) {
