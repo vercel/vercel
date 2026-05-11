@@ -10,7 +10,7 @@ import {
   getInternalServiceWorkerPathPrefix,
   type Service,
 } from '@vercel/fs-detectors';
-import type { Cron } from '@vercel/build-utils';
+import type { Cron, ServiceQueueConsumer } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
@@ -142,6 +142,7 @@ interface ServiceDevProcess {
   workspace: string;
   logger: ServiceLogger;
   crons?: Cron[];
+  queueConsumers?: ServiceQueueConsumer[];
 }
 
 function getServiceRoutePrefixes(service: Service): string[] {
@@ -321,6 +322,16 @@ export class ServicesOrchestrator {
     return this.managedServices;
   }
 
+  getQueueConsumers(): Map<string, ServiceQueueConsumer[]> {
+    const consumers = new Map<string, ServiceQueueConsumer[]>();
+    for (const [name, service] of this.managedServices) {
+      if (service.queueConsumers?.length) {
+        consumers.set(name, service.queueConsumers);
+      }
+    }
+    return consumers;
+  }
+
   private async startService(
     service: Service,
     colorIndex: number
@@ -491,6 +502,7 @@ export class ServicesOrchestrator {
         workspace: service.workspace || '.',
         logger,
         crons: result.crons,
+        queueConsumers: result.queueConsumers,
       };
     } catch (err) {
       output.debug(`Failed to use startDevServer for ${service.name}: ${err}`);

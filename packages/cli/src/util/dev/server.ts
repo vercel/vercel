@@ -949,16 +949,6 @@ export default class DevServer {
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
 
-      // Instantiate the dev queue broker if any queue-backed services exist.
-      const queueServices = (this.services || []).filter(
-        isQueueTriggeredService
-      );
-      if (queueServices.length > 0) {
-        this.queueBroker = new QueueBroker(this.services || [], name =>
-          this.orchestrator!.getServiceOrigin(name)
-        );
-      }
-
       let addressFormatted = this.address.toString();
       if (this.address.pathname === '/' && this.address.protocol === 'http:') {
         // log address without trailing slash to maintain backwards compatibility
@@ -1068,6 +1058,21 @@ export default class DevServer {
     });
 
     await devCommandPromise;
+
+    // Instantiate the dev queue broker after services start so Python workers
+    // can report generated per-handler queue subscriptions.
+    if (this.orchestrator?.hasServices()) {
+      const queueServices = (this.services || []).filter(
+        isQueueTriggeredService
+      );
+      if (queueServices.length > 0) {
+        this.queueBroker = new QueueBroker(
+          this.services || [],
+          name => this.orchestrator!.getServiceOrigin(name),
+          this.orchestrator.getQueueConsumers()
+        );
+      }
+    }
 
     // For multi-service mode, URLs were already printed.
     if (!this.orchestrator?.hasServices()) {

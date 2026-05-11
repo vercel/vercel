@@ -76,6 +76,7 @@ import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob, Span, download } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
+import { getServiceQueueConsumers } from '../src/queues';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -2471,6 +2472,129 @@ describe('dynamic cron detection', () => {
   });
 });
 
+describe('queue subscription detection', () => {
+  const mockedExeca = vi.mocked(execa);
+
+  afterEach(() => {
+    mockedExeca.mockReset();
+  });
+
+  it('returns undefined for non-worker services', async () => {
+    const result = await getServiceQueueConsumers({
+      service: { type: 'web', name: 'api' },
+      entrypoint: 'worker.py',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toBeUndefined();
+  });
+
+  it('detects subscriptions for queue-triggered job services', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        subscriptions: [{ topic: 'a', handler: 'worker:handle_a' }],
+      }),
+    } as any);
+
+    const result = await getServiceQueueConsumers({
+      service: { type: 'job', trigger: 'queue', name: 'emails' },
+      entrypoint: 'worker.py',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        topic: 'a',
+        handler: 'worker:handle_a',
+        consumer: '_S__svc_Semails_Sindex_23worker_3Ahandle__a',
+      },
+    ]);
+  });
+
+  it('calls python and returns subscriptions with generated consumers', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        subscriptions: [
+          { topic: 'a', handler: 'worker:handle_a' },
+          { topic: 'a', handler: 'worker:handle_b' },
+        ],
+      }),
+    } as any);
+
+    const result = await getServiceQueueConsumers({
+      service: { type: 'worker', name: 'emails' },
+      entrypoint: 'worker.py',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        topic: 'a',
+        handler: 'worker:handle_a',
+        consumer: '_S__svc_Semails_Sindex_23worker_3Ahandle__a',
+      },
+      {
+        topic: 'a',
+        handler: 'worker:handle_b',
+        consumer: '_S__svc_Semails_Sindex_23worker_3Ahandle__b',
+      },
+    ]);
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      '/usr/bin/python3',
+      ['-c', expect.any(String), 'worker'],
+      { env: {}, cwd: '/tmp/test' }
+    );
+  });
+
+  it('passes handlerFunction to python detection for module attribute entrypoints', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        subscriptions: [{ topic: 'a', handler: 'worker:handle_a' }],
+      }),
+    } as any);
+
+    await getServiceQueueConsumers({
+      service: { type: 'worker', name: 'emails' },
+      entrypoint: 'worker.py',
+      handlerFunction: 'queue',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      '/usr/bin/python3',
+      ['-c', expect.any(String), 'worker', 'queue'],
+      { env: {}, cwd: '/tmp/test' }
+    );
+  });
+
+  it('throws with structured error when python detection fails', async () => {
+    mockedExeca.mockRejectedValueOnce({
+      stdout: JSON.stringify({ error: 'boom' }),
+      stderr: '',
+      message: 'failed',
+    });
+
+    await expect(
+      getServiceQueueConsumers({
+        service: { type: 'worker', name: 'emails' },
+        entrypoint: 'worker.py',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/boom/);
+  });
+});
+
 describe('non-web services should not generate catch-all routes', () => {
   let mockWorkPath: string;
 
@@ -2544,6 +2668,10 @@ describe('non-web services should not generate catch-all routes', () => {
       }),
     } as Record<string, FileBlob>;
 
+    vi.mocked(execa).mockResolvedValue({
+      stdout: JSON.stringify({ subscriptions: [] }),
+    } as any);
+
     const result = await build({
       workPath: mockWorkPath,
       files,
@@ -2557,6 +2685,59 @@ describe('non-web services should not generate catch-all routes', () => {
     const v2result = getBuildOutputV2(result);
     expect(v2result.output['_svc/my-worker/index']).toBeDefined();
     expect(v2result.routes).toBeUndefined();
+  });
+
+  it('worker service emits one queue trigger per detected subscription', async () => {
+    const files = {
+      'worker.py': new FileBlob({
+        data: [
+          'from vercel.workers import subscribe',
+          '',
+          '@subscribe(topic="a")',
+          'def handle_a(payload, metadata): pass',
+          '',
+          '@subscribe(topic="a")',
+          'def handle_b(payload, metadata): pass',
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "my-worker"\nversion = "0.0.1"\ndependencies = ["vercel-workers"]\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    vi.mocked(execa).mockResolvedValue({
+      stdout: JSON.stringify({
+        subscriptions: [
+          { topic: 'a', handler: 'worker:handle_a' },
+          { topic: 'a', handler: 'worker:handle_b' },
+        ],
+      }),
+    } as any);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'worker.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'worker', name: 'my-worker' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    const lambda = v2result.output['_svc/my-worker/index'] as any;
+    expect(lambda.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'a',
+        consumer: '_S__svc_Smy-worker_Sindex_23worker_3Ahandle__a',
+      },
+      {
+        type: 'queue/v2beta',
+        topic: 'a',
+        consumer: '_S__svc_Smy-worker_Sindex_23worker_3Ahandle__b',
+      },
+    ]);
   });
 
   it('web service returns V2 with no routes', async () => {

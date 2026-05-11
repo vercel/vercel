@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
+import os
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, get_type_hints, overload
+from typing import Any, cast, get_type_hints, overload
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -59,8 +61,10 @@ class InvocationPlan:
 @dataclass
 class Subscription:
     func: WorkerCallable
+    topic: str | None = None
     topic_filter: Callable[[str | None], bool] | None = None
     topic_desc: str | None = None
+    consumer: str | None = None
     invocation: InvocationPlan | None = None
 
     def matches(self, topic: str | None) -> bool:
@@ -71,6 +75,27 @@ class Subscription:
 
 
 subscriptions: list[Subscription] = []
+
+
+def get_handler_key(func: WorkerCallable) -> str:
+    module = getattr(func, "__module__", "")
+    name = getattr(func, "__name__", "")
+    return f"{module}:{name}"
+
+
+def get_bound_consumer(func: WorkerCallable) -> str | None:
+    raw = os.environ.get("__VC_QUEUE_SUBSCRIPTIONS")
+    if not raw:
+        return None
+    try:
+        mapping = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(mapping, dict):
+        return None
+    mapping = cast(dict[object, object], mapping)
+    consumer = mapping.get(get_handler_key(func))
+    return consumer if isinstance(consumer, str) else None
 
 
 def _is_untyped_payload_annotation(annotation: Any) -> bool:
@@ -128,14 +153,17 @@ def register_subscription(
     registry: list[Subscription],
     func: WorkerCallable,
     *,
+    topic: str | None,
     topic_filter: Callable[[str | None], bool] | None,
     topic_desc: str | None,
 ) -> WorkerCallable:
     registry.append(
         Subscription(
             func=func,
+            topic=topic,
             topic_filter=topic_filter,
             topic_desc=topic_desc,
+            consumer=get_bound_consumer(func),
             invocation=build_invocation_plan(func),
         )
     )
@@ -146,6 +174,7 @@ def build_subscribe_decorator(
     registry: list[Subscription],
     topic: str | tuple[str, Callable[[str | None], bool]] | None,
 ) -> Callable[[WorkerCallable], WorkerCallable]:
+    topic_exact: str | None = None
     topic_filter: Callable[[str | None], bool] | None = None
     topic_desc: str | None = None
     if isinstance(topic, str):
@@ -153,6 +182,7 @@ def build_subscribe_decorator(
         def exact_topic_filter(t: str | None) -> bool:
             return t == topic
 
+        topic_exact = topic
         topic_filter = exact_topic_filter
         topic_desc = topic
     elif isinstance(topic, tuple):
@@ -162,6 +192,7 @@ def build_subscribe_decorator(
         return register_subscription(
             registry,
             func,
+            topic=topic_exact,
             topic_filter=topic_filter,
             topic_desc=topic_desc,
         )
@@ -196,8 +227,21 @@ def has_subscriptions(registry: list[Subscription] = subscriptions) -> bool:
 def select_subscriptions(
     topic: str | None,
     registry: Iterable[Subscription] = subscriptions,
-) -> Iterable[Subscription]:
-    return [s for s in registry if s.matches(topic)]
+    consumer: str | None = None,
+) -> list[Subscription]:
+    candidates = list(registry)
+    matches = [s for s in candidates if s.matches(topic)]
+    if consumer is None:
+        return matches
+
+    consumer_matches = [s for s in matches if s.consumer == consumer]
+    if consumer_matches:
+        return consumer_matches
+
+    if any(s.consumer is not None for s in candidates):
+        return []
+
+    return matches
 
 
 def result_timeout_seconds(result: Any, current: int | None) -> int | None:
@@ -218,9 +262,10 @@ def invoke_subscriptions(
     value is treated as successful completion.
     """
     topic = metadata.get("topic")
+    consumer = metadata.get("consumer")
     timeout_seconds: int | None = None
 
-    for sub in select_subscriptions(topic, registry):
+    for sub in select_subscriptions(topic, registry, consumer):
         try:
             result = call_subscription(sub, message, metadata)
             if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
@@ -246,6 +291,7 @@ __all__ = [
     "Subscription",
     "WorkerCallable",
     "build_subscribe_decorator",
+    "get_handler_key",
     "has_subscriptions",
     "invoke_subscriptions",
     "select_subscriptions",

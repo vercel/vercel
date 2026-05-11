@@ -255,6 +255,12 @@ export interface StartDevServerSuccess {
    * Used by the dev orchestrator to schedule cron triggers.
    */
   crons?: Cron[];
+
+  /**
+   * Queue consumers produced by the builder for this service.
+   * Used by the dev queue broker to fan out topic deliveries by consumer group.
+   */
+  queueConsumers?: ServiceQueueConsumer[];
 }
 
 /**
@@ -580,6 +586,12 @@ export interface ServiceQueueTopic {
   topic: string;
   retryAfterSeconds?: number;
   initialDelaySeconds?: number;
+}
+
+export interface ServiceQueueConsumer {
+  topic: string;
+  handler: string;
+  consumer: string;
 }
 
 export type ServiceTopics = string[] | ServiceQueueTopic[];

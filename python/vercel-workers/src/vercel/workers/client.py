@@ -4,7 +4,7 @@ import json
 import os
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, overload
+from typing import Any, TypedDict, overload
 from uuid import uuid4
 
 import vercel.workers.callback as callback
@@ -17,6 +17,7 @@ from ._queue.subscribe import (
     Subscription as _Subscription,
     WorkerCallable,
     build_subscribe_decorator as _build_subscribe_decorator,
+    get_handler_key as _get_handler_key,
     invoke_subscriptions as _invoke_subscriptions,
     select_subscriptions as _select_subscriptions,
     subscriptions as _subscriptions,
@@ -52,6 +53,7 @@ __all__ = [
     "RetryAfter",
     "WorkerJSONEncoder",
     "subscribe",
+    "get_vercel_queue_subscriptions",
     "get_wsgi_app",
     "get_asgi_app",
     "has_subscriptions",
@@ -59,6 +61,13 @@ __all__ = [
     "send",
     "send_async",
 ]
+
+
+class QueueSubscription(TypedDict):
+    """Build-time metadata for a queue subscription."""
+
+    topic: str
+    handler: str
 
 
 _DEPLOYMENT_ID_UNSET = DEPLOYMENT_ID_UNSET
@@ -106,6 +115,22 @@ def subscribe(
 def has_subscriptions() -> bool:
     """Return True if any worker functions have been registered via @subscribe."""
     return bool(_subscriptions)
+
+
+def get_vercel_queue_subscriptions() -> list[QueueSubscription]:
+    """Return serializable metadata for build-time queue trigger generation."""
+    result: list[QueueSubscription] = []
+    for sub in _subscriptions:
+        if sub.topic is None:
+            continue
+        qualname = getattr(sub.func, "__qualname__", "")
+        name = getattr(sub.func, "__name__", "")
+        if qualname != name:
+            raise RuntimeError(
+                f"cannot register {qualname!r}: only module-level functions are supported"
+            )
+        result.append({"topic": sub.topic, "handler": _get_handler_key(sub.func)})
+    return result
 
 
 def _delete_message_sync(
@@ -231,8 +256,8 @@ def _handle_queue_callback(
         else:
             queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
 
-        # Fail fast if no workers match this topic.
-        if not _select_subscriptions(queue_name, subscriptions):
+        # Fail fast if no workers match this topic and consumer.
+        if not _select_subscriptions(queue_name, subscriptions, consumer_group):
             return json_response(
                 500,
                 {

@@ -48,6 +48,11 @@ import {
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
 import { buildCronRouteTable, getServiceCrons } from './crons';
+import {
+  buildQueueConsumerMap,
+  buildQueueConsumerTriggers,
+  getServiceQueueConsumers,
+} from './queues';
 import { startDevServer } from './start-dev-server';
 import {
   runPyprojectScript,
@@ -655,6 +660,15 @@ export const build: BuildVX = async ({
     workPath,
   });
 
+  const queueConsumers = await getServiceQueueConsumers({
+    service,
+    entrypoint,
+    handlerFunction,
+    pythonBin: getVenvPythonBin(venvPath),
+    env: pythonEnv,
+    workPath,
+  });
+
   // Build trampoline env line for cron routing.
   // Injected into os.environ.update() in the Python trampoline source,
   // not lambdaEnv, because the platform rejects env var names with
@@ -668,6 +682,16 @@ export const build: BuildVX = async ({
     const json = JSON.stringify(buildCronRouteTable(crons));
     assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
     cronEnvLine = `\n  "__VC_CRON_ROUTES": '${json}',`;
+  }
+
+  let queueEnvLine = '';
+  if (queueConsumers?.length) {
+    const json = JSON.stringify(buildQueueConsumerMap(queueConsumers));
+    assert(
+      !json.includes('\\'),
+      `backslash in queue subscription map: ${json}`
+    );
+    queueEnvLine = `\n  "__VC_QUEUE_SUBSCRIPTIONS": '${json}',`;
   }
 
   const variableName = resolved?.variableName ?? '';
@@ -686,7 +710,7 @@ os.environ.update({
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
   "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${cronEnvLine}
+  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${cronEnvLine}${queueEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'
@@ -818,6 +842,9 @@ from vercel_runtime.vc_init import vc_handler
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
     environment: lambdaEnv,
+    experimentalTriggers: queueConsumers?.length
+      ? buildQueueConsumerTriggers(queueConsumers)
+      : undefined,
     supportsResponseStreaming: true,
   });
 
