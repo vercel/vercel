@@ -8,6 +8,7 @@ import {
   type BuildOptions,
   type BuildResultV3,
   getLambdaOptionsFromFunction,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 import execa from 'execa';
 import { installRustToolchain } from './lib/rust-toolchain';
@@ -35,7 +36,7 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   const BUILDER_DEBUG = Boolean(process.env.VERCEL_BUILDER_DEBUG ?? false);
   const isVercelBuild = Boolean(process.env.VERCEL_BUILD_IMAGE ?? false);
 
-  const { files, entrypoint, workPath, config, meta } = options;
+  const { files, entrypoint, workPath, config, meta, service } = options;
 
   // If we are not building on Vercel and we are not initiainted from `vercel dev`,
   // we are building for a prebuilt deployment, so we need to cross-compile
@@ -152,7 +153,12 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   });
   lambda.zipBuffer = await lambda.createZip();
 
-  await generateProjectManifest({ workPath, cargoMetadata });
+  await generateProjectManifest({
+    workPath,
+    cargoMetadata,
+    framework: config?.framework ?? undefined,
+    serviceType: service ? getReportedServiceType(service) : undefined,
+  });
 
   debug(`generating function for \`${entrypoint}\``);
 

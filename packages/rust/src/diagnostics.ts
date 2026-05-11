@@ -37,9 +37,13 @@ function parseSource(source: string | null): {
 export async function generateProjectManifest({
   workPath,
   cargoMetadata,
+  framework,
+  serviceType,
 }: {
   workPath: string;
   cargoMetadata: CargoMetadataRoot;
+  framework?: string;
+  serviceType?: string;
 }): Promise<void> {
   try {
     const { packages, resolve } = cargoMetadata;
@@ -103,6 +107,8 @@ export async function generateProjectManifest({
     const manifest: PackageManifest = {
       version: MANIFEST_VERSION,
       runtime: 'rust',
+      ...(framework ? { framework } : {}),
+      ...(serviceType ? { serviceType } : {}),
       dependencies: [
         ...directEntries.sort((a, b) => a.name.localeCompare(b.name)),
         ...transitiveEntries.sort((a, b) => a.name.localeCompare(b.name)),
