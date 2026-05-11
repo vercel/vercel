@@ -1654,6 +1654,69 @@ describe('detectServices', () => {
       });
     });
 
+    it('should route a JS schedule-triggered service to @vercel/backends', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'job',
+              trigger: 'schedule',
+              entrypoint: 'cleanup.ts',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'cleanup.ts': 'export default async function () {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].builder.use).toBe('@vercel/backends');
+      expect(result.services[0].builder.config?.serviceName).toBe('cleanup');
+    });
+
+    it('should route a JS legacy cron service to @vercel/backends', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cleanup.ts',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'cleanup.ts': 'export default async function () {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].builder.use).toBe('@vercel/backends');
+    });
+
+    it('should still route a JS queue-triggered worker to @vercel/node', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            worker: {
+              type: 'job',
+              trigger: 'queue',
+              entrypoint: 'worker.ts',
+              topics: ['orders'],
+            },
+          },
+        }),
+        'worker.ts': 'export default async function () {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].builder.use).toBe('@vercel/node');
+    });
+
     it('should parse module:function entrypoint for web services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

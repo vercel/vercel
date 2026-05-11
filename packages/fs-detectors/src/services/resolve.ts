@@ -8,6 +8,7 @@ import type {
 } from './types';
 import {
   getServiceQueueTopics,
+  isScheduleTriggeredService,
   JOB_TRIGGERS,
   JobTrigger,
 } from '@vercel/build-utils';
@@ -389,9 +390,10 @@ export function validateServiceConfig(
   }
   const serviceType = config.type || 'web';
   const isJobService = serviceType === 'job' || serviceType === 'cron';
-  const isScheduleJobService =
-    serviceType === 'cron' ||
-    (serviceType === 'job' && config.trigger === 'schedule');
+  const isScheduleJobService = isScheduleTriggeredService({
+    type: serviceType,
+    trigger: config.trigger,
+  });
   const isQueueJobService = serviceType === 'job' && config.trigger === 'queue';
   const isWorkflowService =
     serviceType === 'job' && config.trigger === 'workflow';
@@ -715,7 +717,11 @@ export async function resolveConfiguredService(
       frameworkDefinition?.useRuntime?.src ||
       'package.json';
   } else if (config.framework) {
-    if (type === 'web' && isNodeBackendFramework(config.framework)) {
+    const isCronService = isScheduleTriggeredService({ type, trigger });
+    if (
+      isNodeBackendFramework(config.framework) &&
+      (type === 'web' || isCronService)
+    ) {
       builderUse = '@vercel/backends';
     } else {
       builderUse =
@@ -733,7 +739,9 @@ export async function resolveConfiguredService(
       );
     }
     if (inferredRuntime === 'node') {
-      builderUse = type === 'web' ? '@vercel/backends' : '@vercel/node';
+      const isCronService = isScheduleTriggeredService({ type, trigger });
+      builderUse =
+        type === 'web' || isCronService ? '@vercel/backends' : '@vercel/node';
     } else {
       builderUse = getBuilderForRuntime(inferredRuntime);
     }
