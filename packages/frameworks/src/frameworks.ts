@@ -2277,6 +2277,8 @@ export const frameworks = [
     name: 'Ash',
     slug: 'ash',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/ash.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/ash-dark.svg',
     tagline:
       'A filesystem-first framework for durable backend agents on Vercel.',
     description:
