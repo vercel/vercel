@@ -3,11 +3,14 @@ import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
+import { detectFramework, LocalFileSystemDetector } from '@vercel/fs-detectors';
+import { frameworkList } from '@vercel/frameworks';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProject, getVercelDirectory } from '../../util/projects/link';
+import { readProjectSettings } from '../../util/projects/project-settings';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
@@ -117,12 +120,49 @@ export default async function dev(
 
     projectSettings = project;
 
+    // Merge local project settings from .vercel/project.json
+    // Local settings take precedence when API values are null/undefined
+    const localProjectSettings = await readProjectSettings(
+      getVercelDirectory(cwd)
+    );
+    if (localProjectSettings?.settings) {
+      projectSettings = mergeProjectSettings(
+        projectSettings,
+        localProjectSettings.settings,
+        [
+          'framework',
+          'devCommand',
+          'buildCommand',
+          'installCommand',
+          'outputDirectory',
+        ]
+      );
+    }
+
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
     }
 
     envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
       .env;
+  }
+
+  // Auto-detect framework if not already set in project settings
+  if (!projectSettings?.framework) {
+    const fs = new LocalFileSystemDetector(cwd);
+    const detectedFramework = await detectFramework({
+      fs,
+      frameworkList,
+      // Enable experimental frameworks for runtime frameworks like Rust
+      useExperimentalFrameworks: true,
+    });
+    if (detectedFramework) {
+      output.debug(`Auto-detected framework: ${detectedFramework}`);
+      projectSettings = {
+        ...projectSettings,
+        framework: detectedFramework,
+      };
+    }
   }
 
   let services: ResolvedService[] | undefined;
@@ -248,4 +288,22 @@ export default async function dev(
     clearTimeout(timeout);
     controller.abort();
   }
+}
+
+/**
+ * Merges local project settings into project settings.
+ * Local settings are used as fallbacks when API values are null/undefined.
+ */
+function mergeProjectSettings(
+  projectSettings: ProjectSettings,
+  localSettings: Partial<ProjectSettings>,
+  keys: (keyof ProjectSettings)[]
+): ProjectSettings {
+  let merged = projectSettings;
+  for (const key of keys) {
+    if (merged[key] == null && localSettings[key]) {
+      merged = { ...merged, [key]: localSettings[key] };
+    }
+  }
+  return merged;
 }

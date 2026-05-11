@@ -621,6 +621,7 @@ export default class DevServer {
         trailingSlash,
         workPath: this.cwd,
       });
+
       let {
         builders,
         warnings,
@@ -648,8 +649,14 @@ export default class DevServer {
       }
 
       if (builders) {
+        output.debug(
+          `Detected builders: ${JSON.stringify(builders.map(b => ({ src: b.src, use: b.use })))}`
+        );
         if (this.devCommand || (this.services && this.services.length > 0)) {
           builders = builders.filter(filterFrontendBuilds);
+          output.debug(
+            `After filtering frontend builds: ${JSON.stringify(builders.map(b => ({ src: b.src, use: b.use })))}`
+          );
         }
 
         vercelConfig.builds = vercelConfig.builds || [];
@@ -657,6 +664,13 @@ export default class DevServer {
 
         delete vercelConfig.functions;
       }
+
+      output.debug(
+        `defaultRoutes from detectBuilders: ${JSON.stringify(defaultRoutes)}`
+      );
+      output.debug(
+        `errorRoutes from detectBuilders: ${JSON.stringify(errorRoutes)}`
+      );
 
       let routes: Route[] = [];
       routes.push(...(redirectRoutes || []));
@@ -679,6 +693,55 @@ export default class DevServer {
       });
       routes.push(...(defaultRoutes || []));
       vercelConfig.routes = routes;
+
+      // For runtime frameworks (e.g., Rust, Python, Go), add the framework's
+      // default routes to enable proper request routing in dev mode.
+      // This is enabled for Rust-based frameworks or via the experimental frameworks flag.
+      const frameworkSlug = this.projectSettings?.framework;
+      output.debug(`Runtime framework check: frameworkSlug=${frameworkSlug}`);
+      if (frameworkSlug) {
+        const framework = frameworkList.find(f => f.slug === frameworkSlug);
+        output.debug(
+          `Framework found: name=${framework?.name}, runtimeFramework=${framework?.runtimeFramework}, hasDefaultRoutes=${!!framework?.defaultRoutes}, supersedes=${JSON.stringify(framework?.supersedes)}`
+        );
+        if (framework?.runtimeFramework && framework.defaultRoutes) {
+          // Check if framework is Rust-based (rust, axum, actix-web) or experimental flag is set
+          const isRustBased =
+            frameworkSlug === 'rust' || framework.supersedes?.includes('rust');
+          const useExperimental = shouldUseExperimentalFrameworks();
+          output.debug(
+            `Runtime framework routing: isRustBased=${isRustBased}, useExperimental=${useExperimental}`
+          );
+          if (isRustBased || useExperimental) {
+            const frameworkRoutes = await getFrameworkRoutes(framework);
+            output.debug(
+              `Adding ${frameworkRoutes.length} framework routes for ${frameworkSlug}: ${JSON.stringify(frameworkRoutes)}`
+            );
+            if (frameworkRoutes.length > 0) {
+              vercelConfig.routes = [
+                ...vercelConfig.routes,
+                ...frameworkRoutes,
+              ];
+              output.debug(
+                `Total routes after adding framework routes: ${vercelConfig.routes.length}`
+              );
+              output.debug(
+                `All routes: ${JSON.stringify(vercelConfig.routes)}`
+              );
+            }
+          } else {
+            output.debug(
+              `Skipping framework routes: neither Rust-based nor experimental flag set`
+            );
+          }
+        } else {
+          output.debug(
+            `Framework ${frameworkSlug} is not a runtimeFramework or has no defaultRoutes`
+          );
+        }
+      } else {
+        output.debug(`No framework slug found in project settings`);
+      }
     }
 
     if (Array.isArray(vercelConfig.builds)) {
@@ -2758,6 +2821,9 @@ async function findBuildMatch(
   isFilesystem = false
 ): Promise<BuildMatch | null> {
   requestPath = requestPath.replace(/^\//, '');
+  output.debug(
+    `findBuildMatch: looking for "${requestPath}", available matches: ${JSON.stringify([...matches.keys()])}`
+  );
 
   let bestIndexMatch: undefined | BuildMatch;
   for (const match of matches.values()) {
@@ -2976,6 +3042,28 @@ function hasNewRoutingProperties(vercelConfig: VercelConfig) {
     typeof vercelConfig.rewrites !== undefined ||
     typeof vercelConfig.trailingSlash !== undefined
   );
+}
+
+/**
+ * Checks if experimental frameworks should be included based on env var.
+ */
+function shouldUseExperimentalFrameworks(): boolean {
+  const experimentalEnv = process.env.VERCEL_USE_EXPERIMENTAL_FRAMEWORKS;
+  return experimentalEnv === '1' || experimentalEnv?.toLowerCase() === 'true';
+}
+
+/**
+ * Gets the default routes for a framework (similar to getFrameworkRoutes in build/index.ts).
+ */
+async function getFrameworkRoutes(
+  framework: (typeof frameworkList)[number]
+): Promise<Route[]> {
+  if (typeof framework.defaultRoutes === 'function') {
+    return framework.defaultRoutes('');
+  } else if (Array.isArray(framework.defaultRoutes)) {
+    return framework.defaultRoutes;
+  }
+  return [];
 }
 
 function buildMatchEquals(a?: BuildMatch, b?: BuildMatch): boolean {
