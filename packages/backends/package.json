@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -28,7 +28,8 @@
     "type-check": "tsc --noEmit"
   },
   "files": [
-    "dist"
+    "dist",
+    "templates"
   ],
   "dependencies": {
     "@vercel/build-utils": "workspace:*",

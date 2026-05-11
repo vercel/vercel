@@ -141,6 +141,52 @@ describe('finalizeLambda()', () => {
     expect(lambda.supportsResponseStreaming).toEqual(true);
   });
 
+  it('disables streaming for Nodejs lambdas with awsLambdaHandler set', async () => {
+    // Mirrors how non-Node builders (e.g. Redwood) construct lambdas:
+    // awsLambdaHandler is set but supportsResponseStreaming is left
+    // undefined. finalizeLambda must not silently flip it to true.
+    const lambda = new NodejsLambda({
+      files: {
+        'index.js': new FileBlob({ data: 'exports.handler = () => {};' }),
+      },
+      handler: 'index.js',
+      runtime: 'nodejs20.x',
+      shouldAddHelpers: false,
+      shouldAddSourcemapSupport: false,
+      awsLambdaHandler: 'index.handler',
+    });
+
+    const result = await finalizeLambda({
+      lambda,
+      bytecodeCachingOptions: NO_BYTECODE,
+      forceStreamingRuntime: false,
+    });
+
+    expect(result.streamingError).toBeUndefined();
+    expect(lambda.supportsResponseStreaming).toEqual(false);
+  });
+
+  it('disables streaming for awsLambdaHandler even when forceStreamingRuntime is true', async () => {
+    const lambda = new NodejsLambda({
+      files: {
+        'index.js': new FileBlob({ data: 'exports.handler = () => {};' }),
+      },
+      handler: 'index.js',
+      runtime: 'nodejs20.x',
+      shouldAddHelpers: false,
+      shouldAddSourcemapSupport: false,
+      awsLambdaHandler: 'index.handler',
+    });
+
+    await finalizeLambda({
+      lambda,
+      bytecodeCachingOptions: NO_BYTECODE,
+      forceStreamingRuntime: true,
+    });
+
+    expect(lambda.supportsResponseStreaming).toEqual(false);
+  });
+
   it('collects uncompressed size when flag is enabled', async () => {
     const data = Buffer.alloc(1024);
     const lambda = createBasicLambda({
