@@ -229,6 +229,9 @@ export default async function dev(
       case 'SIGTERM':
         exitCode = 143;
         break;
+      case 'SIGHUP':
+        exitCode = 129;
+        break;
     }
 
     process.exit(exitCode);
@@ -236,6 +239,10 @@ export default async function dev(
 
   process.on('SIGTERM', async () => await cleanup('SIGTERM'));
   process.on('SIGINT', async () => await cleanup('SIGINT'));
+  // Run cleanup on terminal disconnect too; Node's default SIGHUP behavior is
+  // to terminate immediately, which would bypass async service shutdown and
+  // leave the synchronous 'exit' backstop as the only line of defense.
+  process.on('SIGHUP', async () => await cleanup('SIGHUP'));
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by

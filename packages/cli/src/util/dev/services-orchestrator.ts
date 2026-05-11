@@ -165,23 +165,80 @@ interface ServicesOrchestratorOptions {
   proxyOrigin: string;
 }
 
-// Time to wait between SIGTERM and SIGKILL when force-stopping a service.
+// Max time we wait between SIGTERM and SIGKILL when force-stopping a service.
+// We poll process liveness instead of sleeping the full window, so well-behaved
+// services exit immediately.
 const FORCE_KILL_GRACE_MS = 2000;
+
+// Hard upper bound on `stopAll`. If individual kills hang (e.g. `ps` from
+// `tree-kill` stalls, a builder's async `shutdown` never resolves), we still
+// return so the dev process can exit. Synchronous `'exit'` backstop will
+// SIGKILL anything we couldn't reach.
+const STOP_ALL_TIMEOUT_MS = 8000;
 
 // Send `signal` to the entire process group led by `pid`. Services are spawned
 // with `detached: true`, so each child becomes its own process-group leader
 // (pgid === pid). Killing the group covers grandchildren that re-parent to
 // init when their direct parent exits — which `tree-kill`'s PPID walk would
-// miss. Tolerates ESRCH (group already gone).
+// miss. Treats ESRCH (group gone) and EPERM (e.g. pid reused for a process
+// we don't own) as non-fatal: nothing further we can do, callers move on.
 function killGroup(pid: number, signal: NodeJS.Signals): boolean {
   try {
     process.kill(-pid, signal);
     return true;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'ESRCH') return false;
+    if (code === 'ESRCH' || code === 'EPERM') return false;
     throw err;
   }
+}
+
+// Returns true if a process with `pid` exists right now. EPERM means it exists
+// but we can't signal it (e.g. credentials mismatch after pid reuse) — from
+// our perspective it's "alive but unreachable," which we treat as alive so the
+// caller stops waiting and escalates rather than spinning.
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+// Wait until `pid` is gone or `timeoutMs` elapses. Uses the ChildProcess `exit`
+// event when available (immediate, no polling); otherwise polls every 100 ms.
+// Returns true if the process died within the window.
+function waitForExit(
+  pid: number,
+  proc: ChildProcess | undefined,
+  timeoutMs: number
+): Promise<boolean> {
+  if (proc && (proc.exitCode !== null || proc.signalCode !== null)) {
+    return Promise.resolve(true);
+  }
+  if (!isProcessAlive(pid)) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = (died: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearInterval(poll);
+      clearTimeout(deadline);
+      if (proc) proc.removeListener('exit', onExit);
+      resolve(died);
+    };
+    const onExit = () => finish(true);
+    if (proc) proc.once('exit', onExit);
+
+    const poll = setInterval(() => {
+      if (!isProcessAlive(pid)) finish(true);
+    }, 100);
+    const deadline = setTimeout(() => finish(false), timeoutMs);
+  });
 }
 
 export class ServicesOrchestrator {
@@ -217,17 +274,19 @@ export class ServicesOrchestrator {
   // `process.on('exit' | 'uncaughtException')` so that orphans are reaped even
   // when normal async cleanup never runs (crash, uncaught exception, plain
   // `process.exit`). Must stay synchronous — the 'exit' event allows no I/O.
+  // Each kill is isolated so one failure (EPERM, unexpected error) cannot
+  // abort the loop and leave siblings orphaned.
   private forceKillAllSync(): void {
-    for (const [, proc] of this.managedProcesses) {
-      if (proc.pid) {
-        killGroup(proc.pid, 'SIGKILL');
+    const killOne = (pid: number | undefined) => {
+      if (!pid) return;
+      try {
+        killGroup(pid, 'SIGKILL');
+      } catch {
+        // best-effort during exit; the process is going down anyway
       }
-    }
-    for (const [, service] of this.managedServices) {
-      if (service.pid) {
-        killGroup(service.pid, 'SIGKILL');
-      }
-    }
+    };
+    for (const [, proc] of this.managedProcesses) killOne(proc.pid);
+    for (const [, service] of this.managedServices) killOne(service.pid);
   }
 
   private registerExitBackstop(): void {
@@ -296,7 +355,11 @@ export class ServicesOrchestrator {
         }
 
         if (service.pid) {
-          await this.terminateProcessGroup(name, service.pid).catch(err => {
+          await this.terminateProcessGroup(
+            name,
+            service.pid,
+            service.process
+          ).catch(err => {
             output.debug(`Failed to kill service "${name}": ${err}`);
           });
         }
@@ -310,7 +373,7 @@ export class ServicesOrchestrator {
       if (proc.pid && !this.managedServices.has(name)) {
         output.debug(`Stopping process "${name}" (PID: ${proc.pid})`);
         stopPromises.push(
-          this.terminateProcessGroup(name, proc.pid).catch(err => {
+          this.terminateProcessGroup(name, proc.pid, proc).catch(err => {
             output.debug(`Failed to stop process "${name}": ${err}`);
           })
         );
@@ -322,35 +385,66 @@ export class ServicesOrchestrator {
     }
     this.cronTimers = [];
 
-    await Promise.all(stopPromises);
-    this.managedServices.clear();
-    this.managedProcesses.clear();
-    this.unregisterExitBackstop();
-    output.debug('All services stopped');
+    // Hard timeout: even if individual kills hang (tree-kill's `ps` stalls,
+    // a builder's `shutdown` never resolves, etc.), don't block exit forever.
+    // The synchronous `'exit'` backstop will SIGKILL whatever remains.
+    let timedOut = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<void>(resolve => {
+      timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        output.debug(
+          `stopAll timed out after ${STOP_ALL_TIMEOUT_MS}ms; remaining processes will be SIGKILLed on exit`
+        );
+        resolve();
+      }, STOP_ALL_TIMEOUT_MS);
+    });
+    try {
+      await Promise.race([Promise.all(stopPromises), timeout]);
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+
+    // If we timed out, leave the maps populated so `forceKillAllSync` (on
+    // 'exit') can still reach the survivors with SIGKILL.
+    if (!timedOut) {
+      this.managedServices.clear();
+      this.managedProcesses.clear();
+      this.unregisterExitBackstop();
+      output.debug('All services stopped');
+    }
   }
 
   // Graceful → forceful termination of a single service's process group.
   // Sends SIGTERM to the entire pgid (services run with `detached: true`, so
-  // pgid === pid). If anything is still alive after a grace period, escalate
-  // to SIGKILL. Falls back to `tree-kill` to mop up any descendants that
-  // switched process groups via `setsid` and so escape `kill(-pgid)`.
+  // pgid === pid), waits *up to* a grace window — polling so well-behaved
+  // services exit immediately — and escalates to SIGKILL only if still alive.
+  // `tree-kill` runs in parallel to mop up descendants that switched process
+  // groups via `setsid` and so escape `kill(-pgid)`. Every step is wrapped:
+  // no error from a single service can prevent the rest of `stopAll` from
+  // completing.
   private async terminateProcessGroup(
     name: string,
-    pid: number
+    pid: number,
+    proc?: ChildProcess
   ): Promise<void> {
-    const stillAlive = killGroup(pid, 'SIGTERM');
+    try {
+      killGroup(pid, 'SIGTERM');
+    } catch (err) {
+      output.debug(`SIGTERM group kill for "${name}" failed: ${err}`);
+    }
     await treeKill(pid, 'SIGTERM').catch(err => {
       output.debug(`tree-kill (SIGTERM) for "${name}" failed: ${err}`);
     });
 
-    if (!stillAlive) return;
+    const died = await waitForExit(pid, proc, FORCE_KILL_GRACE_MS);
+    if (died) return;
 
-    await new Promise<void>(resolve =>
-      setTimeout(resolve, FORCE_KILL_GRACE_MS)
-    );
-
-    if (killGroup(pid, 'SIGKILL')) {
-      output.debug(`Escalated to SIGKILL for "${name}" (PID: ${pid})`);
+    output.debug(`Escalating to SIGKILL for "${name}" (PID: ${pid})`);
+    try {
+      killGroup(pid, 'SIGKILL');
+    } catch (err) {
+      output.debug(`SIGKILL group kill for "${name}" failed: ${err}`);
     }
     await treeKill(pid, 'SIGKILL').catch(() => {
       // tolerate: group is likely already dead
