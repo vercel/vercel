@@ -165,11 +165,31 @@ interface ServicesOrchestratorOptions {
   proxyOrigin: string;
 }
 
+// Time to wait between SIGTERM and SIGKILL when force-stopping a service.
+const FORCE_KILL_GRACE_MS = 2000;
+
+// Send `signal` to the entire process group led by `pid`. Services are spawned
+// with `detached: true`, so each child becomes its own process-group leader
+// (pgid === pid). Killing the group covers grandchildren that re-parent to
+// init when their direct parent exits — which `tree-kill`'s PPID walk would
+// miss. Tolerates ESRCH (group already gone).
+function killGroup(pid: number, signal: NodeJS.Signals): boolean {
+  try {
+    process.kill(-pid, signal);
+    return true;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ESRCH') return false;
+    throw err;
+  }
+}
+
 export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
   private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
+  private exitBackstop: (() => void) | undefined;
 
   private services: Service[];
   private cwd: string;
@@ -193,8 +213,41 @@ export class ServicesOrchestrator {
     this.hasQueueServices = options.services.some(isQueueTriggeredService);
   }
 
+  // Synchronously SIGKILL every tracked process group. Used from
+  // `process.on('exit' | 'uncaughtException')` so that orphans are reaped even
+  // when normal async cleanup never runs (crash, uncaught exception, plain
+  // `process.exit`). Must stay synchronous — the 'exit' event allows no I/O.
+  private forceKillAllSync(): void {
+    for (const [, proc] of this.managedProcesses) {
+      if (proc.pid) {
+        killGroup(proc.pid, 'SIGKILL');
+      }
+    }
+    for (const [, service] of this.managedServices) {
+      if (service.pid) {
+        killGroup(service.pid, 'SIGKILL');
+      }
+    }
+  }
+
+  private registerExitBackstop(): void {
+    if (this.exitBackstop) return;
+    const backstop = () => this.forceKillAllSync();
+    this.exitBackstop = backstop;
+    process.on('exit', backstop);
+  }
+
+  private unregisterExitBackstop(): void {
+    if (this.exitBackstop) {
+      process.removeListener('exit', this.exitBackstop);
+      this.exitBackstop = undefined;
+    }
+  }
+
   async startAll(): Promise<void> {
     output.debug(`Starting ${this.services.length} services`);
+
+    this.registerExitBackstop();
 
     const startPromises = this.services.map((service, index) =>
       this.startService(service, index).then(result => {
@@ -234,7 +287,7 @@ export class ServicesOrchestrator {
       output.debug(`Stopping service "${name}" (PID: ${service.pid})`);
 
       // For some builders (e.g. @vercel/python) `shutdown` is defined as no-op,
-      // so we'll try to be nice at first, but then proceed with killing the tree.
+      // so we'll try to be nice at first, but then proceed with killing the group.
       const stopService = async () => {
         if (service.shutdown) {
           await service.shutdown().catch(err => {
@@ -243,7 +296,7 @@ export class ServicesOrchestrator {
         }
 
         if (service.pid) {
-          await treeKill(service.pid).catch(err => {
+          await this.terminateProcessGroup(name, service.pid).catch(err => {
             output.debug(`Failed to kill service "${name}": ${err}`);
           });
         }
@@ -257,7 +310,7 @@ export class ServicesOrchestrator {
       if (proc.pid && !this.managedServices.has(name)) {
         output.debug(`Stopping process "${name}" (PID: ${proc.pid})`);
         stopPromises.push(
-          treeKill(proc.pid).catch(err => {
+          this.terminateProcessGroup(name, proc.pid).catch(err => {
             output.debug(`Failed to stop process "${name}": ${err}`);
           })
         );
@@ -272,7 +325,36 @@ export class ServicesOrchestrator {
     await Promise.all(stopPromises);
     this.managedServices.clear();
     this.managedProcesses.clear();
+    this.unregisterExitBackstop();
     output.debug('All services stopped');
+  }
+
+  // Graceful → forceful termination of a single service's process group.
+  // Sends SIGTERM to the entire pgid (services run with `detached: true`, so
+  // pgid === pid). If anything is still alive after a grace period, escalate
+  // to SIGKILL. Falls back to `tree-kill` to mop up any descendants that
+  // switched process groups via `setsid` and so escape `kill(-pgid)`.
+  private async terminateProcessGroup(
+    name: string,
+    pid: number
+  ): Promise<void> {
+    const stillAlive = killGroup(pid, 'SIGTERM');
+    await treeKill(pid, 'SIGTERM').catch(err => {
+      output.debug(`tree-kill (SIGTERM) for "${name}" failed: ${err}`);
+    });
+
+    if (!stillAlive) return;
+
+    await new Promise<void>(resolve =>
+      setTimeout(resolve, FORCE_KILL_GRACE_MS)
+    );
+
+    if (killGroup(pid, 'SIGKILL')) {
+      output.debug(`Escalated to SIGKILL for "${name}" (PID: ${pid})`);
+    }
+    await treeKill(pid, 'SIGKILL').catch(() => {
+      // tolerate: group is likely already dead
+    });
   }
 
   getServiceForRoute(pathname: string): ServiceDevProcess | null {
