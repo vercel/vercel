@@ -30,17 +30,22 @@ vi.mock('../../../../src/util/dev/server', () => {
 // don't work against memfs in tests. Replace it with a lookup against
 // `mockedRepoRoots`: for each `cwd` we look up the longest registered
 // path that contains it (the same nearest-ancestor semantics findRepoRoot
-// provides via `.git` traversal).
+// provides via `.git` traversal). Paths are normalized to forward slashes
+// before comparison so the mock works on Windows, where `path.resolve`
+// converts forward slashes to backslashes.
 vi.mock('../../../../src/util/link/repo', async () => {
   const actual = await vi.importActual<
     typeof import('../../../../src/util/link/repo')
   >('../../../../src/util/link/repo');
+  const toPosix = (p: string) => p.replace(/\\/g, '/');
   return {
     ...actual,
     findRepoRoot: async (start: string) => {
+      const normStart = toPosix(start);
       let best: string | undefined;
       for (const root of mockedRepoRoots.keys()) {
-        if (start === root || start.startsWith(`${root}/`)) {
+        const normRoot = toPosix(root);
+        if (normStart === normRoot || normStart.startsWith(`${normRoot}/`)) {
           if (!best || root.length > best.length) {
             best = root;
           }
@@ -276,7 +281,9 @@ describe('dev', () => {
       await expect(exitCodePromise).resolves.toEqual(undefined);
 
       expect(devServerInstances).toHaveLength(1);
-      expect(devServerInstances[0].cwd).toBe(projectDir);
+      // Normalize separators so the assertion holds on Windows, where
+      // `path.join` produces backslashes.
+      expect(devServerInstances[0].cwd.replace(/\\/g, '/')).toBe(projectDir);
     });
 
     // Edge case: the monorepo folder name happens to match the project's
@@ -315,7 +322,9 @@ describe('dev', () => {
       await expect(exitCodePromise).resolves.toEqual(undefined);
 
       expect(devServerInstances).toHaveLength(1);
-      expect(devServerInstances[0].cwd).toBe(projectDir);
+      // Normalize separators so the assertion holds on Windows, where
+      // `path.join` produces backslashes.
+      expect(devServerInstances[0].cwd.replace(/\\/g, '/')).toBe(projectDir);
     });
   });
 });
