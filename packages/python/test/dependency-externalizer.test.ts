@@ -160,6 +160,47 @@ describe('dependency externalizer support', () => {
       const size = await calculateBundleSize({});
       expect(size).toBe(0);
     });
+
+    it('uses pre-populated size on FileFsRef without stat', async () => {
+      // FileFsRef with a pre-populated size should be used directly
+      // without hitting the filesystem, so we can use a non-existent path.
+      const files = {
+        'file1.txt': new FileFsRef({
+          fsPath: '/nonexistent/file1.txt',
+          size: 100,
+        }),
+        'file2.txt': new FileFsRef({
+          fsPath: '/nonexistent/file2.txt',
+          size: 200,
+        }),
+      };
+
+      const size = await calculateBundleSize(files);
+      expect(size).toBe(300);
+    });
+
+    it('mixes pre-populated and stat-based sizes', async () => {
+      const tempDir = path.join(tmpdir(), `size-mixed-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const filePath = path.join(tempDir, 'real.txt');
+      fs.writeFileSync(filePath, 'a'.repeat(50));
+
+      const files = {
+        'pre-sized.txt': new FileFsRef({
+          fsPath: '/nonexistent/pre-sized.txt',
+          size: 150,
+        }),
+        'real.txt': new FileFsRef({ fsPath: filePath }),
+      };
+
+      try {
+        const size = await calculateBundleSize(files);
+        expect(size).toBe(200);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
   });
 
   describe('Lambda size constants', () => {
