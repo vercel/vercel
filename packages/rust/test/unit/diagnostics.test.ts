@@ -385,6 +385,30 @@ describe('generateProjectManifest', () => {
     }
   });
 
+  it('writes framework and serviceType when passed', async () => {
+    await generateProjectManifest({
+      workPath: tempDir,
+      cargoMetadata: makeMetadata({}),
+      framework: 'axum',
+      serviceType: 'web',
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.framework).toBe('axum');
+    expect(manifest.serviceType).toBe('web');
+  });
+
+  it('omits framework and serviceType when not passed', async () => {
+    await generateProjectManifest({
+      workPath: tempDir,
+      cargoMetadata: makeMetadata({}),
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.framework).toBeUndefined();
+    expect(manifest.serviceType).toBeUndefined();
+  });
+
   it('does not throw on empty metadata', async () => {
     await expect(
       generateProjectManifest({
