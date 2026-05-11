@@ -652,6 +652,29 @@ export function isScheduleTriggeredService(service: {
   );
 }
 
+export type ReportedServiceType = 'web' | 'schedule' | 'queue' | 'workflow';
+
+export function getReportedServiceType(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): ReportedServiceType | undefined {
+  switch (service.type) {
+    case 'web':
+      return 'web';
+    case 'cron':
+      return 'schedule';
+    case 'worker':
+      return 'queue';
+    case 'job':
+      if (service.trigger === 'schedule') return 'schedule';
+      if (service.trigger === 'queue') return 'queue';
+      if (service.trigger === 'workflow') return 'workflow';
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;

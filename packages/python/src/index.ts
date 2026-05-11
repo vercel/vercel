@@ -8,6 +8,7 @@ import {
 } from './package-versions';
 import {
   download,
+  getReportedServiceType,
   glob,
   Lambda,
   FileBlob,
@@ -17,6 +18,7 @@ import {
   scanParentDirs,
   getEnvForPackageManager,
   isPythonFramework,
+  isScheduleTriggeredService,
   Span,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
@@ -285,8 +287,7 @@ export const build: BuildVX = async ({
             // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
             // For other services, handlerFunction is used as the entrypoint variable name.
             varName:
-              service?.type === 'cron' ||
-              (service?.type === 'job' && service.trigger === 'schedule')
+              service && isScheduleTriggeredService(service)
                 ? undefined
                 : handlerFunction,
           }
@@ -831,6 +832,7 @@ from vercel_runtime.vc_init import vc_handler
         pythonVersion,
         uvLockPath,
         framework,
+        serviceType: service ? getReportedServiceType(service) : undefined,
       });
     } catch (err) {
       debug(

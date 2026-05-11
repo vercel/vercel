@@ -3,7 +3,11 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, delimiter, dirname, basename } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
-import { debug, NowBuildError } from '@vercel/build-utils';
+import {
+  debug,
+  isScheduleTriggeredService,
+  NowBuildError,
+} from '@vercel/build-utils';
 import { buildCronRouteTable, getServiceCrons } from './crons';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
@@ -787,8 +791,7 @@ export const startDevServer: StartDevServer = async opts => {
           // Schedule-triggered services create their own "app" wrapper dynamically.
           // Other services use handlerFunction as the entrypoint variable name.
           varName:
-            service?.type === 'cron' ||
-            (service?.type === 'job' && service.trigger === 'schedule')
+            service && isScheduleTriggeredService(service)
               ? undefined
               : handlerFunction,
         }
