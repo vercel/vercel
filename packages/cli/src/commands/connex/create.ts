@@ -15,7 +15,12 @@ import type { ConnexClient } from './types';
 export async function create(
   client: Client,
   args: string[],
-  flags: { '--name'?: string; '--format'?: string; '--json'?: boolean }
+  flags: {
+    '--name'?: string;
+    '--format'?: string;
+    '--json'?: boolean;
+    '--triggers'?: boolean;
+  }
 ): Promise<number> {
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
@@ -64,6 +69,7 @@ export async function create(
   if (link?.projectId) {
     body.projectId = link.projectId;
   }
+  body.triggers = { enabled: flags['--triggers'] === true };
 
   output.spinner('Setting up...');
   let createdClient: ConnexClient | null = null;

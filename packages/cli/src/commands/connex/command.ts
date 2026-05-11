@@ -20,6 +20,13 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Name of the Connex client',
     },
+    {
+      name: 'triggers',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Enable webhook triggers for this client',
+    },
     formatOption,
   ],
   examples: [
@@ -32,6 +39,10 @@ export const createSubcommand = {
       value: `${packageName} connex create slack --name my-bot`,
     },
     {
+      name: 'Create with webhook triggers enabled',
+      value: `${packageName} connex create slack --name my-bot --triggers`,
+    },
+    {
       name: 'Output as JSON',
       value: `${packageName} connex create slack --format=json`,
     },
@@ -41,9 +52,18 @@ export const createSubcommand = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List Connex clients for the current team',
+  description:
+    'List Connex clients linked to the current project (falls back to every client in the team when no project is linked or when --all-projects is set)',
   arguments: [],
   options: [
+    {
+      name: 'all-projects',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'List every Connex client in the team, regardless of project link',
+    },
     {
       name: 'limit',
       shorthand: null,
@@ -64,8 +84,12 @@ export const listSubcommand = {
   ],
   examples: [
     {
-      name: 'List Connex clients for the current team',
+      name: 'List Connex clients linked to the current project',
       value: `${packageName} connex list`,
+    },
+    {
+      name: 'List every Connex client in the team',
+      value: `${packageName} connex list --all-projects`,
     },
     {
       name: 'Limit the number of results',

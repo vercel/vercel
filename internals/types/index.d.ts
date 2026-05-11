@@ -26,41 +26,9 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-export interface AuthConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
-  skipWrite?: boolean;
-  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
-  token?: string;
-  /** The ID of the currently authenticated user, cached from `/v2/user`. */
-  userId?: string;
-  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
-  refreshToken?: string;
-  /**
-   * The absolute time (seconds) when the {@link AuthConfig.token} expires.
-   * Used to optimistically check if the token is still valid.
-   */
-  expiresAt?: number;
-  /**
-   * Indicates where the token was provided from when using external tokens.
-   * Only set when token is provided via `--token` flag or `VERCEL_TOKEN` env var.
-   */
-  tokenSource?: 'flag' | 'env';
-}
+export type AuthConfig = import('@vercel/cli-config').AuthConfig;
 
-export interface GlobalConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
-  currentTeam?: string;
-  api?: string;
-
-  telemetry?: {
-    enabled?: boolean;
-  };
-  guidance?: {
-    enabled?: boolean;
-  };
-}
+export type GlobalConfig = import('@vercel/cli-config').GlobalConfig;
 
 type Billing = {
   addons: string[];

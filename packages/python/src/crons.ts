@@ -3,8 +3,11 @@ import { join } from 'path';
 import execa from 'execa';
 import {
   getInternalServiceCronPath,
+  isScheduleTriggeredService,
   NowBuildError,
   type Cron,
+  type JobTrigger,
+  type ServiceType,
 } from '@vercel/build-utils';
 
 const DYNAMIC_SCHEDULE = '<dynamic>';
@@ -64,8 +67,8 @@ export function buildCronRouteTable(
  */
 export async function getServiceCrons(opts: {
   service?: {
-    type?: string;
-    trigger?: string;
+    type?: ServiceType;
+    trigger?: JobTrigger;
     name?: string;
     schedule?: string;
   };
@@ -77,9 +80,7 @@ export async function getServiceCrons(opts: {
   workPath: string;
 }): Promise<ServiceCronEntry[] | undefined> {
   const { service, entrypoint, rawEntrypoint, handlerFunction } = opts;
-  const isScheduledService =
-    service?.type === 'cron' ||
-    (service?.type === 'job' && service.trigger === 'schedule');
+  const isScheduledService = !!service && isScheduleTriggeredService(service);
 
   if (
     !isScheduledService ||

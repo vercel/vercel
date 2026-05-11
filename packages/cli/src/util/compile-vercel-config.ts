@@ -6,6 +6,7 @@ import { parse as tomlParse } from 'smol-toml';
 import output from '../output-manager';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
+import { DeprecatedNowJson } from './errors-ts';
 import { NowBuildError } from '@vercel/build-utils';
 import { isVercelTomlEnabled } from './is-vercel-toml-enabled';
 import type {
@@ -232,10 +233,13 @@ export async function compileVercelConfig(
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
 
+  if (hasNowJson) {
+    throw new DeprecatedNowJson(nowJsonPath);
+  }
+
   // Collect all found config files for conflict detection
   const foundConfigs: string[] = [];
   if (hasVercelJson) foundConfigs.push(vercelJsonPath);
-  if (hasNowJson) foundConfigs.push(nowJsonPath);
   if (hasVercelToml) foundConfigs.push(vercelTomlPath);
   if (vercelConfigPath) foundConfigs.push(vercelConfigPath);
 
@@ -247,18 +251,11 @@ export async function compileVercelConfig(
     );
   }
 
-  // No TS/JS config and no TOML — return JSON/now.json paths directly
+  // No TS/JS config and no TOML — return vercel.json directly.
   if (!vercelConfigPath && !hasVercelToml) {
     if (hasVercelJson) {
       return {
         configPath: vercelJsonPath,
-        wasCompiled: false,
-      };
-    }
-
-    if (hasNowJson) {
-      return {
-        configPath: nowJsonPath,
         wasCompiled: false,
       };
     }
@@ -439,7 +436,6 @@ export async function compileVercelConfig(
 
 export async function getVercelConfigPath(workPath: string): Promise<string> {
   const vercelJsonPath = join(workPath, 'vercel.json');
-  const nowJsonPath = join(workPath, 'now.json');
   const vercelTomlPath = join(workPath, 'vercel.toml');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
@@ -451,13 +447,9 @@ export async function getVercelConfigPath(workPath: string): Promise<string> {
     return vercelTomlPath;
   }
 
-  if (await fileExists(nowJsonPath)) {
-    return nowJsonPath;
-  }
-
   if (await fileExists(compiledConfigPath)) {
     return compiledConfigPath;
   }
 
-  return nowJsonPath;
+  return vercelJsonPath;
 }

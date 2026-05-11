@@ -1,6 +1,6 @@
 ---
 name: vercel-cli
-description: Deploy, manage, and develop projects on Vercel from the command line
+description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, projects and teams, environment variables, domains and DNS, logs, metrics, usage, activity, firewall rules, preview access, local development, integrations, or `vercel api` fallback.
 ---
 
 # Vercel CLI Skill
@@ -42,13 +42,13 @@ Use this to route to the correct reference file:
 - **CI/CD automation** → `references/ci-automation.md`
 - **Domains or DNS** → `references/domains-and-dns.md`
 - **Projects or teams** → `references/projects-and-teams.md`
-- **Logs, debugging, or accessing preview deploys** → `references/monitoring-and-debugging.md`
+- **Logs, metrics, usage, activity, performance, or production debugging** → `references/monitoring-and-debugging.md`
 - **Blob storage** → `references/storage.md`
 - **Integrations (databases, storage, etc.)** → `references/integrations.md`
 - **Routing rules** → `references/routing.md`
 - **Firewall (WAF rules, IP blocks, rate limiting)** → `references/firewall.md`
 - **Access a preview deployment** → use `vercel curl` (see `references/monitoring-and-debugging.md`)
-- **CLI doesn't have a command for it** → use `vercel api` as a fallback (see `references/advanced.md`)
+- **CLI command is unavailable or output is missing required fields** → use `vercel api` after first-class CLI paths are unavailable or insufficient (see `references/advanced.md`)
 - **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`
 - **Monorepos (Turborepo, Nx, workspaces)** → `references/monorepos.md`
 - **Bun runtime** → `references/bun.md`
