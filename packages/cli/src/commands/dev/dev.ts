@@ -10,6 +10,7 @@ import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
+import { findRepoRoot } from '../../util/link/repo';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
@@ -105,17 +106,31 @@ export default async function dev(
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
   let repoRoot: string | undefined;
+  let projectId: string | undefined;
+  let orgId: string | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
 
-    // If repo linked, update `cwd` to the repo root
+    // Resolve the effective repo root so that `rootDirectory` is always
+    // interpreted relative to the repository, not relative to wherever the
+    // user happened to run the command from. For repo links the root comes
+    // from `repo.json`; otherwise fall back to `findRepoRoot` (which walks
+    // up looking for `.git`). This avoids double-appending `rootDirectory`
+    // when the user runs `vercel dev` from inside the project folder.
     if (link.repoRoot) {
       repoRoot = cwd = link.repoRoot;
+    } else if (project.rootDirectory) {
+      const monorepoRoot = await findRepoRoot(cwd);
+      if (monorepoRoot) {
+        repoRoot = cwd = monorepoRoot;
+      }
     }
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
+    projectId = project.id;
+    orgId = org.id;
 
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
@@ -168,6 +183,8 @@ export default async function dev(
     repoRoot,
     services,
     useImplicitServicesEnvInjection,
+    projectId,
+    orgId,
   });
 
   const controller = new AbortController();
@@ -221,6 +238,9 @@ export default async function dev(
       case 'SIGTERM':
         exitCode = 143;
         break;
+      case 'SIGHUP':
+        exitCode = 129;
+        break;
     }
 
     process.exit(exitCode);
@@ -228,6 +248,10 @@ export default async function dev(
 
   process.on('SIGTERM', async () => await cleanup('SIGTERM'));
   process.on('SIGINT', async () => await cleanup('SIGINT'));
+  // Run cleanup on terminal disconnect too; Node's default SIGHUP behavior is
+  // to terminate immediately, which would bypass async service shutdown and
+  // leave the synchronous 'exit' backstop as the only line of defense.
+  process.on('SIGHUP', async () => await cleanup('SIGHUP'));
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by

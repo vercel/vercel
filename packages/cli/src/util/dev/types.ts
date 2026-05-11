@@ -27,6 +27,8 @@ export interface DevServerOptions {
   repoRoot?: string;
   services?: ResolvedService[];
   useImplicitServicesEnvInjection?: boolean;
+  projectId?: string;
+  orgId?: string;
 }
 
 export interface EnvConfigs {

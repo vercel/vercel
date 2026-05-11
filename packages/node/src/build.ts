@@ -44,6 +44,7 @@ import type {
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
+import { generateProjectManifest } from './diagnostics';
 import {
   validateConfiguredRuntime,
   entrypointToOutputPath,
@@ -83,6 +84,7 @@ async function downloadInstallAndBundle({
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -118,7 +120,15 @@ async function downloadInstallAndBundle({
     );
   }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnEnv };
+  return {
+    entrypointPath,
+    entrypointFsDirname,
+    nodeVersion,
+    spawnEnv,
+    cliType,
+    lockfilePath,
+    lockfileVersion,
+  };
 }
 
 function renameTStoJS(path: string) {
@@ -444,6 +454,9 @@ export const build = async ({
     entrypointFsDirname,
     nodeVersion,
     spawnEnv,
+    cliType,
+    lockfilePath,
+    lockfileVersion,
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
@@ -697,6 +710,20 @@ export const build = async ({
         process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
         '1',
     });
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write node manifest: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 
   return { routes, output };
