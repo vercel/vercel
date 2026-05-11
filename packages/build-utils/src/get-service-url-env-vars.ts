@@ -17,6 +17,22 @@ export interface GetServiceUrlEnvVarsOptions {
   origin?: string;
 }
 
+export interface GetExperimentalServiceUrlEnvVarsOptions {
+  services: Service[];
+  frameworkList: readonly FrameworkInfo[];
+  currentEnv?: Envs;
+  deploymentUrl?: string;
+  origin?: string;
+}
+
+/**
+ * Convert service name to env-var name: "frontend" → "FRONTEND_URL",
+ * "api-users" → "API_USERS_URL".
+ */
+function serviceNameToEnvVar(name: string): string {
+  return `${name.replace(/-/g, '_').toUpperCase()}_URL`;
+}
+
 function computeServiceUrl(
   baseUrl: string,
   routePrefix: string,
@@ -106,4 +122,76 @@ export function getServiceUrlEnvVars(
   }
 
   return result;
+}
+
+/**
+ * Legacy implicit URL injection used for `experimentalServices` (and
+ * auto-detected services that map to the experimentalServices shape).
+ *
+ * For each web service, generates:
+ * 1. `{NAME}_URL` with the absolute URL (server-side use).
+ * 2. `{PREFIX}{NAME}_URL` for every framework prefix in `frameworkList` that
+ *    matches a service in the deployment, with the relative route prefix
+ *    (client-side use; relative paths avoid CORS).
+ *
+ * Entries already present in `currentEnv` are not overwritten — user-defined
+ * values win.
+ *
+ * The GA `services` field replaces this with explicit `env` declarations
+ * handled by `getServiceUrlEnvVars`.
+ */
+export function getExperimentalServiceUrlEnvVars(
+  options: GetExperimentalServiceUrlEnvVarsOptions
+): Record<string, string> {
+  const {
+    services,
+    frameworkList,
+    currentEnv = {},
+    deploymentUrl,
+    origin,
+  } = options;
+
+  const baseUrl = origin || deploymentUrl;
+  if (!baseUrl || !services || services.length === 0) {
+    return {};
+  }
+
+  const envVars: Record<string, string> = {};
+
+  // Collect framework prefixes from any frontend services in the deployment,
+  // so each web service gets a prefixed twin per framework (NEXT_PUBLIC_*,
+  // VITE_*, …) for client-side use.
+  const frameworkPrefixes = new Set<string>();
+  for (const service of services) {
+    const prefix = getFrameworkEnvPrefix(service.framework, frameworkList);
+    if (prefix) {
+      frameworkPrefixes.add(prefix);
+    }
+  }
+
+  for (const service of services) {
+    if (service.type !== 'web' || !service.routePrefix) {
+      continue;
+    }
+
+    const baseEnvVarName = serviceNameToEnvVar(service.name);
+    const absoluteUrl = computeServiceUrl(
+      baseUrl,
+      service.routePrefix,
+      !!origin
+    );
+
+    if (!(baseEnvVarName in currentEnv)) {
+      envVars[baseEnvVarName] = absoluteUrl;
+    }
+
+    for (const prefix of frameworkPrefixes) {
+      const prefixedEnvVarName = `${prefix}${baseEnvVarName}`;
+      if (!(prefixedEnvVarName in currentEnv)) {
+        envVars[prefixedEnvVarName] = service.routePrefix;
+      }
+    }
+  }
+
+  return envVars;
 }

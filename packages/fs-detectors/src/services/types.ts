@@ -71,6 +71,7 @@ export type InferredServicesConfig = ExperimentalServices;
 export interface ResolvedServicesResult {
   services: Service[];
   source: DetectServicesSource;
+  useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];

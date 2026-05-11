@@ -181,6 +181,7 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+  private useImplicitServicesEnvInjection: boolean;
 
   private shouldUseServicesOrchestrator(): boolean {
     if (!this.services || this.services.length === 0) {
@@ -198,6 +199,8 @@ export default class DevServer {
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
     this.services = options.services;
+    this.useImplicitServicesEnvInjection =
+      options.useImplicitServicesEnvInjection ?? true;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -950,6 +953,7 @@ export default class DevServer {
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
+        useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;

@@ -13,6 +13,7 @@ import {
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -731,6 +732,26 @@ async function doBuild(
 
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
+
+    // Legacy URL injection for `experimentalServices`. The `services` field
+    // opts out of this and uses explicit per-service
+    // `env` declarations (handled inside the builder loop below).
+    if (
+      detectedBuilders.useImplicitEnvInjection &&
+      detectedServices &&
+      detectedServices.length > 0
+    ) {
+      const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
+        services: detectedServices,
+        frameworkList,
+        currentEnv: process.env,
+        deploymentUrl: process.env.VERCEL_URL,
+      });
+      for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
+        process.env[key] = value;
+        output.debug(`Injected service URL env var: ${key}=${value}`);
+      }
+    }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     const detectedHostRewriteRoutes = (

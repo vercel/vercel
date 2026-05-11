@@ -3,10 +3,11 @@
     "ECHO_VAR": {"type": "service-ref", "service": "service-a"},
     "GLOBAL_REF": {"type": "service-ref", "service": "service-b"}
   },
-  "experimentalServices": {
+  "services": {
     "service-next": {
+      "type": "web",
       "framework": "vite",
-      "entrypoint": "apps/web",
+      "root": "apps/web",
       "mount": "/",
       "env": {
         "VITE_SERVICE_A_URL": {"type": "service-ref", "service": "service-a"},
@@ -14,8 +15,9 @@
       }
     },
     "service-a": {
+      "type": "web",
       "framework": "fastapi",
-      "entrypoint": "services/service-a",
+      "root": "services/service-a",
       "mount": "/api/a",
       "env": {
         "SERVICE_B_URL": {"type": "service-ref", "service": "service-b"},
@@ -23,8 +25,9 @@
       }
     },
     "service-b": {
+      "type": "web",
       "framework": "fastapi",
-      "entrypoint": "services/service-b",
+      "root": "services/service-b",
       "mount": "/api/b"
     }
   }

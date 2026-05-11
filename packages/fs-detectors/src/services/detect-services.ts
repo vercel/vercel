@@ -59,6 +59,7 @@ function withResolvedResult(
   return {
     services: resolved.services,
     source: resolved.source,
+    useImplicitEnvInjection: resolved.useImplicitEnvInjection,
     routes: resolved.routes,
     errors: resolved.errors,
     warnings: resolved.warnings,
@@ -124,6 +125,7 @@ export async function detectServices(
     return withResolvedResult({
       services: [],
       source: 'configured',
+      useImplicitEnvInjection: true,
       routes: emptyRoutes(),
       errors: [configError],
       warnings: [],
@@ -146,6 +148,7 @@ export async function detectServices(
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes: emptyRoutes(),
         errors: railwayResult.errors,
         warnings: railwayResult.warnings,
@@ -174,6 +177,7 @@ export async function detectServices(
         {
           services: [],
           source: 'auto-detected',
+          useImplicitEnvInjection: true,
           routes: emptyRoutes(),
           errors: result.errors,
           warnings: railwayResult.warnings,
@@ -194,6 +198,7 @@ export async function detectServices(
       const resolved: ResolvedServicesResult = {
         services: result.services,
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes,
         errors: result.errors,
         warnings: [],
@@ -220,6 +225,7 @@ export async function detectServices(
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes: emptyRoutes(),
         errors: autoResult.errors,
         warnings: [],
@@ -229,6 +235,7 @@ export async function detectServices(
     return withResolvedResult({
       services: [],
       source: 'auto-detected',
+      useImplicitEnvInjection: true,
       routes: emptyRoutes(),
       errors: [
         {
@@ -259,6 +266,9 @@ export async function detectServices(
   return withResolvedResult({
     services: result.services,
     source: 'configured',
+    // GA `services` opts into explicit `env`; experimentalServices keeps
+    // the legacy `{NAME}_URL` injection.
+    useImplicitEnvInjection: !hasNonEmptyPublicServicesConfig,
     routes,
     errors: result.errors,
     warnings: [],

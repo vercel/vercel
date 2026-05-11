@@ -22,6 +22,7 @@ import {
   NowBuildError,
   runNpmInstall,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   type BuilderV3,
   type BuilderVX,
   type Config,
@@ -163,6 +164,7 @@ interface ServicesOrchestratorOptions {
   repoRoot: string;
   env: NodeJS.ProcessEnv;
   proxyOrigin: string;
+  useImplicitEnvInjection: boolean;
 }
 
 export class ServicesOrchestrator {
@@ -179,6 +181,7 @@ export class ServicesOrchestrator {
   private proxyOrigin: string;
   private pythonServiceCount: number;
   private hasQueueServices: boolean;
+  private useImplicitEnvInjection: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -187,6 +190,7 @@ export class ServicesOrchestrator {
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
     this.envFilesValues = options.env;
+    this.useImplicitEnvInjection = options.useImplicitEnvInjection;
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
@@ -335,16 +339,28 @@ export class ServicesOrchestrator {
 
     const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
 
-    const perServiceEnv = service.env
-      ? getServiceUrlEnvVars({
-          requestedEnv: service.env,
-          consumerService: service,
-          services: this.services,
-          frameworkList,
-          origin: this.proxyOrigin,
-          currentEnv: effectiveProcessEnv,
-        })
-      : {};
+    let perServiceEnv: Record<string, string> = {};
+    if (this.useImplicitEnvInjection) {
+      // Legacy behavior for experimentalServices / auto-detected: synthesize
+      // `{NAME}_URL` and `{PREFIX}{NAME}_URL` env vars for every web service.
+      // Pass only the consumer's framework so its prefix wins for client-side
+      // (relative) names; absolute `{NAME}_URL` is always emitted.
+      perServiceEnv = getExperimentalServiceUrlEnvVars({
+        services: this.services,
+        frameworkList: framework ? [framework] : [],
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    } else if (service.env) {
+      perServiceEnv = getServiceUrlEnvVars({
+        requestedEnv: service.env,
+        consumerService: service,
+        services: this.services,
+        frameworkList,
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    }
 
     // Precedence: process env > env* files > per-service env > config env > defaults
     //

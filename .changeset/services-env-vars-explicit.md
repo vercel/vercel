@@ -6,4 +6,4 @@
 'vercel': minor
 ---
 
-Replace implicit `{SERVICE_NAME}_URL` injection in `experimentalServices` with an explicit `env` configuration.
+Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
