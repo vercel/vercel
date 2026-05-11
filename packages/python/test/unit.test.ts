@@ -1128,6 +1128,7 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
 
     const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
+    expect(getBuildOutputV3(result).architecture).toBe('x86_64');
   });
 
   it('falls back to pyproject.toml requires-python when no uv.lock (build succeeds)', async () => {

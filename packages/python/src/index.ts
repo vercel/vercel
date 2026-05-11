@@ -828,6 +828,7 @@ from vercel_runtime.vc_init import vc_handler
     files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
+    architecture: 'x86_64',
     environment: lambdaEnv,
     supportsResponseStreaming: true,
   });
