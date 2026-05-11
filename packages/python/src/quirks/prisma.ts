@@ -3,7 +3,7 @@ import { isAbsolute, join, relative } from 'path';
 import execa from 'execa';
 import { NowBuildError, debug } from '@vercel/build-utils';
 import { extendDistRecord } from '@vercel/python-analysis';
-import { getVenvPythonBin, detectPlatform } from '../utils';
+import { getVenvPythonBin, detectTargetPlatform } from '../utils';
 import { getVenvSitePackagesDirs, resolveVendorDir } from '../install';
 import type { Quirk, QuirkContext, QuirkResult } from './index';
 
@@ -24,7 +24,7 @@ const LAMBDA_ROOT = '/var/task';
 export const RUNTIME_OPENSSL_VERSION = '3.2';
 
 function getLambdaBinaryTarget(): string {
-  const platform = detectPlatform();
+  const platform = detectTargetPlatform();
   return platform.archName === 'aarch64'
     ? 'linux-arm64-openssl-3.0.x'
     : 'rhel-openssl-3.0.x';
