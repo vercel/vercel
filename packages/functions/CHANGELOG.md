@@ -1,5 +1,13 @@
 # @vercel/functions
 
+## 3.5.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [ae20217]
+  - @vercel/oidc@3.4.1
+
 ## 3.5.0
 
 ### Minor Changes

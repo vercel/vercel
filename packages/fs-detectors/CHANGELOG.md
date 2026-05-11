@@ -1,5 +1,26 @@
 # @vercel/fs-detectors
 
+## 6.2.1
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
+## 6.2.0
+
+### Minor Changes
+
+- b4ada64: Implement scheduled jobs for JS/TS.
+
+### Patch Changes
+
+- 1e08c83: [services] error on framework = "services" but no services configured
+- Updated dependencies [e53dd86]
+- Updated dependencies [c95a7ca]
+  - @vercel/build-utils@13.22.0
+  - @vercel/frameworks@3.25.1
+
 ## 6.1.1
 
 ### Patch Changes
