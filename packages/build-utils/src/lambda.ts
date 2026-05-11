@@ -14,6 +14,7 @@ import type {
   TriggerEvent,
   TriggerEventInput,
 } from './types';
+import { createHash } from 'crypto';
 
 export type { TriggerEvent, TriggerEventInput };
 
@@ -461,6 +462,32 @@ export class Lambda {
       }
     }
     return zipBuffer;
+  }
+
+  /**
+   * Computes a content hash for the Lambda based on its files. Returns undefined if not all files
+   * have a `.contentHash`.
+   */
+  computeDigest(): string | undefined {
+    if (!this.files) {
+      throw new Error('`files` is not defined');
+    }
+
+    // It's slightly faster to concat and hash the string as opposed to calling update() repeatedly:
+    // 2000 ops/s vs 1850 ops/s. This is likely because it results in fewer calls into the native
+    // crypto code.
+    let hashes = '';
+
+    const names = Object.keys(this.files).sort();
+    for (const name of names) {
+      const contentHash = this.files[name].contentHash;
+      if (!contentHash) {
+        return undefined;
+      }
+      hashes += `${name}\0${contentHash}\n`;
+    }
+
+    return createHash('sha256').update(hashes).digest('hex');
   }
 
   /**
