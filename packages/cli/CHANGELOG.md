@@ -1,11 +1,5 @@
 # vercel
 
-## 54.0.0
-
-### Major Changes
-
-- 9b4972d: Require `--follow` for `vercel logs` to stream deployment logs. Passing a deployment argument or `--deployment` now uses historical deployment log filtering by default.
-
 ## 53.3.2
 
 ### Patch Changes
