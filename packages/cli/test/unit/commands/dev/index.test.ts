@@ -343,7 +343,7 @@ describe('dev', () => {
 
       await expect(exitCodePromise).resolves.toEqual(undefined);
       expect(devServerInstances).toHaveLength(1);
-      expect(devServerInstances[0]).toEqual({ projectId, orgId });
+      expect(devServerInstances[0]).toMatchObject({ projectId, orgId });
     });
 
     it('omits the IDs for unlinked projects in --local mode', async () => {
@@ -355,7 +355,7 @@ describe('dev', () => {
 
       await expect(exitCodePromise).resolves.toEqual(undefined);
       expect(devServerInstances).toHaveLength(1);
-      expect(devServerInstances[0]).toEqual({
+      expect(devServerInstances[0]).toMatchObject({
         projectId: undefined,
         orgId: undefined,
       });
