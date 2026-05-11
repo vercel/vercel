@@ -124,8 +124,7 @@ export async function getServicesBuilders(
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
+          message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
       warnings: warningResponses,

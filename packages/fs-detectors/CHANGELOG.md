@@ -1,5 +1,23 @@
 # @vercel/fs-detectors
 
+## 6.2.2
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+- Updated dependencies [51785a6]
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/frameworks@3.26.0
+  - @vercel/build-utils@13.23.0
+
+## 6.2.1
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
 ## 6.2.0
 
 ### Minor Changes

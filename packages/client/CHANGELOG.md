@@ -1,5 +1,21 @@
 # @vercel/client
 
+## 17.4.3
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/build-utils@13.23.0
+
+## 17.4.2
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
 ## 17.4.1
 
 ### Patch Changes

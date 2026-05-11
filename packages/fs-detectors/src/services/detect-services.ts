@@ -11,7 +11,7 @@ import {
   type InferredServicesResult,
   type ResolvedServicesResult,
   type Service,
-  type ServicesConfig,
+  type InferredServicesConfig,
   type ServicesRoutes,
 } from './types';
 import {
@@ -62,11 +62,13 @@ function withResolvedResult(
  * This lets us define the conventions of how we'd like the services configuration
  * to look like.
  */
-function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
-  const inferredConfig: ServicesConfig = {};
+function toInferredLayoutConfig(
+  services: InferredServicesConfig
+): InferredServicesConfig {
+  const inferredConfig: InferredServicesConfig = {};
 
   for (const [name, service] of Object.entries(services)) {
-    const serviceConfig: ServicesConfig[string] = {};
+    const serviceConfig: InferredServicesConfig[string] = {};
 
     if (typeof service.entrypoint === 'string') {
       serviceConfig.entrypoint = service.entrypoint;
@@ -94,7 +96,7 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
 /**
  * Detect and resolve services within a project.
  *
- * Reads vercel.json and resolves `experimentalServices` into Service objects.
+ * Reads vercel.json and resolves configured services into Service objects.
  * Returns an error if no services are configured.
  */
 export async function detectServices(
@@ -119,7 +121,11 @@ export async function detectServices(
     });
   }
 
-  const configuredServices = vercelConfig?.experimentalServices;
+  const hasNonEmptyPublicServicesConfig =
+    vercelConfig?.services && Object.keys(vercelConfig.services).length > 0;
+  const configuredServices = hasNonEmptyPublicServicesConfig
+    ? vercelConfig.services
+    : vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -218,8 +224,7 @@ export async function detectServices(
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
+          message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
       warnings: [],
@@ -230,7 +235,12 @@ export async function detectServices(
   const result = await resolveAllConfiguredServices(
     configuredServices,
     scopedFs,
-    'configured'
+    'configured',
+    {
+      requireFileEntrypointForBackendRuntimes: Boolean(
+        hasNonEmptyPublicServicesConfig
+      ),
+    }
   );
 
   // Generate routes
