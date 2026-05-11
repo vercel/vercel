@@ -58,6 +58,97 @@ function orgFromOwner(id: string, slug = id): ProjectLinked['org'] {
   return { type: id.startsWith('team_') ? 'team' : 'user', id, slug };
 }
 
+const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
+const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help']);
+
+function flagName(arg: string): string {
+  const eqIdx = arg.indexOf('=');
+  return eqIdx === -1 ? arg : arg.slice(0, eqIdx);
+}
+
+function flagValue(args: string[], index: number): string | undefined {
+  const arg = args[index];
+  const eqIdx = arg.indexOf('=');
+  if (eqIdx !== -1) {
+    return arg.slice(eqIdx + 1);
+  }
+
+  const next = args[index + 1];
+  return next && !next.startsWith('-') ? next : undefined;
+}
+
+export function parseCurlLikeArgs(
+  rawArgs: string[],
+  commandName: string
+): {
+  target?: string;
+  deployment?: string;
+  protectionBypass?: string;
+  yes: boolean;
+  help: boolean;
+  toolFlags: string[];
+} {
+  const result = {
+    target: undefined as string | undefined,
+    deployment: undefined as string | undefined,
+    protectionBypass: undefined as string | undefined,
+    yes: false,
+    help: false,
+    toolFlags: [] as string[],
+  };
+  const args = rawArgs[0] === commandName ? rawArgs.slice(1) : [...rawArgs];
+  const separatorIndex = args.indexOf('--');
+  const beforeSeparator =
+    separatorIndex === -1 ? args : args.slice(0, separatorIndex);
+  const afterSeparator =
+    separatorIndex === -1 ? [] : args.slice(separatorIndex + 1);
+
+  for (let i = 0; i < beforeSeparator.length; i++) {
+    const arg = beforeSeparator[i];
+    const name = flagName(arg);
+
+    if (VC_STRING_FLAGS.has(name)) {
+      const value = flagValue(beforeSeparator, i);
+      if (!arg.includes('=') && value !== undefined) {
+        i++;
+      }
+      if (name === '--deployment') {
+        result.deployment = value;
+      } else {
+        result.protectionBypass = value;
+      }
+      continue;
+    }
+
+    if (VC_BOOLEAN_FLAGS.has(name)) {
+      if (name === '--yes') {
+        result.yes = true;
+      } else {
+        result.help = true;
+      }
+      continue;
+    }
+
+    if (!result.target && name === '--url') {
+      const value = flagValue(beforeSeparator, i);
+      if (!arg.includes('=') && value !== undefined) {
+        i++;
+      }
+      result.target = value;
+      continue;
+    }
+
+    if (!result.target && !arg.startsWith('-')) {
+      result.target = arg;
+    } else {
+      result.toolFlags.push(arg);
+    }
+  }
+
+  result.toolFlags.push(...afterSeparator);
+  return result;
+}
+
 /**
  * Shared setup logic for curl-like commands
  * Handles argument parsing, validation, help, and telemetry
@@ -69,6 +160,53 @@ export function setupCurlLikeCommand(
   options: { allowFullUrl?: boolean } = {}
 ): CommandSetupResult | number {
   const { print } = output;
+
+  if (options.allowFullUrl) {
+    const parsed = parseCurlLikeArgs(client.argv.slice(2), command.name);
+
+    if (parsed.help) {
+      print(help(command, { columns: client.stderr.columns }));
+      return 2;
+    }
+
+    const path = parsed.target;
+
+    telemetryClient.trackCliArgumentPath(path);
+
+    if (parsed.deployment) {
+      telemetryClient.trackCliOptionDeployment(parsed.deployment);
+    }
+
+    if (parsed.protectionBypass) {
+      telemetryClient.trackCliOptionProtectionBypass(parsed.protectionBypass);
+    }
+
+    if (!path) {
+      output.error(
+        `${getCommandName(`${command.name} <url|path>`)} requires a URL or API path (e.g., 'https://example.vercel.app/api/hello' or '/api/hello')`
+      );
+      print(help(command, { columns: client.stderr.columns }));
+      return 1;
+    }
+
+    let isFullUrl = path.startsWith('http://') || path.startsWith('https://');
+    if (!isFullUrl && looksLikeHostname(path)) {
+      isFullUrl = true;
+    }
+
+    output.debug(
+      `${command.name} flags (${parsed.toolFlags.length} args): ${JSON.stringify(parsed.toolFlags)}`
+    );
+
+    return {
+      path: isFullUrl && !path.startsWith('http') ? `https://${path}` : path,
+      isFullUrl,
+      deploymentFlag: parsed.deployment,
+      protectionBypassFlag: parsed.protectionBypass,
+      toolFlags: parsed.toolFlags,
+      yes: parsed.yes,
+    };
+  }
 
   let parsedArgs = null;
 

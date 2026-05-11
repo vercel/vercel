@@ -2,7 +2,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
-import { getDeploymentUrlAndToken } from '../../../../src/commands/curl/shared';
+import {
+  getDeploymentUrlAndToken,
+  parseCurlLikeArgs,
+} from '../../../../src/commands/curl/shared';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
@@ -180,11 +183,59 @@ describe('curl', () => {
       );
     });
 
-    it('should reject unrecognized flags before --', async () => {
-      client.setArgv('curl', '/api/hello', '--invalid-flag');
+    it('should pass native curl flags before --', async () => {
+      client.setArgv(
+        'curl',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test-secret',
+        '-X',
+        'POST',
+        '-H',
+        'Content-Type: application/json',
+        '-d',
+        '{"ok":true}'
+      );
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('unknown or unexpected option');
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://example.com/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: test-secret',
+          '-X',
+          'POST',
+          '-H',
+          'Content-Type: application/json',
+          '-d',
+          '{"ok":true}',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should accept curl --url as the target', async () => {
+      client.setArgv(
+        'curl',
+        '--url',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test-secret',
+        '--compressed'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--url',
+          'https://example.com/api/hello',
+          '--compressed',
+        ]),
+        expect.any(Object)
+      );
     });
 
     it('should handle process.argv parsing for curl flags after --', () => {
@@ -788,6 +839,45 @@ describe('getDeploymentUrlById', () => {
       '/v13/deployments/dpl_XYZ789ABC123',
       { accountId: MOCK_ACCOUNT_ID }
     );
+  });
+});
+
+describe('parseCurlLikeArgs', () => {
+  it('passes short curl flags through before --', () => {
+    const parsed = parseCurlLikeArgs(
+      ['curl', 'https://example.com', '-X', 'POST', '-d', '{"ok":true}'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('https://example.com');
+    expect(parsed.toolFlags).toEqual(['-X', 'POST', '-d', '{"ok":true}']);
+  });
+
+  it('extracts only vc-owned flags', () => {
+    const parsed = parseCurlLikeArgs(
+      [
+        'curl',
+        'https://example.com',
+        '--protection-bypass',
+        'secret',
+        '--compressed',
+      ],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('https://example.com');
+    expect(parsed.protectionBypass).toBe('secret');
+    expect(parsed.toolFlags).toEqual(['--compressed']);
+  });
+
+  it('uses curl --url as the target', () => {
+    const parsed = parseCurlLikeArgs(
+      ['curl', '--url=https://example.com', '--silent'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('https://example.com');
+    expect(parsed.toolFlags).toEqual(['--silent']);
   });
 });
 
