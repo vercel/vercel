@@ -18,6 +18,7 @@ import {
 import {
   getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
+  isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
   readVercelConfig,
@@ -91,9 +92,7 @@ function toInferredLayoutConfig(
       serviceConfig.routePrefix = service.routePrefix;
     }
 
-    // Persist the framework slug so the resolver doesn't have to
-    // re-detect it from the workspace later.
-    if (typeof service.framework === 'string') {
+    if (isFrontendFramework(service.framework)) {
       serviceConfig.framework = service.framework;
     }
 
