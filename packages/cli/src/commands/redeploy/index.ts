@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { checkDeploymentStatus } from '@vercel/client';
+import { getPlatformEnv } from '@vercel/build-utils';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
@@ -73,6 +74,14 @@ export default async function redeploy(client: Client): Promise<number> {
   telemetry.trackCliArgumentUrlOrDeploymentId(deployIdOrUrl);
   telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
   telemetry.trackCliOptionTarget(parsedArgs.flags['--target']);
+
+  // Honor VERCEL_ORG_ID so that CI workflows using env-var-based
+  // configuration get the correct team context, consistent with
+  // `vercel list`, `vercel deploy`, and other commands.
+  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  if (VERCEL_ORG_ID) {
+    client.config.currentTeam = VERCEL_ORG_ID;
+  }
 
   const { contextName } = await getScope(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
