@@ -112,7 +112,7 @@ Optional settings for the cache entry.
 
 `string`
 
-Optional user-friendly name for the cache entry used for o11y.
+Optional user-friendly name for the cache entry used for o11y. Defaults to the provided `key` if not set.
 
 ###### tags?
 
