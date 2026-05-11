@@ -18,7 +18,10 @@ const binaryRuntimePackageNames = [
   '@vercel/build-utils',
   '@vercel/cli-config',
   '@vercel/detect-agent',
+  '@vercel/fun',
   '@vercel/prepare-flags-definitions',
+  'chokidar',
+  'esbuild',
   'form-data',
   'jose',
   'luxon',
@@ -27,6 +30,30 @@ const binaryRuntimePackageNames = [
   'smol-toml',
   'zod',
 ];
+const binaryRuntimeDevDependencies = new Map([
+  [
+    '@vercel/build-utils',
+    [
+      'async-retry',
+      'async-sema',
+      'bytes',
+      'cross-spawn',
+      'end-of-stream',
+      'fs-extra',
+      'glob',
+      'ignore',
+      'into-stream',
+      'js-yaml',
+      'json5',
+      'mime-types',
+      'minimatch',
+      'multistream',
+      'node-fetch',
+      'semver',
+      'yazl',
+    ],
+  ],
+]);
 const binaryRuntimeDependencies = Object.fromEntries(
   binaryRuntimePackageNames.map(name => [name, packageJson.dependencies[name]])
 );
@@ -123,6 +150,13 @@ async function scanPackage(name, issuerDir = packageRoot) {
     ...manifest.dependencies,
     ...manifest.optionalDependencies,
   };
+  const devDependencies = binaryRuntimeDevDependencies.get(name) ?? [];
+
+  for (const dependency of devDependencies) {
+    if (manifest.devDependencies?.[dependency]) {
+      dependencies[dependency] = manifest.devDependencies[dependency];
+    }
+  }
 
   for (const [dependency, version] of Object.entries(dependencies)) {
     try {
@@ -177,12 +211,30 @@ function shouldCopyPackagePath(packageDir, sourcePath) {
     return true;
   }
 
+  const filename = packageRelativePath.split('/').at(-1);
+  const ignoredExtensions = ['.d.cts', '.d.mts', '.d.ts', '.map'];
+
+  if (ignoredExtensions.some(extension => filename.endsWith(extension))) {
+    return false;
+  }
+
+  if (/\.(spec|test)\.(cjs|js|mjs)$/.test(filename)) {
+    return false;
+  }
+
   const [firstSegment] = packageRelativePath.split('/');
   const ignored = new Set([
     '.git',
     '.turbo',
+    'bench',
+    'benchmark',
     'coverage',
+    'doc',
+    'docs',
+    'example',
+    'examples',
     'node_modules',
+    'scripts',
     'target',
     'test',
     'tests',
