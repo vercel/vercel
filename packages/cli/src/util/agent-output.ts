@@ -102,6 +102,7 @@ const GLOBAL_FLAG_NAMES = new Set([
   '--non-interactive',
   '--scope',
   '--team',
+  '--project',
   '-S',
   '-T',
   // --token/-t are intentionally excluded and stripped via stripSensitiveAuthArgs.

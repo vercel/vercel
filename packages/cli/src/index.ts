@@ -379,6 +379,7 @@ const main = async () => {
   telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
   telemetry.trackCliFlagNoColor(parsedArgs.flags['--no-color']);
   telemetry.trackCliOptionScope(parsedArgs.flags['--scope']);
+  telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
   telemetry.trackCliOptionToken(parsedArgs.flags['--token']);
   telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
   telemetry.trackCliOptionApi(parsedArgs.flags['--api']);

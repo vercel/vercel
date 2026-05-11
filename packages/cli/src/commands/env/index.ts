@@ -59,6 +59,9 @@ export default async function main(client: Client) {
   );
 
   const needHelp = parsedArgs.flags['--help'];
+  const project = parsedArgs.flags['--project'];
+  const forwardedArgs =
+    typeof project === 'string' ? [...args, '--project', project] : args;
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('env', subcommand);
@@ -82,7 +85,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      exitCode = await ls(client, args);
+      exitCode = await ls(client, forwardedArgs);
       break;
     case 'add':
       if (needHelp) {
@@ -91,7 +94,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      exitCode = await add(client, args);
+      exitCode = await add(client, forwardedArgs);
       break;
     case 'rm':
       if (needHelp) {
@@ -100,7 +103,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      exitCode = await rm(client, args);
+      exitCode = await rm(client, forwardedArgs);
       break;
     case 'pull':
       if (needHelp) {
@@ -109,7 +112,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandPull(subcommandOriginal);
-      exitCode = await pull(client, args);
+      exitCode = await pull(client, forwardedArgs);
       break;
     case 'run':
       /**
@@ -134,7 +137,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
-      exitCode = await update(client, args);
+      exitCode = await update(client, forwardedArgs);
       break;
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

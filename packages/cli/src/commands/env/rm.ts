@@ -17,7 +17,6 @@ import { removeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import {
   outputActionRequired,
   outputAgentError,
@@ -25,6 +24,7 @@ import {
   buildEnvRmCommandWithPreservedArgs,
   getPreservedArgsForEnvRm,
 } from '../../util/agent-output';
+import { getEnvLinkedProject } from './project';
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetryClient = new EnvRmTelemetryClient({
@@ -82,7 +82,7 @@ export default async function rm(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagYes(opts['--yes']);
 
-  const link = await getLinkedProject(client);
+  const link = await getEnvLinkedProject(client, opts['--project']);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

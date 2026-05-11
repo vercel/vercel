@@ -81,6 +81,36 @@ describe('env ls', () => {
     });
   });
 
+  describe('--project', () => {
+    beforeEach(() => {
+      useProject(
+        {
+          ...defaultProject,
+          id: 'explicit-env-project',
+          name: 'explicit-env-project',
+          accountId: 'team_dummy',
+        },
+        []
+      );
+    });
+
+    it('uses a global --project before the env command', async () => {
+      client.setArgv('--project', 'explicit-env-project', 'env', 'ls');
+      const exitCode = await env(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain('explicit-env-project');
+    });
+
+    it('uses --project after the env subcommand', async () => {
+      client.setArgv('env', 'ls', '--project', 'explicit-env-project');
+      const exitCode = await env(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain('explicit-env-project');
+    });
+  });
+
   describe('[environment]', () => {
     it('tracks `environment` argument', async () => {
       client.setArgv('env', 'ls', 'production');
