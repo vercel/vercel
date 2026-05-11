@@ -76,7 +76,11 @@ export class UvRunner {
       output = execFileSync(
         this.uvPath,
         ['python', 'list', '--only-installed', '--output-format', 'json'],
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          shell: isWin,
+        }
       );
     } catch (err) {
       throw new Error(
