@@ -1424,6 +1424,393 @@ describe('detectServices', () => {
       expect(result.errors).toEqual([]);
     });
 
+    describe('with env', () => {
+      it('should pass env through to the resolved service', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  NEXT_PUBLIC_API_BASE_URL: {
+                    type: 'service-ref',
+                    service: 'api',
+                  },
+                },
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.services).toHaveLength(2);
+        const frontend = result.services.find(s => s.name === 'frontend');
+        expect(frontend?.env).toEqual({
+          NEXT_PUBLIC_API_BASE_URL: { type: 'service-ref', service: 'api' },
+        });
+      });
+
+      it('should allow services to reference each other', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  NEXT_PUBLIC_API_BASE_URL: {
+                    type: 'service-ref',
+                    service: 'api',
+                  },
+                },
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+                env: {
+                  DASHBOARD_URL: { type: 'service-ref', service: 'frontend' },
+                },
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.services).toHaveLength(2);
+      });
+
+      it('should error on unknown ref target', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  API_URL: { type: 'service-ref', service: 'missing' },
+                },
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatchObject({
+          code: 'UNKNOWN_SERVICE_REF',
+          serviceName: 'frontend',
+        });
+        expect(result.errors[0].message).toContain('missing');
+      });
+
+      it('should error when ref target is not a web service', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  WORKER_URL: { type: 'service-ref', service: 'worker' },
+                },
+              },
+              worker: {
+                type: 'worker',
+                entrypoint: 'worker/handler.ts',
+                topics: ['jobs'],
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'worker/handler.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(
+          result.errors.filter(e => e.code === 'INVALID_SERVICE_REF_TYPE')
+        ).toHaveLength(1);
+        expect(
+          result.errors.find(e => e.code === 'INVALID_SERVICE_REF_TYPE')
+        ).toMatchObject({
+          code: 'INVALID_SERVICE_REF_TYPE',
+          serviceName: 'frontend',
+        });
+      });
+
+      it('should error on invalid env var name', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  '1BAD NAME': { type: 'service-ref', service: 'api' },
+                },
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatchObject({
+          code: 'INVALID_ENV_VAR_NAME',
+          serviceName: 'frontend',
+        });
+      });
+
+      it('should error on missing service for a service-ref entry', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  API_URL: { type: 'service-ref' },
+                },
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatchObject({
+          code: 'INVALID_ENV_VAR_REF',
+          serviceName: 'frontend',
+        });
+      });
+
+      it('should error on unknown env var type', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  API_URL: { type: 'unknown-ref', project: 'foo' },
+                },
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatchObject({
+          code: 'INVALID_ENV_VAR_TYPE',
+          serviceName: 'frontend',
+        });
+      });
+    });
+
+    describe('top-level env refs', () => {
+      it('should accept refs to known web services', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              API_URL: { type: 'service-ref', service: 'api' },
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.services).toHaveLength(2);
+      });
+
+      it('should error when top-level env references an unknown service', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              API_URL: { type: 'service-ref', service: 'missing' },
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        const refError = result.errors.find(
+          e => e.code === 'UNKNOWN_SERVICE_REF'
+        );
+        expect(refError).toMatchObject({
+          code: 'UNKNOWN_SERVICE_REF',
+        });
+        // Top-level env errors aren't attributed to a specific service.
+        expect(refError?.serviceName).toBeUndefined();
+        expect(refError?.message).toContain('missing');
+      });
+
+      it('should error when top-level env references a non-web service', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              WORKER_URL: { type: 'service-ref', service: 'worker' },
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+              },
+              worker: {
+                type: 'worker',
+                entrypoint: 'worker/handler.ts',
+                topics: ['jobs'],
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'worker/handler.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        const refError = result.errors.find(
+          e => e.code === 'INVALID_SERVICE_REF_TYPE'
+        );
+        expect(refError).toMatchObject({
+          code: 'INVALID_SERVICE_REF_TYPE',
+        });
+        expect(refError?.serviceName).toBeUndefined();
+      });
+
+      it('should NOT validate legacy literal top-level env', async () => {
+        // Legacy `Record<string, string>` shape has no refs; it must pass
+        // through without triggering the ref validator.
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              API_URL: 'https://api.example.com',
+              FOO: 'bar',
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        expect(result.services).toHaveLength(1);
+      });
+
+      it('should fold top-level env into every service.env', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              API_URL: { type: 'service-ref', service: 'api' },
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        const frontend = result.services.find(s => s.name === 'frontend');
+        const api = result.services.find(s => s.name === 'api');
+        expect(frontend?.env).toEqual({
+          API_URL: { type: 'service-ref', service: 'api' },
+        });
+        expect(api?.env).toEqual({
+          API_URL: { type: 'service-ref', service: 'api' },
+        });
+      });
+
+      it('per-service env overrides top-level on key conflict', async () => {
+        const fs = new VirtualFilesystem({
+          'vercel.json': JSON.stringify({
+            env: {
+              API_URL: { type: 'service-ref', service: 'api' },
+            },
+            experimentalServices: {
+              frontend: {
+                entrypoint: 'client/index.ts',
+                routePrefix: '/',
+                env: {
+                  // Override the top-level entry with a different target.
+                  API_URL: { type: 'service-ref', service: 'admin' },
+                },
+              },
+              api: {
+                entrypoint: 'server/index.ts',
+                routePrefix: '/api',
+              },
+              admin: {
+                entrypoint: 'admin/index.ts',
+                routePrefix: '/admin',
+              },
+            },
+          }),
+          'client/index.ts': 'export default {}',
+          'server/index.ts': 'export default {}',
+          'admin/index.ts': 'export default {}',
+        });
+        const result = await detectServices({ fs });
+
+        expect(result.errors).toEqual([]);
+        const frontend = result.services.find(s => s.name === 'frontend');
+        // Per-service entry wins.
+        expect(frontend?.env).toEqual({
+          API_URL: { type: 'service-ref', service: 'admin' },
+        });
+      });
+    });
+
     describe('with root', () => {
       it('should resolve file entrypoint relative to root', async () => {
         const fs = new VirtualFilesystem({

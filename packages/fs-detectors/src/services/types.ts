@@ -1,5 +1,7 @@
 import type { Route } from '@vercel/routing-utils';
 import type {
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
@@ -7,12 +9,15 @@ import type {
   Services,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
   Service,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
@@ -20,6 +25,7 @@ export type {
   Services,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
   Service,
   Builder,
 };
@@ -65,6 +71,7 @@ export type InferredServicesConfig = ExperimentalServices;
 export interface ResolvedServicesResult {
   services: Service[];
   source: DetectServicesSource;
+  useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
