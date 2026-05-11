@@ -69,6 +69,7 @@ const PYTHON_ENTRYPOINT_DOCS_URL =
 
 import {
   detectPythonEntrypoint,
+  entrypointToModule,
   type DetectedPythonEntrypoint,
   type PythonEntrypoint,
 } from './entrypoint';
@@ -622,7 +623,7 @@ export const build: BuildVX = async ({
     Object.assign(pythonEnv, quirksResult.buildEnv);
   }
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const moduleName = entrypointToModule(entrypoint);
 
   if (handlerFunction) {
     const entrypointPath = join(workPath, entrypoint);
