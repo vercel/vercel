@@ -1,0 +1,246 @@
+name: Release Binary
+
+on:
+  push:
+    tags:
+      - 'vercel@*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build (e.g. vercel@53.3.1)
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-binary-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: node22-macos-arm64
+            asset: vercel-darwin-arm64
+            ext: ''
+            sign: true
+            smoke: true
+          - runner: macos-15-intel
+            target: node22-macos-x64
+            asset: vercel-darwin-x64
+            ext: ''
+            sign: true
+            smoke: true
+          - runner: ubuntu-latest
+            target: node22-linux-arm64
+            asset: vercel-linux-arm64
+            ext: ''
+            sign: false
+            smoke: false
+          - runner: ubuntu-latest
+            target: node22-linux-x64
+            asset: vercel-linux-x64
+            ext: ''
+            sign: false
+            smoke: true
+          - runner: windows-latest
+            target: node22-win-x64
+            asset: vercel-windows-x64
+            ext: '.exe'
+            sign: false
+            smoke: true
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          enable-cache: false
+
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Build binary
+        working-directory: packages/cli
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: node scripts/build-binary.mjs --target ${{ matrix.target }} --output ./dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+
+      - name: Install rcodesign
+        if: ${{ matrix.sign }}
+        run: cargo install apple-codesign --locked
+
+      - name: Write Apple signing certificate
+        if: ${{ matrix.sign }}
+        shell: bash
+        env:
+          APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+          APPLE_CERT_PATH: ${{ runner.temp }}/apple-certificate.p12
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_CERT_DATA" ]]; then
+            echo "::error::APPLE_CERT_DATA secret is empty or unavailable"
+            exit 1
+          fi
+          echo "$APPLE_CERT_DATA" | base64 --decode > "$APPLE_CERT_PATH"
+          if [[ ! -s "$APPLE_CERT_PATH" ]]; then
+            echo "::error::Decoded Apple certificate is empty"
+            exit 1
+          fi
+          echo "APPLE_CERT_PATH=$APPLE_CERT_PATH" >> "$GITHUB_ENV"
+
+      - name: Write Apple notarization API key
+        if: ${{ matrix.sign }}
+        shell: bash
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ runner.temp }}/apple-api-key.json
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_API_KEY" ]]; then
+            echo "::error::APPLE_API_KEY secret is empty or unavailable"
+            exit 1
+          fi
+          echo "$APPLE_API_KEY" | base64 --decode > "$APPLE_API_KEY_PATH"
+          if [[ ! -s "$APPLE_API_KEY_PATH" ]]; then
+            echo "::error::Decoded Apple API key is empty"
+            exit 1
+          fi
+          echo "APPLE_API_KEY_PATH=$APPLE_API_KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Sign binary
+        if: ${{ matrix.sign }}
+        shell: bash
+        working-directory: packages/cli
+        env:
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          VERCEL_CLI_APPLE_SIGNING_IDENTIFIER: com.vercel.vercel-cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          rcodesign sign \
+            --for-notarization \
+            --binary-identifier "$VERCEL_CLI_APPLE_SIGNING_IDENTIFIER" \
+            --entitlements-xml-path entitlements.plist \
+            --p12-file "$APPLE_CERT_PATH" \
+            --p12-password "$APPLE_CERT_PASSWORD" \
+            "$bin"
+
+          requirement=$(codesign -dr - "$bin" 2>&1)
+          printf '%s\n' "$requirement"
+          expected_identifier="identifier \"$VERCEL_CLI_APPLE_SIGNING_IDENTIFIER\""
+          if [[ "$requirement" != *"$expected_identifier"* ]]; then
+            echo "::error::Expected designated requirement to contain $expected_identifier"
+            exit 1
+          fi
+      - name: Notarize binary
+        if: ${{ matrix.sign }}
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          zip_path="$RUNNER_TEMP/${{ matrix.asset }}${{ matrix.ext }}.zip"
+          ditto -c -k --keepParent "$bin" "$zip_path"
+          rcodesign notary-submit \
+            --api-key-file "$APPLE_API_KEY_PATH" \
+            --wait \
+            "$zip_path"
+      - name: Smoke test binary version
+        if: ${{ matrix.smoke }}
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          chmod +x "$bin" || true
+          out=$(./"$bin" --version)
+          echo "$out"
+          test -n "$out"
+
+      - name: Compute checksum
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          file="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 "$file" > "$file.sha256"
+          else
+            sha256sum "$file" > "$file.sha256"
+          fi
+          cat "$file.sha256"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}${{ matrix.ext }}
+          path: packages/cli/dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+          retention-days: 3
+          if-no-files-found: error
+
+      - name: Wait for GitHub Release
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          for i in $(seq 1 30); do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release $TAG ready"
+              exit 0
+            fi
+            echo "Waiting for release $TAG to be created ($i/30)..."
+            sleep 10
+          done
+          echo "::error::Timed out waiting for release $TAG after 5 minutes"
+          exit 1
+
+      - name: Upload to GitHub Release
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        working-directory: packages/cli
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          gh release upload "$TAG" \
+            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}" \
+            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

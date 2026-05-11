@@ -1,0 +1,105 @@
+name: Validate Binary
+
+on:
+  pull_request:
+    paths:
+      - 'packages/cli/package.json'
+      - 'packages/cli/pkg.js'
+      - 'packages/cli/pkg.config.mjs'
+      - 'packages/cli/scripts/build-binary.mjs'
+      - '.github/workflows/validate-binary.yml'
+      - '.github/workflows/release-binary.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: validate-binary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: node22-linux-x64
+            asset: vercel-linux-x64
+            ext: ''
+          - runner: windows-latest
+            target: node22-win-x64
+            asset: vercel-windows-x64
+            ext: '.exe'
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          enable-cache: false
+
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Build binary
+        working-directory: packages/cli
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: node scripts/build-binary.mjs --target ${{ matrix.target }} --output ./dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+
+      - name: Smoke test binary version
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          chmod +x "$bin" || true
+          out=$(./"$bin" --version)
+          echo "$out"
+          test -n "$out"
+
+      - name: Smoke test binary help
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          ./"$bin" --help >/tmp/vercel-binary-help.txt
+          test -s /tmp/vercel-binary-help.txt
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}${{ matrix.ext }}
+          path: packages/cli/dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+          retention-days: 3
+          if-no-files-found: error
