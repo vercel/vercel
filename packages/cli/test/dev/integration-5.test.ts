@@ -652,7 +652,7 @@ describe('[vercel dev] Multi-service with services', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_SERVICES: '1',
           VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
         },
       },
@@ -708,7 +708,7 @@ describe('[vercel dev] Multi-service with services', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_SERVICES: '1',
           VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
         },
       },
@@ -739,7 +739,7 @@ describe('[vercel dev] Multi-service with services', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_SERVICES: '1',
           VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
           ECHO_VAR: 'http://from-shell',
         },
@@ -771,7 +771,7 @@ describe('[vercel dev] Multi-service with services', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_SERVICES: '1',
           VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
         },
       },
