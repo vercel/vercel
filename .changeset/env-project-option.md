@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Add support for the global `--project` option in `vc env` commands.
+Add support for explicit `--project` and `--scope` selection in `vc env` commands.

@@ -65,7 +65,11 @@ export default async function run(client: Client): Promise<number> {
   }
 
   // Get the linked project
-  const link = await getEnvLinkedProject(client, parsedArgs.flags['--project']);
+  const link = await getEnvLinkedProject(
+    client,
+    parsedArgs.flags['--project'],
+    parsedArgs.flags['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

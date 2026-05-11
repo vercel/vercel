@@ -78,6 +78,7 @@ export default async function update(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
   telemetryClient.trackCliOptionValue(valueFromFlag);
+  telemetryClient.trackCliOptionScope(opts['--scope']);
 
   if (args.length > 3) {
     if (client.nonInteractive) {
@@ -180,7 +181,11 @@ export default async function update(client: Client, argv: string[]) {
     }
   }
 
-  const link = await getEnvLinkedProject(client, opts['--project']);
+  const link = await getEnvLinkedProject(
+    client,
+    opts['--project'],
+    opts['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

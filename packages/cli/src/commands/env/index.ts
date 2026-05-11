@@ -60,8 +60,14 @@ export default async function main(client: Client) {
 
   const needHelp = parsedArgs.flags['--help'];
   const project = parsedArgs.flags['--project'];
-  const forwardedArgs =
-    typeof project === 'string' ? [...args, '--project', project] : args;
+  const scope = parsedArgs.flags['--scope'];
+  const forwardedArgs = [...args];
+  if (typeof scope === 'string') {
+    forwardedArgs.push('--scope', scope);
+  }
+  if (typeof project === 'string') {
+    forwardedArgs.push('--project', project);
+  }
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('env', subcommand);

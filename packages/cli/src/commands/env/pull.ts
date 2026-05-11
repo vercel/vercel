@@ -110,8 +110,13 @@ export default async function pull(
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionId(opts['--id']);
+  telemetryClient.trackCliOptionScope(opts['--scope']);
 
-  const link = await getEnvLinkedProject(client, opts['--project']);
+  const link = await getEnvLinkedProject(
+    client,
+    opts['--project'],
+    opts['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

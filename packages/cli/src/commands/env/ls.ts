@@ -69,8 +69,13 @@ export default async function ls(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagGuidance(flags['--guidance']);
   telemetryClient.trackCliOptionFormat(flags['--format']);
+  telemetryClient.trackCliOptionScope(flags['--scope']);
 
-  const link = await getEnvLinkedProject(client, flags['--project']);
+  const link = await getEnvLinkedProject(
+    client,
+    flags['--project'],
+    flags['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
