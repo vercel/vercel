@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 13.23.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+
 ## 13.22.1
 
 ### Patch Changes
