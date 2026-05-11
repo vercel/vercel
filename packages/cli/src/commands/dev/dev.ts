@@ -10,6 +10,7 @@ import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
+import { findRepoRoot } from '../../util/link/repo';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
@@ -108,9 +109,19 @@ export default async function dev(
   if (link.status === 'linked') {
     const { project, org } = link;
 
-    // If repo linked, update `cwd` to the repo root
+    // Resolve the effective repo root so that `rootDirectory` is always
+    // interpreted relative to the repository, not relative to wherever the
+    // user happened to run the command from. For repo links the root comes
+    // from `repo.json`; otherwise fall back to `findRepoRoot` (which walks
+    // up looking for `.git`). This avoids double-appending `rootDirectory`
+    // when the user runs `vercel dev` from inside the project folder.
     if (link.repoRoot) {
       repoRoot = cwd = link.repoRoot;
+    } else if (project.rootDirectory) {
+      const monorepoRoot = await findRepoRoot(cwd);
+      if (monorepoRoot) {
+        repoRoot = cwd = monorepoRoot;
+      }
     }
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
