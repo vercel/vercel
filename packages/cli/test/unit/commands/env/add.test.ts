@@ -247,6 +247,81 @@ describe('env add', () => {
       });
     });
 
+    describe('default-sensitive with --value --yes (53.x regression, #16232)', () => {
+      it('shows retrieval-limitation warning when --value --yes defaults to sensitive on Production', async () => {
+        // Reproduces #16232 Bug 1: CLI 53.x made Production/Preview sensitive by default.
+        // When --value V --yes is used without --sensitive, the variable is stored as
+        // sensitive and env pull returns an empty value. The user should be warned.
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'DEFAULT_SENSITIVE_VALUE_YES',
+          'production',
+          '--value',
+          'secret123',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+
+        // The warning should appear even though --sensitive was not passed explicitly.
+        await expect(client.stderr).toOutput(
+          'Sensitive values cannot be retrieved later from the dashboard or CLI'
+        );
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        // The value must actually be stored (not empty).
+        expect(spy).toHaveBeenCalled();
+        const [, , , type, , value] = spy.mock.calls[0] as unknown as [
+          unknown,
+          unknown,
+          unknown,
+          string,
+          unknown,
+          string,
+        ];
+        expect(type).toBe('sensitive');
+        expect(value).toBe('secret123');
+
+        spy.mockRestore();
+      });
+
+      it('does NOT show retrieval-limitation warning when --no-sensitive is set (encrypted, pullable)', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'ENCRYPTED_VALUE_YES',
+          'production',
+          '--no-sensitive',
+          '--value',
+          'secret123',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        // No warning for encrypted (pullable) vars.
+        expect(spy).toHaveBeenCalled();
+        const type = spy.mock.calls[0][3];
+        expect(type).toBe('encrypted');
+
+        spy.mockRestore();
+      });
+    });
+
     describe('--sensitive + Development', () => {
       it('errors when --sensitive is passed and the target is Development', async () => {
         client.setArgv(
