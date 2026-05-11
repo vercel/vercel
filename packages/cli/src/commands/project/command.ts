@@ -238,7 +238,7 @@ export const tokenSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption],
+  options: [yesOption, formatOption],
   examples: [
     {
       name: 'Get a development OIDC token for the linked project',
@@ -247,6 +247,10 @@ export const tokenSubcommand = {
     {
       name: 'Get a development OIDC token for the project named "my-project"',
       value: `${packageName} project token my-project`,
+    },
+    {
+      name: 'Get a development OIDC token as JSON',
+      value: `${packageName} project token my-project --format=json`,
     },
   ],
 } as const;

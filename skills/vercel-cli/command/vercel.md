@@ -1,8 +1,8 @@
 ---
-description: Load the Vercel CLI skill for deploying, managing, and developing projects on the Vercel platform. Use when users ask to "deploy a project", "set up environment variables", "configure a domain", "start local development", manage Vercel infrastructure, "add a database", "install an integration", "connect a third-party service", or manage Marketplace integrations.
+description: Load the Vercel CLI skill for deploying, managing, inspecting, and troubleshooting projects on the Vercel platform. Use when users ask to deploy a project, inspect deployments, debug logs or metrics, check activity or usage, set up environment variables, configure domains or DNS, start local development, manage Vercel infrastructure, add databases or integrations, connect third-party services, or use Vercel API fallback.
 ---
 
-Load the Vercel CLI skill and help with project deployment and management.
+Load the Vercel CLI skill and help with Vercel project deployment, management, inspection, and troubleshooting.
 
 ## Workflow
 

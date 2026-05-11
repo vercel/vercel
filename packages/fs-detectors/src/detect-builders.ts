@@ -8,6 +8,7 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
+  Services,
   ExperimentalServices,
   ProjectSettings,
   Service,
@@ -64,6 +65,7 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
+  services?: Services;
   experimentalServices?: ExperimentalServices;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
@@ -140,13 +142,17 @@ export async function detectBuilders(
   errorRoutes: Route[] | null;
   services?: Service[];
 }> {
-  const { experimentalServices: services, projectSettings = {} } = options;
+  const { services, experimentalServices, projectSettings = {} } = options;
   const { framework } = projectSettings;
-  const hasServicesConfig = services != null && typeof services === 'object';
+  const configuredServices = services ?? experimentalServices;
+  const hasServicesConfig =
+    configuredServices != null && typeof configuredServices === 'object';
 
   if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
+      configuredServices: configuredServices,
+      projectFramework: framework,
     });
   }
 

@@ -22,7 +22,7 @@ describe('getServiceUrlEnvVars', () => {
       createService({ name: 'api', routePrefix: '/api' }),
     ];
     const result = getServiceUrlEnvVars({
-      requestedEnv: services[0].env ?? {},
+      requestedEnv: {},
       consumerService: services[0],
       services,
       frameworkList: [NEXTJS, FASTAPI],

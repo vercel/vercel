@@ -28,6 +28,7 @@ import {
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
 import { importBuilders } from '../build/import-builders';
+import { getStaticServiceSchedules } from '../service-schedules';
 import output from '../../output-manager';
 import { treeKill } from '../tree-kill';
 
@@ -734,20 +735,15 @@ export class ServicesOrchestrator {
       const crons =
         managed.crons && managed.crons.length > 0
           ? managed.crons
-          : service &&
-              isScheduleTriggeredService(service) &&
-              service.schedule &&
-              service.schedule !== '<dynamic>'
-            ? [
-                {
-                  path: getInternalServiceCronPath(
-                    name,
-                    service.entrypoint || service.builder.src || 'index',
-                    service.handlerFunction || 'cron'
-                  ),
-                  schedule: service.schedule,
-                },
-              ]
+          : service && isScheduleTriggeredService(service) && service.schedule
+            ? getStaticServiceSchedules(service.schedule).map(schedule => ({
+                path: getInternalServiceCronPath(
+                  name,
+                  service.entrypoint || service.builder.src || 'index',
+                  service.handlerFunction || 'cron'
+                ),
+                schedule,
+              }))
             : [];
       if (crons.length === 0) continue;
 

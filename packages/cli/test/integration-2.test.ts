@@ -21,7 +21,7 @@ import type { CLIProcess } from './helpers/types';
 import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
@@ -788,7 +788,7 @@ describe('telemetry submits data', () => {
   });
 });
 
-test('deploys with only vercel.json and README.md', async () => {
+test('deploys with only vercel.json and a static file', async () => {
   const directory = await setupE2EFixture(
     'deploy-with-only-readme-vercel-json'
   );
@@ -810,12 +810,12 @@ test('deploys with only vercel.json and README.md', async () => {
   );
 
   const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
+  const res = await nodeFetch(`https://${host}/content.txt`);
   const text = await res.text();
-  expect(text).toMatch(/readme contents/);
+  expect(text).toMatch(/content file contents/);
 });
 
-test('reject conflicting `vercel.json` and `now.json` files', async () => {
+test('reject deprecated `now.json` files', async () => {
   const directory = await setupE2EFixture('conflicting-now-json-vercel-json');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
@@ -824,7 +824,7 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
-    'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    'The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.'
   );
 });
 
@@ -1409,6 +1409,9 @@ test.each([
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
   expectedStatus,
+}: {
+  vercelAuth: 'none' | 'standard';
+  expectedStatus: number;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${

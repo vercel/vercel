@@ -273,6 +273,26 @@ describe('deploy', () => {
     expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
+  it('should prefer an explicit target config over early cwd config', async () => {
+    const targetDir = setupTmpDir('deploy-explicit-target-config');
+    await fs.writeJSON(join(targetDir, 'now.json'), { version: 1 });
+    await fs.writeFile(join(targetDir, 'index.txt'), 'hello');
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', targetDir);
+    client.localConfig = {
+      [fileNameSymbol]: 'vercel.json',
+      version: 2,
+    };
+
+    const exitCodePromise = deploy(client);
+    await expect(client.stderr).toOutput(
+      'Error: The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.\n'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
+  });
+
   it('should send a tgz file when `--archive=tgz`', async () => {
     const user = useUser();
     useTeams('team_dummy');
@@ -378,6 +398,89 @@ describe('deploy', () => {
         value: 'tgz',
       },
     ]);
+  });
+
+  it('should mark a manual deployment as errored with `deploy continue --error`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    let teamId: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      teamId = req.query.teamId;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        inspectorUrl: 'https://vercel.com/test/continue',
+        readyState: 'ERROR',
+        errorCode: 'BUILD_FAILED',
+        errorMessage: body.errorMessage,
+        aliasAssigned: false,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--error',
+      'External CI failed'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toEqual({ errorMessage: 'External CI failed' });
+    expect(teamId).toEqual('team_dummy');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:continue',
+        value: 'continue',
+      },
+    ]);
+  });
+
+  it('should mark a manual deployment as errored with `deploy continue --error=...`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        readyState: 'ERROR',
+        errorCode: 'BUILD_FAILED',
+        errorMessage: body.errorMessage,
+        aliasAssigned: false,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--error=External CI failed'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toEqual({ errorMessage: 'External CI failed' });
   });
 
   it('should pass flag to skip custom domain assignment', async () => {

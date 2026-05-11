@@ -103,6 +103,9 @@ export default async function connex(client: Client): Promise<number> {
 
         const listFlagsSpec = getFlagsSpecification(listSubcommand.options);
         const listParsedArgs = parseArguments(subArgs, listFlagsSpec);
+        telemetry.trackCliFlagAllProjects(
+          listParsedArgs.flags['--all-projects']
+        );
         telemetry.trackCliOptionLimit(listParsedArgs.flags['--limit']);
         telemetry.trackCliOptionNext(listParsedArgs.flags['--next']);
         telemetry.trackCliOptionFormat(listParsedArgs.flags['--format']);

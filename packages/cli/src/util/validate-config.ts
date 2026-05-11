@@ -155,7 +155,7 @@ const cronsSchema = {
   },
 };
 
-const serviceMountSchema = {
+const experimentalServicesMountSchema = {
   oneOf: [
     {
       type: 'string',
@@ -182,10 +182,48 @@ const serviceMountSchema = {
   ],
 };
 
-const serviceScheduleSchema = {
+const servicesMountSchema = {
+  oneOf: [
+    {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['path'],
+      properties: {
+        path: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 512,
+        },
+      },
+    },
+  ],
+};
+
+const staticServiceScheduleSchema = {
   type: 'string',
   minLength: 9,
   maxLength: 256,
+  not: { const: '<dynamic>' },
+};
+
+const serviceScheduleSchema = {
+  oneOf: [
+    {
+      type: 'string',
+      minLength: 9,
+      maxLength: 256,
+    },
+    {
+      type: 'array',
+      minItems: 1,
+      items: staticServiceScheduleSchema,
+    },
+  ],
 };
 
 const serviceQueueTopicSchema = {
@@ -275,13 +313,18 @@ const topLevelEnvSchema = {
   ],
 };
 
-const serviceCommonProperties = {
+const experimentalServicesCommonProperties = {
+  entrypoint: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 512,
+  },
   root: {
     type: 'string',
     minLength: 1,
     maxLength: 512,
   },
-  entrypoint: {
+  workspace: {
     type: 'string',
     minLength: 1,
     maxLength: 512,
@@ -307,6 +350,11 @@ const serviceCommonProperties = {
     maxLength: 2048,
   },
   installCommand: {
+    type: 'string',
+    minLength: 1,
+    maxLength: 2048,
+  },
+  preDeployCommand: {
     type: 'string',
     minLength: 1,
     maxLength: 2048,
@@ -340,11 +388,10 @@ const serviceCommonProperties = {
       },
     ],
   },
-  env: envVarRecordSchema,
 };
 
-const serviceRoutableProperties = {
-  mount: serviceMountSchema,
+const experimentalServicesRoutableProperties = {
+  mount: experimentalServicesMountSchema,
   routePrefix: {
     type: 'string',
     minLength: 1,
@@ -357,14 +404,34 @@ const serviceRoutableProperties = {
   },
 };
 
-const serviceConfigSchema = {
+const servicesCommonProperties = {
+  entrypoint: experimentalServicesCommonProperties.entrypoint,
+  root: experimentalServicesCommonProperties.root,
+  framework: experimentalServicesCommonProperties.framework,
+  runtime: experimentalServicesCommonProperties.runtime,
+  buildCommand: experimentalServicesCommonProperties.buildCommand,
+  preDeployCommand: experimentalServicesCommonProperties.preDeployCommand,
+  memory: experimentalServicesCommonProperties.memory,
+  maxDuration: experimentalServicesCommonProperties.maxDuration,
+  includeFiles: experimentalServicesCommonProperties.includeFiles,
+  excludeFiles: experimentalServicesCommonProperties.excludeFiles,
+  env: envVarRecordSchema,
+};
+
+const servicesRoutableProperties = {
+  mount: servicesMountSchema,
+};
+
+const servicesRequiredProperties = ['type', 'root'];
+
+const experimentalServicesServiceConfigSchema = {
   oneOf: [
     {
       type: 'object',
       additionalProperties: false,
       properties: {
-        ...serviceCommonProperties,
-        ...serviceRoutableProperties,
+        ...experimentalServicesCommonProperties,
+        ...experimentalServicesRoutableProperties,
         type: {
           enum: ['web'],
         },
@@ -375,7 +442,7 @@ const serviceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'trigger', 'schedule'],
       properties: {
-        ...serviceCommonProperties,
+        ...experimentalServicesCommonProperties,
         type: {
           const: 'job',
         },
@@ -390,7 +457,7 @@ const serviceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'trigger', 'topics'],
       properties: {
-        ...serviceCommonProperties,
+        ...experimentalServicesCommonProperties,
         type: {
           const: 'job',
         },
@@ -410,7 +477,7 @@ const serviceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'trigger', 'entrypoint'],
       properties: {
-        ...serviceCommonProperties,
+        ...experimentalServicesCommonProperties,
         type: {
           const: 'job',
         },
@@ -424,7 +491,7 @@ const serviceConfigSchema = {
       additionalProperties: false,
       required: ['type'],
       properties: {
-        ...serviceCommonProperties,
+        ...experimentalServicesCommonProperties,
         type: {
           const: 'worker',
         },
@@ -449,7 +516,7 @@ const serviceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'schedule'],
       properties: {
-        ...serviceCommonProperties,
+        ...experimentalServicesCommonProperties,
         type: {
           const: 'cron',
         },
@@ -457,6 +524,76 @@ const serviceConfigSchema = {
       },
     },
   ],
+};
+
+const servicesServiceConfigSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: servicesRequiredProperties,
+      properties: {
+        ...servicesCommonProperties,
+        ...servicesRoutableProperties,
+        type: {
+          enum: ['web'],
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: [...servicesRequiredProperties, 'trigger', 'schedule'],
+      properties: {
+        ...servicesCommonProperties,
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'schedule',
+        },
+        schedule: serviceScheduleSchema,
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: [...servicesRequiredProperties, 'trigger', 'topics'],
+      properties: {
+        ...servicesCommonProperties,
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'queue',
+        },
+        topics: serviceTopicsSchema,
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: [...servicesRequiredProperties, 'trigger', 'entrypoint'],
+      properties: {
+        ...servicesCommonProperties,
+        type: {
+          const: 'job',
+        },
+        trigger: {
+          const: 'workflow',
+        },
+      },
+    },
+  ],
+};
+
+const servicesSchema = {
+  type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
+  additionalProperties: servicesServiceConfigSchema,
 };
 
 /**
@@ -470,7 +607,7 @@ const experimentalServicesSchema = {
     pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
     maxLength: 64,
   },
-  additionalProperties: serviceConfigSchema,
+  additionalProperties: experimentalServicesServiceConfigSchema,
 };
 
 /**
@@ -513,6 +650,7 @@ const vercelConfigSchema = {
     crons: cronsSchema,
     bunVersion: { type: 'string' },
     env: topLevelEnvSchema,
+    services: servicesSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,
   },
@@ -521,7 +659,27 @@ const vercelConfigSchema = {
 const ajv = new Ajv();
 const validate = ajv.compile(vercelConfigSchema);
 
+function isPublicServicesEnabled(): boolean {
+  return (
+    process.env.VERCEL_USE_SERVICES === '1' ||
+    process.env.VERCEL_USE_SERVICES?.toLowerCase() === 'true'
+  );
+}
+
 export function validateConfig(config: VercelConfig): NowBuildError | null {
+  if (
+    Object.prototype.hasOwnProperty.call(config, 'services') &&
+    !isPublicServicesEnabled()
+  ) {
+    const fileName = config[fileNameSymbol] || 'vercel.json';
+    const niceError = getPrettyError({
+      dataPath: '',
+      params: { additionalProperty: 'services' },
+    });
+    niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+    return niceError;
+  }
+
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
@@ -541,19 +699,30 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     });
   }
 
-  if (config.experimentalServices && config.builds) {
+  const hasServices = Boolean(config.services);
+  const hasExperimentalServices = Boolean(config.experimentalServices);
+
+  if (hasServices && hasExperimentalServices) {
     return new NowBuildError({
-      code: 'SERVICES_AND_BUILDS',
+      code: 'SERVICES_AND_EXPERIMENTAL_SERVICES',
       message:
-        'The `experimentalServices` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+        'The `services` property cannot be used in conjunction with the `experimentalServices` property. Please remove one of them.',
     });
   }
 
-  if (config.experimentalServices && config.functions) {
+  if ((hasServices || hasExperimentalServices) && config.builds) {
+    return new NowBuildError({
+      code: 'SERVICES_AND_BUILDS',
+      message:
+        'The `services` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+    });
+  }
+
+  if ((hasServices || hasExperimentalServices) && config.functions) {
     return new NowBuildError({
       code: 'SERVICES_AND_FUNCTIONS',
       message:
-        'The `experimentalServices` property cannot be used in conjunction with the `functions` property. Please remove one of them.',
+        'The `services` property cannot be used in conjunction with the `functions` property. Please remove one of them.',
     });
   }
 
