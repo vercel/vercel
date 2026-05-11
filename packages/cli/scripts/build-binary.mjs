@@ -154,7 +154,9 @@ async function findPackageDir(name, issuerDir) {
 
     const parent = dirname(current);
     if (parent === current) {
-      throw new Error('Could not resolve package ' + name + ' from ' + issuerDir);
+      throw new Error(
+        'Could not resolve package ' + name + ' from ' + issuerDir
+      );
     }
     current = parent;
   }
@@ -194,7 +196,10 @@ function shouldCopyPackagePath(packageDir, sourcePath) {
 }
 
 function isWorkspacePackage(packageDir) {
-  const relativePackagePath = relative(resolve(packageRoot, '..', '..'), packageDir);
+  const relativePackagePath = relative(
+    resolve(packageRoot, '..', '..'),
+    packageDir
+  );
   return (
     relativePackagePath.startsWith('packages/') ||
     relativePackagePath.startsWith('internals/')
@@ -202,7 +207,12 @@ function isWorkspacePackage(packageDir) {
 }
 
 function normalizeOutputArgs(args) {
-  const outputFlags = new Set(['--output', '-o', '--out-path', '--output-path']);
+  const outputFlags = new Set([
+    '--output',
+    '-o',
+    '--out-path',
+    '--output-path',
+  ]);
   const normalized = [];
 
   for (let index = 0; index < args.length; index += 1) {

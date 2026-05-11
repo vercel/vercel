@@ -1,7 +1,13 @@
 export default {
   name: 'vercel',
   pkg: {
-    scripts: ['pkg.js', 'dist/vc.js', 'dist/index.js', 'dist/help.js', 'dist/commands-bulk.js'],
+    scripts: [
+      'pkg.js',
+      'dist/vc.js',
+      'dist/index.js',
+      'dist/help.js',
+      'dist/commands-bulk.js',
+    ],
     assets: [
       'dist/**/*.js',
       'dist/**/*.cjs',
