@@ -298,3 +298,26 @@ export function detectPlatform(): PlatformInfo {
     libc,
   };
 }
+
+/**
+ * Return platform info for the Lambda runtime target (x86_64 Linux).
+ *
+ * Unlike {@link detectPlatform} (which reflects the build host), this returns
+ * Lambda-compatible Linux details for local builds. On the Vercel build image
+ * we can delegate to `detectPlatform()` because that host is the deploy target.
+ */
+export function detectTargetPlatform(): PlatformInfo {
+  if (process.env.VERCEL_BUILD_IMAGE && process.platform === 'linux') {
+    return detectPlatform();
+  }
+
+  return {
+    osName: 'manylinux',
+    archName: 'x86_64',
+    osMajor: 2,
+    osMinor: 17,
+    os: 'linux',
+    sysPlatform: 'linux',
+    libc: 'gnu',
+  };
+}
