@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import { resolve, join, sep } from 'path';
+import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
 
@@ -10,6 +10,7 @@ import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
+import { findRepoRoot } from '../../util/link/repo';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
@@ -33,25 +34,6 @@ type Options = {
   '--local': boolean;
   '--yes': boolean;
 };
-
-/**
- * Returns true if `cwd`'s trailing path segments match `suffix`. Used to
- * avoid double-appending a project's `rootDirectory` when the user has
- * already `cd`'d into it (e.g. a per-directory `.vercel/project.json`
- * lives inside the project's root directory).
- */
-function endsWithPath(cwd: string, suffix: string): boolean {
-  const cwdSegments = cwd.split(sep).filter(Boolean);
-  const suffixSegments = suffix.split(/[\\/]/).filter(Boolean);
-  if (
-    suffixSegments.length === 0 ||
-    suffixSegments.length > cwdSegments.length
-  ) {
-    return false;
-  }
-  const offset = cwdSegments.length - suffixSegments.length;
-  return suffixSegments.every((s, i) => s === cwdSegments[offset + i]);
-}
 
 export default async function dev(
   client: Client,
@@ -127,16 +109,26 @@ export default async function dev(
   if (link.status === 'linked') {
     const { project, org } = link;
 
-    // If repo linked, update `cwd` to the repo root
+    // Resolve the effective repo root so that `rootDirectory` is always
+    // interpreted relative to the repository, not relative to wherever the
+    // user happened to run the command from. For repo links the root comes
+    // from `repo.json`; otherwise fall back to `findRepoRoot` (which walks
+    // up looking for `.git`). This avoids double-appending `rootDirectory`
+    // when the user runs `vercel dev` from inside the project folder.
     if (link.repoRoot) {
       repoRoot = cwd = link.repoRoot;
+    } else if (project.rootDirectory) {
+      const monorepoRoot = await findRepoRoot(cwd);
+      if (monorepoRoot) {
+        repoRoot = cwd = monorepoRoot;
+      }
     }
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
 
-    if (project.rootDirectory && !endsWithPath(cwd, project.rootDirectory)) {
+    if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
     }
 
