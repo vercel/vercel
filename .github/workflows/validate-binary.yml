@@ -93,7 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
-          ./"$bin" --help >/tmp/vercel-binary-help.txt
+          ./"$bin" --help >/tmp/vercel-binary-help.txt 2>&1
           test -s /tmp/vercel-binary-help.txt
 
       - name: Upload binary artifact
