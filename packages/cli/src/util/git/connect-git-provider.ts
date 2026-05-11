@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import { URL } from 'url';
 import type Client from '../client';
 import chalk from 'chalk';
@@ -105,6 +106,33 @@ export function buildRepoUrl(
   }
 }
 
+function resolveSshHostAlias(host: string): string {
+  // SSH `Host` aliases (e.g. `github-golden` mapped to `HostName github.com`
+  // in ~/.ssh/config) produce remote URLs with single-token hostnames that
+  // can't be classified as a Git provider. Ask `ssh -G` for the resolved
+  // hostname; this is the canonical way to read SSH config and works on
+  // every platform that has an OpenSSH client (including Windows, where
+  // OpenSSH ships by default since Win10 1809).
+  if (host.includes('.')) {
+    return host;
+  }
+  try {
+    const out = execFileSync('ssh', ['-G', host], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 2000,
+    });
+    const match = out.match(/^hostname\s+(\S+)$/m);
+    if (match && match[1] && match[1] !== host) {
+      return match[1];
+    }
+  } catch {
+    // ssh not on PATH, no SSH config entry, or process timed out — fall
+    // through and let the caller deal with the unresolved hostname.
+  }
+  return host;
+}
+
 function getURL(input: string) {
   let url: URL | null = null;
 
@@ -118,6 +146,16 @@ function getURL(input: string) {
     try {
       url = new URL(`ssh://${input.replace(':', '/')}`);
     } catch {}
+  }
+
+  if (url && !url.hostname.includes('.')) {
+    // Likely an SSH config `Host` alias. Try to resolve it to the real
+    // hostname before the provider classifier in `parseRepoUrl` rejects
+    // it for having fewer than two dot-separated parts.
+    const resolved = resolveSshHostAlias(url.hostname);
+    if (resolved !== url.hostname) {
+      url.hostname = resolved;
+    }
   }
 
   return url;
