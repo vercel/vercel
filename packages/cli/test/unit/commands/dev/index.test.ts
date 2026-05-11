@@ -7,15 +7,23 @@ import { useTeams } from '../../../mocks/team';
 import { useProject } from '../../../mocks/project';
 
 const { devServerInstances, mockedRepoRoots } = vi.hoisted(() => ({
-  devServerInstances: [] as { cwd: string }[],
+  devServerInstances: [] as {
+    cwd: string;
+    projectId?: string;
+    orgId?: string;
+  }[],
   mockedRepoRoots: new Map<string, string>(),
 }));
 
 vi.mock('../../../../src/util/dev/server', () => {
   class DevServer {
     devCommand = 'framework dev';
-    constructor(cwd: string) {
-      devServerInstances.push({ cwd });
+    constructor(cwd: string, options: { projectId?: string; orgId?: string }) {
+      devServerInstances.push({
+        cwd,
+        projectId: options.projectId,
+        orgId: options.orgId,
+      });
     }
     feed() {}
     stop() {
@@ -325,6 +333,32 @@ describe('dev', () => {
       // Normalize separators so the assertion holds on Windows, where
       // `path.join` produces backslashes.
       expect(devServerInstances[0].cwd.replace(/\\/g, '/')).toBe(projectDir);
+    });
+  });
+
+  describe('project/org IDs', () => {
+    it('passes the linked project and org IDs to DevServer', async () => {
+      client.setArgv('dev', projectPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      expect(devServerInstances).toHaveLength(1);
+      expect(devServerInstances[0]).toMatchObject({ projectId, orgId });
+    });
+
+    it('omits the IDs for unlinked projects in --local mode', async () => {
+      const unlinkedPath = '/user/name/code/unlinked-project';
+      vol.fromJSON({}, unlinkedPath);
+
+      client.setArgv('dev', '--local', unlinkedPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      expect(devServerInstances).toHaveLength(1);
+      expect(devServerInstances[0]).toMatchObject({
+        projectId: undefined,
+        orgId: undefined,
+      });
     });
   });
 });

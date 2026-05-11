@@ -106,6 +106,8 @@ export default async function dev(
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
   let repoRoot: string | undefined;
+  let projectId: string | undefined;
+  let orgId: string | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
 
@@ -127,6 +129,8 @@ export default async function dev(
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
+    projectId = project.id;
+    orgId = org.id;
 
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
@@ -176,6 +180,8 @@ export default async function dev(
     envValues,
     repoRoot,
     services,
+    projectId,
+    orgId,
   });
 
   const controller = new AbortController();
