@@ -1,5 +1,7 @@
 node_modules
 dist
+dist-bin
+.pkg-staging
 .vscode
 .zed
 npm-debug.log
