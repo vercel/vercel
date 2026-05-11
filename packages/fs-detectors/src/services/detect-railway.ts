@@ -153,7 +153,7 @@ export async function detectRailwayServices(options: {
     if (frameworks.length === 0) {
       warnings.push({
         code: 'SERVICE_SKIPPED',
-        message: `Skipped service in ${dirLabel}/: no framework detected. Configure it manually in experimentalServices.`,
+        message: `Skipped service in ${dirLabel}/: no framework detected. Configure it manually in services.`,
       });
       continue;
     }
@@ -162,7 +162,7 @@ export async function detectRailwayServices(options: {
       const names = frameworks.map(f => f.name).join(', ');
       errors.push({
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-        message: `Multiple frameworks detected in ${dirLabel}/: ${names}. Use explicit experimentalServices config.`,
+        message: `Multiple frameworks detected in ${dirLabel}/: ${names}. Use explicit services config.`,
         serviceName,
       });
       continue;
