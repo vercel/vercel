@@ -55,7 +55,9 @@ describe('env pull', () => {
     // check for development env value
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
-    expect(gitignore).toBe('.next\nyarn.lock\n!.vercel\n.env*\n');
+    expect(gitignore.replaceAll('\r\n', '\n')).toBe(
+      '.next\nyarn.lock\n!.vercel\n.env*\n'
+    );
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
