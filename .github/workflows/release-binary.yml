@@ -69,7 +69,7 @@ jobs:
             custom_node_path: .node-runtime/node-v22.22.2-linux-x64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: x64
-          - runner: windows-latest
+          - runner: windows-latest-8-core
             target: node22.22.2-win-x64
             asset: vercel-windows-x64
             ext: '.exe'
