@@ -405,7 +405,8 @@ export default async function setupAndLink(
 
   // Status line — intent is implied by the user running `vc` in this directory.
   // The "Set up and deploy?" confirmation prompt is gone; Ctrl-C is the escape hatch.
-  output.print(`${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}\n`);
+  // Single leading newline, 2-space indent, straight quotes — matches the prototype.
+  output.print(`\n  ${setupMsg} ${chalk.cyan(`"${toHumanPath(path)}"`)}\n`);
 
   let skipAutoDetect = false;
   if (searchAcrossTeams) {

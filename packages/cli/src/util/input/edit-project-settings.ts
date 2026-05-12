@@ -126,8 +126,9 @@ export async function editProjectSettings(
       outputDir ? `${settingMap.outputDirectory}: ${outputDir}` : null,
     ].filter(Boolean);
     const detail = inline.length ? chalk.dim(` (${inline.join(', ')})`) : '';
+    // 2-space indent matches the Set up status line and the printAlignedLabel block.
     output.print(
-      `${chalk.bold('Detected')} ${styledFramework(framework.name)}${detail}\n`
+      `  ${chalk.bold('Detected')} ${styledFramework(framework.name)}${detail}\n`
     );
   }
 
