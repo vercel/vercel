@@ -133,6 +133,17 @@ jobs:
           VERCEL_CLI_BINARY_NODE_PATH: ${{ matrix.custom_node_path }}
         run: node scripts/build-binary.mjs --target ${{ matrix.target }} --compress Brotli --output ./dist-bin/${{ matrix.asset }}${{ matrix.ext }}
 
+      - name: Smoke test binary before signing
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          chmod +x "$bin" || true
+          out=$(./"$bin" --version)
+          echo "$out"
+          test -n "$out"
+
       - name: Install rcodesign
         if: ${{ matrix.sign }}
         run: cargo install apple-codesign --locked

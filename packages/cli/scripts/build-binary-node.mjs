@@ -52,7 +52,7 @@ try {
   await fs.mkdir(dirname(outputNode), { recursive: true });
   await fs.copyFile(builtNode, outputNode);
   await fs.chmod(outputNode, 0o755);
-  await stripAndSignNode();
+  const stripped = await stripAndSignNode();
 
   if (!(await isExpectedNode(outputNode, nodePlatform, nodeArch))) {
     throw new Error(
@@ -69,6 +69,7 @@ try {
         arch: nodeArch,
         intl: 'small-icu',
         locales: ['en'],
+        stripped,
         configure: configureFlags(),
       },
       null,
@@ -118,14 +119,20 @@ async function buildNode(sourceDir) {
 
 async function stripAndSignNode() {
   if (nodePlatform === 'win') {
-    return;
+    return false;
   }
 
-  await run('strip', [outputNode], packageRoot);
+  const shouldStrip = !(nodePlatform === 'darwin' && nodeArch === 'x64');
+
+  if (shouldStrip) {
+    await run('strip', [outputNode], packageRoot);
+  }
 
   if (nodePlatform === 'darwin') {
     await run('codesign', ['-f', '--sign', '-', outputNode], packageRoot);
   }
+
+  return shouldStrip;
 }
 
 function configureFlags() {
