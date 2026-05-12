@@ -277,7 +277,7 @@ describe('connex create', () => {
     const exitCodePromise = connex(client);
 
     await expect(client.stderr).toOutput(
-      'Select the team where you want to create this client'
+      'Select the team where you want to create this connector'
     );
     // Arrow down past the personal account to select the team.
     client.stdin.write('[B\n');
@@ -323,7 +323,7 @@ describe('connex create', () => {
     const exitCodePromise = connex(client);
 
     await expect(client.stderr).toOutput(
-      'Select the team where you want to create this client'
+      'Select the team where you want to create this connector'
     );
     // Accept the default (personal account for non-northstar users).
     client.stdin.write('\n');

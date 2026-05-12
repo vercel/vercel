@@ -60,7 +60,7 @@ export async function attach(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing client ID or UID. Usage: vercel connex attach <client>'
+      'Missing connector ID or UID. Usage: vercel connex attach <client>'
     );
     return 1;
   }
@@ -132,7 +132,7 @@ export async function attach(
   }
 
   // Resolve client identity → canonical id + display name.
-  output.spinner('Retrieving Connex client…');
+  output.spinner('Retrieving Connex connector…');
   let target: ConnexClientIdentity;
   try {
     target = await client.fetch<ConnexClientIdentity>(
@@ -142,7 +142,9 @@ export async function attach(
     output.stopSpinner();
     const status = (err as { status?: number }).status;
     if (status === 404) {
-      output.error(`No Connex client found for ${chalk.bold(clientIdOrUid)}.`);
+      output.error(
+        `No Connex connector found for ${chalk.bold(clientIdOrUid)}.`
+      );
       return 1;
     }
     printError(err);
@@ -188,7 +190,7 @@ export async function attach(
       return 0;
     }
     output.log(
-      `Connex client ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+      `Connex connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
         projectName
       )} for environments: ${environments.join(', ')}. Nothing to do.`
     );
@@ -208,7 +210,7 @@ export async function attach(
       const current = (existingAttachment.environments ?? []).join(', ') || '—';
       const next = environments.join(', ');
       output.log(
-        `Connex client ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+        `Connex connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
           projectName
         )}.`
       );
@@ -216,7 +218,7 @@ export async function attach(
       output.log(`  Will set: ${next}`);
     } else {
       output.log(
-        `Connex client ${chalk.bold(displayName)} will be attached to ${chalk.bold(
+        `Connex connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
           projectName
         )} for environments: ${environments.join(', ')}.`
       );
@@ -250,7 +252,7 @@ export async function attach(
     }
     if (status === 404) {
       output.error(
-        `No Connex client found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
+        `No Connex connector found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
       );
       return 1;
     }
@@ -276,7 +278,7 @@ export async function attach(
   }
 
   output.success(
-    `Attached Connex client ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
+    `Attached Connex connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
   );
   return 0;
 }

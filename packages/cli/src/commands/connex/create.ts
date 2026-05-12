@@ -38,7 +38,7 @@ export async function create(
   // Resolve team
   await selectConnexTeam(
     client,
-    'Select the team where you want to create this client'
+    'Select the team where you want to create this connector'
   );
 
   // Get app name from flag or interactive prompt
@@ -46,7 +46,7 @@ export async function create(
   if (!name) {
     if (!client.stdin.isTTY) {
       output.error(
-        'Missing required flag --name. In non-interactive mode, provide --name for the client.'
+        'Missing required flag --name. In non-interactive mode, provide --name for the connector.'
       );
       return 1;
     }
@@ -149,11 +149,11 @@ export async function create(
     );
   } else if (hasBeenInstalled) {
     output.success(
-      `${serviceType} client created and installed: ${createdClient.id} (UID ${createdClient.uid})`
+      `${serviceType} connector created and installed: ${createdClient.id} (UID ${createdClient.uid})`
     );
   } else {
     output.success(
-      `${serviceType} client created: ${createdClient.id} (UID ${createdClient.uid})`
+      `${serviceType} connector created: ${createdClient.id} (UID ${createdClient.uid})`
     );
   }
   return 0;

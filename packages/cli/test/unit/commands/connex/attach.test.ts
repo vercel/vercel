@@ -40,7 +40,9 @@ describe('connex attach', () => {
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('Missing client ID or UID');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing connector ID or UID'
+    );
   });
 
   it('rejects --format=json without --yes', async () => {
@@ -92,7 +94,7 @@ describe('connex attach', () => {
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'No Connex client found for'
+      'No Connex connector found for'
     );
   });
 
@@ -135,7 +137,9 @@ describe('connex attach', () => {
       'preview',
       'development',
     ]);
-    expect(client.stderr.getFullOutput()).toContain('Attached Connex client');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Attached Connex connector'
+    );
   });
 
   it('parses comma-separated environments', async () => {
