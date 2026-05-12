@@ -53,10 +53,6 @@ async function setupProject(
 
   await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
-
-  await waitForPrompt(process, 'In which directory is your code located?');
-  process.stdin?.write('\n');
-
   await waitForPrompt(process, 'Customize defaults?');
 
   if (overrides) {
@@ -306,10 +302,6 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
 
   await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
-
-  await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin?.write('\n');
-
   await waitForPrompt(now, 'Customize defaults?');
   now.stdin?.write('no\n');
 
@@ -1086,10 +1078,6 @@ test('[vc link] should show project prompts but not framework when `builds` defi
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
-
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, 'Customize Vercel Authentication?');
   vc.stdin?.write('\n');
 
@@ -1261,8 +1249,6 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('n\n');
   await waitForPrompt(vc, 'Name?');
-  vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Customize defaults?');
   vc.stdin?.write('y\n');

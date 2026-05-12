@@ -1,6 +1,7 @@
 import { normalizePath } from '@vercel/build-utils';
 import path from 'path';
 import chalk from 'chalk';
+import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import { validateRootDirectory } from '../validate-paths';
 import type Client from '../client';
 
@@ -10,6 +11,14 @@ export async function inputRootDirectory(
   autoConfirm = false
 ) {
   if (autoConfirm) {
+    return null;
+  }
+
+  // Skip the prompt for single-app projects. Only ask when this is a workspace
+  // (monorepo with multiple packages) where the user actually needs to pick.
+  const fs = new LocalFileSystemDetector(cwd);
+  const workspaces = await getWorkspaces({ fs });
+  if (workspaces.length === 0) {
     return null;
   }
 

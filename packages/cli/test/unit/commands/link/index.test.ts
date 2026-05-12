@@ -1363,12 +1363,6 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Multiple services were detected, but your existing project config uses `builds`. To deploy multiple services in one project, see Services (https://vercel.com/docs/services).'
     );
-
-    await expect(client.stderr).toOutput(
-      'In which directory is your code located? ./'
-    );
-    client.stdin.write('\n');
-
     await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
@@ -1947,12 +1941,6 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('your project');
       client.stdin.write(`${basename(cwd)}\n`);
-
-      await expect(client.stderr).toOutput(
-        'In which directory is your code located?'
-      );
-      client.stdin.write('\n');
-
       await expect(client.stderr).toOutput('Customize defaults?');
       client.stdin.write('\n');
 

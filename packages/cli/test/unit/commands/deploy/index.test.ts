@@ -1645,12 +1645,6 @@ describe('deploy', () => {
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${nameOption})`);
         client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput(
-          '? In which directory is your code located?'
-        );
-        client.stdin.write('\n');
-
         await expect(client.stderr).toOutput('Customize defaults?');
         client.stdin.write('\n');
 
@@ -1679,12 +1673,6 @@ describe('deploy', () => {
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${directoryName})`);
         client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput(
-          '? In which directory is your code located?'
-        );
-        client.stdin.write('\n');
-
         await expect(client.stderr).toOutput('Customize defaults?');
         client.stdin.write('\n');
 
