@@ -714,7 +714,7 @@ export default async function setupAndLink(
     let changeAdditionalSettings = false;
     if (!autoConfirm) {
       changeAdditionalSettings = await client.input.confirm(
-        'Do you want to change additional project settings?',
+        'Customize Vercel Authentication?',
         false
       );
     }

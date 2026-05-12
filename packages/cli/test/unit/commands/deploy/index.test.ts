@@ -1657,11 +1657,11 @@ describe('deploy', () => {
         );
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Want to modify these settings?');
+        await expect(client.stderr).toOutput('Customize defaults?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
+          'Customize Vercel Authentication?'
         );
         client.stdin.write('\n');
 
@@ -1697,11 +1697,11 @@ describe('deploy', () => {
         );
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Want to modify these settings?');
+        await expect(client.stderr).toOutput('Customize defaults?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
+          'Customize Vercel Authentication?'
         );
         client.stdin.write('\n');
 

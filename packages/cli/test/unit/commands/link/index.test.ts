@@ -916,12 +916,10 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Auto-detected Project Settings for Next.js'
     );
-    await expect(client.stderr).toOutput('Want to modify these settings?');
+    await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -981,9 +979,7 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1056,12 +1052,10 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Auto-detected Project Settings for Next.js'
     );
-    await expect(client.stderr).toOutput('Want to modify these settings?');
+    await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1126,12 +1120,10 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Auto-detected Project Settings for FastAPI'
     );
-    await expect(client.stderr).toOutput('Want to modify these settings?');
+    await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1222,9 +1214,7 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1301,9 +1291,7 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1363,9 +1351,7 @@ describe('link', () => {
     );
     client.stdin.write('apps/web\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1427,9 +1413,7 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
+    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -2039,12 +2023,10 @@ describe('link', () => {
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Want to modify these settings?');
+      await expect(client.stderr).toOutput('Customize defaults?');
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput(
-        'Do you want to change additional project settings?'
-      );
+      await expect(client.stderr).toOutput('Customize Vercel Authentication?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Linked to');

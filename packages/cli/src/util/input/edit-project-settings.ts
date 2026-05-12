@@ -144,7 +144,7 @@ export async function editProjectSettings(
   // Prompt the user if they want to modify any settings not defined by local configuration.
   if (
     autoConfirm ||
-    !(await client.input.confirm('Want to modify these settings?', false))
+    !(await client.input.confirm('Customize defaults?', false))
   ) {
     return settings;
   }

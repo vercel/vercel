@@ -64,10 +64,10 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Want to modify these settings?');
+  await waitForPrompt(vc, 'Customize defaults?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
+  await waitForPrompt(vc, 'Customize Vercel Authentication?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Linked to/);
@@ -109,10 +109,10 @@ test('[vc link] should not create .env.local when linking new project', async ()
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Want to modify these settings?');
+  await waitForPrompt(vc, 'Customize defaults?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
+  await waitForPrompt(vc, 'Customize Vercel Authentication?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Linked to/);

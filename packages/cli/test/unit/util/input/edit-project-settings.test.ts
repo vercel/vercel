@@ -238,4 +238,43 @@ describe('editProjectSettings', () => {
       );
     });
   });
+
+  describe('customize prompt copy', () => {
+    test('asks "Customize defaults?" instead of "Want to modify these settings?"', async () => {
+      const settingsPromise = editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        false,
+        null
+      );
+
+      // New prompt copy must appear in stderr.
+      await expect(client.stderr).toOutput('Customize defaults?');
+
+      // Dismiss the prompt (default: No) so the function resolves.
+      client.stdin.write('\r');
+
+      const settings = await settingsPromise;
+      expect(settings.framework).toBe('nextjs');
+    });
+
+    test('does not use the legacy "Want to modify these settings?" copy', async () => {
+      const settingsPromise = editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        false,
+        null
+      );
+
+      await expect(client.stderr).not.toOutput(
+        'Want to modify these settings?'
+      );
+
+      // Need to still resolve the promise so it doesn't hang the test.
+      client.stdin.write('\r');
+      await settingsPromise;
+    });
+  });
 });
