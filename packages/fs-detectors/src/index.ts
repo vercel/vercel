@@ -29,7 +29,7 @@ export type {
   DetectServicesOptions,
   DetectServicesResult,
   DetectServicesSource,
-  ServicesConfig,
+  InferredServicesConfig,
   ResolvedServicesResult,
   InferredServicesResult,
   ResolvedService,
