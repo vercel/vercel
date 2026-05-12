@@ -41,6 +41,8 @@ export interface CommandSetupResult {
   protectionBypassFlag?: string;
   toolFlags: string[];
   yes: boolean;
+  trace: boolean;
+  json: boolean;
 }
 
 export interface CommandTelemetryClient {
@@ -59,7 +61,7 @@ function orgFromOwner(id: string, slug = id): ProjectLinked['org'] {
 }
 
 const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
-const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help']);
+const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help', '--trace', '--json']);
 
 function flagName(arg: string): string {
   const eqIdx = arg.indexOf('=');
@@ -86,6 +88,8 @@ export function parseCurlLikeArgs(
   protectionBypass?: string;
   yes: boolean;
   help: boolean;
+  trace: boolean;
+  json: boolean;
   toolFlags: string[];
 } {
   const result = {
@@ -94,6 +98,8 @@ export function parseCurlLikeArgs(
     protectionBypass: undefined as string | undefined,
     yes: false,
     help: false,
+    trace: false,
+    json: false,
     toolFlags: [] as string[],
   };
   const args = rawArgs[0] === commandName ? rawArgs.slice(1) : [...rawArgs];
@@ -123,6 +129,10 @@ export function parseCurlLikeArgs(
     if (VC_BOOLEAN_FLAGS.has(name)) {
       if (name === '--yes') {
         result.yes = true;
+      } else if (name === '--trace') {
+        result.trace = true;
+      } else if (name === '--json') {
+        result.json = true;
       } else {
         result.help = true;
       }
@@ -205,6 +215,8 @@ export function setupCurlLikeCommand(
       protectionBypassFlag: parsed.protectionBypass,
       toolFlags: parsed.toolFlags,
       yes: parsed.yes,
+      trace: parsed.trace,
+      json: parsed.json,
     };
   }
 
@@ -289,6 +301,8 @@ export function setupCurlLikeCommand(
     protectionBypassFlag,
     toolFlags,
     yes: !!flags['--yes'],
+    trace: !!flags['--trace'],
+    json: !!flags['--json'],
   };
 }
 
@@ -377,9 +391,17 @@ export async function getFullUrlAndToken(
   client: Client,
   fullUrl: string,
   protectionBypassFlag?: string
-): Promise<Pick<DeploymentUrlResult, 'fullUrl' | 'deploymentProtectionToken'>> {
+): Promise<{
+  fullUrl: string;
+  deploymentProtectionToken: string | null;
+  link: ProjectLinked | null;
+}> {
   if (protectionBypassFlag) {
-    return { fullUrl, deploymentProtectionToken: protectionBypassFlag };
+    return {
+      fullUrl,
+      deploymentProtectionToken: protectionBypassFlag,
+      link: null,
+    };
   }
 
   if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
@@ -387,6 +409,7 @@ export async function getFullUrlAndToken(
     return {
       fullUrl,
       deploymentProtectionToken: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+      link: null,
     };
   }
 
@@ -407,6 +430,7 @@ export async function getFullUrlAndToken(
   return {
     fullUrl,
     deploymentProtectionToken,
+    link,
   };
 }
 
