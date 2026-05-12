@@ -16,6 +16,11 @@ permissions:
   contents: write
   id-token: write
 
+env:
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
 concurrency:
   group: release-binary-${{ github.ref }}
   cancel-in-progress: false
@@ -28,35 +33,50 @@ jobs:
       matrix:
         include:
           - runner: macos-14
-            target: node22-macos-arm64
+            target: node22.22.2-macos-arm64
             asset: vercel-darwin-arm64
             ext: ''
             sign: true
             smoke: true
+            custom_node_path: .node-runtime/node-v22.22.2-darwin-arm64-small-icu/bin/node
+            custom_node_platform: darwin
+            custom_node_arch: arm64
           - runner: macos-15-intel
-            target: node22-macos-x64
+            target: node22.22.2-macos-x64
             asset: vercel-darwin-x64
             ext: ''
             sign: true
             smoke: true
-          - runner: ubuntu-latest
-            target: node22-linux-arm64
+            custom_node_path: .node-runtime/node-v22.22.2-darwin-x64-small-icu/bin/node
+            custom_node_platform: darwin
+            custom_node_arch: x64
+          - runner: ubuntu-24.04-arm
+            target: node22.22.2-linux-arm64
             asset: vercel-linux-arm64
             ext: ''
             sign: false
             smoke: false
+            custom_node_path: .node-runtime/node-v22.22.2-linux-arm64-small-icu/bin/node
+            custom_node_platform: linux
+            custom_node_arch: arm64
           - runner: ubuntu-latest
-            target: node22-linux-x64
+            target: node22.22.2-linux-x64
             asset: vercel-linux-x64
             ext: ''
             sign: false
             smoke: true
+            custom_node_path: .node-runtime/node-v22.22.2-linux-x64-small-icu/bin/node
+            custom_node_platform: linux
+            custom_node_arch: x64
           - runner: windows-latest
-            target: node22-win-x64
+            target: node22.22.2-win-x64
             asset: vercel-windows-x64
             ext: '.exe'
             sign: false
             smoke: true
+            custom_node_path: .node-runtime/node-v22.22.2-win-x64-small-icu/node.exe
+            custom_node_platform: win
+            custom_node_arch: x64
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
@@ -97,11 +117,20 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
+      - name: Build custom Node runtime
+        if: ${{ matrix.custom_node_path != '' }}
+        env:
+          VERCEL_CLI_NODE_VERSION: 22.22.2
+          VERCEL_CLI_NODE_PLATFORM: ${{ matrix.custom_node_platform }}
+          VERCEL_CLI_NODE_ARCH: ${{ matrix.custom_node_arch }}
+        run: pnpm turbo --no-update-notifier run build-binary-node --filter vercel --output-logs=new-only
+
       - name: Build binary
         working-directory: packages/cli
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-        run: node scripts/build-binary.mjs --target ${{ matrix.target }} --output ./dist-bin/${{ matrix.asset }}${{ matrix.ext }}
+          VERCEL_CLI_BINARY_NODE_PATH: ${{ matrix.custom_node_path }}
+        run: node scripts/build-binary.mjs --target ${{ matrix.target }} --compress Brotli --output ./dist-bin/${{ matrix.asset }}${{ matrix.ext }}
 
       - name: Install rcodesign
         if: ${{ matrix.sign }}
