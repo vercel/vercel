@@ -41,8 +41,11 @@ export async function getServicesSetupState(
   const detectServicesResult = await detectServices({
     fs: new LocalFileSystemDetector(workPath),
   });
+  // `resolved` is undefined when no services are detected at all (common for
+  // empty or simple fixtures). Defensive optional chain avoids crashing the
+  // setup flow before any prompts can fire.
   const hasConfiguredServices =
-    detectServicesResult.resolved.source === 'configured';
+    detectServicesResult.resolved?.source === 'configured';
   const inferredServices = hasConfiguredServices
     ? null
     : detectServicesResult.inferred;
