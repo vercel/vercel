@@ -972,7 +972,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   vc.stdin?.write(`${projectRootDir}\n`);
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });

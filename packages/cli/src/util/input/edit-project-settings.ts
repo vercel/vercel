@@ -106,11 +106,25 @@ export async function editProjectSettings(
   };
 
   // A missing framework slug implies the "Other" framework was selected
-  output.log(
-    !framework.slug
-      ? `No framework detected. Default Project Settings:\n`
-      : `Auto-detected Project Settings for ${styledFramework(framework.name)}\n`
-  );
+  if (!framework.slug) {
+    output.log(`No framework detected. Default Project Settings:\n`);
+  } else {
+    // Compress "Auto-detected Project Settings for X" into a single line that
+    // also names the key commands the user is about to run with.
+    const formatSetting = (setting: keyof typeof settingMap) => {
+      const v = framework.settings[setting];
+      if (!v) return null;
+      return isSettingValue(v) ? v.value : v.placeholder;
+    };
+    const buildCmd = formatSetting('buildCommand');
+    const outputDir = formatSetting('outputDirectory');
+    const inline = [
+      buildCmd ? `build: ${buildCmd}` : null,
+      outputDir ? `output: ${outputDir}` : null,
+    ].filter(Boolean);
+    const detail = inline.length ? chalk.dim(` (${inline.join(', ')})`) : '';
+    output.log(`Detected ${styledFramework(framework.name)}${detail}\n`);
+  }
 
   settings.framework = framework.slug;
 

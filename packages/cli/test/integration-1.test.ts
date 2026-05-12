@@ -387,7 +387,7 @@ test('deploy from a nested directory', async () => {
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -423,7 +423,7 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });

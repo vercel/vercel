@@ -86,7 +86,7 @@ describe('editProjectSettings', () => {
         ...projectSettings,
         framework: nextJSFramework.slug,
       });
-      await expect(client.stderr).toOutput('Auto-detected Project Settings');
+      await expect(client.stderr).toOutput('Detected');
     });
   });
 
@@ -127,7 +127,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput(
         'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
       );
-      await expect(client.stderr).toOutput('Auto-detected Project Settings');
+      await expect(client.stderr).toOutput('Detected');
     });
   });
 
@@ -161,7 +161,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput(
         'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
       );
-      await expect(client.stderr).toOutput('Auto-detected Project Settings');
+      await expect(client.stderr).toOutput('Detected');
     });
   });
 
@@ -195,7 +195,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput(
         'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
       );
-      await expect(client.stderr).toOutput('Auto-detected Project Settings');
+      await expect(client.stderr).toOutput('Detected');
     });
   });
 

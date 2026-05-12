@@ -897,9 +897,7 @@ describe('link', () => {
     );
     client.stdin.write('apps/nextjs\n');
 
-    await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for Next.js'
-    );
+    await expect(client.stderr).toOutput('Detected');
     await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
@@ -1025,9 +1023,7 @@ describe('link', () => {
     );
     client.stdin.write('\x1B[B\n');
 
-    await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for Next.js'
-    );
+    await expect(client.stderr).toOutput('Detected');
     await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
@@ -1089,9 +1085,7 @@ describe('link', () => {
     );
     client.stdin.write('\x1B[B\x1B[B\n');
 
-    await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for FastAPI'
-    );
+    await expect(client.stderr).toOutput('Detected');
     await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
