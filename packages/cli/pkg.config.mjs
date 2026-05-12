@@ -1,0 +1,32 @@
+import pkg from './package.json' with { type: 'json' };
+
+export default {
+  name: 'vercel',
+  pkg: {
+    scripts: ['pkg.js', 'dist/vc.js', 'dist/index.js', 'dist/help.js', 'dist/commands-bulk.js'],
+    assets: [
+      'dist/**/*.js',
+      'dist/**/*.cjs',
+      'dist/**/*.mjs',
+      'dist/**/*.json',
+      'node_modules/**/*.js',
+      'node_modules/**/*.cjs',
+      'node_modules/**/*.mjs',
+      'node_modules/**/*.json',
+      'node_modules/**/*.wasm',
+      'node_modules/**/*.node',
+    ],
+    targets: [
+      'node22-linux-x64',
+      'node22-linux-arm64',
+      'node22-macos-x64',
+      'node22-macos-arm64',
+      'node22-win-x64',
+    ],
+    outputPath: process.env.VERCEL_CLI_BINARY_OUTPUT_DIR ?? 'dist-bin',
+    sea: true,
+    bytecode: false,
+    public: true,
+    publicPackages: '*',
+  },
+};
