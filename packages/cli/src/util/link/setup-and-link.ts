@@ -505,11 +505,7 @@ export default async function setupAndLink(
   }
 
   try {
-    org = await selectOrg(
-      client,
-      'Which scope should contain your project?',
-      autoConfirm
-    );
+    org = await selectOrg(client, 'Team?', autoConfirm);
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'NOT_AUTHORIZED') {

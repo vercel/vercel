@@ -277,11 +277,7 @@ async function discoverRepoProjects(
     return;
   }
 
-  const org = await selectOrg(
-    client,
-    'Which scope should contain your Project(s)?',
-    yes
-  );
+  const org = await selectOrg(client, 'Team?', yes);
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const remote = await resolveGitRemote(client, rootPath, {

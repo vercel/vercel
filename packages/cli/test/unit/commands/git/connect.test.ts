@@ -95,9 +95,7 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Set up');
         client.stdin.write('y\n');
 
-        await expect(client.stderr).toOutput(
-          'Which scope should contain your project?'
-        );
+        await expect(client.stderr).toOutput('Team?');
         client.stdin.write('\r');
 
         await expect(client.stderr).toOutput('Found project');
@@ -202,9 +200,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
+      await expect(client.stderr).toOutput('Team?');
       client.stdin.write('\r');
 
       await expect(client.stderr).toOutput('Found project');
@@ -256,9 +252,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
+      await expect(client.stderr).toOutput('Team?');
       client.stdin.write('\r');
 
       await expect(client.stderr).toOutput('Found project');

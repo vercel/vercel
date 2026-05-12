@@ -1638,9 +1638,7 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('? Set up and deploy');
         client.stdin.write('y\n');
 
-        await expect(client.stderr).toOutput(
-          '? Which scope should contain your project?'
-        );
+        await expect(client.stderr).toOutput('? Team?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Link to existing project?');
@@ -1678,9 +1676,7 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('? Set up and deploy');
         client.stdin.write('y\n');
 
-        await expect(client.stderr).toOutput(
-          '? Which scope should contain your project?'
-        );
+        await expect(client.stderr).toOutput('? Team?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Link to existing project?');
