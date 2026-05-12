@@ -1222,6 +1222,13 @@ describe('link', () => {
     useUnknownProject();
 
     await mkdirp(join(cwd, 'apps/web/services/api'));
+    // `pnpm-workspace.yaml` marks the repo root as a workspace, which is what
+    // triggers the "In which directory is your code located?" prompt under
+    // the standard (no-inferred-services) flow.
+    await writeFile(
+      join(cwd, 'pnpm-workspace.yaml'),
+      "packages:\n  - 'apps/*'\n"
+    );
     await writeJSON(join(cwd, 'apps/web/package.json'), {
       dependencies: {
         next: 'latest',
@@ -1297,6 +1304,13 @@ describe('link', () => {
     useUnknownProject();
 
     await mkdirp(join(cwd, 'apps/web'));
+    // `pnpm-workspace.yaml` marks the repo root as a workspace, which is what
+    // triggers the "In which directory is your code located?" prompt under
+    // the standard (no-inferred-services) flow.
+    await writeFile(
+      join(cwd, 'pnpm-workspace.yaml'),
+      "packages:\n  - 'apps/*'\n"
+    );
     await writeFile(join(cwd, 'apps/web/vercel.json'), '{\n');
 
     client.cwd = cwd;
@@ -1949,7 +1963,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link to existing project?');
       client.stdin.write('n\n');
 
-      await expect(client.stderr).toOutput('your project');
+      await expect(client.stderr).toOutput('Name?');
       client.stdin.write(`${basename(cwd)}\n`);
       await expect(client.stderr).toOutput('Customize settings?');
       client.stdin.write('\n');
