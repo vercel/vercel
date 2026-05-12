@@ -44,4 +44,19 @@ export class TracesTelemetryClient
       });
     }
   }
+
+  trackCliOptionTimeout(value: number | undefined) {
+    if (typeof value === 'number') {
+      this.trackCliOption({
+        option: 'timeout',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagNoWait(noWait: boolean | undefined) {
+    if (noWait) {
+      this.trackCliFlag('no-wait');
+    }
+  }
 }
