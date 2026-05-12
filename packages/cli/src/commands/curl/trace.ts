@@ -296,7 +296,7 @@ export async function trace(
 
   if (json) {
     client.stdout.write(
-      JSON.stringify({ response: capturedBody, requestId: requestId ?? null })
+      `${JSON.stringify({ response: capturedBody, requestId: requestId ?? null }, null, 2)}\n`
     );
     return requestId ? exitCode : exitCode === 0 ? 1 : exitCode;
   }
