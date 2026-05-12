@@ -473,6 +473,13 @@ export class Lambda {
       throw new Error('`files` is not defined');
     }
 
+    // Preflight check to ensure all files have content hashes before sorting and concatenating.
+    for (const name in this.files) {
+      if (!this.files[name].contentHash) {
+        return undefined;
+      }
+    }
+
     // It's slightly faster to concat and hash the string as opposed to calling update() repeatedly:
     // 2000 ops/s vs 1850 ops/s. This is likely because it results in fewer calls into the native
     // crypto code.
@@ -480,10 +487,7 @@ export class Lambda {
 
     const names = Object.keys(this.files).sort();
     for (const name of names) {
-      const contentHash = this.files[name].contentHash;
-      if (!contentHash) {
-        return undefined;
-      }
+      const contentHash = this.files[name].contentHash!;
       hashes += `${name}\0${contentHash}\n`;
     }
 
