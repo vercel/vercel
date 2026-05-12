@@ -7,7 +7,7 @@ import {
 
 const DYNAMIC_SCHEDULE = '<dynamic>';
 
-export interface BackendsCron extends Cron {
+export interface BackendsCronEntry extends Cron {
   /**
    * Name of the export on the user's bundled module that the dispatcher
    * should invoke for this entry. `'default'` for static schedules; for
@@ -18,7 +18,7 @@ export interface BackendsCron extends Cron {
 
 /** Build the JSON route table embedded in the dispatcher shim. */
 export function buildCronRouteTable(
-  crons: BackendsCron[]
+  crons: BackendsCronEntry[]
 ): Record<string, string> {
   const table: Record<string, string> = {};
   for (const cron of crons) {
@@ -37,7 +37,7 @@ export function buildCronRouteTable(
 export function getServiceCrons(opts: {
   service?: BuildOptions['service'];
   entrypoint?: string;
-}): BackendsCron[] | undefined {
+}): BackendsCronEntry[] | undefined {
   const { service, entrypoint } = opts;
 
   if (!service || !isScheduleTriggeredService(service)) {
