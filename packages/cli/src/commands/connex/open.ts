@@ -24,11 +24,14 @@ export async function openClient(
 
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
-    output.error('Missing client ID or UID. Usage: vercel connex open <id>');
+    output.error('Missing connector ID or UID. Usage: vercel connex open <id>');
     return 1;
   }
 
-  await selectConnexTeam(client, 'Select the team whose Connex client to open');
+  await selectConnexTeam(
+    client,
+    'Select the team whose Connex connector to open'
+  );
 
   const { team } = await getScope(client);
   if (!team) {
@@ -36,7 +39,7 @@ export async function openClient(
     return 1;
   }
 
-  output.spinner('Looking up Connex client…');
+  output.spinner('Looking up Connex connector…');
   let resolvedId: string;
   try {
     // Resolve to the scl_ id even if the caller passed a UID. The dashboard
@@ -51,7 +54,7 @@ export async function openClient(
     const status = (err as { status?: number }).status;
     if (status === 404) {
       output.error(
-        `Connex client ${chalk.bold(`"${clientIdOrUid}"`)} not found on team ${chalk.bold(team.slug)}, or Connex is not enabled for this team.`
+        `Connex connector ${chalk.bold(`"${clientIdOrUid}"`)} not found on team ${chalk.bold(team.slug)}, or Connex is not enabled for this team.`
       );
       return 1;
     }
@@ -69,7 +72,7 @@ export async function openClient(
 
   if (client.stdout.isTTY) {
     output.print(
-      `Opening Connex client ${chalk.bold(clientIdOrUid)} in the dashboard…\n`
+      `Opening Connex connector ${chalk.bold(clientIdOrUid)} in the dashboard…\n`
     );
     open(url);
     return 0;

@@ -60,7 +60,7 @@ export async function awaitConnexResult(
           output.stopSpinner();
           const clientId = result.data.clientId as string | undefined;
           if (clientId) {
-            output.log(`Client created: ${clientId}`);
+            output.log(`Connector created: ${clientId}`);
           }
           output.spinner(`${result.progress}...`);
         }

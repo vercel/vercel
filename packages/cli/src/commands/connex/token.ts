@@ -43,7 +43,9 @@ export async function token(
 
   const clientId = args[0];
   if (!clientId) {
-    output.error('Missing client ID or UID. Usage: vercel connex token <id>');
+    output.error(
+      'Missing connector ID or UID. Usage: vercel connex token <id>'
+    );
     return 1;
   }
 
@@ -82,13 +84,13 @@ export async function token(
   const errorMessage = result.errorMessage ?? 'Failed to get token';
 
   if (errorCode === 'not_found') {
-    output.error('Client not found or Connex is not enabled for this team.');
+    output.error('Connector not found or Connex is not enabled for this team.');
     return 1;
   }
 
   if (errorCode === 'unresolved_token') {
     output.error(
-      `${errorMessage} This client does not support getting a token for the requested subject.`
+      `${errorMessage} This connector does not support getting a token for the requested subject.`
     );
     return 1;
   }

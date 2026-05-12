@@ -68,7 +68,7 @@ describe('connex list', () => {
       expect(requestUrl).toContain(`projectId=${project.id}`);
       expect(requestUrl).not.toContain('include=projects');
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('Connex clients linked to');
+      expect(stderr).toContain('Connex connectors linked to');
       expect(stderr).toContain(project.name);
       expect(stderr).toContain('slack/my-bot');
     });
@@ -92,7 +92,7 @@ describe('connex list', () => {
 
       expect(exitCode).toBe(0);
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('No Connex clients linked to');
+      expect(stderr).toContain('No Connex connectors linked to');
       expect(stderr).toContain(project.name);
       expect(stderr).toContain('--all-projects');
     });
@@ -137,7 +137,7 @@ describe('connex list', () => {
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('Projects');
       expect(stderr).toContain('web');
-      expect(stderr).not.toContain('Connex clients linked to');
+      expect(stderr).not.toContain('Connex connectors linked to');
     });
   });
 
@@ -278,7 +278,7 @@ describe('connex list', () => {
 
       expect(exitCode).toBe(0);
       expect(client.stderr.getFullOutput()).toContain(
-        'No Connex clients found'
+        'No Connex connectors found'
       );
     });
 
