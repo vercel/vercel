@@ -48,9 +48,9 @@ jobs:
             ext: ''
             sign: true
             smoke: true
-            custom_node_path: .node-runtime/node-v22.22.2-darwin-x64-small-icu/bin/node
-            custom_node_platform: darwin
-            custom_node_arch: x64
+            custom_node_path: ''
+            custom_node_platform: ''
+            custom_node_arch: ''
           - runner: ubuntu-24.04-arm
             target: node22.22.2-linux-arm64
             asset: vercel-linux-arm64
