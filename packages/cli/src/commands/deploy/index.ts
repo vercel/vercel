@@ -70,6 +70,7 @@ import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
+import { getEffectiveRootDirectory } from '../../util/projects/effective-root-directory';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
@@ -306,7 +307,10 @@ async function handleInitDeployment(
   }
 
   const { org, project } = link;
-  const rootDirectory = project.rootDirectory;
+  const rootDirectory = getEffectiveRootDirectory({
+    projectRootDirectory: project.rootDirectory,
+    repoProjectDirectory: link.projectRootDirectory,
+  });
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
 
@@ -915,8 +919,12 @@ async function handleContinueSubcommand(
 
   // Resolve vercelOutputDir - prebuilt is implicit for continue
   let vercelOutputDir: string = join(cwd, '.vercel/output');
-  if (link.repoRoot && link.project.rootDirectory) {
-    vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
+  const effectiveRootDirectory = getEffectiveRootDirectory({
+    projectRootDirectory: link.project.rootDirectory,
+    repoProjectDirectory: link.projectRootDirectory,
+  });
+  if (link.repoRoot && effectiveRootDirectory) {
+    vercelOutputDir = join(cwd, effectiveRootDirectory, '.vercel/output');
   }
 
   const prebuiltExists = await fs.pathExists(vercelOutputDir);
@@ -1193,7 +1201,10 @@ async function handleDefaultDeploy(
   }
 
   const { org, project } = link;
-  const rootDirectory = project.rootDirectory;
+  const rootDirectory = getEffectiveRootDirectory({
+    projectRootDirectory: project.rootDirectory,
+    repoProjectDirectory: link.projectRootDirectory,
+  });
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
 
@@ -1206,8 +1217,8 @@ async function handleDefaultDeploy(
   if (parsedArguments.flags['--prebuilt']) {
     vercelOutputDir = join(cwd, '.vercel/output');
 
-    if (link.repoRoot && link.project.rootDirectory) {
-      vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
+    if (link.repoRoot && rootDirectory) {
+      vercelOutputDir = join(cwd, rootDirectory, '.vercel/output');
     }
 
     const prebuiltExists = await fs.pathExists(vercelOutputDir);

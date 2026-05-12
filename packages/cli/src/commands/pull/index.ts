@@ -7,6 +7,7 @@ import { parseArguments } from '../../util/get-args';
 import stamp from '../../util/output/stamp';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../../util/projects/link';
 import { writeProjectSettings } from '../../util/projects/project-settings';
+import { getEffectiveRootDirectory } from '../../util/projects/effective-root-directory';
 import { envPullCommandLogic } from '../env/pull';
 import {
   isValidEnvTarget,
@@ -132,7 +133,11 @@ export async function pullCommandLogic(
 
   let currentDirectory: string;
   if (repoRoot) {
-    currentDirectory = join(repoRoot, project.rootDirectory || '');
+    const effectiveRootDirectory = getEffectiveRootDirectory({
+      projectRootDirectory: project.rootDirectory,
+      repoProjectDirectory: link.projectRootDirectory,
+    });
+    currentDirectory = join(repoRoot, effectiveRootDirectory);
   } else {
     currentDirectory = cwd;
   }

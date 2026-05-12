@@ -7,11 +7,14 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { client } from '../../../mocks/client';
 import git from '../../../../src/commands/git';
 import type { Project } from '@vercel-internals/types';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('git connect', () => {
   const fixture = (name: string) =>
-    join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
+    setupUnitFixture(join('commands/git/connect', name));
 
   describe('--non-interactive', () => {
     it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
@@ -196,44 +199,49 @@ describe('git connect', () => {
     it('connects an unlinked project', async () => {
       const cwd = fixture('unlinked');
       client.cwd = cwd;
-      client.setArgv('git', 'connect');
-      const gitPromise = git(client);
+      try {
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        client.setArgv('git', 'connect');
+        const gitPromise = git(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\r');
+        await expect(client.stderr).toOutput(
+          'Which scope should contain your project?'
+        );
+        client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found project');
-      client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Found project');
+        client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
-      );
-      client.stdin.write('n\n');
+        await expect(client.stderr).toOutput(
+          'Would you like to pull environment variables now?'
+        );
+        client.stdin.write('n\n');
 
-      await expect(client.stderr).toOutput(
-        `Connecting GitHub repository: https://github.com/user/repo`
-      );
+        await expect(client.stderr).toOutput(
+          `Connecting GitHub repository: https://github.com/user/repo`
+        );
 
-      const exitCode = await gitPromise;
-      await expect(client.stderr).toOutput('Connected');
+        const exitCode = await gitPromise;
+        await expect(client.stderr).toOutput('Connected');
 
-      expect(exitCode).toEqual(0);
+        expect(exitCode).toEqual(0);
 
-      const project: Project = await client.fetch(`/v8/projects/unlinked`);
-      expect(project.link).toMatchObject({
-        type: 'github',
-        repo: 'user/repo',
-        repoId: 1010,
-        gitCredentialId: '',
-        sourceless: true,
-        createdAt: 1656109539791,
-        updatedAt: 1656109539791,
-      });
+        const project: Project = await client.fetch(`/v8/projects/unlinked`);
+        expect(project.link).toMatchObject({
+          type: 'github',
+          repo: 'user/repo',
+          repoId: 1010,
+          gitCredentialId: '',
+          sourceless: true,
+          createdAt: 1656109539791,
+          updatedAt: 1656109539791,
+        });
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+      }
     });
   });
 
@@ -677,7 +685,13 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput(
-        `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
+        `Found multiple Git repositories in your local Git config:`
+      );
+      await expect(client.stderr).toOutput(
+        `origin: https://github.com/user/repo.git`
+      );
+      await expect(client.stderr).toOutput(
+        `secondary: https://github.com/user/repo2.git`
       );
       await expect(client.stderr).toOutput(
         `Do you still want to connect https://github.com/user3/repo3? (y/N)`

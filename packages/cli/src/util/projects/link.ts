@@ -394,7 +394,13 @@ export async function getLinkedProject(
     return { status: 'not_linked', org: null, project: null };
   }
 
-  return { status: 'linked', org, project, repoRoot: link.repoRoot };
+  return {
+    status: 'linked',
+    org,
+    project,
+    repoRoot: link.repoRoot,
+    projectRootDirectory: link.projectRootDirectory,
+  };
 }
 
 const VERCEL_DIR_README_CONTENT = `> Why do I have a folder named ".vercel" in my project?

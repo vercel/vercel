@@ -448,6 +448,7 @@ export type ProjectLinked = {
   org: Org;
   project: Project;
   repoRoot?: string;
+  projectRootDirectory?: string;
 };
 
 export type ProjectNotLinked = {

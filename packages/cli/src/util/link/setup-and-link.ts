@@ -14,13 +14,15 @@ import {
   VERCEL_DIR_README,
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
-import { linkRepoProject } from './repo';
+import { findRepoRoot, linkRepoProject, resolveGitRemote } from './repo';
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
 import pull from '../../commands/env/pull';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
 import {
+  type RepoInfo,
+  parseRepoUrl,
   selectAndParseRemoteUrl,
   checkExistsAndConnect,
 } from '../git/connect-git-provider';
@@ -56,6 +58,12 @@ import {
 } from './services-setup';
 import searchProjectAcrossTeams from '../projects/search-project-across-teams';
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
+
+interface GitConnectionChoice {
+  repoInfo: RepoInfo;
+  repoRoot: string;
+  remoteName: string;
+}
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -199,6 +207,41 @@ async function linkCrossTeamMatch({
     pullEnv
   );
   return { status: 'linked', org: match.org, project: match.project };
+}
+
+async function promptForGitConnection(
+  client: Client,
+  repoRoot: string,
+  autoConfirm: boolean
+): Promise<GitConnectionChoice | null> {
+  const shouldConnect =
+    autoConfirm ||
+    (await client.input.confirm(
+      `Detected a repository. Connect it to this project?`,
+      true
+    ));
+  if (!shouldConnect) {
+    return null;
+  }
+
+  const remote = await resolveGitRemote(client, repoRoot, {
+    yes: autoConfirm,
+  });
+  if (!remote) {
+    return null;
+  }
+
+  const repoInfo = parseRepoUrl(remote.repoUrl);
+  if (!repoInfo) {
+    output.log(`Failed to parse Git repo data from ${remote.repoUrl}`);
+    return null;
+  }
+
+  return {
+    repoInfo,
+    repoRoot,
+    remoteName: remote.remoteName,
+  };
 }
 
 async function promptForLimitedTeams(
@@ -575,6 +618,14 @@ export default async function setupAndLink(
     let settings: ProjectSettings = {};
     let pathWithRootDirectory = path;
     let rootInferredServicesChoice: InferredServicesChoice | null = null;
+    const detectedRepoRoot = await findRepoRoot(path);
+    const gitConnection = detectedRepoRoot
+      ? await promptForGitConnection(client, detectedRepoRoot, autoConfirm)
+      : null;
+    const rootDirectoryBasePath = detectedRepoRoot ?? path;
+    const defaultRootDirectory = detectedRepoRoot
+      ? toProjectRootDirectory(detectedRepoRoot, path)
+      : null;
 
     if (!rootServicesSetup.hasConfiguredServices) {
       rootInferredServicesChoice = await promptForInferredServicesSetup({
@@ -609,14 +660,22 @@ export default async function setupAndLink(
 
       if (rootInferredServicesChoice?.type === 'single-app') {
         rootDirectory = toProjectRootDirectory(
-          path,
+          rootDirectoryBasePath,
           rootInferredServicesChoice.selectedPath
         );
       } else {
-        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+        rootDirectory = await inputRootDirectory(
+          client,
+          rootDirectoryBasePath,
+          autoConfirm,
+          defaultRootDirectory
+        );
         if (
           rootDirectory &&
-          !(await validateRootDirectory(path, join(path, rootDirectory)))
+          !(await validateRootDirectory(
+            rootDirectoryBasePath,
+            join(rootDirectoryBasePath, rootDirectory)
+          ))
         ) {
           return {
             status: 'error',
@@ -626,7 +685,9 @@ export default async function setupAndLink(
         }
       }
 
-      pathWithRootDirectory = rootDirectory ? join(path, rootDirectory) : path;
+      pathWithRootDirectory = rootDirectory
+        ? join(rootDirectoryBasePath, rootDirectory)
+        : path;
       const selectedRootServicesSetup =
         pathWithRootDirectory === path
           ? null
@@ -657,11 +718,11 @@ export default async function setupAndLink(
       } else {
         if (selectedRootInferredServicesChoice?.type === 'single-app') {
           rootDirectory = toProjectRootDirectory(
-            path,
+            rootDirectoryBasePath,
             selectedRootInferredServicesChoice.selectedPath
           );
           pathWithRootDirectory = rootDirectory
-            ? join(path, rootDirectory)
+            ? join(rootDirectoryBasePath, rootDirectory)
             : path;
         }
 
@@ -737,21 +798,45 @@ export default async function setupAndLink(
       v0,
     });
 
-    await linkFolderToProject(
-      client,
-      path,
-      {
-        projectId: project.id,
-        orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
-      autoConfirm,
-      false // don't prompt to pull env for newly created projects
-    );
-
-    await connectGitRepository(client, path, project, autoConfirm, org);
+    if (gitConnection) {
+      const connected = await connectGitRepository(
+        client,
+        path,
+        project,
+        autoConfirm,
+        org,
+        gitConnection
+      );
+      if (!connected) {
+        await linkFolderToProject(
+          client,
+          path,
+          {
+            projectId: project.id,
+            orgId: org.id,
+          },
+          project.name,
+          org.slug,
+          successEmoji,
+          autoConfirm,
+          false // don't prompt to pull env for newly created projects
+        );
+      }
+    } else {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        false // don't prompt to pull env for newly created projects
+      );
+    }
 
     return { status: 'linked', org, project };
   } catch (err) {
@@ -776,18 +861,43 @@ export async function connectGitRepository(
   path: string,
   project: { id: string; link?: any },
   autoConfirm: boolean,
-  org: Org
-): Promise<void> {
+  org: Org,
+  gitConnection?: GitConnectionChoice
+): Promise<boolean> {
   try {
+    if (gitConnection) {
+      const result = await checkExistsAndConnect({
+        client,
+        confirm: autoConfirm,
+        gitProviderLink: project.link,
+        org,
+        gitOrg: gitConnection.repoInfo.org,
+        project: project as any,
+        provider: gitConnection.repoInfo.provider,
+        repo: gitConnection.repoInfo.repo,
+        repoPath: `${gitConnection.repoInfo.org}/${gitConnection.repoInfo.repo}`,
+      });
+      if (typeof result === 'number') {
+        return false;
+      }
+      await linkRepoProject(client, path, {
+        project: project as any,
+        orgId: org.id,
+        orgSlug: org.slug,
+        remoteName: gitConnection.remoteName,
+      });
+      return true;
+    }
+
     const gitConfig = await parseGitConfig(join(path, '.git/config'));
 
     if (!gitConfig) {
-      return;
+      return false;
     }
 
     const remoteUrls = pluckRemoteUrls(gitConfig);
     if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
-      return;
+      return false;
     }
 
     const shouldConnect =
@@ -798,12 +908,12 @@ export async function connectGitRepository(
       ));
 
     if (!shouldConnect) {
-      return;
+      return false;
     }
 
     const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
     if (!repoInfo) {
-      return;
+      return false;
     }
 
     await checkExistsAndConnect({
@@ -817,8 +927,10 @@ export async function connectGitRepository(
       repo: repoInfo.repo,
       repoPath: `${repoInfo.org}/${repoInfo.repo}`,
     });
+    return true;
   } catch (error) {
     // Silently ignore git connection errors to not disrupt the main flow
     output.debug(`Failed to connect git repository: ${error}`);
+    return false;
   }
 }

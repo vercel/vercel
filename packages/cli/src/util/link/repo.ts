@@ -5,9 +5,15 @@ import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
 import { basename, join } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
-import { lstat, readJSON, outputJSON } from 'fs-extra';
+import { lstat, readJSON, outputJSON, remove } from 'fs-extra';
 import toHumanPath from '../humanize-path';
-import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
+import {
+  getVercelDirectory,
+  VERCEL_DIR,
+  VERCEL_DIR_PROJECT,
+  VERCEL_DIR_REPO,
+  writeReadme,
+} from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji, type EmojiLabel } from '../emoji';
@@ -202,6 +208,7 @@ export async function linkRepoProject(
   };
 
   await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
+  await remove(join(getVercelDirectory(cwd), VERCEL_DIR_PROJECT));
   await writeReadme(repoLink.rootPath);
   const isGitIgnoreUpdated = await addToGitIgnore(repoLink.rootPath);
 
