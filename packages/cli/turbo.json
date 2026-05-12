@@ -10,7 +10,10 @@
       ]
     },
     "build-binary-node": {
-      "inputs": ["package.json", "scripts/build-binary-node.mjs"],
+      "inputs": [
+        "$TURBO_ROOT$/.github/workflows/release-binary.yml",
+        "scripts/build-binary-node.mjs"
+      ],
       "outputs": [".node-runtime/**"],
       "env": [
         "VERCEL_CLI_NODE_ARCH",
