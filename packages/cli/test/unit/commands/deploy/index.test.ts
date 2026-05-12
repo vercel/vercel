@@ -1645,9 +1645,7 @@ describe('deploy', () => {
         client.stdin.write('no\n');
 
         // The one expecation that the test is actually about!
-        await expect(client.stderr).toOutput(
-          `What’s your project’s name? (${nameOption})`
-        );
+        await expect(client.stderr).toOutput(`Name? (${nameOption})`);
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
@@ -1683,9 +1681,7 @@ describe('deploy', () => {
         client.stdin.write('no\n');
 
         // The one expecation that the test is actually about!
-        await expect(client.stderr).toOutput(
-          `What’s your project’s name? (${directoryName})`
-        );
+        await expect(client.stderr).toOutput(`Name? (${directoryName})`);
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(

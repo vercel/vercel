@@ -53,7 +53,7 @@ async function setupProject(
   await waitForPrompt(process, 'Link to existing project?');
   process.stdin?.write('no\n');
 
-  await waitForPrompt(process, 'What’s your project’s name?');
+  await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(process, 'In which directory is your code located?');
@@ -308,7 +308,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   await waitForPrompt(now, 'Link to existing project?');
   now.stdin?.write('no\n');
 
-  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
 
   await waitForPrompt(now, 'In which directory is your code located?');
@@ -979,7 +979,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'What’s your project’s name?');
+  await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
@@ -1092,7 +1092,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'What’s your project’s name?');
+  await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
@@ -1269,7 +1269,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('n\n');
-  await waitForPrompt(vc, 'What’s your project’s name?');
+  await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('\n');

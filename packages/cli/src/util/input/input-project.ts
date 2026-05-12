@@ -130,7 +130,7 @@ export default async function inputProject(
 
   // user wants to create a new project
   return await client.input.text({
-    message: `What’s your project’s name?`,
+    message: `Name?`,
     default: !detectedProject ? slugifiedName : undefined,
     validate: async val => {
       if (!val) {

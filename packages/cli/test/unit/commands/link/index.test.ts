@@ -893,7 +893,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('awesome-app\n');
 
     await expect(client.stderr).toOutput(
@@ -948,7 +948,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1022,7 +1022,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('declined-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1088,7 +1088,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('single-fastapi-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1173,7 +1173,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('selected-directory-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1256,7 +1256,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('nested-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1319,7 +1319,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('invalid-selected-root-config-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1375,7 +1375,7 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('services-with-builds\n');
 
     await expect(client.stderr).toOutput(
