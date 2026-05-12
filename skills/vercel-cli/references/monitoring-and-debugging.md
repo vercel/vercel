@@ -21,6 +21,7 @@ vercel metrics schema <metric-or-prefix> --format=json
 vercel activity --help
 vercel activity types --format json --scope <team>
 vercel usage --help
+vercel httpstat /api/health --deployment <deployment-url>
 ```
 
 ## Logs
@@ -78,6 +79,8 @@ vercel bisect --run ./test-script.sh    # automated testing
 ## Cache
 
 ```bash
-vercel cache purge                    # purge CDN cache
-vercel cache invalidate --tag mytag   # invalidate by cache tag
+vercel cache purge --type cdn --yes      # purge CDN cache
+vercel cache invalidate --tag mytag --yes # invalidate by cache tag
 ```
+
+See `references/project-infra.md` for destructive cache deletion and other project infrastructure commands.
