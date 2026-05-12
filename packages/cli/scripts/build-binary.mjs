@@ -1,10 +1,12 @@
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
+import { promisify } from 'node:util';
 
 const require = createRequire(import.meta.url);
+const execFileAsync = promisify(execFile);
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const stagingRoot = join(packageRoot, '.pkg-staging');
@@ -97,6 +99,7 @@ for (const dependency of directDependencies) {
 }
 
 const args = normalizeOutputArgs(process.argv.slice(2));
+const customNodeRuntimeEnv = await seedCustomNodeRuntime(args);
 const child = spawn(
   process.execPath,
   [pkgBin, './pkg.js', '--config', './pkg.config.mjs', ...args],
@@ -104,6 +107,7 @@ const child = spawn(
     cwd: stagingRoot,
     env: {
       ...process.env,
+      ...customNodeRuntimeEnv,
       VERCEL_CLI_BINARY_OUTPUT_DIR: join(packageRoot, 'dist-bin'),
     },
     stdio: 'inherit',
@@ -295,4 +299,99 @@ function normalizeFromPackageRoot(path) {
     return path;
   }
   return resolve(packageRoot, path);
+}
+
+async function seedCustomNodeRuntime(args) {
+  const customNodePath = process.env.VERCEL_CLI_BINARY_NODE_PATH;
+
+  if (!customNodePath) {
+    return {};
+  }
+
+  const target = getSingleTarget(args);
+  if (!target) {
+    throw new Error(
+      'VERCEL_CLI_BINARY_NODE_PATH requires a single explicit --target value'
+    );
+  }
+
+  const parsedTarget = parseExactNodeTarget(target);
+  if (!parsedTarget) {
+    throw new Error(
+      `VERCEL_CLI_BINARY_NODE_PATH requires an exact Node patch target, got "${target}"`
+    );
+  }
+
+  const resolvedNodePath = normalizeFromPackageRoot(customNodePath);
+  const { stdout } = await execFileAsync(resolvedNodePath, ['--version']);
+  const nodeVersion = stdout.trim();
+  const expectedVersion = `v${parsedTarget.version}`;
+
+  if (nodeVersion !== expectedVersion) {
+    throw new Error(
+      `Custom Node runtime version mismatch: expected ${expectedVersion}, got ${nodeVersion}`
+    );
+  }
+
+  const nodeOs = nodeOsForTargetPlatform(parsedTarget.platform);
+  const cacheHome = process.env.VERCEL_CLI_BINARY_NODE_CACHE_HOME
+    ? normalizeFromPackageRoot(process.env.VERCEL_CLI_BINARY_NODE_CACHE_HOME)
+    : join(packageRoot, '.node-runtime', 'pkg-home');
+  const cacheDir = join(cacheHome, '.pkg-cache', 'sea');
+  const nodeDirName = `node-${expectedVersion}-${nodeOs}-${parsedTarget.arch}`;
+  const cacheNodePath =
+    nodeOs === 'win'
+      ? join(cacheDir, `${nodeDirName}.exe`)
+      : join(cacheDir, nodeDirName, 'bin', 'node');
+  const archivePath = join(
+    cacheDir,
+    `${nodeDirName}.${nodeOs === 'win' ? 'zip' : 'tar.gz'}`
+  );
+
+  await fs.mkdir(dirname(cacheNodePath), { recursive: true });
+  await fs.copyFile(resolvedNodePath, cacheNodePath);
+  await fs.chmod(cacheNodePath, 0o755);
+  await fs.writeFile(`${cacheNodePath}.ok`, '');
+  await fs.writeFile(archivePath, '');
+  await fs.writeFile(`${archivePath}.ok`, '');
+
+  console.log(
+    `Seeded yao-pkg SEA cache with custom Node runtime for ${target}: ${resolvedNodePath}`
+  );
+
+  return { HOME: cacheHome, USERPROFILE: cacheHome };
+}
+
+function getSingleTarget(args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === '--target' || arg === '-t') {
+      return args[index + 1];
+    }
+
+    if (arg.startsWith('--target=')) {
+      return arg.slice('--target='.length);
+    }
+  }
+}
+
+function parseExactNodeTarget(target) {
+  const match = target.match(
+    /^node(?<version>\d+\.\d+\.\d+)-(?<platform>[^-]+)-(?<arch>[^-]+)$/
+  );
+
+  return match?.groups;
+}
+
+function nodeOsForTargetPlatform(targetPlatform) {
+  if (targetPlatform === 'macos') {
+    return 'darwin';
+  }
+
+  if (targetPlatform === 'linux' || targetPlatform === 'win') {
+    return targetPlatform;
+  }
+
+  throw new Error(`Unsupported custom Node target platform: ${targetPlatform}`);
 }

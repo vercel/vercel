@@ -21,6 +21,7 @@
     "build": "node scripts/build.mjs",
     "build-binary": "pnpm --filter vercel... build && node scripts/build-binary.mjs",
     "build-binary:host": "pnpm --filter vercel... build && node scripts/build-binary.mjs --target host --output ./dist-bin/vercel",
+    "build-binary-node": "node scripts/build-binary-node.mjs",
     "dev": "echo \"'pnpm dev [command]' has been removed. Use 'pnpm vercel [command]' instead.\" && exit 1",
     "vercel": "pnpm build && node ./dist/vc.js",
     "vc": "pnpm vercel",

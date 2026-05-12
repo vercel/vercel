@@ -8,6 +8,18 @@
         "src/util/constants.ts",
         "src/util/dev/templates/*.ts"
       ]
+    },
+    "build-binary-node": {
+      "inputs": [
+        "$TURBO_ROOT$/.github/workflows/release-binary.yml",
+        "scripts/build-binary-node.mjs"
+      ],
+      "outputs": [".node-runtime/**"],
+      "env": [
+        "VERCEL_CLI_NODE_ARCH",
+        "VERCEL_CLI_NODE_PLATFORM",
+        "VERCEL_CLI_NODE_VERSION"
+      ]
     }
   }
 }

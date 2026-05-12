@@ -2,6 +2,7 @@ node_modules
 dist
 dist-bin
 .pkg-staging
+.node-runtime
 .vscode
 .zed
 npm-debug.log
