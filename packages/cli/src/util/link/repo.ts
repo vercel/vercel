@@ -22,6 +22,7 @@ import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
 const home = homedir();
 
@@ -203,13 +204,9 @@ export async function linkRepoProject(
 
   await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
   await writeReadme(repoLink.rootPath);
-  // update .gitignore (silent — git status surfaces the change on demand)
   await addToGitIgnore(repoLink.rootPath);
 
-  // Aligned with `Inspect` / `Production` so values land in a shared column.
-  output.print(
-    `${chalk.bold('Linked')}      ${chalk.bold(`${orgSlug}/${project.name}`)}\n`
-  );
+  printAlignedLabel('Linked', `${orgSlug}/${project.name}`);
 
   return {
     repoConfig,

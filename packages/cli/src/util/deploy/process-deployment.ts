@@ -24,18 +24,15 @@ import eraseLines from '../output/erase-lines';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
-function printInspectUrl(
-  inspectorUrl: string | null | undefined,
-  _deployStamp: () => string
-) {
+function printInspectUrl(inspectorUrl: string | null | undefined) {
   if (!inspectorUrl) {
     return;
   }
 
-  // Aligned with `Linked` / `Production` so values land in a shared column.
   // Timing belongs on the Build/Ready line, not on the URL line which is instant.
-  output.print(`${chalk.bold('Inspect')}     ${chalk.bold(inspectorUrl)}\n`);
+  printAlignedLabel('Inspect', inspectorUrl);
 }
 
 export default async function processDeployment({
@@ -203,18 +200,14 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(deployment.inspectorUrl, deployStamp);
+        printInspectUrl(deployment.inspectorUrl);
 
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
 
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji(withFullLogs ? 'link' : 'loading')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          previewUrl
         );
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
@@ -297,13 +290,9 @@ export default async function processDeployment({
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji('success')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          previewUrl
         );
 
         if (v1ChecksPending || v2ChecksPending) {

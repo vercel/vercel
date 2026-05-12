@@ -63,6 +63,7 @@ import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
@@ -2192,8 +2193,7 @@ async function handleContinueDeployment({
         ) {
           const primaryDomain = finalDeployment.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          // Aligned with `Linked` / `Inspect` (10-char label column).
-          output.print(`${chalk.bold('Production')}  ${chalk.bold(prodUrl)}\n`);
+          printAlignedLabel('Production', prodUrl);
         }
       }
 
