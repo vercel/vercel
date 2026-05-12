@@ -111,6 +111,9 @@ export async function editProjectSettings(
   } else {
     // Compress "Auto-detected Project Settings for X" into a single line that
     // also names the key commands the user is about to run with.
+    // Use output.print (not output.log) to skip the gray "> " prefix so this
+    // line visually matches the bold-label block (Linked / Inspect / Live).
+    // Title Case the inline labels so they match the checkbox panel below.
     const buildCmd = framework.settings.buildCommand?.value ?? null;
     const outputSetting = framework.settings.outputDirectory;
     const outputDir = outputSetting
@@ -119,11 +122,13 @@ export async function editProjectSettings(
         : outputSetting.placeholder
       : null;
     const inline = [
-      buildCmd ? `build: ${buildCmd}` : null,
-      outputDir ? `output: ${outputDir}` : null,
+      buildCmd ? `${settingMap.buildCommand}: ${buildCmd}` : null,
+      outputDir ? `${settingMap.outputDirectory}: ${outputDir}` : null,
     ].filter(Boolean);
     const detail = inline.length ? chalk.dim(` (${inline.join(', ')})`) : '';
-    output.log(`Detected ${styledFramework(framework.name)}${detail}\n`);
+    output.print(
+      `${chalk.bold('Detected')} ${styledFramework(framework.name)}${detail}\n`
+    );
   }
 
   settings.framework = framework.slug;
@@ -158,7 +163,7 @@ export async function editProjectSettings(
   // Prompt the user if they want to modify any settings not defined by local configuration.
   if (
     autoConfirm ||
-    !(await client.input.confirm('Customize defaults?', false))
+    !(await client.input.confirm('Customize settings?', false))
   ) {
     return settings;
   }

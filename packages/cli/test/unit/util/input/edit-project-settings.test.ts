@@ -86,7 +86,7 @@ describe('editProjectSettings', () => {
         ...projectSettings,
         framework: nextJSFramework.slug,
       });
-      await expect(client.stderr).toOutput('Detected');
+      await expect(client.stderr).toOutput('Detected Next.js');
     });
   });
 
@@ -127,7 +127,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput(
         'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
       );
-      await expect(client.stderr).toOutput('Detected');
+      await expect(client.stderr).toOutput('Detected Svelte');
     });
   });
 
@@ -161,7 +161,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput(
         'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
       );
-      await expect(client.stderr).toOutput('Detected');
+      await expect(client.stderr).toOutput('Detected Svelte');
     });
   });
 
@@ -195,7 +195,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput(
         'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
       );
-      await expect(client.stderr).toOutput('Detected');
+      await expect(client.stderr).toOutput('Detected Svelte');
     });
   });
 
@@ -240,7 +240,7 @@ describe('editProjectSettings', () => {
   });
 
   describe('customize prompt copy', () => {
-    test('asks "Customize defaults?" instead of "Want to modify these settings?"', async () => {
+    test('asks "Customize settings?" instead of "Want to modify these settings?"', async () => {
       const settingsPromise = editProjectSettings(
         client,
         null,
@@ -250,7 +250,7 @@ describe('editProjectSettings', () => {
       );
 
       // New prompt copy must appear in stderr.
-      await expect(client.stderr).toOutput('Customize defaults?');
+      await expect(client.stderr).toOutput('Customize settings?');
 
       // Dismiss the prompt (default: No) so the function resolves.
       client.stdin.write('\r');
@@ -275,6 +275,71 @@ describe('editProjectSettings', () => {
       // Need to still resolve the promise so it doesn't hang the test.
       client.stdin.write('\r');
       await settingsPromise;
+    });
+
+    test('does not use the legacy "Customize defaults?" copy', async () => {
+      const settingsPromise = editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        false,
+        null
+      );
+
+      await expect(client.stderr).not.toOutput('Customize defaults?');
+
+      client.stdin.write('\r');
+      await settingsPromise;
+    });
+
+    test('confirming the prompt opens the settings checkbox panel', async () => {
+      const settingsPromise = editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        false,
+        null
+      );
+
+      await expect(client.stderr).toOutput('Customize settings?');
+      // Answer "y" + Enter — proves the confirm returned `true`
+      // because the next prompt (checkbox panel) must render.
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which settings would you like to overwrite (select multiple)?'
+      );
+
+      // Submit checkbox panel with zero selections so the promise resolves.
+      client.stdin.write('\r');
+
+      const settings = await settingsPromise;
+      expect(settings.framework).toBe('nextjs');
+    });
+  });
+
+  describe('detected line formatting', () => {
+    test('uses bold "Detected" verb without the gray "> " log prefix', async () => {
+      await editProjectSettings(client, null, nextJSFramework, true, null);
+
+      const fullOutput = client.stderr.getFullOutput();
+      // output.log prepends gray "> " — output.print does not.
+      // Detected line must use output.print so it visually matches the
+      // bold-label block (Linked / Inspect / Production).
+      expect(fullOutput).not.toMatch(/> Detected/);
+      expect(fullOutput).toContain('Detected');
+    });
+
+    test('inline detail uses Title Case "Build Command" / "Output Directory"', async () => {
+      await editProjectSettings(client, null, nextJSFramework, true, null);
+
+      const fullOutput = client.stderr.getFullOutput();
+      // Title Case matches the checkbox panel that follows.
+      // Anti-regression: must NOT use the old lowercase "build:" / "output:".
+      expect(fullOutput).toContain('Build Command:');
+      expect(fullOutput).toContain('Output Directory:');
+      expect(fullOutput).not.toMatch(/\(build:/);
+      expect(fullOutput).not.toMatch(/, output:/);
     });
   });
 });
