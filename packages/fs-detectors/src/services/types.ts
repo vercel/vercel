@@ -1,21 +1,31 @@
 import type { Route } from '@vercel/routing-utils';
 import type {
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ServiceConfig,
+  Services,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
   Service,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ServiceConfig,
+  Services,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
   Service,
   Builder,
 };
@@ -55,11 +65,13 @@ export interface ServicesRoutes {
   workers: Route[];
 }
 
-export type ServicesConfig = ExperimentalServices;
+export type ConfiguredServices = Services | ExperimentalServices;
+export type InferredServicesConfig = ExperimentalServices;
 
 export interface ResolvedServicesResult {
   services: Service[];
   source: DetectServicesSource;
+  useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
@@ -67,7 +79,7 @@ export interface ResolvedServicesResult {
 
 export interface InferredServicesResult {
   source: 'layout' | 'procfile' | 'railway';
-  config: ServicesConfig;
+  config: InferredServicesConfig;
   services: Service[];
   warnings: ServiceDetectionWarning[];
 }
@@ -75,7 +87,7 @@ export interface InferredServicesResult {
 export interface DetectServicesResult extends ResolvedServicesResult {
   /**
    * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
+   * - `configured`: loaded from explicit project configuration (`vercel.json#services` or legacy `experimentalServices`)
    * - `auto-detected`: inferred from project structure
    */
   // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.

@@ -151,7 +151,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'deploy-with-only-readme-vercel-json': {
       'vercel.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
+      'content.txt': 'content file contents',
     },
     'deploy-default-with-sub-directory': {
       'vercel.json': JSON.stringify({ version: 2 }),
@@ -160,9 +160,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'deploy-default-with-conflicting-sub-directory': {
       'list/vercel.json': JSON.stringify({ version: 2 }),
-      'list/list/README.md': 'nested nested readme contents',
-      'list/README.md':
-        'readme contents for deploy-default-with-conflicting-sub-directory',
+      'list/list/content.txt':
+        'nested contents for deploy-default-with-conflicting-sub-directory',
+      'list/content.txt':
+        'root contents for deploy-default-with-conflicting-sub-directory',
     },
     'deploy-default-with-prebuilt-preview': {
       'vercel.json': JSON.stringify({ version: 2 }),

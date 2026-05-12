@@ -184,10 +184,11 @@ test('default command should work with --cwd option', async () => {
 
   const url = stdout;
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
+  // Root README.md is intentionally excluded from zero-config static deployments.
+  const deploymentResult = await nodeFetch(`${url}/content.txt`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
-    'readme contents for deploy-default-with-conflicting-sub-directory'
+    'root contents for deploy-default-with-conflicting-sub-directory'
   );
 });
 
