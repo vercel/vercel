@@ -25,6 +25,7 @@ import type {
 import { getVenvSitePackagesDirs } from './install';
 import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
 import { detectPlatform } from './utils';
+import { derivePycPath } from './compileall';
 
 const readFile = promisify(fs.readFile);
 
@@ -83,6 +84,7 @@ interface PythonDependencyExternalizerOptions {
   pythonPath: string;
   hasCustomCommand: boolean;
   alwaysBundlePackages?: string[];
+  includeBytecode?: boolean;
 }
 
 interface DependencyAnalysis {
@@ -103,6 +105,7 @@ export class PythonDependencyExternalizer {
   private pythonPath: string;
   private hasCustomCommand: boolean;
   private alwaysBundlePackages: string[];
+  private includeBytecode: boolean;
 
   // Populated by analyze()
   private allVendorFiles: Files = {};
@@ -127,6 +130,7 @@ export class PythonDependencyExternalizer {
     this.pythonPath = options.pythonPath;
     this.hasCustomCommand = options.hasCustomCommand;
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
+    this.includeBytecode = options.includeBytecode ?? false;
   }
 
   shouldEnableRuntimeInstall(): boolean {
@@ -754,6 +758,37 @@ export class PythonDependencyExternalizer {
                 ? Number(recordSize)
                 : undefined,
           });
+
+          // When bytecode compilation is enabled, derive the expected .pyc
+          // path for each .py file and add it to the pending list.  The
+          // parallel access/stat batch below will check if it exists on disk.
+          if (
+            this.includeBytecode &&
+            this.pythonMajor != null &&
+            this.pythonMinor != null
+          ) {
+            // Use forward-slash path for derivePycPath (it operates on
+            // platform-independent paths) then convert back.
+            const pycRel = derivePycPath(
+              rawPath,
+              this.pythonMajor,
+              this.pythonMinor
+            );
+            if (pycRel) {
+              const pycFilePath = pycRel.replaceAll('/', sep);
+              const pycSrcFsPath = join(dir, pycFilePath);
+              const pycBundlePath = join(vendorDirName, pycFilePath).replace(
+                /\\/g,
+                '/'
+              );
+              pending.push({
+                bundlePath: pycBundlePath,
+                srcFsPath: pycSrcFsPath,
+                // No RECORD size for generated .pyc — stat will be used.
+                recordSize: undefined,
+              });
+            }
+          }
         }
       }
     }
@@ -841,6 +876,28 @@ export class PythonDependencyExternalizer {
                 .then(stats => stats.size)
                 .catch(() => 0)
             );
+          }
+
+          // Include bytecode size when compilation is enabled.
+          if (
+            this.includeBytecode &&
+            this.pythonMajor != null &&
+            this.pythonMinor != null
+          ) {
+            const pycRel = derivePycPath(
+              rawPath,
+              this.pythonMajor,
+              this.pythonMinor
+            );
+            if (pycRel) {
+              const pycFilePath = pycRel.replaceAll('/', sep);
+              statPromises.push(
+                fs.promises
+                  .stat(join(dir, pycFilePath))
+                  .then(stats => stats.size)
+                  .catch(() => 0)
+              );
+            }
           }
         }
 

@@ -34,6 +34,7 @@ import {
 import {
   discoverPackage,
   ensureUvProject,
+  getVenvSitePackagesDirs,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
@@ -62,10 +63,25 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
+import { isCompileAllEnabled, runCompileAll } from './compileall';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
   'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
+const COMPILEALL_APP_EXCLUDED_DIRS = [
+  '.git',
+  '.vercel',
+  '.pnpm-store',
+  'node_modules',
+  '.next',
+  '.nuxt',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.mypy_cache',
+  '.ruff_cache',
+  'public',
+];
 
 import {
   detectPythonEntrypoint,
@@ -75,6 +91,16 @@ import {
 } from './entrypoint';
 
 export const version = -1;
+
+function escapePythonRegex(value: string): string {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+}
+
+function getCompileAllAppExcludeRegex(workPath: string): string {
+  const excludedDirs =
+    COMPILEALL_APP_EXCLUDED_DIRS.map(escapePythonRegex).join('|');
+  return `${escapePythonRegex(workPath)}[/\\\\](?:${excludedDirs})(?:[/\\\\]|$)`;
+}
 
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
@@ -239,6 +265,7 @@ export const build: BuildVX = async ({
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+  const compileAllEnabled = isCompileAllEnabled() && !meta.isDev;
   // Track whether a custom build or install command was used.
   // When true, runtime dependency installation is disabled because
   // custom commands may install dependencies not tracked in uv.lock.
@@ -723,7 +750,7 @@ from vercel_runtime.vc_init import vc_handler
     '**/.nuxt/**',
     '**/.venv/**',
     '**/venv/**',
-    '**/__pycache__/**',
+    ...(compileAllEnabled ? [] : ['**/__pycache__/**']),
     '**/.mypy_cache/**',
     '**/.ruff_cache/**',
     '**/public/**',
@@ -746,6 +773,43 @@ from vercel_runtime.vc_init import vc_handler
         ? [...predefinedExcludes, config.excludeFiles]
         : predefinedExcludes,
   };
+
+  // Precompile Python bytecode for faster cold starts.  Must run before the
+  // application glob and dependency externalizer so the generated .pyc files
+  // are picked up and included in the bundle/size calculation.
+  if (compileAllEnabled) {
+    await builderSpan
+      .child('vc.builder.python.compileall')
+      .trace(async compileSpan => {
+        const sitePackageDirs = (
+          await getVenvSitePackagesDirs(venvPath)
+        ).filter(d => fs.existsSync(d));
+        const pythonBin = getVenvPythonBin(venvPath);
+
+        console.log('Compiling Python application bytecode...');
+        await runCompileAll({
+          pythonBin,
+          directories: [workPath],
+          env: pythonEnv,
+          excludeRegex: getCompileAllAppExcludeRegex(workPath),
+        });
+
+        console.log('Compiling Python dependency bytecode...');
+        await runCompileAll({
+          pythonBin,
+          directories: sitePackageDirs,
+          env: pythonEnv,
+        });
+
+        compileSpan.setAttributes({
+          'python.compileall.enabled': 'true',
+          'python.compileall.appDirectoryCount': '1',
+          'python.compileall.sitePackageDirectoryCount': String(
+            sitePackageDirs.length
+          ),
+        });
+      });
+  }
 
   const files: Files = await glob('**', globOptions);
 
@@ -770,6 +834,7 @@ from vercel_runtime.vc_init import vc_handler
     pythonMinor: pythonVersion.minor,
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
+    includeBytecode: compileAllEnabled,
     alwaysBundlePackages: [
       ...(quirksResult.alwaysBundlePackages ?? []),
       ...(shouldInstallVercelWorkers
