@@ -30,7 +30,7 @@ export default {
     outputPath: process.env.VERCEL_CLI_BINARY_OUTPUT_DIR ?? 'dist-bin',
     sea: true,
     bytecode: false,
-    compress: 'Brotli'
+    compress: 'Brotli',
     public: true,
     publicPackages: '*',
   },
