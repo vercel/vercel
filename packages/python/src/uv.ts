@@ -1,17 +1,24 @@
-import { execSync } from 'child_process';
+import { createHash } from 'crypto';
+import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { delimiter as pathDelimiter } from 'path';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import which from 'which';
-import { debug } from '@vercel/build-utils';
+import { debug, NowBuildError } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
 
 export const UV_VERSION = '0.10.11';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
 export const UV_CACHE_DIR_SUBPATH = ['.vercel', 'python', 'cache', 'uv'];
+
+// SHA-256 checksum for the Linux x86_64 uv tarball.  Update with UV_VERSION.
+export const UV_BINARY_CHECKSUM =
+  '5a360b0de092ddf4131f5313d0411b48c4e95e8107e40c3f8f2e9fcb636b3583';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -66,9 +73,14 @@ export class UvRunner {
   listInstalledPythons(): Set<string> {
     let output: string;
     try {
-      output = execSync(
-        `${this.uvPath} python list --only-installed --output-format json`,
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+      output = execFileSync(
+        this.uvPath,
+        ['python', 'list', '--only-installed', '--output-format', 'json'],
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          shell: isWin,
+        }
       );
     } catch (err) {
       throw new Error(
@@ -118,9 +130,17 @@ export class UvRunner {
     frozen?: boolean;
     noBuild?: boolean;
     noInstallProject?: boolean;
+    pythonPlatform?: string;
   }): Promise<void> {
-    const { venvPath, projectDir, locked, frozen, noBuild, noInstallProject } =
-      options;
+    const {
+      venvPath,
+      projectDir,
+      locked,
+      frozen,
+      noBuild,
+      noInstallProject,
+      pythonPlatform,
+    } = options;
     const args = ['sync', '--active', '--no-dev', '--link-mode', 'hardlink'];
     if (frozen) {
       args.push('--frozen');
@@ -132,6 +152,9 @@ export class UvRunner {
     }
     if (noInstallProject) {
       args.push('--no-install-project');
+    }
+    if (pythonPlatform) {
+      args.push('--python-platform', pythonPlatform);
     }
     args.push('--no-editable');
     await this.runUvCmd(args, projectDir, venvPath);
@@ -418,4 +441,127 @@ export async function getUvBinaryForBundling(
   // the Lambda will contain a symlink rather than the actual binary.
   const resolvedPath = await fs.promises.realpath(uvPath);
   return resolvedPath;
+}
+
+const UV_LINUX_TARGET = 'x86_64-unknown-linux-gnu';
+
+/**
+ * Download the Linux x86_64 uv binary for bundling into the Lambda.
+ *
+ * Cached at `{cacheDir}/uv-{UV_VERSION}-{target}/uv`.  The tarball's
+ * SHA-256 is verified against {@link UV_BINARY_CHECKSUM}.
+ */
+export async function downloadUvBinaryForTarget(
+  cacheDir: string
+): Promise<string> {
+  const destDir = join(cacheDir, `uv-${UV_VERSION}-${UV_LINUX_TARGET}`);
+  const destBinary = join(destDir, 'uv');
+
+  // Return cached binary if it exists and is executable.
+  try {
+    await fs.promises.access(destBinary, fs.constants.X_OK);
+    debug(`Using cached uv binary at ${destBinary}`);
+    return destBinary;
+  } catch {
+    // Not cached -- continue to download.
+  }
+
+  const tarballName = `uv-${UV_LINUX_TARGET}.tar.gz`;
+  const url = `https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${tarballName}`;
+
+  debug(`Downloading uv ${UV_VERSION} from ${url}`);
+  console.log(
+    `Downloading uv ${UV_VERSION} (linux x86_64) for runtime dependency installation...`
+  );
+
+  await fs.promises.mkdir(destDir, { recursive: true });
+  const tarballPath = join(destDir, tarballName);
+
+  await downloadUvTarball(url, tarballPath);
+
+  const actualHash = await sha256File(tarballPath);
+  if (actualHash !== UV_BINARY_CHECKSUM) {
+    await fs.promises.unlink(tarballPath).catch(() => {});
+    throw new NowBuildError({
+      code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+      message:
+        `checksum mismatch for ${tarballName}: ` +
+        `expected ${UV_BINARY_CHECKSUM}, got ${actualHash}`,
+    });
+  }
+
+  // Archive contains `uv-{target}/uv` (and uvx).
+  try {
+    await execa('tar', [
+      'xzf',
+      tarballPath,
+      '--strip-components=1',
+      '-C',
+      destDir,
+    ]);
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+      message: `could not extract ${tarballName}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  }
+
+  await fs.promises.chmod(destBinary, 0o755);
+  await fs.promises.unlink(tarballPath).catch(() => {});
+
+  debug(`Downloaded uv binary to ${destBinary}`);
+  return destBinary;
+}
+
+async function downloadUvTarball(url: string, dest: string): Promise<void> {
+  const tmpDest = `${dest}.${process.pid}.${Date.now()}.tmp`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+
+  try {
+    const response = await fetch(url, {
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: `could not download ${url}: HTTP ${response.status}`,
+      });
+    }
+
+    if (!response.body) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: `could not download ${url}: response body was empty`,
+      });
+    }
+
+    await pipeline(
+      Readable.fromWeb(response.body),
+      fs.createWriteStream(tmpDest)
+    );
+    await fs.promises.rename(tmpDest, dest);
+  } catch (err) {
+    await fs.promises.unlink(tmpDest).catch(() => {});
+    if (err instanceof NowBuildError) {
+      throw err;
+    }
+    throw new NowBuildError({
+      code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+      message: `could not download ${url}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sha256File(filePath: string): Promise<string> {
+  const data = await fs.promises.readFile(filePath);
+  return createHash('sha256').update(new Uint8Array(data)).digest('hex');
 }

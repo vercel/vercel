@@ -134,10 +134,9 @@ describe('runQuirks', () => {
     // mocked we need to simulate the engine binary that `prisma generate`
     // would download into the cache's node_modules/prisma/ directory.
     const cacheDir = path.join(sitePackagesDir, 'prisma', '__bincache__');
-    const binaryTarget =
-      process.arch === 'arm64'
-        ? 'query-engine-linux-arm64-openssl-3.0.x'
-        : 'query-engine-rhel-openssl-3.0.x';
+    // Always use the x86_64 engine name — getLambdaBinaryTarget() now
+    // targets the Lambda platform (x86_64 Linux) instead of the host.
+    const binaryTarget = 'query-engine-rhel-openssl-3.0.x';
     const engineDir = path.join(cacheDir, 'node_modules', 'prisma');
     await fs.mkdirp(engineDir);
     await fs.writeFile(path.join(engineDir, binaryTarget), 'fake-engine');
@@ -205,10 +204,7 @@ describe('runQuirks', () => {
 
     // Pre-create the engine binary that prisma quirk expects after `prisma generate`
     const cacheDir = path.join(sitePackagesDir, 'prisma', '__bincache__');
-    const binaryTarget =
-      process.arch === 'arm64'
-        ? 'query-engine-linux-arm64-openssl-3.0.x'
-        : 'query-engine-rhel-openssl-3.0.x';
+    const binaryTarget = 'query-engine-rhel-openssl-3.0.x';
     const engineDir = path.join(cacheDir, 'node_modules', 'prisma');
     await fs.mkdirp(engineDir);
     await fs.writeFile(path.join(engineDir, binaryTarget), 'fake-engine');

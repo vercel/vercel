@@ -244,6 +244,13 @@ export const build: BuildVX = async ({
   // custom commands may install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
 
+  // Local prebuilt/deploy builds still target Lambda, but `vercel dev`
+  // installs into a host virtualenv that must keep host-compatible wheels.
+  const uvPythonPlatform =
+    !meta.isDev && !process.env.VERCEL_BUILD_IMAGE
+      ? 'x86_64-unknown-linux-gnu'
+      : undefined;
+
   debug(`workPath: ${workPath}`);
 
   workPath = await downloadFilesInWorkPath({
@@ -515,6 +522,7 @@ export const build: BuildVX = async ({
           projectDir,
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
+          pythonPlatform: uvPythonPlatform,
         });
 
         // Stash the lock file into the cache dir so prepareCache
@@ -595,10 +603,13 @@ export const build: BuildVX = async ({
     baseEnv.VERCEL_RUNTIME_PYTHON ||
     `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
   debug(`Installing ${runtimeDep}`);
+  const pipPlatformArgs = uvPythonPlatform
+    ? ['--python-platform', uvPythonPlatform]
+    : [];
   await uv.pip({
     venvPath,
     projectDir: join(workPath, entryDirectory),
-    args: ['install', runtimeDep],
+    args: ['install', ...pipPlatformArgs, runtimeDep],
   });
 
   if (shouldInstallVercelWorkers) {
@@ -610,7 +621,7 @@ export const build: BuildVX = async ({
     await uv.pip({
       venvPath,
       projectDir: join(workPath, entryDirectory),
-      args: ['install', workersDep],
+      args: ['install', ...pipPlatformArgs, workersDep],
     });
   }
 
@@ -818,6 +829,7 @@ from vercel_runtime.vc_init import vc_handler
     files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
+    architecture: 'x86_64',
     environment: lambdaEnv,
     supportsResponseStreaming: true,
   });
