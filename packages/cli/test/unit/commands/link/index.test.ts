@@ -91,7 +91,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Team?');
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -164,7 +164,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Team?');
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -255,7 +255,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Team?');
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -349,7 +349,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Team?');
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -472,7 +472,7 @@ describe('link', () => {
       );
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Team?');
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -883,7 +883,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -936,7 +936,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -1010,7 +1010,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -1074,7 +1074,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -1157,7 +1157,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -1240,7 +1240,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -1303,7 +1303,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -1359,7 +1359,7 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Team?');
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
@@ -1905,7 +1905,7 @@ describe('link', () => {
       client.stdin.write('n\n');
 
       // Should fall through to selectOrg
-      await expect(client.stderr).toOutput('Team?');
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       // inputProject runs with skipAutoDetect, so no duplicate search
@@ -1942,7 +1942,7 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Set up');
       // No match found during cross-team search, should go to selectOrg
-      await expect(client.stderr).toOutput('Team?');
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       // inputProject runs auto-detect (skipAutoDetect=false), finds nothing

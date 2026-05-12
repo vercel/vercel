@@ -297,7 +297,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   });
 
   await waitForPrompt(now, /Set up and deploy.+/);
-  await waitForPrompt(now, 'Team?');
+  await waitForPrompt(now, 'Which team?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Link to existing project?');
@@ -965,7 +965,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   });
 
   await waitForPrompt(vc, /Set up.+/);
-  await waitForPrompt(vc, 'Team?');
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
@@ -1076,7 +1076,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   });
 
   await waitForPrompt(vc, /Set up.+/);
-  await waitForPrompt(vc, 'Team?');
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');

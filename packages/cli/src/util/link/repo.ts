@@ -272,7 +272,7 @@ async function discoverRepoProjects(
     return;
   }
 
-  const org = await selectOrg(client, 'Team?', yes);
+  const org = await selectOrg(client, 'Which team?', yes);
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const remote = await resolveGitRemote(client, rootPath, {

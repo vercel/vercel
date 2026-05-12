@@ -496,7 +496,7 @@ export default async function setupAndLink(
   }
 
   try {
-    org = await selectOrg(client, 'Team?', autoConfirm);
+    org = await selectOrg(client, 'Which team?', autoConfirm);
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'NOT_AUTHORIZED') {

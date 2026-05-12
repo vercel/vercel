@@ -41,7 +41,7 @@ export default async function selectOrg(
     config: { currentTeam },
   } = client;
 
-  output.spinner('Loading scopes…', 1000);
+  output.spinner('Loading teams…', 1000);
   let user: User;
   let teams: Team[];
   try {
