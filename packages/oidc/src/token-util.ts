@@ -98,8 +98,16 @@ export async function getVercelOidcToken(
   projectId: string,
   teamId?: string
 ): Promise<VercelTokenResponse | null> {
-  const url = `https://api.vercel.com/v1/projects/${projectId}/token?source=vercel-oidc-refresh${teamId ? `&teamId=${teamId}` : ''}`;
-  const res = await fetch(url, {
+  const url = new URL(
+    `/v1/projects/${encodeURIComponent(projectId)}/token`,
+    'https://api.vercel.com'
+  );
+  url.searchParams.set('source', 'vercel-oidc-refresh');
+  if (teamId) {
+    url.searchParams.set('teamId', teamId);
+  }
+
+  const res = await fetch(url.toString(), {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${authToken}`,
@@ -153,34 +161,36 @@ export function findProjectInfo(): { projectId: string; teamId: string } {
 }
 
 export function saveToken(token: VercelTokenResponse, projectId: string): void {
-  const dir = getUserDataDir();
-  if (!dir) {
-    throw new VercelOidcTokenError(
-      'Unable to find user data directory. Please reach out to Vercel support.'
-    );
-  }
-  const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
+  const tokenPath = getTokenPath(projectId);
   const tokenJson = JSON.stringify(token);
-  fs.mkdirSync(path.dirname(tokenPath), { mode: 0o770, recursive: true }); // read/write/exec perms for owner/group only, x required for dir ops
-  fs.writeFileSync(tokenPath, tokenJson);
-  fs.chmodSync(tokenPath, 0o660); // read/write perms for owner only
+  fs.mkdirSync(path.dirname(tokenPath), { mode: 0o700, recursive: true });
+  fs.writeFileSync(tokenPath, tokenJson, { mode: 0o600 });
+  fs.chmodSync(tokenPath, 0o600);
   return;
 }
 
 export function loadToken(projectId: string): VercelTokenResponse | null {
-  const dir = getUserDataDir();
-  if (!dir) {
-    throw new VercelOidcTokenError(
-      'Unable to find user data directory. Please reach out to Vercel support.'
-    );
-  }
-  const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
+  const tokenPath = getTokenPath(projectId);
   if (!fs.existsSync(tokenPath)) {
     return null;
   }
   const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
   assertVercelOidcTokenResponse(token);
   return token;
+}
+
+function getTokenPath(projectId: string): string {
+  const dir = getUserDataDir();
+  if (!dir) {
+    throw new VercelOidcTokenError(
+      'Unable to find user data directory. Please reach out to Vercel support.'
+    );
+  }
+  return path.join(
+    dir,
+    'com.vercel.token',
+    `${encodeURIComponent(projectId)}.json`
+  );
 }
 
 interface TokenPayload {
