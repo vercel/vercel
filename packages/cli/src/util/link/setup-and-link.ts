@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
+import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
   ProjectLinkResult,
   ProjectSettings,
@@ -109,6 +110,33 @@ function printCrossTeamSearchScope({
     output.log(
       `Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}`
     );
+  }
+}
+
+function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
+  return (
+    err instanceof Error && typeof (err as { code?: unknown }).code === 'string'
+  );
+}
+
+// Detect whether `cwd` is a workspace root (monorepo with multiple packages).
+// If the filesystem can't be read (ENOENT/EACCES/ENOTDIR), treat it as a
+// single-app project rather than crashing the CLI.
+async function hasWorkspaces(cwd: string): Promise<boolean> {
+  try {
+    const fs = new LocalFileSystemDetector(cwd);
+    const workspaces = await getWorkspaces({ fs });
+    return workspaces.length > 0;
+  } catch (err) {
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'EACCES', 'ENOTDIR'].includes(err.code)
+    ) {
+      output.debug(`getWorkspaces failed for ${cwd}: ${err}`);
+      return false;
+    }
+    throw err;
   }
 }
 
@@ -406,7 +434,9 @@ export default async function setupAndLink(
   // Status line — intent is implied by the user running `vc` in this directory.
   // The "Set up and deploy?" confirmation prompt is gone; Ctrl-C is the escape hatch.
   // Single leading newline, 2-space indent, straight quotes — matches the prototype.
-  output.print(`\n  ${setupMsg} ${chalk.cyan(`"${toHumanPath(path)}"`)}\n`);
+  output.print(
+    `\n  ${chalk.bold(setupMsg)} ${chalk.cyan(`"${toHumanPath(path)}"`)}\n`
+  );
 
   let skipAutoDetect = false;
   if (searchAcrossTeams) {
@@ -601,16 +631,25 @@ export default async function setupAndLink(
           rootInferredServicesChoice.selectedPath
         );
       } else {
-        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
-        if (
-          rootDirectory &&
-          !(await validateRootDirectory(path, join(path, rootDirectory)))
-        ) {
-          return {
-            status: 'error',
-            exitCode: 1,
-            reason: 'INVALID_ROOT_DIRECTORY',
-          };
+        // Prompt for a root directory when the user explicitly asked for one
+        // via the inferred-services picker, or — in the standard flow — when
+        // this is a workspace (monorepo with multiple packages). For
+        // single-app projects we skip the prompt entirely.
+        const shouldPromptForRootDirectory =
+          rootInferredServicesChoice?.type === 'project-directory' ||
+          (await hasWorkspaces(path));
+        if (shouldPromptForRootDirectory) {
+          rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+          if (
+            rootDirectory &&
+            !(await validateRootDirectory(path, join(path, rootDirectory)))
+          ) {
+            return {
+              status: 'error',
+              exitCode: 1,
+              reason: 'INVALID_ROOT_DIRECTORY',
+            };
+          }
         }
       }
 

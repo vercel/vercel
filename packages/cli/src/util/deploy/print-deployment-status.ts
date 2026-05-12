@@ -72,7 +72,8 @@ export async function printDeploymentStatus(
   }
 
   // ✓ Ready in Xs — terminal state of the deploy flow, gutter glyph at col 0.
-  // Skipped on --no-wait deploys (we never waited for ready).
+  // Skipped when --no-wait is set and the deployment hasn't reached READY yet
+  // (we don't wait for it). Still prints if --no-wait happens to land on READY.
   if (!isStillBuilding && readyState === 'READY') {
     const duration = bareDuration(deployStamp());
     output.print(
