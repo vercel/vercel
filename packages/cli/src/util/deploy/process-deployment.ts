@@ -15,7 +15,6 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
 import type Now from '../../util';
-import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
@@ -77,7 +76,6 @@ export default async function processDeployment({
     now,
     path,
     requestBody,
-    deployStamp,
     force,
     withCache,
     quiet,
@@ -367,12 +365,7 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          printAlignedLabel('Aliased', prodUrl, { gutter: '▲' });
         }
 
         event.payload.indications = indications;

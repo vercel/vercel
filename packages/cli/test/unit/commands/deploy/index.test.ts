@@ -1766,7 +1766,7 @@ describe('deploy', () => {
 
       await expect(client.stderr).toOutput('Production ');
       await expect(client.stderr).toOutput(
-        'Aliased: https://my-app.vercel.app'
+        'Aliased     https://my-app.vercel.app'
       );
 
       const exitCode = await exitCodePromise;
@@ -1844,7 +1844,7 @@ describe('deploy', () => {
       expect(exitCode).toEqual(0);
 
       const stderrOutput = client.stderr.read().toString();
-      expect(stderrOutput).not.toContain('Aliased:');
+      expect(stderrOutput).not.toContain('Aliased');
     });
 
     it('should not display aliased domain when no aliases are assigned', async () => {
@@ -1918,7 +1918,7 @@ describe('deploy', () => {
       expect(exitCode).toEqual(0);
 
       const stderrOutput = client.stderr.read().toString();
-      expect(stderrOutput).not.toContain('Aliased:');
+      expect(stderrOutput).not.toContain('Aliased');
     });
   });
 
@@ -2691,7 +2691,7 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
 
       await expect(client.stderr).toOutput('Running Checks...');
-      await expect(client.stderr).toOutput('Aliased:');
+      await expect(client.stderr).toOutput('Aliased ');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);

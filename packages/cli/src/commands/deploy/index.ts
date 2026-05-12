@@ -2144,20 +2144,15 @@ async function handleContinueDeployment({
         output.stopSpinner();
 
         if (finalDeployment.inspectorUrl) {
-          output.print(
-            prependEmoji(
-              `Inspect: ${chalk.bold(finalDeployment.inspectorUrl)} ${deployStamp()}`,
-              emoji('inspect')
-            ) + '\n'
-          );
+          printAlignedLabel('Inspect', finalDeployment.inspectorUrl);
         }
 
+        const isProdDeployment = finalDeployment.target === 'production';
         const previewUrl = `https://${finalDeployment.url}`;
-        output.print(
-          prependEmoji(
-            `Preview: ${chalk.bold(previewUrl)} ${deployStamp()}`,
-            emoji('success')
-          ) + '\n'
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          previewUrl,
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (noWait) {
