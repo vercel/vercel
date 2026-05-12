@@ -88,6 +88,8 @@ export interface ClientOptions extends Stdio {
   nonInteractive?: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions?: boolean;
+  /** The monorepo project name specified via --project / -P */
+  projectName?: string;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -133,6 +135,8 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** The monorepo project name specified via --project / -P */
+  projectName?: string;
   /** Root trace span for CLI diagnostics */
   rootSpan?: Span;
   /** Path to write CLI trace diagnostics. Only set by `vc build`; other commands do not write traces. */
@@ -159,6 +163,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.agentName = opts.agentName;
     this.nonInteractive = opts.nonInteractive ?? this.isAgent;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
+    this.projectName = opts.projectName;
 
     const theme = {
       prefix: gray('?'),

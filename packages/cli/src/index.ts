@@ -374,6 +374,7 @@ const main = async () => {
   telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
   telemetry.trackVersion(pkg.version);
   telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
+  telemetry.trackCliOptionProjectName(parsedArgs.flags['--project-name']);
   telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
   telemetry.trackCliOptionGlobalConfig(parsedArgs.flags['--global-config']);
   telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
@@ -544,6 +545,45 @@ const main = async () => {
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
     client.cwd = parsedArgs.flags['--cwd'];
+  }
+
+  // The `--project-name` flag resolves a monorepo project name to a directory
+  if (parsedArgs.flags['--project-name']) {
+    if (parsedArgs.flags['--cwd']) {
+      output.error(
+        `Cannot use ${param('--project-name')} and ${param('--cwd')} together. ` +
+          `Use ${param('--project-name')} to target a monorepo project by name, ` +
+          `or ${param('--cwd')} to set an explicit working directory.`
+      );
+      return 1;
+    }
+    const projectFlagName = parsedArgs.flags['--project-name'];
+    try {
+      const { findRepoRoot } = await import('./util/link/repo.js');
+      const { resolveWorkspaceProject } = await import(
+        './util/workspace-resolver.js'
+      );
+      const repoRoot = await findRepoRoot(client.cwd);
+      if (!repoRoot) {
+        output.error(
+          `Could not find a Git repository root. ${param('--project-name')} requires a monorepo context.`
+        );
+        return 1;
+      }
+      const resolved = await resolveWorkspaceProject(repoRoot, projectFlagName);
+      client.cwd = resolved.projectPath;
+      client.projectName = projectFlagName;
+      output.debug(
+        `Resolved ${param('--project-name')} "${projectFlagName}" to: ${resolved.projectPath} (via ${resolved.source})`
+      );
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        output.error(err.message);
+      } else {
+        output.error(`Failed to resolve project "${projectFlagName}"`);
+      }
+      return 1;
+    }
   }
   const { cwd } = client;
 

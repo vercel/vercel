@@ -84,6 +84,9 @@ export const help = () => `
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     --cwd                          Current working directory
+    -P ${chalk.bold.underline('NAME')}, --project-name=${chalk.bold.underline(
+      'NAME'
+    )} Target a monorepo project by name
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
       'FILE'
     )}   Path to the local ${'`vercel.json`'} file
