@@ -901,7 +901,9 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -957,7 +959,9 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1027,7 +1031,9 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1089,7 +1095,9 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Customize defaults?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1176,7 +1184,9 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1249,7 +1259,9 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1305,7 +1317,9 @@ describe('link', () => {
     );
     client.stdin.write('apps/web\n');
 
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1357,7 +1371,9 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Multiple services were detected, but your existing project config uses `builds`. To deploy multiple services in one project, see Services (https://vercel.com/docs/services).'
     );
-    await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
     client.stdin.write('\n');
 
     const exitCode = await exitCodePromise;
@@ -1938,7 +1954,9 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Customize defaults?');
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Customize Vercel Authentication?');
+      await expect(client.stderr).toOutput(
+        'Do you want to change additional project settings?'
+      );
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Linked to');

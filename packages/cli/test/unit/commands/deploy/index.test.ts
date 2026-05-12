@@ -989,7 +989,7 @@ describe('deploy', () => {
       // remove first 3 lines which contains randomized data
       const output = client.getFullOutput().split('\n').slice(3).join('\n');
       expect(output).toContain('Building');
-      expect(output).toContain('Live');
+      expect(output).toContain('Production');
       expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
@@ -1649,7 +1649,7 @@ describe('deploy', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
-          'Customize Vercel Authentication?'
+          'Do you want to change additional project settings?'
         );
         client.stdin.write('\n');
 
@@ -1677,7 +1677,7 @@ describe('deploy', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
-          'Customize Vercel Authentication?'
+          'Do you want to change additional project settings?'
         );
         client.stdin.write('\n');
 
@@ -1764,7 +1764,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Live');
+      await expect(client.stderr).toOutput('Production');
       await expect(client.stderr).toOutput(
         'Aliased: https://my-app.vercel.app'
       );
@@ -1912,7 +1912,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Live');
+      await expect(client.stderr).toOutput('Production');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);

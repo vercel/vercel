@@ -206,9 +206,9 @@ export async function linkRepoProject(
   // update .gitignore (silent — git status surfaces the change on demand)
   await addToGitIgnore(repoLink.rootPath);
 
-  // Aligned with `Inspect` / `Live` (9-char label column).
+  // Aligned with `Inspect` / `Production` so values land in a shared column.
   output.print(
-    `${chalk.bold('Linked')}   ${chalk.bold(`${orgSlug}/${project.name}`)}\n`
+    `${chalk.bold('Linked')}      ${chalk.bold(`${orgSlug}/${project.name}`)}\n`
   );
 
   return {

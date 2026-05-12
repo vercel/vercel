@@ -456,9 +456,9 @@ export async function linkFolderToProject(
   // update .gitignore (silent — git status surfaces the change on demand)
   await addToGitIgnore(path);
 
-  // Aligned with `Inspect` / `Live` (9-char label column).
+  // Aligned with `Inspect` / `Production` so values land in a shared column.
   output.print(
-    `${chalk.bold('Linked')}   ${chalk.bold(`${orgSlug}/${projectName}`)}\n`
+    `${chalk.bold('Linked')}      ${chalk.bold(`${orgSlug}/${projectName}`)}\n`
   );
 
   if (!pullEnv) {

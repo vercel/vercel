@@ -79,7 +79,10 @@ async function setupProject(
   }
 
   const hasAdditionalProjectSettingsToChange = vercelAuth !== 'standard';
-  await waitForPrompt(process, 'Customize Vercel Authentication?');
+  await waitForPrompt(
+    process,
+    'Do you want to change additional project settings?'
+  );
 
   if (hasAdditionalProjectSettingsToChange) {
     process.stdin?.write('y\n');
@@ -305,7 +308,10 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   await waitForPrompt(now, 'Customize defaults?');
   now.stdin?.write('no\n');
 
-  await waitForPrompt(now, 'Customize Vercel Authentication?');
+  await waitForPrompt(
+    now,
+    'Do you want to change additional project settings?'
+  );
   now.stdin?.write('\n');
 
   await waitForPrompt(now, /Linked to/);
@@ -1078,7 +1084,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
-  await waitForPrompt(vc, 'Customize Vercel Authentication?');
+  await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Linked to');
@@ -1263,7 +1269,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, "What's your Output Directory?");
   vc.stdin?.write('output\n');
-  await waitForPrompt(vc, 'Customize Vercel Authentication?');
+  await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('n\n');
   await waitForPrompt(
     vc,

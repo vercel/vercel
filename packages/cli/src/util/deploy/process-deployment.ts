@@ -33,9 +33,9 @@ function printInspectUrl(
     return;
   }
 
-  // Aligned with `Linked` / `Live` (9-char label column). Timing belongs on
-  // the Build/Ready line, not on the URL line which is instant.
-  output.print(`${chalk.bold('Inspect')}  ${chalk.bold(inspectorUrl)}\n`);
+  // Aligned with `Linked` / `Production` so values land in a shared column.
+  // Timing belongs on the Build/Ready line, not on the URL line which is instant.
+  output.print(`${chalk.bold('Inspect')}     ${chalk.bold(inspectorUrl)}\n`);
 }
 
 export default async function processDeployment({
