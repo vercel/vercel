@@ -6,15 +6,12 @@ import type Client from '../../util/client';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { confirmProduction, type DeploymentTarget } from './confirm-production';
+import { getSessionToken } from './session-token-provider';
 import type { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
 import type { Deployment, ProjectLinked } from '@vercel-internals/types';
 import toHost from '../../util/to-host';
 
 const TRACE_COOKIE_NAME = '_vercel_tracing';
-
-interface SessionTokenResponse {
-  token: string;
-}
 
 export interface TraceOptions {
   /** Full resolved URL we are about to curl (e.g. https://my-app.vercel.app/api/x). */
@@ -33,42 +30,6 @@ export interface TraceOptions {
   yes: boolean;
   /** Telemetry client to report --trace and --yes-on-production flags. */
   telemetry: CurlTelemetryClient;
-}
-
-/**
- * Acquire a session cookie from the platform for the resolved deployment.
- * Returns the JWT to inject as `_vercel_tracing` cookie value.
- *
- * No caching in this slice — every call hits the API.
- */
-async function fetchSessionToken(
-  client: Client,
-  {
-    teamId,
-    projectId,
-    deploymentId,
-  }: {
-    teamId?: string;
-    projectId: string;
-    deploymentId: string;
-  }
-): Promise<string> {
-  const body = JSON.stringify({ teamId, projectId, deploymentId });
-  const response = await client.fetch<SessionTokenResponse>(
-    '/v1/projects/traces/session',
-    {
-      method: 'POST',
-      body,
-      headers: { 'Content-Type': 'application/json' },
-      accountId: teamId,
-    }
-  );
-
-  if (!response?.token) {
-    throw new Error('Trace session response is missing a token');
-  }
-
-  return response.token;
 }
 
 /**
@@ -132,6 +93,26 @@ function extractVercelId(headerDump: string): string | undefined {
     }
   }
   return lastValue;
+}
+
+/**
+ * Parse the final HTTP status code from the curl header dump. Curl writes
+ * one `HTTP/x.y <code> <reason>` line per response (including redirects),
+ * so we take the LAST one as the status the user actually consumed.
+ *
+ * Returns undefined when curl produced no parseable status line (connection
+ * failure, no response received, etc).
+ */
+function extractFinalStatus(headerDump: string): number | undefined {
+  const lines = headerDump.split(/\r?\n/);
+  let lastStatus: number | undefined;
+  for (const line of lines) {
+    const match = line.match(/^HTTP\/[\d.]+\s+(\d{3})/);
+    if (match) {
+      lastStatus = Number(match[1]);
+    }
+  }
+  return lastStatus;
 }
 
 /**
@@ -203,10 +184,12 @@ async function runCurlAndCaptureHeaders(
  *
  * 1. Look up the deployment (gives us deploymentId + production-or-not).
  * 2. Gate on production via {@link confirmProduction}.
- * 3. Acquire the session cookie from the platform.
+ * 3. Acquire the session cookie via the on-disk-cached provider.
  * 4. Spawn curl with the cookie header AND `-D <tmpfile>` so we can
  *    capture `x-vercel-id` without disturbing body streaming.
- * 5. Emit the request id (text mode) or wrap the response (JSON mode).
+ * 5. If the response was 401 AND the cookie came from cache, evict the
+ *    cache entry, re-issue, and retry curl ONCE.
+ * 6. Emit the request id (text mode) or wrap the response (JSON mode).
  */
 export async function trace(
   client: Client,
@@ -263,12 +246,14 @@ export async function trace(
     telemetry.trackCliFlagYesOnProduction(true);
   }
 
-  let token: string;
+  let session;
   try {
-    token = await fetchSessionToken(client, {
+    session = await getSessionToken({
+      client,
       teamId,
       projectId,
       deploymentId: deployment.id,
+      host: fullUrl,
     });
   } catch (err) {
     output.error(
@@ -279,18 +264,46 @@ export async function trace(
     return 1;
   }
 
-  const flagsWithCookie = [
-    '--header',
-    `Cookie: ${TRACE_COOKIE_NAME}=${token}`,
-    ...curlFlags,
-  ];
-
-  output.debug(`Executing: curl ${flagsWithCookie.map(requoteArgs).join(' ')}`);
-
-  const { exitCode, headerDump, capturedBody } = await runCurlAndCaptureHeaders(
-    flagsWithCookie,
+  let { exitCode, headerDump, capturedBody } = await runCurlWithCookie(
+    session.token,
+    curlFlags,
     json
   );
+
+  // 401 retry: only if the token came from the cache (a stale cached cookie
+  // is the only situation where evicting + re-issuing would help). A 401 on
+  // a freshly issued token is a real failure and gets surfaced as-is.
+  if (
+    session.fromCache &&
+    extractFinalStatus(headerDump) === 401 &&
+    exitCode === 0
+  ) {
+    output.debug('Trace cookie returned 401; evicting cache and retrying.');
+    let refreshed;
+    try {
+      refreshed = await getSessionToken({
+        client,
+        teamId,
+        projectId,
+        deploymentId: deployment.id,
+        host: fullUrl,
+        evictedToken: session.token,
+      });
+    } catch (err) {
+      output.error(
+        `Failed to refresh trace session after 401: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      return 1;
+    }
+
+    ({ exitCode, headerDump, capturedBody } = await runCurlWithCookie(
+      refreshed.token,
+      curlFlags,
+      json
+    ));
+  }
 
   const requestId = extractVercelId(headerDump);
 
@@ -317,4 +330,24 @@ export async function trace(
   );
 
   return exitCode;
+}
+
+/**
+ * Inject the trace cookie header and run curl. Extracted so the 401-retry
+ * path can re-invoke without duplicating flag-building logic.
+ */
+async function runCurlWithCookie(
+  token: string,
+  curlFlags: string[],
+  json: boolean
+): Promise<{ exitCode: number; headerDump: string; capturedBody: string }> {
+  const flagsWithCookie = [
+    '--header',
+    `Cookie: ${TRACE_COOKIE_NAME}=${token}`,
+    ...curlFlags,
+  ];
+
+  output.debug(`Executing: curl ${flagsWithCookie.map(requoteArgs).join(' ')}`);
+
+  return runCurlAndCaptureHeaders(flagsWithCookie, json);
 }
