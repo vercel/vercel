@@ -22,12 +22,14 @@ import {
   NowBuildError,
   runNpmInstall,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   type BuilderV3,
   type BuilderVX,
   type Config,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
 import { importBuilders } from '../build/import-builders';
+import { getStaticServiceSchedules } from '../service-schedules';
 import output from '../../output-manager';
 import { treeKill } from '../tree-kill';
 
@@ -162,6 +164,83 @@ interface ServicesOrchestratorOptions {
   repoRoot: string;
   env: NodeJS.ProcessEnv;
   proxyOrigin: string;
+  useImplicitEnvInjection: boolean;
+}
+
+// Max time we wait between SIGTERM and SIGKILL when force-stopping a service.
+// We poll process liveness instead of sleeping the full window, so well-behaved
+// services exit immediately.
+const FORCE_KILL_GRACE_MS = 2000;
+
+// Hard upper bound on `stopAll`. If individual kills hang (e.g. `ps` from
+// `tree-kill` stalls, a builder's async `shutdown` never resolves), we still
+// return so the dev process can exit. Synchronous `'exit'` backstop will
+// SIGKILL anything we couldn't reach.
+const STOP_ALL_TIMEOUT_MS = 8000;
+
+// Send `signal` to the entire process group led by `pid`. Services are spawned
+// with `detached: true`, so each child becomes its own process-group leader
+// (pgid === pid). Killing the group covers grandchildren that re-parent to
+// init when their direct parent exits — which `tree-kill`'s PPID walk would
+// miss. Treats ESRCH (group gone) and EPERM (e.g. pid reused for a process
+// we don't own) as non-fatal: nothing further we can do, callers move on.
+function killGroup(pid: number, signal: NodeJS.Signals): boolean {
+  try {
+    process.kill(-pid, signal);
+    return true;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ESRCH' || code === 'EPERM') return false;
+    throw err;
+  }
+}
+
+// Returns true if a process with `pid` exists right now. EPERM means it exists
+// but we can't signal it (e.g. credentials mismatch after pid reuse) — from
+// our perspective it's "alive but unreachable," which we treat as alive so the
+// caller stops waiting and escalates rather than spinning.
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+// Wait until `pid` is gone or `timeoutMs` elapses. Uses the ChildProcess `exit`
+// event when available (immediate, no polling); otherwise polls every 100 ms.
+// Returns true if the process died within the window.
+function waitForExit(
+  pid: number,
+  proc: ChildProcess | undefined,
+  timeoutMs: number
+): Promise<boolean> {
+  if (proc && (proc.exitCode !== null || proc.signalCode !== null)) {
+    return Promise.resolve(true);
+  }
+  if (!isProcessAlive(pid)) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = (died: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearInterval(poll);
+      clearTimeout(deadline);
+      if (proc) proc.removeListener('exit', onExit);
+      resolve(died);
+    };
+    const onExit = () => finish(true);
+    if (proc) proc.once('exit', onExit);
+
+    const poll = setInterval(() => {
+      if (!isProcessAlive(pid)) finish(true);
+    }, 100);
+    const deadline = setTimeout(() => finish(false), timeoutMs);
+  });
 }
 
 export class ServicesOrchestrator {
@@ -169,15 +248,17 @@ export class ServicesOrchestrator {
   private managedProcesses = new Map<string, ChildProcess>();
   private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
+  private exitBackstop: (() => void) | undefined;
 
   private services: Service[];
   private cwd: string;
   private repoRoot: string;
-  private env: NodeJS.ProcessEnv;
+  private envFilesValues: NodeJS.ProcessEnv;
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
   private hasQueueServices: boolean;
+  private useImplicitEnvInjection: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -185,15 +266,51 @@ export class ServicesOrchestrator {
     this.repoRoot = options.repoRoot;
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
-    this.env = options.env;
+    this.envFilesValues = options.env;
+    this.useImplicitEnvInjection = options.useImplicitEnvInjection;
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
     this.hasQueueServices = options.services.some(isQueueTriggeredService);
   }
 
+  // Synchronously SIGKILL every tracked process group. Used from
+  // `process.on('exit' | 'uncaughtException')` so that orphans are reaped even
+  // when normal async cleanup never runs (crash, uncaught exception, plain
+  // `process.exit`). Must stay synchronous — the 'exit' event allows no I/O.
+  // Each kill is isolated so one failure (EPERM, unexpected error) cannot
+  // abort the loop and leave siblings orphaned.
+  private forceKillAllSync(): void {
+    const killOne = (pid: number | undefined) => {
+      if (!pid) return;
+      try {
+        killGroup(pid, 'SIGKILL');
+      } catch {
+        // best-effort during exit; the process is going down anyway
+      }
+    };
+    for (const [, proc] of this.managedProcesses) killOne(proc.pid);
+    for (const [, service] of this.managedServices) killOne(service.pid);
+  }
+
+  private registerExitBackstop(): void {
+    if (this.exitBackstop) return;
+    const backstop = () => this.forceKillAllSync();
+    this.exitBackstop = backstop;
+    process.on('exit', backstop);
+  }
+
+  private unregisterExitBackstop(): void {
+    if (this.exitBackstop) {
+      process.removeListener('exit', this.exitBackstop);
+      this.exitBackstop = undefined;
+    }
+  }
+
   async startAll(): Promise<void> {
     output.debug(`Starting ${this.services.length} services`);
+
+    this.registerExitBackstop();
 
     const startPromises = this.services.map((service, index) =>
       this.startService(service, index).then(result => {
@@ -233,7 +350,7 @@ export class ServicesOrchestrator {
       output.debug(`Stopping service "${name}" (PID: ${service.pid})`);
 
       // For some builders (e.g. @vercel/python) `shutdown` is defined as no-op,
-      // so we'll try to be nice at first, but then proceed with killing the tree.
+      // so we'll try to be nice at first, but then proceed with killing the group.
       const stopService = async () => {
         if (service.shutdown) {
           await service.shutdown().catch(err => {
@@ -242,7 +359,11 @@ export class ServicesOrchestrator {
         }
 
         if (service.pid) {
-          await treeKill(service.pid).catch(err => {
+          await this.terminateProcessGroup(
+            name,
+            service.pid,
+            service.process
+          ).catch(err => {
             output.debug(`Failed to kill service "${name}": ${err}`);
           });
         }
@@ -256,7 +377,7 @@ export class ServicesOrchestrator {
       if (proc.pid && !this.managedServices.has(name)) {
         output.debug(`Stopping process "${name}" (PID: ${proc.pid})`);
         stopPromises.push(
-          treeKill(proc.pid).catch(err => {
+          this.terminateProcessGroup(name, proc.pid, proc).catch(err => {
             output.debug(`Failed to stop process "${name}": ${err}`);
           })
         );
@@ -268,10 +389,70 @@ export class ServicesOrchestrator {
     }
     this.cronTimers = [];
 
-    await Promise.all(stopPromises);
-    this.managedServices.clear();
-    this.managedProcesses.clear();
-    output.debug('All services stopped');
+    // Hard timeout: even if individual kills hang (tree-kill's `ps` stalls,
+    // a builder's `shutdown` never resolves, etc.), don't block exit forever.
+    // The synchronous `'exit'` backstop will SIGKILL whatever remains.
+    let timedOut = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<void>(resolve => {
+      timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        output.debug(
+          `stopAll timed out after ${STOP_ALL_TIMEOUT_MS}ms; remaining processes will be SIGKILLed on exit`
+        );
+        resolve();
+      }, STOP_ALL_TIMEOUT_MS);
+    });
+    try {
+      await Promise.race([Promise.all(stopPromises), timeout]);
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+
+    // If we timed out, leave the maps populated so `forceKillAllSync` (on
+    // 'exit') can still reach the survivors with SIGKILL.
+    if (!timedOut) {
+      this.managedServices.clear();
+      this.managedProcesses.clear();
+      this.unregisterExitBackstop();
+      output.debug('All services stopped');
+    }
+  }
+
+  // Graceful → forceful termination of a single service's process group.
+  // Sends SIGTERM to the entire pgid (services run with `detached: true`, so
+  // pgid === pid), waits *up to* a grace window — polling so well-behaved
+  // services exit immediately — and escalates to SIGKILL only if still alive.
+  // `tree-kill` runs in parallel to mop up descendants that switched process
+  // groups via `setsid` and so escape `kill(-pgid)`. Every step is wrapped:
+  // no error from a single service can prevent the rest of `stopAll` from
+  // completing.
+  private async terminateProcessGroup(
+    name: string,
+    pid: number,
+    proc?: ChildProcess
+  ): Promise<void> {
+    try {
+      killGroup(pid, 'SIGTERM');
+    } catch (err) {
+      output.debug(`SIGTERM group kill for "${name}" failed: ${err}`);
+    }
+    await treeKill(pid, 'SIGTERM').catch(err => {
+      output.debug(`tree-kill (SIGTERM) for "${name}" failed: ${err}`);
+    });
+
+    const died = await waitForExit(pid, proc, FORCE_KILL_GRACE_MS);
+    if (died) return;
+
+    output.debug(`Escalating to SIGKILL for "${name}" (PID: ${pid})`);
+    try {
+      killGroup(pid, 'SIGKILL');
+    } catch (err) {
+      output.debug(`SIGKILL group kill for "${name}" failed: ${err}`);
+    }
+    await treeKill(pid, 'SIGKILL').catch(() => {
+      // tolerate: group is likely already dead
+    });
   }
 
   getServiceForRoute(pathname: string): ServiceDevProcess | null {
@@ -332,22 +513,42 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
-    const serviceUrlEnvVars = getServiceUrlEnvVars({
-      services: this.services,
-      frameworkList: framework ? [framework] : [],
-      origin: this.proxyOrigin,
-      currentEnv: this.env,
-      envPrefix: service.envPrefix,
-    });
+    const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
 
+    let perServiceEnv: Record<string, string> = {};
+    if (this.useImplicitEnvInjection) {
+      // Legacy behavior for experimentalServices / auto-detected: synthesize
+      // `{NAME}_URL` and `{PREFIX}{NAME}_URL` env vars for every web service.
+      // Pass only the consumer's framework so its prefix wins for client-side
+      // (relative) names; absolute `{NAME}_URL` is always emitted.
+      perServiceEnv = getExperimentalServiceUrlEnvVars({
+        services: this.services,
+        frameworkList: framework ? [framework] : [],
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    } else if (service.env) {
+      perServiceEnv = getServiceUrlEnvVars({
+        requestedEnv: service.env,
+        consumerService: service,
+        services: this.services,
+        frameworkList,
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    }
+
+    // Precedence: process env > env* files > per-service env > config env > defaults
+    //
+    // per-service env already contains config env that is folded into it during
+    // service's resolution
     const env = cloneEnv(
       {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
-      process.env,
-      this.env,
-      serviceUrlEnvVars
+      perServiceEnv,
+      effectiveProcessEnv
     );
     env.VERCEL_SERVICE_TYPE = service.type;
     if (service.trigger) {
@@ -726,20 +927,15 @@ export class ServicesOrchestrator {
       const crons =
         managed.crons && managed.crons.length > 0
           ? managed.crons
-          : service &&
-              isScheduleTriggeredService(service) &&
-              service.schedule &&
-              service.schedule !== '<dynamic>'
-            ? [
-                {
-                  path: getInternalServiceCronPath(
-                    name,
-                    service.entrypoint || service.builder.src || 'index',
-                    service.handlerFunction || 'cron'
-                  ),
-                  schedule: service.schedule,
-                },
-              ]
+          : service && isScheduleTriggeredService(service) && service.schedule
+            ? getStaticServiceSchedules(service.schedule).map(schedule => ({
+                path: getInternalServiceCronPath(
+                  name,
+                  service.entrypoint || service.builder.src || 'index',
+                  service.handlerFunction || 'cron'
+                ),
+                schedule,
+              }))
             : [];
       if (crons.length === 0) continue;
 

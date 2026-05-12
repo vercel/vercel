@@ -28,6 +28,7 @@ export interface ServicesBuildersResult {
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: ResolvedService[];
+  useImplicitEnvInjection?: boolean;
 }
 
 function isExperimentalServicesAutoDetectionEnabled(): boolean {
@@ -124,8 +125,7 @@ export async function getServicesBuilders(
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
+          message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
       warnings: warningResponses,
@@ -164,5 +164,6 @@ export async function getServicesBuilders(
         : null,
     errorRoutes: [],
     services: result.services,
+    useImplicitEnvInjection: result.useImplicitEnvInjection,
   };
 }

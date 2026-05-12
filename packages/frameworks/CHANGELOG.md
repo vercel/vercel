@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.26.0
+
+### Minor Changes
+
+- 51785a6: Add Ash framework preset
+
 ## 3.25.1
 
 ### Patch Changes

@@ -181,6 +181,9 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+  private useImplicitServicesEnvInjection: boolean;
+  private projectId?: string;
+  private orgId?: string;
 
   private shouldUseServicesOrchestrator(): boolean {
     if (!this.services || this.services.length === 0) {
@@ -194,10 +197,14 @@ export default class DevServer {
     this.repoRoot = options.repoRoot ?? cwd;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.envValues = options.envValues || {};
+    this.projectId = options.projectId;
+    this.orgId = options.orgId;
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
     this.services = options.services;
+    this.useImplicitServicesEnvInjection =
+      options.useImplicitServicesEnvInjection ?? true;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -601,6 +608,7 @@ export default class DevServer {
 
     // no builds -> zero config
     if (
+      !vercelConfig.services &&
       !vercelConfig.experimentalServices &&
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {
@@ -710,9 +718,14 @@ export default class DevServer {
     this.apiDir = detectApiDirectory(vercelConfig.builds || []);
     this.apiExtensions = detectApiExtensions(vercelConfig.builds || []);
 
-    // Update the env vars configuration
+    // Update the env vars configuration. `vercelConfig.env` may now be the
+    // new `Record<string, EnvVar>` shape and this will be resolved later,
+    // so only the legacy literal shape is forwarded as a `.env` validation base.
+    const literalTopLevelEnv = isLiteralEnvRecord(vercelConfig.env)
+      ? vercelConfig.env
+      : undefined;
     let [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', vercelConfig.env),
+      this.getLocalEnv('.env', literalTopLevelEnv),
       this.getLocalEnv('.env.build', vercelConfig.build?.env),
     ]);
 
@@ -737,6 +750,26 @@ export default class DevServer {
     // simulate parts of the platform for local environment
     allEnv['VERCEL_ENV'] = 'development';
     allEnv['VERCEL'] = '1';
+
+    // Expose the linked project's IDs the same way the platform does in
+    // prod/preview. Don't override a value the user explicitly set in their
+    // shell or `.env` files.
+    if (this.projectId && !process.env.VERCEL_PROJECT_ID) {
+      if (!('VERCEL_PROJECT_ID' in allEnv)) {
+        allEnv['VERCEL_PROJECT_ID'] = this.projectId;
+      }
+      if (!('VERCEL_PROJECT_ID' in runEnv)) {
+        runEnv['VERCEL_PROJECT_ID'] = this.projectId;
+      }
+    }
+    if (this.orgId && !process.env.VERCEL_ORG_ID) {
+      if (!('VERCEL_ORG_ID' in allEnv)) {
+        allEnv['VERCEL_ORG_ID'] = this.orgId;
+      }
+      if (!('VERCEL_ORG_ID' in runEnv)) {
+        runEnv['VERCEL_ORG_ID'] = this.orgId;
+      }
+    }
 
     // mirror how VERCEL_REGION is injected in prod/preview
     // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
@@ -944,6 +977,7 @@ export default class DevServer {
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
+        useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
@@ -2746,6 +2780,18 @@ function generateRequestId(podId: string, isInvoke = false): string {
 
 function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+/**
+ * Type guard for the legacy top-level `env` shape (`Record<string, string>`).
+ * The schema rejects mixed records, so a single sample is sufficient.
+ */
+function isLiteralEnvRecord(
+  env: VercelConfig['env']
+): env is Record<string, string> {
+  if (!env) return false;
+  const first = Object.values(env)[0];
+  return first === undefined || typeof first === 'string';
 }
 
 async function findBuildMatch(

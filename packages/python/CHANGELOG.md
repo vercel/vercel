@@ -1,5 +1,16 @@
 # @vercel/python
 
+## 6.40.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- f93148b: Reduce redundant file stat and subprocess calls.
+- 979d70a: [services] `services` schema support
+
 ## 6.39.0
 
 ### Minor Changes
