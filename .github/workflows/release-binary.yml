@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'melkey/bun-working-branch'
+      - 'ijjk-small-icu-release-binary'
     tags:
       - 'vercel@*'
   workflow_dispatch:
