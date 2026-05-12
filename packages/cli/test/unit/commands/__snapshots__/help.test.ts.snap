@@ -61,6 +61,9 @@ exports[`help command > alias help output snapshots > alias help column width 40
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -112,6 +115,7 @@ exports[`help command > alias help output snapshots > alias help column width 80
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -156,6 +160,7 @@ exports[`help command > alias help output snapshots > alias help column width 12
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -200,6 +205,7 @@ exports[`help command > alias help output snapshots > alias list subcommand > al
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -228,6 +234,7 @@ exports[`help command > alias help output snapshots > alias remove subcommand > 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -251,6 +258,7 @@ exports[`help command > alias help output snapshots > alias set subcommand > ali
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -320,6 +328,9 @@ exports[`help command > bisect help output snapshots > bisect help column width 
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -373,6 +384,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -419,6 +431,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -463,6 +476,7 @@ exports[`help command > certs help output snapshots > certs add help output snap
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -531,6 +545,9 @@ exports[`help command > certs help output snapshots > certs help column width 40
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -584,6 +601,7 @@ exports[`help command > certs help output snapshots > certs help column width 80
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -630,6 +648,7 @@ exports[`help command > certs help output snapshots > certs help column width 12
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -675,6 +694,7 @@ exports[`help command > certs help output snapshots > certs issue help output sn
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -710,6 +730,7 @@ exports[`help command > certs help output snapshots > certs list help output sna
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -739,6 +760,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -775,6 +797,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -830,6 +853,7 @@ exports[`help command > connex help output snapshots > connex help column width 
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -880,6 +904,7 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -930,6 +955,7 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -978,6 +1004,7 @@ exports[`help command > connex help output snapshots > connex token subcommand >
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1196,6 +1223,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -1283,6 +1313,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -1352,6 +1383,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1407,6 +1439,7 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -1440,6 +1473,7 @@ exports[`help command > dns help output snapshots > dns add help output snapshot
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1526,6 +1560,9 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -1597,6 +1634,7 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -1660,6 +1698,7 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1715,6 +1754,7 @@ exports[`help command > dns help output snapshots > dns import help output snaps
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1744,6 +1784,7 @@ exports[`help command > dns help output snapshots > dns list help output snapsho
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1772,6 +1813,7 @@ exports[`help command > dns help output snapshots > dns remove help output snaps
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1800,6 +1842,7 @@ exports[`help command > domains help output snapshots > domains add help output 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1831,6 +1874,7 @@ exports[`help command > domains help output snapshots > domains buy help output 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -1945,6 +1989,9 @@ exports[`help command > domains help output snapshots > domains help column widt
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -1990,6 +2037,7 @@ exports[`help command > domains help output snapshots > domains help column widt
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -2025,6 +2073,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2048,6 +2097,7 @@ exports[`help command > domains help output snapshots > domains inspect help out
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2078,6 +2128,7 @@ exports[`help command > domains help output snapshots > domains list help output
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2112,6 +2163,7 @@ exports[`help command > domains help output snapshots > domains move help output
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2140,6 +2192,7 @@ exports[`help command > domains help output snapshots > domains price help outpu
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2178,6 +2231,7 @@ exports[`help command > domains help output snapshots > domains remove help outp
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2201,6 +2255,7 @@ exports[`help command > domains help output snapshots > domains transfer-in help
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2235,6 +2290,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2384,6 +2440,9 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -2439,6 +2498,7 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -2480,6 +2540,7 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2515,6 +2576,7 @@ exports[`help command > env help output snapshots > env list help output snapsho
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2546,6 +2608,7 @@ exports[`help command > env help output snapshots > env pull help output snapsho
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2585,6 +2648,7 @@ exports[`help command > env help output snapshots > env remove help output snaps
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2630,6 +2694,7 @@ exports[`help command > git help output snapshots > git connect help output snap
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2668,6 +2733,7 @@ exports[`help command > git help output snapshots > git disconnect help output s
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2748,6 +2814,9 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -2786,6 +2855,7 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -2816,6 +2886,7 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -2875,6 +2946,9 @@ exports[`help command > init help output snapshots > init help column width 40 1
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -2928,6 +3002,7 @@ exports[`help command > init help output snapshots > init help column width 80 1
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -2974,6 +3049,7 @@ exports[`help command > init help output snapshots > init help column width 120 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3063,6 +3139,9 @@ exports[`help command > inspect help output snapshots > inspect help column widt
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -3128,6 +3207,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -3185,6 +3265,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3242,6 +3323,7 @@ exports[`help command > integration help output snapshots > integration accept-t
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3285,6 +3367,7 @@ exports[`help command > integration help output snapshots > integration balance 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3324,6 +3407,7 @@ exports[`help command > integration help output snapshots > integration discover
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3368,6 +3452,7 @@ exports[`help command > integration help output snapshots > integration guide su
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3639,6 +3724,9 @@ exports[`help command > integration help output snapshots > integration help col
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -3717,6 +3805,7 @@ exports[`help command > integration help output snapshots > integration help col
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -3770,6 +3859,7 @@ exports[`help command > integration help output snapshots > integration help col
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3805,6 +3895,7 @@ exports[`help command > integration help output snapshots > integration installa
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3849,6 +3940,7 @@ exports[`help command > integration help output snapshots > integration list sub
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3899,6 +3991,7 @@ exports[`help command > integration help output snapshots > integration remove s
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -3951,6 +4044,7 @@ exports[`help command > integration help output snapshots > integration update s
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -4006,6 +4100,7 @@ exports[`help command > integration-resource help output snapshots > integration
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -4044,6 +4139,7 @@ exports[`help command > integration-resource help output snapshots > integration
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -4151,6 +4247,9 @@ exports[`help command > integration-resource help output snapshots > integration
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -4196,6 +4295,7 @@ exports[`help command > integration-resource help output snapshots > integration
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -4227,6 +4327,7 @@ exports[`help command > integration-resource help output snapshots > integration
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -4257,6 +4358,7 @@ exports[`help command > integration-resource help output snapshots > integration
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -4372,6 +4474,9 @@ exports[`help command > link help output snapshots > link help column width 40 1
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -4446,6 +4551,7 @@ exports[`help command > link help output snapshots > link help column width 80 1
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -4509,6 +4615,7 @@ exports[`help command > link help output snapshots > link help column width 120 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -4637,6 +4744,9 @@ exports[`help command > list help output snapshots > list help column width 40 1
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -4714,6 +4824,7 @@ exports[`help command > list help output snapshots > list help column width 80 1
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -4781,6 +4892,7 @@ exports[`help command > list help output snapshots > list help column width 120 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -4863,6 +4975,9 @@ exports[`help command > login help output snapshots > login help column width 40
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -4897,6 +5012,7 @@ exports[`help command > login help output snapshots > login help column width 80
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -v,  --version              Output the version number                         
 
@@ -4925,6 +5041,7 @@ exports[`help command > login help output snapshots > login help column width 12
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -v,  --version              Output the version number                                                                 
 
@@ -4953,6 +5070,7 @@ exports[`help command > project help output snapshots > project add help output 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5104,6 +5222,9 @@ exports[`help command > project help output snapshots > project help column widt
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -5158,6 +5279,7 @@ exports[`help command > project help output snapshots > project help column widt
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -5200,6 +5322,7 @@ exports[`help command > project help output snapshots > project help column widt
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5228,6 +5351,7 @@ exports[`help command > project help output snapshots > project inspect help out
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5269,6 +5393,7 @@ exports[`help command > project help output snapshots > project list help output
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5306,6 +5431,7 @@ exports[`help command > project help output snapshots > project remove help outp
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5329,6 +5455,7 @@ exports[`help command > project help output snapshots > project rename help outp
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5408,6 +5535,9 @@ exports[`help command > promote help output snapshots > promote help column widt
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -5455,6 +5585,7 @@ exports[`help command > promote help output snapshots > promote help column widt
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -5495,6 +5626,7 @@ exports[`help command > promote help output snapshots > promote help column widt
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5529,6 +5661,7 @@ exports[`help command > promote help output snapshots > promote status help outp
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5608,6 +5741,9 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -5669,6 +5805,7 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -5721,6 +5858,7 @@ exports[`help command > pull help output snapshots > pull help column width 120 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5805,6 +5943,9 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -5855,6 +5996,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -5898,6 +6040,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -5972,6 +6115,9 @@ exports[`help command > remove help output snapshots > remove help column width 
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -6022,6 +6168,7 @@ exports[`help command > remove help output snapshots > remove help column width 
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -6065,6 +6212,7 @@ exports[`help command > remove help output snapshots > remove help column width 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6150,6 +6298,9 @@ exports[`help command > rollback help output snapshots > rollback help column wi
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -6197,6 +6348,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -6237,6 +6389,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6277,6 +6430,7 @@ exports[`help command > rollback help output snapshots > rollback status help ou
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6343,6 +6497,9 @@ exports[`help command > target help output snapshots > target help column width 
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -6378,6 +6535,7 @@ exports[`help command > target help output snapshots > target help column width 
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -6406,6 +6564,7 @@ exports[`help command > target help output snapshots > target help column width 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6435,6 +6594,7 @@ exports[`help command > target help output snapshots > target list help output s
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6470,6 +6630,7 @@ exports[`help command > teams help output snapshots > teams add help output snap
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6569,6 +6730,9 @@ exports[`help command > teams help output snapshots > teams help column width 40
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -6611,6 +6775,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -6645,6 +6810,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6668,6 +6834,7 @@ exports[`help command > teams help output snapshots > teams invite help output s
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6707,6 +6874,7 @@ exports[`help command > teams help output snapshots > teams list help output sna
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6736,6 +6904,7 @@ exports[`help command > teams help output snapshots > teams switch help output s
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -v,  --version              Output the version number                                                                 
 
@@ -6764,6 +6933,7 @@ exports[`help command > telemetry help output snapshots > telemetry disable help
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6787,6 +6957,7 @@ exports[`help command > telemetry help output snapshots > telemetry enable help 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6852,6 +7023,9 @@ exports[`help command > telemetry help output snapshots > telemetry help column 
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -6889,6 +7063,7 @@ exports[`help command > telemetry help output snapshots > telemetry help column 
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -6919,6 +7094,7 @@ exports[`help command > telemetry help output snapshots > telemetry help column 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -6942,6 +7118,7 @@ exports[`help command > telemetry help output snapshots > telemetry status help 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
@@ -7002,6 +7179,9 @@ exports[`help command > whoami help output snapshots > whoami help column width 
                               this is   
                               the       
                               default   
+       --project <PROJECT>    Set a     
+                              custom    
+                              project   
   -S,  --scope                Set a     
                               custom    
                               scope     
@@ -7043,6 +7223,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
        --no-color             No color mode (default off)                       
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
+       --project <PROJECT>    Set a custom project                              
   -S,  --scope                Set a custom scope                                
   -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
@@ -7077,6 +7258,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+       --project <PROJECT>    Set a custom project                                                                      
   -S,  --scope                Set a custom scope                                                                        
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
