@@ -142,6 +142,88 @@ describe('vercel traces get', () => {
     const exitCode = await traces(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('vercel link');
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('vercel link');
+    expect(stderr).toContain('--scope');
+    expect(stderr).toContain('--project');
+  });
+
+  it('works from a non-linked dir with --scope and --project flags', async () => {
+    mockNotLinked();
+    let receivedQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/api/v1/projects/traces', (req, res) => {
+      receivedQuery = req.query as Record<string, unknown>;
+      res.json({ trace: sampleTrace });
+    });
+
+    client.setArgv(
+      'traces',
+      'get',
+      'req_flags',
+      '--scope',
+      'team-from-flag',
+      '--project',
+      'project-from-flag'
+    );
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery).toEqual({
+      teamId: 'team-from-flag',
+      projectId: 'project-from-flag',
+      requestId: 'req_flags',
+    });
+  });
+
+  it('lets --scope and --project override the linked project', async () => {
+    mockLinkedProject();
+    let receivedQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/api/v1/projects/traces', (req, res) => {
+      receivedQuery = req.query as Record<string, unknown>;
+      res.json({ trace: sampleTrace });
+    });
+
+    client.setArgv(
+      'traces',
+      'get',
+      'req_override',
+      '--scope',
+      'other-team',
+      '--project',
+      'other-project'
+    );
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery).toEqual({
+      teamId: 'other-team',
+      projectId: 'other-project',
+      requestId: 'req_override',
+    });
+  });
+
+  it('falls back to the linked team when only --project is provided', async () => {
+    mockLinkedProject();
+    let receivedQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/api/v1/projects/traces', (req, res) => {
+      receivedQuery = req.query as Record<string, unknown>;
+      res.json({ trace: sampleTrace });
+    });
+
+    client.setArgv(
+      'traces',
+      'get',
+      'req_partial',
+      '--project',
+      'other-project'
+    );
+    const exitCode = await traces(client);
+
+    expect(exitCode).toBe(0);
+    expect(receivedQuery).toEqual({
+      teamId: 'team_dummy',
+      projectId: 'other-project',
+      requestId: 'req_partial',
+    });
   });
 });
