@@ -24,7 +24,7 @@ export interface RuntimeCache {
    * @param {string} key - The key of the value to set.
    * @param {unknown} value - The value to set.
    * @param {Object} [options] - Optional settings for the cache entry.
-   * @param {string} [options.name] - Optional user-friendly name for the cache entry used for o11y. Defaults to the provided `key` if not set.
+   * @param {string} [options.name] - Optional user-friendly name for the cache entry used for o11y. Defaults to the provided `key` when omitted or `undefined`; pass `''` to suppress sending a name.
    * @param {string[]} [options.tags] - Optional tags to associate with the cache entry.
    * @param {number} [options.ttl] - Optional time-to-live for the cache entry, in seconds.
    * @returns {Promise<void>} A promise that resolves when the value is set.

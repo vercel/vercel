@@ -133,11 +133,11 @@ describe('getCache', () => {
     });
   });
 
-  test('should fall back to the key when options.name is an empty string', async () => {
+  test('should preserve an explicit empty string options.name as a suppression sentinel', async () => {
     const cache = getCache();
     await cache.set('my-key', 'value', { name: '' });
     expect(mockCache.set).toHaveBeenCalledWith('57f938ab', 'value', {
-      name: 'my-key',
+      name: '',
     });
   });
 
