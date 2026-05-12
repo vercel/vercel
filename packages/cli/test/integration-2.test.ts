@@ -44,9 +44,7 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(process, /Set up[^?]+\?/);
-  process.stdin?.write('yes\n');
-
+  await waitForPrompt(process, /Set up.+/);
   await waitForPrompt(process, /Which scope [^?]+\?/);
   process.stdin?.write('\n');
 
@@ -299,9 +297,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
     }
   });
 
-  await waitForPrompt(now, /Set up and deploy[^?]+\?/);
-  now.stdin?.write('yes\n');
-
+  await waitForPrompt(now, /Set up and deploy.+/);
   await waitForPrompt(now, 'Team?');
   now.stdin?.write('\n');
 
@@ -421,7 +417,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
         'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
-    return /Set up and deploy[^?]+\?/.test(chunk);
+    return /Set up and deploy.+/.test(chunk);
   });
   now.stdin?.write('no\n');
 
@@ -970,9 +966,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
+  await waitForPrompt(vc, /Set up.+/);
   await waitForPrompt(vc, 'Team?');
   vc.stdin?.write('\n');
 
@@ -1083,9 +1077,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
+  await waitForPrompt(vc, /Set up.+/);
   await waitForPrompt(vc, 'Team?');
   vc.stdin?.write('\n');
 
@@ -1264,7 +1256,6 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   });
 
   await waitForPrompt(vc, 'Set up and deploy');
-  vc.stdin?.write('y\n');
   await waitForPrompt(vc, /Which scope [^?]+\?/);
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');

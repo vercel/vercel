@@ -403,18 +403,9 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
-  const shouldStartSetup =
-    autoConfirm ||
-    nonInteractive ||
-    (await client.input.confirm(
-      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-      true
-    ));
-
-  if (!shouldStartSetup) {
-    output.print(`Canceled. Project not set up.\n`);
-    return { status: 'not_linked', org: null, project: null };
-  }
+  // Status line — intent is implied by the user running `vc` in this directory.
+  // The "Set up and deploy?" confirmation prompt is gone; Ctrl-C is the escape hatch.
+  output.print(`${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}\n`);
 
   let skipAutoDetect = false;
   if (searchAcrossTeams) {

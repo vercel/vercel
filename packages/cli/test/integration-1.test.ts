@@ -373,9 +373,7 @@ test('deploy from a nested directory', async () => {
     },
   });
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
+  await waitForPrompt(vc, /Set up and deploy.+/);
   await waitForPrompt(vc, 'Team?');
   vc.stdin?.write('\n');
 
@@ -411,9 +409,7 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
     }
   );
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
+  await waitForPrompt(vc, /Set up and deploy.+/);
   await waitForPrompt(vc, 'Team?');
   vc.stdin?.write('\n');
 
