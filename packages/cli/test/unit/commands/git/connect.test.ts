@@ -93,7 +93,6 @@ describe('git connect', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput('Set up');
-        client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
@@ -198,7 +197,6 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
@@ -250,7 +248,6 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');

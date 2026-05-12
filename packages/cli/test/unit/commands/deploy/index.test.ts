@@ -989,7 +989,7 @@ describe('deploy', () => {
       // remove first 3 lines which contains randomized data
       const output = client.getFullOutput().split('\n').slice(3).join('\n');
       expect(output).toContain('Building');
-      expect(output).toContain('Production');
+      expect(output).toContain('Production ');
       expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
@@ -1645,7 +1645,7 @@ describe('deploy', () => {
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${nameOption})`);
         client.stdin.write('\n');
-        await expect(client.stderr).toOutput('Customize defaults?');
+        await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
@@ -1673,7 +1673,7 @@ describe('deploy', () => {
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${directoryName})`);
         client.stdin.write('\n');
-        await expect(client.stderr).toOutput('Customize defaults?');
+        await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
@@ -1764,7 +1764,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production');
+      await expect(client.stderr).toOutput('Production ');
       await expect(client.stderr).toOutput(
         'Aliased: https://my-app.vercel.app'
       );
@@ -1912,7 +1912,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production');
+      await expect(client.stderr).toOutput('Production ');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);

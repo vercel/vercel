@@ -44,7 +44,7 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(process, /Set up.+/);
+  await waitForPrompt(process, /Set up [“"]/);
   await waitForPrompt(process, /Which scope [^?]+\?/);
   process.stdin?.write('\n');
 
@@ -53,7 +53,7 @@ async function setupProject(
 
   await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
-  await waitForPrompt(process, 'Customize defaults?');
+  await waitForPrompt(process, 'Customize settings?');
 
   if (overrides) {
     process.stdin?.write('yes\n');
@@ -106,7 +106,7 @@ async function setupProject(
     process.stdin?.write('\n');
   }
 
-  await waitForPrompt(process, 'Linked to');
+  await waitForPrompt(process, /Linked\s+/);
 }
 
 beforeAll(async () => {
@@ -296,7 +296,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
     }
   });
 
-  await waitForPrompt(now, /Set up and deploy.+/);
+  await waitForPrompt(now, /Set up and deploy [“"]/);
   await waitForPrompt(now, 'Which team?');
   now.stdin?.write('\n');
 
@@ -305,7 +305,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
 
   await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
-  await waitForPrompt(now, 'Customize defaults?');
+  await waitForPrompt(now, 'Customize settings?');
   now.stdin?.write('no\n');
 
   await waitForPrompt(
@@ -314,7 +314,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   );
   now.stdin?.write('\n');
 
-  await waitForPrompt(now, /Linked to/);
+  await waitForPrompt(now, /Linked\s+/);
 
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -382,7 +382,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stdout).not.toContain('Linked to');
+  expect(output.stdout).not.toMatch(/Linked\s+/);
 });
 
 test('deploy shows notice when project in `.vercel` does not exists', async () => {
@@ -407,7 +407,8 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
 
   let detectedNotice = false;
 
-  // kill after first prompt
+  // Terminate after the first status line. The "Set up and deploy?" prompt was
+  // removed, so writing to stdin would leak into the next real prompt.
   await waitForPrompt(now, chunk => {
     detectedNotice =
       detectedNotice ||
@@ -415,9 +416,9 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
         'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
-    return /Set up and deploy.+/.test(chunk);
+    return /Set up and deploy [“"][^”"]+[”"]/.test(chunk);
   });
-  now.stdin?.write('no\n');
+  now.kill('SIGTERM');
 
   expect(detectedNotice, 'detectedNotice').toBe(true);
 });
@@ -964,7 +965,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, /Set up.+/);
+  await waitForPrompt(vc, /Set up [“"]/);
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
@@ -1004,7 +1005,7 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Ensure the message is correct pattern
-  expect(stderr).toMatch(/Linked to /m);
+  expect(stderr).toMatch(/Linked\s+/m);
 
   // Ensure .gitignore contains .vercel and .env*.local (from env pull)
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
@@ -1075,7 +1076,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, /Set up.+/);
+  await waitForPrompt(vc, /Set up [“"]/);
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
@@ -1087,7 +1088,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Linked to');
+  await waitForPrompt(vc, /Linked\s+/);
 
   const output = await vc;
 
@@ -1256,7 +1257,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   vc.stdin?.write('n\n');
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Customize defaults?');
+  await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('y\n');
   await waitForPrompt(
     vc,
@@ -1277,7 +1278,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   );
   vc.stdin?.write('\x1b[B'); // Down Arrow
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Linked to');
+  await waitForPrompt(vc, /Linked\s+/);
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed

@@ -49,7 +49,7 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
     },
   });
 
-  await waitForPrompt(vc, /Set up.+/);
+  await waitForPrompt(vc, /Set up [“"]/);
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
@@ -58,13 +58,13 @@ test('[vc link] should skip env pull prompt when creating new project', async ()
 
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Customize defaults?');
+  await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
 
   await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, /Linked to/);
+  await waitForPrompt(vc, /Linked\s+/);
 
   const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -88,7 +88,7 @@ test('[vc link] should not create .env.local when linking new project', async ()
     },
   });
 
-  await waitForPrompt(vc, /Set up.+/);
+  await waitForPrompt(vc, /Set up [“"]/);
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
@@ -97,13 +97,13 @@ test('[vc link] should not create .env.local when linking new project', async ()
 
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Customize defaults?');
+  await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
 
   await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, /Linked to/);
+  await waitForPrompt(vc, /Linked\s+/);
 
   const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);

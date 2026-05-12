@@ -897,8 +897,8 @@ describe('link', () => {
     );
     client.stdin.write('apps/nextjs\n');
 
-    await expect(client.stderr).toOutput('Detected');
-    await expect(client.stderr).toOutput('Customize defaults?');
+    await expect(client.stderr).toOutput('Detected Next.js');
+    await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -1027,8 +1027,8 @@ describe('link', () => {
     );
     client.stdin.write('\x1B[B\n');
 
-    await expect(client.stderr).toOutput('Detected');
-    await expect(client.stderr).toOutput('Customize defaults?');
+    await expect(client.stderr).toOutput('Detected Next.js');
+    await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -1091,8 +1091,8 @@ describe('link', () => {
     );
     client.stdin.write('\x1B[B\x1B[B\n');
 
-    await expect(client.stderr).toOutput('Detected');
-    await expect(client.stderr).toOutput('Customize defaults?');
+    await expect(client.stderr).toOutput('Detected FastAPI');
+    await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -1919,7 +1919,7 @@ describe('link', () => {
       client.stdin.write(`${basename(cwd)}\n`);
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name}`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1951,7 +1951,7 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('your project');
       client.stdin.write(`${basename(cwd)}\n`);
-      await expect(client.stderr).toOutput('Customize defaults?');
+      await expect(client.stderr).toOutput('Customize settings?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
@@ -1959,7 +1959,7 @@ describe('link', () => {
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Linked to');
+      await expect(client.stderr).toOutput('Linked');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2172,7 +2172,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${projectA.name}`
+        `Linked      ${teamA.slug}/${projectA.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2308,7 +2308,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${expectedProject.name}`
+        `Linked      ${teamA.slug}/${expectedProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2378,7 +2378,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${repoProject.name}`
+        `Linked      ${teamA.slug}/${repoProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2428,7 +2428,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${limitedTeam.slug}/${limitedProject.name}`
+        `Linked      ${limitedTeam.slug}/${limitedProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2575,7 +2575,7 @@ describe('link', () => {
         // Select first option
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked to');
+        await expect(client.stderr).toOutput('Linked');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'
@@ -2629,7 +2629,7 @@ describe('link', () => {
         );
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked to');
+        await expect(client.stderr).toOutput('Linked');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'
