@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-14
+          - runner: macos-15-xlarge
             target: node22.22.2-macos-arm64
             asset: vercel-darwin-arm64
             ext: ''
@@ -42,7 +42,7 @@ jobs:
             custom_node_path: .node-runtime/node-v22.22.2-darwin-arm64-small-icu/bin/node
             custom_node_platform: darwin
             custom_node_arch: arm64
-          - runner: macos-15-intel
+          - runner: macos-15-large
             target: node22.22.2-macos-x64
             asset: vercel-darwin-x64
             ext: ''
