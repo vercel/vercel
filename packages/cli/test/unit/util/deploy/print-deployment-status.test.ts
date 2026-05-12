@@ -95,6 +95,26 @@ describe('printDeploymentStatus() — ready terminal state', () => {
     expect(printed.some(l => l.includes('Ready in'))).toBe(false);
   });
 
+  it('still prints the Ready line when noWait is true but readyState is already READY', async () => {
+    await printDeploymentStatus(
+      fakeClient(),
+      {
+        readyState: 'READY',
+        alias: [],
+        aliasError: undefined as any,
+        target: 'production',
+        indications: [],
+        url: 'x.vercel.app',
+      },
+      () => '0s',
+      true, // noWait
+      false
+    );
+    const printed = allPrintedLines();
+    const ready = printed.find(l => l.includes('Ready'));
+    expect(ready).toBe('✓ Ready in 0s');
+  });
+
   it('prints the Ready line for preview deploys too', async () => {
     await printDeploymentStatus(
       fakeClient(),

@@ -45,7 +45,7 @@ async function setupProject(
   }
 ) {
   await waitForPrompt(process, /Set up [“"]/);
-  await waitForPrompt(process, /Which scope [^?]+\?/);
+  await waitForPrompt(process, /Which team[^?]*\?/);
   process.stdin?.write('\n');
 
   await waitForPrompt(process, 'Link to existing project?');
@@ -795,7 +795,7 @@ test('deploys with only vercel.json and a static file', async () => {
   // assert timing order of showing URLs vs status updates
   // Preview URL appears twice: once with loading emoji, then again with success emoji
   expect(stripAnsi(stderr)).toMatch(
-    /Inspect.*\nPreview.*\n(Queued|Building).*[\s\S]*Completing/
+    /Inspect[\s\S]+Preview[\s\S]+(Queued|Building)[\s\S]+Completing/
   );
 
   const { host } = new URL(stdout);
