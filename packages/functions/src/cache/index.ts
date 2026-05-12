@@ -77,7 +77,7 @@ function wrapWithKeyTransformation(
     ) => {
       return resolveCache().set(makeKey(key), value, {
         ...options,
-        name: options?.name ?? key,
+        name: options?.name || key,
       });
     },
     delete: (key: string) => {
