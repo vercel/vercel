@@ -10,7 +10,7 @@ import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
-import { emoji, prependEmoji, type EmojiLabel } from '../emoji';
+import type { EmojiLabel } from '../emoji';
 import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
@@ -472,20 +472,11 @@ export async function ensureRepoLink(
 
     await writeReadme(rootPath);
 
-    // update .gitignore
-    const isGitIgnoreUpdated = await addToGitIgnore(rootPath);
+    await addToGitIgnore(rootPath);
 
-    output.print(
-      prependEmoji(
-        `Linked to ${pluralize(
-          'Project',
-          result.projects.length,
-          true
-        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${
-          isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-        })`,
-        emoji('link')
-      ) + '\n'
+    printAlignedLabel(
+      'Linked',
+      `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
     );
   }
 
@@ -558,15 +549,9 @@ export async function addRepoLink(
 
   await outputJSON(repoConfigPath, updatedConfig, { spaces: 2 });
 
-  output.print(
-    prependEmoji(
-      `Added ${pluralize(
-        'Project',
-        result.projects.length,
-        true
-      )} under ${chalk.bold(result.orgSlug)}`,
-      emoji('link')
-    ) + '\n'
+  printAlignedLabel(
+    'Added',
+    `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
   );
 
   return {
