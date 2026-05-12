@@ -7,7 +7,7 @@ import type {
   GlobalConfig as SharedGlobalConfig,
 } from '@vercel/cli-config';
 
-const KEYRING_SERVICE = 'Vercel Auth';
+const KEYRING_SERVICE = 'com.vercel.SharedCredentials';
 const TOKEN_STORAGE_ENV = 'VERCEL_TOKEN_STORAGE';
 const KEYRING_UNAVAILABLE_ENV = 'VERCEL_TEST_KEYRING_UNAVAILABLE';
 const KEYRING_UNAVAILABLE_ERROR =
