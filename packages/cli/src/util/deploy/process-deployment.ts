@@ -27,18 +27,15 @@ import printEvents from '../events';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
-  deployStamp: () => string
+  _deployStamp: () => string
 ) {
   if (!inspectorUrl) {
     return;
   }
 
-  output.print(
-    prependEmoji(
-      `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
-      emoji('inspect')
-    ) + `\n`
-  );
+  // Aligned with `Linked` / `Live` (9-char label column). Timing belongs on
+  // the Build/Ready line, not on the URL line which is instant.
+  output.print(`${chalk.bold('Inspect')}  ${chalk.bold(inspectorUrl)}\n`);
 }
 
 export default async function processDeployment({

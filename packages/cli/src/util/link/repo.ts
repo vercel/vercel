@@ -203,17 +203,12 @@ export async function linkRepoProject(
 
   await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
   await writeReadme(repoLink.rootPath);
-  const isGitIgnoreUpdated = await addToGitIgnore(repoLink.rootPath);
+  // update .gitignore (silent — git status surfaces the change on demand)
+  await addToGitIgnore(repoLink.rootPath);
 
+  // Aligned with `Inspect` / `Live` (9-char label column).
   output.print(
-    prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${project.name}`
-      )} (created ${VERCEL_DIR}${
-        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-      })`,
-      emoji(successEmoji)
-    ) + '\n'
+    `${chalk.bold('Linked')}   ${chalk.bold(`${orgSlug}/${project.name}`)}\n`
   );
 
   return {

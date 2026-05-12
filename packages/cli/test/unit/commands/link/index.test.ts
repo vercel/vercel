@@ -104,7 +104,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
+        `Linked   1 Project under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -176,7 +176,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
+        `Linked   1 Project under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -267,7 +267,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to 2 Projects under ${user.username} (created .vercel and added it to .gitignore)`
+        `Linked   2 Projects under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -667,7 +667,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       const exitCode = await exitCodePromise;
@@ -733,7 +733,7 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Searching for existing projects');
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       const exitCode = await exitCodePromise;
@@ -855,7 +855,7 @@ describe('link', () => {
     client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
-      `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+      `Linked   ${team.slug}/${project.name}`
     );
 
     await expect(client.stderr).toOutput(
@@ -905,7 +905,7 @@ describe('link', () => {
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/awesome-app (created .vercel and added it to .gitignore)`
+      `Linked   ${user.username}/awesome-app`
     );
 
     const exitCode = await exitCodePromise;
@@ -1505,7 +1505,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1545,7 +1545,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1583,7 +1583,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1621,7 +1621,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1666,7 +1666,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1708,7 +1708,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1748,7 +1748,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1788,7 +1788,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1851,7 +1851,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked   ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(

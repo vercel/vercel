@@ -453,18 +453,12 @@ export async function linkFolderToProject(
 
   await writeReadme(path);
 
-  // update .gitignore
-  const isGitIgnoreUpdated = await addToGitIgnore(path);
+  // update .gitignore (silent — git status surfaces the change on demand)
+  await addToGitIgnore(path);
 
+  // Aligned with `Inspect` / `Live` (9-char label column).
   output.print(
-    prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${projectName}`
-      )} (created ${VERCEL_DIR}${
-        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-      })`,
-      emoji(successEmoji)
-    ) + '\n'
+    `${chalk.bold('Linked')}   ${chalk.bold(`${orgSlug}/${projectName}`)}\n`
   );
 
   if (!pullEnv) {

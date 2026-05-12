@@ -111,13 +111,13 @@ export async function editProjectSettings(
   } else {
     // Compress "Auto-detected Project Settings for X" into a single line that
     // also names the key commands the user is about to run with.
-    const formatSetting = (setting: keyof typeof settingMap) => {
-      const v = framework.settings[setting];
-      if (!v) return null;
-      return isSettingValue(v) ? v.value : v.placeholder;
-    };
-    const buildCmd = formatSetting('buildCommand');
-    const outputDir = formatSetting('outputDirectory');
+    const buildCmd = framework.settings.buildCommand?.value ?? null;
+    const outputSetting = framework.settings.outputDirectory;
+    const outputDir = outputSetting
+      ? isSettingValue(outputSetting)
+        ? outputSetting.value
+        : outputSetting.placeholder
+      : null;
     const inline = [
       buildCmd ? `build: ${buildCmd}` : null,
       outputDir ? `output: ${outputDir}` : null,

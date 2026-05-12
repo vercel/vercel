@@ -2192,12 +2192,9 @@ async function handleContinueDeployment({
         ) {
           const primaryDomain = finalDeployment.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Production: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          // Aligned with `Linked` / `Inspect` (9-char label column).
+          // "Live" is shorter and pairs better with "Inspect" than "Production".
+          output.print(`${chalk.bold('Live')}     ${chalk.bold(prodUrl)}\n`);
         }
       }
 
