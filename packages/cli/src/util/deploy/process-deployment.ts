@@ -207,7 +207,8 @@ export default async function processDeployment({
 
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
-          previewUrl
+          previewUrl,
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
@@ -292,7 +293,8 @@ export default async function processDeployment({
         const previewUrl = `https://${event.payload.url}`;
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
-          previewUrl
+          previewUrl,
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (v1ChecksPending || v2ChecksPending) {

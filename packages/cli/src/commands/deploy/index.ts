@@ -2193,7 +2193,7 @@ async function handleContinueDeployment({
         ) {
           const primaryDomain = finalDeployment.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Production', prodUrl);
+          printAlignedLabel('Production', prodUrl, { gutter: '▲' });
         }
       }
 
