@@ -3496,6 +3496,18 @@ describe('worker services dependency installation', () => {
     expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
   });
 
+  it('uses copy link mode for injected pip installs', async () => {
+    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
+    expect(pipCalls).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining(['install', '--link-mode', 'copy']),
+      ])
+    );
+    for (const args of pipCalls) {
+      expect(args.slice(0, 3)).toEqual(['install', '--link-mode', 'copy']);
+    }
+  });
+
   it('does not install vercel-workers when worker services are not enabled', async () => {
     const { pipCalls } = await buildWithPipSpy();
     expect(

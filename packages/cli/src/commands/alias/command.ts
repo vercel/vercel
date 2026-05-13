@@ -13,7 +13,7 @@ export const setSubcommand = {
   default: true,
   arguments: [
     {
-      name: 'deployment',
+      name: 'id-or-url',
       required: true,
     },
     {

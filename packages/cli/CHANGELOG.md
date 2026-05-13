@@ -1,5 +1,44 @@
 # vercel
 
+## 54.0.0
+
+### Major Changes
+
+- db207b1: Require `--follow` for `vercel logs` to stream deployment logs. Passing a deployment argument or `--deployment` now uses historical deployment log filtering by default.
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+### Patch Changes
+
+- b3b5ed8: Preserve the source deployment or alias ID/URL when assigning aliases from the CLI.
+- 8324ac7: Rename "Connex client" to "Connex connector" in user-visible `vc connex` strings (help text, spinners, error/success messages) to match the dashboard rename. Flag names, command names, positional argument names, types, file paths, and API endpoints are unchanged.
+- b6b162c: Fix project token creation when project is not in the default team
+- Updated dependencies [bf42168]
+- Updated dependencies [94a214c]
+- Updated dependencies [d874af6]
+- Updated dependencies [9615277]
+  - @vercel/python@6.41.0
+  - @vercel/build-utils@13.24.0
+  - @vercel/backends@0.6.0
+  - @vercel/elysia@0.1.77
+  - @vercel/express@0.1.87
+  - @vercel/fastify@0.1.80
+  - @vercel/go@3.6.0
+  - @vercel/h3@0.1.86
+  - @vercel/hono@0.2.80
+  - @vercel/hydrogen@1.3.7
+  - @vercel/koa@0.1.60
+  - @vercel/nestjs@0.2.81
+  - @vercel/next@4.17.1
+  - @vercel/node@5.8.1
+  - @vercel/redwood@2.4.13
+  - @vercel/remix-builder@5.8.1
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.2.0
+  - @vercel/static-build@2.9.26
+
 ## 53.4.0
 
 ### Minor Changes

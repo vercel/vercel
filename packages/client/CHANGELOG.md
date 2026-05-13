@@ -1,5 +1,16 @@
 # @vercel/client
 
+## 17.5.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
 ## 17.4.3
 
 ### Patch Changes

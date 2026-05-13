@@ -60,7 +60,7 @@ export async function attach(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connex attach <client>'
+      'Missing connector ID or UID. Usage: vercel connect attach <client>'
     );
     return 1;
   }
@@ -132,19 +132,17 @@ export async function attach(
   }
 
   // Resolve client identity → canonical id + display name.
-  output.spinner('Retrieving Connex connector…');
+  output.spinner('Retrieving connector…');
   let target: ConnexClientIdentity;
   try {
     target = await client.fetch<ConnexClientIdentity>(
-      `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
+      `/v1/connect/connectors/${encodeURIComponent(clientIdOrUid)}`
     );
   } catch (err: unknown) {
     output.stopSpinner();
     const status = (err as { status?: number }).status;
     if (status === 404) {
-      output.error(
-        `No Connex connector found for ${chalk.bold(clientIdOrUid)}.`
-      );
+      output.error(`No connector found for ${chalk.bold(clientIdOrUid)}.`);
       return 1;
     }
     printError(err);
@@ -158,7 +156,7 @@ export async function attach(
   let existingAttachment: ConnexClientProject | undefined;
   try {
     existingAttachment = await client.fetch<ConnexClientProject>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`
+      `/v1/connect/connectors/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`
     );
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
@@ -190,7 +188,7 @@ export async function attach(
       return 0;
     }
     output.log(
-      `Connex connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+      `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
         projectName
       )} for environments: ${environments.join(', ')}. Nothing to do.`
     );
@@ -210,7 +208,7 @@ export async function attach(
       const current = (existingAttachment.environments ?? []).join(', ') || '—';
       const next = environments.join(', ');
       output.log(
-        `Connex connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+        `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
           projectName
         )}.`
       );
@@ -218,7 +216,7 @@ export async function attach(
       output.log(`  Will set: ${next}`);
     } else {
       output.log(
-        `Connex connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
+        `Connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
           projectName
         )} for environments: ${environments.join(', ')}.`
       );
@@ -235,7 +233,7 @@ export async function attach(
   output.spinner('Attaching project…');
   try {
     await client.fetch<unknown>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
+      `/v1/connect/connectors/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
       {
         method: 'POST',
         body: { environments },
@@ -252,7 +250,7 @@ export async function attach(
     }
     if (status === 404) {
       output.error(
-        `No Connex connector found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
+        `No connector found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
       );
       return 1;
     }
@@ -278,7 +276,7 @@ export async function attach(
   }
 
   output.success(
-    `Attached Connex connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
+    `Attached connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
   );
   return 0;
 }

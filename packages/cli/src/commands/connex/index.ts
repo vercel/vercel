@@ -207,11 +207,11 @@ export default async function connex(client: Client): Promise<number> {
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  'connex --help',
+                  'connect --help',
                   packageName,
                   { prependGlobalFlags: true }
                 ),
-                when: 'Show all connex subcommands and options',
+                when: 'Show all connect subcommands and options',
               },
             ],
           },
