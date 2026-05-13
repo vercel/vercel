@@ -19,6 +19,7 @@ from vercel.workers._queue.receive import (
     parse_retry_after,
     receive_message_by_id,
     receive_messages,
+    resolve_v2beta_message,
 )
 
 __all__ = [
@@ -38,4 +39,5 @@ __all__ = [
     "parse_v2beta_callback",
     "receive_message_by_id",
     "receive_messages",
+    "resolve_v2beta_message",
 ]
