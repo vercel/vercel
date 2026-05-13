@@ -83,7 +83,7 @@ export async function list(
   if (unscoped) {
     await selectConnexTeam(
       client,
-      'Select the team whose Connex connectors you want to list'
+      'Select the team whose connectors you want to list'
     );
   }
 
@@ -100,9 +100,9 @@ export async function list(
     params.set('projectId', projectId);
   }
   const query = params.toString();
-  const url = `/v1/connex/clients${query ? `?${query}` : ''}`;
+  const url = `/v1/connect/connectors${query ? `?${query}` : ''}`;
 
-  output.spinner('Fetching Connex connectors…');
+  output.spinner('Fetching connectors…');
   let response: ListClientsResponse;
   try {
     response = await client.fetch<ListClientsResponse>(url);
@@ -111,7 +111,7 @@ export async function list(
     const status = (err as { status?: number }).status;
     if (status === 404) {
       output.error(
-        'Connex is not enabled for this team. Contact support to enable it.'
+        'Connect is not enabled for this team. Contact support to enable it.'
       );
       return 1;
     }
@@ -159,18 +159,18 @@ export async function list(
   if (clients.length === 0) {
     if (unscoped) {
       output.log(
-        `No Connex connectors found. Create one with \`${packageName} connex create <type>\`.`
+        `No connectors found. Create one with \`${packageName} connect create <type>\`.`
       );
     } else {
       output.log(
-        `No Connex connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connex list --all-projects\` to see every connector in the team.`
+        `No connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connect list --all-projects\` to see every connector in the team.`
       );
     }
     return 0;
   }
 
   if (!unscoped && projectName) {
-    output.log(`Connex connectors linked to ${chalk.bold(projectName)}:`);
+    output.log(`Connectors linked to ${chalk.bold(projectName)}:`);
   }
 
   const headers = ['UID', 'ID', 'Name', 'Type'];
@@ -212,8 +212,8 @@ export async function list(
 
   if (response.cursor) {
     const nextCommand = allProjects
-      ? `${packageName} connex list --all-projects --next ${response.cursor}`
-      : `${packageName} connex list --next ${response.cursor}`;
+      ? `${packageName} connect list --all-projects --next ${response.cursor}`
+      : `${packageName} connect list --next ${response.cursor}`;
     output.log(`To see more, run \`${nextCommand}\``);
   }
 
