@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.24.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
 ## 13.23.0
 
 ### Minor Changes

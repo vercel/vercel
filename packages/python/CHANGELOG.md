@@ -1,5 +1,15 @@
 # @vercel/python
 
+## 6.41.0
+
+### Minor Changes
+
+- bf42168: Provide better suggestion for how to fix entry point error
+
+### Patch Changes
+
+- 94a214c: Use copy link mode for injected uv pip installs to avoid cross-device cache clone failures.
+
 ## 6.40.0
 
 ### Minor Changes
