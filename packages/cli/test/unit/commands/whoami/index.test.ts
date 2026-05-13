@@ -82,6 +82,32 @@ describe('whoami', () => {
     expect(stderr).toContain(`globally selected: ${globalTeam.slug}`);
   });
 
+  it('should fall back to the global team when local linked scope is inaccessible', async () => {
+    useUser();
+    const globalTeam = useTeam();
+    const forbiddenTeamId = 'team_forbidden';
+    client.config.currentTeam = globalTeam.id;
+    client.scenario.get(`/teams/${forbiddenTeamId}`, (_req, res) => {
+      res.status(403).json({
+        code: 'team_unauthorized',
+        message: 'Not authorized',
+      });
+    });
+
+    const cwd = setupTmpDir();
+    client.cwd = cwd;
+    await outputFile(
+      join(cwd, '.vercel', 'project.json'),
+      JSON.stringify({ orgId: forbiddenTeamId, projectId: 'prj_1' })
+    );
+
+    const exitCode = await whoami(client);
+    expect(exitCode).toEqual(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(`Active team: ${globalTeam.slug}`);
+    expect(stderr).not.toContain('Local override:');
+  });
+
   it('should print only the Vercel username when output is not a TTY', async () => {
     const user = useUser();
     client.stdout.isTTY = false;
