@@ -1,9 +1,11 @@
+import time
 from datetime import UTC, datetime
 from decimal import Decimal
 from logging import getLogger
 from uuid import uuid4
 
 from flask import Flask, jsonify, render_template_string, request
+from vercel.cache import get_cache
 
 from worker.broker import broker
 from worker.tasks import process_job
@@ -61,7 +63,8 @@ def enqueue():
     if not isinstance(payload, dict):
         payload = {}
 
-    payload["request_id"] = uuid4()
+    incoming_request_id = payload.get("request_id")
+    payload["request_id"] = str(incoming_request_id) if incoming_request_id else str(uuid4())
     payload["enqueued_at"] = datetime.now(UTC)
     payload["priority"] = Decimal("1.5")
 
@@ -75,11 +78,24 @@ def enqueue():
         {
             "ok": True,
             "jobId": message.message_id,
+            "requestId": payload["request_id"],
             "queueName": message.queue_name,
             "actorName": message.actor_name,
             "broker": broker.__class__.__name__,
         }
     )
+
+
+@app.get("/status/<topic>/<request_id>")
+def status(topic: str, request_id: str):
+    cache = get_cache(namespace=topic)
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        result = cache.get(request_id)
+        if result is not None:
+            return jsonify({"ok": True, "processed": True, "result": result})
+        time.sleep(0.5)
+    return jsonify({"ok": False, "processed": False, "error": "timeout"}), 504
 
 
 @app.get("/health")

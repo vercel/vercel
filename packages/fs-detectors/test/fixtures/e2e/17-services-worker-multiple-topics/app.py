@@ -1,6 +1,9 @@
+import time
 from logging import getLogger
+from uuid import uuid4
 
 from flask import Flask, jsonify, render_template_string, request
+from vercel.cache import get_cache
 
 from worker.broker import broker
 from worker.tasks import process_order, process_event
@@ -62,12 +65,17 @@ def enqueue():
           'action': 'test'
         }
 
+    incoming_request_id = payload.get('request_id')
+    request_id = str(incoming_request_id) if incoming_request_id else str(uuid4())
+
     try:
         order_payload = payload.copy()
+        order_payload['request_id'] = request_id
         order_payload.pop('eventId', 0)
         order_msg = process_order.send(order_payload)
 
         event_payload = payload.copy()
+        event_payload['request_id'] = request_id
         event_payload.pop('orderId', 0)
         event_msg = process_event.send(event_payload)
     except Exception as exc:
@@ -77,6 +85,7 @@ def enqueue():
     return jsonify(
         {
             "ok": True,
+            "requestId": request_id,
             "jobs": [
                 {
                     "jobId": order_msg.message_id,
@@ -90,6 +99,18 @@ def enqueue():
             "broker": broker.__class__.__name__,
         }
     )
+
+
+@app.get("/status/<topic>/<request_id>")
+def status(topic: str, request_id: str):
+    cache = get_cache(namespace=topic)
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        result = cache.get(request_id)
+        if result is not None:
+            return jsonify({"ok": True, "processed": True, "result": result})
+        time.sleep(0.5)
+    return jsonify({"ok": False, "processed": False, "error": "timeout"}), 504
 
 
 @app.get("/health")
