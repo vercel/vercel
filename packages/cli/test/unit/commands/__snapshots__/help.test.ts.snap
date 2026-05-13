@@ -759,11 +759,17 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Options:
 
-  -e,  --environment <ENV>     Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
-                               -e production,preview). Defaults to all environments.                                    
-  -F,  --format <FORMAT>       Specify the output format (json)                                                         
-  -p,  --project <NAME_OR_ID>  Project name or ID (default: current linked project)                                     
-  -y,  --yes                   Skip the confirmation prompt                                                             
+  -e,  --environment <ENV>        Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
+                                  -e production,preview). Defaults to all environments.                                    
+  -F,  --format <FORMAT>          Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>     Project name or ID (default: current linked project)                                     
+       --trigger-branch <BRANCH>  Target a specific git branch for the trigger destination (default: production). Only     
+                                  valid with --triggers.                                                                   
+       --trigger-path <PATH>      Path on the destination project that receives the forwarded webhook (default:            
+                                  /{service}). Only valid with --triggers.                                                 
+       --triggers                 Also register this project as a trigger destination so the connector forwards verified   
+                                  webhooks to it (max 3 destinations per connector)                                        
+  -y,  --yes                      Skip the confirmation prompt                                                             
 
 
   Global Options:
@@ -793,6 +799,14 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
   - Attach a different project by name
 
     $ vercel connect attach slack/my-bot --project my-app
+
+  - Attach and register the project as a trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers
+
+  - Attach and register a preview-branch trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack
 
   - Non-interactive output as JSON
 
@@ -849,6 +863,50 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 "
 `;
 
+exports[`help command > connex help output snapshots > connex detach subcommand > connex detach subcommand help column width 120 1`] = `
+"
+  ▲ vercel connect detach client [options]
+
+  Detach a Vercel project from a connector                                                                              
+
+  Options:
+
+  -F,  --format <FORMAT>       Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>  Project name or ID (default: current linked project)                                     
+  -y,  --yes                   Skip the confirmation prompt                                                             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Detach the current project from a connector
+
+    $ vercel connect detach scl_abc123
+
+  - Detach a different project by name
+
+    $ vercel connect detach slack/my-bot --project my-app
+
+  - Non-interactive output as JSON
+
+    $ vercel connect detach scl_abc123 --yes --format=json
+
+"
+`;
+
 exports[`help command > connex help output snapshots > connex help column width 80 1`] = `
 "
   ▲ vercel connect command
@@ -865,6 +923,7 @@ exports[`help command > connex help output snapshots > connex help column width 
                   like scl_abc or a UID like slack/my-bot)              
   attach  client  Attach a Vercel project to a connector for one or more
                   environments                                          
+  detach  client  Detach a Vercel project from a connector              
   remove  client  Delete a connector                                    
   open    id      Open a connector in the Vercel dashboard              
 

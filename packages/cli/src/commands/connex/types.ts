@@ -17,3 +17,30 @@ export interface ConnexClient {
   supportedSubjectTypes: Array<'user' | 'app'>;
   supportsInstallation: boolean;
 }
+
+export interface ConnexClientIdentity {
+  id: string;
+  uid: string;
+  name?: string;
+  supportsTriggers?: boolean;
+  triggers?: { enabled: boolean };
+  triggerDestinations?: ConnexTriggerDestination[];
+}
+
+export interface ConnexTriggerDestination {
+  projectId: string;
+  branch?: string;
+  path?: string;
+}
+
+export interface ConnexClientProject {
+  clientId: string;
+  projectId: string;
+  environments?: string[];
+  project?: { id: string; name: string };
+}
+
+export interface ConnexClientProjectListResponse {
+  projects: ConnexClientProject[];
+  cursor?: string;
+}

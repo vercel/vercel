@@ -3,23 +3,11 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { selectConnexTeam } from '../../util/connex/select-team';
-
-interface ConnexClientIdentity {
-  id: string;
-  uid: string;
-  name?: string;
-}
-
-interface ConnexClientProject {
-  clientId: string;
-  projectId: string;
-  project?: { id: string; name: string };
-}
-
-interface ListProjectsResponse {
-  projects: ConnexClientProject[];
-  cursor?: string;
-}
+import type {
+  ConnexClientIdentity,
+  ConnexClientProject,
+  ConnexClientProjectListResponse,
+} from './types';
 
 export async function remove(
   client: Client,
@@ -81,7 +69,7 @@ export async function remove(
   let projectLinks: ConnexClientProject[];
   try {
     output.spinner('Checking connected projects…');
-    const res = await client.fetch<ListProjectsResponse>(
+    const res = await client.fetch<ConnexClientProjectListResponse>(
       `/v1/connect/connectors/${encodeURIComponent(target.id)}/projects`
     );
     projectLinks = res.projects ?? [];

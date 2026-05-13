@@ -12,6 +12,7 @@ import {
   listSubcommand,
   tokenSubcommand,
   attachSubcommand,
+  detachSubcommand,
   removeSubcommand,
   openSubcommand,
   connexCommand,
@@ -20,6 +21,7 @@ import { create } from './create';
 import { list } from './list';
 import { token } from './token';
 import { attach } from './attach';
+import { detach } from './detach';
 import { remove } from './remove';
 import { openClient } from './open';
 import {
@@ -34,6 +36,7 @@ const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
   attach: getCommandAliases(attachSubcommand),
+  detach: getCommandAliases(detachSubcommand),
   remove: getCommandAliases(removeSubcommand),
   open: getCommandAliases(openSubcommand),
 };
@@ -141,12 +144,39 @@ export default async function connex(client: Client): Promise<number> {
           attachParsedArgs.flags['--environment']
         );
         telemetry.trackCliOptionProject(attachParsedArgs.flags['--project']);
+        telemetry.trackCliFlagTriggers(attachParsedArgs.flags['--triggers']);
+        telemetry.trackCliOptionTriggerBranch(
+          attachParsedArgs.flags['--trigger-branch']
+        );
+        telemetry.trackCliOptionTriggerPath(
+          attachParsedArgs.flags['--trigger-path']
+        );
         telemetry.trackCliFlagYes(attachParsedArgs.flags['--yes']);
         telemetry.trackCliOptionFormat(attachParsedArgs.flags['--format']);
         return await attach(
           client,
           attachParsedArgs.args,
           attachParsedArgs.flags
+        );
+      }
+      case 'detach': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(detachSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandDetach(subcommandOriginal);
+
+        const detachFlagsSpec = getFlagsSpecification(detachSubcommand.options);
+        const detachParsedArgs = parseArguments(subArgs, detachFlagsSpec);
+        telemetry.trackCliArgumentClient(detachParsedArgs.args[0]);
+        telemetry.trackCliOptionProject(detachParsedArgs.flags['--project']);
+        telemetry.trackCliFlagYes(detachParsedArgs.flags['--yes']);
+        telemetry.trackCliOptionFormat(detachParsedArgs.flags['--format']);
+        return await detach(
+          client,
+          detachParsedArgs.args,
+          detachParsedArgs.flags
         );
       }
       case 'remove': {
