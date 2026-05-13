@@ -60,7 +60,7 @@ jobs:
             custom_node_path: .node-runtime/node-v22.22.2-linux-arm64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: arm64
-          - runner: ubuntu-latest-32-core
+          - runner: ubuntu-latest
             target: node22.22.2-linux-x64
             asset: vercel-linux-x64
             ext: ''
