@@ -67,6 +67,90 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
+      - name: Block trusted publish for new npm packages
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+
+            function getChangedPackageJsonPaths() {
+              const output = execSync('git diff --name-only HEAD^ HEAD', {
+                encoding: 'utf8',
+              });
+
+              return output
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .filter(filename => filename.endsWith('/package.json'));
+            }
+
+            async function packageExistsOnNpm(packageName) {
+              const response = await fetch(
+                `https://registry.npmjs.org/${encodeURIComponent(packageName)}`
+              );
+
+              if (response.status === 404) {
+                return false;
+              }
+
+              if (!response.ok) {
+                throw new Error(
+                  `NPM registry lookup failed for ${packageName} with status ${response.status}`
+                );
+              }
+
+              return true;
+            }
+
+            const packageMap = new Map();
+
+            for (const packageJsonPath of getChangedPackageJsonPaths()) {
+              let packageJson;
+              try {
+                packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+              } catch (error) {
+                core.warning(
+                  `Skipping ${packageJsonPath}; unable to parse package.json: ${error.message}`
+                );
+                continue;
+              }
+
+              if (packageJson.private === true || typeof packageJson.name !== 'string') {
+                continue;
+              }
+
+              packageMap.set(packageJson.name, packageJsonPath);
+            }
+
+            const unpublishedPackages = [];
+            for (const [packageName, packageJsonPath] of packageMap) {
+              const exists = await packageExistsOnNpm(packageName);
+              if (!exists) {
+                unpublishedPackages.push({
+                  packageName,
+                  packageJsonPath,
+                });
+              }
+            }
+
+            if (unpublishedPackages.length === 0) {
+              core.info('All changed releasable packages already exist on npm.');
+              return;
+            }
+
+            const packageList = unpublishedPackages
+              .map(
+                ({ packageName, packageJsonPath }) =>
+                  `- ${packageName} (${packageJsonPath})`
+              )
+              .join('\n');
+
+            core.setFailed(
+              `Release blocked. Trusted publishing cannot publish first-time npm packages:\n${packageList}`
+            );
+
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf
