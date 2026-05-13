@@ -9,6 +9,7 @@ import {
   getFullUrlAndToken,
   setupCurlLikeCommand,
 } from './shared';
+import { trace } from './trace';
 
 export default async function curl(client: Client): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({
@@ -25,8 +26,15 @@ export default async function curl(client: Client): Promise<number> {
     return setup;
   }
 
-  const { path, isFullUrl, deploymentFlag, protectionBypassFlag, toolFlags } =
-    setup;
+  const {
+    path,
+    isFullUrl,
+    deploymentFlag,
+    protectionBypassFlag,
+    toolFlags,
+    trace: traceFlag,
+    json: jsonFlag,
+  } = setup;
 
   const result = isFullUrl
     ? await getFullUrlAndToken(client, path, protectionBypassFlag)
@@ -52,6 +60,17 @@ export default async function curl(client: Client): Promise<number> {
   }
 
   curlFlags.unshift('--url', fullUrl);
+
+  if (traceFlag) {
+    return trace(client, {
+      fullUrl,
+      link: result.link ?? null,
+      curlFlags,
+      json: jsonFlag,
+      yes: setup.yes,
+      telemetry: telemetryClient,
+    });
+  }
 
   output.debug(`Executing: curl ${curlFlags.map(requoteArgs).join(' ')}`);
 
