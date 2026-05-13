@@ -389,7 +389,7 @@ describe('editProjectSettings', () => {
       const honoFramework = frameworks.find(
         fwk => fwk.name === 'Hono'
       ) as unknown as Framework;
-      if (!honoFramework) return; // skip if Hono isn't in the framework list
+      expect(honoFramework).toBeDefined();
       await editProjectSettings(client, null, honoFramework, true, null);
       const fullOutput = client.stderr.getFullOutput();
       expect(fullOutput).not.toContain('🔥');

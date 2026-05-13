@@ -913,17 +913,20 @@ describe('link', () => {
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
-    // Anti-regression: old "Set up and deploy?" confirmation prompt is gone.
+    // Anti-regression: old "Set up and deploy <path>?" confirm prompt is gone.
     // Status line is "Set up <path>" with no trailing "?" question mark.
     const fullOutput = client.stderr.getFullOutput();
-    expect(fullOutput).not.toContain('Set up and deploy?');
-    expect(fullOutput).not.toContain('Set up and deploy "');
+    // Old: `Set up and deploy "${path}"?`
+    expect(fullOutput).not.toMatch(/Set up and deploy "[^"]+"\?/);
+    // Old inquirer prefix: `? Set up and deploy ...`
+    expect(fullOutput).not.toMatch(/\? Set up and deploy/);
     // Anti-regression: "Which scope" was renamed to "Which team".
     expect(fullOutput).not.toContain(
       'Which scope should contain your project?'
     );
     // Anti-regression: "What's your project's name?" was renamed to "Name?".
-    expect(fullOutput).not.toContain("What's your project's name?");
+    // Use regex to match both straight ' and curly ’ apostrophes (source on main uses curly).
+    expect(fullOutput).not.toMatch(/What.s your project.s name\?/);
   });
 
   it('should write vercel.json for inferred multi-service layouts', async () => {
@@ -1985,7 +1988,7 @@ describe('link', () => {
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Linked');
+      await expect(client.stderr).toOutput('Linked      ');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2601,7 +2604,7 @@ describe('link', () => {
         // Select first option
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked');
+        await expect(client.stderr).toOutput('Linked      ');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'
@@ -2655,7 +2658,7 @@ describe('link', () => {
         );
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked');
+        await expect(client.stderr).toOutput('Linked      ');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'
