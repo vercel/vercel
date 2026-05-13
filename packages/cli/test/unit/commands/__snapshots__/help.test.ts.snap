@@ -753,17 +753,67 @@ exports[`help command > certs help output snapshots > certs remove help output s
 "
 `;
 
+exports[`help command > connex help output snapshots > connex attach subcommand > connex attach subcommand help column width 120 1`] = `
+"
+  ▲ vercel connex attach client [options]
+
+  Attach a Vercel project to a Connex connector for one or more environments                                            
+
+  Options:
+
+  -e,  --environment <ENV>     Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
+                               -e production,preview). Defaults to all environments.                                    
+  -F,  --format <FORMAT>       Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>  Project name or ID (default: current linked project)                                     
+  -y,  --yes                   Skip the confirmation prompt                                                             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Attach the current project to a connector for all environments
+
+    $ vercel connex attach scl_abc123
+
+  - Restrict to specific environments
+
+    $ vercel connex attach scl_abc123 -e production -e preview
+
+  - Attach a different project by name
+
+    $ vercel connex attach slack/my-bot --project my-app
+
+  - Non-interactive output as JSON
+
+    $ vercel connex attach scl_abc123 --yes --format=json
+
+"
+`;
+
 exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
 "
   ▲ vercel connex create type [options]
 
-  Create a new Connex client                                                                                            
+  Create a new Connex connector                                                                                         
 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -n,  --name <NAME>      Name of the Connex client                                                                     
-       --triggers         Enable webhook triggers for this client                                                       
+  -n,  --name <NAME>      Name of the Connex connector                                                                  
+       --triggers         Enable webhook triggers for this connector                                                    
 
 
   Global Options:
@@ -805,18 +855,20 @@ exports[`help command > connex help output snapshots > connex help column width 
 "
   ▲ vercel connex command
 
-  Manage Vercel Connect clients                                                 
+  Manage Vercel Connect connectors                                              
 
   Commands:
 
-  create  type    Create a new Connex client                            
-  list            List Connex clients linked to the current project     
-                  (falls back to every client in the team when no       
+  create  type    Create a new Connex connector                         
+  list            List Connex connectors linked to the current project  
+                  (falls back to every connector in the team when no    
                   project is linked or when --all-projects is set)      
-  token   id      Get a token for a Connex client (accepts a client ID  
-                  like scl_abc or a UID like slack/my-bot)              
-  remove  client  Delete a Connex client                                
-  open    id      Open a Connex client in the Vercel dashboard          
+  token   id      Get a token for a Connex connector (accepts a         
+                  connector ID like scl_abc or a UID like slack/my-bot) 
+  attach  client  Attach a Vercel project to a Connex connector for one 
+                  or more environments                                  
+  remove  client  Delete a Connex connector                             
+  open    id      Open a Connex connector in the Vercel dashboard       
 
 
   Global Options:
@@ -841,7 +893,7 @@ exports[`help command > connex help output snapshots > connex help column width 
 
     $ vercel connex create slack
 
-  - List Connex clients on the current team
+  - List Connex connectors on the current team
 
     $ vercel connex list
 
@@ -849,7 +901,11 @@ exports[`help command > connex help output snapshots > connex help column width 
 
     $ vercel connex token scl_abc123
 
-  - Open a client in the dashboard
+  - Attach the current project to a connector
+
+    $ vercel connex attach scl_abc123
+
+  - Open a connector in the dashboard
 
     $ vercel connex open scl_abc123
 
@@ -860,14 +916,14 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 "
   ▲ vercel connex list [options]
 
-  List Connex clients linked to the current project (falls back to every client in the team when no project is linked   
-  or when --all-projects is set)                                                                                        
+  List Connex connectors linked to the current project (falls back to every connector in the team when no project is    
+  linked or when --all-projects is set)                                                                                 
 
   Options:
 
-       --all-projects     List every Connex client in the team, regardless of project link                              
+       --all-projects     List every Connex connector in the team, regardless of project link                           
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --limit <COUNT>    Number of clients to return per page                                                          
+       --limit <COUNT>    Number of connectors to return per page                                                       
        --next <CURSOR>    Cursor for the next page of results                                                           
 
 
@@ -887,11 +943,11 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   Examples:
 
-  - List Connex clients linked to the current project
+  - List Connex connectors linked to the current project
 
     $ vercel connex list
 
-  - List every Connex client in the team
+  - List every Connex connector in the team
 
     $ vercel connex list --all-projects
 
@@ -914,7 +970,7 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
 "
   ▲ vercel connex open id [options]
 
-  Open a Connex client in the Vercel dashboard                                                                          
+  Open a Connex connector in the Vercel dashboard                                                                       
 
   Options:
 
@@ -937,11 +993,11 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
 
   Examples:
 
-  - Open a client by ID
+  - Open a connector by ID
 
     $ vercel connex open scl_abc123
 
-  - Open a client by UID
+  - Open a connector by UID
 
     $ vercel connex open slack/my-bot
 
@@ -956,15 +1012,15 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 "
   ▲ vercel connex token id [options]
 
-  Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)                         
+  Get a token for a Connex connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)                   
 
   Options:
 
   -F,  --format <FORMAT>       Specify the output format (json)                                                              
-       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the client's      
+       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the connector's   
                                default installation)                                                                         
        --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
-  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the client's default     
+  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector's default  
                                installation)                                                                                 
   -y,  --yes                   Accept default value for all prompts                                                          
 
@@ -985,11 +1041,11 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 
   Examples:
 
-  - Get a user token by client ID
+  - Get a user token by connector ID
 
     $ vercel connex token scl_abc123
 
-  - Get a token by client UID
+  - Get a token by connector UID
 
     $ vercel connex token slack/my-bot
 

@@ -210,18 +210,12 @@ importers:
       '@vercel/nft':
         specifier: 1.5.0
         version: 1.5.0
-      '@yarnpkg/parsers':
-        specifier: ^3.0.0
-        version: 3.0.0
       execa:
         specifier: 3.2.0
         version: 3.2.0
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
-      js-yaml:
-        specifier: ^3.13.1
-        version: 3.13.1
       oxc-transform:
         specifier: 0.111.0
         version: 0.111.0
@@ -332,6 +326,9 @@ importers:
       '@vercel/routing-utils':
         specifier: workspace:*
         version: link:../routing-utils
+      '@yarnpkg/parsers':
+        specifier: ^3.0.0
+        version: 3.0.0
       aggregate-error:
         specifier: 3.0.1
         version: 3.0.1
@@ -392,6 +389,9 @@ importers:
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
       vitest:
         specifier: 2.0.1
         version: 2.0.1(@types/node@20.11.0)
@@ -10456,7 +10456,7 @@ packages:
     dependencies:
       js-yaml: 3.13.1
       tslib: 2.8.1
-    dev: false
+    dev: true
 
   /abbrev@3.0.1:
     resolution: {integrity: sha512-AO2ac6pjRB3SJmGJo+v5/aK6Omggp6fsLrs6wN9bd35ulu4cCwaAU9+7ZhXjeqHVkaHThLuzH0nZr0YpCDhygg==}
@@ -19829,6 +19829,12 @@ packages:
       minimatch: 10.2.5
       typescript: 5.9.3
       yaml: 2.8.4
+    dev: true
+
+  /typescript@4.9.5:
+    resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
     dev: true
 
   /typescript@5.9.3:

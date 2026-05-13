@@ -83,7 +83,7 @@ export async function list(
   if (unscoped) {
     await selectConnexTeam(
       client,
-      'Select the team whose Connex clients you want to list'
+      'Select the team whose Connex connectors you want to list'
     );
   }
 
@@ -102,7 +102,7 @@ export async function list(
   const query = params.toString();
   const url = `/v1/connex/clients${query ? `?${query}` : ''}`;
 
-  output.spinner('Fetching Connex clients…');
+  output.spinner('Fetching Connex connectors…');
   let response: ListClientsResponse;
   try {
     response = await client.fetch<ListClientsResponse>(url);
@@ -159,18 +159,18 @@ export async function list(
   if (clients.length === 0) {
     if (unscoped) {
       output.log(
-        `No Connex clients found. Create one with \`${packageName} connex create <type>\`.`
+        `No Connex connectors found. Create one with \`${packageName} connex create <type>\`.`
       );
     } else {
       output.log(
-        `No Connex clients linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connex list --all-projects\` to see every client in the team.`
+        `No Connex connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connex list --all-projects\` to see every connector in the team.`
       );
     }
     return 0;
   }
 
   if (!unscoped && projectName) {
-    output.log(`Connex clients linked to ${chalk.bold(projectName)}:`);
+    output.log(`Connex connectors linked to ${chalk.bold(projectName)}:`);
   }
 
   const headers = ['UID', 'ID', 'Name', 'Type'];

@@ -345,7 +345,17 @@ export const build: BuildV2 = async args => {
     return {
       routes,
       output,
-      ...(cronEntries ? { crons: cronEntries } : {}),
+      // Emit only the public {path, schedule} shape; `exportName` is an
+      // internal plumbing field consumed by `buildCronRouteTable` and
+      // doesn't belong in the build artifact.
+      ...(cronEntries
+        ? {
+            crons: cronEntries.map(({ path, schedule }) => ({
+              path,
+              schedule,
+            })),
+          }
+        : {}),
     };
   });
 };
