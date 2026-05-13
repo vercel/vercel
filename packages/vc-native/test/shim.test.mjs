@@ -42,18 +42,29 @@ describe('@vercel/vc-native shim', () => {
       join(wrapperDir, 'bin', 'vercel')
     );
     await chmod(join(wrapperDir, 'bin', 'vercel'), 0o755);
-    await writeFile(
-      join(platformDir, 'bin', binaryName),
-      '#!/usr/bin/env node\nconsole.log("native shim ok:" + process.argv.slice(2).join(","));\n'
-    );
-    await chmod(join(platformDir, 'bin', binaryName), 0o755);
+    const binaryPath = join(platformDir, 'bin', binaryName);
 
+    if (process.platform === 'win32') {
+      await copyFile(process.execPath, binaryPath);
+    } else {
+      await writeFile(
+        binaryPath,
+        '#!/usr/bin/env node\nconsole.log("native shim ok:" + process.argv.slice(2).join(","));\n'
+      );
+    }
+    await chmod(binaryPath, 0o755);
+
+    const args =
+      process.platform === 'win32' ? ['--version'] : ['arg-one', 'arg-two'];
     const { stdout } = await execFileAsync(process.execPath, [
       join(wrapperDir, 'bin', 'vercel'),
-      'arg-one',
-      'arg-two',
+      ...args,
     ]);
 
-    expect(stdout.trim()).toBe('native shim ok:arg-one,arg-two');
+    expect(stdout.trim()).toBe(
+      process.platform === 'win32'
+        ? process.version
+        : 'native shim ok:arg-one,arg-two'
+    );
   });
 });
