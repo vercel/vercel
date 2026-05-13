@@ -287,3 +287,39 @@ jobs:
             "dist-bin/${{ matrix.asset }}${{ matrix.ext }}.sha256" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
+
+  publish-npm:
+    name: Publish native npm packages
+    if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    needs:
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Install npm@11
+        run: npm i -g npm@11
+
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/cli/dist-bin
+          merge-multiple: true
+
+      - name: Publish native npm packages
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+        run: node packages/vc-native/scripts/publish-packages.mjs

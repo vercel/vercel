@@ -7,6 +7,7 @@ on:
       - 'packages/cli/pkg.js'
       - 'packages/cli/pkg.config.mjs'
       - 'packages/cli/scripts/build-binary.mjs'
+      - 'packages/vc-native/**'
       - '.github/workflows/validate-binary.yml'
       - '.github/workflows/release-binary.yml'
   workflow_dispatch:
@@ -103,3 +104,27 @@ jobs:
           path: packages/cli/dist-bin/${{ matrix.asset }}${{ matrix.ext }}
           retention-days: 3
           if-no-files-found: error
+
+  shim:
+    name: Native npm shim
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Install pnpm
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test shim
+        run: pnpm --filter @vercel/vc-native test
