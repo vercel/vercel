@@ -82,7 +82,7 @@ function formatMatchReason(match: CrossTeamMatch): string {
 }
 
 function formatCrossTeamMatch(match: CrossTeamMatch): string {
-  return `${chalk.blue(match.org.slug)}/${match.project.name} ${formatMatchReason(
+  return `${chalk.bold(match.org.slug)}/${match.project.name} ${formatMatchReason(
     match
   )}`;
 }

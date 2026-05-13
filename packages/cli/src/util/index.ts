@@ -125,7 +125,6 @@ export default class Now {
       forceNew = false,
       withCache = false,
       target = null,
-      deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
