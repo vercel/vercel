@@ -284,6 +284,32 @@ export const attachSubcommand = {
       description: 'Project name or ID (default: current linked project)',
     },
     {
+      name: 'triggers',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Also register this project as a trigger destination so the connector forwards verified webhooks to it (max 3 destinations per connector)',
+    },
+    {
+      name: 'trigger-branch',
+      shorthand: null,
+      type: String,
+      argument: 'BRANCH',
+      deprecated: false,
+      description:
+        'Target a specific git branch for the trigger destination (default: production). Only valid with --triggers.',
+    },
+    {
+      name: 'trigger-path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path on the destination project that receives the forwarded webhook (default: /{service}). Only valid with --triggers.',
+    },
+    {
       ...yesOption,
       description: 'Skip the confirmation prompt',
     },
@@ -303,8 +329,57 @@ export const attachSubcommand = {
       value: `${packageName} connect attach slack/my-bot --project my-app`,
     },
     {
+      name: 'Attach and register the project as a trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers`,
+    },
+    {
+      name: 'Attach and register a preview-branch trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack`,
+    },
+    {
       name: 'Non-interactive output as JSON',
       value: `${packageName} connect attach scl_abc123 --yes --format=json`,
+    },
+  ],
+} as const;
+
+export const detachSubcommand = {
+  name: 'detach',
+  aliases: [],
+  description: 'Detach a Vercel project from a connector',
+  arguments: [
+    {
+      name: 'client',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'project',
+      shorthand: 'p',
+      type: String,
+      argument: 'NAME_OR_ID',
+      deprecated: false,
+      description: 'Project name or ID (default: current linked project)',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Detach the current project from a connector',
+      value: `${packageName} connect detach scl_abc123`,
+    },
+    {
+      name: 'Detach a different project by name',
+      value: `${packageName} connect detach slack/my-bot --project my-app`,
+    },
+    {
+      name: 'Non-interactive output as JSON',
+      value: `${packageName} connect detach scl_abc123 --yes --format=json`,
     },
   ],
 } as const;
@@ -320,6 +395,7 @@ export const connexCommand = {
     listSubcommand,
     tokenSubcommand,
     attachSubcommand,
+    detachSubcommand,
     removeSubcommand,
     openSubcommand,
   ],
