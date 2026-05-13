@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { connectCommand } from '../../../../commands/connect/command';
+import type { connexCommand } from '../../../../commands/connex/command';
 
-export class ConnectTelemetryClient
+export class ConnexTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof connectCommand>
+  implements TelemetryMethods<typeof connexCommand>
 {
   trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({

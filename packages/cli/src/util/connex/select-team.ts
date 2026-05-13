@@ -8,7 +8,7 @@ import selectOrg from '../input/select-org';
  * `getScope`. Falls back to an interactive picker only when no team context
  * is available, and persists the explicit pick to the global config.
  */
-export async function selectConnectTeam(
+export async function selectConnexTeam(
   client: Client,
   message: string
 ): Promise<void> {

@@ -4,7 +4,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
-import { selectConnectTeam } from '../../util/connect/select-team';
+import { selectConnexTeam } from '../../util/connex/select-team';
 import { validateJsonOutput } from '../../util/output-format';
 
 export async function openClient(
@@ -30,7 +30,7 @@ export async function openClient(
     return 1;
   }
 
-  await selectConnectTeam(
+  await selectConnexTeam(
     client,
     'Select the team whose Connect connector to open'
   );
@@ -48,7 +48,7 @@ export async function openClient(
     // route is a single [clientId] segment and can't hold slashes from UIDs
     // like `slack/my-bot`, so we always link by the canonical id.
     const resolved = await client.fetch<{ id: string }>(
-      `/v1/connect/clients/${encodeURIComponent(clientIdOrUid)}`
+      `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
     );
     resolvedId = resolved.id;
   } catch (err: unknown) {

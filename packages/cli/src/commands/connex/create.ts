@@ -5,12 +5,12 @@ import type { JSONObject } from '@vercel-internals/types';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
 import { getProjectLink } from '../../util/projects/link';
-import { selectConnectTeam } from '../../util/connect/select-team';
+import { selectConnexTeam } from '../../util/connex/select-team';
 import {
   generateRequestCode,
-  awaitConnectResult,
-} from '../../util/connect/request-code';
-import type { ConnectClient } from './types';
+  awaitConnexResult,
+} from '../../util/connex/request-code';
+import type { ConnexClient } from './types';
 
 export async function create(
   client: Client,
@@ -36,7 +36,7 @@ export async function create(
   }
 
   // Resolve team
-  await selectConnectTeam(
+  await selectConnexTeam(
     client,
     'Select the team where you want to create this connector'
   );
@@ -72,11 +72,11 @@ export async function create(
   body.triggers = { enabled: flags['--triggers'] === true };
 
   output.spinner('Setting up...');
-  let createdClient: ConnectClient | null = null;
+  let createdClient: ConnexClient | null = null;
   let browserUrl: string | undefined;
   try {
-    createdClient = await client.fetch<ConnectClient>(
-      '/v1/connect/clients/managed?autoinstall=true',
+    createdClient = await client.fetch<ConnexClient>(
+      '/v1/connex/clients/managed?autoinstall=true',
       { method: 'POST', body }
     );
   } catch (err: unknown) {
@@ -107,7 +107,7 @@ export async function create(
     );
 
     output.spinner('Waiting for you to complete setup in the browser...');
-    const resultFromBrowser = await awaitConnectResult(client, verifier);
+    const resultFromBrowser = await awaitConnexResult(client, verifier);
     output.stopSpinner();
 
     if (
@@ -116,8 +116,8 @@ export async function create(
       typeof resultFromBrowser.clientId === 'string'
     ) {
       const clientId = resultFromBrowser.clientId;
-      createdClient = await client.fetch<ConnectClient>(
-        `/v1/connect/clients/${clientId}`
+      createdClient = await client.fetch<ConnexClient>(
+        `/v1/connex/clients/${clientId}`
       );
     }
     if (

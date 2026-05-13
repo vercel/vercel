@@ -964,8 +964,8 @@ const main = async () => {
           break;
         case 'connect':
           if (process.env.FF_CONNEX_ENABLED) {
-            telemetry.trackCliCommandConnect(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).connect;
+            telemetry.trackCliCommandConnex(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).connex;
             break;
           } else {
             func = null;

@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
-import { selectConnectTeam } from '../../util/connect/select-team';
+import { selectConnexTeam } from '../../util/connex/select-team';
 import { getLinkedProject } from '../../util/projects/link';
 import table from '../../util/output/table';
 import { packageName } from '../../util/pkg-name';
@@ -13,12 +13,12 @@ interface LinkedProject {
   name: string;
 }
 
-interface ConnectClientProjectLink {
+interface ConnexClientProjectLink {
   projectId: string;
   project?: LinkedProject;
 }
 
-interface ConnectClient {
+interface ConnexClient {
   id: string;
   uid: string;
   name: string;
@@ -27,7 +27,7 @@ interface ConnectClient {
   createdAt: number;
   includes?: {
     projects?: {
-      items: ConnectClientProjectLink[];
+      items: ConnexClientProjectLink[];
       hasMore: boolean;
       cursor?: string | null;
     };
@@ -35,7 +35,7 @@ interface ConnectClient {
 }
 
 interface ListClientsResponse {
-  clients: ConnectClient[];
+  clients: ConnexClient[];
   cursor?: string;
 }
 
@@ -81,7 +81,7 @@ export async function list(
   // Resolve a team explicitly so we have one for the API call.
   const unscoped = !projectId;
   if (unscoped) {
-    await selectConnectTeam(
+    await selectConnexTeam(
       client,
       'Select the team whose Connect connectors you want to list'
     );
@@ -100,7 +100,7 @@ export async function list(
     params.set('projectId', projectId);
   }
   const query = params.toString();
-  const url = `/v1/connect/clients${query ? `?${query}` : ''}`;
+  const url = `/v1/connex/clients${query ? `?${query}` : ''}`;
 
   output.spinner('Fetching Connect connectors…');
   let response: ListClientsResponse;

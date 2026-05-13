@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
-import { selectConnectTeam } from '../../util/connect/select-team';
+import { selectConnexTeam } from '../../util/connex/select-team';
 import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -13,13 +13,13 @@ import { packageName } from '../../util/pkg-name';
 
 const ALL_ENVS = ['production', 'preview', 'development'] as const;
 
-interface ConnectClientIdentity {
+interface ConnexClientIdentity {
   id: string;
   uid: string;
   name?: string;
 }
 
-interface ConnectClientProject {
+interface ConnexClientProject {
   clientId: string;
   projectId: string;
   environments: string[];
@@ -88,7 +88,7 @@ export async function attach(
 
   const projectFlag = flags['--project'];
   if (projectFlag) {
-    await selectConnectTeam(client, 'Select the team that owns this project');
+    await selectConnexTeam(client, 'Select the team that owns this project');
     const team = client.config.currentTeam;
 
     output.spinner('Looking up project…');
@@ -133,10 +133,10 @@ export async function attach(
 
   // Resolve client identity → canonical id + display name.
   output.spinner('Retrieving Connect connector…');
-  let target: ConnectClientIdentity;
+  let target: ConnexClientIdentity;
   try {
-    target = await client.fetch<ConnectClientIdentity>(
-      `/v1/connect/clients/${encodeURIComponent(clientIdOrUid)}`
+    target = await client.fetch<ConnexClientIdentity>(
+      `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
     );
   } catch (err: unknown) {
     output.stopSpinner();
@@ -155,10 +155,10 @@ export async function attach(
   const displayName = target.uid || target.name || target.id;
 
   // Pre-fetch existing attachment for the diff prompt and the no-op check.
-  let existingAttachment: ConnectClientProject | undefined;
+  let existingAttachment: ConnexClientProject | undefined;
   try {
-    existingAttachment = await client.fetch<ConnectClientProject>(
-      `/v1/connect/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`
+    existingAttachment = await client.fetch<ConnexClientProject>(
+      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`
     );
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
@@ -235,7 +235,7 @@ export async function attach(
   output.spinner('Attaching project…');
   try {
     await client.fetch<unknown>(
-      `/v1/connect/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
+      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
       {
         method: 'POST',
         body: { environments },

@@ -2,9 +2,9 @@ import { describe, beforeEach, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
-import connect from '../../../../src/commands/connect';
+import connect from '../../../../src/commands/connex';
 
-describe('connect remove', () => {
+describe('connex remove', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -26,7 +26,7 @@ describe('connect remove', () => {
   });
 
   it('should error with a friendly message when the client is not found', async () => {
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
@@ -44,16 +44,16 @@ describe('connect remove', () => {
   it('should delete a client with no connected projects when --yes is passed', async () => {
     let deleteCalled = false;
 
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot', name: 'My Bot' });
     });
     client.scenario.get(
-      '/v1/connect/clients/:clientId/projects',
+      '/v1/connex/clients/:clientId/projects',
       (_req, res) => {
         res.json({ projects: [] });
       }
     );
-    client.scenario.delete('/v1/connect/clients/:clientId', (req, res) => {
+    client.scenario.delete('/v1/connex/clients/:clientId', (req, res) => {
       deleteCalled = true;
       expect(req.params.clientId).toBe('scl_abc123');
       res.statusCode = 200;
@@ -72,11 +72,11 @@ describe('connect remove', () => {
   it('should refuse to delete when projects are connected and --disconnect-all is not set', async () => {
     let deleteCalled = false;
 
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot', name: 'My Bot' });
     });
     client.scenario.get(
-      '/v1/connect/clients/:clientId/projects',
+      '/v1/connex/clients/:clientId/projects',
       (_req, res) => {
         res.json({
           projects: [
@@ -86,7 +86,7 @@ describe('connect remove', () => {
         });
       }
     );
-    client.scenario.delete('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.delete('/v1/connex/clients/:clientId', (_req, res) => {
       deleteCalled = true;
       res.statusCode = 200;
       res.end();
@@ -106,18 +106,18 @@ describe('connect remove', () => {
   it('should delete with --disconnect-all + --yes when projects are connected (backend cascades)', async () => {
     let deleteCalled = false;
 
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot', name: 'My Bot' });
     });
     client.scenario.get(
-      '/v1/connect/clients/:clientId/projects',
+      '/v1/connex/clients/:clientId/projects',
       (_req, res) => {
         res.json({
           projects: [{ clientId: 'scl_abc123', projectId: 'prj_1' }],
         });
       }
     );
-    client.scenario.delete('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.delete('/v1/connex/clients/:clientId', (_req, res) => {
       deleteCalled = true;
       res.statusCode = 200;
       res.end();
@@ -139,11 +139,11 @@ describe('connect remove', () => {
   });
 
   it('should require --yes when stdin is not a TTY', async () => {
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connect/clients/:clientId/projects',
+      '/v1/connex/clients/:clientId/projects',
       (_req, res) => {
         res.json({ projects: [] });
       }
@@ -161,16 +161,16 @@ describe('connect remove', () => {
   it('should cancel cleanly when the user declines the confirmation prompt', async () => {
     let deleteCalled = false;
 
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connect/clients/:clientId/projects',
+      '/v1/connex/clients/:clientId/projects',
       (_req, res) => {
         res.json({ projects: [] });
       }
     );
-    client.scenario.delete('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.delete('/v1/connex/clients/:clientId', (_req, res) => {
       deleteCalled = true;
       res.statusCode = 200;
       res.end();
@@ -202,16 +202,16 @@ describe('connect remove', () => {
   });
 
   it('should emit a JSON receipt on success with --format=json --yes', async () => {
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot', name: 'My Bot' });
     });
     client.scenario.get(
-      '/v1/connect/clients/:clientId/projects',
+      '/v1/connex/clients/:clientId/projects',
       (_req, res) => {
         res.json({ projects: [] });
       }
     );
-    client.scenario.delete('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.delete('/v1/connex/clients/:clientId', (_req, res) => {
       res.statusCode = 200;
       res.end();
     });
@@ -240,17 +240,14 @@ describe('connect remove', () => {
     let getProjectsClientId = '';
     let deleteClientId = '';
 
-    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
-    client.scenario.get(
-      '/v1/connect/clients/:clientId/projects',
-      (req, res) => {
-        getProjectsClientId = req.params.clientId;
-        res.json({ projects: [] });
-      }
-    );
-    client.scenario.delete('/v1/connect/clients/:clientId', (req, res) => {
+    client.scenario.get('/v1/connex/clients/:clientId/projects', (req, res) => {
+      getProjectsClientId = req.params.clientId;
+      res.json({ projects: [] });
+    });
+    client.scenario.delete('/v1/connex/clients/:clientId', (req, res) => {
       deleteClientId = req.params.clientId;
       res.statusCode = 200;
       res.end();

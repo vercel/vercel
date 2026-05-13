@@ -2,22 +2,22 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
-import { selectConnectTeam } from '../../util/connect/select-team';
+import { selectConnexTeam } from '../../util/connex/select-team';
 
-interface ConnectClientIdentity {
+interface ConnexClientIdentity {
   id: string;
   uid: string;
   name?: string;
 }
 
-interface ConnectClientProject {
+interface ConnexClientProject {
   clientId: string;
   projectId: string;
   project?: { id: string; name: string };
 }
 
 interface ListProjectsResponse {
-  projects: ConnectClientProject[];
+  projects: ConnexClientProject[];
   cursor?: string;
 }
 
@@ -54,13 +54,13 @@ export async function remove(
     return 1;
   }
 
-  await selectConnectTeam(client, 'Select the team for this Connect connector');
+  await selectConnexTeam(client, 'Select the team for this Connect connector');
 
   output.spinner('Retrieving Connect connector…');
-  let target: ConnectClientIdentity;
+  let target: ConnexClientIdentity;
   try {
-    target = await client.fetch<ConnectClientIdentity>(
-      `/v1/connect/clients/${encodeURIComponent(clientIdOrUid)}`
+    target = await client.fetch<ConnexClientIdentity>(
+      `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
     );
   } catch (err: unknown) {
     output.stopSpinner();
@@ -80,11 +80,11 @@ export async function remove(
 
   const displayName = target.uid || target.id;
 
-  let projectLinks: ConnectClientProject[];
+  let projectLinks: ConnexClientProject[];
   try {
     output.spinner('Checking connected projects…');
     const res = await client.fetch<ListProjectsResponse>(
-      `/v1/connect/clients/${encodeURIComponent(target.id)}/projects`
+      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects`
     );
     projectLinks = res.projects ?? [];
   } catch (err: unknown) {
@@ -133,7 +133,7 @@ export async function remove(
   try {
     output.spinner('Deleting Connect connector…');
     await client.fetch<unknown>(
-      `/v1/connect/clients/${encodeURIComponent(target.id)}`,
+      `/v1/connex/clients/${encodeURIComponent(target.id)}`,
       { method: 'DELETE' }
     );
   } catch (err: unknown) {

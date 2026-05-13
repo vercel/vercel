@@ -6,7 +6,7 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import connect from '../../../../src/commands/connect';
+import connect from '../../../../src/commands/connex';
 
 async function linkProjectInCwd(
   team: { id: string },
@@ -23,7 +23,7 @@ async function linkProjectInCwd(
   return cwd;
 }
 
-describe('connect list', () => {
+describe('connex list', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -44,7 +44,7 @@ describe('connect list', () => {
       await linkProjectInCwd(team, project);
 
       let requestUrl = '';
-      client.scenario.get('/v1/connect/clients', (req, res) => {
+      client.scenario.get('/v1/connex/clients', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({
           clients: [
@@ -82,7 +82,7 @@ describe('connect list', () => {
       useProject(project);
       await linkProjectInCwd(team, project);
 
-      client.scenario.get('/v1/connect/clients', (_req, res) => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({ clients: [] });
       });
 
@@ -99,7 +99,7 @@ describe('connect list', () => {
 
     it('should fall back to unscoped list when no project is linked', async () => {
       let requestUrl = '';
-      client.scenario.get('/v1/connect/clients', (req, res) => {
+      client.scenario.get('/v1/connex/clients', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({
           clients: [
@@ -144,7 +144,7 @@ describe('connect list', () => {
   describe('with --all-projects', () => {
     it('should request clients with include=projects', async () => {
       let requestUrl = '';
-      client.scenario.get('/v1/connect/clients', (req, res) => {
+      client.scenario.get('/v1/connex/clients', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({
           clients: [
@@ -190,7 +190,7 @@ describe('connect list', () => {
     });
 
     it('should append "+ more" when includes.projects.hasMore is true', async () => {
-      client.scenario.get('/v1/connect/clients', (_req, res) => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({
           clients: [
             {
@@ -228,7 +228,7 @@ describe('connect list', () => {
     });
 
     it('should skip deleted projects when rendering names', async () => {
-      client.scenario.get('/v1/connect/clients', (_req, res) => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({
           clients: [
             {
@@ -268,7 +268,7 @@ describe('connect list', () => {
     });
 
     it('should render empty-state without project context', async () => {
-      client.scenario.get('/v1/connect/clients', (_req, res) => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({ clients: [] });
       });
 
@@ -283,7 +283,7 @@ describe('connect list', () => {
     });
 
     it('should show friendly error when connect feature flag is off (404)', async () => {
-      client.scenario.get('/v1/connect/clients', (_req, res) => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.statusCode = 404;
         res.json({ error: { code: 'not_found', message: 'Not Found' } });
       });
@@ -297,7 +297,7 @@ describe('connect list', () => {
     });
 
     it('should output JSON with projects and hasMoreProjects when --format=json is used', async () => {
-      client.scenario.get('/v1/connect/clients', (_req, res) => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({
           clients: [
             {
@@ -344,7 +344,7 @@ describe('connect list', () => {
     });
 
     it('should print --all-projects in next-page hint when the response has a cursor', async () => {
-      client.scenario.get('/v1/connect/clients', (_req, res) => {
+      client.scenario.get('/v1/connex/clients', (_req, res) => {
         res.json({
           clients: [
             {
@@ -375,7 +375,7 @@ describe('connect list', () => {
 
     it('should forward --limit and --next as query params', async () => {
       let requestUrl = '';
-      client.scenario.get('/v1/connect/clients', (req, res) => {
+      client.scenario.get('/v1/connex/clients', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({ clients: [] });
       });
@@ -404,7 +404,7 @@ describe('connect list', () => {
     useProject(project);
     await linkProjectInCwd(team, project);
 
-    client.scenario.get('/v1/connect/clients', (_req, res) => {
+    client.scenario.get('/v1/connex/clients', (_req, res) => {
       res.json({
         clients: [
           {

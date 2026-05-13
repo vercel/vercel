@@ -1,4 +1,4 @@
-export interface ConnectClient {
+export interface ConnexClient {
   id: string;
   ownerId: string;
   createdAt: number;

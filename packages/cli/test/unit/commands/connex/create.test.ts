@@ -5,13 +5,13 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import connect from '../../../../src/commands/connect';
+import connect from '../../../../src/commands/connex';
 import * as configFilesUtil from '../../../../src/util/config/files';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 vi.setConfig({ testTimeout: 15000 });
 
-function fakeConnectClient(overrides: Record<string, unknown> = {}) {
+function fakeConnexClient(overrides: Record<string, unknown> = {}) {
   return {
     id: 'scl_test123',
     ownerId: 'team_abc',
@@ -28,7 +28,7 @@ function fakeConnectClient(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('connect create', () => {
+describe('connex create', () => {
   let team: { id: string; slug: string };
   const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
@@ -60,7 +60,7 @@ describe('connect create', () => {
   });
 
   it('should show friendly error when connect feature flag is off (404)', async () => {
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
@@ -76,11 +76,11 @@ describe('connect create', () => {
   it('should create client directly when POST succeeds (no browser)', async () => {
     let postBody: any;
     let pollHit = false;
-    client.scenario.post('/v1/connect/clients/managed', (req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (req, res) => {
       postBody = req.body;
-      res.json(fakeConnectClient({ id: 'scl_direct1', uid: 'uid_direct1' }));
+      res.json(fakeConnexClient({ id: 'scl_direct1', uid: 'uid_direct1' }));
     });
-    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
       pollHit = true;
       res.json({ status: 'pending' });
     });
@@ -102,10 +102,10 @@ describe('connect create', () => {
 
   it('should pass any type to the server without validation', async () => {
     let postBody: any;
-    client.scenario.post('/v1/connect/clients/managed', (req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (req, res) => {
       postBody = req.body;
       res.json(
-        fakeConnectClient({ id: 'scl_jira1', type: 'jira', name: 'my-jira' })
+        fakeConnexClient({ id: 'scl_jira1', type: 'jira', name: 'my-jira' })
       );
     });
 
@@ -118,9 +118,9 @@ describe('connect create', () => {
   });
 
   it('should output JSON when --format=json is used', async () => {
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
       res.json(
-        fakeConnectClient({
+        fakeConnexClient({
           id: 'scl_json123',
           uid: 'uid_json123',
           type: 'slack',
@@ -147,7 +147,7 @@ describe('connect create', () => {
 
   it('should open browser and poll when POST returns 422 with registerUrl', async () => {
     let postHits = 0;
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
       postHits++;
       res.statusCode = 422;
       res.json({
@@ -160,7 +160,7 @@ describe('connect create', () => {
     });
 
     let pollCount = 0;
-    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
       pollCount++;
       if (pollCount < 2) {
         res.json({ status: 'pending' });
@@ -169,9 +169,9 @@ describe('connect create', () => {
       }
     });
 
-    client.scenario.get('/v1/connect/clients/:id', (req, res) => {
+    client.scenario.get('/v1/connex/clients/:id', (req, res) => {
       res.json(
-        fakeConnectClient({
+        fakeConnexClient({
           id: (req.params as any).id,
           uid: 'uid_after422',
         })
@@ -189,7 +189,7 @@ describe('connect create', () => {
   });
 
   it('should keep polling through partial status until success', async () => {
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -200,7 +200,7 @@ describe('connect create', () => {
     });
 
     let pollCount = 0;
-    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
       pollCount++;
       if (pollCount === 1) {
         res.json({ status: 'pending' });
@@ -219,9 +219,9 @@ describe('connect create', () => {
       }
     });
 
-    client.scenario.get('/v1/connect/clients/:id', (req, res) => {
+    client.scenario.get('/v1/connex/clients/:id', (req, res) => {
       res.json(
-        fakeConnectClient({
+        fakeConnexClient({
           id: (req.params as any).id,
           uid: 'uid_partial1',
           supportsInstallation: true,
@@ -241,7 +241,7 @@ describe('connect create', () => {
   });
 
   it('should handle error status from polling after 422', async () => {
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -251,7 +251,7 @@ describe('connect create', () => {
       });
     });
 
-    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
       res.json({
         status: 'error',
         error: { code: 'creation_failed', message: 'Slack API error' },
@@ -269,8 +269,8 @@ describe('connect create', () => {
   it('should persist team to config after interactive selection', async () => {
     delete client.config.currentTeam;
 
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
-      res.json(fakeConnectClient({ id: 'scl_persist', uid: 'uid_persist' }));
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_persist', uid: 'uid_persist' }));
     });
 
     client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
@@ -303,8 +303,8 @@ describe('connect create', () => {
     });
     client.cwd = cwd;
 
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
-      res.json(fakeConnectClient({ id: 'scl_linked', uid: 'uid_linked' }));
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_linked', uid: 'uid_linked' }));
     });
 
     client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
@@ -334,8 +334,8 @@ describe('connect create', () => {
   });
 
   it('should not rewrite config when team is already set', async () => {
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
-      res.json(fakeConnectClient({ id: 'scl_noop', uid: 'uid_noop' }));
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+      res.json(fakeConnexClient({ id: 'scl_noop', uid: 'uid_noop' }));
     });
 
     client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
@@ -348,10 +348,10 @@ describe('connect create', () => {
   describe('--triggers flag', () => {
     it('should send triggers: { enabled: true } when --triggers is passed', async () => {
       let postBody: any;
-      client.scenario.post('/v1/connect/clients/managed', (req, res) => {
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
         postBody = req.body;
         res.json(
-          fakeConnectClient({ id: 'scl_triggers1', uid: 'uid_triggers1' })
+          fakeConnexClient({ id: 'scl_triggers1', uid: 'uid_triggers1' })
         );
       });
 
@@ -376,9 +376,9 @@ describe('connect create', () => {
 
     it('should send triggers: { enabled: false } when --triggers is not passed', async () => {
       let postBody: any;
-      client.scenario.post('/v1/connect/clients/managed', (req, res) => {
+      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
         postBody = req.body;
-        res.json(fakeConnectClient({ id: 'scl_notrig', uid: 'uid_notrig' }));
+        res.json(fakeConnexClient({ id: 'scl_notrig', uid: 'uid_notrig' }));
       });
 
       client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
@@ -391,7 +391,7 @@ describe('connect create', () => {
   });
 
   it('should tolerate early 404s during polling after 422', async () => {
-    client.scenario.post('/v1/connect/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -402,7 +402,7 @@ describe('connect create', () => {
     });
 
     let pollCount = 0;
-    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
       pollCount++;
       if (pollCount <= 2) {
         res.statusCode = 404;
@@ -412,9 +412,9 @@ describe('connect create', () => {
       }
     });
 
-    client.scenario.get('/v1/connect/clients/:id', (req, res) => {
+    client.scenario.get('/v1/connex/clients/:id', (req, res) => {
       res.json(
-        fakeConnectClient({
+        fakeConnexClient({
           id: (req.params as any).id,
           uid: 'uid_after404',
         })

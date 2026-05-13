@@ -2,13 +2,13 @@ import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
-import { selectConnectTeam } from '../../util/connect/select-team';
+import { selectConnexTeam } from '../../util/connex/select-team';
 import {
   generateRequestCode,
-  awaitConnectResult,
-} from '../../util/connect/request-code';
+  awaitConnexResult,
+} from '../../util/connex/request-code';
 
-interface ConnectTokenResponse {
+interface ConnexTokenResponse {
   token: string;
   expiresAt: number;
   name?: string;
@@ -55,13 +55,13 @@ export async function token(
     return 1;
   }
 
-  await selectConnectTeam(client, 'Select the team for this token request');
+  await selectConnexTeam(client, 'Select the team for this token request');
 
   const body: Record<string, unknown> = {};
   if (subject === 'app') {
     body.subject = { type: 'app' };
   } else if (subject === 'user') {
-    // selectConnectTeam → selectOrg → getUser populates authConfig.userId, so
+    // selectConnexTeam → selectOrg → getUser populates authConfig.userId, so
     // it's reliably available here for authenticated callers.
     body.subject = { type: 'user', id: client.authConfig.userId };
   }
@@ -156,7 +156,7 @@ export async function token(
   );
 
   output.spinner(`Waiting for ${actionLabel} to complete in the browser...`);
-  const pollData = await awaitConnectResult(client, verifier);
+  const pollData = await awaitConnexResult(client, verifier);
   output.stopSpinner();
 
   if (!pollData) {
@@ -209,12 +209,12 @@ function buildActionUrl(
     teamId,
     request_code: requestCode,
   });
-  return `https://vercel.com/api/v1/connect/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
+  return `https://vercel.com/api/v1/connex/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }
 
 function printTokenResult(
   client: Client,
-  data: ConnectTokenResponse,
+  data: ConnexTokenResponse,
   asJson: boolean
 ): number {
   if (asJson) {
@@ -226,7 +226,7 @@ function printTokenResult(
 }
 
 type TokenResult =
-  | { ok: true; data: ConnectTokenResponse }
+  | { ok: true; data: ConnexTokenResponse }
   | { ok: false; errorCode?: string; errorMessage?: string };
 
 async function fetchToken(
@@ -235,8 +235,8 @@ async function fetchToken(
   body: Record<string, unknown>
 ): Promise<TokenResult> {
   try {
-    const data = await client.fetch<ConnectTokenResponse>(
-      `/v1/connect/token/${encodeURIComponent(clientId)}`,
+    const data = await client.fetch<ConnexTokenResponse>(
+      `/v1/connex/token/${encodeURIComponent(clientId)}`,
       {
         method: 'POST',
         body: JSON.stringify(body),

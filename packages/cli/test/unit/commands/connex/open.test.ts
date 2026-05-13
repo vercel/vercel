@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
-import connect from '../../../../src/commands/connect';
+import connect from '../../../../src/commands/connex';
 import { client } from '../../../mocks/client';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -13,7 +13,7 @@ vi.mock('open', () => {
 
 const openMock = vi.mocked(open);
 
-describe('connect open', () => {
+describe('connex open', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -27,7 +27,7 @@ describe('connect open', () => {
 
   it('should open the client detail page on success', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connex/clients/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
@@ -48,7 +48,7 @@ describe('connect open', () => {
     const uid = 'slack/my-bot';
     const resolvedId = 'scl_xyz';
     client.scenario.get(
-      `/v1/connect/clients/${encodeURIComponent(uid)}`,
+      `/v1/connex/clients/${encodeURIComponent(uid)}`,
       (_req, res) => {
         res.json({ id: resolvedId, uid, type: 'slack' });
       }
@@ -65,7 +65,7 @@ describe('connect open', () => {
   });
 
   it('should show a friendly error when the client is not found (404)', async () => {
-    client.scenario.get('/v1/connect/clients/scl_missing', (_req, res) => {
+    client.scenario.get('/v1/connex/clients/scl_missing', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
@@ -93,7 +93,7 @@ describe('connect open', () => {
 
   it('should output JSON when --format=json is passed', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connex/clients/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
@@ -112,7 +112,7 @@ describe('connect open', () => {
 
   it('should print URL to stdout when stdout is not a TTY', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connex/clients/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
@@ -131,7 +131,7 @@ describe('connect open', () => {
 
   it('should track telemetry for the open subcommand', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connex/clients/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 

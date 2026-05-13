@@ -751,7 +751,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
 "
 `;
 
-exports[`help command > connect help output snapshots > connect attach subcommand > connect attach subcommand help column width 120 1`] = `
+exports[`help command > connex help output snapshots > connex attach subcommand > connex attach subcommand help column width 120 1`] = `
 "
   ▲ vercel connect attach client [options]
 
@@ -801,7 +801,7 @@ exports[`help command > connect help output snapshots > connect attach subcomman
 "
 `;
 
-exports[`help command > connect help output snapshots > connect create subcommand > connect create subcommand help column width 120 1`] = `
+exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
 "
   ▲ vercel connect create type [options]
 
@@ -849,7 +849,7 @@ exports[`help command > connect help output snapshots > connect create subcomman
 "
 `;
 
-exports[`help command > connect help output snapshots > connect help column width 80 1`] = `
+exports[`help command > connex help output snapshots > connex help column width 80 1`] = `
 "
   ▲ vercel connect command
 
@@ -910,7 +910,7 @@ exports[`help command > connect help output snapshots > connect help column widt
 "
 `;
 
-exports[`help command > connect help output snapshots > connect list subcommand > connect list subcommand help column width 120 1`] = `
+exports[`help command > connex help output snapshots > connex list subcommand > connex list subcommand help column width 120 1`] = `
 "
   ▲ vercel connect list [options]
 
@@ -964,7 +964,7 @@ exports[`help command > connect help output snapshots > connect list subcommand 
 "
 `;
 
-exports[`help command > connect help output snapshots > connect open subcommand > connect open subcommand help column width 120 1`] = `
+exports[`help command > connex help output snapshots > connex open subcommand > connex open subcommand help column width 120 1`] = `
 "
   ▲ vercel connect open id [options]
 
@@ -1006,7 +1006,7 @@ exports[`help command > connect help output snapshots > connect open subcommand 
 "
 `;
 
-exports[`help command > connect help output snapshots > connect token subcommand > connect token subcommand help column width 120 1`] = `
+exports[`help command > connex help output snapshots > connex token subcommand > connex token subcommand help column width 120 1`] = `
 "
   ▲ vercel connect token id [options]
 

@@ -309,7 +309,7 @@ export const attachSubcommand = {
   ],
 } as const;
 
-export const connectCommand = {
+export const connexCommand = {
   name: 'connect',
   aliases: [],
   description: 'Manage Vercel Connect connectors',

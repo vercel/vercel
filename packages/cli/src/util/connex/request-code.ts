@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import type Client from '../client';
 import sleep from '../sleep';
 
-export interface ConnectResult {
+export interface ConnexResult {
   status: 'pending' | 'partial' | 'success' | 'error';
   progress?: string;
   data?: Record<string, unknown>;
@@ -29,13 +29,13 @@ export function generateRequestCode(): {
 }
 
 /**
- * Polls `GET /v1/connect/result/{verifier}` until the request code resolves
+ * Polls `GET /v1/connex/result/{verifier}` until the request code resolves
  * to success or error, or the timeout is reached.
  *
  * Returns the result data on success, or null on failure (error is
  * printed to output).
  */
-export async function awaitConnectResult(
+export async function awaitConnexResult(
   client: Client,
   verifier: string
 ): Promise<Record<string, unknown> | null> {
@@ -46,8 +46,8 @@ export async function awaitConnectResult(
   while (Date.now() < deadline) {
     await sleep(POLL_INTERVAL_MS);
     try {
-      const result = await client.fetch<ConnectResult>(
-        `/v1/connect/result/${encodeURIComponent(verifier)}`
+      const result = await client.fetch<ConnexResult>(
+        `/v1/connex/result/${encodeURIComponent(verifier)}`
       );
 
       if (result.status === 'success' && result.data) {
