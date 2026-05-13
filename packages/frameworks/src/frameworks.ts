@@ -1920,9 +1920,10 @@ export const frameworks = [
     website: 'https://tanstack.com/start',
     supersedes: ['ionic-react', 'vite'],
     detectors: {
-      every: [
-        { matchPackage: '@tanstack/router-plugin' },
-        { matchPackage: 'nitro' },
+      every: [{ matchPackage: '@tanstack/router-plugin' }],
+      some: [
+        { matchPackage: '@tanstack/react-start' },
+        { matchPackage: '@tanstack/solid-start' },
       ],
     },
     settings: {
