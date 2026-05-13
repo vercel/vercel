@@ -15,11 +15,14 @@ Refresh the `vc` setup-and-link flow and post-deploy output for clarity and visu
 - The `In which directory is your code located?` prompt now only fires when (a) the current directory is a workspace (monorepo with multiple packages), or (b) the user explicitly chose "Choose a different root directory" via the inferred-services picker. Single-app projects default the root to `.`.
 
 **Output format**
-- `Auto-detected Project Settings for X` line replaced with a single bold `Detected X (Build Command: …, Output Directory: …)` line. Title Case labels match the checkbox panel below.
+- `Auto-detected Project Settings for X` line replaced with a single bold `Detected X (Build Command: …, Output Directory: …)` line. Title Case labels match the checkbox panel below. Only `Detected` is bold; framework name and parens render plain/dim.
 - Introduced a new aligned-label format for status output via the `printAlignedLabel` helper (12-char bold label column, value column at terminal column 14). Applied to `Linked` / `Inspect` / `Production` / `Preview` / `Aliased` / `Added` rows.
+- `vc redeploy` output now uses the same aligned-label format as `vc deploy` — `Inspect` / `Production` / `Preview` / `Aliased` rows are consistent across both commands. No more emoji-prefix / aligned-label mixing in the same session.
+- `vc link --repo` info messages (`No Projects are linked…`, `Found N Project(s) linked…`, `Detected N new Project(s)…`, `Created new Project: …`) dropped the gray `> ` prefix and now use the 2-space indent that matches the rest of the link/setup flow.
+- Path-in-prompt for `vc link --repo` confirm message uses `chalk.dim` instead of `chalk.cyan` — paths are not URLs, so dim is the correct treatment per the color rules (cyan reserved for URLs).
 - Introduced a "gutter" semantic system: column 0 is reserved for semantic glyphs. `▲` marks Production deploys (`▲ Production  URL`) and breaks out of the indent — bookending the session with the `▲` brand mark at the top. Preview deploys stay in-column without the triangle.
 - Added a terminal `✓ Ready in Xs` line at deploy completion (green ✓ at column 0, bold `Ready`, dim duration). Skipped when `--no-wait` is set and the deployment hasn't reached READY yet.
-- Dropped the emoji prefixes (`🔗`, `🔍`, `⏳`) on Linked / Inspect / Production rows.
+- Dropped the emoji prefixes (`🔗`, `🔍`, `⏳`) on Linked / Inspect / Production rows (across both `vc deploy` and `vc redeploy`).
 - Dropped the `(created .vercel and added it to .gitignore)` parenthetical from `Linked` — `git status` surfaces it on demand.
 - Dropped the `[Xs]` timing suffix from URL lines. URLs are results, not operations — timing belongs on the build / ready signal.
 

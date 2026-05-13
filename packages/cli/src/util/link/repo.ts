@@ -255,10 +255,10 @@ async function discoverRepoProjects(
   const promptAction = existingRemoteName ? 'add' : 'link';
   const confirmMessage =
     promptAction === 'add'
-      ? `Add Project(s) for Git repository at ${chalk.cyan(
+      ? `Add Project(s) for Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )}?`
-      : `Link Git repository at ${chalk.cyan(
+      : `Link Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )} to your Project(s)?`;
 
@@ -304,16 +304,16 @@ async function discoverRepoProjects(
   }
 
   if (projects.length === 0) {
-    output.log(
-      `No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.`
+    output.print(
+      `  No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.\n`
     );
   } else {
-    output.log(
-      `Found ${pluralize(
+    output.print(
+      `  Found ${pluralize(
         'Project',
         projects.length,
         true
-      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
+      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}\n`
     );
   }
 
@@ -337,12 +337,12 @@ async function discoverRepoProjects(
     0
   );
   if (detectedProjectsCount > 0) {
-    output.log(
-      `Detected ${pluralize(
+    output.print(
+      `  Detected ${pluralize(
         'new Project',
         detectedProjectsCount,
         true
-      )} that may be created.`
+      )} that may be created.\n`
     );
   }
 
@@ -420,12 +420,12 @@ async function discoverRepoProjects(
       parsedRepoUrl.provider,
       `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
     );
-    output.log(
-      `Created new Project: ${output.link(
+    output.print(
+      `  Created new Project: ${output.link(
         orgAndName,
         `https://vercel.com/${orgAndName}`,
         { fallback: false }
-      )}`
+      )}\n`
     );
   }
 
