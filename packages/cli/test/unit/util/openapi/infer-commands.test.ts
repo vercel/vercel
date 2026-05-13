@@ -8,12 +8,15 @@ import { client } from '../../../mocks/client';
 import { OpenApiCache } from '../../../../src/util/openapi/openapi-cache';
 import type { EndpointInfo } from '../../../../src/util/openapi/types';
 import * as linkUtils from '../../../../src/util/projects/link';
+import { Router } from 'express';
 
 describe('inferCommands', () => {
   const commands = inferCommands({
     projects: {
+      name: 'projects',
+      aliases: ['project'],
       list: {
-        alias: ['ls', 'all'],
+        value: 'ls',
         arguments: {
           'bodyFields.name': {
             required: true,
@@ -65,19 +68,31 @@ describe('inferCommands', () => {
         tag: 'projects',
         operationId: 'list',
         config: expect.objectContaining({
-          alias: ['ls', 'all'],
+          value: 'ls',
         }),
       })
     );
   });
 
-  it('resolves a configured alias to the operationId', () => {
+  it('resolves a configured value to the operationId', () => {
     expect(resolveInferredCommand(commands, ['projects', 'ls'])).toEqual(
       expect.objectContaining({
         tag: 'projects',
         operationId: 'list',
         config: expect.objectContaining({
-          alias: ['ls', 'all'],
+          value: 'ls',
+        }),
+      })
+    );
+  });
+
+  it('resolves a configured tag alias to the operationId', () => {
+    expect(resolveInferredCommand(commands, ['project', 'ls'])).toEqual(
+      expect.objectContaining({
+        tag: 'projects',
+        operationId: 'list',
+        config: expect.objectContaining({
+          value: 'ls',
         }),
       })
     );
@@ -105,7 +120,16 @@ describe('inferCommands', () => {
     const output = client.stderr.getFullOutput();
     expect(output).toContain('Inferred OpenAPI operations for "projects"');
     expect(output).toContain('list');
-    expect(output).toContain('ls, all');
+    expect(output).toContain('ls');
+  });
+
+  it('prints operation ids when a tag alias is provided', async () => {
+    const exitCode = await runInferredCommand(commands, ['project']);
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Inferred OpenAPI operations for "projects"');
+    expect(output).toContain('vercel projects');
+    expect(output).toContain('project');
   });
 
   it('short-circuits dispatch and prints context plus request preview', async () => {
@@ -157,7 +181,7 @@ describe('inferCommands', () => {
     expect(output).not.toContain('"metadata"');
   });
 
-  it('prints matched alias when alias token is used', async () => {
+  it('prints matched value when value token is used', async () => {
     vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
     vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
       listEndpoint,
@@ -168,7 +192,33 @@ describe('inferCommands', () => {
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('"operationId": "list"');
-    expect(output).toContain('"matchedAlias": "ls"');
+    expect(output).toContain('"value": "ls"');
+    expect(output).toContain('"matchedValue": "ls"');
+  });
+
+  it('executes the inferred API request when a client is provided', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ id: 'prj_123' }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(commands, ['projects', 'ls'], {
+      client,
+      api: client.apiUrl,
+    });
+    expect(exitCode).toBe(0);
+    expect(client.stdout.getFullOutput()).toContain('"projects"');
+    expect(client.stderr.getFullOutput()).not.toContain('"request"');
   });
 
   it('prints formatted request preview when dry-run is enabled', async () => {
@@ -202,11 +252,50 @@ describe('inferCommands', () => {
     expect(output).not.toContain('"tag": "projects"');
   });
 
+  it('infers teamId from default team when no scope flag is passed', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue(null);
+
+    const scenario = Router();
+    scenario.get('/v2/user', (_req, res) => {
+      res.status(200).json({
+        user: {
+          id: 'usr_123',
+          username: 'tester',
+          email: 'tester@example.com',
+          version: 'northstar',
+          defaultTeamId: 'team_default_123',
+        },
+      });
+    });
+    client.useScenario(scenario);
+
+    const exitCode = await runInferredCommand(
+      commands,
+      ['projects', 'ls', '--dry-run'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('teamSource');
+    expect(output).toContain('default-team');
+    expect(output).toContain('Request Query:');
+    expect(output).toContain('teamId');
+    expect(output).toContain('team_default_123');
+  });
+
   it('maps teamId arguments to team in output and request path', async () => {
     const commandsWithTeamArgument = inferCommands({
       teams: {
         getTeam: {
-          alias: ['inspect'],
+          value: 'inspect',
           arguments: {
             'path.teamId': {
               required: 'team',
@@ -295,7 +384,7 @@ describe('inferCommands', () => {
     const commandsWithoutOptions = inferCommands({
       projects: {
         list: {
-          alias: ['ls'],
+          value: 'ls',
           arguments: {
             'bodyFields.name': {
               required: true,

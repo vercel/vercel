@@ -2,11 +2,14 @@ import output from '../../output-manager';
 import {
   help as renderHelp,
   type Command,
+  type CommandArgument,
   type CommandOption,
 } from '../../commands/help';
+import { formatOutput } from '../../commands/api/request-builder';
 import chalk from 'chalk';
 import { homedir } from 'os';
 import { isAbsolute, resolve as resolvePath } from 'path';
+import type Client from '../client';
 import type {
   OpenApiCommandTag,
   OpenApiInputNamesByTagOperation,
@@ -16,16 +19,22 @@ import { OpenApiCache } from './openapi-cache';
 import { resolveEndpointByTagAndOperationId } from './resolve-by-tag-operation';
 import type { BodyField, Parameter } from './types';
 import { getLinkFromDir, getVercelDirectory } from '../projects/link';
+import getUser from '../get-user';
 
 type OptionalRecord<K extends PropertyKey, V> = {
   [P in K]?: V;
 };
 
 export interface InferredCommandConfig {
-  alias: string[];
+  value?: string;
   arguments?: Record<string, InferredCommandParamConfig | undefined>;
   options?: Record<string, InferredCommandParamConfig | undefined>;
   examples?: InferredCommandExample[];
+}
+
+export interface InferredTagConfig {
+  name?: string;
+  aliases?: string[];
 }
 
 export interface InferredCommandParamConfig {
@@ -70,13 +79,16 @@ type KnownOperationsByTag<Tag extends OpenApiCommandTag> = {
   >;
 };
 
+type KnownTagConfig<Tag extends OpenApiCommandTag> = InferredTagConfig &
+  KnownOperationsByTag<Tag> &
+  Record<string, InferredCommandConfig | undefined>;
+
 type KnownInferredCommands = {
-  [Tag in OpenApiCommandTag]?: KnownOperationsByTag<Tag> &
-    Record<string, InferredCommandConfig | undefined>;
+  [Tag in OpenApiCommandTag]?: KnownTagConfig<Tag>;
 };
 
 export type InferredCommands = KnownInferredCommands &
-  Record<string, Record<string, InferredCommandConfig | undefined> | undefined>;
+  Record<string, (InferredTagConfig & Record<string, unknown>) | undefined>;
 
 export function inferCommands<const T extends InferredCommands>(
   commands: T
@@ -86,6 +98,8 @@ export function inferCommands<const T extends InferredCommands>(
 
 type ResolvedInferredCommand = {
   tag: string;
+  tagName: string;
+  tagAliases: string[];
   operationId: string;
   config: InferredCommandConfig;
 };
@@ -119,6 +133,8 @@ type InferredOperationMetadata = {
 };
 
 type RunInferredCommandOptions = {
+  client?: Client;
+  execute?: boolean;
   help?: boolean;
   columns?: number;
   dryRun?: boolean;
@@ -149,7 +165,10 @@ type NormalizedParamDefinition = {
 type InferredCommandContext = {
   cwd: string;
   project: { id: string } | null;
-  team: { value: string; source: '--scope' | '--team' | 'link' } | null;
+  team: {
+    value: string;
+    source: '--scope' | '--team' | 'link' | 'current-team' | 'default-team';
+  } | null;
 };
 
 type RequestPreview = {
@@ -163,7 +182,7 @@ type RequestPreview = {
 type InferredDryRunPreview = {
   tag: string;
   operationId: string;
-  matchedAlias: string | null;
+  matchedValue: string | null;
   context: InferredCommandContext;
   provided: {
     arguments: Record<string, string>;
@@ -176,7 +195,15 @@ type InferredDryRunPreview = {
 
 type TagOperationOverview = {
   operationId: string;
+  value: string;
+  arguments: CommandArgument[];
+};
+
+type ResolvedTagConfig = {
+  key: string;
+  name: string;
   aliases: string[];
+  operations: Record<string, InferredCommandConfig>;
 };
 
 function getDefaultOutputName(inputKey: string): string {
@@ -366,7 +393,8 @@ function resolveCommandCwd(cwdOverride: string | undefined): string {
 async function resolveInferredContext(
   cwdOverride: string | undefined,
   scopeOverride: string | undefined,
-  teamOverride: string | undefined
+  teamOverride: string | undefined,
+  client?: Client
 ): Promise<InferredCommandContext> {
   const cwd = resolveCommandCwd(cwdOverride);
 
@@ -380,6 +408,28 @@ async function resolveInferredContext(
   }
 
   const scopeValue = scopeOverride ?? teamOverride;
+  let teamFromClient: InferredCommandContext['team'] = null;
+
+  if (!scopeValue && !linkedProject?.orgId && client?.config.currentTeam) {
+    teamFromClient = {
+      value: client.config.currentTeam,
+      source: 'current-team',
+    };
+  }
+
+  if (!scopeValue && !linkedProject?.orgId && !teamFromClient && client) {
+    try {
+      const user = await getUser(client);
+      if (user.version === 'northstar' && user.defaultTeamId) {
+        teamFromClient = {
+          value: user.defaultTeamId,
+          source: 'default-team',
+        };
+      }
+    } catch {
+      // Best-effort fallback only; command execution can proceed without team context.
+    }
+  }
 
   return {
     cwd,
@@ -398,7 +448,7 @@ async function resolveInferredContext(
             value: linkedProject.orgId,
             source: 'link',
           }
-        : null,
+        : teamFromClient,
   };
 }
 
@@ -481,7 +531,7 @@ function renderListSection(title: string, values: string[]): string {
 function printDryRunPreview(preview: InferredDryRunPreview): void {
   const sections = [
     chalk.bold(
-      `Inferred command dry run: ${preview.tag} ${preview.matchedAlias ?? preview.operationId}`
+      `Inferred command dry run: ${preview.tag} ${preview.matchedValue ?? preview.operationId}`
     ),
     renderKeyValueSection('Request', [
       ['tag', preview.tag],
@@ -509,44 +559,171 @@ function printDryRunPreview(preview: InferredDryRunPreview): void {
   output.print(sections.join('\n\n'));
 }
 
+function isEnabledFlag(value: string | boolean | undefined): boolean {
+  return value === true || value === '' || value === 'true';
+}
+
+async function executeInferredRequest(
+  client: Client,
+  request: RequestPreview,
+  parsedOptions: Record<string, string | boolean>
+): Promise<number> {
+  if (!request.url || !request.method) {
+    output.error('Could not resolve inferred OpenAPI request.');
+    return 1;
+  }
+
+  const method = request.method.toUpperCase();
+  const hasBody =
+    Object.keys(request.body).length > 0 &&
+    method !== 'GET' &&
+    method !== 'HEAD';
+
+  if (isEnabledFlag(parsedOptions.verbose)) {
+    output.debug(`Request: ${method} ${request.url}`);
+    if (hasBody) {
+      output.debug(`Body: ${JSON.stringify(request.body)}`);
+    }
+  }
+
+  try {
+    const confirmed = await client.confirmMutatingOperation(
+      request.url,
+      method
+    );
+    if (!confirmed) {
+      return 1;
+    }
+
+    const response = await client.fetch(request.url, {
+      method,
+      body: hasBody ? request.body : undefined,
+      headers: {},
+      json: false,
+    });
+
+    if (isEnabledFlag(parsedOptions.include)) {
+      client.stdout.write(`HTTP ${response.status} ${response.statusText}\n`);
+      response.headers.forEach((value, key) => {
+        client.stdout.write(`${key}: ${value}\n`);
+      });
+      client.stdout.write('\n');
+    }
+
+    if (isEnabledFlag(parsedOptions.silent)) {
+      return 0;
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const body = await response.json();
+      client.stdout.write(
+        `${formatOutput(body, { raw: isEnabledFlag(parsedOptions.raw) })}\n`
+      );
+      return 0;
+    }
+
+    const body = await response.text();
+    client.stdout.write(body.endsWith('\n') ? body : `${body}\n`);
+    return 0;
+  } catch (error) {
+    output.prettyError(error);
+    return 1;
+  }
+}
+
 function stripHelpTokens(args: string[]): string[] {
   return args.filter(token => token !== '-h' && token !== '--help');
 }
 
-function getConfiguredTags(commands: InferredCommands): string[] {
-  return Object.entries(commands)
-    .filter(([_tag, operations]) => {
-      if (!operations) {
-        return false;
-      }
-      return Object.values(operations).some(config => Boolean(config));
-    })
-    .map(([tag]) => tag)
-    .sort((a, b) => a.localeCompare(b));
+function getCommandValue(
+  operationId: string,
+  config: InferredCommandConfig
+): string {
+  return config.value ?? operationId;
 }
 
-function getTagOperations(
-  commands: InferredCommands,
-  tag: string
-): TagOperationOverview[] {
-  const operations = commands[tag];
-  if (!operations) {
-    return [];
+function isInferredCommandConfig(
+  value: unknown
+): value is InferredCommandConfig {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function toResolvedTagConfig(
+  key: string,
+  config: (InferredTagConfig & Record<string, unknown>) | undefined
+): ResolvedTagConfig | null {
+  if (!config) {
+    return null;
   }
 
-  return Object.entries(operations)
+  const entries = Object.entries(config).filter(
+    ([entryKey, entryValue]) =>
+      entryKey !== 'name' &&
+      entryKey !== 'aliases' &&
+      isInferredCommandConfig(entryValue)
+  );
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return {
+    key,
+    name: config.name ?? key,
+    aliases: config.aliases ?? [],
+    operations: Object.fromEntries(entries) as Record<
+      string,
+      InferredCommandConfig
+    >,
+  };
+}
+
+function getResolvedTags(commands: InferredCommands): ResolvedTagConfig[] {
+  return Object.entries(commands)
+    .map(([key, config]) => toResolvedTagConfig(key, config))
+    .filter((tag): tag is ResolvedTagConfig => Boolean(tag))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function getConfiguredTags(commands: InferredCommands): ResolvedTagConfig[] {
+  return getResolvedTags(commands);
+}
+
+function resolveTagConfig(
+  commands: InferredCommands,
+  tagToken: string
+): ResolvedTagConfig | null {
+  return (
+    getResolvedTags(commands).find(
+      tag =>
+        tagToken === tag.name ||
+        tagToken === tag.key ||
+        tag.aliases.includes(tagToken)
+    ) ?? null
+  );
+}
+
+function getTagOperations(tag: ResolvedTagConfig): TagOperationOverview[] {
+  return Object.entries(tag.operations)
     .filter(([_operationId, config]) => Boolean(config))
     .map(([operationId, config]) => ({
       operationId,
-      aliases: config?.alias ?? [],
+      value: getCommandValue(operationId, config),
+      arguments: normalizeParamDefinitions(config.arguments, 'arguments').map(
+        definition => ({
+          name: definition.outputName,
+          required: definition.config.required === true,
+        })
+      ),
     }))
     .sort((a, b) => a.operationId.localeCompare(b.operationId));
 }
 
 function printTagsOverview(commands: InferredCommands): number {
   const rows: Array<[string, string]> = getConfiguredTags(commands).map(tag => [
-    tag,
-    `${getTagOperations(commands, tag).length} operations`,
+    tag.name,
+    `${getTagOperations(tag).length} operations`,
   ]);
   output.print(
     `${chalk.bold('Inferred OpenAPI tags')}\n\n${renderSectionRows(rows)}\n`
@@ -555,24 +732,34 @@ function printTagsOverview(commands: InferredCommands): number {
 }
 
 function printTagOperationsOverview(
-  commands: InferredCommands,
-  tag: string
+  tag: ResolvedTagConfig,
+  columns: number
 ): number {
-  const operations = getTagOperations(commands, tag);
-  const rows: Array<[string, string]> = operations.map(operation => [
-    operation.operationId,
-    operation.aliases.length > 0
-      ? operation.aliases.join(', ')
-      : chalk.gray('(no aliases)'),
-  ]);
-  output.print(
-    [
-      chalk.bold(`Inferred OpenAPI operations for "${tag}"`),
-      '',
-      renderSectionRows(rows),
-      '',
-    ].join('\n')
-  );
+  const operations = getTagOperations(tag);
+  const subcommands: Command[] = operations.map(operation => ({
+    name: operation.value,
+    aliases:
+      operation.value === operation.operationId ? [] : [operation.operationId],
+    description: `OpenAPI operationId: ${operation.operationId}`,
+    arguments: operation.arguments,
+    options: [],
+    examples: [],
+  }));
+
+  const command: Command = {
+    name: tag.name,
+    aliases: [
+      tag.key,
+      ...tag.aliases.filter(alias => alias !== tag.key && alias !== tag.name),
+    ].filter(alias => alias !== tag.name),
+    description: `Inferred OpenAPI operations for "${tag.name}"`,
+    arguments: [],
+    subcommands,
+    options: [],
+    examples: [],
+  };
+
+  output.print(renderHelp(command, { columns }));
   return 0;
 }
 
@@ -603,13 +790,18 @@ function buildRequestPreview(
     definition: NormalizedParamDefinition,
     providedValue: string | boolean | undefined
   ) => {
+    const implicitTeamValue =
+      definition.source.location === 'query' &&
+      definition.source.name === 'teamId'
+        ? context.team?.value
+        : undefined;
     const value =
       providedValue ??
       (definition.config.required === 'project'
         ? context.project?.id
         : definition.config.required === 'team'
           ? context.team?.value
-          : undefined);
+          : implicitTeamValue);
 
     if (value === undefined || definition.source.location === null) {
       return;
@@ -664,64 +856,22 @@ function getRequiredHint(
   required: InferredCommandParamConfig['required']
 ): string {
   if (required === true) {
-    return 'Required.';
+    return 'Required';
   }
   if (required === 'project') {
-    return 'Required when project context cannot infer it.';
+    return 'Required if project context is missing';
   }
   if (required === 'team') {
-    return 'Required when team context cannot infer it.';
+    return 'Required if team context is missing';
   }
-  return 'Optional.';
-}
-
-function buildMetadataByName(
-  metadata: InferredOperationMetadata | null
-): Record<string, { type: string | null; description: string | null }> {
-  if (!metadata) {
-    return {};
-  }
-
-  const byName: Record<
-    string,
-    { type: string | null; description: string | null }
-  > = {};
-  const sources = [
-    ...metadata.params.path,
-    ...metadata.params.query,
-    ...metadata.params.header,
-    ...metadata.params.cookie,
-    ...metadata.bodyFields,
-  ];
-
-  for (const item of sources) {
-    if (!byName[item.name]) {
-      byName[item.name] = {
-        type: item.type,
-        description: item.description,
-      };
-    }
-  }
-
-  return byName;
+  return 'Optional';
 }
 
 function toHelpOption(
   name: string,
-  config: InferredCommandParamConfig,
-  metadataByName: Record<
-    string,
-    { type: string | null; description: string | null }
-  >
+  config: InferredCommandParamConfig
 ): CommandOption {
-  const metadata =
-    metadataByName[name] ??
-    (name === 'team' || name === 'scope' ? metadataByName.teamId : undefined);
-  const descriptionParts = [
-    metadata?.description ?? null,
-    metadata?.type ? `Type: ${metadata.type}.` : null,
-    getRequiredHint(config.required),
-  ].filter(Boolean);
+  const descriptionParts = [getRequiredHint(config.required)];
 
   return {
     name,
@@ -733,14 +883,10 @@ function toHelpOption(
 }
 
 function buildHelpOptions(
-  normalizedOptions: Record<string, InferredCommandParamConfig>,
-  metadataByName: Record<
-    string,
-    { type: string | null; description: string | null }
-  >
+  normalizedOptions: Record<string, InferredCommandParamConfig>
 ): CommandOption[] {
   return Object.entries(normalizedOptions).map(([name, config]) =>
-    toHelpOption(name, config, metadataByName)
+    toHelpOption(name, config)
   );
 }
 
@@ -750,16 +896,19 @@ function printInferredCommandHelp(
   metadata: InferredOperationMetadata | null,
   columns: number
 ): number {
-  const commandName = cliArgs[1] ?? resolved.operationId;
+  const commandName =
+    cliArgs[1] ?? getCommandValue(resolved.operationId, resolved.config);
   const normalizedArguments =
     normalizeParamConfigs(resolved.config.arguments, 'arguments') ?? {};
   const normalizedOptions =
     normalizeParamConfigs(resolved.config.options, 'options') ?? {};
-  const metadataByName = buildMetadataByName(metadata);
+  const aliases = Array.from(
+    new Set([resolved.operationId, resolved.config.value].filter(Boolean))
+  ).filter(name => name !== commandName) as string[];
 
   const command: Command = {
     name: commandName,
-    aliases: commandName === resolved.operationId ? [] : [resolved.operationId],
+    aliases,
     description:
       metadata?.summary ||
       metadata?.description ||
@@ -768,14 +917,14 @@ function printInferredCommandHelp(
       name,
       required: config.required === true,
     })),
-    options: buildHelpOptions(normalizedOptions, metadataByName),
+    options: buildHelpOptions(normalizedOptions),
     examples: resolved.config.examples ?? [],
   };
 
   const parent: Command = {
-    name: resolved.tag,
-    aliases: [],
-    description: `OpenAPI tag "${resolved.tag}"`,
+    name: resolved.tagName,
+    aliases: resolved.tagAliases.filter(alias => alias !== resolved.tagName),
+    description: `OpenAPI tag "${resolved.tagName}"`,
     arguments: [],
     options: [],
     examples: [],
@@ -794,33 +943,39 @@ export function resolveInferredCommand(
   commands: InferredCommands,
   cliArgs: string[]
 ): ResolvedInferredCommand | null {
-  const [tag, operationToken] = cliArgs;
-  if (!tag || !operationToken) {
+  const [tagToken, operationToken] = cliArgs;
+  if (!tagToken || !operationToken) {
     return null;
   }
 
-  const commandsByTag = commands[tag];
-  if (!commandsByTag) {
+  const tag = resolveTagConfig(commands, tagToken);
+  if (!tag) {
     return null;
   }
 
-  const directMatch = commandsByTag[operationToken];
+  const directMatch = tag.operations[operationToken];
   if (directMatch) {
     return {
-      tag,
+      tag: tag.key,
+      tagName: tag.name,
+      tagAliases: [tag.key, ...tag.aliases].filter(alias => alias !== tag.name),
       operationId: operationToken,
       config: directMatch,
     };
   }
 
-  for (const [operationId, config] of Object.entries(commandsByTag)) {
+  for (const [operationId, config] of Object.entries(tag.operations)) {
     if (!config) {
       continue;
     }
 
-    if (config.alias.includes(operationToken)) {
+    if (getCommandValue(operationId, config) === operationToken) {
       return {
-        tag,
+        tag: tag.key,
+        tagName: tag.name,
+        tagAliases: [tag.key, ...tag.aliases].filter(
+          alias => alias !== tag.name
+        ),
         operationId,
         config,
       };
@@ -910,19 +1065,24 @@ export async function runInferredCommand(
     cliArgs.includes('-h') ||
     cliArgs.includes('--help');
   const commandArgs = stripHelpTokens(cliArgs);
-  const [tag, operationToken] = commandArgs;
+  const [tagToken, operationToken] = commandArgs;
 
-  if (!tag) {
+  if (options.execute === false && !helpRequested) {
+    return null;
+  }
+
+  if (!tagToken) {
     if (helpRequested) {
       return printTagsOverview(commands);
     }
     return null;
   }
 
-  const operationsForTag = getTagOperations(commands, tag);
+  const resolvedTag = resolveTagConfig(commands, tagToken);
+  const operationsForTag = resolvedTag ? getTagOperations(resolvedTag) : [];
   if (!operationToken) {
-    if (operationsForTag.length > 0) {
-      return printTagOperationsOverview(commands, tag);
+    if (resolvedTag && operationsForTag.length > 0) {
+      return printTagOperationsOverview(resolvedTag, options.columns ?? 80);
     }
     if (helpRequested) {
       return printTagsOverview(commands);
@@ -932,8 +1092,8 @@ export async function runInferredCommand(
 
   const resolved = resolveInferredCommand(commands, commandArgs);
   if (!resolved) {
-    if (helpRequested && operationsForTag.length > 0) {
-      return printTagOperationsOverview(commands, tag);
+    if (helpRequested && resolvedTag && operationsForTag.length > 0) {
+      return printTagOperationsOverview(resolvedTag, options.columns ?? 80);
     }
     return null;
   }
@@ -1016,7 +1176,8 @@ export async function runInferredCommand(
   const context = await resolveInferredContext(
     typeof parsedOptions.cwd === 'string' ? parsedOptions.cwd : undefined,
     typeof parsedOptions.scope === 'string' ? parsedOptions.scope : undefined,
-    typeof parsedOptions.team === 'string' ? parsedOptions.team : undefined
+    typeof parsedOptions.team === 'string' ? parsedOptions.team : undefined,
+    options.client
   );
 
   const request = buildRequestPreview(
@@ -1040,7 +1201,7 @@ export async function runInferredCommand(
     printDryRunPreview({
       tag: resolved.tag,
       operationId: resolved.operationId,
-      matchedAlias:
+      matchedValue:
         resolved.operationId === commandArgs[1]
           ? null
           : (commandArgs[1] ?? null),
@@ -1058,13 +1219,17 @@ export async function runInferredCommand(
     return 0;
   }
 
+  if (options.client) {
+    return executeInferredRequest(options.client, request, parsedOptions);
+  }
+
   output.print(
     JSON.stringify(
       {
         tag: resolved.tag,
         operationId: resolved.operationId,
-        alias: resolved.config.alias,
-        matchedAlias:
+        value: getCommandValue(resolved.operationId, resolved.config),
+        matchedValue:
           resolved.operationId === commandArgs[1]
             ? null
             : (commandArgs[1] ?? null),

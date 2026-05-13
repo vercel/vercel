@@ -267,6 +267,7 @@ const main = async () => {
     inferredOpenApiCommands,
     rawCliArgs,
     {
+      execute: false,
       help:
         rawCliArgs.includes('-h') ||
         rawCliArgs.includes('--help') ||
@@ -882,6 +883,35 @@ const main = async () => {
 
       client.config.currentTeam = related.id;
     }
+  }
+
+  const inferredCommandExecutionExitCode = await runInferredCommand(
+    inferredOpenApiCommands,
+    rawCliArgs,
+    {
+      client,
+      help:
+        rawCliArgs.includes('-h') ||
+        rawCliArgs.includes('--help') ||
+        Boolean(parsedArgs.flags['--help']),
+      columns: process.stderr.columns ?? 80,
+      cwd:
+        typeof parsedArgs.flags['--cwd'] === 'string'
+          ? parsedArgs.flags['--cwd']
+          : undefined,
+      scope:
+        typeof parsedArgs.flags['--scope'] === 'string'
+          ? parsedArgs.flags['--scope']
+          : undefined,
+      team:
+        typeof parsedArgs.flags['--team'] === 'string'
+          ? parsedArgs.flags['--team']
+          : undefined,
+      api: client.apiUrl,
+    }
+  );
+  if (inferredCommandExecutionExitCode !== null) {
+    return finishWithExitCode(inferredCommandExecutionExitCode);
   }
 
   let exitCode;
