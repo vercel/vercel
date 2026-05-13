@@ -25,7 +25,7 @@ from vercel.workers._queue.send import (
     get_queue_base_url,
     get_queue_token,
 )
-from vercel.workers._queue.types import ReceivedMessage
+from vercel.workers._queue.types import ParsedV2BetaCallback, ReceivedMessage
 
 
 def parse_retry_after(response: httpx.Response) -> int | None:
@@ -290,6 +290,46 @@ def receive_message_by_id(
     return payload, delivery_count, timestamp, receipt_handle  # type: ignore[return-value]
 
 
+def resolve_v2beta_message(
+    parsed: ParsedV2BetaCallback,
+    *,
+    visibility_timeout_seconds: int | None = None,
+    timeout: float | None = 10.0,
+) -> ParsedV2BetaCallback:
+    """
+    Ensure a parsed v2beta callback carries a payload and receipt handle.
+
+    Vercel Queues v2beta can delivers messages in 2 modes:
+
+    - Inline: the HTTP body carries the payload and
+      ``ce-vqsreceipthandle`` / ``ce-vqsdeliverycount`` / ``ce-vqscreatedat``
+      headers are present.
+    - Metadata-only: the HTTP body is empty and the payload-related headers
+      are absent. The SDK is expected to call ``receive_message_by_id``
+      to fetch the message body and obtain a receipt handle.
+
+    Returns the input unchanged when the inline mode delivered everything;
+    otherwise returns a new dict augmented with the fetched fields.
+    """
+    if parsed["receiptHandle"]:
+        return parsed
+
+    payload, delivery_count, created_at, receipt_handle = receive_message_by_id(
+        parsed["queueName"],
+        parsed["consumerGroup"],
+        parsed["messageId"],
+        visibility_timeout_seconds=visibility_timeout_seconds,
+        timeout=timeout,
+    )
+    return {
+        **parsed,
+        "receiptHandle": receipt_handle,
+        "deliveryCount": delivery_count,
+        "createdAt": created_at,
+        "payload": payload,
+    }
+
+
 def delete_message(
     queue_name: str,
     consumer_group: str,
@@ -483,4 +523,5 @@ __all__ = [
     "parse_retry_after",
     "receive_message_by_id",
     "receive_messages",
+    "resolve_v2beta_message",
 ]
