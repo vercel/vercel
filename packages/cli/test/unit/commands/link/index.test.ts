@@ -1978,6 +1978,12 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Name?');
       client.stdin.write(`${basename(cwd)}\n`);
+      // Tmp dir has no detectable framework at the root, so the
+      // root-directory prompt now fires (nested-monolith guard).
+      await expect(client.stderr).toOutput(
+        'In which directory is your code located?'
+      );
+      client.stdin.write('\n');
       await expect(client.stderr).toOutput('Customize settings?');
       client.stdin.write('\n');
 

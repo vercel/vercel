@@ -12,7 +12,7 @@ Refresh the `vc` setup-and-link flow and post-deploy output for clarity and visu
 
 **Flow changes**
 - Removed the `Set up and deploy "/path"?` confirmation prompt. Intent is implied by running `vc`; the path is surfaced as a status line (`  Set up "/path"`) and Ctrl-C remains the escape hatch.
-- The `In which directory is your code located?` prompt now only fires when (a) the current directory is a workspace (monorepo with multiple packages), or (b) the user explicitly chose "Choose a different root directory" via the inferred-services picker. Single-app projects default the root to `.`.
+- The `In which directory is your code located?` prompt now fires when (a) the current directory is a workspace (monorepo with multiple packages), (b) the user explicitly chose "Choose a different root directory" via the inferred-services picker, **or (c) framework detection at the root finds nothing — covers nested-monolith layouts like `repo/app/package.json` where the app lives in a subdir.** Single-app projects with a framework detected at the root still default the root to `.` and skip the prompt.
 
 **Output format**
 - `Auto-detected Project Settings for X` line replaced with a single bold `Detected X (Build Command: …, Output Directory: …)` line. Title Case labels match the checkbox panel below. Only `Detected` is bold; framework name and parens render plain/dim.

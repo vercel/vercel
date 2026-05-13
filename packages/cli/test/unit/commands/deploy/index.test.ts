@@ -1645,6 +1645,12 @@ describe('deploy', () => {
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${nameOption})`);
         client.stdin.write('\n');
+        // Fixture has no detectable framework at the root, so the
+        // root-directory prompt now fires (nested-monolith guard).
+        await expect(client.stderr).toOutput(
+          'In which directory is your code located?'
+        );
+        client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
@@ -1672,6 +1678,12 @@ describe('deploy', () => {
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${directoryName})`);
+        client.stdin.write('\n');
+        // Fixture has no detectable framework at the root, so the
+        // root-directory prompt now fires (nested-monolith guard).
+        await expect(client.stderr).toOutput(
+          'In which directory is your code located?'
+        );
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');

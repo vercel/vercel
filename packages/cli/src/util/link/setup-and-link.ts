@@ -140,6 +140,40 @@ async function hasWorkspaces(cwd: string): Promise<boolean> {
   }
 }
 
+/**
+ * Decides whether to prompt the user for a project root directory.
+ *
+ * Returns true if any of:
+ *  - the user explicitly chose "Choose a different root directory" via the
+ *    inferred-services picker
+ *  - the directory is a workspace (monorepo with multiple packages)
+ *  - framework detection at the root finds nothing — covers nested-monolith
+ *    layouts like `repo/app/package.json` where the app lives in a subdir
+ *
+ * Returns false only for single-app projects with a framework detected at
+ * the root — that's the fast-path the no-prompt optimization targets.
+ */
+export async function shouldPromptForRootDirectory(opts: {
+  path: string;
+  servicesChoice: InferredServicesChoice | null;
+}): Promise<boolean> {
+  if (opts.servicesChoice?.type === 'project-directory') {
+    return true;
+  }
+  if (await hasWorkspaces(opts.path)) {
+    return true;
+  }
+  try {
+    const detected = await detectProjects(opts.path);
+    const frameworksAtRoot = detected.get('') ?? [];
+    return frameworksAtRoot.length === 0;
+  } catch (err) {
+    output.debug(`detectProjects failed at root: ${err}`);
+    // Safer to prompt than to silently misconfigure.
+    return true;
+  }
+}
+
 async function maybePullEnvAfterLink(
   client: Client,
   path: string,
@@ -633,12 +667,15 @@ export default async function setupAndLink(
       } else {
         // Prompt for a root directory when the user explicitly asked for one
         // via the inferred-services picker, or — in the standard flow — when
-        // this is a workspace (monorepo with multiple packages). For
-        // single-app projects we skip the prompt entirely.
-        const shouldPromptForRootDirectory =
-          rootInferredServicesChoice?.type === 'project-directory' ||
-          (await hasWorkspaces(path));
-        if (shouldPromptForRootDirectory) {
+        // this is a workspace (monorepo with multiple packages), or when no
+        // framework is detected at the root (nested monolith layouts like
+        // `repo/app/package.json`). For single-app projects with a framework
+        // at the root we skip the prompt entirely.
+        const shouldPromptRoot = await shouldPromptForRootDirectory({
+          path,
+          servicesChoice: rootInferredServicesChoice,
+        });
+        if (shouldPromptRoot) {
           rootDirectory = await inputRootDirectory(client, path, autoConfirm);
           if (
             rootDirectory &&
