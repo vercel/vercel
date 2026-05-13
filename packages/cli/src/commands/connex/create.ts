@@ -31,14 +31,14 @@ export async function create(
 
   const serviceType = args[0];
   if (!serviceType) {
-    output.error('Missing service type. Usage: vercel connex create <type>');
+    output.error('Missing service type. Usage: vercel connect create <type>');
     return 1;
   }
 
   // Resolve team
   await selectConnexTeam(
     client,
-    'Select the team where you want to create this client'
+    'Select the team where you want to create this connector'
   );
 
   // Get app name from flag or interactive prompt
@@ -46,7 +46,7 @@ export async function create(
   if (!name) {
     if (!client.stdin.isTTY) {
       output.error(
-        'Missing required flag --name. In non-interactive mode, provide --name for the client.'
+        'Missing required flag --name. In non-interactive mode, provide --name for the connector.'
       );
       return 1;
     }
@@ -76,7 +76,7 @@ export async function create(
   let browserUrl: string | undefined;
   try {
     createdClient = await client.fetch<ConnexClient>(
-      '/v1/connex/clients/managed?autoinstall=true',
+      '/v1/connect/connectors/managed?autoinstall=true',
       { method: 'POST', body }
     );
   } catch (err: unknown) {
@@ -86,7 +86,7 @@ export async function create(
     } else if (apiErr.status === 404) {
       output.stopSpinner();
       output.error(
-        'Connex is not enabled for this team. Contact support to enable it.'
+        'Connect is not enabled for this team. Contact support to enable it.'
       );
       return 1;
     } else {
@@ -117,7 +117,7 @@ export async function create(
     ) {
       const clientId = resultFromBrowser.clientId;
       createdClient = await client.fetch<ConnexClient>(
-        `/v1/connex/clients/${clientId}`
+        `/v1/connect/connectors/${clientId}`
       );
     }
     if (
@@ -149,11 +149,11 @@ export async function create(
     );
   } else if (hasBeenInstalled) {
     output.success(
-      `${serviceType} client created and installed: ${createdClient.id} (UID ${createdClient.uid})`
+      `${serviceType} connector created and installed: ${createdClient.id} (UID ${createdClient.uid})`
     );
   } else {
     output.success(
-      `${serviceType} client created: ${createdClient.id} (UID ${createdClient.uid})`
+      `${serviceType} connector created: ${createdClient.id} (UID ${createdClient.uid})`
     );
   }
   return 0;

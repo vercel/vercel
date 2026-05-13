@@ -44,6 +44,7 @@ import type {
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
+import { generateProjectManifest } from './diagnostics';
 import {
   validateConfiguredRuntime,
   entrypointToOutputPath,
@@ -83,6 +84,7 @@ async function downloadInstallAndBundle({
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -118,7 +120,15 @@ async function downloadInstallAndBundle({
     );
   }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnEnv };
+  return {
+    entrypointPath,
+    entrypointFsDirname,
+    nodeVersion,
+    spawnEnv,
+    cliType,
+    lockfilePath,
+    lockfileVersion,
+  };
 }
 
 function renameTStoJS(path: string) {
@@ -444,6 +454,9 @@ export const build = async ({
     entrypointFsDirname,
     nodeVersion,
     spawnEnv,
+    cliType,
+    lockfilePath,
+    lockfileVersion,
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
@@ -601,11 +614,20 @@ export const build = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    const supportsResponseStreaming =
+    // AWS custom handlers can't stream responses. The canonical gate
+    // lives in `@vercel/build-utils`'s `getLambdaSupportsStreaming`, but
+    // the build-container picks that up on its own rollout cadence —
+    // until then this build-time signal is what protects users on the
+    // Node builder. Keep this in sync with the central gate.
+    let supportsResponseStreaming: boolean | undefined;
+    if (awsLambdaHandler) {
+      supportsResponseStreaming = false;
+    } else if (
       (staticConfig?.supportsResponseStreaming ??
         staticConfig?.experimentalResponseStreaming) === true
-        ? true
-        : undefined;
+    ) {
+      supportsResponseStreaming = true;
+    }
 
     const enableBundling =
       process.env.VERCEL_API_FUNCTION_BUNDLING === '1' &&
@@ -688,6 +710,20 @@ export const build = async ({
         process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
         '1',
     });
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write node manifest: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 
   return { routes, output };

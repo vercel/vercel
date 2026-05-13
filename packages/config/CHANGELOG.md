@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.4.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
 ## 0.3.0
 
 ### Minor Changes

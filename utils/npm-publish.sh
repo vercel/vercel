@@ -15,9 +15,25 @@ NPM_TAG=${1:-}
 TARBALL_DIR=$(mktemp -d)
 trap 'rm -rf "$TARBALL_DIR"' EXIT
 
-# Get all public (non-private) workspace packages as JSON from pnpm
+# Get all public (non-private) workspace packages as JSON from pnpm,
+# then order them by pnpm's recursive execution order. This publishes
+# workspace dependencies before their dependents while preserving npm publish
+# for OIDC trusted publishing.
 # Each line: <package-name>\t<path>
-packages=$(pnpm ls -r --depth -1 --json | jq -r '.[] | select(.private != true) | "\(.name)\t\(.path)"')
+package_metadata=$(pnpm ls -r --depth -1 --json)
+topological_paths=$(
+  pnpm --workspace-concurrency=1 recursive exec pwd |
+    jq -R -s 'split("\n") | map(select(length > 0))'
+)
+packages=$(
+  jq -r --argjson topological_paths "$topological_paths" '
+    map(select(.private != true)) as $packages |
+    $topological_paths[] as $path |
+    $packages[] |
+    select(.path == $path) |
+    "\(.name)\t\(.path)"
+  ' <<< "$package_metadata"
+)
 
 if [ -z "$packages" ]; then
   echo "No publishable packages found."

@@ -4,7 +4,7 @@ import { packageName } from '../../util/pkg-name';
 export const createSubcommand = {
   name: 'create',
   aliases: [],
-  description: 'Create a new Connex client',
+  description: 'Create a new connector',
   arguments: [
     {
       name: 'type',
@@ -18,33 +18,33 @@ export const createSubcommand = {
       type: String,
       argument: 'NAME',
       deprecated: false,
-      description: 'Name of the Connex client',
+      description: 'Name of the connector',
     },
     {
       name: 'triggers',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Enable webhook triggers for this client',
+      description: 'Enable webhook triggers for this connector',
     },
     formatOption,
   ],
   examples: [
     {
       name: 'Create a Slack app',
-      value: `${packageName} connex create slack`,
+      value: `${packageName} connect create slack`,
     },
     {
       name: 'Create with a custom name',
-      value: `${packageName} connex create slack --name my-bot`,
+      value: `${packageName} connect create slack --name my-bot`,
     },
     {
       name: 'Create with webhook triggers enabled',
-      value: `${packageName} connex create slack --name my-bot --triggers`,
+      value: `${packageName} connect create slack --name my-bot --triggers`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connex create slack --format=json`,
+      value: `${packageName} connect create slack --format=json`,
     },
   ],
 } as const;
@@ -53,7 +53,7 @@ export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
   description:
-    'List Connex clients linked to the current project (falls back to every client in the team when no project is linked or when --all-projects is set)',
+    'List connectors linked to the current project (falls back to every connector in the team when no project is linked or when --all-projects is set)',
   arguments: [],
   options: [
     {
@@ -62,7 +62,7 @@ export const listSubcommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'List every Connex client in the team, regardless of project link',
+        'List every connector in the team, regardless of project link',
     },
     {
       name: 'limit',
@@ -70,7 +70,7 @@ export const listSubcommand = {
       type: Number,
       argument: 'COUNT',
       deprecated: false,
-      description: 'Number of clients to return per page',
+      description: 'Number of connectors to return per page',
     },
     {
       name: 'next',
@@ -84,24 +84,24 @@ export const listSubcommand = {
   ],
   examples: [
     {
-      name: 'List Connex clients linked to the current project',
-      value: `${packageName} connex list`,
+      name: 'List connectors linked to the current project',
+      value: `${packageName} connect list`,
     },
     {
-      name: 'List every Connex client in the team',
-      value: `${packageName} connex list --all-projects`,
+      name: 'List every connector in the team',
+      value: `${packageName} connect list --all-projects`,
     },
     {
       name: 'Limit the number of results',
-      value: `${packageName} connex list --limit 10`,
+      value: `${packageName} connect list --limit 10`,
     },
     {
       name: 'Fetch the next page of results',
-      value: `${packageName} connex list --next <cursor>`,
+      value: `${packageName} connect list --next <cursor>`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connex list --format=json`,
+      value: `${packageName} connect list --format=json`,
     },
   ],
 } as const;
@@ -109,7 +109,7 @@ export const listSubcommand = {
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
-  description: 'Delete a Connex client',
+  description: 'Delete a connector',
   arguments: [
     {
       name: 'client',
@@ -119,40 +119,41 @@ export const removeSubcommand = {
   options: [
     {
       name: 'disconnect-all',
-      description: 'Disconnects all projects from the client before deletion',
+      description:
+        'Disconnects all projects from the connector before deletion',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,
     },
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when deleting a client',
+      description: 'Skip the confirmation prompt when deleting a connector',
     },
     formatOption,
   ],
   examples: [
     {
-      name: 'Delete a Connex client by ID',
-      value: `${packageName} connex remove scl_abc123`,
+      name: 'Delete a connector by ID',
+      value: `${packageName} connect remove scl_abc123`,
     },
     {
-      name: 'Delete a Connex client by UID',
-      value: `${packageName} connex remove slack/my-bot`,
+      name: 'Delete a connector by UID',
+      value: `${packageName} connect remove slack/my-bot`,
     },
     {
-      name: 'Disconnect all projects from a client, then delete it',
+      name: 'Disconnect all projects from a connector, then delete it',
       value: [
-        `${packageName} connex remove scl_abc123 --disconnect-all`,
-        `${packageName} connex remove slack/my-bot -a`,
+        `${packageName} connect remove scl_abc123 --disconnect-all`,
+        `${packageName} connect remove slack/my-bot -a`,
       ],
     },
     {
       name: 'Skip the confirmation prompt',
-      value: `${packageName} connex remove scl_abc123 --yes`,
+      value: `${packageName} connect remove scl_abc123 --yes`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connex remove scl_abc123 --format=json --yes`,
+      value: `${packageName} connect remove scl_abc123 --format=json --yes`,
     },
   ],
 } as const;
@@ -161,7 +162,7 @@ export const tokenSubcommand = {
   name: 'token',
   aliases: [],
   description:
-    'Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)',
+    'Get a token for a connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)',
   arguments: [
     {
       name: 'id',
@@ -176,7 +177,7 @@ export const tokenSubcommand = {
       argument: 'TYPE',
       deprecated: false,
       description:
-        'Subject type: "user" (default, acts on behalf of you) or "app" (uses the client\'s default installation)',
+        'Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector\'s default installation)',
     },
     {
       name: 'installation-id',
@@ -185,7 +186,7 @@ export const tokenSubcommand = {
       argument: 'ID',
       deprecated: false,
       description:
-        "Target a specific installation (only useful with --subject app; defaults to the client's default installation)",
+        "Target a specific installation (only useful with --subject app; defaults to the connector's default installation)",
     },
     {
       name: 'scopes',
@@ -200,28 +201,28 @@ export const tokenSubcommand = {
   ],
   examples: [
     {
-      name: 'Get a user token by client ID',
-      value: `${packageName} connex token scl_abc123`,
+      name: 'Get a user token by connector ID',
+      value: `${packageName} connect token scl_abc123`,
     },
     {
-      name: 'Get a token by client UID',
-      value: `${packageName} connex token slack/my-bot`,
+      name: 'Get a token by connector UID',
+      value: `${packageName} connect token slack/my-bot`,
     },
     {
       name: 'Get an app token (default installation)',
-      value: `${packageName} connex token scl_abc123 --subject app`,
+      value: `${packageName} connect token scl_abc123 --subject app`,
     },
     {
       name: 'Get an app token for a specific installation',
-      value: `${packageName} connex token scl_abc123 --subject app --installation-id inst_1`,
+      value: `${packageName} connect token scl_abc123 --subject app --installation-id inst_1`,
     },
     {
       name: 'Open the browser automatically if authorization/installation is required',
-      value: `${packageName} connex token scl_abc123 --yes`,
+      value: `${packageName} connect token scl_abc123 --yes`,
     },
     {
       name: 'Output as JSON (includes expiresAt, installationId, etc.)',
-      value: `${packageName} connex token scl_abc123 --format=json`,
+      value: `${packageName} connect token scl_abc123 --format=json`,
     },
   ],
 } as const;
@@ -229,7 +230,7 @@ export const tokenSubcommand = {
 export const openSubcommand = {
   name: 'open',
   aliases: [],
-  description: 'Open a Connex client in the Vercel dashboard',
+  description: 'Open a connector in the Vercel dashboard',
   arguments: [
     {
       name: 'id',
@@ -239,49 +240,109 @@ export const openSubcommand = {
   options: [formatOption],
   examples: [
     {
-      name: 'Open a client by ID',
-      value: `${packageName} connex open scl_abc123`,
+      name: 'Open a connector by ID',
+      value: `${packageName} connect open scl_abc123`,
     },
     {
-      name: 'Open a client by UID',
-      value: `${packageName} connex open slack/my-bot`,
+      name: 'Open a connector by UID',
+      value: `${packageName} connect open slack/my-bot`,
     },
     {
       name: 'Print the dashboard URL as JSON',
-      value: `${packageName} connex open scl_abc123 --format=json`,
+      value: `${packageName} connect open scl_abc123 --format=json`,
+    },
+  ],
+} as const;
+
+export const attachSubcommand = {
+  name: 'attach',
+  aliases: [],
+  description:
+    'Attach a Vercel project to a connector for one or more environments',
+  arguments: [
+    {
+      name: 'client',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: [String],
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
+    },
+    {
+      name: 'project',
+      shorthand: 'p',
+      type: String,
+      argument: 'NAME_OR_ID',
+      deprecated: false,
+      description: 'Project name or ID (default: current linked project)',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Attach the current project to a connector for all environments',
+      value: `${packageName} connect attach scl_abc123`,
+    },
+    {
+      name: 'Restrict to specific environments',
+      value: `${packageName} connect attach scl_abc123 -e production -e preview`,
+    },
+    {
+      name: 'Attach a different project by name',
+      value: `${packageName} connect attach slack/my-bot --project my-app`,
+    },
+    {
+      name: 'Non-interactive output as JSON',
+      value: `${packageName} connect attach scl_abc123 --yes --format=json`,
     },
   ],
 } as const;
 
 export const connexCommand = {
-  name: 'connex',
+  name: 'connect',
   aliases: [],
-  description: 'Manage Vercel Connect clients',
+  description: 'Manage connectors',
   arguments: [],
   options: [],
   subcommands: [
     createSubcommand,
     listSubcommand,
     tokenSubcommand,
+    attachSubcommand,
     removeSubcommand,
     openSubcommand,
   ],
   examples: [
     {
       name: 'Create a Slack app',
-      value: `${packageName} connex create slack`,
+      value: `${packageName} connect create slack`,
     },
     {
-      name: 'List Connex clients on the current team',
-      value: `${packageName} connex list`,
+      name: 'List connectors on the current team',
+      value: `${packageName} connect list`,
     },
     {
       name: 'Get a token',
-      value: `${packageName} connex token scl_abc123`,
+      value: `${packageName} connect token scl_abc123`,
     },
     {
-      name: 'Open a client in the dashboard',
-      value: `${packageName} connex open scl_abc123`,
+      name: 'Attach the current project to a connector',
+      value: `${packageName} connect attach scl_abc123`,
+    },
+    {
+      name: 'Open a connector in the dashboard',
+      value: `${packageName} connect open scl_abc123`,
     },
   ],
 } as const;
