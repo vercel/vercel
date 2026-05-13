@@ -141,11 +141,13 @@ export default async function dev(
   }
 
   let services: ResolvedService[] | undefined;
+  let useImplicitServicesEnvInjection = true;
   const servicesResult = await tryDetectServices(cwd);
   const foundServices = servicesResult && servicesResult.services.length > 0;
   if (foundServices) {
     displayDetectedServices(servicesResult.services);
     services = servicesResult.services;
+    useImplicitServicesEnvInjection = servicesResult.useImplicitEnvInjection;
   }
 
   let lockAcquired = false;
@@ -180,6 +182,7 @@ export default async function dev(
     envValues,
     repoRoot,
     services,
+    useImplicitServicesEnvInjection,
     projectId,
     orgId,
   });

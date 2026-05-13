@@ -268,6 +268,51 @@ const serviceTopicsSchema = {
   ],
 };
 
+const envVarNamesSchema = {
+  pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+  maxLength: 256,
+};
+
+const envVarSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'service'],
+      properties: {
+        type: { const: 'service-ref' },
+        service: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 64,
+          pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+        },
+      },
+    },
+  ],
+};
+
+const envVarRecordSchema = {
+  type: 'object',
+  additionalProperties: envVarSchema,
+  propertyNames: envVarNamesSchema,
+};
+
+/**
+ * Top-level `env` accepts both a literal `Record<string, string>` (deprecated)
+ * or a new way that allows specifying required URLs to inject into service's env.
+ */
+const topLevelEnvSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      propertyNames: envVarNamesSchema,
+    },
+    envVarRecordSchema,
+  ],
+};
+
 const experimentalServicesCommonProperties = {
   entrypoint: {
     type: 'string',
@@ -370,6 +415,7 @@ const servicesCommonProperties = {
   maxDuration: experimentalServicesCommonProperties.maxDuration,
   includeFiles: experimentalServicesCommonProperties.includeFiles,
   excludeFiles: experimentalServicesCommonProperties.excludeFiles,
+  env: envVarRecordSchema,
 };
 
 const servicesRoutableProperties = {
@@ -603,6 +649,7 @@ const vercelConfigSchema = {
     images: imagesSchema,
     crons: cronsSchema,
     bunVersion: { type: 'string' },
+    env: topLevelEnvSchema,
     services: servicesSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,

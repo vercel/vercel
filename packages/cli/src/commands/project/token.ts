@@ -52,6 +52,7 @@ export default async function getOidcToken(client: Client, argv: string[]) {
       `/projects/${project.id}/token`,
       {
         method: 'POST',
+        accountId: project.accountId,
         body: JSON.stringify({
           source: 'vercel-cli',
         }),

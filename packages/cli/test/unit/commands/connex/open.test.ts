@@ -40,7 +40,7 @@ describe('connex open', () => {
       `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${clientId}`
     );
     expect(client.stderr.getFullOutput()).toContain(
-      'Opening Connex client scl_abc123'
+      'Opening Connex connector scl_abc123'
     );
   });
 
@@ -85,7 +85,9 @@ describe('connex open', () => {
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('Missing client ID or UID');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing connector ID or UID'
+    );
     expect(openMock).not.toHaveBeenCalled();
   });
 

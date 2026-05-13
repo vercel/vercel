@@ -8,6 +8,7 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
+  type EnvVars,
   type InferredServicesResult,
   type ResolvedServicesResult,
   type Service,
@@ -43,6 +44,14 @@ function emptyRoutes(): ServicesRoutes {
   };
 }
 
+function isEnvVars(
+  env: Record<string, string> | EnvVars | undefined
+): env is EnvVars {
+  if (!env) return false;
+  const first = Object.values(env)[0];
+  return typeof first === 'object' && first !== null;
+}
+
 function withResolvedResult(
   resolved: ResolvedServicesResult,
   inferred: InferredServicesResult | null = null
@@ -50,6 +59,7 @@ function withResolvedResult(
   return {
     services: resolved.services,
     source: resolved.source,
+    useImplicitEnvInjection: resolved.useImplicitEnvInjection,
     routes: resolved.routes,
     errors: resolved.errors,
     warnings: resolved.warnings,
@@ -115,6 +125,7 @@ export async function detectServices(
     return withResolvedResult({
       services: [],
       source: 'configured',
+      useImplicitEnvInjection: true,
       routes: emptyRoutes(),
       errors: [configError],
       warnings: [],
@@ -137,6 +148,7 @@ export async function detectServices(
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes: emptyRoutes(),
         errors: railwayResult.errors,
         warnings: railwayResult.warnings,
@@ -165,6 +177,7 @@ export async function detectServices(
         {
           services: [],
           source: 'auto-detected',
+          useImplicitEnvInjection: true,
           routes: emptyRoutes(),
           errors: result.errors,
           warnings: railwayResult.warnings,
@@ -185,6 +198,7 @@ export async function detectServices(
       const resolved: ResolvedServicesResult = {
         services: result.services,
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes,
         errors: result.errors,
         warnings: [],
@@ -211,6 +225,7 @@ export async function detectServices(
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes: emptyRoutes(),
         errors: autoResult.errors,
         warnings: [],
@@ -220,6 +235,7 @@ export async function detectServices(
     return withResolvedResult({
       services: [],
       source: 'auto-detected',
+      useImplicitEnvInjection: true,
       routes: emptyRoutes(),
       errors: [
         {
@@ -240,6 +256,7 @@ export async function detectServices(
       requireFileEntrypointForBackendRuntimes: Boolean(
         hasNonEmptyPublicServicesConfig
       ),
+      rootEnv: isEnvVars(vercelConfig?.env) ? vercelConfig?.env : undefined,
     }
   );
 
@@ -249,6 +266,9 @@ export async function detectServices(
   return withResolvedResult({
     services: result.services,
     source: 'configured',
+    // GA `services` opts into explicit `env`; experimentalServices keeps
+    // the legacy `{NAME}_URL` injection.
+    useImplicitEnvInjection: !hasNonEmptyPublicServicesConfig,
     routes,
     errors: result.errors,
     warnings: [],

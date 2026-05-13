@@ -1,5 +1,6 @@
 import { posix as posixPath } from 'path';
 import type {
+  EnvVars,
   Service,
   ConfiguredServices,
   ExperimentalServiceConfig,
@@ -58,7 +59,7 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
-const ENV_PREFIX_RE = /^[A-Z][A-Z0-9_]*_$/;
+const ENV_VAR_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ENTRYPOINT_REQUIRED_RUNTIMES = new Set<ServiceRuntime>([
   'node',
   'python',
@@ -209,6 +210,12 @@ interface ResolveConfiguredServiceOptions {
 
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
+  /**
+   * Optional top-level `env` (from vercel.json `env`). Per-service `env`
+   * values take precedence; entries here are folded into every service that
+   * doesn't already define the same name.
+   */
+  rootEnv?: EnvVars;
 }
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
@@ -582,13 +589,45 @@ export function validateServiceConfig(
       };
     }
   }
-  if (config.envPrefix !== undefined) {
-    if (!ENV_PREFIX_RE.test(config.envPrefix)) {
+  if (config.env !== undefined) {
+    if (typeof config.env !== 'object' || Array.isArray(config.env)) {
       return {
-        code: 'INVALID_ENV_PREFIX',
-        message: `Service "${name}" has invalid envPrefix "${config.envPrefix}". Must start with an uppercase letter, contain only uppercase letters, digits, and underscores, and end with "_" (e.g., "MY_SERVICE_").`,
+        code: 'INVALID_ENV_VARS',
+        message: `Service "${name}" has invalid "env". Must be an object keyed by environment variable name.`,
         serviceName: name,
       };
+    }
+    for (const [envVarName, envVar] of Object.entries(config.env)) {
+      if (!ENV_VAR_NAME_RE.test(envVarName)) {
+        return {
+          code: 'INVALID_ENV_VAR_NAME',
+          message: `Service "${name}" has invalid env key "${envVarName}". Must match /^[A-Za-z_][A-Za-z0-9_]*$/.`,
+          serviceName: name,
+        };
+      }
+      if (!envVar || typeof envVar !== 'object' || Array.isArray(envVar)) {
+        return {
+          code: 'INVALID_ENV_VAR',
+          message: `Service "${name}" has invalid env["${envVarName}"]. Must be an object with a "type" discriminator.`,
+          serviceName: name,
+        };
+      }
+      const envVarType = (envVar as { type?: unknown }).type;
+      if (envVarType !== 'service-ref') {
+        return {
+          code: 'INVALID_ENV_VAR_TYPE',
+          message: `Service "${name}" env["${envVarName}"] has unknown type "${envVarType}".`,
+          serviceName: name,
+        };
+      }
+      const refService = (envVar as { service?: unknown }).service;
+      if (typeof refService !== 'string' || refService.length === 0) {
+        return {
+          code: 'INVALID_ENV_VAR_REF',
+          message: `Service "${name}" env["${envVarName}"] must specify "service" as a non-empty string.`,
+          serviceName: name,
+        };
+      }
     }
   }
   if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
@@ -912,7 +951,7 @@ export async function resolveConfiguredService(
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    envPrefix: config.envPrefix,
+    env: config.env,
   };
 }
 
@@ -1090,5 +1129,55 @@ export async function resolveAllConfiguredServices(
     resolved.push(service);
   }
 
+  const servicesByName = new Map(resolved.map(s => [s.name, s]));
+  for (const service of resolved) {
+    if (!service.env) continue;
+    validateEnvRefs(
+      service.env,
+      `Service "${service.name}" env`,
+      servicesByName,
+      errors,
+      service.name
+    );
+  }
+  if (options.rootEnv) {
+    validateEnvRefs(options.rootEnv, 'env', servicesByName, errors);
+    // Fold top-level env refs into every service's `env`, so the result
+    // is always written in the build output and API won't be needed to do that again
+    for (const service of resolved) {
+      service.env = { ...options.rootEnv, ...(service.env ?? {}) };
+    }
+  }
+
   return { services: resolved, errors };
+}
+
+function validateEnvRefs(
+  env: EnvVars,
+  pathPrefix: string,
+  servicesByName: Map<string, Service>,
+  errors: ServiceDetectionError[],
+  serviceName?: string
+): void {
+  for (const [envVarName, envVar] of Object.entries(env)) {
+    if (envVar.type !== 'service-ref') continue;
+
+    const refName = envVar.service;
+    const target = servicesByName.get(refName);
+    if (!target) {
+      errors.push({
+        code: 'UNKNOWN_SERVICE_REF',
+        message: `${pathPrefix}["${envVarName}"] references unknown service "${refName}".`,
+        ...(serviceName ? { serviceName } : {}),
+      });
+      continue;
+    }
+    if (target.type !== 'web') {
+      errors.push({
+        code: 'INVALID_SERVICE_REF_TYPE',
+        message: `${pathPrefix}["${envVarName}"] references service "${refName}" which is a ${target.type} service and has no URL. Only web services can be referenced.`,
+        ...(serviceName ? { serviceName } : {}),
+      });
+    }
+  }
 }
