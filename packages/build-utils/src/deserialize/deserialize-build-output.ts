@@ -268,7 +268,12 @@ export async function deserializeBuildOutput<
         throw new Error(`Could not load function config: "${funcConfigPath}"`);
       }
 
-      const files = await glob('**', { cwd: fnDir, includeDirectories: true });
+      const files = await glob(
+        '**',
+        { cwd: fnDir, includeDirectories: true },
+        undefined,
+        funcConfig.fileHashes
+      );
       delete files['.vc-config.json'];
 
       if (funcConfig.type === 'EdgeFunction' || funcConfig.runtime === 'edge') {
