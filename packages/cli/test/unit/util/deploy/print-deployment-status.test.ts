@@ -20,7 +20,7 @@ import { printDeploymentStatus } from '../../../../src/util/deploy/print-deploym
 function allPrintedLines(): string[] {
   return vi
     .mocked(output.print)
-    .mock.calls.map(call => stripAnsi(call[0]).trimEnd());
+    .mock.calls.map(call => stripAnsi(call[0]).trim());
 }
 
 function fakeClient(): any {

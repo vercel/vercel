@@ -77,7 +77,7 @@ export async function printDeploymentStatus(
   if (!isStillBuilding && readyState === 'READY') {
     const duration = bareDuration(deployStamp());
     output.print(
-      `${chalk.green('✓')} ${chalk.bold('Ready')} ${chalk.dim(`in ${duration}`)}\n`
+      `\n${chalk.green('✓')} ${chalk.bold('Ready')} ${chalk.dim(`in ${duration}`)}\n`
     );
   }
 

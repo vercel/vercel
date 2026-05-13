@@ -435,7 +435,7 @@ export default async function setupAndLink(
   // The "Set up and deploy?" confirmation prompt is gone; Ctrl-C is the escape hatch.
   // Single leading newline, 2-space indent, straight quotes — matches the prototype.
   output.print(
-    `\n  ${chalk.bold(setupMsg)} ${chalk.cyan(`"${toHumanPath(path)}"`)}\n`
+    `\n  ${chalk.bold(setupMsg)} ${chalk.dim(`"${toHumanPath(path)}"`)}\n`
   );
 
   let skipAutoDetect = false;

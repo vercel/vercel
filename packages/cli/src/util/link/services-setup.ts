@@ -191,6 +191,6 @@ export async function promptForInferredServicesSetup({
     workPath,
     inferred.config
   );
-  output.log(`Added services configuration to ${configFileName}.`);
+  output.print(`  Added services configuration to ${configFileName}.\n`);
   return { type: 'services' };
 }
