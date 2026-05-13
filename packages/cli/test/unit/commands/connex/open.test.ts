@@ -27,7 +27,7 @@ describe('connex open', () => {
 
   it('should open the client detail page on success', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connect/connectors/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
@@ -48,7 +48,7 @@ describe('connex open', () => {
     const uid = 'slack/my-bot';
     const resolvedId = 'scl_xyz';
     client.scenario.get(
-      `/v1/connect/clients/${encodeURIComponent(uid)}`,
+      `/v1/connect/connectors/${encodeURIComponent(uid)}`,
       (_req, res) => {
         res.json({ id: resolvedId, uid, type: 'slack' });
       }
@@ -65,7 +65,7 @@ describe('connex open', () => {
   });
 
   it('should show a friendly error when the client is not found (404)', async () => {
-    client.scenario.get('/v1/connect/clients/scl_missing', (_req, res) => {
+    client.scenario.get('/v1/connect/connectors/scl_missing', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
@@ -93,7 +93,7 @@ describe('connex open', () => {
 
   it('should output JSON when --format=json is passed', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connect/connectors/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
@@ -112,7 +112,7 @@ describe('connex open', () => {
 
   it('should print URL to stdout when stdout is not a TTY', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connect/connectors/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
@@ -131,7 +131,7 @@ describe('connex open', () => {
 
   it('should track telemetry for the open subcommand', async () => {
     const clientId = 'scl_abc123';
-    client.scenario.get(`/v1/connect/clients/${clientId}`, (_req, res) => {
+    client.scenario.get(`/v1/connect/connectors/${clientId}`, (_req, res) => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 

@@ -76,7 +76,7 @@ export async function create(
   let browserUrl: string | undefined;
   try {
     createdClient = await client.fetch<ConnexClient>(
-      '/v1/connect/clients/managed?autoinstall=true',
+      '/v1/connect/connectors/managed?autoinstall=true',
       { method: 'POST', body }
     );
   } catch (err: unknown) {
@@ -117,7 +117,7 @@ export async function create(
     ) {
       const clientId = resultFromBrowser.clientId;
       createdClient = await client.fetch<ConnexClient>(
-        `/v1/connect/clients/${clientId}`
+        `/v1/connect/connectors/${clientId}`
       );
     }
     if (

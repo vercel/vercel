@@ -45,7 +45,7 @@ export async function openClient(
     // route is a single [clientId] segment and can't hold slashes from UIDs
     // like `slack/my-bot`, so we always link by the canonical id.
     const resolved = await client.fetch<{ id: string }>(
-      `/v1/connect/clients/${encodeURIComponent(clientIdOrUid)}`
+      `/v1/connect/connectors/${encodeURIComponent(clientIdOrUid)}`
     );
     resolvedId = resolved.id;
   } catch (err: unknown) {
