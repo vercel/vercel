@@ -107,12 +107,17 @@ function installSpawnMock(config: SpawnResponse | SpawnResponse[] = {}) {
 }
 
 function mockSessionEndpoint(
-  capturedBody: { value: unknown; calls: number },
+  capturedBody: {
+    value: unknown;
+    query?: Record<string, unknown>;
+    calls: number;
+  },
   responseTokens: string[] = [TRACE_TOKEN]
 ) {
   let idx = 0;
   client.scenario.post('/v1/projects/traces/session', (req, res) => {
     capturedBody.value = req.body;
+    capturedBody.query = req.query;
     capturedBody.calls += 1;
     const token = responseTokens[Math.min(idx++, responseTokens.length - 1)];
     // Include expiresAt so the cache stores a real future expiry (5 min from now).
@@ -183,7 +188,11 @@ describe('curl --trace', () => {
   it('preview happy path: body to stdout, two stderr lines, request id from x-vercel-id', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -198,12 +207,13 @@ describe('curl --trace', () => {
 
     expect(exitCode).toEqual(0);
 
-    // Cookie API was called with the right body
+    // Cookie API was called with the right body. The team is scoped via the
+    // `teamId` query string parameter, not the body.
     expect(captured.value).toEqual({
-      teamId: 'team_dummy',
       projectId: 'static',
       deploymentId: DEPLOYMENT_ID,
     });
+    expect(captured.query?.teamId).toBe('team_dummy');
 
     // spawn was invoked with --header Cookie: _vercel_tracing=<token>
     expect(spawnMock).toHaveBeenCalledTimes(1);
@@ -230,7 +240,11 @@ describe('curl --trace', () => {
   it('--json: JSON envelope to stdout, no trace lines on stderr', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured);
     installSpawnMock({ bodyText: '{"hello":"world"}' });
 
@@ -269,7 +283,11 @@ describe('curl --trace', () => {
   it('production deployment: non-TTY without --yes exits 1 with actionable message', async () => {
     await setupLinkedProject({ productionAlias: PROD_ALIAS });
     mockDeploymentLookup({ target: 'production' });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -298,7 +316,11 @@ describe('curl --trace', () => {
   it('production deployment: --yes skips prompt and proceeds', async () => {
     await setupLinkedProject({ productionAlias: PROD_ALIAS });
     mockDeploymentLookup({ target: 'production' });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -320,9 +342,9 @@ describe('curl --trace', () => {
     expect(exitCode).toEqual(0);
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(captured.value).toMatchObject({
-      teamId: 'team_dummy',
       projectId: 'static',
     });
+    expect(captured.query?.teamId).toBe('team_dummy');
     expect(spawnMock).toHaveBeenCalledTimes(1);
 
     confirmSpy.mockRestore();
@@ -358,7 +380,11 @@ describe('curl --trace', () => {
   it('cache miss: calls session API once and writes cache file with 0600 perms', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -387,7 +413,11 @@ describe('curl --trace', () => {
   it('cache hit: pre-populated cache short-circuits session API call', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured, ['should-not-be-called']);
     installSpawnMock();
 
@@ -428,7 +458,11 @@ describe('curl --trace', () => {
   it('cache expired: re-issues when expiresAt is within 30s buffer', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -473,7 +507,11 @@ describe('curl --trace', () => {
   it('401 with cached cookie: evicts cache, re-issues, and retries curl once', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured, [REFRESHED_TOKEN]);
 
     // First curl returns 401, second returns 200
@@ -525,7 +563,11 @@ describe('curl --trace', () => {
   it('401 with freshly-issued token: surfaces without retry', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = { value: undefined as unknown, calls: 0 };
+    const captured = {
+      value: undefined as unknown,
+      query: undefined as Record<string, unknown> | undefined,
+      calls: 0,
+    };
     mockSessionEndpoint(captured);
 
     // Cache miss → fresh token → still 401 (real auth failure, not a stale

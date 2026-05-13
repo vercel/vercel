@@ -26,10 +26,10 @@ function mockSessionEndpoint({
 }: {
   token: string;
   expiresAt?: number;
-  onCall?: (body: unknown) => void;
+  onCall?: (body: unknown, query: Record<string, unknown>) => void;
 }) {
   client.scenario.post('/v1/projects/traces/session', (req, res) => {
-    onCall?.(req.body);
+    onCall?.(req.body, req.query);
     const payload: { token: string; expiresAt?: number } = { token };
     if (typeof expiresAt === 'number') {
       payload.expiresAt = expiresAt;
@@ -123,12 +123,14 @@ describe('getSessionToken', () => {
 
   it('miss: calls API and writes cache when no cache file exists', async () => {
     let capturedBody: unknown;
+    let capturedQuery: Record<string, unknown> | undefined;
     const expiresAt = Date.now() + 5 * 60 * 1000;
     mockSessionEndpoint({
       token: 'fresh-from-api',
       expiresAt,
-      onCall: body => {
+      onCall: (body, query) => {
         capturedBody = body;
+        capturedQuery = query;
       },
     });
 
@@ -145,10 +147,12 @@ describe('getSessionToken', () => {
     expect(result.fromCache).toBe(false);
     expect(result.expiresAt).toBe(expiresAt);
     expect(capturedBody).toEqual({
-      teamId: TEAM_ID,
       projectId: PROJECT_ID,
       deploymentId: DEPLOYMENT_ID,
     });
+    // Team is scoped via the query string (authTeamReq resolves it from there),
+    // not the request body.
+    expect(capturedQuery?.teamId).toBe(TEAM_ID);
 
     // Cache file was written
     const path = cachePathFor(cacheDir, TEAM_ID, HOST);
