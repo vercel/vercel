@@ -124,7 +124,7 @@ jobs:
           VERCEL_CLI_NODE_VERSION: 22.22.2
           VERCEL_CLI_NODE_PLATFORM: ${{ matrix.custom_node_platform }}
           VERCEL_CLI_NODE_ARCH: ${{ matrix.custom_node_arch }}
-        run: pnpm turbo --no-update-notifier run build-binary-node --filter vercel --output-logs=new-only
+        run: pnpm turbo --no-update-notifier --root-turbo-json turbo.node-runtime.json run //#build-binary-node --output-logs=new-only
 
       - name: Build binary
         working-directory: packages/cli
