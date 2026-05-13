@@ -5,7 +5,10 @@ import {
   formatFlagBucketingBaseSelector,
   resolveFlagBucketingBase,
 } from './bucketing-base';
-import { resolveVariant } from './resolve-variant';
+import {
+  resolveVariantByIdOrThrow,
+  resolveVariantOrThrow,
+} from './resolve-variant';
 import type {
   Flag,
   FlagRolloutOutcome,
@@ -123,13 +126,13 @@ function resolveRollFromVariant(
   currentRollout: FlagRolloutOutcome | undefined
 ): FlagVariant {
   if (selector) {
-    return resolveVariantSelector(flag, selector, '--from-variant');
+    return resolveVariantOrThrow(selector, flag.variants, '--from-variant');
   }
 
   if (currentRollout) {
-    return resolveVariantById(
-      flag,
+    return resolveVariantByIdOrThrow(
       currentRollout.rollFromVariantId,
+      flag.variants,
       '--from-variant'
     );
   }
@@ -143,13 +146,13 @@ function resolveRollToVariant(
   currentRollout: FlagRolloutOutcome | undefined
 ): FlagVariant {
   if (selector) {
-    return resolveVariantSelector(flag, selector, '--to-variant');
+    return resolveVariantOrThrow(selector, flag.variants, '--to-variant');
   }
 
   if (currentRollout) {
-    return resolveVariantById(
-      flag,
+    return resolveVariantByIdOrThrow(
       currentRollout.rollToVariantId,
+      flag.variants,
       '--to-variant'
     );
   }
@@ -164,47 +167,18 @@ function resolveDefaultVariant(
   rollFromVariant: FlagVariant
 ): FlagVariant {
   if (selector) {
-    return resolveVariantSelector(flag, selector, '--default-variant');
+    return resolveVariantOrThrow(selector, flag.variants, '--default-variant');
   }
 
   if (currentRollout) {
-    return resolveVariantById(
-      flag,
+    return resolveVariantByIdOrThrow(
       currentRollout.defaultVariantId,
+      flag.variants,
       '--default-variant'
     );
   }
 
   return rollFromVariant;
-}
-
-function resolveVariantSelector(
-  flag: Flag,
-  selector: string,
-  optionName: string
-): FlagVariant {
-  const result = resolveVariant(selector, flag.variants);
-  if (result.error || !result.variant) {
-    throw new Error(
-      `${optionName} ${chalk.bold(selector)} is invalid. ${result.error || 'Variant not found.'}`
-    );
-  }
-
-  return result.variant;
-}
-
-function resolveVariantById(
-  flag: Flag,
-  variantId: string,
-  optionName: string
-): FlagVariant {
-  const variant = flag.variants.find(candidate => candidate.id === variantId);
-  if (!variant) {
-    throw new Error(
-      `${optionName} references an unknown variant ${chalk.bold(variantId)}.`
-    );
-  }
-  return variant;
 }
 
 function inferBooleanVariant(

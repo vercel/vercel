@@ -2,7 +2,8 @@ import chalk from 'chalk';
 import {
   formatVariantForDisplay,
   formatVariantValue,
-  resolveVariant,
+  resolveVariantByIdOrThrow,
+  resolveVariantOrThrow,
 } from './resolve-variant';
 import {
   formatFlagBucketingBaseSelector,
@@ -96,7 +97,11 @@ function resolveSplitWeights(
 
   for (const input of weightInputs) {
     const { variantSelector, weight } = parseWeightInput(input);
-    const variant = resolveVariantSelector(flag, variantSelector, '--weight');
+    const variant = resolveVariantOrThrow(
+      variantSelector,
+      flag.variants,
+      '--weight'
+    );
 
     if (seen.has(variant.id)) {
       throw new Error(
@@ -183,13 +188,13 @@ function resolveDefaultVariant(
   currentSplit: FlagSplitOutcome | undefined
 ): FlagVariant {
   if (selector) {
-    return resolveVariantSelector(flag, selector, '--default-variant');
+    return resolveVariantOrThrow(selector, flag.variants, '--default-variant');
   }
 
   if (currentSplit) {
-    return resolveVariantById(
-      flag,
+    return resolveVariantByIdOrThrow(
       currentSplit.defaultVariantId,
+      flag.variants,
       '--default-variant'
     );
   }
@@ -201,35 +206,6 @@ function resolveDefaultVariant(
   throw new Error(
     'Missing required flag --default-variant. Use --default-variant <VARIANT> for non-boolean splits.'
   );
-}
-
-function resolveVariantSelector(
-  flag: Flag,
-  selector: string,
-  optionName: string
-): FlagVariant {
-  const result = resolveVariant(selector, flag.variants);
-  if (result.error || !result.variant) {
-    throw new Error(
-      `${optionName} ${chalk.bold(selector)} is invalid. ${result.error || 'Variant not found.'}`
-    );
-  }
-
-  return result.variant;
-}
-
-function resolveVariantById(
-  flag: Flag,
-  variantId: string,
-  optionName: string
-): FlagVariant {
-  const variant = flag.variants.find(candidate => candidate.id === variantId);
-  if (!variant) {
-    throw new Error(
-      `${optionName} references an unknown variant ${chalk.bold(variantId)}.`
-    );
-  }
-  return variant;
 }
 
 function formatSplitSummary(

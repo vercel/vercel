@@ -10,6 +10,7 @@ import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
 import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import {
+  buildOutcomeEnvConfig,
   resolveFlagEnvironment,
   resolveFlagUpdateMessage,
 } from '../../util/flags/environment-variant';
@@ -18,10 +19,10 @@ import {
   type ResolvedFlagSplit,
 } from '../../util/flags/split';
 import { formatFlagBucketingBaseSelector } from '../../util/flags/bucketing-base';
+import { canPrompt } from '../../util/flags/can-prompt';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import type {
   Flag,
-  FlagEnvironmentConfig,
   FlagSettings,
   FlagSplitOutcome,
 } from '../../util/flags/types';
@@ -160,10 +161,10 @@ export default async function split(
       defaultVariantSelector: resolvedDefaultVariantSelector,
       currentOutcome: envConfig.fallthrough,
     });
-    const nextEnvironmentConfig = buildSplitEnvironmentConfig(
-      envConfig,
-      splitConfig
-    );
+    const nextEnvironmentConfig = buildOutcomeEnvConfig(envConfig, {
+      outcome: splitConfig.outcome,
+      defaultVariantId: splitConfig.defaultVariant.id,
+    });
 
     if (
       !message &&
@@ -207,30 +208,6 @@ export default async function split(
   }
 
   return 0;
-}
-
-function buildSplitEnvironmentConfig(
-  envConfig: FlagEnvironmentConfig,
-  splitConfig: ResolvedFlagSplit
-): FlagEnvironmentConfig {
-  const nextConfig: FlagEnvironmentConfig = {
-    ...envConfig,
-    active: true,
-    pausedOutcome: envConfig.pausedOutcome || {
-      type: 'variant',
-      variantId: splitConfig.defaultVariant.id,
-    },
-    fallthrough: splitConfig.outcome,
-  };
-
-  if (envConfig.reuse) {
-    nextConfig.reuse = {
-      ...envConfig.reuse,
-      active: false,
-    };
-  }
-
-  return nextConfig;
 }
 
 function getDefaultSplitMessage(
@@ -357,10 +334,6 @@ async function resolveDefaultVariantSelector(
         variant => variant.id === currentSplit?.defaultVariantId
       )?.id || getBooleanFallbackVariantId(flag),
   });
-}
-
-function canPrompt(client: Client): boolean {
-  return Boolean(client.stdin.isTTY) && !client.nonInteractive;
 }
 
 function getBooleanFallbackVariantId(flag: Flag): string | undefined {

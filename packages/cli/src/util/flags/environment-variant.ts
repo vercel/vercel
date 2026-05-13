@@ -4,6 +4,7 @@ import { STANDARD_ENVIRONMENTS } from '../target/standard-environments';
 import { normalizeOptionalInput } from './normalize-optional-input';
 import { printFlagEnvironmentDetails } from './print-flag-details';
 import type { Flag, FlagEnvironmentConfig, FlagVariant } from './types';
+import { canPrompt } from './can-prompt';
 
 type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
 
@@ -22,7 +23,7 @@ export async function resolveFlagEnvironment(
   let nextEnvironment = environment;
 
   if (!nextEnvironment) {
-    if (client.nonInteractive || !client.stdin.isTTY) {
+    if (!canPrompt(client)) {
       throw new Error(
         'Missing required flag --environment. Use --environment <ENV>, or run interactively in a terminal.'
       );
@@ -128,6 +129,34 @@ export function buildPausedEnvironmentConfig(
   };
 }
 
+export function buildOutcomeEnvConfig(
+  envConfig: FlagEnvironmentConfig,
+  options: {
+    outcome: FlagEnvironmentConfig['fallthrough'];
+    defaultVariantId: string;
+  }
+): FlagEnvironmentConfig {
+  const { reuse, ...restConfig } = envConfig;
+  const nextConfig: FlagEnvironmentConfig = {
+    ...restConfig,
+    active: true,
+    pausedOutcome: envConfig.pausedOutcome ?? {
+      type: 'variant',
+      variantId: options.defaultVariantId,
+    },
+    fallthrough: options.outcome,
+  };
+
+  if (reuse) {
+    nextConfig.reuse = {
+      ...reuse,
+      active: false,
+    };
+  }
+
+  return nextConfig;
+}
+
 export function getBooleanVariant(flag: Flag, value: boolean): FlagVariant {
   const variant = flag.variants.find(candidate => candidate.value === value);
 
@@ -149,7 +178,7 @@ export async function resolveFlagUpdateMessage(
     return message;
   }
 
-  if (client.nonInteractive || !client.stdin.isTTY) {
+  if (!canPrompt(client)) {
     return defaultMessage;
   }
 
