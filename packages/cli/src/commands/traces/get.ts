@@ -34,9 +34,13 @@ export default async function get(
   const positional = parsedArgs.args.slice(1);
   const requestId = positional[0] === 'get' ? positional[1] : positional[0];
   const json = parsedArgs.flags['--json'];
+  const scopeFlag = parsedArgs.flags['--scope'];
+  const projectFlag = parsedArgs.flags['--project'];
 
   telemetry.trackCliArgumentRequestId(requestId);
   telemetry.trackCliFlagJson(json);
+  // `--scope` is tracked globally in `src/index.ts`; only project is local.
+  telemetry.trackCliOptionProject(projectFlag);
 
   if (!requestId) {
     output.print(
@@ -53,7 +57,10 @@ export default async function get(
     return linkedProject.exitCode;
   }
 
-  const scope = resolveScope({ linkedProject });
+  const scope = resolveScope({
+    flags: { scope: scopeFlag, project: projectFlag },
+    linkedProject,
+  });
   if ('message' in scope) {
     output.error(scope.message);
     return 1;

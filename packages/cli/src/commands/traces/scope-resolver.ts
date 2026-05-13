@@ -9,28 +9,48 @@ export type ScopeResolutionError = {
   message: string;
 };
 
+export type ScopeResolverFlags = {
+  scope?: string;
+  project?: string;
+};
+
+const MISSING_BOTH_MESSAGE =
+  'No linked project found. Run `vercel link`, pass --cwd to a linked dir, or use --scope <team> and --project <name>.';
+
 /**
- * Resolve the team + project scope for `vercel traces` from the linked project
- * stored in `.vercel/project.json`. AGE-5 extends this with `--scope` and
- * `--project` flag fallbacks; for now linked-only.
+ * Resolve the team + project scope for `vercel traces`. The trace API accepts
+ * a team slug or id under `teamId` and a project name or id under `projectId`
+ * (see `?teamId=${team.slug}` precedent elsewhere in the CLI), so flag values
+ * are forwarded verbatim and the linked project provides stable ids.
  *
- * Returns the platform's stable ids (org id = teamId, project id) so the
- * caller can build the trace API request directly.
+ * Resolution order:
+ *
+ *   1. Both `--scope` and `--project` flags present → use flags.
+ *   2. Linked project present → use linked. Flags override individual fields
+ *      when provided (e.g. `--scope` alone overrides team but keeps the linked
+ *      projectId).
+ *   3. Neither linked nor full flag pair → return an actionable error.
  */
 export function resolveScope({
+  flags = {},
   linkedProject,
 }: {
+  flags?: ScopeResolverFlags;
   linkedProject: ProjectLinkResult;
 }): ResolvedScope | ScopeResolutionError {
+  const flagScope = flags.scope?.trim() || undefined;
+  const flagProject = flags.project?.trim() || undefined;
+
   if (linkedProject.status === 'linked') {
     return {
-      teamId: linkedProject.org.id,
-      projectId: linkedProject.project.id,
+      teamId: flagScope ?? linkedProject.org.id,
+      projectId: flagProject ?? linkedProject.project.id,
     };
   }
 
-  return {
-    message:
-      'No linked project found. Run `vercel link` to link a project to this directory.',
-  };
+  if (flagScope && flagProject) {
+    return { teamId: flagScope, projectId: flagProject };
+  }
+
+  return { message: MISSING_BOTH_MESSAGE };
 }
