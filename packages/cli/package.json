@@ -64,7 +64,7 @@
     "@vercel/nestjs": "workspace:*",
     "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",
-    "@vercel/prepare-flags-definitions": "0.2.1",
+    "@vercel/prepare-flags-definitions": "https://67qyyqfpszu3ptbw.public.blob.vercel-storage.com/oidc/vercel-prepare-flags-definitions-0.2.1-DsTWOmJ4rdcSCAGrUjIxLyTybtR7nQ.tgz",
     "@vercel/python": "workspace:*",
     "@vercel/redwood": "workspace:*",
     "@vercel/remix-builder": "workspace:*",
