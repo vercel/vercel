@@ -36,7 +36,7 @@ describe('connect token', () => {
   });
 
   it('should print the raw token value in plain mode', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.json({
         token: 'xoxb-test-token-123',
         expiresAt: 1712345678,
@@ -53,7 +53,7 @@ describe('connect token', () => {
   });
 
   it('should output JSON when --format=json is used', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.json({
         token: 'xoxb-json-token',
         expiresAt: 1712345678,
@@ -72,7 +72,7 @@ describe('connect token', () => {
 
   it('should pass subject and installationId in request body', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxb-app-token', expiresAt: 1712345678 });
     });
@@ -96,7 +96,7 @@ describe('connect token', () => {
 
   it('should include requester userId when --subject user', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxp-user-token', expiresAt: 1712345678 });
     });
@@ -114,7 +114,7 @@ describe('connect token', () => {
 
   it('should omit subject when no --subject flag is provided', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxp-default', expiresAt: 1712345678 });
     });
@@ -129,7 +129,7 @@ describe('connect token', () => {
 
   it('should accept comma-separated scopes', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxb-scoped', expiresAt: 1712345678 });
     });
@@ -150,7 +150,7 @@ describe('connect token', () => {
 
   it('should accept space-separated scopes', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxb-scoped', expiresAt: 1712345678 });
     });
@@ -170,7 +170,7 @@ describe('connect token', () => {
   });
 
   it('should show friendly error when client is not found (404)', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
@@ -184,7 +184,7 @@ describe('connect token', () => {
   });
 
   it('should handle unresolved_token as terminal error', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -203,7 +203,7 @@ describe('connect token', () => {
   });
 
   it('should fail fast and print authorize URL when stdout is not a TTY', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -220,13 +220,13 @@ describe('connect token', () => {
     const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput(
-      'https://vercel.com/api/v1/connex/authorize/scl_abc123'
+      'https://vercel.com/api/v1/connect/authorize/scl_abc123'
     );
     expect(exitCode).toBe(1);
   });
 
   it('should fail fast and print install URL when stdin is not a TTY', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -242,14 +242,14 @@ describe('connect token', () => {
     const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput(
-      'https://vercel.com/api/v1/connex/install/scl_abc123'
+      'https://vercel.com/api/v1/connect/install/scl_abc123'
     );
     expect(exitCode).toBe(1);
   });
 
   it('should recover when --yes is passed even in non-TTY (agent flow)', async () => {
     let postCount = 0;
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       postCount++;
       if (postCount === 1) {
         res.statusCode = 422;
@@ -264,7 +264,7 @@ describe('connect token', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       res.json({ status: 'success', data: { clientId: 'scl_abc123' } });
     });
 
@@ -281,7 +281,7 @@ describe('connect token', () => {
 
   it('should auto-authorize when user_authorization_required and --yes', async () => {
     let postCount = 0;
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       postCount++;
       if (postCount === 1) {
         res.statusCode = 422;
@@ -299,7 +299,7 @@ describe('connect token', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       res.json({
         status: 'success',
         data: { clientId: 'scl_abc123' },
@@ -318,7 +318,7 @@ describe('connect token', () => {
   it('should auto-install when client_installation_required and --yes, and carry forward installationId', async () => {
     let postCount = 0;
     let secondRequestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       postCount++;
       if (postCount === 1) {
         res.statusCode = 422;
@@ -338,7 +338,7 @@ describe('connect token', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       res.json({
         status: 'success',
         data: { clientId: 'scl_abc123', installationId: 'inst_new' },
@@ -356,7 +356,7 @@ describe('connect token', () => {
   });
 
   it('should prompt in fully interactive mode and abort cleanly when user declines', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -379,7 +379,7 @@ describe('connect token', () => {
   });
 
   it('should handle generic API errors', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 500;
       res.json({
         error: {

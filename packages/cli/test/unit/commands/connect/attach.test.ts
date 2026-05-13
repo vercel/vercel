@@ -83,7 +83,7 @@ describe('connect attach', () => {
 
   it('errors with a friendly message when the client is not found', async () => {
     await setupLinkedProject(team);
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
@@ -104,18 +104,18 @@ describe('connect attach', () => {
     let postClientId = '';
     let postProjectId = '';
 
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot', name: 'My Bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 404;
         res.json({ error: { code: 'not_found' } });
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (req, res) => {
         postClientId = req.params.clientId;
         postProjectId = req.params.projectId;
@@ -146,18 +146,18 @@ describe('connect attach', () => {
     await setupLinkedProject(team);
     let postBody: { environments?: string[] } | undefined;
 
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 404;
         res.json({ error: { code: 'not_found' } });
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (req, res) => {
         postBody = req.body;
         res.statusCode = 200;
@@ -184,11 +184,11 @@ describe('connect attach', () => {
     await setupLinkedProject(team);
     let postCalled = false;
 
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.json({
           clientId: 'scl_abc123',
@@ -200,7 +200,7 @@ describe('connect attach', () => {
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         postCalled = true;
         res.statusCode = 200;
@@ -230,11 +230,11 @@ describe('connect attach', () => {
     await setupLinkedProject(team);
     let postCalled = false;
 
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.json({
           clientId: 'scl_abc123',
@@ -244,7 +244,7 @@ describe('connect attach', () => {
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         postCalled = true;
         res.statusCode = 200;
@@ -280,11 +280,11 @@ describe('connect attach', () => {
     await setupLinkedProject(team);
     let postBody: { environments?: string[] } | undefined;
 
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.json({
           clientId: 'scl_abc123',
@@ -294,7 +294,7 @@ describe('connect attach', () => {
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (req, res) => {
         postBody = req.body;
         res.statusCode = 200;
@@ -328,18 +328,18 @@ describe('connect attach', () => {
     await setupLinkedProject(team);
     let postCalled = false;
 
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 404;
         res.json({});
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         postCalled = true;
         res.statusCode = 200;
@@ -363,11 +363,11 @@ describe('connect attach', () => {
 
   it('requires --yes when stdin is not a TTY', async () => {
     await setupLinkedProject(team);
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 404;
         res.json({});
@@ -385,18 +385,18 @@ describe('connect attach', () => {
 
   it('emits a JSON receipt on --yes --format=json', async () => {
     await setupLinkedProject(team);
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 404;
         res.json({});
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 200;
         res.json({});
@@ -428,18 +428,18 @@ describe('connect attach', () => {
 
   it('surfaces a friendly error on 403 from the upsert endpoint', async () => {
     await setupLinkedProject(team);
-    client.scenario.get('/v1/connex/clients/:clientId', (_req, res) => {
+    client.scenario.get('/v1/connect/clients/:clientId', (_req, res) => {
       res.json({ id: 'scl_abc123', uid: 'slack/my-bot' });
     });
     client.scenario.get(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 404;
         res.json({});
       }
     );
     client.scenario.post(
-      '/v1/connex/clients/:clientId/projects/:projectId',
+      '/v1/connect/clients/:clientId/projects/:projectId',
       (_req, res) => {
         res.statusCode = 403;
         res.json({ error: { code: 'forbidden', message: 'Forbidden' } });

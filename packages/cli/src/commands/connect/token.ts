@@ -209,7 +209,7 @@ function buildActionUrl(
     teamId,
     request_code: requestCode,
   });
-  return `https://vercel.com/api/v1/connex/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
+  return `https://vercel.com/api/v1/connect/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }
 
 function printTokenResult(
@@ -236,7 +236,7 @@ async function fetchToken(
 ): Promise<TokenResult> {
   try {
     const data = await client.fetch<ConnectTokenResponse>(
-      `/v1/connex/token/${encodeURIComponent(clientId)}`,
+      `/v1/connect/token/${encodeURIComponent(clientId)}`,
       {
         method: 'POST',
         body: JSON.stringify(body),

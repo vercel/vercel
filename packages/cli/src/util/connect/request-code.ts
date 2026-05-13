@@ -29,7 +29,7 @@ export function generateRequestCode(): {
 }
 
 /**
- * Polls `GET /v1/connex/result/{verifier}` until the request code resolves
+ * Polls `GET /v1/connect/result/{verifier}` until the request code resolves
  * to success or error, or the timeout is reached.
  *
  * Returns the result data on success, or null on failure (error is
@@ -47,7 +47,7 @@ export async function awaitConnectResult(
     await sleep(POLL_INTERVAL_MS);
     try {
       const result = await client.fetch<ConnectResult>(
-        `/v1/connex/result/${encodeURIComponent(verifier)}`
+        `/v1/connect/result/${encodeURIComponent(verifier)}`
       );
 
       if (result.status === 'success' && result.data) {

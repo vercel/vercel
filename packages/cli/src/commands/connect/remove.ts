@@ -60,7 +60,7 @@ export async function remove(
   let target: ConnectClientIdentity;
   try {
     target = await client.fetch<ConnectClientIdentity>(
-      `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
+      `/v1/connect/clients/${encodeURIComponent(clientIdOrUid)}`
     );
   } catch (err: unknown) {
     output.stopSpinner();
@@ -84,7 +84,7 @@ export async function remove(
   try {
     output.spinner('Checking connected projects…');
     const res = await client.fetch<ListProjectsResponse>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects`
+      `/v1/connect/clients/${encodeURIComponent(target.id)}/projects`
     );
     projectLinks = res.projects ?? [];
   } catch (err: unknown) {
@@ -133,7 +133,7 @@ export async function remove(
   try {
     output.spinner('Deleting Connect connector…');
     await client.fetch<unknown>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}`,
+      `/v1/connect/clients/${encodeURIComponent(target.id)}`,
       { method: 'DELETE' }
     );
   } catch (err: unknown) {

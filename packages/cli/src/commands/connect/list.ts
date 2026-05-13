@@ -100,7 +100,7 @@ export async function list(
     params.set('projectId', projectId);
   }
   const query = params.toString();
-  const url = `/v1/connex/clients${query ? `?${query}` : ''}`;
+  const url = `/v1/connect/clients${query ? `?${query}` : ''}`;
 
   output.spinner('Fetching Connect connectors…');
   let response: ListClientsResponse;
