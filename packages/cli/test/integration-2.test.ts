@@ -795,8 +795,8 @@ test('deploys with only vercel.json and a static file', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  // assert timing order of showing URLs vs status updates
-  // Preview URL appears twice: once with loading emoji, then again with success emoji
+  // assert timing order of showing URLs vs status updates: Inspect and Preview
+  // rows print first, then build status (Queued/Building) transitions to Completing.
   expect(stripAnsi(stderr)).toMatch(
     /Inspect[\s\S]+Preview[\s\S]+(Queued|Building)[\s\S]+Completing/
   );

@@ -1942,9 +1942,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       // Mock pagination returns {}, so hasMoreProjects is true → text input
-      await expect(client.stderr).toOutput(
-        'the name of your existing project?'
-      );
+      await expect(client.stderr).toOutput('Existing project name?');
       client.stdin.write(`${basename(cwd)}\n`);
 
       await expect(client.stderr).toOutput(

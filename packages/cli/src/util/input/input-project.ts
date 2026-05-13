@@ -97,7 +97,7 @@ export default async function inputProject(
     } else if (hasMoreProjects) {
       let toLink: Project;
       await client.input.text({
-        message: "What's the name of your existing project?",
+        message: 'Existing project name?',
         validate: async val => {
           if (!val) {
             return 'Project name cannot be empty';

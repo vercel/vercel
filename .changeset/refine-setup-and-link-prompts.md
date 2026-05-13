@@ -23,6 +23,7 @@ Refresh the `vc` setup-and-link flow and post-deploy output for clarity and visu
 - Introduced a "gutter" semantic system: column 0 is reserved for semantic glyphs. `▲` marks Production deploys (`▲ Production  URL`) and breaks out of the indent — bookending the session with the `▲` brand mark at the top. Preview deploys stay in-column without the triangle.
 - Added a terminal `✓ Ready in Xs` line at deploy completion (green ✓ at column 0, bold `Ready`, dim duration). Skipped when `--no-wait` is set and the deployment hasn't reached READY yet.
 - Dropped the emoji prefixes (`🔗`, `🔍`, `⏳`) on Linked / Inspect / Production rows (across both `vc deploy` and `vc redeploy`).
+- Dropped the `Building: ` prefix from the build-logs spinner. Each streamed log line is shown verbatim instead of `Building: <line>`.
 - Dropped the `(created .vercel and added it to .gitignore)` parenthetical from `Linked` — `git status` surfaces it on demand.
 - Dropped the `[Xs]` timing suffix from URL lines. URLs are results, not operations — timing belongs on the build / ready signal.
 
