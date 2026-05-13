@@ -2,13 +2,13 @@ import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
-import { selectConnexTeam } from '../../util/connex/select-team';
+import { selectConnectTeam } from '../../util/connect/select-team';
 import {
   generateRequestCode,
-  awaitConnexResult,
-} from '../../util/connex/request-code';
+  awaitConnectResult,
+} from '../../util/connect/request-code';
 
-interface ConnexTokenResponse {
+interface ConnectTokenResponse {
   token: string;
   expiresAt: number;
   name?: string;
@@ -44,7 +44,7 @@ export async function token(
   const clientId = args[0];
   if (!clientId) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connex token <id>'
+      'Missing connector ID or UID. Usage: vercel connect token <id>'
     );
     return 1;
   }
@@ -55,13 +55,13 @@ export async function token(
     return 1;
   }
 
-  await selectConnexTeam(client, 'Select the team for this token request');
+  await selectConnectTeam(client, 'Select the team for this token request');
 
   const body: Record<string, unknown> = {};
   if (subject === 'app') {
     body.subject = { type: 'app' };
   } else if (subject === 'user') {
-    // selectConnexTeam → selectOrg → getUser populates authConfig.userId, so
+    // selectConnectTeam → selectOrg → getUser populates authConfig.userId, so
     // it's reliably available here for authenticated callers.
     body.subject = { type: 'user', id: client.authConfig.userId };
   }
@@ -84,7 +84,9 @@ export async function token(
   const errorMessage = result.errorMessage ?? 'Failed to get token';
 
   if (errorCode === 'not_found') {
-    output.error('Connector not found or Connex is not enabled for this team.');
+    output.error(
+      'Connector not found or Connect is not enabled for this team.'
+    );
     return 1;
   }
 
@@ -115,7 +117,7 @@ export async function token(
 
   // Attempt recovery when explicitly opted in (--yes) or when we're in a
   // fully interactive TTY. In any other context (pipe, script, agent)
-  // we fail fast so `TOKEN=$(vc connex token ...)` stays safe.
+  // we fail fast so `TOKEN=$(vc connect token ...)` stays safe.
   const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
   const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
 
@@ -125,7 +127,7 @@ export async function token(
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
-      `Or re-run with --yes to open the browser automatically: vercel connex token ${clientId} --yes`
+      `Or re-run with --yes to open the browser automatically: vercel connect token ${clientId} --yes`
     );
     return 1;
   }
@@ -154,7 +156,7 @@ export async function token(
   );
 
   output.spinner(`Waiting for ${actionLabel} to complete in the browser...`);
-  const pollData = await awaitConnexResult(client, verifier);
+  const pollData = await awaitConnectResult(client, verifier);
   output.stopSpinner();
 
   if (!pollData) {
@@ -212,7 +214,7 @@ function buildActionUrl(
 
 function printTokenResult(
   client: Client,
-  data: ConnexTokenResponse,
+  data: ConnectTokenResponse,
   asJson: boolean
 ): number {
   if (asJson) {
@@ -224,7 +226,7 @@ function printTokenResult(
 }
 
 type TokenResult =
-  | { ok: true; data: ConnexTokenResponse }
+  | { ok: true; data: ConnectTokenResponse }
   | { ok: false; errorCode?: string; errorMessage?: string };
 
 async function fetchToken(
@@ -233,7 +235,7 @@ async function fetchToken(
   body: Record<string, unknown>
 ): Promise<TokenResult> {
   try {
-    const data = await client.fetch<ConnexTokenResponse>(
+    const data = await client.fetch<ConnectTokenResponse>(
       `/v1/connex/token/${encodeURIComponent(clientId)}`,
       {
         method: 'POST',

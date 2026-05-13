@@ -14,7 +14,7 @@ import * as env from '../../../src/commands/env/command';
 import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
-import * as connex from '../../../src/commands/connex/command';
+import * as connect from '../../../src/commands/connect/command';
 import * as integration from '../../../src/commands/integration/command';
 import * as integrationResource from '../../../src/commands/integration-resource/command';
 import { linkCommand } from '../../../src/commands/link/command';
@@ -426,56 +426,56 @@ describe('help command', () => {
     });
   });
 
-  describe('connex help output snapshots', () => {
-    it('connex help column width 80', () => {
-      expect(help(connex.connexCommand, { columns: 80 })).toMatchSnapshot();
+  describe('connect help output snapshots', () => {
+    it('connect help column width 80', () => {
+      expect(help(connect.connectCommand, { columns: 80 })).toMatchSnapshot();
     });
-    describe('connex create subcommand', () => {
-      it('connex create subcommand help column width 120', () => {
+    describe('connect create subcommand', () => {
+      it('connect create subcommand help column width 120', () => {
         expect(
-          help(connex.createSubcommand, {
+          help(connect.createSubcommand, {
             columns: 120,
-            parent: connex.connexCommand,
+            parent: connect.connectCommand,
           })
         ).toMatchSnapshot();
       });
     });
-    describe('connex list subcommand', () => {
-      it('connex list subcommand help column width 120', () => {
+    describe('connect list subcommand', () => {
+      it('connect list subcommand help column width 120', () => {
         expect(
-          help(connex.listSubcommand, {
+          help(connect.listSubcommand, {
             columns: 120,
-            parent: connex.connexCommand,
+            parent: connect.connectCommand,
           })
         ).toMatchSnapshot();
       });
     });
-    describe('connex token subcommand', () => {
-      it('connex token subcommand help column width 120', () => {
+    describe('connect token subcommand', () => {
+      it('connect token subcommand help column width 120', () => {
         expect(
-          help(connex.tokenSubcommand, {
+          help(connect.tokenSubcommand, {
             columns: 120,
-            parent: connex.connexCommand,
+            parent: connect.connectCommand,
           })
         ).toMatchSnapshot();
       });
     });
-    describe('connex open subcommand', () => {
-      it('connex open subcommand help column width 120', () => {
+    describe('connect open subcommand', () => {
+      it('connect open subcommand help column width 120', () => {
         expect(
-          help(connex.openSubcommand, {
+          help(connect.openSubcommand, {
             columns: 120,
-            parent: connex.connexCommand,
+            parent: connect.connectCommand,
           })
         ).toMatchSnapshot();
       });
     });
-    describe('connex attach subcommand', () => {
-      it('connex attach subcommand help column width 120', () => {
+    describe('connect attach subcommand', () => {
+      it('connect attach subcommand help column width 120', () => {
         expect(
-          help(connex.attachSubcommand, {
+          help(connect.attachSubcommand, {
             columns: 120,
-            parent: connex.connexCommand,
+            parent: connect.connectCommand,
           })
         ).toMatchSnapshot();
       });

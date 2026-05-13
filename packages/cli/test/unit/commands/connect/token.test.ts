@@ -2,11 +2,11 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
-import connex from '../../../../src/commands/connex';
+import connect from '../../../../src/commands/connect';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 
-describe('connex token', () => {
+describe('connect token', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -18,18 +18,18 @@ describe('connex token', () => {
   });
 
   it('should error when no clientId argument is provided', async () => {
-    client.setArgv('connex', 'token');
+    client.setArgv('connect', 'token');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Missing connector ID or UID');
     expect(exitCode).toBe(1);
   });
 
   it('should error with invalid --subject value', async () => {
-    client.setArgv('connex', 'token', 'scl_abc', '--subject', 'invalid');
+    client.setArgv('connect', 'token', 'scl_abc', '--subject', 'invalid');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Invalid --subject value');
     expect(exitCode).toBe(1);
@@ -44,9 +44,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     await expect(client.stdout).toOutput('xoxb-test-token-123\n');
@@ -62,9 +62,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--format=json');
+    client.setArgv('connect', 'token', 'scl_abc123', '--format=json');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     await expect(client.stdout).toOutput('"token": "xoxb-json-token"');
@@ -78,7 +78,7 @@ describe('connex token', () => {
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'token',
       'scl_abc123',
       '--subject',
@@ -87,7 +87,7 @@ describe('connex token', () => {
       'inst_42'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toEqual({ type: 'app' });
@@ -101,9 +101,9 @@ describe('connex token', () => {
       res.json({ token: 'xoxp-user-token', expiresAt: 1712345678 });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--subject', 'user');
+    client.setArgv('connect', 'token', 'scl_abc123', '--subject', 'user');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toEqual({
@@ -119,9 +119,9 @@ describe('connex token', () => {
       res.json({ token: 'xoxp-default', expiresAt: 1712345678 });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toBeUndefined();
@@ -135,14 +135,14 @@ describe('connex token', () => {
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'token',
       'scl_abc123',
       '--scopes',
       'chat:write,channels:read'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.scopes).toEqual(['chat:write', 'channels:read']);
@@ -156,14 +156,14 @@ describe('connex token', () => {
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'token',
       'scl_abc123',
       '--scopes',
       'chat:write channels:read'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.scopes).toEqual(['chat:write', 'channels:read']);
@@ -175,9 +175,9 @@ describe('connex token', () => {
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Connector not found');
     expect(exitCode).toBe(1);
@@ -194,9 +194,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('does not support');
     expect(exitCode).toBe(1);
@@ -213,11 +213,11 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
-    // Simulate `TOKEN=$(vc connex token ...)` — stdout captured, stdin is still a TTY
+    client.setArgv('connect', 'token', 'scl_abc123');
+    // Simulate `TOKEN=$(vc connect token ...)` — stdout captured, stdin is still a TTY
     (client.stdout as any).isTTY = false;
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput(
       'https://vercel.com/api/v1/connex/authorize/scl_abc123'
@@ -236,10 +236,10 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
     (client.stdin as any).isTTY = false;
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput(
       'https://vercel.com/api/v1/connex/install/scl_abc123'
@@ -270,9 +270,9 @@ describe('connex token', () => {
 
     // Simulate an agent/script: stdout not a TTY, but user explicitly opted in
     (client.stdout as any).isTTY = false;
-    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
+    client.setArgv('connect', 'token', 'scl_abc123', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postCount).toBe(2);
@@ -306,9 +306,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
+    client.setArgv('connect', 'token', 'scl_abc123', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postCount).toBe(2);
@@ -345,9 +345,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
+    client.setArgv('connect', 'token', 'scl_abc123', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postCount).toBe(2);
@@ -366,9 +366,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCodePromise = connex(client);
+    const exitCodePromise = connect(client);
 
     await expect(client.stderr).toOutput('Open browser');
     client.stdin.write('n\n');
@@ -389,9 +389,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Something went wrong');
     expect(exitCode).toBe(1);

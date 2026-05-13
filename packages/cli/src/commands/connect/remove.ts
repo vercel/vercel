@@ -2,22 +2,22 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
-import { selectConnexTeam } from '../../util/connex/select-team';
+import { selectConnectTeam } from '../../util/connect/select-team';
 
-interface ConnexClientIdentity {
+interface ConnectClientIdentity {
   id: string;
   uid: string;
   name?: string;
 }
 
-interface ConnexClientProject {
+interface ConnectClientProject {
   clientId: string;
   projectId: string;
   project?: { id: string; name: string };
 }
 
 interface ListProjectsResponse {
-  projects: ConnexClientProject[];
+  projects: ConnectClientProject[];
   cursor?: string;
 }
 
@@ -49,17 +49,17 @@ export async function remove(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connex remove <client>'
+      'Missing connector ID or UID. Usage: vercel connect remove <client>'
     );
     return 1;
   }
 
-  await selectConnexTeam(client, 'Select the team for this Connex connector');
+  await selectConnectTeam(client, 'Select the team for this Connect connector');
 
-  output.spinner('Retrieving Connex connector…');
-  let target: ConnexClientIdentity;
+  output.spinner('Retrieving Connect connector…');
+  let target: ConnectClientIdentity;
   try {
-    target = await client.fetch<ConnexClientIdentity>(
+    target = await client.fetch<ConnectClientIdentity>(
       `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
     );
   } catch (err: unknown) {
@@ -67,7 +67,7 @@ export async function remove(
     const status = (err as { status?: number }).status;
     if (status === 404) {
       output.error(
-        `No Connex connector found for ${chalk.bold(clientIdOrUid)}.`
+        `No Connect connector found for ${chalk.bold(clientIdOrUid)}.`
       );
       return 1;
     }
@@ -80,7 +80,7 @@ export async function remove(
 
   const displayName = target.uid || target.id;
 
-  let projectLinks: ConnexClientProject[];
+  let projectLinks: ConnectClientProject[];
   try {
     output.spinner('Checking connected projects…');
     const res = await client.fetch<ListProjectsResponse>(
@@ -100,7 +100,7 @@ export async function remove(
     const count = projectLinks.length;
     const plural = count === 1 ? 'project' : 'projects';
     output.error(
-      `Cannot delete Connex connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` flag.`
+      `Cannot delete Connect connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` flag.`
     );
     return 1;
   }
@@ -118,7 +118,7 @@ export async function remove(
         ? ` ${projectLinks.length} connected ${projectLinks.length === 1 ? 'project' : 'projects'} will be disconnected.`
         : '';
     output.log(
-      `Connex connector ${chalk.bold(displayName)} will be deleted permanently.${cascadeNote}`
+      `Connect connector ${chalk.bold(displayName)} will be deleted permanently.${cascadeNote}`
     );
     const confirmed = await client.input.confirm(
       `${chalk.red('Are you sure?')}`,
@@ -131,7 +131,7 @@ export async function remove(
   }
 
   try {
-    output.spinner('Deleting Connex connector…');
+    output.spinner('Deleting Connect connector…');
     await client.fetch<unknown>(
       `/v1/connex/clients/${encodeURIComponent(target.id)}`,
       { method: 'DELETE' }
@@ -153,7 +153,7 @@ export async function remove(
   }
 
   output.success(
-    `Connex connector ${chalk.bold(displayName)} successfully removed.`
+    `Connect connector ${chalk.bold(displayName)} successfully removed.`
   );
   return 0;
 }

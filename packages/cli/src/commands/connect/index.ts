@@ -5,7 +5,7 @@ import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
-import { ConnexTelemetryClient } from '../../util/telemetry/commands/connex';
+import { ConnectTelemetryClient } from '../../util/telemetry/commands/connect';
 import { type Command, help } from '../help';
 import {
   createSubcommand,
@@ -14,7 +14,7 @@ import {
   attachSubcommand,
   removeSubcommand,
   openSubcommand,
-  connexCommand,
+  connectCommand,
 } from './command';
 import { create } from './create';
 import { list } from './list';
@@ -38,8 +38,8 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
 };
 
-export default async function connex(client: Client): Promise<number> {
-  const telemetry = new ConnexTelemetryClient({
+export default async function connect(client: Client): Promise<number> {
+  const telemetry = new ConnectTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
@@ -47,7 +47,7 @@ export default async function connex(client: Client): Promise<number> {
 
   const { args, flags } = parseArguments(
     client.argv.slice(2),
-    getFlagsSpecification(connexCommand.options),
+    getFlagsSpecification(connectCommand.options),
     { permissive: true }
   );
 
@@ -63,15 +63,15 @@ export default async function connex(client: Client): Promise<number> {
     output.print(
       help(command, {
         columns: client.stderr.columns,
-        parent: connexCommand,
+        parent: connectCommand,
       })
     );
   }
 
   if (!subcommand && needHelp) {
-    telemetry.trackCliFlagHelp('connex');
+    telemetry.trackCliFlagHelp('connect');
     output.print(
-      help(connexCommand, {
+      help(connectCommand, {
         columns: client.stderr.columns,
       })
     );
@@ -82,7 +82,7 @@ export default async function connex(client: Client): Promise<number> {
     switch (subcommand) {
       case 'create': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(createSubcommand);
           return 0;
         }
@@ -98,7 +98,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'list': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(listSubcommand);
           return 0;
         }
@@ -116,7 +116,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'token': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(tokenSubcommand);
           return 0;
         }
@@ -128,7 +128,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'attach': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(attachSubcommand);
           return 0;
         }
@@ -151,7 +151,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'remove': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(removeSubcommand);
           return 0;
         }
@@ -173,7 +173,7 @@ export default async function connex(client: Client): Promise<number> {
       }
       case 'open': {
         if (needHelp) {
-          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(openSubcommand);
           return 0;
         }
@@ -207,11 +207,11 @@ export default async function connex(client: Client): Promise<number> {
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  'connex --help',
+                  'connect --help',
                   packageName,
                   { prependGlobalFlags: true }
                 ),
-                when: 'Show all connex subcommands and options',
+                when: 'Show all connect subcommands and options',
               },
             ],
           },

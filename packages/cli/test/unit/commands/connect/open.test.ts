@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
-import connex from '../../../../src/commands/connex';
+import connect from '../../../../src/commands/connect';
 import { client } from '../../../mocks/client';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -13,7 +13,7 @@ vi.mock('open', () => {
 
 const openMock = vi.mocked(open);
 
-describe('connex open', () => {
+describe('connect open', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -31,16 +31,16 @@ describe('connex open', () => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
-    client.setArgv('connex', 'open', clientId);
+    client.setArgv('connect', 'open', clientId);
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(openMock).toHaveBeenCalledWith(
       `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${clientId}`
     );
     expect(client.stderr.getFullOutput()).toContain(
-      'Opening Connex connector scl_abc123'
+      'Opening Connect connector scl_abc123'
     );
   });
 
@@ -54,9 +54,9 @@ describe('connex open', () => {
       }
     );
 
-    client.setArgv('connex', 'open', uid);
+    client.setArgv('connect', 'open', uid);
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(openMock).toHaveBeenCalledWith(
@@ -70,9 +70,9 @@ describe('connex open', () => {
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connex', 'open', 'scl_missing');
+    client.setArgv('connect', 'open', 'scl_missing');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('not found');
@@ -80,9 +80,9 @@ describe('connex open', () => {
   });
 
   it('should error when no argument is passed', async () => {
-    client.setArgv('connex', 'open');
+    client.setArgv('connect', 'open');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -97,9 +97,9 @@ describe('connex open', () => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
-    client.setArgv('connex', 'open', clientId, '--format=json');
+    client.setArgv('connect', 'open', clientId, '--format=json');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     const stdout = client.stdout.getFullOutput().trim();
@@ -118,9 +118,9 @@ describe('connex open', () => {
 
     (client.stdout as unknown as { isTTY: boolean }).isTTY = false;
 
-    client.setArgv('connex', 'open', clientId);
+    client.setArgv('connect', 'open', clientId);
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(client.stdout.getFullOutput().trim()).toBe(
@@ -135,9 +135,9 @@ describe('connex open', () => {
       res.json({ id: clientId, uid: 'slack/my-bot', type: 'slack' });
     });
 
-    client.setArgv('connex', 'open', clientId);
+    client.setArgv('connect', 'open', clientId);
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([

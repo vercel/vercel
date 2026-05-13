@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import type Client from '../client';
 import sleep from '../sleep';
 
-export interface ConnexResult {
+export interface ConnectResult {
   status: 'pending' | 'partial' | 'success' | 'error';
   progress?: string;
   data?: Record<string, unknown>;
@@ -35,7 +35,7 @@ export function generateRequestCode(): {
  * Returns the result data on success, or null on failure (error is
  * printed to output).
  */
-export async function awaitConnexResult(
+export async function awaitConnectResult(
   client: Client,
   verifier: string
 ): Promise<Record<string, unknown> | null> {
@@ -46,7 +46,7 @@ export async function awaitConnexResult(
   while (Date.now() < deadline) {
     await sleep(POLL_INTERVAL_MS);
     try {
-      const result = await client.fetch<ConnexResult>(
+      const result = await client.fetch<ConnectResult>(
         `/v1/connex/result/${encodeURIComponent(verifier)}`
       );
 

@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
-import { selectConnexTeam } from '../../util/connex/select-team';
+import { selectConnectTeam } from '../../util/connect/select-team';
 import { getLinkedProject } from '../../util/projects/link';
 import table from '../../util/output/table';
 import { packageName } from '../../util/pkg-name';
@@ -13,12 +13,12 @@ interface LinkedProject {
   name: string;
 }
 
-interface ConnexClientProjectLink {
+interface ConnectClientProjectLink {
   projectId: string;
   project?: LinkedProject;
 }
 
-interface ConnexClient {
+interface ConnectClient {
   id: string;
   uid: string;
   name: string;
@@ -27,7 +27,7 @@ interface ConnexClient {
   createdAt: number;
   includes?: {
     projects?: {
-      items: ConnexClientProjectLink[];
+      items: ConnectClientProjectLink[];
       hasMore: boolean;
       cursor?: string | null;
     };
@@ -35,7 +35,7 @@ interface ConnexClient {
 }
 
 interface ListClientsResponse {
-  clients: ConnexClient[];
+  clients: ConnectClient[];
   cursor?: string;
 }
 
@@ -81,9 +81,9 @@ export async function list(
   // Resolve a team explicitly so we have one for the API call.
   const unscoped = !projectId;
   if (unscoped) {
-    await selectConnexTeam(
+    await selectConnectTeam(
       client,
-      'Select the team whose Connex connectors you want to list'
+      'Select the team whose Connect connectors you want to list'
     );
   }
 
@@ -102,7 +102,7 @@ export async function list(
   const query = params.toString();
   const url = `/v1/connex/clients${query ? `?${query}` : ''}`;
 
-  output.spinner('Fetching Connex connectors…');
+  output.spinner('Fetching Connect connectors…');
   let response: ListClientsResponse;
   try {
     response = await client.fetch<ListClientsResponse>(url);
@@ -111,7 +111,7 @@ export async function list(
     const status = (err as { status?: number }).status;
     if (status === 404) {
       output.error(
-        'Connex is not enabled for this team. Contact support to enable it.'
+        'Connect is not enabled for this team. Contact support to enable it.'
       );
       return 1;
     }
@@ -159,18 +159,18 @@ export async function list(
   if (clients.length === 0) {
     if (unscoped) {
       output.log(
-        `No Connex connectors found. Create one with \`${packageName} connex create <type>\`.`
+        `No Connect connectors found. Create one with \`${packageName} connect create <type>\`.`
       );
     } else {
       output.log(
-        `No Connex connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connex list --all-projects\` to see every connector in the team.`
+        `No Connect connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connect list --all-projects\` to see every connector in the team.`
       );
     }
     return 0;
   }
 
   if (!unscoped && projectName) {
-    output.log(`Connex connectors linked to ${chalk.bold(projectName)}:`);
+    output.log(`Connect connectors linked to ${chalk.bold(projectName)}:`);
   }
 
   const headers = ['UID', 'ID', 'Name', 'Type'];
@@ -212,8 +212,8 @@ export async function list(
 
   if (response.cursor) {
     const nextCommand = allProjects
-      ? `${packageName} connex list --all-projects --next ${response.cursor}`
-      : `${packageName} connex list --next ${response.cursor}`;
+      ? `${packageName} connect list --all-projects --next ${response.cursor}`
+      : `${packageName} connect list --next ${response.cursor}`;
     output.log(`To see more, run \`${nextCommand}\``);
   }
 

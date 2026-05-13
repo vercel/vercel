@@ -4,7 +4,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
-import { selectConnexTeam } from '../../util/connex/select-team';
+import { selectConnectTeam } from '../../util/connect/select-team';
 import { validateJsonOutput } from '../../util/output-format';
 
 export async function openClient(
@@ -24,13 +24,15 @@ export async function openClient(
 
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
-    output.error('Missing connector ID or UID. Usage: vercel connex open <id>');
+    output.error(
+      'Missing connector ID or UID. Usage: vercel connect open <id>'
+    );
     return 1;
   }
 
-  await selectConnexTeam(
+  await selectConnectTeam(
     client,
-    'Select the team whose Connex connector to open'
+    'Select the team whose Connect connector to open'
   );
 
   const { team } = await getScope(client);
@@ -39,7 +41,7 @@ export async function openClient(
     return 1;
   }
 
-  output.spinner('Looking up Connex connector…');
+  output.spinner('Looking up Connect connector…');
   let resolvedId: string;
   try {
     // Resolve to the scl_ id even if the caller passed a UID. The dashboard
@@ -54,7 +56,7 @@ export async function openClient(
     const status = (err as { status?: number }).status;
     if (status === 404) {
       output.error(
-        `Connex connector ${chalk.bold(`"${clientIdOrUid}"`)} not found on team ${chalk.bold(team.slug)}, or Connex is not enabled for this team.`
+        `Connect connector ${chalk.bold(`"${clientIdOrUid}"`)} not found on team ${chalk.bold(team.slug)}, or Connect is not enabled for this team.`
       );
       return 1;
     }
@@ -72,7 +74,7 @@ export async function openClient(
 
   if (client.stdout.isTTY) {
     output.print(
-      `Opening Connex connector ${chalk.bold(clientIdOrUid)} in the dashboard…\n`
+      `Opening Connect connector ${chalk.bold(clientIdOrUid)} in the dashboard…\n`
     );
     open(url);
     return 0;

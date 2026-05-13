@@ -6,7 +6,7 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import connex from '../../../../src/commands/connex';
+import connect from '../../../../src/commands/connect';
 
 const PROJECT_ID = 'prj_linked_test';
 const PROJECT_NAME = 'my-app';
@@ -22,7 +22,7 @@ async function setupLinkedProject(team: { id: string }): Promise<void> {
   client.cwd = cwd;
 }
 
-describe('connex attach', () => {
+describe('connect attach', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -35,9 +35,9 @@ describe('connex attach', () => {
 
   it('errors when no client argument is provided', async () => {
     await setupLinkedProject(team);
-    client.setArgv('connex', 'attach');
+    client.setArgv('connect', 'attach');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -47,9 +47,9 @@ describe('connex attach', () => {
 
   it('rejects --format=json without --yes', async () => {
     await setupLinkedProject(team);
-    client.setArgv('connex', 'attach', 'scl_abc123', '--format=json');
+    client.setArgv('connect', 'attach', 'scl_abc123', '--format=json');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -59,9 +59,9 @@ describe('connex attach', () => {
 
   it('rejects an invalid --environment value', async () => {
     await setupLinkedProject(team);
-    client.setArgv('connex', 'attach', 'scl_abc123', '-e', 'staging', '--yes');
+    client.setArgv('connect', 'attach', 'scl_abc123', '-e', 'staging', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     const stderr = client.stderr.getFullOutput();
@@ -73,9 +73,9 @@ describe('connex attach', () => {
     // Intentionally no setupLinkedProject — cwd has no .vercel/project.json.
     client.cwd = setupTmpDir();
 
-    client.setArgv('connex', 'attach', 'scl_abc123', '--yes');
+    client.setArgv('connect', 'attach', 'scl_abc123', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('No linked project found');
@@ -88,13 +88,13 @@ describe('connex attach', () => {
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connex', 'attach', 'scl_missing', '--yes');
+    client.setArgv('connect', 'attach', 'scl_missing', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'No Connex connector found for'
+      'No Connect connector found for'
     );
   });
 
@@ -125,9 +125,9 @@ describe('connex attach', () => {
       }
     );
 
-    client.setArgv('connex', 'attach', 'slack/my-bot', '--yes');
+    client.setArgv('connect', 'attach', 'slack/my-bot', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postClientId).toBe('scl_abc123');
@@ -138,7 +138,7 @@ describe('connex attach', () => {
       'development',
     ]);
     expect(client.stderr.getFullOutput()).toContain(
-      'Attached Connex connector'
+      'Attached Connect connector'
     );
   });
 
@@ -166,7 +166,7 @@ describe('connex attach', () => {
     );
 
     client.setArgv(
-      'connex',
+      'connect',
       'attach',
       'scl_abc123',
       '-e',
@@ -174,7 +174,7 @@ describe('connex attach', () => {
       '--yes'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postBody?.environments).toEqual(['production', 'preview']);
@@ -209,14 +209,14 @@ describe('connex attach', () => {
     );
 
     client.setArgv(
-      'connex',
+      'connect',
       'attach',
       'scl_abc123',
       '-e',
       'production,preview'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postCalled).toBe(false);
@@ -253,7 +253,7 @@ describe('connex attach', () => {
     );
 
     client.setArgv(
-      'connex',
+      'connect',
       'attach',
       'scl_abc123',
       '-e',
@@ -262,7 +262,7 @@ describe('connex attach', () => {
       '--format=json'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postCalled).toBe(false);
@@ -303,14 +303,14 @@ describe('connex attach', () => {
     );
 
     client.setArgv(
-      'connex',
+      'connect',
       'attach',
       'scl_abc123',
       '-e',
       'production,preview'
     );
 
-    const exitCodePromise = connex(client);
+    const exitCodePromise = connect(client);
 
     await expect(client.stderr).toOutput('is already attached');
     await expect(client.stderr).toOutput('Current:  production');
@@ -347,9 +347,9 @@ describe('connex attach', () => {
       }
     );
 
-    client.setArgv('connex', 'attach', 'scl_abc123');
+    client.setArgv('connect', 'attach', 'scl_abc123');
 
-    const exitCodePromise = connex(client);
+    const exitCodePromise = connect(client);
 
     await expect(client.stderr).toOutput('Continue?');
     client.stdin.write('n\n');
@@ -374,10 +374,10 @@ describe('connex attach', () => {
       }
     );
 
-    client.setArgv('connex', 'attach', 'scl_abc123');
+    client.setArgv('connect', 'attach', 'scl_abc123');
     (client.stdin as unknown as { isTTY: boolean }).isTTY = false;
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('Confirmation required');
@@ -404,7 +404,7 @@ describe('connex attach', () => {
     );
 
     client.setArgv(
-      'connex',
+      'connect',
       'attach',
       'slack/my-bot',
       '-e',
@@ -413,7 +413,7 @@ describe('connex attach', () => {
       '--format=json'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     const stdout = client.stdout.getFullOutput().trim();
@@ -446,9 +446,9 @@ describe('connex attach', () => {
       }
     );
 
-    client.setArgv('connex', 'attach', 'scl_abc123', '--yes');
+    client.setArgv('connect', 'attach', 'scl_abc123', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(

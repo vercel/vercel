@@ -5,12 +5,12 @@ import type { JSONObject } from '@vercel-internals/types';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
 import { getProjectLink } from '../../util/projects/link';
-import { selectConnexTeam } from '../../util/connex/select-team';
+import { selectConnectTeam } from '../../util/connect/select-team';
 import {
   generateRequestCode,
-  awaitConnexResult,
-} from '../../util/connex/request-code';
-import type { ConnexClient } from './types';
+  awaitConnectResult,
+} from '../../util/connect/request-code';
+import type { ConnectClient } from './types';
 
 export async function create(
   client: Client,
@@ -31,12 +31,12 @@ export async function create(
 
   const serviceType = args[0];
   if (!serviceType) {
-    output.error('Missing service type. Usage: vercel connex create <type>');
+    output.error('Missing service type. Usage: vercel connect create <type>');
     return 1;
   }
 
   // Resolve team
-  await selectConnexTeam(
+  await selectConnectTeam(
     client,
     'Select the team where you want to create this connector'
   );
@@ -72,10 +72,10 @@ export async function create(
   body.triggers = { enabled: flags['--triggers'] === true };
 
   output.spinner('Setting up...');
-  let createdClient: ConnexClient | null = null;
+  let createdClient: ConnectClient | null = null;
   let browserUrl: string | undefined;
   try {
-    createdClient = await client.fetch<ConnexClient>(
+    createdClient = await client.fetch<ConnectClient>(
       '/v1/connex/clients/managed?autoinstall=true',
       { method: 'POST', body }
     );
@@ -86,7 +86,7 @@ export async function create(
     } else if (apiErr.status === 404) {
       output.stopSpinner();
       output.error(
-        'Connex is not enabled for this team. Contact support to enable it.'
+        'Connect is not enabled for this team. Contact support to enable it.'
       );
       return 1;
     } else {
@@ -107,7 +107,7 @@ export async function create(
     );
 
     output.spinner('Waiting for you to complete setup in the browser...');
-    const resultFromBrowser = await awaitConnexResult(client, verifier);
+    const resultFromBrowser = await awaitConnectResult(client, verifier);
     output.stopSpinner();
 
     if (
@@ -116,7 +116,7 @@ export async function create(
       typeof resultFromBrowser.clientId === 'string'
     ) {
       const clientId = resultFromBrowser.clientId;
-      createdClient = await client.fetch<ConnexClient>(
+      createdClient = await client.fetch<ConnectClient>(
         `/v1/connex/clients/${clientId}`
       );
     }

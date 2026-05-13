@@ -9,7 +9,7 @@ import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
-import { connexCommand } from './connex/command';
+import { connectCommand } from './connect/command';
 import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
 import { curlCommand } from './curl/command';
@@ -134,7 +134,7 @@ if (process.env.FF_GUIDANCE_MODE) {
 commandsStructs.push(metricsCommand);
 
 if (process.env.FF_CONNEX_ENABLED) {
-  commandsStructs.push(connexCommand);
+  commandsStructs.push(connectCommand);
 }
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {

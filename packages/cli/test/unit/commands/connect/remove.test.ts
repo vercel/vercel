@@ -2,9 +2,9 @@ import { describe, beforeEach, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
-import connex from '../../../../src/commands/connex';
+import connect from '../../../../src/commands/connect';
 
-describe('connex remove', () => {
+describe('connect remove', () => {
   let team: { id: string; slug: string };
 
   beforeEach(() => {
@@ -15,9 +15,9 @@ describe('connex remove', () => {
   });
 
   it('should error when no client argument is provided', async () => {
-    client.setArgv('connex', 'remove');
+    client.setArgv('connect', 'remove');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -31,13 +31,13 @@ describe('connex remove', () => {
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connex', 'remove', 'scl_missing', '--yes');
+    client.setArgv('connect', 'remove', 'scl_missing', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'No Connex connector found for'
+      'No Connect connector found for'
     );
   });
 
@@ -60,9 +60,9 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connex', 'remove', 'slack/my-bot', '--yes');
+    client.setArgv('connect', 'remove', 'slack/my-bot', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(deleteCalled).toBe(true);
@@ -92,9 +92,9 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connex', 'remove', 'slack/my-bot', '--yes');
+    client.setArgv('connect', 'remove', 'slack/my-bot', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(deleteCalled).toBe(false);
@@ -124,14 +124,14 @@ describe('connex remove', () => {
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'remove',
       'slack/my-bot',
       '--disconnect-all',
       '--yes'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(deleteCalled).toBe(true);
@@ -149,10 +149,10 @@ describe('connex remove', () => {
       }
     );
 
-    client.setArgv('connex', 'remove', 'scl_abc123');
+    client.setArgv('connect', 'remove', 'scl_abc123');
     (client.stdin as unknown as { isTTY: boolean }).isTTY = false;
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('Confirmation required');
@@ -176,9 +176,9 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connex', 'remove', 'scl_abc123');
+    client.setArgv('connect', 'remove', 'scl_abc123');
 
-    const exitCodePromise = connex(client);
+    const exitCodePromise = connect(client);
 
     await expect(client.stderr).toOutput('Are you sure?');
     client.stdin.write('n\n');
@@ -191,9 +191,9 @@ describe('connex remove', () => {
   });
 
   it('should reject --format=json without --yes', async () => {
-    client.setArgv('connex', 'remove', 'scl_abc123', '--format=json');
+    client.setArgv('connect', 'remove', 'scl_abc123', '--format=json');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
@@ -217,14 +217,14 @@ describe('connex remove', () => {
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'remove',
       'slack/my-bot',
       '--format=json',
       '--yes'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     const stdout = client.stdout.getFullOutput().trim();
@@ -253,9 +253,9 @@ describe('connex remove', () => {
       res.end();
     });
 
-    client.setArgv('connex', 'remove', 'slack/my-bot', '--yes');
+    client.setArgv('connect', 'remove', 'slack/my-bot', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(getProjectsClientId).toBe('scl_abc123');
