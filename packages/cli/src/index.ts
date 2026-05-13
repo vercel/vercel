@@ -988,6 +988,11 @@ const main = async () => {
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).curl;
           break;
+        case 'db':
+        case 'database':
+          telemetry.trackCliCommandDb(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).db;
+          break;
         case 'dns':
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).dns;

@@ -22,6 +22,8 @@ describe('index', () => {
         ['cron', 'crons'],
         ['crons', 'crons'],
         ['curl', 'curl'],
+        ['database', 'db'],
+        ['db', 'db'],
         ['deploy', 'deploy'],
         ['deploy-hooks', 'deploy-hooks'],
         ['deploy-hook', 'deploy-hooks'],

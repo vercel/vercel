@@ -250,6 +250,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandDb(actual: string) {
+    this.trackCliCommand({
+      command: 'db',
+      value: actual,
+    });
+  }
+
   trackCliCommandLink(actual: string) {
     this.trackCliCommand({
       command: 'link',
