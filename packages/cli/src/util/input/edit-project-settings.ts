@@ -56,15 +56,15 @@ export async function editProjectSettings(
       if (localConfigValue) settings[setting] = localConfigValue;
     }
 
-    output.print(`Local settings detected in ${configFileName}:\n`);
+    output.print(`  Local settings detected in ${configFileName}:\n`);
 
     // Print provided overrides including framework
     for (const setting of settingKeys) {
       const override = localConfigurationOverrides[setting];
       if (override) {
         output.print(
-          `${chalk.dim(
-            `- ${chalk.bold(`${settingMap[setting]}:`)} ${override}`
+          `  ${chalk.dim(
+            `${chalk.bold(`${settingMap[setting]}:`)} ${override}`
           )}\n`
         );
       }
@@ -79,7 +79,7 @@ export async function editProjectSettings(
       if (overrideFramework) {
         framework = overrideFramework;
         output.print(
-          `Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`
+          `  Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`
         );
       }
     }
@@ -91,23 +91,11 @@ export async function editProjectSettings(
     return settings;
   }
 
-  const styledFramework = (frameworkName: string) => {
-    const frameworkStyle = {
-      text: frameworkName,
-      color: chalk.blue,
-    };
-
-    if (frameworkName === 'Hono') {
-      frameworkStyle.text = '🔥 Hono';
-      frameworkStyle.color = chalk.hex('#FFA500');
-    }
-
-    return chalk.bold(frameworkStyle.color(frameworkStyle.text));
-  };
+  const styledFramework = (frameworkName: string) => chalk.bold(frameworkName);
 
   // A missing framework slug implies the "Other" framework was selected
   if (!framework.slug) {
-    output.log(`No framework detected. Default Project Settings:\n`);
+    output.print(`  No framework detected. Default Project Settings:\n`);
   } else {
     // Compress "Auto-detected Project Settings for X" into a single line that
     // also names the key commands the user is about to run with.
@@ -149,8 +137,8 @@ export async function editProjectSettings(
 
       if (!override && defaultSetting) {
         output.print(
-          `${chalk.dim(
-            `- ${chalk.bold(`${settingMap[setting]}:`)} ${
+          `  ${chalk.dim(
+            `${chalk.bold(`${settingMap[setting]}:`)} ${
               isSettingValue(defaultSetting)
                 ? defaultSetting.value
                 : chalk.italic(`${defaultSetting.placeholder}`)
@@ -190,7 +178,7 @@ export async function editProjectSettings(
   for (const setting of settingFields) {
     const field = settingMap[setting];
     settings[setting] = await client.input.text({
-      message: `What's your ${chalk.bold(field)}?`,
+      message: `${chalk.bold(field)}?`,
     });
   }
   return settings;

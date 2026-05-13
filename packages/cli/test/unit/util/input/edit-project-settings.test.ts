@@ -341,5 +341,25 @@ describe('editProjectSettings', () => {
       expect(fullOutput).not.toMatch(/\(build:/);
       expect(fullOutput).not.toMatch(/, output:/);
     });
+
+    test('does not apply blue color to framework name', async () => {
+      await editProjectSettings(client, null, nextJSFramework, true, null);
+      const fullOutput = client.stderr.getFullOutput();
+      // The framework name should be bold but not blue (no chalk.blue ANSI code).
+      // chalk.blue ANSI sequence is \x1b[34m. The Detected line must NOT contain it.
+      const detectedLineMatch = fullOutput.match(/Detected[^\n]*/);
+      expect(detectedLineMatch).toBeTruthy();
+      expect(detectedLineMatch![0]).not.toContain('\x1b[34m');
+    });
+
+    test('does not emit 🔥 Hono emoji', async () => {
+      const honoFramework = frameworks.find(
+        fwk => fwk.name === 'Hono'
+      ) as unknown as Framework;
+      if (!honoFramework) return; // skip if Hono isn't in the framework list
+      await editProjectSettings(client, null, honoFramework, true, null);
+      const fullOutput = client.stderr.getFullOutput();
+      expect(fullOutput).not.toContain('🔥');
+    });
   });
 });
