@@ -113,6 +113,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Linux build tools
+        if: ${{ matrix.custom_node_platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
       - name: Build workspace packages
         run: pnpm build
         env:
