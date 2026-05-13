@@ -22,6 +22,7 @@ import {
   NowBuildError,
   runNpmInstall,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   type BuilderV3,
   type BuilderVX,
   type Config,
@@ -163,6 +164,7 @@ interface ServicesOrchestratorOptions {
   repoRoot: string;
   env: NodeJS.ProcessEnv;
   proxyOrigin: string;
+  useImplicitEnvInjection: boolean;
 }
 
 // Max time we wait between SIGTERM and SIGKILL when force-stopping a service.
@@ -251,11 +253,12 @@ export class ServicesOrchestrator {
   private services: Service[];
   private cwd: string;
   private repoRoot: string;
-  private env: NodeJS.ProcessEnv;
+  private envFilesValues: NodeJS.ProcessEnv;
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
   private hasQueueServices: boolean;
+  private useImplicitEnvInjection: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -263,7 +266,8 @@ export class ServicesOrchestrator {
     this.repoRoot = options.repoRoot;
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
-    this.env = options.env;
+    this.envFilesValues = options.env;
+    this.useImplicitEnvInjection = options.useImplicitEnvInjection;
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
@@ -509,22 +513,42 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
-    const serviceUrlEnvVars = getServiceUrlEnvVars({
-      services: this.services,
-      frameworkList: framework ? [framework] : [],
-      origin: this.proxyOrigin,
-      currentEnv: this.env,
-      envPrefix: service.envPrefix,
-    });
+    const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
 
+    let perServiceEnv: Record<string, string> = {};
+    if (this.useImplicitEnvInjection) {
+      // Legacy behavior for experimentalServices / auto-detected: synthesize
+      // `{NAME}_URL` and `{PREFIX}{NAME}_URL` env vars for every web service.
+      // Pass only the consumer's framework so its prefix wins for client-side
+      // (relative) names; absolute `{NAME}_URL` is always emitted.
+      perServiceEnv = getExperimentalServiceUrlEnvVars({
+        services: this.services,
+        frameworkList: framework ? [framework] : [],
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    } else if (service.env) {
+      perServiceEnv = getServiceUrlEnvVars({
+        requestedEnv: service.env,
+        consumerService: service,
+        services: this.services,
+        frameworkList,
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    }
+
+    // Precedence: process env > env* files > per-service env > config env > defaults
+    //
+    // per-service env already contains config env that is folded into it during
+    // service's resolution
     const env = cloneEnv(
       {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
-      process.env,
-      this.env,
-      serviceUrlEnvVars
+      perServiceEnv,
+      effectiveProcessEnv
     );
     env.VERCEL_SERVICE_TYPE = service.type;
     if (service.trigger) {

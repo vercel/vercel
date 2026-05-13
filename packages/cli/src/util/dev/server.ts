@@ -181,6 +181,7 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+  private useImplicitServicesEnvInjection: boolean;
   private projectId?: string;
   private orgId?: string;
 
@@ -202,6 +203,8 @@ export default class DevServer {
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
     this.services = options.services;
+    this.useImplicitServicesEnvInjection =
+      options.useImplicitServicesEnvInjection ?? true;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -715,9 +718,14 @@ export default class DevServer {
     this.apiDir = detectApiDirectory(vercelConfig.builds || []);
     this.apiExtensions = detectApiExtensions(vercelConfig.builds || []);
 
-    // Update the env vars configuration
+    // Update the env vars configuration. `vercelConfig.env` may now be the
+    // new `Record<string, EnvVar>` shape and this will be resolved later,
+    // so only the legacy literal shape is forwarded as a `.env` validation base.
+    const literalTopLevelEnv = isLiteralEnvRecord(vercelConfig.env)
+      ? vercelConfig.env
+      : undefined;
     let [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', vercelConfig.env),
+      this.getLocalEnv('.env', literalTopLevelEnv),
       this.getLocalEnv('.env.build', vercelConfig.build?.env),
     ]);
 
@@ -969,6 +977,7 @@ export default class DevServer {
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
+        useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
@@ -2771,6 +2780,18 @@ function generateRequestId(podId: string, isInvoke = false): string {
 
 function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+/**
+ * Type guard for the legacy top-level `env` shape (`Record<string, string>`).
+ * The schema rejects mixed records, so a single sample is sufficient.
+ */
+function isLiteralEnvRecord(
+  env: VercelConfig['env']
+): env is Record<string, string> {
+  if (!env) return false;
+  const first = Object.values(env)[0];
+  return first === undefined || typeof first === 'string';
 }
 
 async function findBuildMatch(

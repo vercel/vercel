@@ -1,5 +1,16 @@
 # @vercel/fs-detectors
 
+## 6.3.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
 ## 6.2.2
 
 ### Patch Changes

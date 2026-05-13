@@ -13,6 +13,7 @@ import {
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -732,18 +733,20 @@ async function doBuild(
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
 
-    // Inject service URL environment variables so they're available during builds.
-    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
-    // these env vars are baked into the client bundle so they can be accessed in the client code.
-    // User-defined env vars take precedence and won't be overwritten.
-    if (detectedServices && detectedServices.length > 0) {
-      const serviceUrlEnvVars = getServiceUrlEnvVars({
+    // Legacy URL injection for `experimentalServices`. The `services` field
+    // opts out of this and uses explicit per-service
+    // `env` declarations (handled inside the builder loop below).
+    if (
+      detectedBuilders.useImplicitEnvInjection &&
+      detectedServices &&
+      detectedServices.length > 0
+    ) {
+      const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
         services: detectedServices,
         frameworkList,
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
       });
-
       for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
         process.env[key] = value;
         output.debug(`Injected service URL env var: ${key}=${value}`);
@@ -1034,6 +1037,29 @@ async function doBuild(
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
+
+      // Inject per-service URL environment variables so they're available during builds.
+      // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+      // these env vars are baked into the client bundle so they can be accessed in the client code.
+      // User-defined env takes precedence and won't be overwritten. The env will be cleared
+      // after the build is complete
+      const restoreEnv = new Map<string, string | undefined>();
+      if (detectedServices && service?.env) {
+        const perServiceEnv = getServiceUrlEnvVars({
+          requestedEnv: service.env,
+          consumerService: service,
+          services: detectedServices,
+          frameworkList,
+          currentEnv: process.env,
+          deploymentUrl: process.env.VERCEL_URL,
+        });
+        for (const [key, value] of Object.entries(perServiceEnv)) {
+          if (key in process.env) continue;
+          restoreEnv.set(key, process.env[key]);
+          process.env[key] = value;
+          output.debug(`Injected service URL env var: ${key}=${value}`);
+        }
+      }
       let buildResult: BuildResultV2 | BuildResultV3;
       let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
@@ -1068,6 +1094,15 @@ async function doBuild(
           }
         }
       } finally {
+        // Restore any process.env keys we set from service envVars so the
+        // next builder iteration starts from a clean slate.
+        for (const [key, prior] of restoreEnv) {
+          if (prior === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = prior;
+          }
+        }
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan

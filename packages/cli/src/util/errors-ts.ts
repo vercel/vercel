@@ -324,11 +324,11 @@ export class InvalidDeploymentId extends NowError<
   'INVALID_DEPLOYMENT_ID',
   { id: string }
 > {
-  constructor(id: string) {
+  constructor(id: string, message?: string | null) {
     super({
       code: 'INVALID_DEPLOYMENT_ID',
       meta: { id },
-      message: `The deployment id "${id}" is not valid.`,
+      message: message || `The deployment id "${id}" is not valid.`,
     });
   }
 }

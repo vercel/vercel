@@ -8,19 +8,17 @@ exports[`help command > alias help output snapshots > alias help column width 40
 
   Commands:
 
-  list                      Show   
-                            all    
-                            aliases
-  remove  alias             Remove 
-                            an     
-                            alias  
-                            using  
-                            its    
-                            hostna…
-  set     deployment alias  Create 
-                            a new  
-                            alias  
-                            (defau…
+  list                     Show all
+                           aliases 
+  remove  alias            Remove  
+                           an alias
+                           using   
+                           its     
+                           hostname
+  set     id-or-url alias  Create a
+                           new     
+                           alias   
+                           (defaul…
 
 
   Global Options:
@@ -96,9 +94,9 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
   Commands:
 
-  list                      Show all aliases                               
-  remove  alias             Remove an alias using its hostname             
-  set     deployment alias  Create a new alias (default)                   
+  list                     Show all aliases                                
+  remove  alias            Remove an alias using its hostname              
+  set     id-or-url alias  Create a new alias (default)                    
 
 
   Global Options:
@@ -142,9 +140,9 @@ exports[`help command > alias help output snapshots > alias help column width 12
 
   Commands:
 
-  list                      Show all aliases                                                                       
-  remove  alias             Remove an alias using its hostname                                                     
-  set     deployment alias  Create a new alias (default)                                                           
+  list                     Show all aliases                                                                        
+  remove  alias            Remove an alias using its hostname                                                      
+  set     id-or-url alias  Create a new alias (default)                                                            
 
 
   Global Options:
@@ -238,7 +236,7 @@ exports[`help command > alias help output snapshots > alias remove subcommand > 
 
 exports[`help command > alias help output snapshots > alias set subcommand > alias set subcommand help column width 120 1`] = `
 "
-  ▲ vercel alias set deployment alias
+  ▲ vercel alias set id-or-url alias
 
   Create a new alias                                                                                                    
 
@@ -757,7 +755,7 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 "
   ▲ vercel connex attach client [options]
 
-  Attach a Vercel project to a Connex client for one or more environments                                               
+  Attach a Vercel project to a Connex connector for one or more environments                                            
 
   Options:
 
@@ -784,7 +782,7 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 
   Examples:
 
-  - Attach the current project to a client for all environments
+  - Attach the current project to a connector for all environments
 
     $ vercel connex attach scl_abc123
 
@@ -807,13 +805,13 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 "
   ▲ vercel connex create type [options]
 
-  Create a new Connex client                                                                                            
+  Create a new Connex connector                                                                                         
 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -n,  --name <NAME>      Name of the Connex client                                                                     
-       --triggers         Enable webhook triggers for this client                                                       
+  -n,  --name <NAME>      Name of the Connex connector                                                                  
+       --triggers         Enable webhook triggers for this connector                                                    
 
 
   Global Options:
@@ -855,20 +853,20 @@ exports[`help command > connex help output snapshots > connex help column width 
 "
   ▲ vercel connex command
 
-  Manage Vercel Connect clients                                                 
+  Manage Vercel Connect connectors                                              
 
   Commands:
 
-  create  type    Create a new Connex client                            
-  list            List Connex clients linked to the current project     
-                  (falls back to every client in the team when no       
+  create  type    Create a new Connex connector                         
+  list            List Connex connectors linked to the current project  
+                  (falls back to every connector in the team when no    
                   project is linked or when --all-projects is set)      
-  token   id      Get a token for a Connex client (accepts a client ID  
-                  like scl_abc or a UID like slack/my-bot)              
-  attach  client  Attach a Vercel project to a Connex client for one or 
-                  more environments                                     
-  remove  client  Delete a Connex client                                
-  open    id      Open a Connex client in the Vercel dashboard          
+  token   id      Get a token for a Connex connector (accepts a         
+                  connector ID like scl_abc or a UID like slack/my-bot) 
+  attach  client  Attach a Vercel project to a Connex connector for one 
+                  or more environments                                  
+  remove  client  Delete a Connex connector                             
+  open    id      Open a Connex connector in the Vercel dashboard       
 
 
   Global Options:
@@ -893,7 +891,7 @@ exports[`help command > connex help output snapshots > connex help column width 
 
     $ vercel connex create slack
 
-  - List Connex clients on the current team
+  - List Connex connectors on the current team
 
     $ vercel connex list
 
@@ -901,11 +899,11 @@ exports[`help command > connex help output snapshots > connex help column width 
 
     $ vercel connex token scl_abc123
 
-  - Attach the current project to a client
+  - Attach the current project to a connector
 
     $ vercel connex attach scl_abc123
 
-  - Open a client in the dashboard
+  - Open a connector in the dashboard
 
     $ vercel connex open scl_abc123
 
@@ -916,14 +914,14 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 "
   ▲ vercel connex list [options]
 
-  List Connex clients linked to the current project (falls back to every client in the team when no project is linked   
-  or when --all-projects is set)                                                                                        
+  List Connex connectors linked to the current project (falls back to every connector in the team when no project is    
+  linked or when --all-projects is set)                                                                                 
 
   Options:
 
-       --all-projects     List every Connex client in the team, regardless of project link                              
+       --all-projects     List every Connex connector in the team, regardless of project link                           
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --limit <COUNT>    Number of clients to return per page                                                          
+       --limit <COUNT>    Number of connectors to return per page                                                       
        --next <CURSOR>    Cursor for the next page of results                                                           
 
 
@@ -943,11 +941,11 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   Examples:
 
-  - List Connex clients linked to the current project
+  - List Connex connectors linked to the current project
 
     $ vercel connex list
 
-  - List every Connex client in the team
+  - List every Connex connector in the team
 
     $ vercel connex list --all-projects
 
@@ -970,7 +968,7 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
 "
   ▲ vercel connex open id [options]
 
-  Open a Connex client in the Vercel dashboard                                                                          
+  Open a Connex connector in the Vercel dashboard                                                                       
 
   Options:
 
@@ -993,11 +991,11 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
 
   Examples:
 
-  - Open a client by ID
+  - Open a connector by ID
 
     $ vercel connex open scl_abc123
 
-  - Open a client by UID
+  - Open a connector by UID
 
     $ vercel connex open slack/my-bot
 
@@ -1012,15 +1010,15 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 "
   ▲ vercel connex token id [options]
 
-  Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)                         
+  Get a token for a Connex connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)                   
 
   Options:
 
   -F,  --format <FORMAT>       Specify the output format (json)                                                              
-       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the client's      
+       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the connector's   
                                default installation)                                                                         
        --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
-  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the client's default     
+  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector's default  
                                installation)                                                                                 
   -y,  --yes                   Accept default value for all prompts                                                          
 
@@ -1041,11 +1039,11 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 
   Examples:
 
-  - Get a user token by client ID
+  - Get a user token by connector ID
 
     $ vercel connex token scl_abc123
 
-  - Get a token by client UID
+  - Get a token by connector UID
 
     $ vercel connex token slack/my-bot
 

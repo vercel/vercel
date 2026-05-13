@@ -22,7 +22,7 @@ describe('connex token', () => {
 
     const exitCode = await connex(client);
 
-    await expect(client.stderr).toOutput('Missing client ID or UID');
+    await expect(client.stderr).toOutput('Missing connector ID or UID');
     expect(exitCode).toBe(1);
   });
 
@@ -179,7 +179,7 @@ describe('connex token', () => {
 
     const exitCode = await connex(client);
 
-    await expect(client.stderr).toOutput('Client not found');
+    await expect(client.stderr).toOutput('Connector not found');
     expect(exitCode).toBe(1);
   });
 

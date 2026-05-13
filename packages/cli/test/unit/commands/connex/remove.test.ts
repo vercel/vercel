@@ -20,7 +20,9 @@ describe('connex remove', () => {
     const exitCode = await connex(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('Missing client ID or UID');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing connector ID or UID'
+    );
   });
 
   it('should error with a friendly message when the client is not found', async () => {
@@ -35,7 +37,7 @@ describe('connex remove', () => {
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'No Connex client found for'
+      'No Connex connector found for'
     );
   });
 

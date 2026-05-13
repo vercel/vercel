@@ -69,6 +69,7 @@ const PYTHON_ENTRYPOINT_DOCS_URL =
 
 import {
   detectPythonEntrypoint,
+  entrypointToModule,
   type DetectedPythonEntrypoint,
   type PythonEntrypoint,
 } from './entrypoint';
@@ -597,7 +598,7 @@ export const build: BuildVX = async ({
   await uv.pip({
     venvPath,
     projectDir: join(workPath, entryDirectory),
-    args: ['install', runtimeDep],
+    args: ['install', '--link-mode', 'copy', runtimeDep],
   });
 
   if (shouldInstallVercelWorkers) {
@@ -609,7 +610,7 @@ export const build: BuildVX = async ({
     await uv.pip({
       venvPath,
       projectDir: join(workPath, entryDirectory),
-      args: ['install', workersDep],
+      args: ['install', '--link-mode', 'copy', workersDep],
     });
   }
 
@@ -622,7 +623,7 @@ export const build: BuildVX = async ({
     Object.assign(pythonEnv, quirksResult.buildEnv);
   }
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const moduleName = entrypointToModule(entrypoint);
 
   if (handlerFunction) {
     const entrypointPath = join(workPath, entrypoint);
