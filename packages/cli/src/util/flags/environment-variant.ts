@@ -22,7 +22,7 @@ export async function resolveFlagEnvironment(
   let nextEnvironment = environment;
 
   if (!nextEnvironment) {
-    if (!client.stdin.isTTY) {
+    if (client.nonInteractive || !client.stdin.isTTY) {
       throw new Error(
         'Missing required flag --environment. Use --environment <ENV>, or run interactively in a terminal.'
       );

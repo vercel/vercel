@@ -1,6 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import type { FlagSettings } from './types';
+import {
+  formatFlagBucketingBaseSelector,
+  resolveFlagBucketingBase,
+} from './bucketing-base';
 import { resolveVariant } from './resolve-variant';
 import type {
   Flag,
@@ -45,13 +49,14 @@ export function resolveFlagRollout(
       : undefined;
 
   const baseSelector =
-    options.baseSelector || formatBaseSelector(currentRollout?.base);
+    options.baseSelector ||
+    formatFlagBucketingBaseSelector(currentRollout?.base);
   if (!baseSelector) {
     throw new Error(
       'Missing required flag --by. Use --by <entity.attribute> to choose how users are bucketed.'
     );
   }
-  const base = resolveRolloutBase(settings, baseSelector);
+  const base = resolveFlagBucketingBase(settings, baseSelector);
 
   const rollFromVariant = resolveRollFromVariant(
     flag,
@@ -109,44 +114,6 @@ export function resolveFlagRollout(
     baseLabel: `${base.kind}.${base.attribute}`,
     summary: formatRolloutStages(slots),
     startLabel: formatStartLabel(options.start, currentRollout?.startTimestamp),
-  };
-}
-
-function resolveRolloutBase(settings: FlagSettings, selector: string) {
-  const separatorIndex = selector.indexOf('.');
-  if (separatorIndex <= 0 || separatorIndex === selector.length - 1) {
-    throw new Error(
-      'Invalid value for --by. Use the format <entity.attribute>, for example --by user.userId.'
-    );
-  }
-
-  const kind = selector.slice(0, separatorIndex);
-  const attribute = selector.slice(separatorIndex + 1);
-  const entity = settings.entities.find(candidate => candidate.kind === kind);
-
-  if (!entity) {
-    const availableKinds = settings.entities.map(candidate => candidate.kind);
-    throw new Error(
-      `Unknown entity ${chalk.bold(kind)}. Available entities: ${availableKinds.join(', ')}`
-    );
-  }
-
-  const matchingAttribute = entity.attributes.find(
-    candidate => candidate.key === attribute
-  );
-  if (!matchingAttribute) {
-    const availableAttributes = entity.attributes.map(
-      candidate => candidate.key
-    );
-    throw new Error(
-      `Unknown attribute ${chalk.bold(selector)}. Available attributes for ${kind}: ${availableAttributes.join(', ')}`
-    );
-  }
-
-  return {
-    type: 'entity' as const,
-    kind,
-    attribute,
   };
 }
 
@@ -389,20 +356,4 @@ function formatStartLabel(
     return 'immediately';
   }
   return `start at ${start}`;
-}
-
-function formatBaseSelector(
-  base:
-    | {
-        type: 'entity';
-        kind: string;
-        attribute: string;
-      }
-    | undefined
-): string | undefined {
-  if (!base) {
-    return undefined;
-  }
-
-  return `${base.kind}.${base.attribute}`;
 }

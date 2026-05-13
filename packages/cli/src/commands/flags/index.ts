@@ -13,6 +13,7 @@ import create from './add';
 import openFlag from './open';
 import update from './update';
 import set from './set';
+import split from './split';
 import rollout from './rollout';
 import rm from './rm';
 import archive from './archive';
@@ -27,6 +28,7 @@ import {
   openSubcommand,
   updateSubcommand,
   setSubcommand,
+  splitSubcommand,
   rolloutSubcommand,
   removeSubcommand,
   archiveSubcommand,
@@ -46,6 +48,7 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
   update: getCommandAliases(updateSubcommand),
   set: getCommandAliases(setSubcommand),
+  split: getCommandAliases(splitSubcommand),
   rollout: getCommandAliases(rolloutSubcommand),
   rm: getCommandAliases(removeSubcommand),
   archive: getCommandAliases(archiveSubcommand),
@@ -143,6 +146,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
+    case 'split':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(splitSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSplit(subcommandOriginal);
+      return split(client, args);
     case 'rollout':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
