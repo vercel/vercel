@@ -14,6 +14,15 @@ export const getSubcommand = {
       deprecated: false,
       description: 'Print the raw trace JSON to stdout instead of a summary.',
     },
+    {
+      name: 'project',
+      shorthand: null,
+      type: String,
+      argument: 'NAME|ID',
+      deprecated: false,
+      description:
+        'Project name or id to fetch the trace from (overrides the linked project).',
+    },
   ],
   examples: [
     {
@@ -27,6 +36,10 @@ export const getSubcommand = {
     {
       name: '`get` is the default — this is equivalent to the above',
       value: `${packageName} traces req_1234567890`,
+    },
+    {
+      name: 'Fetch a trace from a specific team and project',
+      value: `${packageName} traces get req_1234567890 --scope my-team --project my-app`,
     },
   ],
 } as const;
