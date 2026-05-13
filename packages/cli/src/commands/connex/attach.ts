@@ -136,7 +136,7 @@ export async function attach(
   let target: ConnexClientIdentity;
   try {
     target = await client.fetch<ConnexClientIdentity>(
-      `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
+      `/v1/connect/clients/${encodeURIComponent(clientIdOrUid)}`
     );
   } catch (err: unknown) {
     output.stopSpinner();
@@ -156,7 +156,7 @@ export async function attach(
   let existingAttachment: ConnexClientProject | undefined;
   try {
     existingAttachment = await client.fetch<ConnexClientProject>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`
+      `/v1/connect/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`
     );
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
@@ -233,7 +233,7 @@ export async function attach(
   output.spinner('Attaching project…');
   try {
     await client.fetch<unknown>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
+      `/v1/connect/clients/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
       {
         method: 'POST',
         body: { environments },
