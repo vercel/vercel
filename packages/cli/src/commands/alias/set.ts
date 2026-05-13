@@ -4,7 +4,6 @@ import type { AliasRecord } from '../../util/alias/create-alias';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import type Client from '../../util/client';
-import getDeployment from '../../util/get-deployment';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
 import type setupDomain from '../../util/domains/setup-domain';
@@ -52,17 +51,13 @@ export default async function set(client: Client, argv: string[]) {
   // If there are more than two args we have to error
   if (args.length > 2) {
     output.error(
-      `${getCommandName(
-        'alias <deployment> <target>'
-      )} accepts at most two arguments`
+      `${getCommandName('alias <id-or-url> <target>')} accepts at most two arguments`
     );
     return 1;
   }
 
   if (args.length >= 1 && !isValidName(args[0])) {
-    output.error(
-      `The provided argument "${args[0]}" is not a valid deployment`
-    );
+    output.error(`The provided argument "${args[0]}" is not a valid ID or URL`);
     return 1;
   }
 
@@ -87,7 +82,6 @@ export default async function set(client: Client, argv: string[]) {
     const deployment = handleCertError(
       await getDeploymentForAlias(
         client,
-        args,
         opts['--local-config'],
         user,
         contextName,
@@ -122,7 +116,12 @@ export default async function set(client: Client, argv: string[]) {
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
-      const record = await assignAlias(client, deployment, target, contextName);
+      const record = await assignAlias(
+        client,
+        deployment.id,
+        target,
+        contextName
+      );
 
       const handleResult = handleSetupDomainError(
         handleCreateAliasError(record)
@@ -142,30 +141,17 @@ export default async function set(client: Client, argv: string[]) {
     return 0;
   }
 
-  const [deploymentIdOrHost, aliasTarget] = args;
-  telemetryClient.trackCliArgumentDeployment(deploymentIdOrHost);
+  const [idOrUrl, aliasTarget] = args;
+  telemetryClient.trackCliArgumentIdOrUrl(idOrUrl);
   telemetryClient.trackCliArgumentAlias(aliasTarget);
-  const deployment = handleCertError(
-    await getDeployment(client, contextName, deploymentIdOrHost)
-  );
 
-  if (deployment === 1) {
-    return deployment;
-  }
-
-  if (deployment === null) {
-    output.error(
-      `Couldn't find a deployment to alias. Please provide one as an argument.`
-    );
-    return 1;
-  }
-
-  output.log(`Assigning alias ${aliasTarget} to deployment ${deployment.url}`);
+  output.log(`Assigning alias ${aliasTarget} to ${idOrUrl}`);
 
   const isWildcard = isWildcardAlias(aliasTarget);
+  const idOrUrlForRequest = idOrUrl.includes('.') ? toHost(idOrUrl) : idOrUrl;
   const record = await assignAlias(
     client,
-    deployment,
+    idOrUrlForRequest,
     aliasTarget,
     contextName
   );
@@ -177,9 +163,9 @@ export default async function set(client: Client, argv: string[]) {
   const prefix = isWildcard ? '' : 'https://';
 
   output.success(
-    `${chalk.bold(`${prefix}${handleResult.alias}`)} now points to https://${
-      deployment.url
-    } ${setStamp()}`
+    `${chalk.bold(
+      `${prefix}${handleResult.alias}`
+    )} now points to ${idOrUrl} ${setStamp()}`
   );
 
   return 0;
@@ -304,7 +290,7 @@ function handleCreateAliasError<T>(
 
   if (error instanceof ERRORS.DeploymentNotFound) {
     output.error(
-      `Failed to find deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(
+      `Failed to find ID or URL ${chalk.dim(error.meta.id)} under ${chalk.bold(
         error.meta.context
       )}`
     );
@@ -318,7 +304,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.DeploymentPermissionDenied) {
     output.error(
-      `No permission to access deployment ${chalk.dim(
+      `No permission to access ID or URL ${chalk.dim(
         error.meta.id
       )} under ${chalk.bold(error.meta.context)}`
     );

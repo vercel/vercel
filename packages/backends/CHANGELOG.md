@@ -1,5 +1,16 @@
 # @vercel/backends
 
+## 0.6.0
+
+### Minor Changes
+
+- 9615277: Add exportName to js crons.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
 ## 0.5.0
 
 ### Minor Changes

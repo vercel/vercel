@@ -49,26 +49,24 @@ export async function remove(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connex remove <client>'
+      'Missing connector ID or UID. Usage: vercel connect remove <client>'
     );
     return 1;
   }
 
-  await selectConnexTeam(client, 'Select the team for this Connex connector');
+  await selectConnexTeam(client, 'Select the team for this connector');
 
-  output.spinner('Retrieving Connex connector…');
+  output.spinner('Retrieving connector…');
   let target: ConnexClientIdentity;
   try {
     target = await client.fetch<ConnexClientIdentity>(
-      `/v1/connex/clients/${encodeURIComponent(clientIdOrUid)}`
+      `/v1/connect/connectors/${encodeURIComponent(clientIdOrUid)}`
     );
   } catch (err: unknown) {
     output.stopSpinner();
     const status = (err as { status?: number }).status;
     if (status === 404) {
-      output.error(
-        `No Connex connector found for ${chalk.bold(clientIdOrUid)}.`
-      );
+      output.error(`No connector found for ${chalk.bold(clientIdOrUid)}.`);
       return 1;
     }
     output.error(
@@ -84,7 +82,7 @@ export async function remove(
   try {
     output.spinner('Checking connected projects…');
     const res = await client.fetch<ListProjectsResponse>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}/projects`
+      `/v1/connect/connectors/${encodeURIComponent(target.id)}/projects`
     );
     projectLinks = res.projects ?? [];
   } catch (err: unknown) {
@@ -100,7 +98,7 @@ export async function remove(
     const count = projectLinks.length;
     const plural = count === 1 ? 'project' : 'projects';
     output.error(
-      `Cannot delete Connex connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` flag.`
+      `Cannot delete connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` flag.`
     );
     return 1;
   }
@@ -118,7 +116,7 @@ export async function remove(
         ? ` ${projectLinks.length} connected ${projectLinks.length === 1 ? 'project' : 'projects'} will be disconnected.`
         : '';
     output.log(
-      `Connex connector ${chalk.bold(displayName)} will be deleted permanently.${cascadeNote}`
+      `Connector ${chalk.bold(displayName)} will be deleted permanently.${cascadeNote}`
     );
     const confirmed = await client.input.confirm(
       `${chalk.red('Are you sure?')}`,
@@ -131,9 +129,9 @@ export async function remove(
   }
 
   try {
-    output.spinner('Deleting Connex connector…');
+    output.spinner('Deleting connector…');
     await client.fetch<unknown>(
-      `/v1/connex/clients/${encodeURIComponent(target.id)}`,
+      `/v1/connect/connectors/${encodeURIComponent(target.id)}`,
       { method: 'DELETE' }
     );
   } catch (err: unknown) {
@@ -152,8 +150,6 @@ export async function remove(
     return 0;
   }
 
-  output.success(
-    `Connex connector ${chalk.bold(displayName)} successfully removed.`
-  );
+  output.success(`Connector ${chalk.bold(displayName)} successfully removed.`);
   return 0;
 }
