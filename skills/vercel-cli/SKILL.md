@@ -1,6 +1,6 @@
 ---
 name: vercel-cli
-description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, projects and teams, environment variables, domains and DNS, logs, metrics, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, Blob storage, microfrontends, rolling releases, custom environments, agent/MCP setup, preview access, local development, or `vercel api` fallback.
+description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, projects and teams, environment variables, domains and DNS, logs, metrics, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, preview access, local development, or `vercel api` fallback.
 ---
 
 # Vercel CLI Skill
@@ -49,6 +49,7 @@ Use this to route to the correct reference file:
 - **Alerts, usage, contracts, billing purchases, tokens, telemetry, or CLI upgrades** → `references/platform-ops.md`
 - **Blob storage** → `references/storage.md`
 - **Integrations (databases, storage, etc.)** → `references/integrations.md`
+- **Connectors (`vercel connect`)** → `references/connectors.md`
 - **Routing rules** → `references/routing.md`
 - **Firewall (WAF rules, IP blocks, rate limiting)** → `references/firewall.md`
 - **Access a preview deployment** → use `vercel curl` (see `references/monitoring-and-debugging.md`)
@@ -58,6 +59,7 @@ Use this to route to the correct reference file:
 - **Bun runtime** → `references/bun.md`
 - **Feature flags** → `references/flags.md`
 - **Microfrontends** → `references/microfrontends.md`
+- **Sandbox** → `references/sandbox.md`
 - **Agent, MCP, skills discovery, or AI Gateway** → `references/agent-and-ai.md`
 - **Advanced (API, webhooks, oauth apps)** → `references/advanced.md`
 - **Global flags** → `references/global-options.md`

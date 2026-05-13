@@ -1,5 +1,5 @@
 ---
-description: Load the Vercel CLI skill for deploying, managing, inspecting, and troubleshooting projects on the Vercel platform. Use when users ask to deploy a project, inspect deployments, debug logs or metrics, check activity, alerts, or usage, set up environment variables, configure domains or DNS, start local development, manage Vercel infrastructure, add databases or integrations, connect third-party services, configure agent/MCP tooling, or use Vercel API fallback.
+description: Load the Vercel CLI skill for deploying, managing, inspecting, and troubleshooting projects on the Vercel platform. Use when users ask to deploy a project, inspect deployments, debug logs or metrics, check activity, alerts, or usage, set up environment variables, configure domains or DNS, start local development, manage Vercel infrastructure, add databases, integrations, connectors, or Blob stores, configure Sandbox or agent/MCP tooling, or use Vercel API fallback.
 ---
 
 Load the Vercel CLI skill and help with Vercel project deployment, management, inspection, and troubleshooting.
