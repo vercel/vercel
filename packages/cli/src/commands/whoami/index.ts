@@ -11,6 +11,29 @@ import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
 
+function isAuthorizationError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const maybeError = error as { code?: unknown; message?: unknown };
+  if (typeof maybeError.code === 'string') {
+    const normalizedCode = maybeError.code.toLowerCase();
+    if (
+      normalizedCode === 'not_authorized' ||
+      normalizedCode === 'forbidden' ||
+      normalizedCode === 'team_unauthorized'
+    ) {
+      return true;
+    }
+  }
+
+  return (
+    typeof maybeError.message === 'string' &&
+    maybeError.message.toLowerCase().includes('not authorized')
+  );
+}
+
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
 
@@ -43,7 +66,21 @@ export default async function whoami(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const scope = await getScope(client, { resolveLocalScope: true });
+  const scope = await getScope(client, { resolveLocalScope: true }).catch(
+    async error => {
+      if (!isAuthorizationError(error)) {
+        throw error;
+      }
+
+      const fallbackScope = await getScope(client);
+      return {
+        ...fallbackScope,
+        globalTeam: fallbackScope.team,
+        explicitScopeProvided: false,
+        scopeMismatch: false,
+      };
+    }
+  );
   const { user, team, globalTeam } = scope;
 
   // A local override exists when the effective team (from the linked project)

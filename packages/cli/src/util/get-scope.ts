@@ -48,29 +48,6 @@ interface GetScopeWithoutLocalScopeOptions extends GetScopeOptions {
   resolveLocalScope?: false;
 }
 
-function isAuthorizationError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) {
-    return false;
-  }
-
-  const maybeError = error as { code?: unknown; message?: unknown };
-  if (typeof maybeError.code === 'string') {
-    const normalizedCode = maybeError.code.toLowerCase();
-    if (
-      normalizedCode === 'not_authorized' ||
-      normalizedCode === 'forbidden' ||
-      normalizedCode === 'team_unauthorized'
-    ) {
-      return true;
-    }
-  }
-
-  return (
-    typeof maybeError.message === 'string' &&
-    maybeError.message.toLowerCase().includes('not authorized')
-  );
-}
-
 export default function getScope(
   client: Client,
   opts: GetScopeWithLocalScopeOptions
@@ -173,37 +150,25 @@ export default async function getScope(
       ? { type: 'team', id: team.id, slug: team.slug }
       : { type: 'user', id: user.id, slug: user.username };
   } else if (localOrgId) {
-    const localTeamId = localOrgId.startsWith('team_') ? localOrgId : undefined;
-    client.config.currentTeam = localTeamId;
+    client.config.currentTeam = localOrgId.startsWith('team_')
+      ? localOrgId
+      : undefined;
 
-    try {
-      const correctedTeam = localTeamId
-        ? await getTeamById(client, localTeamId)
-        : null;
-      const correctedUser = await getUser(client);
-      resolvedOrg = correctedTeam
-        ? { type: 'team', id: correctedTeam.id, slug: correctedTeam.slug }
-        : {
-            type: 'user',
-            id: correctedUser.id,
-            slug: correctedUser.username,
-          };
-      resolvedContextName = correctedTeam
-        ? correctedTeam.slug
-        : correctedUser.username || correctedUser.email;
-      resolvedTeam = correctedTeam;
-    } catch (error) {
-      if (!isAuthorizationError(error)) {
-        throw error;
-      }
-
-      client.config.currentTeam = globalTeamId;
-      resolvedOrg = team
-        ? { type: 'team', id: team.id, slug: team.slug }
-        : { type: 'user', id: user.id, slug: user.username };
-      resolvedContextName = team ? team.slug : user.username || user.email;
-      resolvedTeam = team;
-    }
+    const correctedTeam = client.config.currentTeam
+      ? await getTeamById(client, client.config.currentTeam)
+      : null;
+    const correctedUser = await getUser(client);
+    resolvedOrg = correctedTeam
+      ? { type: 'team', id: correctedTeam.id, slug: correctedTeam.slug }
+      : {
+          type: 'user',
+          id: correctedUser.id,
+          slug: correctedUser.username,
+        };
+    resolvedContextName = correctedTeam
+      ? correctedTeam.slug
+      : correctedUser.username || correctedUser.email;
+    resolvedTeam = correctedTeam;
   } else {
     if (isCrossTeamRepo) {
       output.warn(
