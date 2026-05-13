@@ -31,7 +31,7 @@ function printInspectUrl(inspectorUrl: string | null | undefined) {
   }
 
   // Timing belongs on the Build/Ready line, not on the URL line which is instant.
-  printAlignedLabel('Inspect', inspectorUrl);
+  printAlignedLabel('Inspect', chalk.cyan(inspectorUrl));
 }
 
 export default async function processDeployment({
@@ -205,7 +205,7 @@ export default async function processDeployment({
 
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
-          previewUrl,
+          chalk.cyan(previewUrl),
           isProdDeployment ? { gutter: '▲' } : {}
         );
 
@@ -218,7 +218,7 @@ export default async function processDeployment({
         }
 
         latestLogMessage =
-          deployment.readyState === 'QUEUED' ? 'Queued...' : 'Building...';
+          deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
         if (withFullLogs) {
           let promise: Promise<void>;
@@ -242,7 +242,7 @@ export default async function processDeployment({
                 const lines = parseLogLines(event);
                 const message = lines[0];
                 if (message) {
-                  latestLogMessage = `Building: ${message}`;
+                  latestLogMessage = message;
                   output.spinner(latestLogMessage, 0);
                 }
               },
@@ -259,7 +259,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'building' && !withFullLogs) {
-        output.spinner(latestLogMessage || 'Building...', 0);
+        output.spinner(latestLogMessage || 'Building…', 0);
       }
 
       if (event.type === 'canceled') {
@@ -273,7 +273,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'ready' && rollingRelease) {
-        output.spinner('Releasing...', 0);
+        output.spinner('Releasing…', 0);
         stopSpinner();
         return event.payload;
       }
@@ -291,20 +291,20 @@ export default async function processDeployment({
         const previewUrl = `https://${event.payload.url}`;
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
-          previewUrl,
+          chalk.cyan(previewUrl),
           isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (v1ChecksPending || v2ChecksPending) {
-          output.spinner('Running Checks...', 0);
+          output.spinner('Running Checks…', 0);
         } else {
-          output.spinner('Completing...', 0);
+          output.spinner('Completing…', 0);
         }
       }
 
       // v1 checks running
       if (event.type === 'checks-running' && !withFullLogs) {
-        output.spinner('Running Checks...', 0);
+        output.spinner('Running Checks…', 0);
       }
 
       // v1 checks failed
@@ -365,7 +365,7 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Aliased', prodUrl, { gutter: '▲' });
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
 
         event.payload.indications = indications;

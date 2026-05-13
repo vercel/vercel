@@ -44,7 +44,10 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(process, /Set up [“"]/);
+  await waitForPrompt(
+    process,
+    /Set up (?:and (?:deploy|develop) )?[“"][^”"]+[”"]/
+  );
   await waitForPrompt(process, /Which team[^?]*\?/);
   process.stdin?.write('\n');
 
@@ -296,7 +299,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
     }
   });
 
-  await waitForPrompt(now, /Set up and deploy [“"]/);
+  await waitForPrompt(now, /Set up [“"]/);
   await waitForPrompt(now, 'Which team?');
   now.stdin?.write('\n');
 
@@ -416,7 +419,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
         'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
-    return /Set up and deploy [“"][^”"]+[”"]/.test(chunk);
+    return /Set up [“"][^”"]+[”"]/.test(chunk);
   });
   now.kill('SIGTERM');
 
@@ -1250,7 +1253,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
     },
   });
 
-  await waitForPrompt(vc, 'Set up and deploy');
+  await waitForPrompt(vc, 'Set up');
   await waitForPrompt(vc, /Which scope [^?]+\?/);
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');

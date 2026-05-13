@@ -1635,7 +1635,7 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up and deploy');
+        await expect(client.stderr).toOutput('Set up');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
@@ -1663,7 +1663,7 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up and deploy');
+        await expect(client.stderr).toOutput('Set up');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
@@ -2634,7 +2634,7 @@ describe('deploy', () => {
       ]);
     });
 
-    // v2 checks pending → shows "Running Checks..." spinner
+    // v2 checks pending → shows "Running Checks…" spinner
     it('should show Running Checks spinner when v2 checks are pending', async () => {
       const user = useUser();
       useTeams('team_dummy');
@@ -2690,7 +2690,7 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Running Checks...');
+      await expect(client.stderr).toOutput('Running Checks…');
       await expect(client.stderr).toOutput('Aliased ');
 
       const exitCode = await exitCodePromise;

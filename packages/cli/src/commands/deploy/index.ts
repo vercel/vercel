@@ -294,7 +294,7 @@ async function handleInitDeployment(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: undefined,
       nowConfig: localConfig,
@@ -881,7 +881,7 @@ async function handleContinueSubcommand(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm: true,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: undefined,
       nowConfig: localConfig,
@@ -1181,7 +1181,7 @@ async function handleDefaultDeploy(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: parsedArguments.flags['--name'],
       nowConfig: localConfig,
@@ -2101,7 +2101,7 @@ async function handleContinueDeployment({
     return 1;
   }
 
-  output.spinner(`Continuing deployment...`, 0);
+  output.spinner(`Continuing deployment…`, 0);
 
   try {
     let finalDeployment: any = null;
@@ -2136,7 +2136,7 @@ async function handleContinueDeployment({
       }
 
       if (event.type === 'all-files-uploaded') {
-        output.spinner('Continuing deployment...', 0);
+        output.spinner('Continuing deployment…', 0);
       }
 
       if (event.type === 'created') {
@@ -2144,14 +2144,17 @@ async function handleContinueDeployment({
         output.stopSpinner();
 
         if (finalDeployment.inspectorUrl) {
-          printAlignedLabel('Inspect', finalDeployment.inspectorUrl);
+          printAlignedLabel(
+            'Inspect',
+            chalk.cyan(finalDeployment.inspectorUrl)
+          );
         }
 
         const isProdDeployment = finalDeployment.target === 'production';
         const previewUrl = `https://${finalDeployment.url}`;
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
-          previewUrl,
+          chalk.cyan(previewUrl),
           isProdDeployment ? { gutter: '▲' } : {}
         );
 
@@ -2165,11 +2168,11 @@ async function handleContinueDeployment({
           );
         }
 
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'building') {
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'ready') {
@@ -2188,7 +2191,7 @@ async function handleContinueDeployment({
         ) {
           const primaryDomain = finalDeployment.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Production', prodUrl, { gutter: '▲' });
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
       }
 
