@@ -40,7 +40,7 @@ describe('connex open', () => {
       `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${clientId}`
     );
     expect(client.stderr.getFullOutput()).toContain(
-      'Opening Connect connector scl_abc123'
+      'Opening connector scl_abc123'
     );
   });
 

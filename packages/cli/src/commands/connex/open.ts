@@ -30,10 +30,7 @@ export async function openClient(
     return 1;
   }
 
-  await selectConnexTeam(
-    client,
-    'Select the team whose Connect connector to open'
-  );
+  await selectConnexTeam(client, 'Select the team whose connector to open');
 
   const { team } = await getScope(client);
   if (!team) {
@@ -41,7 +38,7 @@ export async function openClient(
     return 1;
   }
 
-  output.spinner('Looking up Connect connector…');
+  output.spinner('Looking up connector…');
   let resolvedId: string;
   try {
     // Resolve to the scl_ id even if the caller passed a UID. The dashboard
@@ -56,7 +53,7 @@ export async function openClient(
     const status = (err as { status?: number }).status;
     if (status === 404) {
       output.error(
-        `Connect connector ${chalk.bold(`"${clientIdOrUid}"`)} not found on team ${chalk.bold(team.slug)}, or Connect is not enabled for this team.`
+        `Connector ${chalk.bold(`"${clientIdOrUid}"`)} not found on team ${chalk.bold(team.slug)}, or Connect is not enabled for this team.`
       );
       return 1;
     }
@@ -74,7 +71,7 @@ export async function openClient(
 
   if (client.stdout.isTTY) {
     output.print(
-      `Opening Connect connector ${chalk.bold(clientIdOrUid)} in the dashboard…\n`
+      `Opening connector ${chalk.bold(clientIdOrUid)} in the dashboard…\n`
     );
     open(url);
     return 0;

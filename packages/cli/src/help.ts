@@ -5,7 +5,7 @@ const packageName = 'vercel';
 const logo = '▲';
 
 const connexLine = process.env.FF_CONNEX_ENABLED
-  ? '\n      connect              [cmd]       Manage Vercel Connect OAuth clients'
+  ? '\n      connect              [cmd]       Manage connectors'
   : '';
 
 export const help = () => `

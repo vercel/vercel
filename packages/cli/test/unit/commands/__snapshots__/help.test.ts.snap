@@ -755,7 +755,7 @@ exports[`help command > connex help output snapshots > connex attach subcommand 
 "
   ▲ vercel connect attach client [options]
 
-  Attach a Vercel project to a Connect connector for one or more environments                                           
+  Attach a Vercel project to a connector for one or more environments                                                   
 
   Options:
 
@@ -805,12 +805,12 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 "
   ▲ vercel connect create type [options]
 
-  Create a new Connect connector                                                                                        
+  Create a new connector                                                                                                
 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -n,  --name <NAME>      Name of the Connect connector                                                                 
+  -n,  --name <NAME>      Name of the connector                                                                         
        --triggers         Enable webhook triggers for this connector                                                    
 
 
@@ -853,20 +853,20 @@ exports[`help command > connex help output snapshots > connex help column width 
 "
   ▲ vercel connect command
 
-  Manage Vercel Connect connectors                                              
+  Manage connectors                                                             
 
   Commands:
 
-  create  type    Create a new Connect connector                        
-  list            List Connect connectors linked to the current project 
-                  (falls back to every connector in the team when no    
-                  project is linked or when --all-projects is set)      
-  token   id      Get a token for a Connect connector (accepts a        
-                  connector ID like scl_abc or a UID like slack/my-bot) 
-  attach  client  Attach a Vercel project to a Connect connector for one
-                  or more environments                                  
-  remove  client  Delete a Connect connector                            
-  open    id      Open a Connect connector in the Vercel dashboard      
+  create  type    Create a new connector                                
+  list            List connectors linked to the current project (falls  
+                  back to every connector in the team when no project is
+                  linked or when --all-projects is set)                 
+  token   id      Get a token for a connector (accepts a connector ID   
+                  like scl_abc or a UID like slack/my-bot)              
+  attach  client  Attach a Vercel project to a connector for one or more
+                  environments                                          
+  remove  client  Delete a connector                                    
+  open    id      Open a connector in the Vercel dashboard              
 
 
   Global Options:
@@ -891,7 +891,7 @@ exports[`help command > connex help output snapshots > connex help column width 
 
     $ vercel connect create slack
 
-  - List Connect connectors on the current team
+  - List connectors on the current team
 
     $ vercel connect list
 
@@ -914,12 +914,12 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 "
   ▲ vercel connect list [options]
 
-  List Connect connectors linked to the current project (falls back to every connector in the team when no project is   
-  linked or when --all-projects is set)                                                                                 
+  List connectors linked to the current project (falls back to every connector in the team when no project is linked or 
+  when --all-projects is set)                                                                                           
 
   Options:
 
-       --all-projects     List every Connect connector in the team, regardless of project link                          
+       --all-projects     List every connector in the team, regardless of project link                                  
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
        --limit <COUNT>    Number of connectors to return per page                                                       
        --next <CURSOR>    Cursor for the next page of results                                                           
@@ -941,11 +941,11 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   Examples:
 
-  - List Connect connectors linked to the current project
+  - List connectors linked to the current project
 
     $ vercel connect list
 
-  - List every Connect connector in the team
+  - List every connector in the team
 
     $ vercel connect list --all-projects
 
@@ -968,7 +968,7 @@ exports[`help command > connex help output snapshots > connex open subcommand > 
 "
   ▲ vercel connect open id [options]
 
-  Open a Connect connector in the Vercel dashboard                                                                      
+  Open a connector in the Vercel dashboard                                                                              
 
   Options:
 
@@ -1010,7 +1010,7 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 "
   ▲ vercel connect token id [options]
 
-  Get a token for a Connect connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)                  
+  Get a token for a connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)                          
 
   Options:
 

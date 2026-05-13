@@ -93,9 +93,7 @@ describe('connex attach', () => {
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'No Connect connector found for'
-    );
+    expect(client.stderr.getFullOutput()).toContain('No connector found for');
   });
 
   it('attaches with --yes, defaults to all environments, and POSTs to the resolved scl_ id', async () => {
@@ -137,9 +135,7 @@ describe('connex attach', () => {
       'preview',
       'development',
     ]);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Attached Connect connector'
-    );
+    expect(client.stderr.getFullOutput()).toContain('Attached connector');
   });
 
   it('parses comma-separated environments', async () => {

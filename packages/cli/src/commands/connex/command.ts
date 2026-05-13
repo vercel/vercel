@@ -4,7 +4,7 @@ import { packageName } from '../../util/pkg-name';
 export const createSubcommand = {
   name: 'create',
   aliases: [],
-  description: 'Create a new Connect connector',
+  description: 'Create a new connector',
   arguments: [
     {
       name: 'type',
@@ -18,7 +18,7 @@ export const createSubcommand = {
       type: String,
       argument: 'NAME',
       deprecated: false,
-      description: 'Name of the Connect connector',
+      description: 'Name of the connector',
     },
     {
       name: 'triggers',
@@ -53,7 +53,7 @@ export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
   description:
-    'List Connect connectors linked to the current project (falls back to every connector in the team when no project is linked or when --all-projects is set)',
+    'List connectors linked to the current project (falls back to every connector in the team when no project is linked or when --all-projects is set)',
   arguments: [],
   options: [
     {
@@ -62,7 +62,7 @@ export const listSubcommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'List every Connect connector in the team, regardless of project link',
+        'List every connector in the team, regardless of project link',
     },
     {
       name: 'limit',
@@ -84,11 +84,11 @@ export const listSubcommand = {
   ],
   examples: [
     {
-      name: 'List Connect connectors linked to the current project',
+      name: 'List connectors linked to the current project',
       value: `${packageName} connect list`,
     },
     {
-      name: 'List every Connect connector in the team',
+      name: 'List every connector in the team',
       value: `${packageName} connect list --all-projects`,
     },
     {
@@ -109,7 +109,7 @@ export const listSubcommand = {
 export const removeSubcommand = {
   name: 'remove',
   aliases: ['rm'],
-  description: 'Delete a Connect connector',
+  description: 'Delete a connector',
   arguments: [
     {
       name: 'client',
@@ -133,11 +133,11 @@ export const removeSubcommand = {
   ],
   examples: [
     {
-      name: 'Delete a Connect connector by ID',
+      name: 'Delete a connector by ID',
       value: `${packageName} connect remove scl_abc123`,
     },
     {
-      name: 'Delete a Connect connector by UID',
+      name: 'Delete a connector by UID',
       value: `${packageName} connect remove slack/my-bot`,
     },
     {
@@ -162,7 +162,7 @@ export const tokenSubcommand = {
   name: 'token',
   aliases: [],
   description:
-    'Get a token for a Connect connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)',
+    'Get a token for a connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)',
   arguments: [
     {
       name: 'id',
@@ -230,7 +230,7 @@ export const tokenSubcommand = {
 export const openSubcommand = {
   name: 'open',
   aliases: [],
-  description: 'Open a Connect connector in the Vercel dashboard',
+  description: 'Open a connector in the Vercel dashboard',
   arguments: [
     {
       name: 'id',
@@ -258,7 +258,7 @@ export const attachSubcommand = {
   name: 'attach',
   aliases: [],
   description:
-    'Attach a Vercel project to a Connect connector for one or more environments',
+    'Attach a Vercel project to a connector for one or more environments',
   arguments: [
     {
       name: 'client',
@@ -312,7 +312,7 @@ export const attachSubcommand = {
 export const connexCommand = {
   name: 'connect',
   aliases: [],
-  description: 'Manage Vercel Connect connectors',
+  description: 'Manage connectors',
   arguments: [],
   options: [],
   subcommands: [
@@ -329,7 +329,7 @@ export const connexCommand = {
       value: `${packageName} connect create slack`,
     },
     {
-      name: 'List Connect connectors on the current team',
+      name: 'List connectors on the current team',
       value: `${packageName} connect list`,
     },
     {

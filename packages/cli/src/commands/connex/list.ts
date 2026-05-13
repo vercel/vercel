@@ -83,7 +83,7 @@ export async function list(
   if (unscoped) {
     await selectConnexTeam(
       client,
-      'Select the team whose Connect connectors you want to list'
+      'Select the team whose connectors you want to list'
     );
   }
 
@@ -102,7 +102,7 @@ export async function list(
   const query = params.toString();
   const url = `/v1/connex/clients${query ? `?${query}` : ''}`;
 
-  output.spinner('Fetching Connect connectors…');
+  output.spinner('Fetching connectors…');
   let response: ListClientsResponse;
   try {
     response = await client.fetch<ListClientsResponse>(url);
@@ -159,18 +159,18 @@ export async function list(
   if (clients.length === 0) {
     if (unscoped) {
       output.log(
-        `No Connect connectors found. Create one with \`${packageName} connect create <type>\`.`
+        `No connectors found. Create one with \`${packageName} connect create <type>\`.`
       );
     } else {
       output.log(
-        `No Connect connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connect list --all-projects\` to see every connector in the team.`
+        `No connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connect list --all-projects\` to see every connector in the team.`
       );
     }
     return 0;
   }
 
   if (!unscoped && projectName) {
-    output.log(`Connect connectors linked to ${chalk.bold(projectName)}:`);
+    output.log(`Connectors linked to ${chalk.bold(projectName)}:`);
   }
 
   const headers = ['UID', 'ID', 'Name', 'Type'];

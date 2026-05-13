@@ -54,9 +54,9 @@ export async function remove(
     return 1;
   }
 
-  await selectConnexTeam(client, 'Select the team for this Connect connector');
+  await selectConnexTeam(client, 'Select the team for this connector');
 
-  output.spinner('Retrieving Connect connector…');
+  output.spinner('Retrieving connector…');
   let target: ConnexClientIdentity;
   try {
     target = await client.fetch<ConnexClientIdentity>(
@@ -66,9 +66,7 @@ export async function remove(
     output.stopSpinner();
     const status = (err as { status?: number }).status;
     if (status === 404) {
-      output.error(
-        `No Connect connector found for ${chalk.bold(clientIdOrUid)}.`
-      );
+      output.error(`No connector found for ${chalk.bold(clientIdOrUid)}.`);
       return 1;
     }
     output.error(
@@ -100,7 +98,7 @@ export async function remove(
     const count = projectLinks.length;
     const plural = count === 1 ? 'project' : 'projects';
     output.error(
-      `Cannot delete Connect connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` flag.`
+      `Cannot delete connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` flag.`
     );
     return 1;
   }
@@ -118,7 +116,7 @@ export async function remove(
         ? ` ${projectLinks.length} connected ${projectLinks.length === 1 ? 'project' : 'projects'} will be disconnected.`
         : '';
     output.log(
-      `Connect connector ${chalk.bold(displayName)} will be deleted permanently.${cascadeNote}`
+      `Connector ${chalk.bold(displayName)} will be deleted permanently.${cascadeNote}`
     );
     const confirmed = await client.input.confirm(
       `${chalk.red('Are you sure?')}`,
@@ -131,7 +129,7 @@ export async function remove(
   }
 
   try {
-    output.spinner('Deleting Connect connector…');
+    output.spinner('Deleting connector…');
     await client.fetch<unknown>(
       `/v1/connex/clients/${encodeURIComponent(target.id)}`,
       { method: 'DELETE' }
@@ -152,8 +150,6 @@ export async function remove(
     return 0;
   }
 
-  output.success(
-    `Connect connector ${chalk.bold(displayName)} successfully removed.`
-  );
+  output.success(`Connector ${chalk.bold(displayName)} successfully removed.`);
   return 0;
 }

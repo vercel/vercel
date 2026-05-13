@@ -36,9 +36,7 @@ describe('connex remove', () => {
     const exitCode = await connect(client);
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'No Connect connector found for'
-    );
+    expect(client.stderr.getFullOutput()).toContain('No connector found for');
   });
 
   it('should delete a client with no connected projects when --yes is passed', async () => {

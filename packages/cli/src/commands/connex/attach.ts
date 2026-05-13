@@ -132,7 +132,7 @@ export async function attach(
   }
 
   // Resolve client identity → canonical id + display name.
-  output.spinner('Retrieving Connect connector…');
+  output.spinner('Retrieving connector…');
   let target: ConnexClientIdentity;
   try {
     target = await client.fetch<ConnexClientIdentity>(
@@ -142,9 +142,7 @@ export async function attach(
     output.stopSpinner();
     const status = (err as { status?: number }).status;
     if (status === 404) {
-      output.error(
-        `No Connect connector found for ${chalk.bold(clientIdOrUid)}.`
-      );
+      output.error(`No connector found for ${chalk.bold(clientIdOrUid)}.`);
       return 1;
     }
     printError(err);
@@ -190,7 +188,7 @@ export async function attach(
       return 0;
     }
     output.log(
-      `Connect connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+      `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
         projectName
       )} for environments: ${environments.join(', ')}. Nothing to do.`
     );
@@ -210,7 +208,7 @@ export async function attach(
       const current = (existingAttachment.environments ?? []).join(', ') || '—';
       const next = environments.join(', ');
       output.log(
-        `Connect connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+        `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
           projectName
         )}.`
       );
@@ -218,7 +216,7 @@ export async function attach(
       output.log(`  Will set: ${next}`);
     } else {
       output.log(
-        `Connect connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
+        `Connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
           projectName
         )} for environments: ${environments.join(', ')}.`
       );
@@ -252,7 +250,7 @@ export async function attach(
     }
     if (status === 404) {
       output.error(
-        `No Connect connector found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
+        `No connector found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
       );
       return 1;
     }
@@ -278,7 +276,7 @@ export async function attach(
   }
 
   output.success(
-    `Attached Connect connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
+    `Attached connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
   );
   return 0;
 }

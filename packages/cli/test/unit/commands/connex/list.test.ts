@@ -68,7 +68,7 @@ describe('connex list', () => {
       expect(requestUrl).toContain(`projectId=${project.id}`);
       expect(requestUrl).not.toContain('include=projects');
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('Connect connectors linked to');
+      expect(stderr).toContain('Connectors linked to');
       expect(stderr).toContain(project.name);
       expect(stderr).toContain('slack/my-bot');
     });
@@ -92,7 +92,7 @@ describe('connex list', () => {
 
       expect(exitCode).toBe(0);
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('No Connect connectors linked to');
+      expect(stderr).toContain('No connectors linked to');
       expect(stderr).toContain(project.name);
       expect(stderr).toContain('--all-projects');
     });
@@ -137,7 +137,7 @@ describe('connex list', () => {
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('Projects');
       expect(stderr).toContain('web');
-      expect(stderr).not.toContain('Connect connectors linked to');
+      expect(stderr).not.toContain('Connectors linked to');
     });
   });
 
@@ -277,9 +277,7 @@ describe('connex list', () => {
       const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
-      expect(client.stderr.getFullOutput()).toContain(
-        'No Connect connectors found'
-      );
+      expect(client.stderr.getFullOutput()).toContain('No connectors found');
     });
 
     it('should show friendly error when connect feature flag is off (404)', async () => {
