@@ -69,13 +69,13 @@ async function setupProject(
     );
     process.stdin?.write('a\n'); // 'a' means select all
 
-    await waitForPrompt(process, `What's your Build Command?`);
+    await waitForPrompt(process, 'Build Command?');
     process.stdin?.write(`${buildCommand || ''}\n`);
 
-    await waitForPrompt(process, `What's your Development Command?`);
+    await waitForPrompt(process, 'Development Command?');
     process.stdin?.write(`${devCommand || ''}\n`);
 
-    await waitForPrompt(process, `What's your Output Directory?`);
+    await waitForPrompt(process, 'Output Directory?');
     process.stdin?.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin?.write('no\n');
@@ -1254,7 +1254,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   });
 
   await waitForPrompt(vc, 'Set up');
-  await waitForPrompt(vc, /Which scope [^?]+\?/);
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('n\n');
@@ -1267,11 +1267,11 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
     'Which settings would you like to overwrite (select multiple)?'
   );
   vc.stdin?.write('a\n');
-  await waitForPrompt(vc, "What's your Development Command?");
+  await waitForPrompt(vc, 'Development Command?');
   vc.stdin?.write('echo "DEV COMMAND"\n');
   // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
-  await waitForPrompt(vc, "What's your Output Directory?");
+  await waitForPrompt(vc, 'Output Directory?');
   vc.stdin?.write('output\n');
   await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('n\n');

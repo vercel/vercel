@@ -316,6 +316,39 @@ describe('editProjectSettings', () => {
       const settings = await settingsPromise;
       expect(settings.framework).toBe('nextjs');
     });
+
+    test('per-field prompt asks "<Setting>?" not "What\'s your <Setting>?"', async () => {
+      const settingsPromise = editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        false,
+        null
+      );
+
+      await expect(client.stderr).toOutput('Customize settings?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which settings would you like to overwrite (select multiple)?'
+      );
+
+      // Toggle first option (Build Command — choices are sorted alphabetically)
+      // then submit the checkbox panel.
+      client.events.keypress('space');
+      client.events.keypress('enter');
+
+      // The new prompt is just "Build Command?" — no "What's your" preamble.
+      await expect(client.stderr).toOutput('Build Command?');
+      client.stdin.write('npm run build\n');
+
+      const settings = await settingsPromise;
+      expect(settings.buildCommand).toBe('npm run build');
+      // Anti-regression: legacy preamble must not appear.
+      expect(client.stderr.getFullOutput()).not.toContain(
+        "What's your Build Command?"
+      );
+    });
   });
 
   describe('detected line formatting', () => {
