@@ -134,4 +134,30 @@ describe('printDeploymentStatus() — ready terminal state', () => {
     const ready = printed.find(l => l.includes('Ready'));
     expect(ready).toBe('✓ Ready in 12s');
   });
+
+  it('Ready line has a leading blank line (separates from Aliased row)', async () => {
+    // Anti-regression: the prior test uses allPrintedLines() which .trim()s
+    // each call, so it cannot catch a regression that removes the leading
+    // "\n" from the Ready string. Assert against the raw call argument.
+    await printDeploymentStatus(
+      fakeClient(),
+      {
+        readyState: 'READY',
+        alias: [],
+        aliasError: undefined as any,
+        target: 'production',
+        indications: [],
+        url: 'x.vercel.app',
+      },
+      () => '47s',
+      false,
+      false
+    );
+    const rawCalls = vi
+      .mocked(output.print)
+      .mock.calls.map(call => call[0] as string);
+    const readyCall = rawCalls.find(c => c.includes('Ready'));
+    expect(readyCall).toBeDefined();
+    expect(readyCall!.startsWith('\n')).toBe(true);
+  });
 });

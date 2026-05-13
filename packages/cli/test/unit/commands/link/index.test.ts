@@ -912,6 +912,18 @@ describe('link', () => {
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    // Anti-regression: old "Set up and deploy?" confirmation prompt is gone.
+    // Status line is "Set up <path>" with no trailing "?" question mark.
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).not.toContain('Set up and deploy?');
+    expect(fullOutput).not.toContain('Set up and deploy "');
+    // Anti-regression: "Which scope" was renamed to "Which team".
+    expect(fullOutput).not.toContain(
+      'Which scope should contain your project?'
+    );
+    // Anti-regression: "What's your project's name?" was renamed to "Name?".
+    expect(fullOutput).not.toContain("What's your project's name?");
   });
 
   it('should write vercel.json for inferred multi-service layouts', async () => {

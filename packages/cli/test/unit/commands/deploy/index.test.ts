@@ -1769,6 +1769,13 @@ describe('deploy', () => {
         'Aliased     https://my-app.vercel.app'
       );
 
+      // Anti-regression: ANSI is stripped from toOutput, so assert the raw
+      // output still contains the gutter glyphs for both Production + Aliased
+      // rows. A regression that drops `gutter: '▲'` would not fail toOutput.
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('▲ Production');
+      expect(stderrOutput).toContain('▲ Aliased');
+
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
     });
@@ -1919,6 +1926,9 @@ describe('deploy', () => {
 
       const stderrOutput = client.stderr.read().toString();
       expect(stderrOutput).not.toContain('Aliased');
+      // Anti-regression: production rows always render with the ▲ gutter
+      // glyph at column 0.
+      expect(stderrOutput).toContain('▲ Production');
     });
   });
 
