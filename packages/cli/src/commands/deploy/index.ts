@@ -2126,7 +2126,7 @@ async function handleContinueDeployment({
       if (event.type === 'file-count') {
         const { total, missing } = event.payload;
         output.spinner(
-          `Uploading ${missing.length} of ${total.size} files...`,
+          `Uploading ${missing.length} of ${total.size} files…`,
           0
         );
       }

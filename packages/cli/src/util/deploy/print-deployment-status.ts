@@ -58,8 +58,8 @@ export async function printDeploymentStatus(
     if (isDeploying(readyState)) {
       isStillBuilding = true;
       const message = isInit
-        ? 'Deployment is awaiting continuation...'
-        : 'Note: Deployment is still processing...';
+        ? 'Deployment is awaiting continuation…'
+        : 'Note: Deployment is still processing…';
       output.print(prependEmoji(message, emoji('notice')) + '\n');
     }
   }

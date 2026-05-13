@@ -67,7 +67,7 @@ export default async function inputProject(
     if (
       await client.input.confirm(
         `Found project ${chalk.cyan(
-          `“${org.slug}/${detectedProject.name}”`
+          `"${org.slug}/${detectedProject.name}"`
         )}. Link to it?`,
         true
       )

@@ -164,7 +164,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
     if (!noWait) {
       output.spinner(
-        deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
+        deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…',
         0
       );
       let project: Project | ProjectNotFound | undefined;
@@ -179,7 +179,7 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.aliasAssigned &&
         !rollingRelease
       ) {
-        output.spinner('Completing', 0);
+        output.spinner('Completing…', 0);
       } else {
         try {
           const clientOptions: VercelClientOptions = {
@@ -197,9 +197,9 @@ export default async function redeploy(client: Client): Promise<number> {
             clientOptions
           )) {
             if (event.type === 'building') {
-              output.spinner('Building', 0);
+              output.spinner('Building…', 0);
             } else if (event.type === 'ready' && rollingRelease) {
-              output.spinner('Releasing', 0);
+              output.spinner('Releasing…', 0);
               output.stopSpinner();
               deployment = event.payload;
               break;
@@ -209,9 +209,9 @@ export default async function redeploy(client: Client): Promise<number> {
                 ? (event.payload as any).checksState === 'completed'
                 : true)
             ) {
-              output.spinner('Completing', 0);
+              output.spinner('Completing…', 0);
             } else if (event.type === 'checks-running') {
-              output.spinner('Running Checks', 0);
+              output.spinner('Running Checks…', 0);
             } else if (
               event.type === 'alias-assigned' ||
               event.type === 'checks-conclusion-failed'

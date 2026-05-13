@@ -265,7 +265,7 @@ async function discoverRepoProjects(
   const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
 
   if (!shouldLink) {
-    output.print(`Canceled. Repository not linked.\n`);
+    output.print(`  Canceled. Repository not linked.\n`);
     return;
   }
 
@@ -399,7 +399,7 @@ async function discoverRepoProjects(
   }
 
   if (selected.length === 0) {
-    output.print(`No Projects were selected. Repository not linked.\n`);
+    output.print(`  No Projects were selected. Repository not linked.\n`);
     return;
   }
 
@@ -530,7 +530,7 @@ export async function addRepoLink(
   }
 
   if (result.projects.length === 0) {
-    output.print(`No new Projects were added.\n`);
+    output.print(`  No new Projects were added.\n`);
     return { repoConfig, repoConfigPath, rootPath };
   }
 

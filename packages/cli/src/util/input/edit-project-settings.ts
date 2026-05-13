@@ -98,7 +98,7 @@ export async function editProjectSettings(
     // Compress "Auto-detected Project Settings for X" into a single line that
     // also names the key commands the user is about to run with.
     // Use output.print (not output.log) to skip the gray "> " prefix so this
-    // line visually matches the bold-label block (Linked / Inspect / Live).
+    // line visually matches the bold-label block (Linked / Inspect / Production).
     // Title Case the inline labels so they match the checkbox panel below.
     const buildCmd = framework.settings.buildCommand?.value ?? null;
     const outputSetting = framework.settings.outputDirectory;

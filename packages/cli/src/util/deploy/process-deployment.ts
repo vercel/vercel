@@ -51,8 +51,6 @@ export default async function processDeployment({
   now: Now;
   path: string;
   requestBody: DeploymentOptions;
-  uploadStamp: () => string;
-  deployStamp: () => string;
   quiet: boolean;
   force?: boolean;
   withCache?: boolean;

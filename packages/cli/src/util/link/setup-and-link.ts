@@ -104,11 +104,11 @@ function printCrossTeamSearchScope({
   skippedLimitedTeamSlugs: string[];
 }): void {
   if (searchedTeamSlugs.length > 0) {
-    output.log(`Searched teams: ${formatTeamList(searchedTeamSlugs)}`);
+    output.print(`  Searched teams: ${formatTeamList(searchedTeamSlugs)}\n`);
   }
   if (skippedLimitedTeamSlugs.length > 0) {
-    output.log(
-      `Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}`
+    output.print(
+      `  Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}\n`
     );
   }
 }
@@ -489,8 +489,8 @@ export default async function setupAndLink(
 
     if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
       if (crossTeamMatches.length === 0) {
-        output.log(
-          `No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.`
+        output.print(
+          `  No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.\n`
         );
       }
       const limitedTeamMatches = await searchSelectedLimitedTeams({
@@ -513,8 +513,8 @@ export default async function setupAndLink(
         return linkedLimitedMatch;
       }
       if (limitedTeamMatches.length === 0) {
-        output.log(
-          'No matching projects found in the selected SSO-protected teams.'
+        output.print(
+          '  No matching projects found in the selected SSO-protected teams.\n'
         );
       }
       skipAutoDetect =
