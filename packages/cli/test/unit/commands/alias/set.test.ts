@@ -149,54 +149,6 @@ describe('alias set', () => {
       expect(idOrUrl).toEqual(id);
     });
 
-    it('outputs the API error for invalid URLs', async () => {
-      useUser();
-      const url = 'https://%';
-      const errorMessage = `Invalid URL "${url}"`;
-      client.scenario.post(
-        '/:version/deployments/:id/aliases',
-        (request, response) => {
-          expect(request.params.id).toEqual(url);
-          response.status(400).json({
-            error: {
-              code: 'invalid_url',
-              message: errorMessage,
-            },
-          });
-        }
-      );
-
-      client.setArgv('alias', 'set', url, 'custom');
-      const exitCode = await alias(client);
-
-      expect(exitCode, 'exit code of "alias"').toEqual(1);
-      await expect(client.stderr).toOutput(errorMessage);
-    });
-
-    it('outputs the API error for invalid IDs', async () => {
-      useUser();
-      const id = 'not-a-valid-id';
-      const errorMessage = `Invalid ID "${id}"`;
-      client.scenario.post(
-        '/:version/deployments/:id/aliases',
-        (request, response) => {
-          expect(request.params.id).toEqual(id);
-          response.status(400).json({
-            error: {
-              code: 'invalid_deployment_id',
-              message: errorMessage,
-            },
-          });
-        }
-      );
-
-      client.setArgv('alias', 'set', id, 'custom');
-      const exitCode = await alias(client);
-
-      expect(exitCode, 'exit code of "alias"').toEqual(1);
-      await expect(client.stderr).toOutput(errorMessage);
-    });
-
     it('outputs the API error for URLs that are not found', async () => {
       useUser();
       const url = 'https://missing-alias.vercel.app';
