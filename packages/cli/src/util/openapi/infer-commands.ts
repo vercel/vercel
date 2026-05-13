@@ -4,6 +4,7 @@ import {
   type Command,
   type CommandOption,
 } from '../../commands/help';
+import chalk from 'chalk';
 import { homedir } from 'os';
 import { isAbsolute, resolve as resolvePath } from 'path';
 import type {
@@ -120,6 +121,7 @@ type InferredOperationMetadata = {
 type RunInferredCommandOptions = {
   help?: boolean;
   columns?: number;
+  dryRun?: boolean;
   cwd?: string;
   scope?: string;
   team?: string;
@@ -156,6 +158,25 @@ type RequestPreview = {
   path: string | null;
   query: Record<string, string>;
   body: Record<string, string>;
+};
+
+type InferredDryRunPreview = {
+  tag: string;
+  operationId: string;
+  matchedAlias: string | null;
+  context: InferredCommandContext;
+  provided: {
+    arguments: Record<string, string>;
+    options: Record<string, string | boolean>;
+    extraArguments: string[];
+    extraOptions: Record<string, string | boolean>;
+  };
+  request: RequestPreview;
+};
+
+type TagOperationOverview = {
+  operationId: string;
+  aliases: string[];
 };
 
 function getDefaultOutputName(inputKey: string): string {
@@ -396,6 +417,163 @@ function normalizeApiBaseUrl(apiOverride: string | undefined): string {
 
 function stringifyProvidedValue(value: string | boolean): string {
   return typeof value === 'string' ? value : String(value);
+}
+
+function stringifyPreviewCell(value: unknown): string {
+  if (value === null || value === undefined) {
+    return chalk.gray('--');
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function renderSectionRows(rows: Array<[string, string]>): string {
+  if (rows.length === 0) {
+    return `  ${chalk.gray('(empty)')}  ${chalk.gray('--')}`;
+  }
+
+  const maxKeyLength = rows.reduce(
+    (max, [key]) => Math.max(max, key.length),
+    0
+  );
+  return rows
+    .map(([key, value]) => {
+      const paddedKey = key.padEnd(maxKeyLength);
+      return `  ${chalk.gray(paddedKey)}  ${value}`;
+    })
+    .join('\n');
+}
+
+function renderKeyValueSection(
+  title: string,
+  entries: Array<[string, unknown]>
+): string {
+  const rows: Array<[string, string]> =
+    entries.length > 0
+      ? entries.map(([key, value]) => [key, stringifyPreviewCell(value)])
+      : [];
+  return `${chalk.bold.cyan(`${title}:`)}\n${renderSectionRows(rows)}`;
+}
+
+function renderRecordSection(
+  title: string,
+  record: Record<string, unknown>
+): string {
+  const entries = Object.keys(record)
+    .sort()
+    .map(key => [key, record[key]] as [string, unknown]);
+  return renderKeyValueSection(title, entries);
+}
+
+function renderListSection(title: string, values: string[]): string {
+  if (values.length === 0) {
+    return renderKeyValueSection(title, []);
+  }
+  const rows: Array<[string, string]> = values.map((value, index) => [
+    String(index + 1),
+    value,
+  ]);
+  return `${chalk.bold.cyan(`${title}:`)}\n${renderSectionRows(rows)}`;
+}
+
+function printDryRunPreview(preview: InferredDryRunPreview): void {
+  const sections = [
+    chalk.bold(
+      `Inferred command dry run: ${preview.tag} ${preview.matchedAlias ?? preview.operationId}`
+    ),
+    renderKeyValueSection('Request', [
+      ['tag', preview.tag],
+      ['operation', preview.operationId],
+      [
+        'method',
+        preview.request.method ? chalk.green(preview.request.method) : null,
+      ],
+      ['path', preview.request.path],
+    ]),
+    renderKeyValueSection('Context', [
+      ['cwd', preview.context.cwd],
+      ['project', preview.context.project?.id ?? null],
+      ['team', preview.context.team?.value ?? null],
+      ['teamSource', preview.context.team?.source ?? null],
+    ]),
+    renderRecordSection('Provided Arguments', preview.provided.arguments),
+    renderRecordSection('Provided Options', preview.provided.options),
+    renderListSection('Extra Arguments', preview.provided.extraArguments),
+    renderRecordSection('Extra Options', preview.provided.extraOptions),
+    renderRecordSection('Request Query', preview.request.query),
+    renderRecordSection('Request Body', preview.request.body),
+  ];
+
+  output.print(sections.join('\n\n'));
+}
+
+function stripHelpTokens(args: string[]): string[] {
+  return args.filter(token => token !== '-h' && token !== '--help');
+}
+
+function getConfiguredTags(commands: InferredCommands): string[] {
+  return Object.entries(commands)
+    .filter(([_tag, operations]) => {
+      if (!operations) {
+        return false;
+      }
+      return Object.values(operations).some(config => Boolean(config));
+    })
+    .map(([tag]) => tag)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function getTagOperations(
+  commands: InferredCommands,
+  tag: string
+): TagOperationOverview[] {
+  const operations = commands[tag];
+  if (!operations) {
+    return [];
+  }
+
+  return Object.entries(operations)
+    .filter(([_operationId, config]) => Boolean(config))
+    .map(([operationId, config]) => ({
+      operationId,
+      aliases: config?.alias ?? [],
+    }))
+    .sort((a, b) => a.operationId.localeCompare(b.operationId));
+}
+
+function printTagsOverview(commands: InferredCommands): number {
+  const rows: Array<[string, string]> = getConfiguredTags(commands).map(tag => [
+    tag,
+    `${getTagOperations(commands, tag).length} operations`,
+  ]);
+  output.print(
+    `${chalk.bold('Inferred OpenAPI tags')}\n\n${renderSectionRows(rows)}\n`
+  );
+  return 0;
+}
+
+function printTagOperationsOverview(
+  commands: InferredCommands,
+  tag: string
+): number {
+  const operations = getTagOperations(commands, tag);
+  const rows: Array<[string, string]> = operations.map(operation => [
+    operation.operationId,
+    operation.aliases.length > 0
+      ? operation.aliases.join(', ')
+      : chalk.gray('(no aliases)'),
+  ]);
+  output.print(
+    [
+      chalk.bold(`Inferred OpenAPI operations for "${tag}"`),
+      '',
+      renderSectionRows(rows),
+      '',
+    ].join('\n')
+  );
+  return 0;
 }
 
 function buildRequestPreview(
@@ -727,8 +905,36 @@ export async function runInferredCommand(
   cliArgs: string[],
   options: RunInferredCommandOptions = {}
 ): Promise<number | null> {
-  const resolved = resolveInferredCommand(commands, cliArgs);
+  const helpRequested =
+    options.help === true ||
+    cliArgs.includes('-h') ||
+    cliArgs.includes('--help');
+  const commandArgs = stripHelpTokens(cliArgs);
+  const [tag, operationToken] = commandArgs;
+
+  if (!tag) {
+    if (helpRequested) {
+      return printTagsOverview(commands);
+    }
+    return null;
+  }
+
+  const operationsForTag = getTagOperations(commands, tag);
+  if (!operationToken) {
+    if (operationsForTag.length > 0) {
+      return printTagOperationsOverview(commands, tag);
+    }
+    if (helpRequested) {
+      return printTagsOverview(commands);
+    }
+    return null;
+  }
+
+  const resolved = resolveInferredCommand(commands, commandArgs);
   if (!resolved) {
+    if (helpRequested && operationsForTag.length > 0) {
+      return printTagOperationsOverview(commands, tag);
+    }
     return null;
   }
 
@@ -737,10 +943,10 @@ export async function runInferredCommand(
     resolved.operationId
   );
 
-  if (options.help) {
+  if (helpRequested) {
     return printInferredCommandHelp(
       resolved,
-      cliArgs,
+      commandArgs,
       metadata,
       options.columns ?? 80
     );
@@ -757,7 +963,7 @@ export async function runInferredCommand(
   const knownOptionNames = new Set(
     optionDefinitions.map(def => def.outputName)
   );
-  const parsedInput = parseProvidedCliInput(cliArgs.slice(2));
+  const parsedInput = parseProvidedCliInput(commandArgs.slice(2));
   const parsedOptions = {
     ...parsedInput.options,
   };
@@ -772,6 +978,9 @@ export async function runInferredCommand(
   }
   if (options.api) {
     parsedOptions.api = options.api;
+  }
+  if (options.dryRun === true) {
+    parsedOptions['dry-run'] = true;
   }
 
   const providedArguments = argumentDefinitions.reduce<Record<string, string>>(
@@ -798,7 +1007,7 @@ export async function runInferredCommand(
   const extraOptions = Object.entries(parsedOptions).reduce<
     Record<string, string | boolean>
   >((acc, [name, value]) => {
-    if (!knownOptionNames.has(name)) {
+    if (!knownOptionNames.has(name) && name !== 'dry-run') {
       acc[name] = value;
     }
     return acc;
@@ -820,7 +1029,35 @@ export async function runInferredCommand(
     typeof parsedOptions.api === 'string' ? parsedOptions.api : undefined
   );
 
-  output.log('Inferred OpenAPI command matched before native command dispatch');
+  const dryRunFlag = parsedOptions['dry-run'];
+  const isDryRun =
+    options.dryRun === true ||
+    dryRunFlag === true ||
+    dryRunFlag === 'true' ||
+    dryRunFlag === '';
+
+  if (isDryRun) {
+    printDryRunPreview({
+      tag: resolved.tag,
+      operationId: resolved.operationId,
+      matchedAlias:
+        resolved.operationId === commandArgs[1]
+          ? null
+          : (commandArgs[1] ?? null),
+      context,
+      provided: {
+        arguments: providedArguments,
+        options: providedOptions,
+        extraArguments: parsedInput.positionals.slice(
+          argumentDefinitions.length
+        ),
+        extraOptions,
+      },
+      request,
+    });
+    return 0;
+  }
+
   output.print(
     JSON.stringify(
       {
@@ -828,7 +1065,9 @@ export async function runInferredCommand(
         operationId: resolved.operationId,
         alias: resolved.config.alias,
         matchedAlias:
-          resolved.operationId === cliArgs[1] ? null : (cliArgs[1] ?? null),
+          resolved.operationId === commandArgs[1]
+            ? null
+            : (commandArgs[1] ?? null),
         context,
         provided: {
           arguments: providedArguments,

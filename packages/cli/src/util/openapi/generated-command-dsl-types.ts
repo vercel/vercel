@@ -1804,7 +1804,6 @@ export interface OpenApiInputNamesByTagOperation {
       | 'query.slug'
       | 'query.teamId';
     createSandbox:
-      | 'bodyFields.__networkPolicyForwardRules'
       | 'bodyFields.env'
       | 'bodyFields.networkPolicy'
       | 'bodyFields.ports'
@@ -1894,7 +1893,6 @@ export interface OpenApiInputNamesByTagOperation {
   };
   'sandboxes-v2-beta': {
     createSandboxes:
-      | 'bodyFields.__networkPolicyForwardRules'
       | 'bodyFields.env'
       | 'bodyFields.name'
       | 'bodyFields.networkPolicy'

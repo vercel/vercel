@@ -21,16 +21,4 @@ if (
   process.exit(0);
 }
 
-// Fast path for --help to avoid loading the entire CLI
-if (
-  process.argv.length === 3 &&
-  (process.argv[2] === '--help' || process.argv[2] === '-h')
-) {
-  const { version } = await import('./version.mjs');
-  const { help } = await import('./help.js');
-  console.error(`Vercel CLI ${version}`);
-  console.error(help());
-  process.exit(0);
-}
-
 await import('./index.js');

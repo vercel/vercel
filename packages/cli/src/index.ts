@@ -177,6 +177,7 @@ const main = async () => {
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
   const isTelemetryFlushCommand =
     process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
+  const rawCliArgs = process.argv.slice(2);
 
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -262,19 +263,14 @@ const main = async () => {
     return 0;
   }
 
-  // Handle bare `-h` directly
-  const bareHelpOption = !targetOrSubcommand && parsedArgs.flags['--help'];
-  const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
-  if (bareHelpOption || bareHelpSubcommand) {
-    output.print(help());
-    return 0;
-  }
-
   const inferredCommandExitCode = await runInferredCommand(
     inferredOpenApiCommands,
-    parsedArgs.args.slice(2),
+    rawCliArgs,
     {
-      help: Boolean(parsedArgs.flags['--help']),
+      help:
+        rawCliArgs.includes('-h') ||
+        rawCliArgs.includes('--help') ||
+        Boolean(parsedArgs.flags['--help']),
       columns: process.stderr.columns ?? 80,
       cwd:
         typeof parsedArgs.flags['--cwd'] === 'string'
@@ -296,6 +292,14 @@ const main = async () => {
   );
   if (inferredCommandExitCode !== null) {
     return inferredCommandExitCode;
+  }
+
+  // Handle bare `-h` directly
+  const bareHelpOption = !targetOrSubcommand && parsedArgs.flags['--help'];
+  const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
+  if (bareHelpOption || bareHelpSubcommand) {
+    output.print(help());
+    return 0;
   }
 
   // Ensure that the Vercel global configuration directory exists

@@ -90,6 +90,24 @@ describe('inferCommands', () => {
     expect(resolveInferredCommand(commands, ['projects'])).toBeNull();
   });
 
+  it('prints configured tags when help is requested without a tag', async () => {
+    const exitCode = await runInferredCommand(commands, ['-h']);
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Inferred OpenAPI tags');
+    expect(output).toContain('projects');
+    expect(output).toContain('1 operations');
+  });
+
+  it('prints operation ids when only a tag is provided', async () => {
+    const exitCode = await runInferredCommand(commands, ['projects']);
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Inferred OpenAPI operations for "projects"');
+    expect(output).toContain('list');
+    expect(output).toContain('ls, all');
+  });
+
   it('short-circuits dispatch and prints context plus request preview', async () => {
     vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
     vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
@@ -119,9 +137,6 @@ describe('inferCommands', () => {
     ]);
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
-    expect(output).toContain(
-      'Inferred OpenAPI command matched before native command dispatch'
-    );
     expect(output).toContain('"tag": "projects"');
     expect(output).toContain('"operationId": "list"');
     expect(output).toContain('"context"');
@@ -154,6 +169,37 @@ describe('inferCommands', () => {
     const output = client.stderr.getFullOutput();
     expect(output).toContain('"operationId": "list"');
     expect(output).toContain('"matchedAlias": "ls"');
+  });
+
+  it('prints formatted request preview when dry-run is enabled', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue({
+      projectId: 'prj_123',
+      orgId: 'team_123',
+    });
+
+    const exitCode = await runInferredCommand(commands, [
+      'projects',
+      'ls',
+      '--dry-run',
+      '--scope',
+      'my-team',
+      '--slugFilter',
+      'starter',
+    ]);
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Inferred command dry run: projects ls');
+    expect(output).toContain('Request:');
+    expect(output).toContain('Context:');
+    expect(output).toContain('Provided Options:');
+    expect(output).toContain('Request Query:');
+    expect(output).toContain('starter');
+    expect(output).not.toContain('"tag": "projects"');
   });
 
   it('maps teamId arguments to team in output and request path', async () => {
@@ -222,6 +268,27 @@ describe('inferCommands', () => {
     expect(output).toContain('Global Options');
     expect(output).not.toContain('--name');
     expect(output).not.toContain('"operationId": "list"');
+  });
+
+  it('supports inline -h for tag+operation help output', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const exitCode = await runInferredCommand(
+      commands,
+      ['projects', 'ls', '-h'],
+      {
+        columns: 120,
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('vercel projects ls');
+    expect(output).toContain('Global Options');
   });
 
   it('does not show required arguments as options when options are omitted', async () => {
