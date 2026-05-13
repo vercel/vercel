@@ -125,7 +125,9 @@ async function writeCache(path: string, entry: CacheEntry): Promise<void> {
 }
 
 /**
- * Call the platform to mint a fresh trace session cookie.
+ * Call the platform to mint a fresh trace session cookie. The team is resolved
+ * server-side from the `teamId` query parameter that `client.fetch` adds when
+ * `accountId` is set — not from the request body.
  */
 async function issueToken(
   client: Client,
@@ -135,7 +137,7 @@ async function issueToken(
     deploymentId,
   }: { teamId?: string; projectId: string; deploymentId: string }
 ): Promise<{ token: string; expiresAt: number }> {
-  const body = JSON.stringify({ teamId, projectId, deploymentId });
+  const body = JSON.stringify({ projectId, deploymentId });
   const response = await client.fetch<SessionTokenApiResponse>(
     '/v1/projects/traces/session',
     {
