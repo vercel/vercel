@@ -207,7 +207,7 @@ export async function downloadFilesInWorkPath({
       });
     }
 
-    // Old versions of the CLI don't assign this property
+    // Old versions of the CLI don't assign this property.
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
     // Replace dots in the entrypoint basename with underscores so the cache
     // directory name doesn't collide with the entrypoint file itself.
