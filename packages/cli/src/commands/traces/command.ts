@@ -23,6 +23,23 @@ export const getSubcommand = {
       description:
         'Project name or id to fetch the trace from (overrides the linked project).',
     },
+    {
+      name: 'timeout',
+      shorthand: null,
+      type: Number,
+      argument: 'MS',
+      deprecated: false,
+      description:
+        'Total wall-clock budget in milliseconds to wait for the trace to become available. Defaults to 30000.',
+    },
+    {
+      name: 'no-wait',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Skip the retry loop. Make a single attempt and exit immediately.',
+    },
   ],
   examples: [
     {
@@ -32,6 +49,14 @@ export const getSubcommand = {
     {
       name: 'Print the raw trace JSON',
       value: `${packageName} traces get req_1234567890 --json`,
+    },
+    {
+      name: 'Wait up to 60 seconds for the trace to be available',
+      value: `${packageName} traces get req_1234567890 --timeout 60000`,
+    },
+    {
+      name: 'Skip retries and fail immediately on a missing trace',
+      value: `${packageName} traces get req_1234567890 --no-wait`,
     },
     {
       name: '`get` is the default — this is equivalent to the above',
