@@ -43,6 +43,8 @@ import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
 import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
 import { tryOpenApiFallback } from './util/openapi';
+import { runInferredCommand } from './util/openapi/infer-commands';
+import { inferredOpenApiCommands } from './util/openapi/inferred-commands-config';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -266,6 +268,34 @@ const main = async () => {
   if (bareHelpOption || bareHelpSubcommand) {
     output.print(help());
     return 0;
+  }
+
+  const inferredCommandExitCode = await runInferredCommand(
+    inferredOpenApiCommands,
+    parsedArgs.args.slice(2),
+    {
+      help: Boolean(parsedArgs.flags['--help']),
+      columns: process.stderr.columns ?? 80,
+      cwd:
+        typeof parsedArgs.flags['--cwd'] === 'string'
+          ? parsedArgs.flags['--cwd']
+          : undefined,
+      scope:
+        typeof parsedArgs.flags['--scope'] === 'string'
+          ? parsedArgs.flags['--scope']
+          : undefined,
+      team:
+        typeof parsedArgs.flags['--team'] === 'string'
+          ? parsedArgs.flags['--team']
+          : undefined,
+      api:
+        typeof parsedArgs.flags['--api'] === 'string'
+          ? parsedArgs.flags['--api']
+          : undefined,
+    }
+  );
+  if (inferredCommandExitCode !== null) {
+    return inferredCommandExitCode;
   }
 
   // Ensure that the Vercel global configuration directory exists

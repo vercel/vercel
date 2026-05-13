@@ -7,6 +7,7 @@ import {
   existsSync,
 } from 'node:fs';
 import { compileDevTemplates } from './compile-templates.mjs';
+import { generateOpenApiCommandDslTypes } from './generate-openapi-command-dsl-types.mjs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { esbuild, getDependencies } from '../../../utils/build.mjs';
@@ -41,6 +42,7 @@ function envToString(key) {
 // Read the secrets from GitHub Actions and generate a file.
 // During local development, these secrets will be empty.
 createConstants();
+await generateOpenApiCommandDslTypes();
 
 // Validate that index.ts doesn't use require() for command loading.
 // Commands must use `await import('./commands-bulk.js')` for code splitting.
