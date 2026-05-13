@@ -4,12 +4,22 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 
+vi.mock('@vercel/cli-config', async importOriginal => ({
+  ...(await importOriginal<typeof import('@vercel/cli-config')>()),
+  getGlobalPathConfig: vi.fn(),
+  getLikelyEffectiveCredStorage: vi.fn(() => 'file'),
+}));
+vi.mock('@vercel/cli-exec', () => ({
+  execVercelCli: vi.fn(),
+  VercelCliError: class VercelCliError extends Error {},
+}));
 vi.mock('./token-io');
 vi.mock('./get-context', () => ({
   getContext: () => ({ headers: {} }),
 }));
 
 import { findRootDir, getUserDataDir } from './token-io';
+import { getGlobalPathConfig } from '@vercel/cli-config';
 import { getVercelOidcToken } from './get-vercel-oidc-token';
 import * as tokenUtil from './token-util';
 
@@ -44,6 +54,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     vi.spyOn(process, 'cwd').mockReturnValue(rootDir);
     vi.mocked(findRootDir).mockReturnValue(rootDir);
     vi.mocked(getUserDataDir).mockReturnValue(userDataDir);
+    vi.mocked(getGlobalPathConfig).mockReturnValue(cliDataDir);
   });
 
   afterEach(() => {
@@ -133,13 +144,13 @@ describe('getVercelOidcToken - Error Scenarios', () => {
 
     vi.spyOn(tokenUtil, 'getVercelOidcToken').mockRejectedValue(
       new TypeError(
-        'Vercel OIDC token is malformed. Expected a string-valued token property. Please run `vc env pull` and try again'
+        'Vercel OIDC token is malformed. Expected a string-valued token property.'
       )
     );
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     await expect(getVercelOidcToken()).rejects.toThrow(
-      /Vercel OIDC token is malformed\. Expected a string-valued token property\. Please run `vc env pull` and try again/
+      /Vercel OIDC token is malformed\. Expected a string-valued token property\./
     );
   });
 
@@ -147,20 +158,16 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     process.env.VERCEL_OIDC_TOKEN = 'not-a-valid-jwt-token';
 
     vi.spyOn(tokenUtil, 'getTokenPayload').mockImplementation(() => {
-      throw new Error('Invalid token. Please run `vc env pull` and try again');
+      throw new Error('Invalid token.');
     });
 
-    await expect(getVercelOidcToken()).rejects.toThrow(
-      /Invalid token\. Please run `vc env pull` and try again/
-    );
+    await expect(getVercelOidcToken()).rejects.toThrow(/Invalid token\./);
   });
 
   test('should throw error when token expiry check fails', async () => {
     process.env.VERCEL_OIDC_TOKEN = 'not-a-jwt-token';
 
-    await expect(getVercelOidcToken()).rejects.toThrow(
-      /Invalid token\. Please run `vc env pull` and try again/
-    );
+    await expect(getVercelOidcToken()).rejects.toThrow(/Invalid token\./);
   });
 
   test('should fail when no token exists and no CLI credentials available', async () => {

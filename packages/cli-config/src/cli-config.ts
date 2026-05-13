@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import XDGAppPaths from 'xdg-app-paths';
 import { z } from 'zod';
 import { authConfigSchema, globalConfigSchema } from './schema';
-import type { AuthConfig, GlobalConfig } from './types';
+import type { AuthConfig, AuthFileConfig, GlobalConfig } from './types';
 
 const DOCS_URL =
   'https://vercel.com/docs/projects/project-configuration/global-configuration';
@@ -29,12 +29,35 @@ export function getDefaultAuthConfig(): AuthConfig {
 
 export const defaultAuthConfig: AuthConfig = getDefaultAuthConfig();
 
+function normalizeConfigError(error: unknown): never {
+  if (error instanceof z.ZodError) {
+    const credStorageIssue = error.issues.find(
+      issue => issue.path[0] === 'credStorage'
+    );
+
+    if (credStorageIssue) {
+      throw new Error(credStorageIssue.message);
+    }
+  }
+
+  throw error;
+}
+
 export function parseGlobalConfig(value: unknown): GlobalConfig {
-  return globalConfigSchema.parse(value);
+  try {
+    return globalConfigSchema.parse(value);
+  } catch (error) {
+    normalizeConfigError(error);
+  }
 }
 
 export function parseAuthConfig(value: unknown): AuthConfig {
   return authConfigSchema.parse(value);
+}
+
+export function parseAuthFileConfig(value: unknown): AuthFileConfig {
+  const { tokenSource, ...authConfig } = parseAuthConfig(value);
+  return authConfig;
 }
 
 function readJsonFileSync(filePath: string): unknown {
@@ -126,7 +149,11 @@ export function getAuthConfigFilePath(configDir: string): string {
 }
 
 export function readGlobalConfigFile(configPath: string): GlobalConfig {
-  return readConfigFile(configPath, globalConfigSchema);
+  try {
+    return readConfigFile(configPath, globalConfigSchema);
+  } catch (error) {
+    normalizeConfigError(error);
+  }
 }
 
 export function writeGlobalConfigFile(
@@ -140,6 +167,22 @@ export function readAuthConfigFile(configPath: string): AuthConfig {
   return readConfigFile(configPath, authConfigSchema);
 }
 
+export function readAuthFileConfig(configPath: string): AuthFileConfig {
+  return parseAuthFileConfig(readJsonFileSync(configPath));
+}
+
+export function readAuthConfig(configDir: string): AuthConfig {
+  return readAuthConfigFile(getAuthConfigFilePath(configDir));
+}
+
+export function tryReadAuthConfig(configDir: string): AuthConfig | null {
+  try {
+    return readAuthConfig(configDir);
+  } catch {
+    return null;
+  }
+}
+
 export function writeAuthConfigFile(
   configPath: string,
   authConfig: AuthConfig
@@ -151,4 +194,19 @@ export function writeAuthConfigFile(
   writeConfigFile(configPath, authConfigSchema, authConfig, {
     mode: 0o600,
   });
+}
+
+export function writeAuthConfig(
+  configDir: string,
+  authConfig: AuthConfig
+): void {
+  writeAuthConfigFile(getAuthConfigFilePath(configDir), authConfig);
+}
+
+export function deleteAuthConfigFile(configPath: string): void {
+  fs.rmSync(configPath, { force: true });
+}
+
+export function deleteAuthConfig(configDir: string): void {
+  deleteAuthConfigFile(getAuthConfigFilePath(configDir));
 }

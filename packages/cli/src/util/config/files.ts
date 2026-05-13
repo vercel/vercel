@@ -2,15 +2,20 @@ import { join, basename, dirname } from 'path';
 import loadJSON from 'load-json-file';
 import { accessSync, constants } from 'fs';
 import * as config from '@vercel/cli-config';
+import {
+  persistCliAuthConfig,
+  readCliAuthConfig,
+} from '@vercel/cli-auth/credentials-store.js';
+import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { fileNameSymbol } from '@vercel/client';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
+import hp from '../humanize-path';
 import highlight from '../output/highlight';
 import type { VercelConfig } from '../dev/types';
 import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import { isErrnoException, isError } from '@vercel/error-utils';
 import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
 import {
   VERCEL_CONFIG_EXTENSIONS,
@@ -55,34 +60,27 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
   }
 };
 
-// reads "auth config" file atomically
-export const readAuthConfigFile = (): AuthConfig => {
-  return config.readAuthConfigFile(AUTH_CONFIG_FILE_PATH);
+export const readAuthConfigFile = (_globalConfig: GlobalConfig): AuthConfig => {
+  return {
+    ...config.getDefaultAuthConfig(),
+    ...readCliAuthConfig(VERCEL_DIR),
+  };
 };
 
-export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
+export const persistAuthConfig = (
+  authConfig: AuthConfig,
+  _globalConfig: GlobalConfig
+) => {
   try {
-    return config.writeAuthConfigFile(AUTH_CONFIG_FILE_PATH, authConfig);
+    return persistCliAuthConfig(VERCEL_DIR, authConfig);
   } catch (err: unknown) {
-    if (isErrnoException(err)) {
-      if (err.code === 'EPERM') {
-        output.error(
-          `Not able to create ${highlight(
-            AUTH_CONFIG_FILE_PATH
-          )} (operation not permitted).`
-        );
-        process.exit(1);
-      } else if (err.code === 'EBADF') {
-        output.error(
-          `Not able to create ${highlight(
-            AUTH_CONFIG_FILE_PATH
-          )} (bad file descriptor).`
-        );
-        process.exit(1);
-      }
-    }
-
-    throw err;
+    const wrappedError = new Error(
+      `An unexpected error occurred while trying to write the auth config to "${hp(
+        AUTH_CONFIG_FILE_PATH
+      )}" ${errorToString(err)}`
+    );
+    (wrappedError as Error & { cause?: unknown }).cause = err;
+    throw wrappedError;
   }
 };
 

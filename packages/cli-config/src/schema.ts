@@ -6,7 +6,7 @@
  * passthrough behavior for unrecognized config keys.
  */
 
-import type { z } from 'zod';
+import { z } from 'zod';
 import {
   authConfigSchema as generatedAuthConfigSchema,
   globalConfigSchema as generatedGlobalConfigSchema,
@@ -15,10 +15,16 @@ import {
 } from './schema.zod';
 import type {
   AuthConfig,
+  CredStorage,
   GlobalConfig,
   GuidanceConfig,
   TelemetryConfig,
 } from './types';
+import { CRED_STORAGE_CONFIG_VALUES } from './types';
+
+function formatCredStorageError(value: unknown): string {
+  return `Invalid value for \`credStorage\`: ${JSON.stringify(value)}. Expected one of: ${CRED_STORAGE_CONFIG_VALUES.map(storage => JSON.stringify(storage)).join(', ')}.`;
+}
 
 export const telemetryConfigSchema =
   generatedTelemetryConfigSchema.passthrough() as z.ZodType<TelemetryConfig>;
@@ -26,8 +32,17 @@ export const telemetryConfigSchema =
 export const guidanceConfigSchema =
   generatedGuidanceConfigSchema.passthrough() as z.ZodType<GuidanceConfig>;
 
+export const credStorageSchema = z
+  .enum(CRED_STORAGE_CONFIG_VALUES, {
+    error: issue => {
+      return formatCredStorageError(issue.input);
+    },
+  })
+  .optional() as z.ZodType<CredStorage | undefined>;
+
 export const globalConfigSchema = generatedGlobalConfigSchema
   .extend({
+    credStorage: credStorageSchema,
     telemetry: telemetryConfigSchema.optional(),
     guidance: guidanceConfigSchema.optional(),
   })
