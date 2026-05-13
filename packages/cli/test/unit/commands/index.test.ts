@@ -80,6 +80,7 @@ describe('index', () => {
         ['team', 'teams'],
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
+        ['traces', 'traces'],
         ['upgrade', 'upgrade'],
         ['webhook', 'webhooks'],
         ['webhooks', 'webhooks'],
