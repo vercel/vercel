@@ -57,10 +57,23 @@ async function setupProject(
   await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(process, 'In which directory is your code located?');
-  process.stdin?.write('\n');
+  // The "In which directory…" prompt fires only when framework detection finds
+  // nothing at the root. Some fixtures trigger framework detection (e.g.
+  // `dev-proxy-headers-and-env` via server.js), others don't (e.g.
+  // `project-link-deploy` with empty package.json). Wait for whichever fires.
+  let sawDirectoryPrompt = false;
+  await waitForPrompt(process, chunk => {
+    if (chunk.includes('In which directory is your code located?')) {
+      sawDirectoryPrompt = true;
+      return true;
+    }
+    return chunk.includes('Customize settings?');
+  });
 
-  await waitForPrompt(process, 'Customize settings?');
+  if (sawDirectoryPrompt) {
+    process.stdin?.write('\n');
+    await waitForPrompt(process, 'Customize settings?');
+  }
 
   if (overrides) {
     process.stdin?.write('yes\n');
