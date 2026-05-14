@@ -12,6 +12,10 @@ on:
       tag:
         description: Existing tag to build (e.g. vercel@53.3.1)
         required: true
+      publish_native_npm:
+        description: Publish native npm packages instead of dry-run
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -327,8 +331,12 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: 'true'
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.publish_native_npm }}" == "true" ]]; then
+            export VERCEL_VC_NATIVE_VERSION="53.4.0-native-test.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+            export VERCEL_VC_NATIVE_NPM_TAG="native-test"
+            node packages/vc-native/scripts/publish-packages.mjs --tag native-test
           else
             node packages/vc-native/scripts/publish-packages.mjs --dry-run
           fi

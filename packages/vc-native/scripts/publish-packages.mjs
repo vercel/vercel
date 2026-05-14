@@ -8,6 +8,7 @@ const execFileAsync = promisify(execFile);
 const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputRoot = join(packageRoot, 'dist-native');
 const dryRun = process.argv.includes('--dry-run');
+const tag = getArgValue('--tag') ?? process.env.VERCEL_VC_NATIVE_NPM_TAG;
 
 await execFileAsync(process.execPath, [
   join(packageRoot, 'scripts', 'stage-packages.mjs'),
@@ -36,6 +37,9 @@ for (const packageDir of packageDirs) {
   }
 
   const args = ['publish', packageDir, '--access', 'public', '--provenance'];
+  if (tag) {
+    args.push('--tag', tag);
+  }
   if (dryRun) {
     args.push('--dry-run');
   }
@@ -60,4 +64,15 @@ async function run(command, args) {
   const { stdout, stderr } = await child;
   if (stdout) process.stdout.write(stdout);
   if (stderr) process.stderr.write(stderr);
+}
+
+function getArgValue(name) {
+  const index = process.argv.indexOf(name);
+  if (index !== -1) {
+    return process.argv[index + 1];
+  }
+
+  const prefix = `${name}=`;
+  const arg = process.argv.find(value => value.startsWith(prefix));
+  return arg?.slice(prefix.length);
 }

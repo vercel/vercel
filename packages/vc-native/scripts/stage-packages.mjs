@@ -16,7 +16,7 @@ const cliRoot = join(repoRoot, 'packages', 'cli');
 const cliPackageJson = JSON.parse(
   await readFile(join(cliRoot, 'package.json'), 'utf8')
 );
-const version = cliPackageJson.version;
+const version = process.env.VERCEL_VC_NATIVE_VERSION ?? cliPackageJson.version;
 const outputRoot = join(packageRoot, 'dist-native');
 const binaryRoot = join(cliRoot, 'dist-bin');
 const checkSourcesOnly = process.argv.includes('--check-sources');
