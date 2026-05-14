@@ -97,10 +97,6 @@ for (const platform of platforms) {
     repository: repository('packages/vc-native'),
     os: platform.os,
     cpu: platform.cpu,
-    bin: {
-      vercel: `./bin/${binaryName}`,
-      vc: `./bin/${binaryName}`,
-    },
     files: ['bin'],
     publishConfig: { access: 'public' },
   });

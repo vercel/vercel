@@ -3,7 +3,6 @@ name: Release Binary
 on:
   push:
     branches:
-      - 'melkey/bun-working-branch'
       - 'ijjk-small-icu-release-binary'
     tags:
       - 'vercel@*'
@@ -12,10 +11,6 @@ on:
       tag:
         description: Existing tag to build (e.g. vercel@53.3.1)
         required: true
-      publish_native_npm:
-        description: Publish native npm packages instead of dry-run
-        required: false
-        default: 'false'
 
 permissions:
   contents: write
@@ -73,16 +68,15 @@ jobs:
             custom_node_path: .node-runtime/node-v22.22.2-linux-x64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: x64
-          # Temporarily disabled while debugging native npm package publishing.
-          # - runs-on: windows-latest-8-core-oss
-          #   target: node22.22.2-win-x64
-          #   asset: vercel-windows-x64
-          #   ext: '.exe'
-          #   sign: false
-          #   smoke: true
-          #   custom_node_path: .node-runtime/node-v22.22.2-win-x64-small-icu/node.exe
-          #   custom_node_platform: win
-          #   custom_node_arch: x64
+          - runs-on: windows-latest-8-core-oss
+            target: node22.22.2-win-x64
+            asset: vercel-windows-x64
+            ext: '.exe'
+            sign: false
+            smoke: true
+            custom_node_path: .node-runtime/node-v22.22.2-win-x64-small-icu/node.exe
+            custom_node_platform: win
+            custom_node_arch: x64
     runs-on: ${{ matrix['runs-on'] }}
     steps:
       - name: Checkout
@@ -339,17 +333,6 @@ jobs:
         run: |
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
-          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.publish_native_npm }}" == "true" ]]; then
-            export VERCEL_VC_NATIVE_VERSION="53.4.0-native-test.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
-            export VERCEL_VC_NATIVE_NPM_TAG="native-test"
-            node packages/vc-native/scripts/publish-packages.mjs --tag native-test
-          elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
-            # TODO: Remove before merging. This temporarily publishes PR branch builds
-            # to the native-test npm tag so the install flow can be validated.
-            # --allow-missing is only here while Windows is disabled in the matrix.
-            export VERCEL_VC_NATIVE_VERSION="53.4.0-native-test.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
-            export VERCEL_VC_NATIVE_NPM_TAG="native-test"
-            node packages/vc-native/scripts/publish-packages.mjs --tag native-test --allow-missing
           else
             node packages/vc-native/scripts/publish-packages.mjs --dry-run
           fi

@@ -8,12 +8,11 @@ const execFileAsync = promisify(execFile);
 const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputRoot = join(packageRoot, 'dist-native');
 const dryRun = process.argv.includes('--dry-run');
-const allowMissing = process.argv.includes('--allow-missing');
 const tag = getArgValue('--tag') ?? process.env.VERCEL_VC_NATIVE_NPM_TAG;
 
 await execFileAsync(process.execPath, [
   join(packageRoot, 'scripts', 'stage-packages.mjs'),
-  ...(dryRun || allowMissing ? ['--allow-missing'] : []),
+  ...(dryRun ? ['--allow-missing'] : []),
 ]);
 
 const entries = await readdir(outputRoot, { withFileTypes: true });
