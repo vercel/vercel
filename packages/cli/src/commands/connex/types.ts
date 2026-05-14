@@ -13,7 +13,9 @@ export interface ConnexClient {
   website?: string;
   devsite?: string;
   docsite?: string;
-  icon?: string;
+  icon?: string | null;
+  backgroundColor?: string | null;
+  accentColor?: string | null;
   supportedSubjectTypes: Array<'user' | 'app'>;
   supportsInstallation: boolean;
 }

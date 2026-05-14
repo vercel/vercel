@@ -27,6 +27,31 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Enable webhook triggers for this connector',
     },
+    {
+      name: 'icon',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)',
+    },
+    {
+      name: 'background-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Background color for the connector icon (e.g. #1A2B3C)',
+    },
+    {
+      name: 'accent-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Accent color for the connector icon (e.g. #1A2B3C)',
+    },
     formatOption,
   ],
   examples: [
@@ -43,8 +68,66 @@ export const createSubcommand = {
       value: `${packageName} connect create slack --name my-bot --triggers`,
     },
     {
+      name: 'Create with branding (icon and colors)',
+      value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color #1A2B3C --accent-color #FF0066`,
+    },
+    {
       name: 'Output as JSON',
       value: `${packageName} connect create slack --format=json`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update connector branding (icon and colors)',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'icon',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)',
+    },
+    {
+      name: 'background-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Background color for the connector icon (e.g. #1A2B3C)',
+    },
+    {
+      name: 'accent-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Accent color for the connector icon (e.g. #1A2B3C)',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Update the connector icon',
+      value: `${packageName} connect update scl_abc123 --icon ./logo.png`,
+    },
+    {
+      name: 'Update the connector colors',
+      value: `${packageName} connect update scl_abc123 --background-color #1A2B3C --accent-color #FF0066`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect update scl_abc123 --icon ./logo.png --format=json`,
     },
   ],
 } as const;
@@ -392,6 +475,7 @@ export const connexCommand = {
   options: [],
   subcommands: [
     createSubcommand,
+    updateSubcommand,
     listSubcommand,
     tokenSubcommand,
     attachSubcommand,

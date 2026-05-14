@@ -55,11 +55,56 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
   trackCliArgumentClient(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
         arg: 'client',
         value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliArgumentId(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionIcon(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'icon',
+        // Path can leak username/repo location — redact.
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionBackgroundColor(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'background-color',
+        // Hex colors are not sensitive.
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionAccentColor(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'accent-color',
+        value: v,
       });
     }
   }
