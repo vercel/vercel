@@ -63,6 +63,7 @@ import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
@@ -293,7 +294,7 @@ async function handleInitDeployment(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: undefined,
       nowConfig: localConfig,
@@ -880,7 +881,7 @@ async function handleContinueSubcommand(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm: true,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: undefined,
       nowConfig: localConfig,
@@ -1180,7 +1181,7 @@ async function handleDefaultDeploy(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: parsedArguments.flags['--name'],
       nowConfig: localConfig,
@@ -2100,7 +2101,7 @@ async function handleContinueDeployment({
     return 1;
   }
 
-  output.spinner(`Continuing deployment...`, 0);
+  output.spinner(`Continuing deployment…`, 0);
 
   try {
     let finalDeployment: any = null;
@@ -2125,7 +2126,7 @@ async function handleContinueDeployment({
       if (event.type === 'file-count') {
         const { total, missing } = event.payload;
         output.spinner(
-          `Uploading ${missing.length} of ${total.size} files...`,
+          `Uploading ${missing.length} of ${total.size} files…`,
           0
         );
       }
@@ -2135,7 +2136,7 @@ async function handleContinueDeployment({
       }
 
       if (event.type === 'all-files-uploaded') {
-        output.spinner('Continuing deployment...', 0);
+        output.spinner('Continuing deployment…', 0);
       }
 
       if (event.type === 'created') {
@@ -2143,20 +2144,18 @@ async function handleContinueDeployment({
         output.stopSpinner();
 
         if (finalDeployment.inspectorUrl) {
-          output.print(
-            prependEmoji(
-              `Inspect: ${chalk.bold(finalDeployment.inspectorUrl)} ${deployStamp()}`,
-              emoji('inspect')
-            ) + '\n'
+          printAlignedLabel(
+            'Inspect',
+            chalk.cyan(finalDeployment.inspectorUrl)
           );
         }
 
+        const isProdDeployment = finalDeployment.target === 'production';
         const previewUrl = `https://${finalDeployment.url}`;
-        output.print(
-          prependEmoji(
-            `Preview: ${chalk.bold(previewUrl)} ${deployStamp()}`,
-            emoji('success')
-          ) + '\n'
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (noWait) {
@@ -2169,11 +2168,11 @@ async function handleContinueDeployment({
           );
         }
 
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'building') {
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'ready') {
@@ -2192,12 +2191,7 @@ async function handleContinueDeployment({
         ) {
           const primaryDomain = finalDeployment.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Production: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
       }
 

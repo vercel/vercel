@@ -10,7 +10,7 @@ import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
-import { emoji, prependEmoji, type EmojiLabel } from '../emoji';
+import type { EmojiLabel } from '../emoji';
 import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
@@ -22,6 +22,7 @@ import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
 const home = homedir();
 
@@ -203,18 +204,9 @@ export async function linkRepoProject(
 
   await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
   await writeReadme(repoLink.rootPath);
-  const isGitIgnoreUpdated = await addToGitIgnore(repoLink.rootPath);
+  await addToGitIgnore(repoLink.rootPath);
 
-  output.print(
-    prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${project.name}`
-      )} (created ${VERCEL_DIR}${
-        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-      })`,
-      emoji(successEmoji)
-    ) + '\n'
-  );
+  printAlignedLabel('Linked', `${orgSlug}/${project.name}`);
 
   return {
     repoConfig,
@@ -263,25 +255,21 @@ async function discoverRepoProjects(
   const promptAction = existingRemoteName ? 'add' : 'link';
   const confirmMessage =
     promptAction === 'add'
-      ? `Add Project(s) for Git repository at ${chalk.cyan(
+      ? `Add Project(s) for Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )}?`
-      : `Link Git repository at ${chalk.cyan(
+      : `Link Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )} to your Project(s)?`;
 
   const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
 
   if (!shouldLink) {
-    output.print(`Canceled. Repository not linked.\n`);
+    output.print(`  Canceled. Repository not linked.\n`);
     return;
   }
 
-  const org = await selectOrg(
-    client,
-    'Which scope should contain your Project(s)?',
-    yes
-  );
+  const org = await selectOrg(client, 'Which team?', yes);
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const remote = await resolveGitRemote(client, rootPath, {
@@ -316,16 +304,16 @@ async function discoverRepoProjects(
   }
 
   if (projects.length === 0) {
-    output.log(
-      `No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.`
+    output.print(
+      `  No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.\n`
     );
   } else {
-    output.log(
-      `Found ${pluralize(
+    output.print(
+      `  Found ${pluralize(
         'Project',
         projects.length,
         true
-      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
+      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}\n`
     );
   }
 
@@ -349,12 +337,12 @@ async function discoverRepoProjects(
     0
   );
   if (detectedProjectsCount > 0) {
-    output.log(
-      `Detected ${pluralize(
+    output.print(
+      `  Detected ${pluralize(
         'new Project',
         detectedProjectsCount,
         true
-      )} that may be created.`
+      )} that may be created.\n`
     );
   }
 
@@ -411,7 +399,7 @@ async function discoverRepoProjects(
   }
 
   if (selected.length === 0) {
-    output.print(`No Projects were selected. Repository not linked.\n`);
+    output.print(`  No Projects were selected. Repository not linked.\n`);
     return;
   }
 
@@ -432,12 +420,12 @@ async function discoverRepoProjects(
       parsedRepoUrl.provider,
       `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
     );
-    output.log(
-      `Created new Project: ${output.link(
+    output.print(
+      `  Created new Project: ${output.link(
         orgAndName,
         `https://vercel.com/${orgAndName}`,
         { fallback: false }
-      )}`
+      )}\n`
     );
   }
 
@@ -484,20 +472,11 @@ export async function ensureRepoLink(
 
     await writeReadme(rootPath);
 
-    // update .gitignore
-    const isGitIgnoreUpdated = await addToGitIgnore(rootPath);
+    await addToGitIgnore(rootPath);
 
-    output.print(
-      prependEmoji(
-        `Linked to ${pluralize(
-          'Project',
-          result.projects.length,
-          true
-        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${
-          isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-        })`,
-        emoji('link')
-      ) + '\n'
+    printAlignedLabel(
+      'Linked',
+      `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
     );
   }
 
@@ -551,7 +530,7 @@ export async function addRepoLink(
   }
 
   if (result.projects.length === 0) {
-    output.print(`No new Projects were added.\n`);
+    output.print(`  No new Projects were added.\n`);
     return { repoConfig, repoConfigPath, rootPath };
   }
 
@@ -570,15 +549,9 @@ export async function addRepoLink(
 
   await outputJSON(repoConfigPath, updatedConfig, { spaces: 2 });
 
-  output.print(
-    prependEmoji(
-      `Added ${pluralize(
-        'Project',
-        result.projects.length,
-        true
-      )} under ${chalk.bold(result.orgSlug)}`,
-      emoji('link')
-    ) + '\n'
+  printAlignedLabel(
+    'Added',
+    `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
   );
 
   return {

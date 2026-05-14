@@ -15,7 +15,6 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
 import type Now from '../../util';
-import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
@@ -24,21 +23,15 @@ import eraseLines from '../output/erase-lines';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
-function printInspectUrl(
-  inspectorUrl: string | null | undefined,
-  deployStamp: () => string
-) {
+function printInspectUrl(inspectorUrl: string | null | undefined) {
   if (!inspectorUrl) {
     return;
   }
 
-  output.print(
-    prependEmoji(
-      `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
-      emoji('inspect')
-    ) + `\n`
-  );
+  // Timing belongs on the Build/Ready line, not on the URL line which is instant.
+  printAlignedLabel('Inspect', chalk.cyan(inspectorUrl));
 }
 
 export default async function processDeployment({
@@ -58,8 +51,6 @@ export default async function processDeployment({
   now: Now;
   path: string;
   requestBody: DeploymentOptions;
-  uploadStamp: () => string;
-  deployStamp: () => string;
   quiet: boolean;
   force?: boolean;
   withCache?: boolean;
@@ -83,7 +74,6 @@ export default async function processDeployment({
     now,
     path,
     requestBody,
-    deployStamp,
     force,
     withCache,
     quiet,
@@ -206,18 +196,15 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(deployment.inspectorUrl, deployStamp);
+        printInspectUrl(deployment.inspectorUrl);
 
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
 
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji(withFullLogs ? 'link' : 'loading')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
@@ -229,7 +216,7 @@ export default async function processDeployment({
         }
 
         latestLogMessage =
-          deployment.readyState === 'QUEUED' ? 'Queued...' : 'Building...';
+          deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
         if (withFullLogs) {
           let promise: Promise<void>;
@@ -253,7 +240,7 @@ export default async function processDeployment({
                 const lines = parseLogLines(event);
                 const message = lines[0];
                 if (message) {
-                  latestLogMessage = `Building: ${message}`;
+                  latestLogMessage = message;
                   output.spinner(latestLogMessage, 0);
                 }
               },
@@ -270,7 +257,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'building' && !withFullLogs) {
-        output.spinner(latestLogMessage || 'Building...', 0);
+        output.spinner(latestLogMessage || 'Building…', 0);
       }
 
       if (event.type === 'canceled') {
@@ -284,7 +271,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'ready' && rollingRelease) {
-        output.spinner('Releasing...', 0);
+        output.spinner('Releasing…', 0);
         stopSpinner();
         return event.payload;
       }
@@ -300,25 +287,22 @@ export default async function processDeployment({
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji('success')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (v1ChecksPending || v2ChecksPending) {
-          output.spinner('Running Checks...', 0);
+          output.spinner('Running Checks…', 0);
         } else {
-          output.spinner('Completing...', 0);
+          output.spinner('Completing…', 0);
         }
       }
 
       // v1 checks running
       if (event.type === 'checks-running' && !withFullLogs) {
-        output.spinner('Running Checks...', 0);
+        output.spinner('Running Checks…', 0);
       }
 
       // v1 checks failed
@@ -379,12 +363,7 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
 
         event.payload.indications = indications;

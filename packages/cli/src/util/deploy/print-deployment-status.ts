@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import type { Deployment } from '@vercel-internals/types';
 import type Client from '../../util/client';
 
@@ -9,6 +10,15 @@ import output from '../../output-manager';
 import { getCommandName } from '../pkg-name';
 import { suggestNextCommands } from '../suggest-next-commands';
 import { showPluginTipIfNeeded } from '../agent/auto-install-agentic';
+
+/**
+ * `deployStamp()` returns a string formatted like `[47s]` (gray-wrapped).
+ * Strip the ANSI color codes and surrounding brackets to get a bare duration
+ * for inline use like `✓ Ready in 47s`.
+ */
+function bareDuration(stamp: string): string {
+  return stripAnsi(stamp).replace(/^\[|\]$/g, '');
+}
 
 /**
  * Prints (to `output`) warnings and errors, if any.
@@ -48,8 +58,8 @@ export async function printDeploymentStatus(
     if (isDeploying(readyState)) {
       isStillBuilding = true;
       const message = isInit
-        ? 'Deployment is awaiting continuation...'
-        : 'Note: Deployment is still processing...';
+        ? 'Deployment is awaiting continuation…'
+        : 'Note: Deployment is still processing…';
       output.print(prependEmoji(message, emoji('notice')) + '\n');
     }
   }
@@ -59,6 +69,16 @@ export async function printDeploymentStatus(
       `Your deployment failed. Please retry later. More: https://err.sh/vercel/deployment-error`
     );
     return 1;
+  }
+
+  // ✓ Ready in Xs — terminal state of the deploy flow, gutter glyph at col 0.
+  // Skipped when --no-wait is set and the deployment hasn't reached READY yet
+  // (we don't wait for it). Still prints if --no-wait happens to land on READY.
+  if (!isStillBuilding && readyState === 'READY') {
+    const duration = bareDuration(deployStamp());
+    output.print(
+      `\n${chalk.green('✓')} ${chalk.bold('Ready')} ${chalk.dim(`in ${duration}`)}\n`
+    );
   }
 
   if (aliasError) {

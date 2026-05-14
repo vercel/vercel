@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
+import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
   ProjectLinkResult,
   ProjectSettings,
@@ -81,7 +82,7 @@ function formatMatchReason(match: CrossTeamMatch): string {
 }
 
 function formatCrossTeamMatch(match: CrossTeamMatch): string {
-  return `${chalk.blue(match.org.slug)}/${match.project.name} ${formatMatchReason(
+  return `${chalk.bold(match.org.slug)}/${match.project.name} ${formatMatchReason(
     match
   )}`;
 }
@@ -103,12 +104,73 @@ function printCrossTeamSearchScope({
   skippedLimitedTeamSlugs: string[];
 }): void {
   if (searchedTeamSlugs.length > 0) {
-    output.log(`Searched teams: ${formatTeamList(searchedTeamSlugs)}`);
+    output.print(`  Searched teams: ${formatTeamList(searchedTeamSlugs)}\n`);
   }
   if (skippedLimitedTeamSlugs.length > 0) {
-    output.log(
-      `Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}`
+    output.print(
+      `  Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}\n`
     );
+  }
+}
+
+function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
+  return (
+    err instanceof Error && typeof (err as { code?: unknown }).code === 'string'
+  );
+}
+
+// Detect whether `cwd` is a workspace root (monorepo with multiple packages).
+// If the filesystem can't be read (ENOENT/EACCES/ENOTDIR), treat it as a
+// single-app project rather than crashing the CLI.
+async function hasWorkspaces(cwd: string): Promise<boolean> {
+  try {
+    const fs = new LocalFileSystemDetector(cwd);
+    const workspaces = await getWorkspaces({ fs });
+    return workspaces.length > 0;
+  } catch (err) {
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'EACCES', 'ENOTDIR'].includes(err.code)
+    ) {
+      output.debug(`getWorkspaces failed for ${cwd}: ${err}`);
+      return false;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Decides whether to prompt the user for a project root directory.
+ *
+ * Returns true if any of:
+ *  - the user explicitly chose "Choose a different root directory" via the
+ *    inferred-services picker
+ *  - the directory is a workspace (monorepo with multiple packages)
+ *  - framework detection at the root finds nothing — covers nested-monolith
+ *    layouts like `repo/app/package.json` where the app lives in a subdir
+ *
+ * Returns false only for single-app projects with a framework detected at
+ * the root — that's the fast-path the no-prompt optimization targets.
+ */
+export async function shouldPromptForRootDirectory(opts: {
+  path: string;
+  servicesChoice: InferredServicesChoice | null;
+}): Promise<boolean> {
+  if (opts.servicesChoice?.type === 'project-directory') {
+    return true;
+  }
+  if (await hasWorkspaces(opts.path)) {
+    return true;
+  }
+  try {
+    const detected = await detectProjects(opts.path);
+    const frameworksAtRoot = detected.get('') ?? [];
+    return frameworksAtRoot.length === 0;
+  } catch (err) {
+    output.debug(`detectProjects failed at root: ${err}`);
+    // Safer to prompt than to silently misconfigure.
+    return true;
   }
 }
 
@@ -403,18 +465,12 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
-  const shouldStartSetup =
-    autoConfirm ||
-    nonInteractive ||
-    (await client.input.confirm(
-      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-      true
-    ));
-
-  if (!shouldStartSetup) {
-    output.print(`Canceled. Project not set up.\n`);
-    return { status: 'not_linked', org: null, project: null };
-  }
+  // Status line — intent is implied by the user running `vc` in this directory.
+  // The "Set up and deploy?" confirmation prompt is gone; Ctrl-C is the escape hatch.
+  // Single leading newline, 2-space indent, straight quotes — matches the prototype.
+  output.print(
+    `\n  ${chalk.bold(setupMsg)} ${chalk.dim(`"${toHumanPath(path)}"`)}\n`
+  );
 
   let skipAutoDetect = false;
   if (searchAcrossTeams) {
@@ -467,8 +523,8 @@ export default async function setupAndLink(
 
     if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
       if (crossTeamMatches.length === 0) {
-        output.log(
-          `No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.`
+        output.print(
+          `  No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.\n`
         );
       }
       const limitedTeamMatches = await searchSelectedLimitedTeams({
@@ -491,8 +547,8 @@ export default async function setupAndLink(
         return linkedLimitedMatch;
       }
       if (limitedTeamMatches.length === 0) {
-        output.log(
-          'No matching projects found in the selected SSO-protected teams.'
+        output.print(
+          '  No matching projects found in the selected SSO-protected teams.\n'
         );
       }
       skipAutoDetect =
@@ -505,11 +561,7 @@ export default async function setupAndLink(
   }
 
   try {
-    org = await selectOrg(
-      client,
-      'Which scope should contain your project?',
-      autoConfirm
-    );
+    org = await selectOrg(client, 'Which team?', autoConfirm);
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.code === 'NOT_AUTHORIZED') {
@@ -613,16 +665,28 @@ export default async function setupAndLink(
           rootInferredServicesChoice.selectedPath
         );
       } else {
-        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
-        if (
-          rootDirectory &&
-          !(await validateRootDirectory(path, join(path, rootDirectory)))
-        ) {
-          return {
-            status: 'error',
-            exitCode: 1,
-            reason: 'INVALID_ROOT_DIRECTORY',
-          };
+        // Prompt for a root directory when the user explicitly asked for one
+        // via the inferred-services picker, or — in the standard flow — when
+        // this is a workspace (monorepo with multiple packages), or when no
+        // framework is detected at the root (nested monolith layouts like
+        // `repo/app/package.json`). For single-app projects with a framework
+        // at the root we skip the prompt entirely.
+        const shouldPromptRoot = await shouldPromptForRootDirectory({
+          path,
+          servicesChoice: rootInferredServicesChoice,
+        });
+        if (shouldPromptRoot) {
+          rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+          if (
+            rootDirectory &&
+            !(await validateRootDirectory(path, join(path, rootDirectory)))
+          ) {
+            return {
+              status: 'error',
+              exitCode: 1,
+              reason: 'INVALID_ROOT_DIRECTORY',
+            };
+          }
         }
       }
 
