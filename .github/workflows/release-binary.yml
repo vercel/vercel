@@ -337,6 +337,13 @@ jobs:
             export VERCEL_VC_NATIVE_VERSION="53.4.0-native-test.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
             export VERCEL_VC_NATIVE_NPM_TAG="native-test"
             node packages/vc-native/scripts/publish-packages.mjs --tag native-test
+          elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
+            # TODO: Remove before merging. This temporarily publishes PR branch builds
+            # to the native-test npm tag so the install flow can be validated.
+            # --allow-missing is only here while Windows is disabled in the matrix.
+            export VERCEL_VC_NATIVE_VERSION="53.4.0-native-test.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+            export VERCEL_VC_NATIVE_NPM_TAG="native-test"
+            node packages/vc-native/scripts/publish-packages.mjs --tag native-test --allow-missing
           else
             node packages/vc-native/scripts/publish-packages.mjs --dry-run
           fi
