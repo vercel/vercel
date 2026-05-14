@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
   defaultCachePathGlob,
+  execCommand,
+  getNodeBinPaths,
   getReportedServiceType,
   glob,
   NodejsLambda,
@@ -114,6 +116,28 @@ export const build: BuildV2 = async args => {
     const isCronService = cronEntries !== undefined;
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
+
+    const preDeployCommand = args.config.preDeployCommand;
+    if (args.registerPreDeploy && typeof preDeployCommand === 'string') {
+      const repoRoot = args.repoRootPath || args.workPath;
+      const nodeBinPaths = getNodeBinPaths({
+        base: repoRoot,
+        start: args.workPath,
+      });
+      const nodeBinPath = nodeBinPaths.join(delimiter);
+      const capturedEnv = {
+        ...downloadResult.spawnEnv,
+        PATH: `${nodeBinPath}${delimiter}${downloadResult.spawnEnv?.PATH || process.env.PATH}`,
+      };
+      const capturedCwd = args.workPath;
+      args.registerPreDeploy(async () => {
+        debug(`Running pre-deploy command: \`${preDeployCommand}\``);
+        await execCommand(preDeployCommand, {
+          env: capturedEnv,
+          cwd: capturedCwd,
+        });
+      });
+    }
 
     const functionConfig = args.config.functions?.[entrypoint];
     if (functionConfig) {
