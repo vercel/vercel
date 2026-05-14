@@ -321,8 +321,8 @@ async function main() {
         : usedOIDCFallback
           ? ['cli']
           : [];
-  const agentEvalArgsToPass =
-    experimentsToRun.length > 0 ? [...flagArgs, ...experimentsToRun] : args;
+  const experimentRuns =
+    experimentsToRun.length > 0 ? experimentsToRun : [undefined];
   process.stdout.write(
     `\nCLI eval experiments to run: ${
       experimentsToRun.length > 0
@@ -374,26 +374,35 @@ async function main() {
         agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
       }
 
-      const agentEvalArgs = [
-        '--yes',
-        '@vercel/agent-eval@latest',
-        ...agentEvalArgsToPass,
-      ];
+      for (const experiment of experimentRuns) {
+        const agentEvalArgs = [
+          '--yes',
+          '@vercel/agent-eval@latest',
+          ...flagArgs,
+          ...(experiment ? [experiment] : explicitExperimentArgs),
+        ];
 
-      const child = spawn('npx', agentEvalArgs, {
-        cwd: __dirname,
-        stdio: 'inherit',
-        env: agentEvalEnv,
-      });
+        if (experiment) {
+          process.stdout.write(
+            `\nRunning CLI eval experiment "${experiment}" for variant "${variant.id}".\n`
+          );
+        }
 
-      const exitCode = await new Promise<number>(resolve => {
-        child.on('close', (code, signal) => {
-          resolve(code ?? (signal ? 1 : 0));
+        const child = spawn('npx', agentEvalArgs, {
+          cwd: __dirname,
+          stdio: 'inherit',
+          env: agentEvalEnv,
         });
-      });
 
-      if (exitCode !== 0) {
-        overallExitCode = exitCode;
+        const exitCode = await new Promise<number>(resolve => {
+          child.on('close', (code, signal) => {
+            resolve(code ?? (signal ? 1 : 0));
+          });
+        });
+
+        if (exitCode !== 0) {
+          overallExitCode = exitCode;
+        }
       }
     } catch (err: any) {
       const message =
