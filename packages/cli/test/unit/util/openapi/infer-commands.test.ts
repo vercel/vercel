@@ -399,6 +399,205 @@ describe('inferCommands', () => {
     expect(stdout).not.toContain('"pagination.next"');
   });
 
+  it('renders display fields as JSON when --json is passed', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ id: 'prj_123' }],
+        pagination: { count: 1, next: 123, prev: null },
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commands,
+      ['projects', 'ls', '--json'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('"id": "prj_123"');
+    expect(stdout).not.toContain('"pagination"');
+  });
+
+  it('returns full response JSON when display json is set to all', async () => {
+    const commandsWithJsonAll = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              fields: (project: any) => ({
+                id: project.id,
+              }),
+              json: 'all',
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ id: 'prj_123' }],
+        pagination: { count: 1, next: 123, prev: null },
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithJsonAll,
+      ['projects', 'ls', '--json'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('"projects": [');
+    expect(stdout).toContain('"pagination": {');
+  });
+
+  it('returns selective JSON keys when display json mapper is provided', async () => {
+    const commandsWithJsonMapper = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              fields: (project: any) => ({
+                id: project.id,
+              }),
+              json: (project: any) => ({
+                id: project.id,
+                project,
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [
+          {
+            id: 'prj_123',
+            name: 'alpha',
+            framework: 'nextjs',
+          },
+        ],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithJsonMapper,
+      ['projects', 'ls', '--json'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('"id": "prj_123"');
+    expect(stdout).toContain('"project": {');
+    expect(stdout).toContain('"framework": "nextjs"');
+  });
+
+  it('joins inline display arrays and strips hyperlink control sequences for --json', async () => {
+    const commandsWithColoredFields = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              fields: (project: any) => ({
+                id: project.id,
+                age: util.color.gray(util.relativeTime(project.updatedAt)),
+                status: [
+                  util.color.green(util.icon('circle-fill')),
+                  util.capitalize(project.readyState),
+                ],
+                link: util.link(project.url),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [
+          {
+            id: 'prj_123',
+            updatedAt: 9_000,
+            readyState: 'READY',
+            url: 'project-123.vercel.app',
+          },
+        ],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithColoredFields,
+      ['projects', 'ls', '--json'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('"id"');
+    expect(stdout).toContain('project-123.vercel.app');
+    expect(stdout).not.toContain('"status": [');
+    expect(stdout).toContain('"status": "READY"');
+    expect(stdout).not.toContain(']8;;');
+  });
+
   it('renders table rows when fields use nested format helpers', async () => {
     const commandsWithNestedDisplay = inferCommands({
       projects: {

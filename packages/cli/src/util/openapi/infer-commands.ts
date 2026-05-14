@@ -43,6 +43,7 @@ import { getLinkFromDir, getVercelDirectory } from '../projects/link';
 import getUser from '../get-user';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import { APIError, ProjectNotFound } from '../errors-ts';
+import stripAnsi from 'strip-ansi';
 
 type OptionalRecord<K extends PropertyKey, V> = {
   [P in K]?: V;
@@ -97,6 +98,11 @@ export interface DisplayScopeValue {
   format: 'scope';
 }
 
+export interface DisplayIconValue {
+  format: 'icon';
+  name: DisplayIconName;
+}
+
 export interface DisplayJoinValue {
   values: readonly DisplayNestableValue[];
   separator: string;
@@ -132,6 +138,7 @@ export type DisplayFormattedValue =
   | DisplayDurationValue
   | DisplayCapitalizeValue
   | DisplayScopeValue
+  | DisplayIconValue
   | DisplayJoinValue
   | DisplayColorValue
   | DisplaySwitchValue
@@ -230,6 +237,12 @@ type DisplayScopeTemplate = {
   format: 'scope';
 };
 
+type DisplayIconTemplate = {
+  type: 'format';
+  format: 'icon';
+  name: DisplayIconName;
+};
+
 type DisplayJoinTemplate = {
   type: 'format';
   values: readonly (
@@ -285,6 +298,7 @@ type DisplayFormatTemplate =
   | DisplayDurationTemplate
   | DisplayCapitalizeTemplate
   | DisplayScopeTemplate
+  | DisplayIconTemplate
   | DisplayJoinTemplate
   | DisplayColorTemplate
   | DisplaySwitchTemplate
@@ -299,7 +313,7 @@ type DisplayTemplateValue =
   | DisplayTemplateValue[];
 
 const displayTemplateCache = new WeakMap<
-  InferredCommandSuccessResponseDisplayConfig['fields'],
+  Function,
   DisplayTemplateValue | null
 >();
 
@@ -314,17 +328,28 @@ export interface InferredCommandConfig {
 
 type HttpStatusCode = `${1 | 2 | 3 | 4 | 5}${number}${number}`;
 
-export interface InferredCommandSuccessResponseDisplayConfig<
+export type InferredCommandSuccessResponseDisplayConfig<
   DisplayProperty extends string | undefined = string | undefined,
   DisplayAccessor = DisplayUnknownAccessor,
-> {
+> = {
   displayProperty?: DisplayProperty;
   fields: InferredCommandDisplayFieldsSelector<DisplayAccessor>;
   table?: boolean;
-}
+} & (
+  | {
+      json?: InferredCommandJsonSelector<DisplayAccessor>;
+    }
+  | {
+      json: 'all';
+    }
+);
 
 type InferredCommandDisplayFieldsSelector<DisplayAccessor> = {
   bivarianceHack(item: DisplayAccessor): Record<string, DisplayFieldValue>;
+}['bivarianceHack'];
+
+type InferredCommandJsonSelector<DisplayAccessor> = {
+  bivarianceHack(item: DisplayAccessor): Record<string, unknown>;
 }['bivarianceHack'];
 
 export interface InferredCommandErrorResponseDisplayConfig {
@@ -424,9 +449,9 @@ type KnownInferredSuccessResponseDisplayConfig<
   OperationId extends OpenApiOperationIdsByTag[Tag],
   StatusCode extends string,
 > =
-  | {
-      displayProperty?: never;
-      fields: InferredCommandDisplayFieldsSelector<
+  | (Omit<
+      InferredCommandSuccessResponseDisplayConfig<
+        undefined,
         DisplayRootAccessorForShape<
           InferredDisplayResponseShapeForOperationStatus<
             Tag,
@@ -434,9 +459,11 @@ type KnownInferredSuccessResponseDisplayConfig<
             StatusCode
           >
         >
-      >;
-      table?: boolean;
-    }
+      >,
+      'displayProperty'
+    > & {
+      displayProperty?: never;
+    })
   | (InferredDisplayPropertyForOperationStatus<
       Tag,
       OperationId,
@@ -600,6 +627,10 @@ function getDisplaySwitchSelectorToken(
     return null;
   }
 
+  if (value.format === 'icon') {
+    return null;
+  }
+
   if (value.format === 'join') {
     for (const entry of value.values) {
       const selector = getDisplaySwitchSelectorToken(entry);
@@ -730,8 +761,8 @@ export const util = {
   multiline(values: readonly DisplayNestableValue[]): DisplayJoinValue {
     return { values, separator: '\n', format: 'join' };
   },
-  icon(name: DisplayIconName): string {
-    return resolveDisplayIcon(name);
+  icon(name: DisplayIconName): DisplayIconValue {
+    return { format: 'icon', name };
   },
   link(
     url: DisplayNestableValue,
@@ -862,6 +893,7 @@ type InferredCommandContext = {
 
 type DisplayRenderContext = {
   scope: string | null;
+  mode: 'terminal' | 'json';
 };
 
 type RequestPreview = {
@@ -1310,6 +1342,66 @@ function isEnabledFlag(value: string | boolean | undefined): boolean {
   return value === true || value === '' || value === 'true';
 }
 
+function isJsonOutputRequested(
+  parsedOptions: Record<string, string | boolean>
+): boolean {
+  if (isEnabledFlag(parsedOptions.json)) {
+    return true;
+  }
+
+  return (
+    typeof parsedOptions.format === 'string' &&
+    parsedOptions.format.toLowerCase() === 'json'
+  );
+}
+
+const OSC_HYPERLINK_PATTERN =
+  /\u001b]8;;[^\u0007\u001b]*(?:\u0007|\u001b\\)(.*?)\u001b]8;;(?:\u0007|\u001b\\)/g;
+
+function normalizeInferredJsonValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return stripAnsi(value.replace(OSC_HYPERLINK_PATTERN, '$1'));
+  }
+
+  if (Array.isArray(value)) {
+    const normalizedItems = value.map(item => normalizeInferredJsonValue(item));
+    const flatten = (items: unknown[]): unknown[] =>
+      items.flatMap(item => (Array.isArray(item) ? flatten(item) : [item]));
+
+    const flattenedItems = flatten(normalizedItems).filter(
+      item => item !== null && item !== undefined
+    );
+    const isInlineScalarList = flattenedItems.every(
+      item =>
+        typeof item === 'string' ||
+        typeof item === 'number' ||
+        typeof item === 'boolean'
+    );
+    if (isInlineScalarList) {
+      return flattenedItems
+        .map(item => String(item).trim())
+        .filter(Boolean)
+        .join(' ');
+    }
+    return normalizedItems.filter(item => item !== undefined);
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>).reduce<
+      Record<string, unknown>
+    >((acc, [key, nestedValue]) => {
+      acc[key] = normalizeInferredJsonValue(nestedValue);
+      return acc;
+    }, {});
+  }
+
+  return value;
+}
+
+function formatInferredJsonOutput(value: unknown, client: Client): string {
+  return JSON.stringify(normalizeInferredJsonValue(value), null, 2);
+}
+
 function readValueAtPath(
   input: unknown,
   path: string | readonly string[]
@@ -1454,6 +1546,14 @@ function isDisplayFormatTemplate(
     return true;
   }
 
+  if (format === 'icon') {
+    const name = (value as { name?: unknown }).name;
+    return (
+      typeof name === 'string' &&
+      ['circle-fill', 'warning', 'info', 'error', 'check'].includes(name)
+    );
+  }
+
   if (format === 'join') {
     const values = (value as { values?: unknown }).values;
     const separator = (value as { separator?: unknown }).separator;
@@ -1567,6 +1667,14 @@ function isDisplayFormattedValue(
 
   if (format === 'scope') {
     return true;
+  }
+
+  if (format === 'icon') {
+    const name = (value as { name?: unknown }).name;
+    return (
+      typeof name === 'string' &&
+      ['circle-fill', 'warning', 'info', 'error', 'check'].includes(name)
+    );
   }
 
   if (format === 'join') {
@@ -1853,6 +1961,14 @@ function toDisplayTemplate(value: unknown): DisplayTemplateValue | null {
       };
     }
 
+    if (value.format === 'icon') {
+      return {
+        type: 'format',
+        format: 'icon',
+        name: value.name,
+      };
+    }
+
     const innerTemplate = toDisplayTemplate(value.value);
     if (!innerTemplate) {
       return null;
@@ -2008,11 +2124,21 @@ function resolveDisplayTemplate(
       if (value === undefined || value === null) {
         return null;
       }
+      if (renderContext.mode === 'json') {
+        return String(value);
+      }
       return title(String(value).toLowerCase());
     }
 
     if (template.format === 'scope') {
       return renderContext.scope;
+    }
+
+    if (template.format === 'icon') {
+      if (renderContext.mode === 'json') {
+        return null;
+      }
+      return resolveDisplayIcon(template.name);
     }
 
     if (template.format === 'join') {
@@ -2073,6 +2199,10 @@ function resolveDisplayTemplate(
       const text =
         textValue === undefined || textValue === null ? url : String(textValue);
 
+      if (renderContext.mode === 'json') {
+        return text;
+      }
+
       return output.link(text, url, {
         color: false,
         fallback: () => text,
@@ -2097,6 +2227,9 @@ function resolveDisplayTemplate(
     }
 
     const stringValue = String(value);
+    if (renderContext.mode === 'json') {
+      return stringValue;
+    }
     switch (template.color) {
       case 'gray':
         return chalk.gray(stringValue);
@@ -2167,31 +2300,31 @@ function getDisplayPropertyPayload(
   return selected === undefined ? payload : selected;
 }
 
-function buildDisplayFieldsTemplate(
-  fieldsSelector: InferredCommandSuccessResponseDisplayConfig['fields']
+function buildDisplaySelectorTemplate(
+  selector: (item: DisplayUnknownAccessor) => unknown
 ): DisplayTemplateValue | null {
-  if (displayTemplateCache.has(fieldsSelector)) {
-    return displayTemplateCache.get(fieldsSelector) ?? null;
+  if (displayTemplateCache.has(selector)) {
+    return displayTemplateCache.get(selector) ?? null;
   }
 
   let template: DisplayTemplateValue | null = null;
   try {
-    const selection = fieldsSelector(createDisplayPathRecorder());
+    const selection = selector(createDisplayPathRecorder());
     template = toDisplayTemplate(selection);
   } catch {
     template = null;
   }
 
-  displayTemplateCache.set(fieldsSelector, template);
+  displayTemplateCache.set(selector, template);
   return template;
 }
 
-function applyDisplayFields(
+function applyDisplaySelector(
   payload: unknown,
-  fieldsSelector: InferredCommandSuccessResponseDisplayConfig['fields'],
+  selector: (item: DisplayUnknownAccessor) => unknown,
   renderContext: DisplayRenderContext
 ): unknown {
-  const template = buildDisplayFieldsTemplate(fieldsSelector);
+  const template = buildDisplaySelectorTemplate(selector);
   if (!template) {
     return payload;
   }
@@ -2207,6 +2340,41 @@ function applyDisplayFields(
   }
 
   return resolveDisplayTemplate(template, payload, renderContext);
+}
+
+function applyDisplayFields(
+  payload: unknown,
+  fieldsSelector: InferredCommandSuccessResponseDisplayConfig['fields'],
+  renderContext: DisplayRenderContext
+): unknown {
+  return applyDisplaySelector(
+    payload,
+    fieldsSelector as (item: DisplayUnknownAccessor) => unknown,
+    renderContext
+  );
+}
+
+function applyDisplayJson(
+  body: unknown,
+  displayProperty: string | undefined,
+  fieldsSelector: InferredCommandSuccessResponseDisplayConfig['fields'],
+  jsonSelector: InferredCommandSuccessResponseDisplayConfig['json'],
+  renderContext: DisplayRenderContext
+): unknown {
+  if (jsonSelector === 'all') {
+    return body;
+  }
+
+  const displayPayload = getDisplayPropertyPayload(body, displayProperty);
+  if (typeof jsonSelector === 'function') {
+    return applyDisplaySelector(
+      displayPayload,
+      jsonSelector as (item: DisplayUnknownAccessor) => unknown,
+      renderContext
+    );
+  }
+
+  return applyDisplayFields(displayPayload, fieldsSelector, renderContext);
 }
 
 function stringifyDisplayTableCell(value: unknown): string {
@@ -2382,6 +2550,7 @@ async function executeInferredRequest(
     if (contentType.includes('application/json')) {
       const body = await response.json();
       const rawOutput = isEnabledFlag(parsedOptions.raw);
+      const jsonOutput = isJsonOutputRequested(parsedOptions);
       if (rawOutput) {
         client.stdout.write(`${formatOutput(body, { raw: false })}\n`);
         return 0;
@@ -2389,6 +2558,28 @@ async function executeInferredRequest(
 
       const displayForStatus = getDisplayForStatus(display, response.status);
       if (isSuccessDisplayConfig(displayForStatus)) {
+        const terminalRenderContext: DisplayRenderContext = {
+          scope: context.team?.value ?? null,
+          mode: 'terminal',
+        };
+        const jsonRenderContext: DisplayRenderContext = {
+          scope: context.team?.value ?? null,
+          mode: 'json',
+        };
+        if (jsonOutput) {
+          const mappedJson = applyDisplayJson(
+            body,
+            displayForStatus.displayProperty,
+            displayForStatus.fields,
+            displayForStatus.json,
+            jsonRenderContext
+          );
+          client.stdout.write(
+            `${formatInferredJsonOutput(mappedJson, client)}\n`
+          );
+          return 0;
+        }
+
         const displayPayload = getDisplayPropertyPayload(
           body,
           displayForStatus.displayProperty
@@ -2396,9 +2587,7 @@ async function executeInferredRequest(
         const mapped = applyDisplayFields(
           displayPayload,
           displayForStatus.fields,
-          {
-            scope: context.team?.value ?? null,
-          }
+          terminalRenderContext
         );
         const tableOutput = formatDisplayRowsAsTable(mapped);
         if (tableOutput) {
@@ -2415,6 +2604,11 @@ async function executeInferredRequest(
         return 0;
       }
 
+      if (jsonOutput) {
+        client.stdout.write(`${formatInferredJsonOutput(body, client)}\n`);
+        return 0;
+      }
+
       client.stdout.write(`${formatOutput(body, { raw: false })}\n`);
       return 0;
     }
@@ -2423,7 +2617,11 @@ async function executeInferredRequest(
     client.stdout.write(body.endsWith('\n') ? body : `${body}\n`);
     return 0;
   } catch (error) {
-    if (isEnabledFlag(parsedOptions.raw) && error instanceof APIError) {
+    if (
+      (isEnabledFlag(parsedOptions.raw) ||
+        isJsonOutputRequested(parsedOptions)) &&
+      error instanceof APIError
+    ) {
       const errorPayload = {
         error: {
           status: error.status,
@@ -2431,7 +2629,9 @@ async function executeInferredRequest(
           message: error.serverMessage ?? error.message,
         },
       };
-      client.stdout.write(`${formatOutput(errorPayload, { raw: false })}\n`);
+      client.stdout.write(
+        `${formatInferredJsonOutput(errorPayload, client)}\n`
+      );
       return 1;
     }
     output.prettyError(error);

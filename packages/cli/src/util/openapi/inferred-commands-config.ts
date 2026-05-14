@@ -57,6 +57,7 @@ export const inferredOpenApiCommands = inferCommands({
             Deployment: util.link(item.url),
             Status: statusSwitch(item.readyState),
           }),
+          json: 'all',
         },
       },
     },
@@ -193,6 +194,19 @@ export const inferredOpenApiCommands = inferCommands({
               ),
             },
           }),
+          // json: 'all'
+          // json: item => ({
+          //   id: item.id,
+          //   name: item.name,
+          //   latestProductionDeployment: {
+          //     id: item.targets.production.id,
+          //     name: item.targets.production.name,
+          //     url: item.targets.production.url,
+          //     alias: item.targets.production.alias[0],
+          //     readyState: item.targets.production.readyState,
+          //   },
+          //   production: item.targets.production,
+          // })
         },
       },
     },
