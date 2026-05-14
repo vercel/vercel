@@ -10,8 +10,10 @@ import { getSessionToken } from './session-token-provider';
 import type { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
 import type { Deployment, ProjectLinked } from '@vercel-internals/types';
 import toHost from '../../util/to-host';
+import getUser from '../../util/get-user';
 
 const TRACE_COOKIE_NAME = '_vercel_tracing';
+const SESSION_COOKIE_NAME = '_vercel_session';
 
 export interface TraceOptions {
   /** Full resolved URL we are about to curl (e.g. https://my-app.vercel.app/api/x). */
@@ -246,6 +248,18 @@ export async function trace(
     telemetry.trackCliFlagYesOnProduction(true);
   }
 
+  let userId: string;
+  try {
+    userId = client.authConfig.userId ?? (await getUser(client)).id;
+  } catch (err) {
+    output.error(
+      `Failed to resolve user for trace session: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+    return 1;
+  }
+
   let session;
   try {
     session = await getSessionToken({
@@ -266,6 +280,7 @@ export async function trace(
 
   let { exitCode, headerDump, capturedBody } = await runCurlWithCookie(
     session.token,
+    userId,
     curlFlags,
     json
   );
@@ -300,6 +315,7 @@ export async function trace(
 
     ({ exitCode, headerDump, capturedBody } = await runCurlWithCookie(
       refreshed.token,
+      userId,
       curlFlags,
       json
     ));
@@ -333,17 +349,21 @@ export async function trace(
 }
 
 /**
- * Inject the trace cookie header and run curl. Extracted so the 401-retry
- * path can re-invoke without duplicating flag-building logic.
+ * Inject the trace + session cookie header and run curl. Extracted so the
+ * 401-retry path can re-invoke without duplicating flag-building logic.
+ *
+ * The session cookie is required server-side to associate the request with
+ * the authenticated user and actually generate a trace.
  */
 async function runCurlWithCookie(
   token: string,
+  userId: string,
   curlFlags: string[],
   json: boolean
 ): Promise<{ exitCode: number; headerDump: string; capturedBody: string }> {
   const flagsWithCookie = [
     '--header',
-    `Cookie: ${TRACE_COOKIE_NAME}=${token}`,
+    `Cookie: ${TRACE_COOKIE_NAME}=${token}; ${SESSION_COOKIE_NAME}=${userId}`,
     ...curlFlags,
   ];
 
