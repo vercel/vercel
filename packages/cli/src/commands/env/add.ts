@@ -38,14 +38,14 @@ import {
   getPreservedArgsForEnvAdd,
 } from '../../util/agent-output';
 
-type EnvType = 'encrypted' | 'sensitive';
+export type EnvType = 'encrypted' | 'sensitive';
 
 /**
  * Per-target type resolution. The server silently promotes encrypted → sensitive
  * on policy-on teams for Production/Preview, and rejects sensitive on Development.
  * We mirror that server contract client-side so output and logs are honest.
  */
-function resolveTypeForTarget(
+export function resolveTypeForTarget(
   target: string,
   opts: { forceSensitive: boolean; forceEncrypted: boolean; policyOn: boolean }
 ): EnvType {

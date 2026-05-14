@@ -358,6 +358,47 @@ export const updateSubcommand = {
   ],
 } as const;
 
+export const importSubcommand = {
+  name: 'import',
+  aliases: [],
+  description: 'Import Environment Variables from a .env file',
+  arguments: [
+    {
+      name: 'file',
+      required: true,
+    },
+    {
+      name: 'environment',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      ...forceOption,
+      description: 'Overwrite existing Environment Variables',
+      shorthand: null,
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when importing Environment Variables',
+    },
+  ],
+  examples: [
+    {
+      name: 'Import variables from a .env file to Production',
+      value: [
+        `${packageName} env import .env production`,
+        `${packageName} env import .env.local development`,
+      ],
+    },
+    {
+      name: 'Overwrite existing variables during import',
+      value: `${packageName} env import .env production --force`,
+    },
+  ],
+} as const;
+
 export const envCommand = {
   name: 'env',
   aliases: [],
@@ -365,6 +406,7 @@ export const envCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    importSubcommand,
     listSubcommand,
     pullSubcommand,
     removeSubcommand,
