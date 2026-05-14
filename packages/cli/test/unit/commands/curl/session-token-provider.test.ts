@@ -9,7 +9,6 @@ import { getSessionToken } from '../../../../src/commands/curl/session-token-pro
 
 const TEAM_ID = 'team_dummy';
 const PROJECT_ID = 'prj_static';
-const DEPLOYMENT_ID = 'dpl_test_abc123';
 const HOST_URL = 'https://static-project-abc123.vercel.app/api/hello';
 const HOST = 'static-project-abc123.vercel.app';
 
@@ -65,7 +64,6 @@ describe('getSessionToken', () => {
       JSON.stringify({
         token: 'cached-token',
         expiresAt: Date.now() + 5 * 60 * 1000,
-        deploymentId: DEPLOYMENT_ID,
         schemaVersion: 1,
       }),
       { mode: 0o600 }
@@ -75,7 +73,6 @@ describe('getSessionToken', () => {
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
       host: HOST_URL,
       cacheDir,
     });
@@ -101,7 +98,6 @@ describe('getSessionToken', () => {
       JSON.stringify({
         token: 'almost-expired',
         expiresAt: Date.now() + 15 * 1000,
-        deploymentId: DEPLOYMENT_ID,
         schemaVersion: 1,
       }),
       { mode: 0o600 }
@@ -111,7 +107,6 @@ describe('getSessionToken', () => {
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
       host: HOST_URL,
       cacheDir,
     });
@@ -138,7 +133,6 @@ describe('getSessionToken', () => {
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
       host: HOST_URL,
       cacheDir,
     });
@@ -148,7 +142,7 @@ describe('getSessionToken', () => {
     expect(result.expiresAt).toBe(expiresAt);
     expect(capturedBody).toEqual({
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
+      hostname: HOST,
     });
     // Team is scoped via the query string (authTeamReq resolves it from there),
     // not the request body.
@@ -160,7 +154,6 @@ describe('getSessionToken', () => {
     expect(written).toEqual({
       token: 'fresh-from-api',
       expiresAt,
-      deploymentId: DEPLOYMENT_ID,
       schemaVersion: 1,
     });
   });
@@ -180,7 +173,6 @@ describe('getSessionToken', () => {
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
       host: HOST_URL,
       cacheDir,
     });
@@ -210,7 +202,6 @@ describe('getSessionToken', () => {
       JSON.stringify({
         token: 'cached-but-stale',
         expiresAt: Date.now() + 5 * 60 * 1000,
-        deploymentId: DEPLOYMENT_ID,
         schemaVersion: 1,
       }),
       { mode: 0o600 }
@@ -220,7 +211,6 @@ describe('getSessionToken', () => {
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
       host: HOST_URL,
       cacheDir,
       evictedToken: 'cached-but-stale',
@@ -249,7 +239,6 @@ describe('getSessionToken', () => {
         client,
         teamId: TEAM_ID,
         projectId: PROJECT_ID,
-        deploymentId: DEPLOYMENT_ID,
         host: HOST_URL,
         cacheDir,
       });
@@ -268,7 +257,6 @@ describe('getSessionToken', () => {
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
       host: HOST_URL,
       cacheDir,
     });
@@ -294,7 +282,6 @@ describe('getSessionToken', () => {
       JSON.stringify({
         token: 'real-cached',
         expiresAt,
-        deploymentId: DEPLOYMENT_ID,
         schemaVersion: 1,
       })
     );
@@ -303,7 +290,6 @@ describe('getSessionToken', () => {
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
       host: HOST_URL,
       cacheDir,
       evictedToken: 'some-other-token',
