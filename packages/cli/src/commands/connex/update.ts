@@ -71,7 +71,7 @@ export async function update(
   let preparedIcon: PreparedIcon | undefined;
   if (iconFlag) {
     try {
-      preparedIcon = await prepareConnexIcon(iconFlag, client.cwd);
+      preparedIcon = await prepareConnexIcon(iconFlag);
     } catch (err) {
       output.error((err as Error).message);
       return 1;
@@ -79,31 +79,6 @@ export async function update(
   }
 
   await selectConnexTeam(client, 'Select the team for this connector');
-
-  // Probe the connector before uploading the icon. Without this, a stale
-  // ID or missing permission causes the icon upload to succeed and then
-  // the PATCH to 404, leaving an orphan blob in /v2/files. The probe is
-  // skipped when only colors are being changed.
-  if (preparedIcon) {
-    try {
-      output.spinner('Verifying connector...');
-      await client.fetch<ConnexClient>(
-        `/v1/connect/connectors/${encodeURIComponent(clientIdOrUid)}`
-      );
-    } catch (err: unknown) {
-      output.stopSpinner();
-      const status = (err as { status?: number }).status;
-      if (status === 404) {
-        output.error(`Connector not found: ${chalk.bold(clientIdOrUid)}`);
-      } else {
-        output.error(
-          `Failed to verify ${chalk.bold(clientIdOrUid)}: ${(err as Error).message}`
-        );
-      }
-      return 1;
-    }
-    output.stopSpinner();
-  }
 
   // Upload the prepared icon (if any) before sending the PATCH. The file
   // was already validated above; this only does the /v2/files POST.

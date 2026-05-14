@@ -1,5 +1,6 @@
 import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { join } from 'path';
+import { writeFile } from 'node:fs/promises';
 import { mkdirp, writeJSON } from 'fs-extra';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -7,6 +8,19 @@ import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
 import * as configFilesUtil from '../../../../src/util/config/files';
+
+// PNG magic header.
+const PNG_BYTES = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
+  0x48, 0x44, 0x52,
+]);
+
+async function writeTmpFile(name: string, bytes: Buffer): Promise<string> {
+  const dir = setupTmpDir();
+  const path = join(dir, name);
+  await writeFile(path, new Uint8Array(bytes));
+  return path;
+}
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 vi.setConfig({ testTimeout: 15000 });
@@ -387,6 +401,348 @@ describe('connex create', () => {
 
       expect(exitCode).toBe(0);
       expect(postBody.triggers).toEqual({ enabled: false });
+    });
+  });
+
+  describe('branding flags', () => {
+    it('should upload icon and send branding in direct-path POST body', async () => {
+      let uploadHeaders: Record<string, unknown> | undefined;
+      let uploadHit = false;
+      let postBody: any;
+      let patchHit = false;
+
+      client.scenario.post('/v2/files', (req, res) => {
+        uploadHeaders = req.headers;
+        uploadHit = true;
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+        postBody = req.body;
+        res.json(fakeConnexClient({ id: 'scl_branded', uid: 'uid_branded' }));
+      });
+      client.scenario.patch('/v1/connect/connectors/:id', (_req, res) => {
+        patchHit = true;
+        res.json(fakeConnexClient());
+      });
+
+      const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        iconPath,
+        '--background-color',
+        '#1A2B3C',
+        '--accent-color',
+        '#ff0066'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(uploadHit).toBe(true);
+      expect(patchHit).toBe(false);
+      expect(postBody).toMatchObject({
+        service: 'slack',
+        name: 'my-bot',
+        backgroundColor: '#1A2B3C',
+        accentColor: '#ff0066',
+      });
+      expect(typeof postBody.icon).toBe('string');
+      expect(postBody.icon.length).toBe(40);
+
+      // The body for /v2/files is binary (Buffer); express.json() does not
+      // parse it. Assert via request headers.
+      expect(uploadHeaders?.['content-type']).toBe('application/octet-stream');
+      expect(uploadHeaders?.['x-now-digest']).toBe(postBody.icon);
+      expect(uploadHeaders?.['x-now-size']).toBe(String(PNG_BYTES.length));
+    });
+
+    it('should send colors only when --icon is not provided', async () => {
+      let uploadHit = false;
+      let postBody: any;
+      client.scenario.post('/v2/files', (_req, res) => {
+        uploadHit = true;
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+        postBody = req.body;
+        res.json(fakeConnexClient({ id: 'scl_colors', uid: 'uid_colors' }));
+      });
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--background-color',
+        '#000000',
+        '--accent-color',
+        '#ffffff'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(uploadHit).toBe(false);
+      expect(postBody.icon).toBeUndefined();
+      expect(postBody).toMatchObject({
+        backgroundColor: '#000000',
+        accentColor: '#ffffff',
+      });
+    });
+
+    it('should follow up with PATCH when browser flow runs (HIGH #1)', async () => {
+      let postBody: any;
+      let patchBody: any;
+      let patchedId: string | undefined;
+      let uploadHit = false;
+
+      client.scenario.post('/v2/files', (_req, res) => {
+        uploadHit = true;
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+        postBody = req.body;
+        res.statusCode = 422;
+        res.json({
+          error: {
+            code: 'registration_required',
+            message: 'Registration required',
+            registerUrl: 'https://vercel.com/test/~/connex/register?type=slack',
+          },
+        });
+      });
+      let pollCount = 0;
+      client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+        pollCount++;
+        if (pollCount < 2) {
+          res.json({ status: 'pending' });
+        } else {
+          res.json({
+            status: 'success',
+            data: { clientId: 'scl_browser_branded' },
+          });
+        }
+      });
+      client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
+        res.json(
+          fakeConnexClient({
+            id: (req.params as any).id,
+            uid: 'uid_browser_branded',
+          })
+        );
+      });
+      client.scenario.patch('/v1/connect/connectors/:id', (req, res) => {
+        patchBody = req.body;
+        patchedId = (req.params as { id: string }).id;
+        res.json(
+          fakeConnexClient({
+            id: 'scl_browser_branded',
+            uid: 'uid_browser_branded',
+            icon: req.body.icon,
+            backgroundColor: req.body.backgroundColor,
+            accentColor: req.body.accentColor,
+          })
+        );
+      });
+
+      const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        iconPath,
+        '--background-color',
+        '#aabbcc',
+        '--accent-color',
+        '#112233'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(uploadHit).toBe(true);
+      // The initial POST body also carries branding (best-effort) but the
+      // dashboard ignores it on the browser flow. The follow-up PATCH is what
+      // applies branding for real.
+      expect(typeof postBody.icon).toBe('string');
+      expect(patchedId).toBe('scl_browser_branded');
+      expect(patchBody).toMatchObject({
+        backgroundColor: '#aabbcc',
+        accentColor: '#112233',
+      });
+      expect(typeof patchBody.icon).toBe('string');
+      expect(patchBody.icon.length).toBe(40);
+
+      await expect(client.stderr).toOutput('scl_browser_branded');
+    });
+
+    it('should reject invalid hex before any network call', async () => {
+      let uploadHit = false;
+      let postHit = false;
+      client.scenario.post('/v2/files', (_req, res) => {
+        uploadHit = true;
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+        postHit = true;
+        res.json(fakeConnexClient());
+      });
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--background-color',
+        '#abc'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(uploadHit).toBe(false);
+      expect(postHit).toBe(false);
+      await expect(client.stderr).toOutput(
+        'Invalid background color "#abc". Expected 6-digit hex'
+      );
+    });
+
+    it('should error on non-existent icon path before any network call', async () => {
+      let uploadHit = false;
+      let postHit = false;
+      client.scenario.post('/v2/files', (_req, res) => {
+        uploadHit = true;
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+        postHit = true;
+        res.json(fakeConnexClient());
+      });
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        '/tmp/this-file-does-not-exist.png'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(uploadHit).toBe(false);
+      expect(postHit).toBe(false);
+      await expect(client.stderr).toOutput('Could not read icon file at');
+    });
+
+    it('should reject non-image file (magic-byte check)', async () => {
+      let uploadHit = false;
+      let postHit = false;
+      client.scenario.post('/v2/files', (_req, res) => {
+        uploadHit = true;
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+        postHit = true;
+        res.json(fakeConnexClient());
+      });
+
+      const notImage = await writeTmpFile(
+        'notes.txt',
+        Buffer.from('not an image\n')
+      );
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        notImage
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(uploadHit).toBe(false);
+      expect(postHit).toBe(false);
+      await expect(client.stderr).toOutput('is not a PNG or JPEG');
+    });
+
+    it('should run icon preflight before team selection (no team prompt)', async () => {
+      // Unset currentTeam so a team-selection prompt would fire if the icon
+      // preflight ran AFTER selectConnexTeam (the bug we are guarding
+      // against — the plan requires path + magic bytes BEFORE team selection).
+      delete client.config.currentTeam;
+
+      const notImage = await writeTmpFile(
+        'fake.png',
+        Buffer.from('not an image\n')
+      );
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        notImage
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('is not a PNG or JPEG');
+    });
+
+    it('should surface server upload error and not create connector', async () => {
+      let postHit = false;
+      client.scenario.post('/v2/files', (_req, res) => {
+        res.statusCode = 413;
+        res.json({
+          error: { code: 'payload_too_large', message: 'File is too large' },
+        });
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+        postHit = true;
+        res.json(fakeConnexClient());
+      });
+
+      const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        iconPath
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(postHit).toBe(false);
+      await expect(client.stderr).toOutput(
+        'Failed to upload icon: File is too large'
+      );
     });
   });
 
