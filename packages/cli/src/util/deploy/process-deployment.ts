@@ -53,6 +53,7 @@ export default async function processDeployment({
   manual,
   jsonOutput,
   functionsBeta,
+  linkedProject,
   ...args
 }: {
   now: Now;
@@ -78,6 +79,7 @@ export default async function processDeployment({
   manual?: boolean;
   jsonOutput?: boolean;
   functionsBeta?: boolean;
+  linkedProject?: Project;
 }) {
   const {
     now,
@@ -137,8 +139,9 @@ export default async function processDeployment({
     output.stopSpinner();
   }
 
-  let rollingRelease: ProjectRollingRelease | undefined;
-  let project: Project | ProjectNotFound | undefined;
+  let rollingRelease: ProjectRollingRelease | undefined =
+    linkedProject?.rollingRelease;
+  let project: Project | ProjectNotFound | undefined = linkedProject;
   let latestLogMessage = '';
 
   try {

@@ -11,7 +11,7 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import type { GitMetadata, Org } from '@vercel-internals/types';
+import type { GitMetadata, Org, Project } from '@vercel-internals/types';
 import type { VercelConfig } from './dev/types';
 import type Client from './client';
 import { type FetchOptions, isJSONObject } from './client';
@@ -57,6 +57,7 @@ export interface CreateOptions {
   manual?: boolean;
   jsonOutput?: boolean;
   functionsBeta?: boolean;
+  linkedProject?: Project;
 }
 
 export interface RemoveOptions {
@@ -136,6 +137,7 @@ export default class Now {
       manual,
       jsonOutput = false,
       functionsBeta,
+      linkedProject,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -189,6 +191,7 @@ export default class Now {
       manual,
       jsonOutput,
       functionsBeta,
+      linkedProject,
     });
 
     if (deployment && deployment.warnings) {
