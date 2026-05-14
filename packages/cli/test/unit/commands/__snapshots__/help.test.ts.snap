@@ -911,7 +911,9 @@ exports[`help command > connex help output snapshots > connex help column width 
 "
   ▲ vercel connect command
 
-  Manage connectors                                                             
+  Manage connectors (Beta).                                                     
+  Vercel Connect is currently in beta. Behavior, commands, and output may       
+  change before general availability.                                           
 
   Commands:
 

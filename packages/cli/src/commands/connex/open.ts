@@ -62,7 +62,7 @@ export async function openClient(
   }
   output.stopSpinner();
 
-  const url = `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${resolvedId}`;
+  const url = `https://vercel.com/${encodeURIComponent(team.slug)}/~/connect/${resolvedId}`;
 
   if (asJson) {
     client.stdout.write(`${JSON.stringify({ url }, null, 2)}\n`);
