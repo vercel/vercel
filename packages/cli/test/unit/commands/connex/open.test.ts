@@ -37,7 +37,7 @@ describe('connex open', () => {
 
     expect(exitCode).toBe(0);
     expect(openMock).toHaveBeenCalledWith(
-      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${clientId}`
+      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connect/${clientId}`
     );
     expect(client.stderr.getFullOutput()).toContain(
       'Opening connector scl_abc123'
@@ -60,7 +60,7 @@ describe('connex open', () => {
 
     expect(exitCode).toBe(0);
     expect(openMock).toHaveBeenCalledWith(
-      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${resolvedId}`
+      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connect/${resolvedId}`
     );
   });
 
@@ -105,7 +105,7 @@ describe('connex open', () => {
     const stdout = client.stdout.getFullOutput().trim();
     const parsed = JSON.parse(stdout);
     expect(parsed.url).toBe(
-      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${clientId}`
+      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connect/${clientId}`
     );
     expect(openMock).not.toHaveBeenCalled();
   });
@@ -124,7 +124,7 @@ describe('connex open', () => {
 
     expect(exitCode).toBe(0);
     expect(client.stdout.getFullOutput().trim()).toBe(
-      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connex/${clientId}`
+      `https://vercel.com/${encodeURIComponent(team.slug)}/~/connect/${clientId}`
     );
     expect(openMock).not.toHaveBeenCalled();
   });
