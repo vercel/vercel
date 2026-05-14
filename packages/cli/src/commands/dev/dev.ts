@@ -210,23 +210,28 @@ export default async function dev(
         output.debug('OIDC token refresh was aborted');
         return;
       }
-      // if on forced restart after OIDC refresh (12 hours)
+      // if on forced restart after OIDC refresh
       // we can't restart a dev command, then we can only
       // show the error and exit
       if (error instanceof DevCommandExitError) {
         output.error(error.message);
-        process.exit(error.exitCode);
+        await cleanup(error.exitCode);
+        return;
       }
       throw error;
     }
   });
 
   let cleanupInProgress = false;
-  const cleanup = async (signal: string) => {
+  const cleanup = async (reason: string | number) => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
-    output.debug(`Received ${signal}, shutting down...`);
+    output.debug(
+      typeof reason === 'number'
+        ? `Exiting with code ${reason}, shutting down...`
+        : `Received ${reason}, shutting down...`
+    );
 
     clearTimeout(timeout);
     controller.abort();
@@ -237,17 +242,23 @@ export default async function dev(
 
     await devServer.stop();
 
-    let exitCode = 0;
-    switch (signal) {
-      case 'SIGINT':
-        exitCode = 130;
-        break;
-      case 'SIGTERM':
-        exitCode = 143;
-        break;
-      case 'SIGHUP':
-        exitCode = 129;
-        break;
+    let exitCode: number;
+    if (typeof reason === 'number') {
+      exitCode = reason;
+    } else {
+      switch (reason) {
+        case 'SIGINT':
+          exitCode = 130;
+          break;
+        case 'SIGTERM':
+          exitCode = 143;
+          break;
+        case 'SIGHUP':
+          exitCode = 129;
+          break;
+        default:
+          exitCode = 0;
+      }
     }
 
     process.exit(exitCode);
