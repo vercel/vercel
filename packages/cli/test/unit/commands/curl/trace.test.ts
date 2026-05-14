@@ -213,10 +213,11 @@ describe('curl --trace', () => {
     expect(exitCode).toEqual(0);
 
     // Cookie API was called with the right body. The team is scoped via the
-    // `teamId` query string parameter, not the body.
+    // `teamId` query string parameter, not the body. `hostname` scopes the
+    // session to the specific deployment behind the URL.
     expect(captured.value).toEqual({
       projectId: 'static',
-      deploymentId: DEPLOYMENT_ID,
+      hostname: PREVIEW_ALIAS,
     });
     expect(captured.query?.teamId).toBe('team_dummy');
 
@@ -413,7 +414,6 @@ describe('curl --trace', () => {
     const cachePath = cachePathFor('team_dummy', PREVIEW_ALIAS);
     const written = JSON.parse(readFileSync(cachePath, 'utf8'));
     expect(written.token).toBe(TRACE_TOKEN);
-    expect(written.deploymentId).toBe(DEPLOYMENT_ID);
     expect(written.schemaVersion).toBe(1);
 
     // NTFS doesn't enforce Unix mode bits, so chmod's narrowing to 0o600
@@ -445,7 +445,6 @@ describe('curl --trace', () => {
       JSON.stringify({
         token: 'pre-cached-token',
         expiresAt: Date.now() + 5 * 60 * 1000,
-        deploymentId: DEPLOYMENT_ID,
         schemaVersion: 1,
       }),
       { mode: 0o600 }
@@ -492,7 +491,6 @@ describe('curl --trace', () => {
       JSON.stringify({
         token: 'almost-expired',
         expiresAt: Date.now() + 10 * 1000, // 10s in the future, within 30s buffer
-        deploymentId: DEPLOYMENT_ID,
         schemaVersion: 1,
       }),
       { mode: 0o600 }
@@ -545,7 +543,6 @@ describe('curl --trace', () => {
       JSON.stringify({
         token: 'stale-cached-token',
         expiresAt: Date.now() + 5 * 60 * 1000,
-        deploymentId: DEPLOYMENT_ID,
         schemaVersion: 1,
       }),
       { mode: 0o600 }

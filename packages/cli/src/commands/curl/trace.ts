@@ -35,9 +35,9 @@ export interface TraceOptions {
 }
 
 /**
- * Look up the deployment matching the URL we're about to curl. The deployment
- * carries both the canonical `id` (needed for the cookie API) and `target`
- * ('production' | 'staging' | null) used to gate the confirmation prompt.
+ * Look up the deployment matching the URL we're about to curl. We read
+ * `target` ('production' | 'staging' | null) to gate the confirmation prompt,
+ * and `ownerId` / `projectId` as fallback when no linked project is set.
  *
  * `accountId` is the team or user id; needed for the lookup to scope correctly.
  */
@@ -184,7 +184,7 @@ async function runCurlAndCaptureHeaders(
 /**
  * Orchestrates the --trace flow:
  *
- * 1. Look up the deployment (gives us deploymentId + production-or-not).
+ * 1. Look up the deployment (gives us target + project/owner fallbacks).
  * 2. Gate on production via {@link confirmProduction}.
  * 3. Acquire the session cookie via the on-disk-cached provider.
  * 4. Spawn curl with the cookie header AND `-D <tmpfile>` so we can
@@ -266,7 +266,6 @@ export async function trace(
       client,
       teamId,
       projectId,
-      deploymentId: deployment.id,
       host: fullUrl,
     });
   } catch (err) {
@@ -300,7 +299,6 @@ export async function trace(
         client,
         teamId,
         projectId,
-        deploymentId: deployment.id,
         host: fullUrl,
         evictedToken: session.token,
       });

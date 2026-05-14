@@ -29,9 +29,9 @@ export interface GetSessionTokenParams {
   client: Client;
   teamId: string | undefined;
   projectId: string;
-  deploymentId: string;
-  /** The host of the URL being curled — part of the cache key so that
-   *  different deployments for the same project don't collide. */
+  /** The host of the URL being curled. Sent to the platform as `hostname` to
+   *  scope the session to the target deployment, and used as part of the
+   *  cache key so different deployments for the same project don't collide. */
   host: string;
   /** If provided, evict any cached entry whose token matches this value
    *  before checking the cache. Used to recover from a 401 on a cached
@@ -45,7 +45,6 @@ export interface GetSessionTokenParams {
 interface CacheEntry {
   token: string;
   expiresAt: number;
-  deploymentId: string;
   schemaVersion: number;
 }
 
@@ -127,17 +126,18 @@ async function writeCache(path: string, entry: CacheEntry): Promise<void> {
 /**
  * Call the platform to mint a fresh trace session cookie. The team is resolved
  * server-side from the `teamId` query parameter that `client.fetch` adds when
- * `accountId` is set — not from the request body.
+ * `accountId` is set — not from the request body. `hostname` scopes the
+ * session to the specific deployment behind the URL being curled.
  */
 async function issueToken(
   client: Client,
   {
     teamId,
     projectId,
-    deploymentId,
-  }: { teamId?: string; projectId: string; deploymentId: string }
+    hostname,
+  }: { teamId?: string; projectId: string; hostname: string }
 ): Promise<{ token: string; expiresAt: number }> {
-  const body = JSON.stringify({ projectId, deploymentId });
+  const body = JSON.stringify({ projectId, hostname });
   const response = await client.fetch<SessionTokenApiResponse>(
     '/v1/projects/traces/session',
     {
@@ -165,7 +165,7 @@ async function issueToken(
  * fresh, otherwise from a fresh `POST /v1/projects/traces/session` call.
  *
  * Cache file: `~/.vercel/cache/traces/<sha256(teamId:host)>.json`, perms `0600`,
- * contents `{ token, expiresAt, deploymentId, schemaVersion: 1 }`.
+ * contents `{ token, expiresAt, schemaVersion: 1 }`.
  *
  * The caller checks `fromCache` to decide whether a 401 from the subsequent
  * curl should trigger evict-and-retry (cached only) vs. surface directly.
@@ -176,13 +176,13 @@ export async function getSessionToken({
   client,
   teamId,
   projectId,
-  deploymentId,
   host,
   evictedToken,
   cacheDir,
 }: GetSessionTokenParams): Promise<SessionToken> {
   const dir = resolveCacheDir(cacheDir);
-  const path = cachePath(dir, teamId, toHost(host));
+  const hostname = toHost(host);
+  const path = cachePath(dir, teamId, hostname);
 
   const cached = await readCache(path);
   // Only evict on token match so a stale evict call doesn't blow away a
@@ -197,12 +197,11 @@ export async function getSessionToken({
     };
   }
 
-  const issued = await issueToken(client, { teamId, projectId, deploymentId });
+  const issued = await issueToken(client, { teamId, projectId, hostname });
   try {
     await writeCache(path, {
       token: issued.token,
       expiresAt: issued.expiresAt,
-      deploymentId,
       schemaVersion: CACHE_SCHEMA_VERSION,
     });
   } catch (err) {
