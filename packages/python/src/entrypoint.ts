@@ -612,9 +612,8 @@ export const detectEntrypoint: DetectEntrypointFn = async ({
   );
   if (!detected?.entrypoint) return null;
   const { entrypoint, variableName } = detected.entrypoint;
-  const modulePath = entrypoint.replace(/\.py$/, '').replace(/\//g, '.');
   return {
     kind: 'py-module:attr',
-    entrypoint: `${modulePath}:${variableName}`,
+    entrypoint: `${entrypointToModule(entrypoint)}:${variableName}`,
   };
 };
