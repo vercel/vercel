@@ -1193,6 +1193,50 @@ describe.skipIf(flakey)('build', () => {
     expect(reportConfig.handler).toContain('__vc_cron_dispatch');
   });
 
+  it('should build a JS cron service with a dynamic schedule', async () => {
+    // The default export's getCrons() is run at build time to enumerate
+    // entries; each entry's `handler` names a function export that the
+    // dispatcher routes to at runtime.
+    const cwd = fixture('with-services-cron-dynamic');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.crons).toEqual(
+      expect.arrayContaining([
+        {
+          path: '/_svc/tasks/crons/index/hourly',
+          schedule: '0 * * * *',
+        },
+        {
+          path: '/_svc/tasks/crons/index/daily',
+          schedule: '0 0 * * *',
+        },
+      ])
+    );
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/tasks/crons/.*$',
+      dest: '/_svc/tasks/index',
+      check: true,
+    });
+
+    // The lambda's handler is the dispatcher shim, and the shim source
+    // embeds the route table mapping each cron path to its export name.
+    const funcDir = join(output, 'functions/_svc/tasks/index.func');
+    const vcConfig = await fs.readJSON(join(funcDir, '.vc-config.json'));
+    expect(vcConfig.handler).toContain('__vc_cron_dispatch');
+
+    const shimFiles = (await fs.readdir(funcDir)).filter(name =>
+      name.includes('__vc_cron_dispatch')
+    );
+    expect(shimFiles).toHaveLength(1);
+    const shimSource = await fs.readFile(join(funcDir, shimFiles[0]), 'utf-8');
+    expect(shimSource).toContain('"/_svc/tasks/crons/index/hourly":"hourly"');
+    expect(shimSource).toContain('"/_svc/tasks/crons/index/daily":"daily"');
+  });
+
   it('should build a JS cron service through the cron dispatcher', async () => {
     const cwd = fixture('with-services-cron-handler');
     const output = join(cwd, '.vercel', 'output');
@@ -1314,7 +1358,10 @@ describe.skipIf(flakey)('build', () => {
     expect(serverRouteIndex).toBeLessThan(fallbackRouteIndex);
   });
 
-  it('should fail build when schedule-triggered job uses a dynamic schedule without builder crons', async () => {
+  it('should fail build when a dynamic-schedule entrypoint is not a cron registry', async () => {
+    // `<dynamic>` requires the entrypoint's default export to be a
+    // function returning {handler, schedule}[]. A bare HTTP server has
+    // no default export at all, so detection fails.
     const cwd = await createTempServicesProject({
       experimentalServices: {
         cleanup: {
@@ -1325,13 +1372,7 @@ describe.skipIf(flakey)('build', () => {
         },
       },
       files: {
-        'index.js': `const { createServer } = require('node:http');
-
-createServer((_req, res) => {
-  res.statusCode = 200;
-  res.end('ok');
-}).listen(3000);
-`,
+        'index.js': `module.exports.handler = function () {};\n`,
       },
     });
     const output = join(cwd, '.vercel', 'output');
@@ -1343,7 +1384,7 @@ createServer((_req, res) => {
 
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds.error.message).toContain(
-        'Dynamic cron schedules ("<dynamic>") are not yet supported for JavaScript/TypeScript services'
+        'cron entrypoint must default-export a function'
       );
     } finally {
       // Tolerate EBUSY on Windows when the builder still holds file handles.

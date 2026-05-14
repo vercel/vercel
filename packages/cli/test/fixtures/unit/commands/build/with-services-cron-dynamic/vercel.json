@@ -1,0 +1,10 @@
+{
+  "experimentalServices": {
+    "tasks": {
+      "type": "job",
+      "trigger": "schedule",
+      "entrypoint": "index.mjs",
+      "schedule": "<dynamic>"
+    }
+  }
+}

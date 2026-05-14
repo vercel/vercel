@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
@@ -10,6 +11,7 @@ import {
   debug,
   getNodeVersion,
   getLambdaOptionsFromFunction,
+  isScheduleTriggeredService,
   Span,
   type PrepareCache,
   type BuildV2,
@@ -20,7 +22,11 @@ import {
 import { findEntrypointOrThrow } from './cervel/index.js';
 import { applyServiceVcInit } from './service-vc-init.js';
 import { applyCronDispatch } from './cron-dispatch.js';
-import { buildCronRouteTable, getServiceCrons } from './crons.js';
+import {
+  buildCronRouteTable,
+  getServiceCrons,
+  DYNAMIC_SCHEDULE,
+} from './crons.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
@@ -36,7 +42,7 @@ export type {
   CervelServeOptions,
   PathOptions,
 } from './cervel/index.js';
-import { rolldown } from './rolldown/index.js';
+import { rolldown, stageBundleOnDisk } from './rolldown/index.js';
 import { introspection } from './rolldown/introspection.js';
 import { nft } from './rolldown/nft.js';
 import { maybeDoBuildCommand } from './build.js';
@@ -107,11 +113,10 @@ export const build: BuildV2 = async args => {
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
 
-    const cronEntries = await getServiceCrons({
-      service: args.service,
-      entrypoint,
-    });
-    const isCronService = cronEntries !== undefined;
+    const isCronService =
+      !!args.service && isScheduleTriggeredService(args.service);
+    const isDynamicCron =
+      isCronService && args.service?.schedule === DYNAMIC_SCHEDULE;
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
@@ -182,6 +187,42 @@ export const build: BuildV2 = async args => {
     const files = userBuildResult?.files || rolldownResult.files;
     const handler = userBuildResult?.handler || rolldownResult.handler;
     const nftWorkPath = userBuildResult?.outputDir || args.workPath;
+
+    // For `<dynamic>` schedules, we need to actually execute the cron service
+    // to discover its entries. We do this by staging the bundle on disk
+    // and then `import()`ing the entrypoint to call its default export.
+    let stagedBundleDir: string | undefined;
+    let dynamicBundle: { dir: string; handler: string } | undefined;
+    if (isDynamicCron) {
+      if (userBuildResult?.outputDir && userBuildResult.handler) {
+        dynamicBundle = {
+          dir: userBuildResult.outputDir,
+          handler: userBuildResult.handler,
+        };
+      } else {
+        stagedBundleDir = await stageBundleOnDisk({
+          files,
+          workPath: nftWorkPath,
+          prefix: '.vc-cron-bundle-',
+        });
+        dynamicBundle = { dir: stagedBundleDir, handler };
+      }
+    }
+    let cronEntries: Awaited<ReturnType<typeof getServiceCrons>>;
+    try {
+      cronEntries = await getServiceCrons({
+        service: args.service,
+        entrypoint,
+        bundle: dynamicBundle,
+      });
+    } finally {
+      if (stagedBundleDir) {
+        await rm(stagedBundleDir, {
+          recursive: true,
+          force: true,
+        }).catch(() => {});
+      }
+    }
 
     await nft({
       ...args,
