@@ -11,6 +11,7 @@ const dryRun = process.argv.includes('--dry-run');
 
 await execFileAsync(process.execPath, [
   join(packageRoot, 'scripts', 'stage-packages.mjs'),
+  ...(dryRun ? ['--allow-missing'] : []),
 ]);
 
 const entries = await readdir(outputRoot, { withFileTypes: true });

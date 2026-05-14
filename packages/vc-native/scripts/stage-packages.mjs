@@ -20,6 +20,7 @@ const version = cliPackageJson.version;
 const outputRoot = join(packageRoot, 'dist-native');
 const binaryRoot = join(cliRoot, 'dist-bin');
 const checkSourcesOnly = process.argv.includes('--check-sources');
+const allowMissing = process.argv.includes('--allow-missing');
 
 const platforms = [
   {
@@ -65,6 +66,7 @@ await rm(outputRoot, { recursive: true, force: true });
 await mkdir(outputRoot, { recursive: true });
 
 const packageDirs = [];
+const stagedPlatforms = [];
 
 for (const platform of platforms) {
   const packageDir = join(outputRoot, platform.name.replace('@vercel/', ''));
@@ -72,6 +74,16 @@ for (const platform of platforms) {
   const binaryName = platform.binary ?? 'vercel';
   const sourceBinary = join(binaryRoot, platform.asset);
   const targetBinary = join(binDir, binaryName);
+
+  try {
+    await stat(sourceBinary);
+  } catch (error) {
+    if (allowMissing && error.code === 'ENOENT') {
+      console.warn(`Skipping ${platform.name}: missing ${sourceBinary}`);
+      continue;
+    }
+    throw error;
+  }
 
   await mkdir(binDir, { recursive: true });
   await copyFile(sourceBinary, targetBinary);
@@ -93,6 +105,7 @@ for (const platform of platforms) {
     publishConfig: { access: 'public' },
   });
   packageDirs.push(packageDir);
+  stagedPlatforms.push(platform);
 }
 
 const wrapperDir = join(outputRoot, 'vc-native');
@@ -114,7 +127,7 @@ await writePackageJson(wrapperDir, {
     vc: './bin/vercel',
   },
   optionalDependencies: Object.fromEntries(
-    platforms.map(platform => [platform.name, version])
+    stagedPlatforms.map(platform => [platform.name, version])
   ),
   files: ['bin'],
   publishConfig: { access: 'public' },
