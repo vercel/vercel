@@ -152,7 +152,14 @@ type DisplaySwitchCasesInput = {
 
 type DisplayColorInput = DisplayNestableValue;
 
-type DisplayFieldValue = DisplayInlineValue | DisplayInlineValueList;
+interface DisplayFieldRecord {
+  [key: string]: DisplayFieldValue;
+}
+
+type DisplayFieldValue =
+  | DisplayInlineValue
+  | DisplayInlineValueList
+  | DisplayFieldRecord;
 
 type DisplayUnknownAccessor = DisplayScalarToken & {
   readonly [key: string]: DisplayUnknownAccessor;
@@ -700,6 +707,9 @@ export const util = {
     separator = ' '
   ): DisplayJoinValue {
     return { values, separator, format: 'join' };
+  },
+  multiline(values: readonly DisplayNestableValue[]): DisplayJoinValue {
+    return { values, separator: '\n', format: 'join' };
   },
   icon(name: DisplayIconName): string {
     return resolveDisplayIcon(name);
@@ -2185,16 +2195,51 @@ function formatDisplayObjectAsCard(mapped: unknown): string | null {
     return null;
   }
 
+  const isCardSectionObject = (
+    value: unknown
+  ): value is Record<string, unknown> =>
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
   const entries = Object.entries(mapped as Record<string, unknown>);
   if (entries.length === 0) {
     return null;
   }
 
-  const rows: Array<[string, string]> = entries.map(([key, value]) => [
-    key,
-    stringifyDisplayTableCell(value),
-  ]);
-  return renderSectionRows(rows);
+  const sectionBlocks: string[] = [];
+  const rootRows: Array<[string, string]> = [];
+
+  for (const [key, value] of entries) {
+    if (!isCardSectionObject(value)) {
+      rootRows.push([key, stringifyDisplayTableCell(value)]);
+      continue;
+    }
+
+    const sectionRows = Object.entries(value).map(
+      ([nestedKey, nestedValue]) => [
+        nestedKey,
+        stringifyDisplayTableCell(nestedValue),
+      ]
+    ) as Array<[string, string]>;
+    if (sectionRows.length === 0) {
+      continue;
+    }
+
+    sectionBlocks.push(
+      `${chalk.bold(key)}\n\n${renderSectionRows(sectionRows)}`
+    );
+  }
+
+  if (sectionBlocks.length === 0) {
+    return rootRows.length > 0 ? renderSectionRows(rootRows) : null;
+  }
+
+  if (rootRows.length > 0) {
+    sectionBlocks.unshift(
+      `${chalk.bold('General')}\n\n${renderSectionRows(rootRows)}`
+    );
+  }
+
+  return sectionBlocks.join('\n\n');
 }
 
 function getDisplayForStatus(

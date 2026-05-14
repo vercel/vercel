@@ -121,20 +121,28 @@ export const inferredOpenApiCommands = inferCommands({
         '200': {
           displayProperty: undefined,
           fields: item => ({
-            ID: item.id,
-            Name: item.name,
-            'Created At': util.color.gray(util.relativeTime(item.createdAt)),
-            'Root Directory': util.conditional(item.rootDirectory, '.'),
-            'Node.js Version': util.switch({
-              '24.x': util.color.green(item.nodeVersion),
-              '22.x': util.color.green(item.nodeVersion),
-              '20.x': util.color.yellow(item.nodeVersion),
-              DEFAULT: util.color.red(item.nodeVersion),
-            }),
-            'Framework Preset': util.capitalize(item.framework),
-            'Build Command': util.conditional(item.buildCommand, 'None'),
-            'Output Directory': util.conditional(item.outputDirectory, 'None'),
-            'Install Command': util.conditional(item.installCommand, 'None'),
+            General: {
+              ID: item.id,
+              Name: item.name,
+              Owner: util.scope(),
+              'Created At': util.color.gray(util.relativeTime(item.createdAt)),
+              'Root Directory': util.conditional(item.rootDirectory, '.'),
+              'Node.js Version': util.switch({
+                '24.x': util.color.green(item.nodeVersion),
+                '22.x': util.color.green(item.nodeVersion),
+                '20.x': util.color.yellow(item.nodeVersion),
+                DEFAULT: util.color.red(item.nodeVersion),
+              }),
+            },
+            'Framework Settings': {
+              'Framework Preset': util.capitalize(item.framework),
+              'Build Command': util.conditional(item.buildCommand, 'None'),
+              'Output Directory': util.conditional(
+                item.outputDirectory,
+                'None'
+              ),
+              'Install Command': util.conditional(item.installCommand, 'None'),
+            },
           }),
         },
       },

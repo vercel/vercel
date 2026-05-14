@@ -459,6 +459,113 @@ describe('inferCommands', () => {
     expect(stdout).not.toContain('"updatedAt"');
   });
 
+  it('renders sectioned card output for nested display objects', async () => {
+    const commandsWithSectionedCardDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              fields: (item: any) => ({
+                General: {
+                  Name: item.name,
+                  Owner: util.scope(),
+                },
+                'Framework Settings': {
+                  Framework: util.capitalize(item.framework),
+                },
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        name: 'alpha',
+        framework: 'nextjs',
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithSectionedCardDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('General');
+    expect(stdout).toContain('Framework Settings');
+    expect(stdout).toContain('Name');
+    expect(stdout).toContain('alpha');
+    expect(stdout).toContain('Framework');
+    expect(stdout).toContain('Nextjs');
+  });
+
+  it('supports multiline table cells via util.multiline', async () => {
+    const commandsWithMultilineTableCells = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              fields: (item: any) => ({
+                Name: item.name,
+                Details: util.multiline([item.name, util.link(item.url)]),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ name: 'alpha', url: 'alpha.vercel.app' }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithMultilineTableCells,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Name');
+    expect(stdout).toContain('Details');
+    expect(stdout).toContain('alpha');
+    expect(stdout).toContain('https://alpha.vercel.app');
+    expect(stdout).toMatch(/alpha[\s\S]*https:\/\/alpha\.vercel\.app/u);
+    expect(stdout).not.toContain('"url"');
+  });
+
   it('supports util.switch with DEFAULT branch for formatted fields', async () => {
     const commandsWithSwitchDisplay = inferCommands({
       projects: {
