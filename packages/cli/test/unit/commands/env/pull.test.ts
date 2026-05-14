@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
+import * as fsPromises from 'fs/promises';
 import path from 'path';
 import { parse } from 'dotenv';
 import env from '../../../../src/commands/env';
@@ -205,6 +206,61 @@ describe('env pull', () => {
         value: 'TRUE',
       },
     ]);
+  });
+
+  it('should create managed env files with restricted permissions', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull');
+    const outputFileSpy = vi.spyOn(fs, 'outputFile');
+    const platformSpy = vi
+      .spyOn(process, 'platform', 'get')
+      .mockReturnValue('win32');
+
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', 'other.env', '--yes');
+
+    await expect(env(client)).resolves.toEqual(0);
+    expect(outputFileSpy).toHaveBeenCalledWith(
+      path.join(cwd, 'other.env'),
+      expect.any(String),
+      expect.objectContaining({
+        encoding: 'utf8',
+        mode: 0o600,
+      })
+    );
+
+    platformSpy.mockRestore();
+    outputFileSpy.mockRestore();
+  });
+
+  it('should harden permissions for managed env files on posix', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull');
+    const chmodSpy = vi.spyOn(fsPromises, 'chmod').mockResolvedValue();
+    const platformSpy = vi
+      .spyOn(process, 'platform', 'get')
+      .mockReturnValue('linux');
+
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', 'other.env', '--yes');
+
+    await expect(env(client)).resolves.toEqual(0);
+    expect(chmodSpy).toHaveBeenCalledWith(path.join(cwd, 'other.env'), 0o600);
+
+    platformSpy.mockRestore();
+    chmodSpy.mockRestore();
   });
 
   it('should use given environment', async () => {
