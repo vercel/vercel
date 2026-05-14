@@ -1111,15 +1111,20 @@ describe('[vercel dev] Worker service', () => {
   });
 });
 
-describe('[vercel dev] Schedule-triggered job service', () => {
-  const resultsDir = join(__dirname, 'fixtures', 'services-cron', '.results');
+describe('[vercel dev] Schedule-triggered Python job service', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-cron-py',
+    '.results'
+  );
 
   beforeEach(async () => {
     await fs.remove(resultsDir);
   });
 
-  test('[vercel dev] trigger schedule-triggered job via proxy', async () => {
-    const dir = fixture('services-cron');
+  test('[vercel dev] trigger schedule-triggered Python job via proxy', async () => {
+    const dir = fixture('services-cron-py');
     const { dev, port, readyResolver } = await testFixture(
       dir,
       {
@@ -1138,6 +1143,58 @@ describe('[vercel dev] Schedule-triggered job service', () => {
       // Trigger the service directly via the proxy to not wait for a minute
       const cronRes = await nodeFetch(
         `http://localhost:${port}/_svc/cron/crons/task/run_cron_task`,
+        { method: 'POST' }
+      );
+      expect(cronRes.status).toBe(200);
+      const cronJson = await cronRes.json();
+      expect(cronJson).toHaveProperty('ok', true);
+
+      const cronResultPath = join(resultsDir, 'cron_result.json');
+      expect(await fs.pathExists(cronResultPath)).toBe(true);
+      const cronResult = await fs.readJson(cronResultPath);
+      expect(cronResult).toHaveProperty('executed', true);
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
+describe('[vercel dev] Schedule-triggered JS job service', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-cron-js',
+    '.results'
+  );
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] trigger schedule-triggered JS job via proxy', async () => {
+    const dir = fixture('services-cron-js');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Trigger the service directly via the proxy. Path matches what
+      // @vercel/backends emits via getInternalServiceCronPath:
+      //   /_svc/<service>/crons/<entrypoint-without-ext>/<handler>
+      // For entrypoint "cron/task.js" and handler "cron" that is
+      // /_svc/cron/crons/cron/task/cron.
+      const cronRes = await nodeFetch(
+        `http://localhost:${port}/_svc/cron/crons/cron/task/cron`,
         { method: 'POST' }
       );
       expect(cronRes.status).toBe(200);
