@@ -480,6 +480,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('connex detach subcommand', () => {
+      it('connex detach subcommand help column width 120', () => {
+        expect(
+          help(connex.detachSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration help output snapshots', () => {

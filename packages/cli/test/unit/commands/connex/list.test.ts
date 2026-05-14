@@ -6,7 +6,7 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import connex from '../../../../src/commands/connex';
+import connect from '../../../../src/commands/connex';
 
 async function linkProjectInCwd(
   team: { id: string },
@@ -44,7 +44,7 @@ describe('connex list', () => {
       await linkProjectInCwd(team, project);
 
       let requestUrl = '';
-      client.scenario.get('/v1/connex/clients', (req, res) => {
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({
           clients: [
@@ -60,15 +60,15 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list');
+      client.setArgv('connect', 'list');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       expect(requestUrl).toContain(`projectId=${project.id}`);
       expect(requestUrl).not.toContain('include=projects');
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('Connex connectors linked to');
+      expect(stderr).toContain('Connectors linked to');
       expect(stderr).toContain(project.name);
       expect(stderr).toContain('slack/my-bot');
     });
@@ -82,24 +82,24 @@ describe('connex list', () => {
       useProject(project);
       await linkProjectInCwd(team, project);
 
-      client.scenario.get('/v1/connex/clients', (_req, res) => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({ clients: [] });
       });
 
-      client.setArgv('connex', 'list');
+      client.setArgv('connect', 'list');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('No Connex connectors linked to');
+      expect(stderr).toContain('No connectors linked to');
       expect(stderr).toContain(project.name);
       expect(stderr).toContain('--all-projects');
     });
 
     it('should fall back to unscoped list when no project is linked', async () => {
       let requestUrl = '';
-      client.scenario.get('/v1/connex/clients', (req, res) => {
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({
           clients: [
@@ -127,9 +127,9 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list');
+      client.setArgv('connect', 'list');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       expect(requestUrl).toContain('include=projects');
@@ -137,14 +137,14 @@ describe('connex list', () => {
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('Projects');
       expect(stderr).toContain('web');
-      expect(stderr).not.toContain('Connex connectors linked to');
+      expect(stderr).not.toContain('Connectors linked to');
     });
   });
 
   describe('with --all-projects', () => {
     it('should request clients with include=projects', async () => {
       let requestUrl = '';
-      client.scenario.get('/v1/connex/clients', (req, res) => {
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({
           clients: [
@@ -176,9 +176,9 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list', '--all-projects');
+      client.setArgv('connect', 'list', '--all-projects');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       expect(requestUrl).toContain('include=projects');
@@ -190,7 +190,7 @@ describe('connex list', () => {
     });
 
     it('should append "+ more" when includes.projects.hasMore is true', async () => {
-      client.scenario.get('/v1/connex/clients', (_req, res) => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({
           clients: [
             {
@@ -217,9 +217,9 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list', '--all-projects');
+      client.setArgv('connect', 'list', '--all-projects');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       const stderr = client.stderr.getFullOutput();
@@ -228,7 +228,7 @@ describe('connex list', () => {
     });
 
     it('should skip deleted projects when rendering names', async () => {
-      client.scenario.get('/v1/connex/clients', (_req, res) => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({
           clients: [
             {
@@ -257,9 +257,9 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list', '--all-projects');
+      client.setArgv('connect', 'list', '--all-projects');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       const stderr = client.stderr.getFullOutput();
@@ -268,36 +268,34 @@ describe('connex list', () => {
     });
 
     it('should render empty-state without project context', async () => {
-      client.scenario.get('/v1/connex/clients', (_req, res) => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({ clients: [] });
       });
 
-      client.setArgv('connex', 'list', '--all-projects');
+      client.setArgv('connect', 'list', '--all-projects');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
-      expect(client.stderr.getFullOutput()).toContain(
-        'No Connex connectors found'
-      );
+      expect(client.stderr.getFullOutput()).toContain('No connectors found');
     });
 
-    it('should show friendly error when connex feature flag is off (404)', async () => {
-      client.scenario.get('/v1/connex/clients', (_req, res) => {
+    it('should show friendly error when connect feature flag is off (404)', async () => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.statusCode = 404;
         res.json({ error: { code: 'not_found', message: 'Not Found' } });
       });
 
-      client.setArgv('connex', 'list', '--all-projects');
+      client.setArgv('connect', 'list', '--all-projects');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('Connex is not enabled');
+      expect(client.stderr.getFullOutput()).toContain('Connect is not enabled');
     });
 
     it('should output JSON with projects and hasMoreProjects when --format=json is used', async () => {
-      client.scenario.get('/v1/connex/clients', (_req, res) => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({
           clients: [
             {
@@ -327,9 +325,9 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list', '--all-projects', '--format=json');
+      client.setArgv('connect', 'list', '--all-projects', '--format=json');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       const stdout = client.stdout.getFullOutput();
@@ -344,7 +342,7 @@ describe('connex list', () => {
     });
 
     it('should print --all-projects in next-page hint when the response has a cursor', async () => {
-      client.scenario.get('/v1/connex/clients', (_req, res) => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({
           clients: [
             {
@@ -363,25 +361,25 @@ describe('connex list', () => {
         });
       });
 
-      client.setArgv('connex', 'list', '--all-projects');
+      client.setArgv('connect', 'list', '--all-projects');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       expect(client.stderr.getFullOutput()).toContain(
-        'connex list --all-projects --next cursor-abc'
+        'connect list --all-projects --next cursor-abc'
       );
     });
 
     it('should forward --limit and --next as query params', async () => {
       let requestUrl = '';
-      client.scenario.get('/v1/connex/clients', (req, res) => {
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
         requestUrl = req.url ?? '';
         res.json({ clients: [] });
       });
 
       client.setArgv(
-        'connex',
+        'connect',
         'list',
         '--all-projects',
         '--limit',
@@ -390,7 +388,7 @@ describe('connex list', () => {
         'prev-cursor'
       );
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       expect(requestUrl).toContain('limit=5');
@@ -404,7 +402,7 @@ describe('connex list', () => {
     useProject(project);
     await linkProjectInCwd(team, project);
 
-    client.scenario.get('/v1/connex/clients', (_req, res) => {
+    client.scenario.get('/v1/connect/connectors', (_req, res) => {
       res.json({
         clients: [
           {
@@ -419,9 +417,9 @@ describe('connex list', () => {
       });
     });
 
-    client.setArgv('connex', 'list', '--format=json');
+    client.setArgv('connect', 'list', '--format=json');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     const stdout = client.stdout.getFullOutput();

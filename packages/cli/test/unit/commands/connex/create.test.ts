@@ -5,7 +5,7 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import connex from '../../../../src/commands/connex';
+import connect from '../../../../src/commands/connex';
 import * as configFilesUtil from '../../../../src/util/config/files';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
@@ -41,53 +41,53 @@ describe('connex create', () => {
   });
 
   it('should error when no type argument is provided', async () => {
-    client.setArgv('connex', 'create');
+    client.setArgv('connect', 'create');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Missing service type');
     expect(exitCode).toBe(1);
   });
 
   it('should error in non-interactive mode without --name', async () => {
-    client.setArgv('connex', 'create', 'slack');
+    client.setArgv('connect', 'create', 'slack');
     (client.stdin as any).isTTY = false;
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Missing required flag --name');
     expect(exitCode).toBe(1);
   });
 
-  it('should show friendly error when connex feature flag is off (404)', async () => {
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+  it('should show friendly error when connect feature flag is off (404)', async () => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'test-app');
+    client.setArgv('connect', 'create', 'slack', '--name', 'test-app');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
-    await expect(client.stderr).toOutput('Connex is not enabled');
+    await expect(client.stderr).toOutput('Connect is not enabled');
     expect(exitCode).toBe(1);
   });
 
   it('should create client directly when POST succeeds (no browser)', async () => {
     let postBody: any;
     let pollHit = false;
-    client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
       postBody = req.body;
       res.json(fakeConnexClient({ id: 'scl_direct1', uid: 'uid_direct1' }));
     });
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       pollHit = true;
       res.json({ status: 'pending' });
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postBody).toMatchObject({
@@ -102,23 +102,23 @@ describe('connex create', () => {
 
   it('should pass any type to the server without validation', async () => {
     let postBody: any;
-    client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
       postBody = req.body;
       res.json(
         fakeConnexClient({ id: 'scl_jira1', type: 'jira', name: 'my-jira' })
       );
     });
 
-    client.setArgv('connex', 'create', 'jira', '--name', 'my-jira');
+    client.setArgv('connect', 'create', 'jira', '--name', 'my-jira');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postBody.service).toBe('jira');
   });
 
   it('should output JSON when --format=json is used', async () => {
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(
         fakeConnexClient({
           id: 'scl_json123',
@@ -131,7 +131,7 @@ describe('connex create', () => {
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'create',
       'slack',
       '--name',
@@ -139,7 +139,7 @@ describe('connex create', () => {
       '--format=json'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     await expect(client.stdout).toOutput('"id": "scl_json123"');
@@ -147,7 +147,7 @@ describe('connex create', () => {
 
   it('should open browser and poll when POST returns 422 with registerUrl', async () => {
     let postHits = 0;
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       postHits++;
       res.statusCode = 422;
       res.json({
@@ -160,7 +160,7 @@ describe('connex create', () => {
     });
 
     let pollCount = 0;
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       pollCount++;
       if (pollCount < 2) {
         res.json({ status: 'pending' });
@@ -169,7 +169,7 @@ describe('connex create', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/clients/:id', (req, res) => {
+    client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
       res.json(
         fakeConnexClient({
           id: (req.params as any).id,
@@ -178,9 +178,9 @@ describe('connex create', () => {
       );
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postHits).toBe(1);
@@ -189,7 +189,7 @@ describe('connex create', () => {
   });
 
   it('should keep polling through partial status until success', async () => {
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -200,7 +200,7 @@ describe('connex create', () => {
     });
 
     let pollCount = 0;
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       pollCount++;
       if (pollCount === 1) {
         res.json({ status: 'pending' });
@@ -219,7 +219,7 @@ describe('connex create', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/clients/:id', (req, res) => {
+    client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
       res.json(
         fakeConnexClient({
           id: (req.params as any).id,
@@ -229,9 +229,9 @@ describe('connex create', () => {
       );
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(pollCount).toBe(3);
@@ -241,7 +241,7 @@ describe('connex create', () => {
   });
 
   it('should handle error status from polling after 422', async () => {
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -251,16 +251,16 @@ describe('connex create', () => {
       });
     });
 
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       res.json({
         status: 'error',
         error: { code: 'creation_failed', message: 'Slack API error' },
       });
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Slack API error');
     expect(exitCode).toBe(1);
@@ -269,12 +269,12 @@ describe('connex create', () => {
   it('should persist team to config after interactive selection', async () => {
     delete client.config.currentTeam;
 
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(fakeConnexClient({ id: 'scl_persist', uid: 'uid_persist' }));
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
-    const exitCodePromise = connex(client);
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
+    const exitCodePromise = connect(client);
 
     await expect(client.stderr).toOutput(
       'Select the team where you want to create this connector'
@@ -303,12 +303,12 @@ describe('connex create', () => {
     });
     client.cwd = cwd;
 
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(fakeConnexClient({ id: 'scl_linked', uid: 'uid_linked' }));
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
-    const exitCode = await connex(client);
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(client.config.currentTeam).toBe(team.id);
@@ -319,8 +319,8 @@ describe('connex create', () => {
   it('should error when user selects personal account instead of a team', async () => {
     delete client.config.currentTeam;
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
-    const exitCodePromise = connex(client);
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
+    const exitCodePromise = connect(client);
 
     await expect(client.stderr).toOutput(
       'Select the team where you want to create this connector'
@@ -329,17 +329,17 @@ describe('connex create', () => {
     client.stdin.write('\n');
 
     expect(await exitCodePromise).toBe(1);
-    await expect(client.stderr).toOutput('Connex requires a team');
+    await expect(client.stderr).toOutput('Connect requires a team');
     expect(writeConfigSpy).not.toHaveBeenCalled();
   });
 
   it('should not rewrite config when team is already set', async () => {
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(fakeConnexClient({ id: 'scl_noop', uid: 'uid_noop' }));
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
-    const exitCode = await connex(client);
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(writeConfigSpy).not.toHaveBeenCalled();
@@ -348,7 +348,7 @@ describe('connex create', () => {
   describe('--triggers flag', () => {
     it('should send triggers: { enabled: true } when --triggers is passed', async () => {
       let postBody: any;
-      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+      client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
         postBody = req.body;
         res.json(
           fakeConnexClient({ id: 'scl_triggers1', uid: 'uid_triggers1' })
@@ -356,7 +356,7 @@ describe('connex create', () => {
       });
 
       client.setArgv(
-        'connex',
+        'connect',
         'create',
         'slack',
         '--name',
@@ -364,7 +364,7 @@ describe('connex create', () => {
         '--triggers'
       );
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       expect(postBody).toMatchObject({
@@ -376,14 +376,14 @@ describe('connex create', () => {
 
     it('should send triggers: { enabled: false } when --triggers is not passed', async () => {
       let postBody: any;
-      client.scenario.post('/v1/connex/clients/managed', (req, res) => {
+      client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
         postBody = req.body;
         res.json(fakeConnexClient({ id: 'scl_notrig', uid: 'uid_notrig' }));
       });
 
-      client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+      client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
 
-      const exitCode = await connex(client);
+      const exitCode = await connect(client);
 
       expect(exitCode).toBe(0);
       expect(postBody.triggers).toEqual({ enabled: false });
@@ -391,7 +391,7 @@ describe('connex create', () => {
   });
 
   it('should tolerate early 404s during polling after 422', async () => {
-    client.scenario.post('/v1/connex/clients/managed', (_req, res) => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -402,7 +402,7 @@ describe('connex create', () => {
     });
 
     let pollCount = 0;
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       pollCount++;
       if (pollCount <= 2) {
         res.statusCode = 404;
@@ -412,7 +412,7 @@ describe('connex create', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/clients/:id', (req, res) => {
+    client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
       res.json(
         fakeConnexClient({
           id: (req.params as any).id,
@@ -421,9 +421,9 @@ describe('connex create', () => {
       );
     });
 
-    client.setArgv('connex', 'create', 'slack', '--name', 'my-bot');
+    client.setArgv('connect', 'create', 'slack', '--name', 'my-bot');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(pollCount).toBe(3);

@@ -48,6 +48,13 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandDetach(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'detach',
+      value: actual,
+    });
+  }
+
   trackCliArgumentClient(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
@@ -66,6 +73,30 @@ export class ConnexTelemetryClient
   trackCliFlagDisconnectAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('disconnect-all');
+    }
+  }
+
+  trackCliFlagTriggers(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('triggers');
+    }
+  }
+
+  trackCliOptionTriggerBranch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTriggerPath(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-path',
+        value: this.redactedValue,
+      });
     }
   }
 

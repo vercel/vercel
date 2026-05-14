@@ -598,7 +598,7 @@ export const build: BuildVX = async ({
   await uv.pip({
     venvPath,
     projectDir: join(workPath, entryDirectory),
-    args: ['install', runtimeDep],
+    args: ['install', '--link-mode', 'copy', runtimeDep],
   });
 
   if (shouldInstallVercelWorkers) {
@@ -610,7 +610,7 @@ export const build: BuildVX = async ({
     await uv.pip({
       venvPath,
       projectDir: join(workPath, entryDirectory),
-      args: ['install', workersDep],
+      args: ['install', '--link-mode', 'copy', workersDep],
     });
   }
 
