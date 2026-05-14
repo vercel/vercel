@@ -1,8 +1,8 @@
 import { createCliExperimentConfig } from './cli';
 
 const config = createCliExperimentConfig({
-  agent: 'codex',
-  model: 'gpt-5.3-codex?reasoningEffort=xhigh',
+  agent: 'vercel-ai-gateway/codex',
+  model: 'gpt-5.4?reasoningEffort=medium',
   runs: 1,
   earlyExit: false,
   timeout: 900,

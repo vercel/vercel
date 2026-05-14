@@ -55,7 +55,7 @@ jobs:
           CLI_EVAL_SKILLS_MODES: with-skills,without-skills
           # Run comparable agent/model experiments. Matches the next-evals-oss
           # pattern where each model has its own experiment file.
-          CLI_EVAL_EXPERIMENTS: cli-claude-opus-4.7,cli-gpt-5.3-codex-xhigh
+          CLI_EVAL_EXPERIMENTS: cli-claude-opus-4.7,cli-gpt-5.4-medium
           # Limit memory pressure from concurrent Docker + Node (reduce OOM exit 137)
           NODE_OPTIONS: --max-old-space-size=4096
 

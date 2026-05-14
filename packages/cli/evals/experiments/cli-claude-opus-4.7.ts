@@ -1,7 +1,7 @@
 import { createCliExperimentConfig } from './cli';
 
 const config = createCliExperimentConfig({
-  agent: 'claude-code',
+  agent: 'vercel-ai-gateway/claude-code',
   model: 'claude-opus-4-7',
   runs: 1,
   earlyExit: false,
