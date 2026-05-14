@@ -68,7 +68,7 @@ function parseEvalList(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function getEvalsFromEnv(): string[] {
+export function getEvalsFromEnv(): string[] {
   const requested = parseEvalList(process.env.CLI_EVAL_EVALS);
   const excluded = new Set(parseEvalList(process.env.CLI_EVAL_EXCLUDE));
   const known = new Set(ALL_EVALS);
@@ -89,97 +89,108 @@ function getEvalsFromEnv(): string[] {
  * - Writes evals-setup.json (teamId, projectId) for evals that need link targets
  * - Ensures VERCEL_TOKEN is available
  */
-const config: ExperimentConfig = {
-  agent: 'vercel-ai-gateway/claude-code',
-  evals: getEvalsFromEnv(),
-  runs: 1,
-  earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
-  timeout: 900, // 15 min per eval (env can need link + env ls; build is long)
-  sandbox: 'docker', // Use Docker sandbox in CI (no OIDC required; Vercel sandbox prefers OIDC)
-  setup: async sandbox => {
-    const teamId = process.env.CLI_EVAL_TEAM_ID ?? '';
-    const projectId = process.env.CLI_EVAL_PROJECT_ID ?? '';
+type CliExperimentOptions = Pick<ExperimentConfig, 'agent' | 'model'> &
+  Partial<Pick<ExperimentConfig, 'runs' | 'earlyExit' | 'timeout'>>;
 
-    await setupAuthAndConfig(sandbox);
+export function createCliExperimentConfig({
+  agent,
+  model,
+  runs = 1,
+  earlyExit = false,
+  timeout = 900,
+}: CliExperimentOptions): ExperimentConfig {
+  return {
+    agent,
+    ...(model ? { model } : {}),
+    evals: getEvalsFromEnv(),
+    runs,
+    earlyExit, // Run all evals to completion so we get explicit pass/fail for each
+    timeout, // 15 min per eval (env can need link + env ls; build is long)
+    sandbox: 'docker', // Use Docker sandbox in CI (no OIDC required; Vercel sandbox prefers OIDC)
+    setup: async sandbox => {
+      const teamId = process.env.CLI_EVAL_TEAM_ID ?? '';
+      const projectId = process.env.CLI_EVAL_PROJECT_ID ?? '';
 
-    const runCmd =
-      (sandbox as any).runCommand ||
-      (sandbox as any).exec ||
-      (sandbox as any).run ||
-      null;
+      await setupAuthAndConfig(sandbox);
 
-    // Docker sandbox: enable non-interactive mode via agent detection
-    if (runCmd) {
-      try {
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          'printf \'export AI_AGENT="claude-code"\\n\' >> "$HOME/.bashrc"',
-        ]);
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          'printf \'export CLAUDE_CODE="1"\\n\' >> "$HOME/.bashrc"',
-        ]);
-      } catch (error: any) {
-        void error;
-      }
-    }
+      const runCmd =
+        (sandbox as any).runCommand ||
+        (sandbox as any).exec ||
+        (sandbox as any).run ||
+        null;
 
-    if (runCmd) {
-      try {
-        const installResult = await runCmd.call(sandbox, 'npm', [
-          'install',
-          '-g',
-          'vercel@latest',
-        ]);
-        // CLI installation attempted (output ignored for linting)
-        void installResult;
-      } catch (error: any) {
-        // Don't throw - CLI might already be installed or method might differ
-        void error;
+      // Docker sandbox: enable non-interactive mode via agent detection
+      if (runCmd) {
+        try {
+          await runCmd.call(sandbox, 'bash', [
+            '-c',
+            'printf \'export AI_AGENT="claude-code"\\n\' >> "$HOME/.bashrc"',
+          ]);
+          await runCmd.call(sandbox, 'bash', [
+            '-c',
+            'printf \'export CLAUDE_CODE="1"\\n\' >> "$HOME/.bashrc"',
+          ]);
+        } catch (error: any) {
+          void error;
+        }
       }
 
-      // Verify CLI is available
-      try {
-        const versionResult = await runCmd.call(sandbox, 'vercel', [
-          '--version',
-        ]);
-        // CLI version check attempted (output ignored for linting)
-        void versionResult;
-      } catch (error: any) {
-        // CLI verification failed - may need manual installation
-        void error;
-      }
-    }
-    // Note: If runCmd is not available, CLI installation will need to happen during eval
+      if (runCmd) {
+        try {
+          const installResult = await runCmd.call(sandbox, 'npm', [
+            'install',
+            '-g',
+            'vercel@latest',
+          ]);
+          // CLI installation attempted (output ignored for linting)
+          void installResult;
+        } catch (error: any) {
+          // Don't throw - CLI might already be installed or method might differ
+          void error;
+        }
 
-    // Copy skill files only when CLI_EVAL_WITH_SKILLS=1 (set by runner from matrix variant)
-    const withSkills = process.env.CLI_EVAL_WITH_SKILLS === '1';
-    const skillFiles: Record<string, string> = {};
-    if (withSkills) {
-      try {
-        if (existsSync(SKILLS_DIR)) {
-          const files = listSkillFiles(SKILLS_DIR);
-          for (const rel of files) {
-            try {
-              const full = join(SKILLS_DIR, rel);
-              skillFiles[`docs/vercel-cli/${rel}`] = readFileSync(
-                full,
-                'utf-8'
-              );
-            } catch (error: any) {
-              void error;
+        // Verify CLI is available
+        try {
+          const versionResult = await runCmd.call(sandbox, 'vercel', [
+            '--version',
+          ]);
+          // CLI version check attempted (output ignored for linting)
+          void versionResult;
+        } catch (error: any) {
+          // CLI verification failed - may need manual installation
+          void error;
+        }
+      }
+      // Note: If runCmd is not available, CLI installation will need to happen during eval
+
+      // Copy skill files only when CLI_EVAL_WITH_SKILLS=1 (set by runner from matrix variant)
+      const withSkills = process.env.CLI_EVAL_WITH_SKILLS === '1';
+      const skillFiles: Record<string, string> = {};
+      if (withSkills) {
+        try {
+          if (existsSync(SKILLS_DIR)) {
+            const files = listSkillFiles(SKILLS_DIR);
+            for (const rel of files) {
+              try {
+                const full = join(SKILLS_DIR, rel);
+                skillFiles[`docs/vercel-cli/${rel}`] = readFileSync(
+                  full,
+                  'utf-8'
+                );
+              } catch (error: any) {
+                void error;
+              }
             }
           }
+        } catch (error: any) {
+          void error;
         }
-      } catch (error: any) {
-        void error;
       }
-    }
 
-    const readmeBody = withSkills
-      ? 'Docs are in `docs/vercel-cli/` (skill + references). Use `vercel <command> -h` for help.'
-      : 'Use `vercel <command> -h` for help.';
-    skillFiles['docs/README.md'] = `# Vercel CLI
+      const readmeBody = withSkills
+        ? 'Docs are in `docs/vercel-cli/` (skill + references). Use `vercel <command> -h` for help.'
+        : 'Use `vercel <command> -h` for help.';
+      skillFiles['docs/README.md'] = `# Vercel CLI
 
 ${readmeBody}
 
@@ -187,23 +198,28 @@ Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.
 
 If \`vercel link\` reports no credentials, run \`source ~/.profile\` first (or \`source ~/.bashrc\`) so VERCEL_TOKEN is set, then retry.`;
 
-    const filesToWrite: Record<string, string> = {
-      'evals-setup.json': JSON.stringify({ teamId, projectId }, null, 2),
-      ...skillFiles,
-    };
+      const filesToWrite: Record<string, string> = {
+        'evals-setup.json': JSON.stringify({ teamId, projectId }, null, 2),
+        ...skillFiles,
+      };
 
-    // Pre-link the project in the sandbox so the agent doesn't have to
-    // discover evals-setup.json and create .vercel/project.json itself.
-    if (projectId && teamId) {
-      filesToWrite['.vercel/project.json'] = JSON.stringify(
-        { projectId, orgId: teamId },
-        null,
-        2
-      );
-    }
+      // Pre-link the project in the sandbox so the agent doesn't have to
+      // discover evals-setup.json and create .vercel/project.json itself.
+      if (projectId && teamId) {
+        filesToWrite['.vercel/project.json'] = JSON.stringify(
+          { projectId, orgId: teamId },
+          null,
+          2
+        );
+      }
 
-    await sandbox.writeFiles(filesToWrite);
-  },
-};
+      await sandbox.writeFiles(filesToWrite);
+    },
+  };
+}
+
+const config: ExperimentConfig = createCliExperimentConfig({
+  agent: 'vercel-ai-gateway/claude-code',
+});
 
 export default config;

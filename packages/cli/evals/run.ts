@@ -83,6 +83,13 @@ function parseEvalList(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
+function parseExperimentList(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
 function selectEvals(discovered: string[]): string[] {
   const requested = parseEvalList(process.env.CLI_EVAL_EVALS);
   const excluded = new Set(parseEvalList(process.env.CLI_EVAL_EXCLUDE));
@@ -242,10 +249,24 @@ async function main() {
   }
 
   if (isDryRun) {
+    const explicitExperimentArgs = args.filter(a => !a.startsWith('-'));
+    const envExperimentArgs = parseExperimentList(
+      process.env.CLI_EVAL_EXPERIMENTS
+    );
+    const dryRunExperiments =
+      explicitExperimentArgs.length > 0
+        ? explicitExperimentArgs
+        : envExperimentArgs.length > 0
+          ? envExperimentArgs
+          : ['cli'];
+
     process.stdout.write(
       '\nDry run only: skipping credential checks, Vercel env pull, setup hooks, and agent-eval execution.\n'
     );
     process.stdout.write(`\nEvals discovered: ${evals.join(', ')}\n`);
+    process.stdout.write(
+      `Experiments selected: ${dryRunExperiments.join(', ')}\n`
+    );
     process.exit(0);
   }
 
@@ -286,15 +307,20 @@ async function main() {
     !process.env.VERCEL_OIDC_TOKEN && Boolean(process.env.VERCEL_TOKEN);
   const flagArgs = args.filter(a => a.startsWith('-'));
   const explicitExperimentArgs = args.filter(a => !a.startsWith('-'));
+  const envExperimentArgs = parseExperimentList(
+    process.env.CLI_EVAL_EXPERIMENTS
+  );
   // When falling back to VERCEL_TOKEN, run only the "cli" experiment so each
   // variant runs the full eval set. Otherwise (e.g. explicit experiment args)
   // use the requested experiments.
   const experimentsToRun =
     explicitExperimentArgs.length > 0
       ? explicitExperimentArgs
-      : usedOIDCFallback
-        ? ['cli']
-        : [];
+      : envExperimentArgs.length > 0
+        ? envExperimentArgs
+        : usedOIDCFallback
+          ? ['cli']
+          : [];
   const agentEvalArgsToPass =
     experimentsToRun.length > 0 ? [...flagArgs, ...experimentsToRun] : args;
   process.stdout.write(
@@ -306,7 +332,9 @@ async function main() {
   );
   if (usedOIDCFallback && explicitExperimentArgs.length === 0) {
     process.stderr.write(
-      'Skipping smoke experiment (requires OIDC). Running: cli (all evals per variant).\n'
+      `Skipping smoke experiment (requires OIDC). Running: ${experimentsToRun.join(
+        ', '
+      )} (all evals per variant).\n`
     );
   }
 

@@ -132,12 +132,78 @@ function contentTypeFor(relativePath) {
 }
 
 function shouldUploadFile(relativePath, uploadArtifacts) {
-  if (uploadArtifacts === 'all') return true;
+  if (uploadArtifacts === 'results') {
+    return (
+      relativePath.endsWith('/summary.json') ||
+      /\/run-\d+\/result\.json$/.test(relativePath)
+    );
+  }
 
-  return (
-    relativePath.endsWith('/summary.json') ||
-    /\/run-\d+\/result\.json$/.test(relativePath)
-  );
+  return true;
+}
+
+function isTimestampSegment(segment) {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d+)?Z$/.test(segment);
+}
+
+function getRunGroup(relativePath) {
+  const segments = relativePath.split('/');
+  const timestampIndex = segments.findIndex(isTimestampSegment);
+  if (timestampIndex === -1) return 'ungrouped';
+  return segments.slice(0, timestampIndex + 1).join('/');
+}
+
+function groupFilesByRun(files, resultsDir) {
+  const groups = new Map();
+
+  for (const fullPath of files) {
+    const relativePath = path
+      .relative(resultsDir, fullPath)
+      .replace(/\\/g, '/');
+    const group = getRunGroup(relativePath);
+    const groupFiles = groups.get(group) ?? [];
+    groupFiles.push(fullPath);
+    groups.set(group, groupFiles);
+  }
+
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+async function uploadFileGroup({
+  files,
+  resultsDir,
+  payload,
+  ingestUrl,
+  headers,
+}) {
+  const formData = new FormData();
+  formData.append('payload', JSON.stringify(payload));
+
+  for (const fullPath of files) {
+    const relativePath = path
+      .relative(resultsDir, fullPath)
+      .replace(/\\/g, '/');
+    const buffer = await readFile(fullPath);
+    formData.append(
+      'results_file',
+      new File([buffer], relativePath, {
+        type: contentTypeFor(relativePath),
+      })
+    );
+  }
+
+  const response = await fetch(ingestUrl, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  const responseBody = await response.text();
+  if (!response.ok) {
+    throw new Error(`Batch upload failed: ${response.status} ${responseBody}`);
+  }
+
+  return responseBody;
 }
 
 async function main() {
@@ -191,7 +257,7 @@ async function main() {
   }
 
   const runMetadata = await collectRunMetadata(allFiles);
-  const uploadArtifacts = args['upload-artifacts'] ?? 'results';
+  const uploadArtifacts = args['upload-artifacts'] ?? 'all';
 
   if (!['results', 'all'].includes(uploadArtifacts)) {
     throw new Error(
@@ -233,21 +299,6 @@ async function main() {
     },
   };
 
-  const formData = new FormData();
-  formData.append('payload', JSON.stringify(payload));
-  for (const fullPath of filesToUpload) {
-    const relativePath = path
-      .relative(resultsDir, fullPath)
-      .replace(/\\/g, '/');
-    const buffer = await readFile(fullPath);
-    formData.append(
-      'results_file',
-      new File([buffer], relativePath, {
-        type: contentTypeFor(relativePath),
-      })
-    );
-  }
-
   const headers = {
     Authorization: `Bearer ${args.token}`,
   };
@@ -255,19 +306,30 @@ async function main() {
     headers['x-vercel-protection-bypass'] = bypassSecret;
   }
 
-  const response = await fetch(ingestUrl, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
+  const fileGroups = groupFilesByRun(filesToUpload, resultsDir);
 
-  const responseBody = await response.text();
-  if (!response.ok) {
-    throw new Error(`Batch upload failed: ${response.status} ${responseBody}`);
+  for (const [group, files] of fileGroups) {
+    const groupPayload = {
+      ...payload,
+      metadata: {
+        ...payload.metadata,
+        uploadGroup: group,
+      },
+    };
+    const responseBody = await uploadFileGroup({
+      files,
+      resultsDir,
+      payload: groupPayload,
+      ingestUrl,
+      headers,
+    });
+    console.log(
+      `Uploaded batch ${args['batch-id']} group ${group} with ${files.length} file(s): ${responseBody}`
+    );
   }
 
   console.log(
-    `Uploaded batch ${args['batch-id']} with ${filesToUpload.length}/${allFiles.length} file(s): ${responseBody}`
+    `Uploaded batch ${args['batch-id']} in ${fileGroups.length} request(s) with ${filesToUpload.length}/${allFiles.length} file(s).`
   );
 }
 
