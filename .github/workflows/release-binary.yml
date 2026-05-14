@@ -317,8 +317,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           package-manager-cache: false
+
+      - name: Install npm 11
+        run: npm i -g npm@11
+
+      - name: Print npm version
+        run: npm --version
 
       - name: Download binary artifacts
         uses: actions/download-artifact@v4
