@@ -11,9 +11,23 @@ import ms from 'ms';
 import title from 'title';
 import { homedir } from 'os';
 import { isAbsolute, resolve as resolvePath } from 'path';
+import {
+  createPrompt,
+  isDownKey,
+  isEnterKey,
+  isUpKey,
+  useEffect,
+  useKeypress,
+  useMemo,
+  usePagination,
+  usePrefix,
+  useRef,
+  useState,
+} from '@inquirer/core';
 import table from '../output/table';
 import type Client from '../client';
 import getTeamById from '../teams/get-team-by-id';
+import getTeams from '../teams/get-teams';
 import type {
   OpenApiCommandTag,
   OpenApiDisplayPropertiesByTagOperationStatus,
@@ -27,7 +41,8 @@ import { resolveEndpointByTagAndOperationId } from './resolve-by-tag-operation';
 import type { BodyField, Parameter } from './types';
 import { getLinkFromDir, getVercelDirectory } from '../projects/link';
 import getUser from '../get-user';
-import { APIError } from '../errors-ts';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import { APIError, ProjectNotFound } from '../errors-ts';
 
 type OptionalRecord<K extends PropertyKey, V> = {
   [P in K]?: V;
@@ -290,6 +305,7 @@ const displayTemplateCache = new WeakMap<
 
 export interface InferredCommandConfig {
   value?: string;
+  aliases?: string[];
   arguments?: Record<string, InferredCommandParamConfig | undefined>;
   options?: Record<string, InferredCommandParamConfig | undefined>;
   examples?: InferredCommandExample[];
@@ -473,9 +489,12 @@ export interface InferredTagConfig {
   aliases?: string[];
 }
 
+export type InferredCommandParamFilter = 'deployments';
+
 export interface InferredCommandParamConfig {
   required: boolean | 'project' | 'team';
   value?: string;
+  filter?: InferredCommandParamFilter;
 }
 
 export interface InferredCommandExample {
@@ -811,6 +830,7 @@ type RunInferredCommandOptions = {
   scope?: string;
   team?: string;
   api?: string;
+  projectPromptMode?: ProjectPromptMode;
 };
 
 type ParamSurface = 'arguments' | 'options';
@@ -869,6 +889,7 @@ type InferredDryRunPreview = {
 type TagOperationOverview = {
   operationId: string;
   value: string;
+  aliases: string[];
   arguments: CommandArgument[];
 };
 
@@ -878,6 +899,46 @@ type ResolvedTagConfig = {
   aliases: string[];
   operations: Record<string, InferredCommandConfig>;
 };
+
+type MissingRequiredInput = {
+  surface: ParamSurface;
+  definition: NormalizedParamDefinition;
+  reason: string;
+  hint: string;
+};
+
+type ProjectPromptMode = 'reactive-core' | 'legacy-search';
+type ProjectPromptResult =
+  | {
+      kind: 'project';
+      value: string;
+      scopeId: string;
+      scopeSlug: string;
+    }
+  | {
+      kind: 'limited-scope';
+      scope: ScopeAutocompleteChoice;
+    };
+
+type ScopeAutocompleteChoice = {
+  id: string;
+  slug: string;
+  name: string;
+  limited: boolean;
+  samlEnforced: boolean;
+};
+
+type ProjectAutocompleteChoice = {
+  id: string;
+  name: string;
+  updatedAt: number | null;
+};
+
+type InferredOperationDescriptionsByTag = Map<string, Map<string, string>>;
+
+let inferredOperationDescriptionsByTagPromise:
+  | Promise<InferredOperationDescriptionsByTag>
+  | undefined;
 
 function getDefaultOutputName(inputKey: string): string {
   const dotIndex = inputKey.lastIndexOf('.');
@@ -2389,6 +2450,19 @@ function getCommandValue(
   return config.value ?? operationId;
 }
 
+function getCommandAliases(
+  operationId: string,
+  config: InferredCommandConfig
+): string[] {
+  const value = getCommandValue(operationId, config);
+  return Array.from(
+    new Set([
+      ...(operationId === value ? [] : [operationId]),
+      ...(config.aliases ?? []),
+    ])
+  ).filter(alias => alias !== value);
+}
+
 function isInferredCommandConfig(
   value: unknown
 ): value is InferredCommandConfig {
@@ -2456,6 +2530,7 @@ function getTagOperations(tag: ResolvedTagConfig): TagOperationOverview[] {
     .map(([operationId, config]) => ({
       operationId,
       value: getCommandValue(operationId, config),
+      aliases: getCommandAliases(operationId, config),
       arguments: normalizeParamDefinitions(config.arguments, 'arguments').map(
         definition => ({
           name: definition.outputName,
@@ -2466,27 +2541,94 @@ function getTagOperations(tag: ResolvedTagConfig): TagOperationOverview[] {
     .sort((a, b) => a.operationId.localeCompare(b.operationId));
 }
 
-function printTagsOverview(commands: InferredCommands): number {
-  const rows: Array<[string, string]> = getConfiguredTags(commands).map(tag => [
-    tag.name,
-    `${getTagOperations(tag).length} operations`,
-  ]);
-  output.print(
-    `${chalk.bold('Inferred OpenAPI tags')}\n\n${renderSectionRows(rows)}\n`
-  );
+async function getInferredOperationDescriptionsByTag(): Promise<InferredOperationDescriptionsByTag> {
+  if (inferredOperationDescriptionsByTagPromise) {
+    return inferredOperationDescriptionsByTagPromise;
+  }
+
+  inferredOperationDescriptionsByTagPromise = (async () => {
+    const openApi = new OpenApiCache();
+    const loaded = await openApi.load();
+    if (!loaded) {
+      return new Map();
+    }
+
+    const descriptionsByTag: InferredOperationDescriptionsByTag = new Map();
+    for (const endpoint of openApi.getEndpoints()) {
+      const description =
+        endpoint.summary?.trim() || endpoint.description?.trim() || '';
+      if (!description) {
+        continue;
+      }
+
+      for (const tag of endpoint.tags) {
+        let descriptionsByOperation = descriptionsByTag.get(tag);
+        if (!descriptionsByOperation) {
+          descriptionsByOperation = new Map();
+          descriptionsByTag.set(tag, descriptionsByOperation);
+        }
+
+        if (!descriptionsByOperation.has(endpoint.operationId)) {
+          descriptionsByOperation.set(endpoint.operationId, description);
+        }
+      }
+    }
+
+    return descriptionsByTag;
+  })().catch(() => new Map());
+
+  return inferredOperationDescriptionsByTagPromise;
+}
+
+function toTagOperationRows(
+  tag: ResolvedTagConfig,
+  descriptionsByTag: InferredOperationDescriptionsByTag
+): string[][] {
+  const operations = getTagOperations(tag);
+  const descriptionsByOperation =
+    descriptionsByTag.get(tag.key) ??
+    descriptionsByTag.get(tag.name) ??
+    new Map();
+
+  return operations.map((operation, index) => {
+    const description =
+      descriptionsByOperation.get(operation.operationId) ?? chalk.gray('—');
+    return [index === 0 ? tag.name : '', operation.value, description];
+  });
+}
+
+async function printTagsOverview(commands: InferredCommands): Promise<number> {
+  const descriptionsByTag = await getInferredOperationDescriptionsByTag();
+  const rows = [
+    [
+      chalk.bold(chalk.cyan('Tag')),
+      chalk.bold(chalk.cyan('Operation')),
+      chalk.bold(chalk.cyan('Description')),
+    ],
+    ...getConfiguredTags(commands).flatMap(tag =>
+      toTagOperationRows(tag, descriptionsByTag)
+    ),
+  ];
+  const tableOutput = table(rows, { hsep: 3 }).replace(/^/gm, '  ');
+
+  output.print(`${chalk.bold('Inferred OpenAPI tags')}\n\n${tableOutput}\n`);
   return 0;
 }
 
-function printTagOperationsOverview(
+async function printTagOperationsOverview(
   tag: ResolvedTagConfig,
   columns: number
-): number {
+): Promise<number> {
   const operations = getTagOperations(tag);
+  const descriptionsByTag = await getInferredOperationDescriptionsByTag();
+  const descriptionsByOperation =
+    descriptionsByTag.get(tag.key) ??
+    descriptionsByTag.get(tag.name) ??
+    new Map();
   const subcommands: Command[] = operations.map(operation => ({
     name: operation.value,
-    aliases:
-      operation.value === operation.operationId ? [] : [operation.operationId],
-    description: `OpenAPI operationId: ${operation.operationId}`,
+    aliases: operation.aliases,
+    description: descriptionsByOperation.get(operation.operationId) ?? '',
     arguments: operation.arguments,
     options: [],
     examples: [],
@@ -2536,18 +2678,7 @@ function buildRequestPreview(
     definition: NormalizedParamDefinition,
     providedValue: string | boolean | undefined
   ) => {
-    const implicitTeamValue =
-      definition.source.location === 'query' &&
-      definition.source.name === 'teamId'
-        ? context.team?.value
-        : undefined;
-    const value =
-      providedValue ??
-      (definition.config.required === 'project'
-        ? context.project?.id
-        : definition.config.required === 'team'
-          ? context.team?.value
-          : implicitTeamValue);
+    const value = resolveDefinitionValue(definition, providedValue, context);
 
     if (value === undefined || definition.source.location === null) {
       return;
@@ -2598,6 +2729,1050 @@ function buildRequestPreview(
   };
 }
 
+function shouldPromptForMissingInputs(client: Client): boolean {
+  return client.stdin.isTTY === true && !client.nonInteractive;
+}
+
+async function loadScopeAutocompleteChoices(
+  client: Client
+): Promise<ScopeAutocompleteChoice[]> {
+  const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
+
+  const personalAccountChoices: ScopeAutocompleteChoice[] =
+    user.version === 'northstar'
+      ? []
+      : [
+          {
+            id: user.id,
+            slug: user.username,
+            name: user.name || user.username,
+            limited: false,
+            samlEnforced: false,
+          },
+        ];
+
+  const teamChoices = teams
+    .sort(team => (team.id === user.defaultTeamId ? -1 : 1))
+    .map<ScopeAutocompleteChoice>(team => ({
+      id: team.id,
+      slug: team.slug,
+      name: team.name || team.slug,
+      limited: team.limited === true,
+      samlEnforced:
+        team.saml?.connection?.state === 'active' &&
+        team.saml?.enforced === true,
+    }));
+
+  return [...personalAccountChoices, ...teamChoices];
+}
+
+function getScopeHintForPrompt(
+  context: InferredCommandContext,
+  providedArguments: Record<string, string>,
+  providedOptions: Record<string, string | boolean>
+): string | null {
+  const optionScope = providedOptions.scope;
+  if (typeof optionScope === 'string' && optionScope.trim()) {
+    return optionScope.trim();
+  }
+
+  const argumentScope = providedArguments.team;
+  if (typeof argumentScope === 'string' && argumentScope.trim()) {
+    return argumentScope.trim();
+  }
+
+  return context.team?.value ?? null;
+}
+
+async function loadProjectAutocompleteChoices(
+  client: Client,
+  scopeHint: string | null,
+  accountId: string | undefined,
+  limit: number
+): Promise<ProjectAutocompleteChoice[]> {
+  const mapProjectChoices = (
+    projects: Array<{
+      id: string;
+      name: string;
+      updatedAt?: number;
+    }>
+  ): ProjectAutocompleteChoice[] =>
+    projects.map(project => ({
+      id: project.id,
+      name: project.name,
+      updatedAt:
+        typeof project.updatedAt === 'number' ? project.updatedAt : null,
+    }));
+
+  const dashboardQuery = new URLSearchParams({ limit: String(limit) });
+  if (scopeHint && !accountId) {
+    dashboardQuery.set('teamId', scopeHint);
+  }
+
+  try {
+    const dashboardResponse = await client.fetch<{
+      projects: Array<{
+        id: string;
+        name: string;
+        updatedAt?: number;
+      }>;
+    }>(`/v2/dashboard/projects?${dashboardQuery.toString()}`, {
+      accountId,
+    });
+    return mapProjectChoices(dashboardResponse.projects);
+  } catch {
+    // Fall back to the public projects endpoint if dashboard endpoint is unavailable.
+  }
+
+  const projectsQuery = new URLSearchParams({ limit: String(limit) });
+  if (scopeHint && !accountId) {
+    projectsQuery.set('teamId', scopeHint);
+  }
+
+  const response = await client.fetch<{
+    projects: Array<{
+      id: string;
+      name: string;
+      updatedAt?: number;
+    }>;
+    pagination: { next: number | null };
+  }>(`/v9/projects?${projectsQuery.toString()}`, {
+    accountId,
+  });
+
+  return mapProjectChoices(response.projects);
+}
+
+const PROJECT_PROMPT_PAGE_SIZE = 7;
+const PROJECT_LOADING_PLACEHOLDER_COUNT = PROJECT_PROMPT_PAGE_SIZE + 1;
+const PROJECT_INITIAL_LOAD_LIMIT = 10;
+const PROJECT_BACKFILL_LOAD_LIMIT = 100;
+
+function mergeProjectChoices(
+  currentChoices: ProjectAutocompleteChoice[],
+  incomingChoices: ProjectAutocompleteChoice[]
+): ProjectAutocompleteChoice[] {
+  const mergedChoices: ProjectAutocompleteChoice[] = [];
+  const seen = new Set<string>();
+
+  for (const choice of incomingChoices) {
+    if (seen.has(choice.id)) {
+      continue;
+    }
+    seen.add(choice.id);
+    mergedChoices.push(choice);
+  }
+
+  for (const choice of currentChoices) {
+    if (seen.has(choice.id)) {
+      continue;
+    }
+    seen.add(choice.id);
+    mergedChoices.push(choice);
+  }
+
+  return mergedChoices;
+}
+
+function buildProjectLoadingChoices(): Array<{
+  label: string;
+  description?: string;
+}> {
+  return Array.from(
+    { length: PROJECT_LOADING_PLACEHOLDER_COUNT },
+    (_, index) => ({
+      label:
+        index === 0
+          ? chalk.dim('Loading recent projects...')
+          : chalk.dim('...'),
+      description:
+        index === 0
+          ? chalk.dim('Fetching recent results and full search index')
+          : undefined,
+    })
+  );
+}
+
+type ProjectPromptRow =
+  | { kind: 'loading'; label: string; description?: string }
+  | { kind: 'choice'; choice: ProjectAutocompleteChoice };
+
+type ProjectAutocompletePromptConfig = {
+  messageBase: string;
+  scopes: ScopeAutocompleteChoice[];
+  initialScopeIndex: number;
+  pageSize: number;
+  placeholderCount: number;
+  loadInitialChoices: (
+    scope: ScopeAutocompleteChoice
+  ) => Promise<ProjectAutocompleteChoice[]>;
+  loadBackfillChoices: (
+    scope: ScopeAutocompleteChoice
+  ) => Promise<ProjectAutocompleteChoice[]>;
+};
+
+const projectAutocompletePrompt = createPrompt<
+  ProjectPromptResult,
+  ProjectAutocompletePromptConfig
+>((config, done) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [active, setActive] = useState(0);
+  const [scopeIndex, setScopeIndex] = useState(config.initialScopeIndex);
+  const [allChoices, setAllChoices] = useState<ProjectAutocompleteChoice[]>([]);
+  const allChoicesRef = useRef<ProjectAutocompleteChoice[]>([]);
+  const [initialChoicesLoaded, setInitialChoicesLoaded] = useState(false);
+  const fetchSequenceRef = useRef(0);
+  const activeScope = config.scopes[scopeIndex] ?? config.scopes[0];
+
+  const prefix = usePrefix({
+    status: initialChoicesLoaded ? 'idle' : 'loading',
+  });
+
+  const filteredChoices = useMemo(
+    () =>
+      allChoices.filter(choice =>
+        matchesProjectTerm(choice, searchTerm || undefined)
+      ),
+    [allChoices, searchTerm]
+  );
+
+  const rows = useMemo<ProjectPromptRow[]>(
+    () =>
+      initialChoicesLoaded
+        ? filteredChoices.map(choice => ({ kind: 'choice', choice }))
+        : buildProjectLoadingChoices()
+            .slice(0, config.placeholderCount)
+            .map(choice => ({ kind: 'loading', ...choice })),
+    [config.placeholderCount, filteredChoices, initialChoicesLoaded]
+  );
+
+  useEffect(() => {
+    if (!activeScope) {
+      return () => {};
+    }
+
+    const sequence = fetchSequenceRef.current + 1;
+    fetchSequenceRef.current = sequence;
+    let cancelled = false;
+    allChoicesRef.current = [];
+    setAllChoices([]);
+    setInitialChoicesLoaded(false);
+    setActive(0);
+
+    if (activeScope.limited) {
+      setInitialChoicesLoaded(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void config
+      .loadInitialChoices(activeScope)
+      .then(choices => {
+        if (cancelled || sequence !== fetchSequenceRef.current) {
+          return;
+        }
+        const mergedChoices = mergeProjectChoices(
+          allChoicesRef.current,
+          choices
+        );
+        allChoicesRef.current = mergedChoices;
+        setAllChoices(mergedChoices);
+        setInitialChoicesLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled && sequence === fetchSequenceRef.current) {
+          setInitialChoicesLoaded(true);
+        }
+      });
+
+    void config
+      .loadBackfillChoices(activeScope)
+      .then(choices => {
+        if (cancelled || sequence !== fetchSequenceRef.current) {
+          return;
+        }
+        const mergedChoices = mergeProjectChoices(
+          allChoicesRef.current,
+          choices
+        );
+        allChoicesRef.current = mergedChoices;
+        setAllChoices(mergedChoices);
+      })
+      .catch(() => {
+        // best-effort backfill
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scopeIndex]);
+
+  useEffect(() => {
+    if (active < rows.length) {
+      return;
+    }
+    setActive(Math.max(rows.length - 1, 0));
+  }, [active, rows.length]);
+
+  useKeypress((key, rl) => {
+    if (isEnterKey(key)) {
+      if (activeScope?.limited) {
+        done({ kind: 'limited-scope', scope: activeScope });
+        return;
+      }
+
+      const activeRow = rows[active];
+      if (activeRow?.kind === 'choice') {
+        done({
+          kind: 'project',
+          value: activeRow.choice.name,
+          scopeId: activeScope.id,
+          scopeSlug: activeScope.slug,
+        });
+        return;
+      }
+
+      const trimmed = searchTerm.trim();
+      if (trimmed) {
+        done({
+          kind: 'project',
+          value: trimmed,
+          scopeId: activeScope.id,
+          scopeSlug: activeScope.slug,
+        });
+      }
+      return;
+    }
+
+    if (
+      (key.name === 'left' || key.name === 'right') &&
+      config.scopes.length > 1
+    ) {
+      const offset = key.name === 'left' ? -1 : 1;
+      const nextScopeIndex =
+        (scopeIndex + offset + config.scopes.length) % config.scopes.length;
+      setScopeIndex(nextScopeIndex);
+      setSearchTerm('');
+      rl.clearLine(0);
+      return;
+    }
+
+    if (!initialChoicesLoaded) {
+      setSearchTerm(rl.line);
+      return;
+    }
+
+    if (isUpKey(key) || isDownKey(key)) {
+      rl.clearLine(0);
+      if (filteredChoices.length === 0) {
+        return;
+      }
+
+      const offset = isUpKey(key) ? -1 : 1;
+      setActive(
+        Math.min(Math.max(active + offset, 0), filteredChoices.length - 1)
+      );
+      return;
+    }
+
+    setSearchTerm(rl.line);
+    setActive(0);
+  });
+
+  const page = usePagination({
+    items: rows,
+    active,
+    pageSize: config.pageSize,
+    loop: false,
+    renderItem({ item, isActive }) {
+      if (item.kind === 'loading') {
+        return `${item.label} ${chalk.dim('Loading')}`;
+      }
+
+      const cursor = isActive ? '❯' : ' ';
+      return `${cursor} ${item.choice.name}`;
+    },
+  });
+
+  const header = [
+    prefix,
+    `${config.messageBase} (${activeScope?.slug ?? 'current-scope'}):`,
+    chalk.cyan(searchTerm),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trimEnd();
+  const emptyMessage =
+    initialChoicesLoaded && filteredChoices.length === 0 && searchTerm.trim()
+      ? chalk.red('No results found')
+      : undefined;
+  const limitedScopeMessage = activeScope?.limited
+    ? chalk.yellow(
+        'Must authenticate to continue with this scope. Press Enter.'
+      )
+    : undefined;
+  const helpLine = activeScope?.limited
+    ? chalk.dim('(Use left/right to switch scope, Enter to authenticate)')
+    : chalk.dim('(Use up/down to navigate, left/right to switch scope)');
+
+  const body = [limitedScopeMessage ?? emptyMessage ?? page, helpLine]
+    .filter(Boolean)
+    .join('\n')
+    .trimEnd();
+
+  return [header, body];
+});
+
+function matchesProjectTerm(
+  choice: ProjectAutocompleteChoice,
+  term: string | undefined
+): boolean {
+  if (!term) {
+    return true;
+  }
+
+  const normalizedTerm = term.trim().toLowerCase();
+  if (!normalizedTerm) {
+    return true;
+  }
+
+  return [choice.name, choice.id]
+    .join(' ')
+    .toLowerCase()
+    .includes(normalizedTerm);
+}
+
+function formatProjectDescription(project: ProjectAutocompleteChoice): string {
+  if (typeof project.updatedAt !== 'number') {
+    return project.id;
+  }
+
+  return `${project.id} · ${ms(Math.max(Date.now() - project.updatedAt, 0), {
+    long: true,
+  })} ago`;
+}
+
+type DeploymentFilterChoice = {
+  id: string;
+  readyState: string | null;
+  createdAt: number | null;
+};
+
+const DEPLOYMENT_FILTER_LIMIT = 100;
+
+function sortDeploymentFilterChoices(
+  left: DeploymentFilterChoice,
+  right: DeploymentFilterChoice
+): number {
+  return (right.createdAt ?? 0) - (left.createdAt ?? 0);
+}
+
+function matchesDeploymentFilterTerm(
+  choice: DeploymentFilterChoice,
+  term: string | undefined
+): boolean {
+  if (!term) {
+    return true;
+  }
+
+  const normalizedTerm = term.trim().toLowerCase();
+  if (!normalizedTerm) {
+    return true;
+  }
+
+  return choice.id.toLowerCase().includes(normalizedTerm);
+}
+
+function formatDeploymentFilterDescription(
+  deployment: DeploymentFilterChoice
+): string {
+  const parts: string[] = [];
+  if (typeof deployment.createdAt === 'number') {
+    parts.push(
+      chalk.gray(
+        `${ms(Math.max(Date.now() - deployment.createdAt, 0), {
+          long: true,
+        })} ago`
+      )
+    );
+  }
+
+  if (deployment.readyState) {
+    const normalizedState = deployment.readyState.toUpperCase();
+    const prettyState = title(normalizedState.replace(/_/g, ' ').toLowerCase());
+    if (
+      normalizedState === 'BUILDING' ||
+      normalizedState === 'DEPLOYING' ||
+      normalizedState === 'ANALYZING' ||
+      normalizedState === 'INITIALIZING'
+    ) {
+      parts.push(chalk.yellow(prettyState));
+    } else if (normalizedState === 'READY') {
+      parts.push(chalk.green(prettyState));
+    } else if (normalizedState === 'ERROR') {
+      parts.push(chalk.red(prettyState));
+    } else if (normalizedState === 'CANCELED') {
+      parts.push(chalk.gray(prettyState));
+    } else if (normalizedState === 'QUEUED') {
+      parts.push(chalk.white(prettyState));
+    } else {
+      parts.push(prettyState);
+    }
+  }
+
+  return parts.join(' · ');
+}
+
+function formatDeploymentFilterLabel(
+  deployment: DeploymentFilterChoice
+): string {
+  return deployment.id;
+}
+
+async function loadDeploymentFilterChoices(
+  client: Client,
+  context: InferredCommandContext,
+  providedOptions: Record<string, string | boolean>,
+  projectFilter: string
+): Promise<DeploymentFilterChoice[]> {
+  const teamScope =
+    typeof providedOptions.scope === 'string' && providedOptions.scope.trim()
+      ? providedOptions.scope.trim()
+      : context.team?.value;
+
+  const fetchDeployments = async (params: {
+    teamId?: string;
+    projectId?: string;
+    app?: string;
+    limit: number;
+  }): Promise<DeploymentFilterChoice[]> => {
+    const query = new URLSearchParams({
+      limit: String(params.limit),
+    });
+    if (params.teamId) {
+      query.set('teamId', params.teamId);
+    }
+    if (params.projectId) {
+      query.set('projectId', params.projectId);
+    }
+    if (params.app) {
+      query.set('app', params.app);
+    }
+
+    const response = await client.fetch<{
+      deployments: Array<{
+        id?: string;
+        uid?: string;
+        readyState?: string;
+        state?: string;
+        createdAt?: number;
+      }>;
+    }>(`/v6/deployments?${query.toString()}`);
+
+    return response.deployments
+      .map(deployment => {
+        const id = deployment.id ?? deployment.uid;
+        if (!id) {
+          return null;
+        }
+
+        return {
+          id,
+          readyState:
+            typeof deployment.readyState === 'string'
+              ? deployment.readyState
+              : typeof deployment.state === 'string'
+                ? deployment.state
+                : null,
+          createdAt:
+            typeof deployment.createdAt === 'number'
+              ? deployment.createdAt
+              : null,
+        };
+      })
+      .filter((deployment): deployment is DeploymentFilterChoice =>
+        Boolean(deployment)
+      )
+      .sort(sortDeploymentFilterChoices);
+  };
+
+  const useProjectId = projectFilter.startsWith('prj_');
+  return fetchDeployments({
+    teamId: teamScope,
+    projectId: useProjectId ? projectFilter : undefined,
+    app: useProjectId ? undefined : projectFilter,
+    limit: DEPLOYMENT_FILTER_LIMIT,
+  });
+}
+
+async function promptForDeploymentValue(
+  client: Client,
+  context: InferredCommandContext,
+  providedOptions: Record<string, string | boolean>,
+  projectFilter: string
+): Promise<string> {
+  const choicesPromise = loadDeploymentFilterChoices(
+    client,
+    context,
+    providedOptions,
+    projectFilter
+  ).catch(() => []);
+  const choices = await choicesPromise;
+  const scopeLabel =
+    typeof providedOptions.scope === 'string' && providedOptions.scope.trim()
+      ? providedOptions.scope.trim()
+      : context.team?.value;
+  const projectLabel = projectFilter;
+  const promptContext = [scopeLabel, projectLabel].filter(Boolean).join('/');
+
+  if (choices.length === 0) {
+    const manualValue = await client.input.text({
+      message: 'Enter deployment id:',
+      validate: value =>
+        value.trim().length > 0 ? true : 'Deployment id cannot be empty.',
+    });
+    return manualValue.trim();
+  }
+
+  const selected = await client.input.search<string>({
+    message: promptContext
+      ? `Select deployment (${promptContext}):`
+      : 'Select deployment:',
+    pageSize: PROJECT_PROMPT_PAGE_SIZE,
+    source: async term => {
+      const deployments = await choicesPromise;
+      return deployments
+        .filter(choice => matchesDeploymentFilterTerm(choice, term))
+        .slice(0, 40)
+        .map(choice => ({
+          name: `${formatDeploymentFilterLabel(choice)} ${formatDeploymentFilterDescription(choice)}`.trim(),
+          value: choice.id,
+        }));
+    },
+  });
+
+  return selected.trim();
+}
+
+async function promptForProjectValue(
+  client: Client,
+  scopeHint: string | null,
+  promptMode: ProjectPromptMode
+): Promise<{ value: string; scopeSlug: string } | null> {
+  let scopeChoicesPromise: Promise<ScopeAutocompleteChoice[]> | undefined;
+  const getScopeChoices = async () => {
+    if (!scopeChoicesPromise) {
+      scopeChoicesPromise = loadScopeAutocompleteChoices(client).catch(
+        () => []
+      );
+    }
+    return scopeChoicesPromise;
+  };
+
+  const matchedScope = scopeHint
+    ? (await getScopeChoices()).find(
+        scopeChoice =>
+          scopeChoice.id === scopeHint ||
+          scopeChoice.slug === scopeHint ||
+          scopeChoice.name === scopeHint
+      )
+    : undefined;
+  const loadedScopes = await getScopeChoices();
+  const availableScopes =
+    loadedScopes.length > 0
+      ? loadedScopes
+      : [
+          {
+            id: matchedScope?.id ?? scopeHint ?? '',
+            slug: matchedScope?.slug ?? scopeHint ?? 'current-scope',
+            name: matchedScope?.name ?? scopeHint ?? 'Current Scope',
+            limited: false,
+            samlEnforced: false,
+          },
+        ];
+  const initialScopeIndex = Math.max(
+    availableScopes.findIndex(
+      scopeChoice =>
+        scopeChoice.id === (matchedScope?.id ?? scopeHint) ||
+        scopeChoice.slug === (matchedScope?.slug ?? scopeHint)
+    ),
+    0
+  );
+
+  const loadInitialChoices = (scope: ScopeAutocompleteChoice) =>
+    loadProjectAutocompleteChoices(
+      client,
+      scope.slug,
+      scope.id || undefined,
+      PROJECT_INITIAL_LOAD_LIMIT
+    ).catch(() => []);
+  const loadBackfillChoices = (scope: ScopeAutocompleteChoice) =>
+    loadProjectAutocompleteChoices(
+      client,
+      scope.slug,
+      scope.id || undefined,
+      PROJECT_BACKFILL_LOAD_LIMIT
+    ).catch(() => []);
+
+  const fallbackInitialChoices = loadInitialChoices(
+    availableScopes[initialScopeIndex]
+  );
+  const fallbackBackfillChoices = loadBackfillChoices(
+    availableScopes[initialScopeIndex]
+  );
+
+  const fallbackLoadMergedChoices = async () =>
+    mergeProjectChoices(
+      await fallbackInitialChoices,
+      await fallbackBackfillChoices
+    );
+
+  while (true) {
+    if (promptMode === 'legacy-search') {
+      const selected = await client.input.search<string>({
+        message: `Select project (${availableScopes[initialScopeIndex]?.slug ?? scopeHint ?? 'current-scope'}):`,
+        pageSize: PROJECT_PROMPT_PAGE_SIZE,
+        source: async term => {
+          const projectChoices = await fallbackLoadMergedChoices();
+          const filteredChoices = projectChoices.filter(choice =>
+            matchesProjectTerm(choice, term)
+          );
+          return filteredChoices.slice(0, 40).map(choice => ({
+            name: `${choice.name}`,
+            value: choice.name,
+            description: formatProjectDescription(choice),
+          }));
+        },
+      });
+
+      const selectedValue = selected.trim();
+      if (!selectedValue) {
+        continue;
+      }
+
+      try {
+        const project = await getProjectByIdOrName(
+          client,
+          selectedValue,
+          availableScopes[initialScopeIndex]?.id || undefined
+        );
+        if (!(project instanceof ProjectNotFound)) {
+          return {
+            value: selectedValue,
+            scopeSlug:
+              availableScopes[initialScopeIndex]?.slug ??
+              scopeHint ??
+              'current-scope',
+          };
+        }
+      } catch {
+        return {
+          value: selectedValue,
+          scopeSlug:
+            availableScopes[initialScopeIndex]?.slug ??
+            scopeHint ??
+            'current-scope',
+        };
+      }
+
+      output.error(
+        `Project "${selectedValue}" not found. Try another project.`
+      );
+      await fallbackLoadMergedChoices();
+      continue;
+    }
+
+    const selected = await projectAutocompletePrompt(
+      {
+        messageBase: 'Select project',
+        scopes: availableScopes,
+        initialScopeIndex,
+        pageSize: PROJECT_PROMPT_PAGE_SIZE,
+        placeholderCount: PROJECT_LOADING_PLACEHOLDER_COUNT,
+        loadInitialChoices,
+        loadBackfillChoices,
+      },
+      {
+        input: client.stdin,
+        output: client.stderr,
+      }
+    );
+
+    if (selected.kind === 'limited-scope') {
+      await client.reauthenticate({
+        teamId: selected.scope.id,
+        scope: selected.scope.slug,
+        enforced: selected.scope.samlEnforced,
+      });
+      return null;
+    }
+
+    const selectedValue = selected.value.trim();
+    if (!selectedValue) {
+      continue;
+    }
+
+    try {
+      const project = await getProjectByIdOrName(
+        client,
+        selectedValue,
+        selected.scopeId || undefined
+      );
+      if (!(project instanceof ProjectNotFound)) {
+        return { value: selectedValue, scopeSlug: selected.scopeSlug };
+      }
+    } catch {
+      // Fall through to manual acceptance for API failures.
+      return { value: selectedValue, scopeSlug: selected.scopeSlug };
+    }
+
+    output.error(`Project "${selectedValue}" not found. Try another project.`);
+  }
+}
+
+async function promptForMissingRequiredInputs(
+  client: Client,
+  missingInputs: MissingRequiredInput[],
+  context: InferredCommandContext,
+  providedArguments: Record<string, string>,
+  providedOptions: Record<string, string | boolean>,
+  projectPromptMode: ProjectPromptMode
+): Promise<'completed' | 'restart_required'> {
+  const getPriority = (input: MissingRequiredInput): number => {
+    if (input.definition.config.required === 'project') {
+      return 0;
+    }
+    return 1;
+  };
+
+  const sortedMissingInputs = [...missingInputs].sort(
+    (left, right) => getPriority(left) - getPriority(right)
+  );
+
+  for (const input of sortedMissingInputs) {
+    const name =
+      input.surface === 'options'
+        ? `--${input.definition.outputName}`
+        : input.definition.outputName;
+    const required = input.definition.config.required;
+    let trimmedValue = '';
+    if (input.definition.config.filter === 'deployments') {
+      let deploymentProjectFilter =
+        typeof providedOptions.projectId === 'string' &&
+        providedOptions.projectId.trim()
+          ? providedOptions.projectId.trim()
+          : context.project?.id;
+
+      if (!deploymentProjectFilter) {
+        const promptedProject = await promptForProjectValue(
+          client,
+          getScopeHintForPrompt(context, providedArguments, providedOptions),
+          projectPromptMode
+        );
+        if (promptedProject === null) {
+          output.log(
+            `Authentication completed. Re-run the command to continue with the selected scope.`
+          );
+          return 'restart_required';
+        }
+        deploymentProjectFilter = promptedProject.value;
+        providedOptions.scope = promptedProject.scopeSlug;
+        providedOptions.projectId = promptedProject.value;
+      }
+
+      trimmedValue = await promptForDeploymentValue(
+        client,
+        context,
+        providedOptions,
+        deploymentProjectFilter
+      );
+    } else if (required === 'project') {
+      const promptedProject = await promptForProjectValue(
+        client,
+        getScopeHintForPrompt(context, providedArguments, providedOptions),
+        projectPromptMode
+      );
+      if (promptedProject === null) {
+        output.log(
+          `Authentication completed. Re-run the command to continue with the selected scope.`
+        );
+        return 'restart_required';
+      }
+      trimmedValue = promptedProject.value;
+      providedOptions.scope = promptedProject.scopeSlug;
+    } else {
+      const label = chalk.cyan(name);
+      const value = await client.input.text({
+        message: `Enter value for ${label}:`,
+        validate: rawValue =>
+          rawValue.trim().length > 0 ? true : `${name} cannot be empty.`,
+      });
+      trimmedValue = value.trim();
+    }
+
+    if (input.surface === 'arguments') {
+      providedArguments[input.definition.outputName] = trimmedValue;
+      continue;
+    }
+    providedOptions[input.definition.outputName] = trimmedValue;
+  }
+
+  return 'completed';
+}
+
+function resolveDefinitionValue(
+  definition: NormalizedParamDefinition,
+  providedValue: string | boolean | undefined,
+  context: InferredCommandContext
+): string | boolean | undefined {
+  const implicitTeamValue =
+    definition.source.location === 'query' &&
+    definition.source.name === 'teamId'
+      ? context.team?.value
+      : undefined;
+  return (
+    providedValue ??
+    (definition.config.required === 'project'
+      ? context.project?.id
+      : definition.config.required === 'team'
+        ? context.team?.value
+        : implicitTeamValue)
+  );
+}
+
+function collectMissingRequiredInputs(
+  argumentDefinitions: NormalizedParamDefinition[],
+  optionDefinitions: NormalizedParamDefinition[],
+  providedArguments: Record<string, string>,
+  providedOptions: Record<string, string | boolean>,
+  context: InferredCommandContext,
+  metadata: InferredOperationMetadata | null
+): MissingRequiredInput[] {
+  const missing: MissingRequiredInput[] = [];
+
+  const isDefinitionInMetadata = (definition: NormalizedParamDefinition) => {
+    if (!metadata || !definition.source.location) {
+      return true;
+    }
+
+    switch (definition.source.location) {
+      case 'path':
+      case 'query':
+      case 'header':
+      case 'cookie':
+        return metadata.params[definition.source.location].some(
+          param => param.name === definition.source.name
+        );
+      case 'bodyFields':
+        return metadata.bodyFields.some(
+          field => field.name === definition.source.name
+        );
+      default:
+        return true;
+    }
+  };
+
+  const checkDefinition = (
+    surface: ParamSurface,
+    definition: NormalizedParamDefinition,
+    providedValue: string | boolean | undefined
+  ) => {
+    if (
+      definition.config.required !== true &&
+      definition.config.required !== 'project' &&
+      definition.config.required !== 'team'
+    ) {
+      return;
+    }
+
+    if (!isDefinitionInMetadata(definition)) {
+      return;
+    }
+
+    const resolvedValue = resolveDefinitionValue(
+      definition,
+      providedValue,
+      context
+    );
+    if (resolvedValue !== undefined) {
+      return;
+    }
+
+    const outputName = definition.outputName;
+    if (definition.config.required === true) {
+      missing.push({
+        surface,
+        definition,
+        reason: 'Required input is missing.',
+        hint:
+          surface === 'options'
+            ? `Provide --${outputName} <value>.`
+            : `Provide ${outputName} as a positional argument.`,
+      });
+      return;
+    }
+
+    if (definition.config.required === 'project') {
+      missing.push({
+        surface,
+        definition,
+        reason: 'Could not infer a project from the current context.',
+        hint:
+          surface === 'options'
+            ? `Provide --${outputName} <value> or run from a linked project directory.`
+            : `Provide ${outputName} explicitly or run from a linked project directory.`,
+      });
+      return;
+    }
+
+    missing.push({
+      surface,
+      definition,
+      reason: 'Could not infer a team/scope from the current context.',
+      hint:
+        surface === 'options'
+          ? outputName === 'scope'
+            ? 'Provide --scope <team>.'
+            : `Provide --${outputName} <value> or pass --scope <team>.`
+          : `Provide ${outputName} explicitly or pass --scope <team>.`,
+    });
+  };
+
+  for (const definition of argumentDefinitions) {
+    checkDefinition(
+      'arguments',
+      definition,
+      providedArguments[definition.outputName]
+    );
+  }
+  for (const definition of optionDefinitions) {
+    checkDefinition(
+      'options',
+      definition,
+      providedOptions[definition.outputName]
+    );
+  }
+
+  return missing;
+}
+
+function printMissingRequiredInputs(
+  missingInputs: MissingRequiredInput[]
+): void {
+  const rows: Array<[string, string]> = missingInputs.map(input => [
+    input.surface === 'options'
+      ? `--${input.definition.outputName}`
+      : input.definition.outputName,
+    `${getRequiredHint(input.definition.config.required)} ${input.reason} ${input.hint}`,
+  ]);
+
+  output.error('Missing required inputs for inferred command.');
+  output.print(
+    `${chalk.bold.cyan('Missing inputs')}\n${renderSectionRows(rows)}\n`
+  );
+}
+
 function getRequiredHint(
   required: InferredCommandParamConfig['required']
 ): string {
@@ -2611,6 +3786,26 @@ function getRequiredHint(
     return 'Required if team context is missing';
   }
   return 'Optional';
+}
+
+function getArgumentInferenceHint(
+  required: InferredCommandParamConfig['required']
+): string | null {
+  if (required === 'project') {
+    return 'Inferred from the current project context when available.';
+  }
+  if (required === 'team') {
+    return 'Inferred from the current scope/team context when available.';
+  }
+  return null;
+}
+
+function getArgumentHelpDescription(
+  required: InferredCommandParamConfig['required']
+): string {
+  const base = getRequiredHint(required);
+  const inferenceHint = getArgumentInferenceHint(required);
+  return inferenceHint ? `${base}. ${inferenceHint}` : base;
 }
 
 function toHelpOption(
@@ -2649,7 +3844,13 @@ function printInferredCommandHelp(
   const normalizedOptions =
     normalizeParamConfigs(resolved.config.options, 'options') ?? {};
   const aliases = Array.from(
-    new Set([resolved.operationId, resolved.config.value].filter(Boolean))
+    new Set(
+      [
+        resolved.operationId,
+        resolved.config.value,
+        ...(resolved.config.aliases ?? []),
+      ].filter(Boolean)
+    )
   ).filter(name => name !== commandName) as string[];
 
   const command: Command = {
@@ -2662,6 +3863,7 @@ function printInferredCommandHelp(
     arguments: Object.entries(normalizedArguments).map(([name, config]) => ({
       name,
       required: config.required === true,
+      description: getArgumentHelpDescription(config.required),
     })),
     options: buildHelpOptions(normalizedOptions),
     examples: resolved.config.examples ?? [],
@@ -2715,7 +3917,12 @@ export function resolveInferredCommand(
       continue;
     }
 
-    if (getCommandValue(operationId, config) === operationToken) {
+    const operationValue = getCommandValue(operationId, config);
+    const operationAliases = getCommandAliases(operationId, config);
+    if (
+      operationValue === operationToken ||
+      operationAliases.includes(operationToken)
+    ) {
       return {
         tag: tag.key,
         tagName: tag.name,
@@ -2819,7 +4026,7 @@ export async function runInferredCommand(
 
   if (!tagToken) {
     if (helpRequested) {
-      return printTagsOverview(commands);
+      return await printTagsOverview(commands);
     }
     return null;
   }
@@ -2828,10 +4035,13 @@ export async function runInferredCommand(
   const operationsForTag = resolvedTag ? getTagOperations(resolvedTag) : [];
   if (!operationToken) {
     if (resolvedTag && operationsForTag.length > 0) {
-      return printTagOperationsOverview(resolvedTag, options.columns ?? 80);
+      return await printTagOperationsOverview(
+        resolvedTag,
+        options.columns ?? 80
+      );
     }
     if (helpRequested) {
-      return printTagsOverview(commands);
+      return await printTagsOverview(commands);
     }
     return null;
   }
@@ -2839,7 +4049,10 @@ export async function runInferredCommand(
   const resolved = resolveInferredCommand(commands, commandArgs);
   if (!resolved) {
     if (helpRequested && resolvedTag && operationsForTag.length > 0) {
-      return printTagOperationsOverview(resolvedTag, options.columns ?? 80);
+      return await printTagOperationsOverview(
+        resolvedTag,
+        options.columns ?? 80
+      );
     }
     return null;
   }
@@ -2919,12 +4132,70 @@ export async function runInferredCommand(
     return acc;
   }, {});
 
-  const context = await resolveInferredContext(
+  let context = await resolveInferredContext(
     typeof parsedOptions.cwd === 'string' ? parsedOptions.cwd : undefined,
     typeof parsedOptions.scope === 'string' ? parsedOptions.scope : undefined,
     typeof parsedOptions.team === 'string' ? parsedOptions.team : undefined,
     options.client
   );
+
+  if (options.client) {
+    let missingRequiredInputs = collectMissingRequiredInputs(
+      argumentDefinitions,
+      optionDefinitions,
+      providedArguments,
+      providedOptions,
+      context,
+      metadata
+    );
+
+    if (
+      missingRequiredInputs.length > 0 &&
+      shouldPromptForMissingInputs(options.client)
+    ) {
+      const promptResult = await promptForMissingRequiredInputs(
+        options.client,
+        missingRequiredInputs,
+        context,
+        providedArguments,
+        providedOptions,
+        options.projectPromptMode ?? 'reactive-core'
+      );
+      if (promptResult === 'restart_required') {
+        return 1;
+      }
+      for (const definition of optionDefinitions) {
+        const value = providedOptions[definition.outputName];
+        if (value !== undefined) {
+          parsedOptions[definition.outputName] = value;
+        }
+      }
+      if (typeof providedOptions.scope === 'string') {
+        parsedOptions.scope = providedOptions.scope;
+      }
+      context = await resolveInferredContext(
+        typeof parsedOptions.cwd === 'string' ? parsedOptions.cwd : undefined,
+        typeof parsedOptions.scope === 'string'
+          ? parsedOptions.scope
+          : undefined,
+        typeof parsedOptions.team === 'string' ? parsedOptions.team : undefined,
+        options.client
+      );
+      missingRequiredInputs = collectMissingRequiredInputs(
+        argumentDefinitions,
+        optionDefinitions,
+        providedArguments,
+        providedOptions,
+        context,
+        metadata
+      );
+    }
+
+    if (missingRequiredInputs.length > 0) {
+      printMissingRequiredInputs(missingRequiredInputs);
+      return 1;
+    }
+  }
 
   const request = buildRequestPreview(
     metadata,

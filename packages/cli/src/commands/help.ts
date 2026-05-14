@@ -24,6 +24,7 @@ export interface CommandArgument {
   readonly name: string;
   readonly required: boolean;
   readonly multiple?: true;
+  readonly description?: string;
 }
 export interface CommandExample {
   readonly name: string;
@@ -285,6 +286,65 @@ export function buildSubcommandLines(
   ].join('');
 }
 
+export function buildCommandArgumentLines(
+  commandArguments: ReadonlyArray<CommandArgument>,
+  options: BuildHelpOutputOptions
+) {
+  const describedArguments = commandArguments.filter(
+    argument => argument.description !== undefined
+  );
+
+  if (describedArguments.length === 0) {
+    return null;
+  }
+
+  let maxWidthOfUnwrappedColumns = 0;
+  const rows: (string | _CellOptions)[][] = [];
+
+  for (const argument of describedArguments) {
+    let argumentName = argument.required ? argument.name : `[${argument.name}]`;
+    if (argument.multiple) {
+      argumentName += ' ...';
+    }
+
+    const argumentCell = `${INDENT}${argumentName}${INDENT}`;
+    maxWidthOfUnwrappedColumns = Math.max(
+      maxWidthOfUnwrappedColumns,
+      argumentCell.length
+    );
+
+    rows.push([
+      argumentCell,
+      {
+        content: argument.description ?? '',
+        wordWrap: true,
+      },
+    ]);
+  }
+
+  const rightMargin = INDENT.repeat(2).length;
+  const finalColumnWidth = Math.max(
+    20,
+    options.columns - maxWidthOfUnwrappedColumns - rightMargin
+  );
+
+  const table = new Table(
+    Object.assign({}, tableOptions, {
+      colWidths: [null, finalColumnWidth],
+    })
+  );
+
+  table.push(...rows);
+  return [
+    `${INDENT}${chalk.dim('Arguments')}:`,
+    NEWLINE,
+    NEWLINE,
+    table.toString(),
+    NEWLINE,
+    NEWLINE,
+  ].join('');
+}
+
 export function buildCommandExampleLines(command: Command) {
   if (!command.examples?.length) {
     return null;
@@ -343,6 +403,7 @@ export function buildHelpOutput(
     buildCommandSynopsisLine(command, options.parent),
     buildDescriptionLine(command, options),
     buildSubcommandLines(command.subcommands, options),
+    buildCommandArgumentLines(command.arguments, options),
     buildCommandOptionLines(command.options, options, 'Options'),
     buildCommandOptionLines(filteredGlobalOptions, options, 'Global Options'),
     buildCommandExampleLines(command),

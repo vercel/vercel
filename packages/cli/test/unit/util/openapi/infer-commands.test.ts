@@ -70,6 +70,69 @@ describe('inferCommands', () => {
     ],
   };
 
+  const inspectEndpoint: EndpointInfo = {
+    path: '/v9/projects/{idOrName}',
+    method: 'GET',
+    operationId: 'inspect',
+    summary: 'Inspect project',
+    description: 'Get project details',
+    tags: ['projects'],
+    parameters: [
+      {
+        name: 'idOrName',
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      },
+      {
+        name: 'teamId',
+        in: 'query',
+        required: false,
+        schema: { type: 'string' },
+      },
+    ],
+  };
+
+  const createEndpoint: EndpointInfo = {
+    path: '/v9/projects',
+    method: 'POST',
+    operationId: 'create',
+    summary: 'Create project',
+    description: 'Create a new project',
+    tags: ['projects'],
+    parameters: [
+      {
+        name: 'teamId',
+        in: 'query',
+        required: false,
+        schema: { type: 'string' },
+      },
+    ],
+  };
+
+  const inspectDeploymentEndpoint: EndpointInfo = {
+    path: '/v13/deployments/{id}',
+    method: 'GET',
+    operationId: 'getDeployment',
+    summary: 'Inspect deployment',
+    description: 'Get deployment details',
+    tags: ['deployments'],
+    parameters: [
+      {
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      },
+      {
+        name: 'teamId',
+        in: 'query',
+        required: false,
+        schema: { type: 'string' },
+      },
+    ],
+  };
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -116,6 +179,30 @@ describe('inferCommands', () => {
     );
   });
 
+  it('resolves configured operation aliases to the operationId', () => {
+    const commandsWithOperationAlias = inferCommands({
+      projects: {
+        list: {
+          value: 'list',
+          aliases: ['ls'],
+        },
+      },
+    });
+
+    expect(
+      resolveInferredCommand(commandsWithOperationAlias, ['projects', 'ls'])
+    ).toEqual(
+      expect.objectContaining({
+        tag: 'projects',
+        operationId: 'list',
+        config: expect.objectContaining({
+          value: 'list',
+          aliases: ['ls'],
+        }),
+      })
+    );
+  });
+
   it('returns null when the command is not configured', () => {
     expect(
       resolveInferredCommand(commands, ['projects', 'inspect'])
@@ -124,21 +211,30 @@ describe('inferCommands', () => {
   });
 
   it('prints configured tags when help is requested without a tag', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+
     const exitCode = await runInferredCommand(commands, ['-h']);
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('Inferred OpenAPI tags');
     expect(output).toContain('projects');
-    expect(output).toContain('1 operations');
+    expect(output).toContain('Operation');
+    expect(output).toContain('Description');
+    expect(output).toContain('ls');
+    expect(output).not.toContain('ls (list)');
+    expect(output).toContain('List projects');
   });
 
-  it('prints operation ids when only a tag is provided', async () => {
+  it('prints operations when only a tag is provided', async () => {
     const exitCode = await runInferredCommand(commands, ['projects']);
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('Inferred OpenAPI operations for "projects"');
-    expect(output).toContain('list');
     expect(output).toContain('ls');
+    expect(output).toContain('List projects');
   });
 
   it('prints operation ids when a tag alias is provided', async () => {
@@ -1101,6 +1197,47 @@ describe('inferCommands', () => {
     expect(output).toContain('Global Options');
   });
 
+  it('shows argument inference hints for context-inferred arguments', async () => {
+    const commandsWithProjectInference = inferCommands({
+      projects: {
+        inspect: {
+          value: 'inspect',
+          arguments: {
+            'path.idOrName': { required: 'project', value: 'name' },
+          },
+          options: {
+            'query.teamId': { required: 'team' },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      inspectEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const exitCode = await runInferredCommand(
+      commandsWithProjectInference,
+      ['projects', 'inspect'],
+      {
+        help: true,
+        columns: 120,
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('vercel projects inspect [name]');
+    expect(output).toContain('Arguments:');
+    expect(output).toContain('name');
+    expect(output).toContain('Required if project context is missing. ');
+    expect(output).toContain(
+      'Inferred from the current project context when available.'
+    );
+  });
+
   it('does not show required arguments as options when options are omitted', async () => {
     const commandsWithoutOptions = inferCommands({
       projects: {
@@ -1140,5 +1277,355 @@ describe('inferCommands', () => {
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).not.toContain('--name');
+  });
+
+  it('fails early with a clear error when required positional input is missing', async () => {
+    const commandsWithRequiredArgument = inferCommands({
+      projects: {
+        create: {
+          value: 'add',
+          arguments: {
+            'bodyFields.name': {
+              required: true,
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      createEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([
+      {
+        name: 'name',
+        required: true,
+        type: 'string',
+        description: 'Project name',
+      },
+    ]);
+    client.nonInteractive = true;
+
+    const exitCode = await runInferredCommand(
+      commandsWithRequiredArgument,
+      ['projects', 'add'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+
+    expect(exitCode).toBe(1);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Missing required inputs for inferred command.');
+    expect(output).toContain('name');
+    expect(output).toContain('Required input is missing.');
+  });
+
+  it('prompts for missing required arguments in interactive TTY mode', async () => {
+    const commandsWithRequiredArgument = inferCommands({
+      projects: {
+        create: {
+          value: 'add',
+          arguments: {
+            'bodyFields.name': {
+              required: true,
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      createEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([
+      {
+        name: 'name',
+        required: true,
+        type: 'string',
+        description: 'Project name',
+      },
+    ]);
+    const promptSpy = vi
+      .spyOn(client.input, 'text')
+      .mockResolvedValue('prompted-project');
+
+    const exitCode = await runInferredCommand(
+      commandsWithRequiredArgument,
+      ['projects', 'add', '--dry-run'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(promptSpy).toHaveBeenCalledTimes(1);
+    expect(client.stderr.getFullOutput()).toContain('prompted-project');
+  });
+
+  it('uses search autocomplete for missing project context values', async () => {
+    const commandsWithContextPrompts = inferCommands({
+      projects: {
+        inspect: {
+          value: 'inspect',
+          arguments: {
+            'path.idOrName': {
+              required: 'project',
+              value: 'name',
+            },
+          },
+          options: {
+            'query.teamId': {
+              required: 'team',
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      inspectEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue(null);
+    const searchSpy = vi
+      .spyOn(client.input, 'search')
+      .mockResolvedValueOnce('my-project');
+
+    const exitCode = await runInferredCommand(
+      commandsWithContextPrompts,
+      ['projects', 'inspect', '--dry-run'],
+      {
+        client,
+        api: client.apiUrl,
+        projectPromptMode: 'legacy-search',
+        scope: 'jsee',
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(searchSpy).toHaveBeenCalledTimes(1);
+    expect(searchSpy.mock.calls[0]?.[0]?.message).toContain(
+      'Select project (jsee):'
+    );
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('my-project');
+    expect(output).toContain('jsee');
+  });
+
+  it('supports built-in deployments filter using project and team scope', async () => {
+    const commandsWithDeploymentFilter = inferCommands({
+      deployments: {
+        getDeployment: {
+          value: 'inspect',
+          arguments: {
+            'path.id': {
+              required: true,
+              filter: 'deployments',
+            },
+          },
+          options: {
+            'query.teamId': {
+              required: 'team',
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      inspectDeploymentEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue({
+      projectId: 'prj_from_context',
+      orgId: 'team_from_context',
+    });
+
+    client.scenario.get('/v6/deployments', (req, res) => {
+      expect(req.query.teamId).toBe('jsee');
+      expect(req.query.projectId).toBe('prj_from_context');
+      res.json({
+        deployments: [
+          {
+            id: 'dpl_123',
+            name: 'my-deployment',
+            createdAt: Date.now(),
+          },
+        ],
+      });
+    });
+
+    const searchSpy = vi
+      .spyOn(client.input, 'search')
+      .mockResolvedValueOnce('dpl_123');
+
+    const exitCode = await runInferredCommand(
+      commandsWithDeploymentFilter,
+      ['deployments', 'inspect', '--dry-run'],
+      {
+        client,
+        api: client.apiUrl,
+        scope: 'jsee',
+        projectPromptMode: 'legacy-search',
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(searchSpy).toHaveBeenCalledTimes(1);
+    expect(searchSpy.mock.calls[0]?.[0]?.message).toContain(
+      'Select deployment'
+    );
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('dpl_123');
+  });
+
+  it('prompts for project first, then loads deployments for that project', async () => {
+    const commandsWithDeploymentFilter = inferCommands({
+      deployments: {
+        getDeployment: {
+          value: 'inspect',
+          arguments: {
+            'path.id': {
+              required: true,
+              filter: 'deployments',
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      inspectDeploymentEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue(null);
+
+    const deploymentQueryCalls: Array<{
+      projectId: string | undefined;
+      app: string | undefined;
+      teamId: string | undefined;
+    }> = [];
+    client.scenario.get('/v6/deployments', (req, res) => {
+      deploymentQueryCalls.push({
+        projectId:
+          typeof req.query.projectId === 'string'
+            ? req.query.projectId
+            : undefined,
+        app: typeof req.query.app === 'string' ? req.query.app : undefined,
+        teamId:
+          typeof req.query.teamId === 'string' ? req.query.teamId : undefined,
+      });
+
+      if (req.query.app === 'my-project') {
+        return res.json({
+          deployments: [
+            {
+              id: 'dpl_abc123',
+              name: 'my-deployment',
+              createdAt: Date.now(),
+            },
+          ],
+        });
+      }
+
+      return res.json({ deployments: [] });
+    });
+
+    const searchSpy = vi
+      .spyOn(client.input, 'search')
+      .mockResolvedValueOnce('my-project')
+      .mockResolvedValueOnce('dpl_abc123');
+
+    const exitCode = await runInferredCommand(
+      commandsWithDeploymentFilter,
+      ['deployments', 'inspect', '--dry-run'],
+      {
+        client,
+        api: client.apiUrl,
+        scope: 'jsee',
+        projectPromptMode: 'legacy-search',
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(searchSpy).toHaveBeenCalledTimes(2);
+    expect(searchSpy.mock.calls[0]?.[0]?.message).toContain(
+      'Select project (jsee):'
+    );
+    expect(searchSpy.mock.calls[1]?.[0]?.message).toContain(
+      'Select deployment (jsee/my-project):'
+    );
+    const searchConfig = searchSpy.mock.calls[1]?.[0];
+    const idMatches = await searchConfig?.source?.('dpl_abc', {
+      signal: new AbortController().signal,
+    });
+    expect(
+      idMatches?.some((choice: any) => choice.value === 'dpl_abc123')
+    ).toBe(true);
+    const nameMatches = await searchConfig?.source?.('my-deployment', {
+      signal: new AbortController().signal,
+    });
+    expect(nameMatches).toEqual([]);
+    expect(deploymentQueryCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          projectId: undefined,
+          app: 'my-project',
+          teamId: 'jsee',
+        }),
+      ])
+    );
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('dpl_abc123');
+  });
+
+  it('fails early with project inference guidance when project context is missing', async () => {
+    const commandsWithProjectInference = inferCommands({
+      projects: {
+        inspect: {
+          value: 'inspect',
+          arguments: {
+            'path.idOrName': {
+              required: 'project',
+              value: 'name',
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      inspectEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue(null);
+    client.nonInteractive = true;
+
+    const exitCode = await runInferredCommand(
+      commandsWithProjectInference,
+      ['projects', 'inspect'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+
+    expect(exitCode).toBe(1);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Missing required inputs for inferred command.');
+    expect(output).toContain('name');
+    expect(output).toContain(
+      'Could not infer a project from the current context.'
+    );
+    expect(output).toContain('linked project directory');
   });
 });

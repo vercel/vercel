@@ -1,11 +1,68 @@
-import { inferCommands, util } from './infer-commands';
+import {
+  type DisplayFormattedValue,
+  type DisplayScalarToken,
+  inferCommands,
+  util,
+} from './infer-commands';
+
+type DisplayUnknownAccessor = DisplayScalarToken | DisplayFormattedValue;
+
+const statusSwitch = (status: DisplayUnknownAccessor) =>
+  util.switch({
+    READY: [
+      util.color.green(util.icon('circle-fill')),
+      util.capitalize(status),
+    ],
+    BUILDING: [
+      util.color.yellow(util.icon('circle-fill')),
+      util.capitalize(status),
+    ],
+    DEPLOYING: [
+      util.color.yellow(util.icon('circle-fill')),
+      util.capitalize(status),
+    ],
+    ANALYZING: [
+      util.color.yellow(util.icon('circle-fill')),
+      util.capitalize(status),
+    ],
+    ERROR: [util.color.red(util.icon('circle-fill')), util.capitalize(status)],
+    CANCELED: [
+      util.color.gray(util.icon('circle-fill')),
+      util.capitalize(status),
+    ],
+    DEFAULT: util.color.gray(util.capitalize(status)),
+  });
 
 export const inferredOpenApiCommands = inferCommands({
   // Uses real CLI top-level command tokens intentionally to expose
   // mismatches between command UX and current OpenAPI tag coverage.
   deployments: {
+    getDeployment: {
+      value: 'inspect',
+      arguments: {
+        'path.idOrUrl': { required: true, value: 'id', filter: 'deployments' },
+      },
+      options: {
+        'query.teamId': { required: 'team' },
+      },
+      display: {
+        '200': {
+          displayProperty: undefined,
+          fields: item => ({
+            Age: util.color.gray(util.relativeTime(item.createdAt)),
+            Project: util.link(
+              item.url,
+              util.join([util.scope(), item.name], '/')
+            ),
+            Deployment: util.link(item.url),
+            Status: statusSwitch(item.readyState),
+          }),
+        },
+      },
+    },
     getDeployments: {
-      value: 'ls',
+      value: 'list',
+      aliases: ['ls'],
       options: {
         'query.projectId': { required: 'project' },
         'query.teamId': { required: 'team' },
@@ -20,33 +77,7 @@ export const inferredOpenApiCommands = inferCommands({
               util.join([util.scope(), item.name], '/')
             ),
             Deployment: util.link(item.url),
-            Status: util.switch({
-              READY: [
-                util.color.green(util.icon('circle-fill')),
-                util.capitalize(item.readyState),
-              ],
-              BUILDING: [
-                util.color.yellow(util.icon('circle-fill')),
-                util.capitalize(item.readyState),
-              ],
-              DEPLOYING: [
-                util.color.yellow(util.icon('circle-fill')),
-                util.capitalize(item.readyState),
-              ],
-              ANALYZING: [
-                util.color.yellow(util.icon('circle-fill')),
-                util.capitalize(item.readyState),
-              ],
-              ERROR: [
-                util.color.red(util.icon('circle-fill')),
-                util.capitalize(item.readyState),
-              ],
-              CANCELED: [
-                util.color.gray(util.icon('circle-fill')),
-                util.capitalize(item.readyState),
-              ],
-              DEFAULT: util.color.gray(util.capitalize(item.readyState)),
-            }),
+            Status: statusSwitch(item.readyState),
             Environment: util.capitalize(
               util.conditional(
                 item.customEnvironment?.slug,
@@ -66,7 +97,8 @@ export const inferredOpenApiCommands = inferCommands({
     name: 'projects',
     aliases: ['project'],
     getProjects: {
-      value: 'ls',
+      value: 'list',
+      aliases: ['ls'],
       options: {
         'query.search': { required: false, value: 'filter' },
         'query.limit': { required: false },
@@ -84,6 +116,7 @@ export const inferredOpenApiCommands = inferCommands({
                 '-'
               ),
               Updated: util.color.gray(util.relativeTime(item.updatedAt)),
+              Status: statusSwitch(item.targets.production.readyState),
               'Node Version': util.switch({
                 '24.x': util.color.green(item.nodeVersion),
                 '22.x': util.color.green(item.nodeVersion),
@@ -112,7 +145,7 @@ export const inferredOpenApiCommands = inferCommands({
     getProject: {
       value: 'inspect',
       arguments: {
-        'path.idOrName': { required: 'project', value: 'name' },
+        'path.idOrName': { required: 'project' },
       },
       options: {
         'query.teamId': { required: 'team' },
@@ -143,6 +176,22 @@ export const inferredOpenApiCommands = inferCommands({
               ),
               'Install Command': util.conditional(item.installCommand, 'None'),
             },
+            'Latest Production Deployment': {
+              ID: item.targets.production.id,
+              Name: item.targets.production.name,
+              URL: util.link(item.targets.production.url),
+              Alias: util.conditional(item.targets.production.alias[0], 'None'),
+              Status: statusSwitch(item.targets.production.readyState),
+              'Created At': util.color.gray(
+                util.relativeTime(item.targets.production.createdAt)
+              ),
+              'Updated At': util.conditional(
+                util.color.gray(
+                  util.relativeTime(item.targets.production.updatedAt)
+                ),
+                '-'
+              ),
+            },
           }),
         },
       },
@@ -161,7 +210,7 @@ export const inferredOpenApiCommands = inferCommands({
   },
   env: {
     filterProjectEnvs: {
-      value: 'ls',
+      value: 'list',
       arguments: {
         'path.idOrName': { required: 'project', value: 'project' },
       },
@@ -190,7 +239,7 @@ export const inferredOpenApiCommands = inferCommands({
   },
   webhooks: {
     getWebhooks: {
-      value: 'ls',
+      value: 'list',
       options: {
         'query.teamId': { required: 'team' },
         'query.projectId': { required: false, value: 'project' },
@@ -219,7 +268,7 @@ export const inferredOpenApiCommands = inferCommands({
   },
   'deploy-hooks': {
     listDeployHooks: {
-      value: 'ls',
+      value: 'list',
       options: {
         'query.projectId': { required: false, value: 'project' },
         'query.teamId': { required: 'team' },
@@ -302,7 +351,7 @@ export const inferredOpenApiCommands = inferCommands({
   },
   domains: {
     getDomains: {
-      value: 'ls',
+      value: 'list',
       options: {
         limit: { required: false },
         next: { required: false },

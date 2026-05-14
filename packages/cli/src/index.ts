@@ -177,7 +177,12 @@ const main = async () => {
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
   const isTelemetryFlushCommand =
     process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
-  const rawCliArgs = process.argv.slice(2);
+  const originalCliArgs = process.argv.slice(2);
+  const inferEnabled = originalCliArgs.includes('--infer');
+  const rawCliArgs = originalCliArgs.filter(arg => arg !== '--infer');
+  const argvForParsing = inferEnabled
+    ? [process.argv[0], process.argv[1], ...rawCliArgs]
+    : process.argv;
 
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -187,7 +192,7 @@ const main = async () => {
 
   const parseInitialArgs = () =>
     parseArguments(
-      process.argv,
+      argvForParsing,
       {
         '--version': Boolean,
         '-v': '--version',
@@ -263,36 +268,38 @@ const main = async () => {
     return 0;
   }
 
-  const inferredCommandExitCode = await runInferredCommand(
-    inferredOpenApiCommands,
-    rawCliArgs,
-    {
-      execute: false,
-      help:
-        rawCliArgs.includes('-h') ||
-        rawCliArgs.includes('--help') ||
-        Boolean(parsedArgs.flags['--help']),
-      columns: process.stderr.columns ?? 80,
-      cwd:
-        typeof parsedArgs.flags['--cwd'] === 'string'
-          ? parsedArgs.flags['--cwd']
-          : undefined,
-      scope:
-        typeof parsedArgs.flags['--scope'] === 'string'
-          ? parsedArgs.flags['--scope']
-          : undefined,
-      team:
-        typeof parsedArgs.flags['--team'] === 'string'
-          ? parsedArgs.flags['--team']
-          : undefined,
-      api:
-        typeof parsedArgs.flags['--api'] === 'string'
-          ? parsedArgs.flags['--api']
-          : undefined,
+  if (inferEnabled) {
+    const inferredCommandExitCode = await runInferredCommand(
+      inferredOpenApiCommands,
+      rawCliArgs,
+      {
+        execute: false,
+        help:
+          rawCliArgs.includes('-h') ||
+          rawCliArgs.includes('--help') ||
+          Boolean(parsedArgs.flags['--help']),
+        columns: process.stderr.columns ?? 80,
+        cwd:
+          typeof parsedArgs.flags['--cwd'] === 'string'
+            ? parsedArgs.flags['--cwd']
+            : undefined,
+        scope:
+          typeof parsedArgs.flags['--scope'] === 'string'
+            ? parsedArgs.flags['--scope']
+            : undefined,
+        team:
+          typeof parsedArgs.flags['--team'] === 'string'
+            ? parsedArgs.flags['--team']
+            : undefined,
+        api:
+          typeof parsedArgs.flags['--api'] === 'string'
+            ? parsedArgs.flags['--api']
+            : undefined,
+      }
+    );
+    if (inferredCommandExitCode !== null) {
+      return inferredCommandExitCode;
     }
-  );
-  if (inferredCommandExitCode !== null) {
-    return inferredCommandExitCode;
   }
 
   // Handle bare `-h` directly
@@ -567,7 +574,7 @@ const main = async () => {
     authConfig,
     localConfig,
     localConfigPath,
-    argv: process.argv,
+    argv: argvForParsing,
     telemetryEventStore,
     isAgent,
     agentName: detectedAgent?.name,
@@ -885,33 +892,35 @@ const main = async () => {
     }
   }
 
-  const inferredCommandExecutionExitCode = await runInferredCommand(
-    inferredOpenApiCommands,
-    rawCliArgs,
-    {
-      client,
-      help:
-        rawCliArgs.includes('-h') ||
-        rawCliArgs.includes('--help') ||
-        Boolean(parsedArgs.flags['--help']),
-      columns: process.stderr.columns ?? 80,
-      cwd:
-        typeof parsedArgs.flags['--cwd'] === 'string'
-          ? parsedArgs.flags['--cwd']
-          : undefined,
-      scope:
-        typeof parsedArgs.flags['--scope'] === 'string'
-          ? parsedArgs.flags['--scope']
-          : undefined,
-      team:
-        typeof parsedArgs.flags['--team'] === 'string'
-          ? parsedArgs.flags['--team']
-          : undefined,
-      api: client.apiUrl,
+  if (inferEnabled) {
+    const inferredCommandExecutionExitCode = await runInferredCommand(
+      inferredOpenApiCommands,
+      rawCliArgs,
+      {
+        client,
+        help:
+          rawCliArgs.includes('-h') ||
+          rawCliArgs.includes('--help') ||
+          Boolean(parsedArgs.flags['--help']),
+        columns: process.stderr.columns ?? 80,
+        cwd:
+          typeof parsedArgs.flags['--cwd'] === 'string'
+            ? parsedArgs.flags['--cwd']
+            : undefined,
+        scope:
+          typeof parsedArgs.flags['--scope'] === 'string'
+            ? parsedArgs.flags['--scope']
+            : undefined,
+        team:
+          typeof parsedArgs.flags['--team'] === 'string'
+            ? parsedArgs.flags['--team']
+            : undefined,
+        api: client.apiUrl,
+      }
+    );
+    if (inferredCommandExecutionExitCode !== null) {
+      return finishWithExitCode(inferredCommandExecutionExitCode);
     }
-  );
-  if (inferredCommandExecutionExitCode !== null) {
-    return finishWithExitCode(inferredCommandExecutionExitCode);
   }
 
   let exitCode;
