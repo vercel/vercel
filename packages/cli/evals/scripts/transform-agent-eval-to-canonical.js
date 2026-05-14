@@ -131,6 +131,15 @@ function contentTypeFor(relativePath) {
   return 'application/octet-stream';
 }
 
+function shouldUploadFile(relativePath, uploadArtifacts) {
+  if (uploadArtifacts === 'all') return true;
+
+  return (
+    relativePath.endsWith('/summary.json') ||
+    /\/run-\d+\/result\.json$/.test(relativePath)
+  );
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const required = [
@@ -182,6 +191,27 @@ async function main() {
   }
 
   const runMetadata = await collectRunMetadata(allFiles);
+  const uploadArtifacts = args['upload-artifacts'] ?? 'results';
+
+  if (!['results', 'all'].includes(uploadArtifacts)) {
+    throw new Error(
+      `Invalid --upload-artifacts "${uploadArtifacts}". Expected one of: results, all.`
+    );
+  }
+
+  const filesToUpload = allFiles.filter(fullPath => {
+    const relativePath = path
+      .relative(resultsDir, fullPath)
+      .replace(/\\/g, '/');
+    return shouldUploadFile(relativePath, uploadArtifacts);
+  });
+
+  if (filesToUpload.length === 0) {
+    console.log(
+      'No result files found in results directory; nothing to upload.'
+    );
+    return;
+  }
 
   const payload = {
     format: 'agent-eval-folder',
@@ -205,7 +235,7 @@ async function main() {
 
   const formData = new FormData();
   formData.append('payload', JSON.stringify(payload));
-  for (const fullPath of allFiles) {
+  for (const fullPath of filesToUpload) {
     const relativePath = path
       .relative(resultsDir, fullPath)
       .replace(/\\/g, '/');
@@ -237,7 +267,7 @@ async function main() {
   }
 
   console.log(
-    `Uploaded batch ${args['batch-id']} with ${allFiles.length} file(s): ${responseBody}`
+    `Uploaded batch ${args['batch-id']} with ${filesToUpload.length}/${allFiles.length} file(s): ${responseBody}`
   );
 }
 
