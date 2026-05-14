@@ -69,15 +69,16 @@ jobs:
             custom_node_path: .node-runtime/node-v22.22.2-linux-x64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: x64
-          - runs-on: windows-latest-8-core-oss
-            target: node22.22.2-win-x64
-            asset: vercel-windows-x64
-            ext: '.exe'
-            sign: false
-            smoke: true
-            custom_node_path: .node-runtime/node-v22.22.2-win-x64-small-icu/node.exe
-            custom_node_platform: win
-            custom_node_arch: x64
+          # Temporarily disabled while debugging native npm package publishing.
+          # - runs-on: windows-latest-8-core-oss
+          #   target: node22.22.2-win-x64
+          #   asset: vercel-windows-x64
+          #   ext: '.exe'
+          #   sign: false
+          #   smoke: true
+          #   custom_node_path: .node-runtime/node-v22.22.2-win-x64-small-icu/node.exe
+          #   custom_node_platform: win
+          #   custom_node_arch: x64
     runs-on: ${{ matrix['runs-on'] }}
     steps:
       - name: Checkout
@@ -314,9 +315,6 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
-
-      - name: Install npm@11
-        run: npm i -g npm@11
 
       - name: Download binary artifacts
         uses: actions/download-artifact@v4
