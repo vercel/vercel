@@ -1,5 +1,6 @@
 import { detectServices } from '../src';
 import { detectRailwayServices } from '../src/services/detect-railway';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('detectRailwayServices', () => {
@@ -93,12 +94,12 @@ describe('detectRailwayServices', () => {
       expect(Object.keys(result.services!)).toHaveLength(2);
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        entrypoint: 'web',
+        root: 'web',
         routePrefix: '/',
       });
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'api',
+        root: 'api',
         routePrefix: '/_/api',
         buildCommand: "echo 'test'",
       });
@@ -130,7 +131,7 @@ describe('detectRailwayServices', () => {
 
       // "web" is preferred to be at /
       expect(result.services!.web).toMatchObject({
-        entrypoint: 'web',
+        root: 'web',
         routePrefix: '/',
       });
       expect(result.services!.dashboard.routePrefix).toBe('/_/dashboard');
@@ -652,5 +653,69 @@ describe('detectServices with Railway detection', () => {
 
     expect(result.source).toBe('configured');
     expect(result.inferred).toBeNull();
+  });
+
+  describe('with detectEntrypoint callback', () => {
+    it('emits root + entrypoint for runtime services', async () => {
+      const fs = new VirtualFilesystem({
+        'railway.json': JSON.stringify({
+          build: { buildCommand: 'npm run build' },
+        }),
+        'package.json': JSON.stringify({
+          dependencies: { next: '14.0.0' },
+        }),
+        'api/railway.json': JSON.stringify({}),
+        'api/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+        'api/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+      });
+
+      const detectEntrypoint: DetectEntrypointFn = async ({
+        workPath,
+        framework,
+      }) => {
+        expect(workPath).toBe('api');
+        expect(framework).toBe('fastapi');
+        return { kind: 'py-module:attr', entrypoint: 'main:app' };
+      };
+
+      const result = await detectRailwayServices({ fs, detectEntrypoint });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).not.toBeNull();
+      // root service stays as today (no dirPath, so no root/entrypoint).
+      expect(result.services!.web).toMatchObject({ framework: 'nextjs' });
+      expect(result.services!.web.entrypoint).toBeUndefined();
+      // Subdirectory service gets root + entrypoint instead of directory-as-entrypoint.
+      expect(result.services!.api).toEqual({
+        framework: 'fastapi',
+        root: 'api',
+        entrypoint: 'main:app',
+        routePrefix: '/_/api',
+      });
+    });
+
+    it('omits entrypoint for frontend frameworks even with the callback', async () => {
+      const fs = new VirtualFilesystem({
+        'web/railway.json': JSON.stringify({}),
+        'web/package.json': JSON.stringify({
+          dependencies: { next: '14.0.0' },
+        }),
+      });
+
+      let invoked = false;
+      const detectEntrypoint: DetectEntrypointFn = async () => {
+        invoked = true;
+        return { kind: 'file', entrypoint: 'should-not-be-emitted.ts' };
+      };
+
+      const result = await detectRailwayServices({ fs, detectEntrypoint });
+
+      expect(invoked).toBe(false);
+      expect(result.services!.web).toMatchObject({
+        framework: 'nextjs',
+        root: 'web',
+      });
+      expect(result.services!.web.entrypoint).toBeUndefined();
+    });
   });
 });

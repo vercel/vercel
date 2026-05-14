@@ -74,6 +74,8 @@ import {
   type PythonEntrypoint,
 } from './entrypoint';
 
+export { detectEntrypoint } from './entrypoint';
+
 export const version = -1;
 
 interface FrameworkHookContext {
