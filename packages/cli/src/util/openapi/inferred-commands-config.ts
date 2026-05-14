@@ -1,8 +1,67 @@
-import { inferCommands } from './infer-commands';
+import { inferCommands, util } from './infer-commands';
 
 export const inferredOpenApiCommands = inferCommands({
   // Uses real CLI top-level command tokens intentionally to expose
   // mismatches between command UX and current OpenAPI tag coverage.
+  deployments: {
+    getDeployments: {
+      value: 'ls',
+      options: {
+        'query.projectId': { required: 'project' },
+        'query.teamId': { required: 'team' },
+      },
+      display: {
+        '200': {
+          displayProperty: 'deployments',
+          fields: item => ({
+            Age: util.color.gray(util.relativeTime(item.createdAt)),
+            Project: util.link(
+              item.url,
+              util.join([util.scope(), item.name], '/')
+            ),
+            Deployment: util.link(item.url),
+            Status: util.switch({
+              READY: [
+                util.color.green(util.icon('circle-fill')),
+                util.capitalize(item.readyState),
+              ],
+              BUILDING: [
+                util.color.yellow(util.icon('circle-fill')),
+                util.capitalize(item.readyState),
+              ],
+              DEPLOYING: [
+                util.color.yellow(util.icon('circle-fill')),
+                util.capitalize(item.readyState),
+              ],
+              ANALYZING: [
+                util.color.yellow(util.icon('circle-fill')),
+                util.capitalize(item.readyState),
+              ],
+              ERROR: [
+                util.color.red(util.icon('circle-fill')),
+                util.capitalize(item.readyState),
+              ],
+              CANCELED: [
+                util.color.gray(util.icon('circle-fill')),
+                util.capitalize(item.readyState),
+              ],
+              DEFAULT: util.color.gray(util.capitalize(item.readyState)),
+            }),
+            Environment: util.capitalize(
+              util.conditional(
+                item.customEnvironment?.slug,
+                item.target,
+                'preview'
+              )
+            ),
+            Duration: util.color.gray(
+              util.duration(item.ready, item.buildingAt)
+            ),
+          }),
+        },
+      },
+    },
+  },
   projects: {
     name: 'projects',
     aliases: ['project'],
@@ -14,6 +73,41 @@ export const inferredOpenApiCommands = inferCommands({
         'query.from': { required: false, value: 'next' },
         'query.teamId': { required: 'team' },
       },
+      display: {
+        '200': {
+          displayProperty: 'projects',
+          fields(item) {
+            return {
+              'Project Name': item.name,
+              'Latest Production URL': util.conditional(
+                util.link(item.targets.production.alias[0]),
+                '-'
+              ),
+              Updated: util.color.gray(util.relativeTime(item.updatedAt)),
+              'Node Version': util.switch({
+                '24.x': util.color.green(item.nodeVersion),
+                '22.x': util.color.green(item.nodeVersion),
+                '20.x': util.color.yellow(item.nodeVersion),
+                DEFAULT: util.color.red(item.nodeVersion),
+              }),
+            };
+          },
+          // displayProperty: 'projects',
+          // fields: project => ({
+          //   id: project.id,
+          //   productionUrl: project.targets.production.alias[0],
+          // }),
+        },
+        '400': {
+          errorFields: ['error.code', 'error.message'],
+        },
+        '401': {
+          errorFields: ['error.code', 'error.message'],
+        },
+        '403': {
+          errorFields: ['error.code', 'error.message'],
+        },
+      },
     },
     getProject: {
       value: 'inspect',
@@ -22,6 +116,27 @@ export const inferredOpenApiCommands = inferCommands({
       },
       options: {
         'query.teamId': { required: 'team' },
+      },
+      display: {
+        '200': {
+          displayProperty: undefined,
+          fields: item => ({
+            ID: item.id,
+            Name: item.name,
+            'Created At': util.color.gray(util.relativeTime(item.createdAt)),
+            'Root Directory': util.conditional(item.rootDirectory, '.'),
+            'Node.js Version': util.switch({
+              '24.x': util.color.green(item.nodeVersion),
+              '22.x': util.color.green(item.nodeVersion),
+              '20.x': util.color.yellow(item.nodeVersion),
+              DEFAULT: util.color.red(item.nodeVersion),
+            }),
+            'Framework Preset': util.capitalize(item.framework),
+            'Build Command': util.conditional(item.buildCommand, 'None'),
+            'Output Directory': util.conditional(item.outputDirectory, 'None'),
+            'Install Command': util.conditional(item.installCommand, 'None'),
+          }),
+        },
       },
     },
     createProject: {

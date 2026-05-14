@@ -7,30 +7,459 @@ import {
 } from '../../commands/help';
 import { formatOutput } from '../../commands/api/request-builder';
 import chalk from 'chalk';
+import ms from 'ms';
+import title from 'title';
 import { homedir } from 'os';
 import { isAbsolute, resolve as resolvePath } from 'path';
+import table from '../output/table';
 import type Client from '../client';
+import getTeamById from '../teams/get-team-by-id';
 import type {
   OpenApiCommandTag,
+  OpenApiDisplayPropertiesByTagOperationStatus,
+  OpenApiDisplayResponseShapeByTagOperationStatusProperty,
   OpenApiInputNamesByTagOperation,
   OpenApiOperationIdsByTag,
+  OpenApiResponseStatusCodesByTagOperation,
 } from './generated-command-dsl-types';
 import { OpenApiCache } from './openapi-cache';
 import { resolveEndpointByTagAndOperationId } from './resolve-by-tag-operation';
 import type { BodyField, Parameter } from './types';
 import { getLinkFromDir, getVercelDirectory } from '../projects/link';
 import getUser from '../get-user';
+import { APIError } from '../errors-ts';
 
 type OptionalRecord<K extends PropertyKey, V> = {
   [P in K]?: V;
 };
+
+const DISPLAY_PATH_SYMBOL = Symbol('inferredDisplayPath');
+const DISPLAY_SCALAR_SYMBOL = Symbol('inferredDisplayScalar');
+
+type DisplayScalarKind = 'string' | 'number' | 'boolean';
+
+type DisplayBaseToken<Kind extends DisplayScalarKind> = {
+  readonly [DISPLAY_PATH_SYMBOL]: readonly string[];
+  readonly [DISPLAY_SCALAR_SYMBOL]: Kind;
+};
+
+export type DisplayStringToken = DisplayBaseToken<'string'>;
+export type DisplayNumberToken = DisplayBaseToken<'number'>;
+export type DisplayBooleanToken = DisplayBaseToken<'boolean'>;
+
+export type DisplayScalarToken =
+  | DisplayStringToken
+  | DisplayNumberToken
+  | DisplayBooleanToken;
+
+export type DisplayColorName =
+  | 'gray'
+  | 'red'
+  | 'green'
+  | 'yellow'
+  | 'blue'
+  | 'magenta'
+  | 'cyan'
+  | 'white';
+
+export interface DisplayRelativeTimeValue {
+  value: DisplayNumberInput;
+  format: 'relativeTime';
+}
+
+export interface DisplayDurationValue {
+  end: DisplayNumberInput;
+  start: DisplayNumberInput;
+  format: 'duration';
+}
+
+export interface DisplayCapitalizeValue {
+  value: DisplayNestableValue;
+  format: 'capitalize';
+}
+
+export interface DisplayScopeValue {
+  format: 'scope';
+}
+
+export interface DisplayJoinValue {
+  values: readonly DisplayNestableValue[];
+  separator: string;
+  format: 'join';
+}
+
+export interface DisplaySwitchValue {
+  value: DisplayScalarToken;
+  format: 'switch';
+  cases: Record<string, DisplaySwitchCaseValue>;
+  defaultCase: DisplaySwitchCaseValue;
+}
+
+export interface DisplayLinkValue {
+  url: DisplayNestableValue;
+  format: 'link';
+  text?: DisplayNestableValue;
+}
+
+export interface DisplayConditionalValue {
+  format: 'conditional';
+  values: readonly DisplayNestableValue[];
+}
+
+export interface DisplayColorValue {
+  value: DisplayNestableValue;
+  format: 'color';
+  color: DisplayColorName;
+}
+
+export type DisplayFormattedValue =
+  | DisplayRelativeTimeValue
+  | DisplayDurationValue
+  | DisplayCapitalizeValue
+  | DisplayScopeValue
+  | DisplayJoinValue
+  | DisplayColorValue
+  | DisplaySwitchValue
+  | DisplayLinkValue
+  | DisplayConditionalValue;
+
+type DisplayLiteralValue = string | number | boolean;
+export type DisplayIconName =
+  | 'circle-fill'
+  | 'warning'
+  | 'info'
+  | 'error'
+  | 'check';
+
+type DisplayInlineValue =
+  | DisplayScalarToken
+  | DisplayFormattedValue
+  | DisplayLiteralValue;
+type DisplayInlineValueList = readonly DisplayInlineValue[];
+type DisplayNestableValue =
+  | DisplayScalarToken
+  | DisplayFormattedValue
+  | DisplayLiteralValue
+  | null
+  | undefined;
+type DisplayNumberInput = DisplayNestableValue;
+
+type DisplaySwitchCaseValue = DisplayInlineValue | DisplayInlineValueList;
+
+type DisplaySwitchCasesInput = {
+  DEFAULT: DisplaySwitchCaseValue;
+} & Record<string, DisplaySwitchCaseValue>;
+
+type DisplayColorInput = DisplayNestableValue;
+
+type DisplayFieldValue = DisplayInlineValue | DisplayInlineValueList;
+
+type DisplayUnknownAccessor = DisplayScalarToken & {
+  readonly [key: string]: DisplayUnknownAccessor;
+  readonly [index: number]: DisplayUnknownAccessor;
+};
+
+type DisplayTypeAccessor<T> = unknown extends T
+  ? DisplayUnknownAccessor
+  : T extends string
+    ? DisplayStringToken
+    : T extends number
+      ? DisplayNumberToken
+      : T extends boolean
+        ? DisplayBooleanToken
+        : T extends readonly (infer Item)[]
+          ? readonly DisplayTypeAccessor<Item>[]
+          : T extends object
+            ? {
+                readonly [Key in keyof T]-?: DisplayTypeAccessor<T[Key]>;
+              }
+            : T extends null
+              ? null
+              : T extends undefined
+                ? undefined
+                : DisplayUnknownAccessor;
+
+type DisplayPathTemplate = {
+  type: 'path';
+  path: readonly string[];
+};
+
+type DisplayRelativeTimeTemplate = {
+  type: 'format';
+  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+  format: 'relativeTime';
+};
+
+type DisplayDurationTemplate = {
+  type: 'format';
+  end: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+  start: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+  format: 'duration';
+};
+
+type DisplayCapitalizeTemplate = {
+  type: 'format';
+  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+  format: 'capitalize';
+};
+
+type DisplayScopeTemplate = {
+  type: 'format';
+  format: 'scope';
+};
+
+type DisplayJoinTemplate = {
+  type: 'format';
+  values: readonly (
+    | DisplayPathTemplate
+    | DisplayFormatTemplate
+    | DisplayLiteralTemplate
+    | DisplayTemplateValue[]
+  )[];
+  separator: string;
+  format: 'join';
+};
+
+type DisplayColorTemplate = {
+  type: 'format';
+  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+  format: 'color';
+  color: DisplayColorName;
+};
+
+type DisplaySwitchTemplate = {
+  type: 'format';
+  value: DisplayPathTemplate;
+  format: 'switch';
+  cases: Record<string, DisplayTemplateValue>;
+  defaultCase: DisplayTemplateValue;
+};
+
+type DisplayLinkTemplate = {
+  type: 'format';
+  url: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+  format: 'link';
+  text?: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+};
+
+type DisplayConditionalTemplate = {
+  type: 'format';
+  format: 'conditional';
+  values: readonly (
+    | DisplayPathTemplate
+    | DisplayFormatTemplate
+    | DisplayLiteralTemplate
+    | DisplayTemplateValue[]
+  )[];
+};
+
+type DisplayLiteralTemplate = {
+  type: 'literal';
+  value: DisplayLiteralValue | null;
+};
+
+type DisplayFormatTemplate =
+  | DisplayRelativeTimeTemplate
+  | DisplayDurationTemplate
+  | DisplayCapitalizeTemplate
+  | DisplayScopeTemplate
+  | DisplayJoinTemplate
+  | DisplayColorTemplate
+  | DisplaySwitchTemplate
+  | DisplayLinkTemplate
+  | DisplayConditionalTemplate;
+
+type DisplayTemplateValue =
+  | DisplayPathTemplate
+  | DisplayLiteralTemplate
+  | DisplayFormatTemplate
+  | { [key: string]: DisplayTemplateValue }
+  | DisplayTemplateValue[];
+
+const displayTemplateCache = new WeakMap<
+  InferredCommandSuccessResponseDisplayConfig['fields'],
+  DisplayTemplateValue | null
+>();
 
 export interface InferredCommandConfig {
   value?: string;
   arguments?: Record<string, InferredCommandParamConfig | undefined>;
   options?: Record<string, InferredCommandParamConfig | undefined>;
   examples?: InferredCommandExample[];
+  display?: InferredCommandResponseDisplayByStatus;
 }
+
+type HttpStatusCode = `${1 | 2 | 3 | 4 | 5}${number}${number}`;
+
+export interface InferredCommandSuccessResponseDisplayConfig<
+  DisplayProperty extends string | undefined = string | undefined,
+  DisplayAccessor = DisplayUnknownAccessor,
+> {
+  displayProperty?: DisplayProperty;
+  fields: InferredCommandDisplayFieldsSelector<DisplayAccessor>;
+  table?: boolean;
+}
+
+type InferredCommandDisplayFieldsSelector<DisplayAccessor> = {
+  bivarianceHack(item: DisplayAccessor): Record<string, DisplayFieldValue>;
+}['bivarianceHack'];
+
+export interface InferredCommandErrorResponseDisplayConfig {
+  errorFields: string[];
+}
+
+export type InferredCommandResponseDisplayByStatus = Partial<{
+  [StatusCode in HttpStatusCode]: StatusCode extends `2${string}`
+    ? InferredCommandSuccessResponseDisplayConfig
+    : InferredCommandErrorResponseDisplayConfig;
+}>;
+
+type InferredStatusCodeForOperation<
+  Tag extends OpenApiCommandTag,
+  OperationId extends OpenApiOperationIdsByTag[Tag],
+> = Tag extends keyof OpenApiResponseStatusCodesByTagOperation
+  ? OperationId extends keyof OpenApiResponseStatusCodesByTagOperation[Tag]
+    ? Extract<
+        OpenApiResponseStatusCodesByTagOperation[Tag][OperationId],
+        string
+      >
+    : never
+  : never;
+
+type InferredDisplayPropertyForOperationStatus<
+  Tag extends OpenApiCommandTag,
+  OperationId extends OpenApiOperationIdsByTag[Tag],
+  StatusCode extends string,
+> = Tag extends keyof OpenApiDisplayPropertiesByTagOperationStatus
+  ? OperationId extends keyof OpenApiDisplayPropertiesByTagOperationStatus[Tag]
+    ? StatusCode extends keyof OpenApiDisplayPropertiesByTagOperationStatus[Tag][OperationId]
+      ? Extract<
+          OpenApiDisplayPropertiesByTagOperationStatus[Tag][OperationId][StatusCode],
+          string
+        >
+      : never
+    : never
+  : never;
+
+type InferredDisplayResponseShapeForOperationStatusProperty<
+  Tag extends OpenApiCommandTag,
+  OperationId extends OpenApiOperationIdsByTag[Tag],
+  StatusCode extends string,
+  Property extends string,
+> = Tag extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty
+  ? OperationId extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag]
+    ? StatusCode extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId]
+      ? Property extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId][StatusCode]
+        ? OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId][StatusCode][Property]
+        : never
+      : never
+    : never
+  : never;
+
+type InferredDisplayResponsePropertyMapForOperationStatus<
+  Tag extends OpenApiCommandTag,
+  OperationId extends OpenApiOperationIdsByTag[Tag],
+  StatusCode extends string,
+> = Tag extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty
+  ? OperationId extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag]
+    ? StatusCode extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId]
+      ? OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId][StatusCode]
+      : never
+    : never
+  : never;
+
+type InferredDisplayResponseShapeForOperationStatus<
+  Tag extends OpenApiCommandTag,
+  OperationId extends OpenApiOperationIdsByTag[Tag],
+  StatusCode extends string,
+> =
+  InferredDisplayResponsePropertyMapForOperationStatus<
+    Tag,
+    OperationId,
+    StatusCode
+  > extends infer PropertyMap
+    ? [PropertyMap] extends [never]
+      ? unknown
+      : PropertyMap
+    : unknown;
+
+type DisplayFieldInputForShape<Shape> = Shape extends readonly (infer Item)[]
+  ? Item
+  : Shape;
+
+type DisplayRootAccessorForShape<Shape> =
+  DisplayFieldInputForShape<Shape> extends infer FieldInput
+    ? FieldInput extends object
+      ? {
+          readonly [Key in keyof FieldInput]-?: DisplayUnknownAccessor;
+        }
+      : DisplayTypeAccessor<FieldInput>
+    : DisplayUnknownAccessor;
+
+type KnownInferredSuccessResponseDisplayConfig<
+  Tag extends OpenApiCommandTag,
+  OperationId extends OpenApiOperationIdsByTag[Tag],
+  StatusCode extends string,
+> =
+  | {
+      displayProperty?: never;
+      fields: InferredCommandDisplayFieldsSelector<
+        DisplayRootAccessorForShape<
+          InferredDisplayResponseShapeForOperationStatus<
+            Tag,
+            OperationId,
+            StatusCode
+          >
+        >
+      >;
+      table?: boolean;
+    }
+  | (InferredDisplayPropertyForOperationStatus<
+      Tag,
+      OperationId,
+      StatusCode
+    > extends infer Property extends string
+      ? {
+          [CurrentProperty in Property]: Omit<
+            InferredCommandSuccessResponseDisplayConfig<
+              CurrentProperty,
+              DisplayTypeAccessor<
+                DisplayFieldInputForShape<
+                  InferredDisplayResponseShapeForOperationStatusProperty<
+                    Tag,
+                    OperationId,
+                    StatusCode,
+                    CurrentProperty
+                  >
+                >
+              >
+            >,
+            'displayProperty'
+          > & {
+            displayProperty: CurrentProperty;
+          };
+        }[Property]
+      : never);
+
+type KnownInferredCommandResponseDisplayByStatus<
+  Tag extends OpenApiCommandTag,
+  OperationId extends OpenApiOperationIdsByTag[Tag],
+> = Partial<
+  InferredStatusCodeForOperation<Tag, OperationId> extends never
+    ? {}
+    : {
+        [StatusCode in InferredStatusCodeForOperation<
+          Tag,
+          OperationId
+        >]: StatusCode extends `2${string}`
+          ? KnownInferredSuccessResponseDisplayConfig<
+              Tag,
+              OperationId,
+              StatusCode
+            >
+          : InferredCommandErrorResponseDisplayConfig;
+      }
+>;
 
 export interface InferredTagConfig {
   name?: string;
@@ -59,7 +488,8 @@ type InferredInputNamesForOperation<
 type KnownInferredCommandConfig<
   Tag extends OpenApiCommandTag,
   OperationId extends OpenApiOperationIdsByTag[Tag],
-> = Omit<InferredCommandConfig, 'arguments' | 'options'> & {
+> = Omit<InferredCommandConfig, 'arguments' | 'options' | 'display'> & {
+  display?: KnownInferredCommandResponseDisplayByStatus<Tag, OperationId>;
   arguments?: OptionalRecord<
     InferredInputNamesForOperation<Tag, OperationId>,
     InferredCommandParamConfig
@@ -81,7 +511,7 @@ type KnownOperationsByTag<Tag extends OpenApiCommandTag> = {
 
 type KnownTagConfig<Tag extends OpenApiCommandTag> = InferredTagConfig &
   KnownOperationsByTag<Tag> &
-  Record<string, InferredCommandConfig | undefined>;
+  Record<string, unknown>;
 
 type KnownInferredCommands = {
   [Tag in OpenApiCommandTag]?: KnownTagConfig<Tag>;
@@ -95,6 +525,235 @@ export function inferCommands<const T extends InferredCommands>(
 ): T {
   return commands;
 }
+
+function getDisplaySwitchSelectorToken(
+  value: unknown
+): DisplayScalarToken | null {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const selector = getDisplaySwitchSelectorToken(entry);
+      if (selector) {
+        return selector;
+      }
+    }
+    return null;
+  }
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return null;
+  }
+
+  if (isDisplayScalarToken(value)) {
+    return value;
+  }
+
+  if (!isDisplayFormattedValue(value)) {
+    return null;
+  }
+
+  if (value.format === 'relativeTime') {
+    return getDisplaySwitchSelectorToken(value.value);
+  }
+
+  if (value.format === 'duration') {
+    return (
+      getDisplaySwitchSelectorToken(value.end) ??
+      getDisplaySwitchSelectorToken(value.start)
+    );
+  }
+
+  if (value.format === 'capitalize') {
+    return getDisplaySwitchSelectorToken(value.value);
+  }
+
+  if (value.format === 'scope') {
+    return null;
+  }
+
+  if (value.format === 'join') {
+    for (const entry of value.values) {
+      const selector = getDisplaySwitchSelectorToken(entry);
+      if (selector) {
+        return selector;
+      }
+    }
+    return null;
+  }
+
+  if (value.format === 'color') {
+    return getDisplaySwitchSelectorToken(value.value);
+  }
+
+  if (value.format === 'link') {
+    if (value.text) {
+      return getDisplaySwitchSelectorToken(value.text);
+    }
+    return getDisplaySwitchSelectorToken(value.url);
+  }
+
+  if (value.format === 'conditional') {
+    for (const entry of value.values) {
+      const selector = getDisplaySwitchSelectorToken(entry);
+      if (selector) {
+        return selector;
+      }
+    }
+    return null;
+  }
+
+  return getDisplaySwitchSelectorToken(value.value);
+}
+
+function resolveDisplayIcon(name: DisplayIconName): string {
+  switch (name) {
+    case 'circle-fill':
+      return '●';
+    case 'warning':
+      return '⚠️';
+    case 'info':
+      return 'ℹ️';
+    case 'error':
+      return '🚫';
+    case 'check':
+      return '✓';
+    default:
+      return '●';
+  }
+}
+
+function areDisplayScalarTokensEqual(
+  a: DisplayScalarToken,
+  b: DisplayScalarToken
+): boolean {
+  if (a[DISPLAY_SCALAR_SYMBOL] !== b[DISPLAY_SCALAR_SYMBOL]) {
+    return false;
+  }
+
+  const aPath = a[DISPLAY_PATH_SYMBOL];
+  const bPath = b[DISPLAY_PATH_SYMBOL];
+  if (aPath.length !== bPath.length) {
+    return false;
+  }
+
+  return aPath.every((segment, index) => segment === bPath[index]);
+}
+
+function resolveSwitchSelectorToken(
+  cases: DisplaySwitchCasesInput
+): DisplayScalarToken {
+  const defaultSelector = getDisplaySwitchSelectorToken(cases.DEFAULT);
+  let selectorToken = defaultSelector;
+
+  for (const [caseName, caseValue] of Object.entries(cases)) {
+    if (caseName === 'DEFAULT') {
+      continue;
+    }
+
+    const caseSelector = getDisplaySwitchSelectorToken(caseValue);
+    if (!caseSelector) {
+      continue;
+    }
+
+    if (!selectorToken) {
+      selectorToken = caseSelector;
+      continue;
+    }
+
+    if (!areDisplayScalarTokensEqual(selectorToken, caseSelector)) {
+      throw new Error(
+        'util.switch cases must reference the same display token path'
+      );
+    }
+  }
+
+  if (!selectorToken) {
+    throw new Error(
+      'util.switch requires values derived from a display token and a DEFAULT branch'
+    );
+  }
+
+  return selectorToken;
+}
+
+export const util = {
+  relativeTime(value: DisplayNumberInput): DisplayRelativeTimeValue {
+    return { value, format: 'relativeTime' };
+  },
+  capitalize(value: DisplayNestableValue): DisplayCapitalizeValue {
+    return { value, format: 'capitalize' };
+  },
+  duration(
+    end: DisplayNumberInput,
+    start: DisplayNumberInput
+  ): DisplayDurationValue {
+    return { end, start, format: 'duration' };
+  },
+  scope(): DisplayScopeValue {
+    return { format: 'scope' };
+  },
+  join(
+    values: readonly DisplayNestableValue[],
+    separator = ' '
+  ): DisplayJoinValue {
+    return { values, separator, format: 'join' };
+  },
+  icon(name: DisplayIconName): string {
+    return resolveDisplayIcon(name);
+  },
+  link(
+    url: DisplayNestableValue,
+    text?: DisplayNestableValue
+  ): DisplayLinkValue {
+    if (text === undefined) {
+      return { url, format: 'link' };
+    }
+    return { url, format: 'link', text };
+  },
+  conditional(
+    ...values: [DisplayNestableValue, ...DisplayNestableValue[]]
+  ): DisplayConditionalValue {
+    return { format: 'conditional', values };
+  },
+  switch(cases: DisplaySwitchCasesInput): DisplaySwitchValue {
+    const { DEFAULT: defaultCase, ...configuredCases } = cases;
+    return {
+      value: resolveSwitchSelectorToken(cases),
+      format: 'switch',
+      cases: configuredCases,
+      defaultCase,
+    };
+  },
+  color: {
+    gray(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'gray' };
+    },
+    red(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'red' };
+    },
+    green(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'green' };
+    },
+    yellow(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'yellow' };
+    },
+    blue(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'blue' };
+    },
+    magenta(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'magenta' };
+    },
+    cyan(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'cyan' };
+    },
+    white(value: DisplayColorInput): DisplayColorValue {
+      return { value, format: 'color', color: 'white' };
+    },
+  },
+};
 
 type ResolvedInferredCommand = {
   tag: string;
@@ -169,6 +828,10 @@ type InferredCommandContext = {
     value: string;
     source: '--scope' | '--team' | 'link' | 'current-team' | 'default-team';
   } | null;
+};
+
+type DisplayRenderContext = {
+  scope: string | null;
 };
 
 type RequestPreview = {
@@ -431,6 +1094,29 @@ async function resolveInferredContext(
     }
   }
 
+  const resolvedTeam: InferredCommandContext['team'] = scopeValue
+    ? {
+        value: scopeValue,
+        source: (scopeOverride ? '--scope' : '--team') as '--scope' | '--team',
+      }
+    : linkedProject?.orgId
+      ? {
+          value: linkedProject.orgId,
+          source: 'link' as const,
+        }
+      : teamFromClient;
+
+  if (resolvedTeam?.value && client && resolvedTeam.value.startsWith('team_')) {
+    try {
+      const team = await getTeamById(client, resolvedTeam.value);
+      if (team?.slug) {
+        resolvedTeam.value = team.slug;
+      }
+    } catch {
+      // If slug lookup fails, keep the original team identifier.
+    }
+  }
+
   return {
     cwd,
     project: linkedProject?.projectId
@@ -438,17 +1124,7 @@ async function resolveInferredContext(
           id: linkedProject.projectId,
         }
       : null,
-    team: scopeValue
-      ? {
-          value: scopeValue,
-          source: scopeOverride ? '--scope' : '--team',
-        }
-      : linkedProject?.orgId
-        ? {
-            value: linkedProject.orgId,
-            source: 'link',
-          }
-        : teamFromClient,
+    team: resolvedTeam,
   };
 }
 
@@ -563,10 +1239,992 @@ function isEnabledFlag(value: string | boolean | undefined): boolean {
   return value === true || value === '' || value === 'true';
 }
 
+function readValueAtPath(
+  input: unknown,
+  path: string | readonly string[]
+): unknown {
+  const segments = typeof path === 'string' ? path.split('.') : path;
+  let current: unknown = input;
+
+  for (const segment of segments) {
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      if (!Number.isInteger(index)) {
+        return undefined;
+      }
+      current = current[index];
+      continue;
+    }
+
+    if (typeof current !== 'object' || current === null) {
+      return undefined;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current;
+}
+
+function isDisplayPathTemplate(value: unknown): value is DisplayPathTemplate {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    (value as { type?: unknown }).type === 'path' &&
+    Array.isArray((value as { path?: unknown }).path)
+  );
+}
+
+function isDisplayLiteralTemplate(
+  value: unknown
+): value is DisplayLiteralTemplate {
+  if (
+    !Boolean(value) ||
+    typeof value !== 'object' ||
+    (value as { type?: unknown }).type !== 'literal'
+  ) {
+    return false;
+  }
+
+  const literalValue = (value as { value?: unknown }).value;
+  return (
+    literalValue === null ||
+    typeof literalValue === 'string' ||
+    typeof literalValue === 'number' ||
+    typeof literalValue === 'boolean'
+  );
+}
+
+function isDisplayFormatTemplate(
+  value: unknown
+): value is DisplayFormatTemplate {
+  const format = (value as { format?: unknown }).format;
+  const formatValue = (value as { value?: unknown }).value;
+  const isTemplateLeaf = (
+    input: unknown
+  ): input is
+    | DisplayPathTemplate
+    | DisplayFormatTemplate
+    | DisplayLiteralTemplate =>
+    isDisplayPathTemplate(input) ||
+    isDisplayFormatTemplate(input) ||
+    isDisplayLiteralTemplate(input);
+
+  if (
+    !Boolean(value) ||
+    typeof value !== 'object' ||
+    (value as { type?: unknown }).type !== 'format'
+  ) {
+    return false;
+  }
+
+  if (format === 'relativeTime') {
+    return isTemplateLeaf(formatValue);
+  }
+
+  if (format === 'duration') {
+    const endValue = (value as { end?: unknown }).end;
+    const startValue = (value as { start?: unknown }).start;
+    const isDurationValue = (input: unknown) => isTemplateLeaf(input);
+
+    return isDurationValue(endValue) && isDurationValue(startValue);
+  }
+
+  if (format === 'color') {
+    return (
+      (value as { color?: unknown }).color !== undefined &&
+      [
+        'gray',
+        'red',
+        'green',
+        'yellow',
+        'blue',
+        'magenta',
+        'cyan',
+        'white',
+      ].includes(String((value as { color?: unknown }).color)) &&
+      (isDisplayPathTemplate(formatValue) ||
+        isDisplayFormatTemplate(formatValue) ||
+        isDisplayLiteralTemplate(formatValue))
+    );
+  }
+
+  if (format === 'switch') {
+    const casesValue = (value as { cases?: unknown }).cases;
+    const defaultCaseValue = (value as { defaultCase?: unknown }).defaultCase;
+
+    if (
+      !isDisplayPathTemplate(formatValue) ||
+      typeof casesValue !== 'object' ||
+      casesValue === null ||
+      Array.isArray(casesValue) ||
+      !(
+        isTemplateLeaf(defaultCaseValue) ||
+        (Array.isArray(defaultCaseValue) &&
+          defaultCaseValue.every(entry => isTemplateLeaf(entry)))
+      )
+    ) {
+      return false;
+    }
+
+    return Object.values(casesValue).every(
+      caseTemplate =>
+        isTemplateLeaf(caseTemplate) ||
+        (Array.isArray(caseTemplate) &&
+          caseTemplate.every(entry => isTemplateLeaf(entry)))
+    );
+  }
+
+  if (format === 'capitalize') {
+    return isTemplateLeaf(formatValue);
+  }
+
+  if (format === 'scope') {
+    return true;
+  }
+
+  if (format === 'join') {
+    const values = (value as { values?: unknown }).values;
+    const separator = (value as { separator?: unknown }).separator;
+    if (!Array.isArray(values) || typeof separator !== 'string') {
+      return false;
+    }
+
+    return values.every(
+      entry =>
+        isTemplateLeaf(entry) ||
+        (Array.isArray(entry) && entry.every(nested => isTemplateLeaf(nested)))
+    );
+  }
+
+  if (format === 'link') {
+    const urlValue = (value as { url?: unknown }).url;
+    const textValue = (value as { text?: unknown }).text;
+
+    if (!isTemplateLeaf(urlValue)) {
+      return false;
+    }
+
+    if (textValue === undefined) {
+      return true;
+    }
+
+    return isTemplateLeaf(textValue);
+  }
+
+  if (format === 'conditional') {
+    const values = (value as { values?: unknown }).values;
+    if (!Array.isArray(values) || values.length === 0) {
+      return false;
+    }
+
+    return values.every(
+      entry =>
+        isTemplateLeaf(entry) ||
+        (Array.isArray(entry) && entry.every(nested => isTemplateLeaf(nested)))
+    );
+  }
+
+  return false;
+}
+
+function isDisplayScalarToken(value: unknown): value is DisplayScalarToken {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const kind = (value as DisplayScalarToken)[DISPLAY_SCALAR_SYMBOL];
+  return (
+    (kind === 'string' || kind === 'number' || kind === 'boolean') &&
+    Array.isArray((value as DisplayScalarToken)[DISPLAY_PATH_SYMBOL])
+  );
+}
+
+function isDisplaySwitchCaseValue(
+  value: unknown
+): value is DisplaySwitchCaseValue {
+  if (Array.isArray(value)) {
+    return value.every(entry => isDisplaySwitchCaseValue(entry));
+  }
+  return (
+    isDisplayScalarToken(value) ||
+    isDisplayFormattedValue(value) ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  );
+}
+
+function isDisplayNestableValue(value: unknown): value is DisplayNestableValue {
+  return (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    isDisplayScalarToken(value) ||
+    isDisplayFormattedValue(value)
+  );
+}
+
+function isDisplayFormattedValue(
+  value: unknown
+): value is DisplayFormattedValue {
+  const format = (value as { format?: unknown }).format;
+
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  if (format === 'relativeTime') {
+    const inner = (value as { value?: unknown }).value;
+    return isDisplayNestableValue(inner);
+  }
+
+  if (format === 'duration') {
+    const end = (value as { end?: unknown }).end;
+    const start = (value as { start?: unknown }).start;
+    const isDurationToken = (input: unknown) => isDisplayNestableValue(input);
+
+    return isDurationToken(end) && isDurationToken(start);
+  }
+
+  if (format === 'capitalize') {
+    const inner = (value as { value?: unknown }).value;
+    return isDisplayNestableValue(inner);
+  }
+
+  if (format === 'scope') {
+    return true;
+  }
+
+  if (format === 'join') {
+    const values = (value as { values?: unknown }).values;
+    const separator = (value as { separator?: unknown }).separator;
+    return (
+      Array.isArray(values) &&
+      typeof separator === 'string' &&
+      values.every(entry => isDisplayNestableValue(entry))
+    );
+  }
+
+  if (
+    format === 'color' &&
+    [
+      'gray',
+      'red',
+      'green',
+      'yellow',
+      'blue',
+      'magenta',
+      'cyan',
+      'white',
+    ].includes(String((value as { color?: unknown }).color))
+  ) {
+    const inner = (value as { value?: unknown }).value;
+    return isDisplayNestableValue(inner);
+  }
+
+  if (format === 'switch') {
+    const selector = (value as { value?: unknown }).value;
+    const cases = (value as { cases?: unknown }).cases;
+    const defaultCase = (value as { defaultCase?: unknown }).defaultCase;
+
+    if (
+      !isDisplayScalarToken(selector) ||
+      typeof cases !== 'object' ||
+      cases === null ||
+      Array.isArray(cases) ||
+      !isDisplaySwitchCaseValue(defaultCase)
+    ) {
+      return false;
+    }
+
+    return Object.values(cases).every(caseValue =>
+      isDisplaySwitchCaseValue(caseValue)
+    );
+  }
+
+  if (format === 'link') {
+    const url = (value as { url?: unknown }).url;
+    const text = (value as { text?: unknown }).text;
+
+    if (!isDisplayNestableValue(url)) {
+      return false;
+    }
+
+    if (text === undefined) {
+      return true;
+    }
+
+    return isDisplayNestableValue(text);
+  }
+
+  if (format === 'conditional') {
+    const values = (value as { values?: unknown }).values;
+    return (
+      Array.isArray(values) &&
+      values.length > 0 &&
+      values.every(entry => isDisplayNestableValue(entry))
+    );
+  }
+
+  return false;
+}
+
+function toDisplayTemplate(value: unknown): DisplayTemplateValue | null {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return {
+      type: 'literal',
+      value: value ?? null,
+    };
+  }
+
+  if (isDisplayScalarToken(value)) {
+    return {
+      type: 'path',
+      path: value[DISPLAY_PATH_SYMBOL],
+    };
+  }
+
+  if (isDisplayFormattedValue(value)) {
+    if (value.format === 'conditional') {
+      const valueTemplates = value.values.map(entry =>
+        toDisplayTemplate(entry)
+      );
+      if (
+        valueTemplates.some(
+          template =>
+            !template ||
+            (!isDisplayPathTemplate(template) &&
+              !isDisplayFormatTemplate(template) &&
+              !isDisplayLiteralTemplate(template) &&
+              !(
+                Array.isArray(template) &&
+                template.every(
+                  nested =>
+                    isDisplayPathTemplate(nested) ||
+                    isDisplayFormatTemplate(nested) ||
+                    isDisplayLiteralTemplate(nested)
+                )
+              ))
+        )
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        format: 'conditional',
+        values: valueTemplates as (
+          | DisplayPathTemplate
+          | DisplayFormatTemplate
+          | DisplayLiteralTemplate
+          | DisplayTemplateValue[]
+        )[],
+      };
+    }
+
+    if (value.format === 'relativeTime') {
+      const innerTemplate = toDisplayTemplate(value.value);
+      if (
+        !innerTemplate ||
+        (!isDisplayPathTemplate(innerTemplate) &&
+          !isDisplayFormatTemplate(innerTemplate) &&
+          !isDisplayLiteralTemplate(innerTemplate))
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        value: innerTemplate,
+        format: 'relativeTime',
+      };
+    }
+
+    if (value.format === 'duration') {
+      const endTemplate = toDisplayTemplate(value.end);
+      const startTemplate = toDisplayTemplate(value.start);
+      const isValidDurationTemplate = (
+        template: DisplayTemplateValue | null
+      ): template is
+        | DisplayPathTemplate
+        | DisplayFormatTemplate
+        | DisplayLiteralTemplate =>
+        Boolean(template) &&
+        (isDisplayPathTemplate(template) ||
+          isDisplayFormatTemplate(template) ||
+          (isDisplayLiteralTemplate(template) &&
+            (template.value === null ||
+              typeof template.value === 'number' ||
+              typeof template.value === 'string' ||
+              typeof template.value === 'boolean')));
+
+      if (
+        !isValidDurationTemplate(endTemplate) ||
+        !isValidDurationTemplate(startTemplate)
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        end: endTemplate,
+        start: startTemplate,
+        format: 'duration',
+      };
+    }
+
+    if (value.format === 'capitalize') {
+      const innerTemplate = toDisplayTemplate(value.value);
+      if (
+        !innerTemplate ||
+        (!isDisplayPathTemplate(innerTemplate) &&
+          !isDisplayFormatTemplate(innerTemplate) &&
+          !isDisplayLiteralTemplate(innerTemplate))
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        value: innerTemplate,
+        format: 'capitalize',
+      };
+    }
+
+    if (value.format === 'scope') {
+      return {
+        type: 'format',
+        format: 'scope',
+      };
+    }
+
+    if (value.format === 'join') {
+      const valueTemplates = value.values.map(entry =>
+        toDisplayTemplate(entry)
+      );
+      if (
+        valueTemplates.some(
+          template =>
+            !template ||
+            (!isDisplayPathTemplate(template) &&
+              !isDisplayFormatTemplate(template) &&
+              !isDisplayLiteralTemplate(template) &&
+              !(
+                Array.isArray(template) &&
+                template.every(
+                  nested =>
+                    isDisplayPathTemplate(nested) ||
+                    isDisplayFormatTemplate(nested) ||
+                    isDisplayLiteralTemplate(nested)
+                )
+              ))
+        )
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        values: valueTemplates as (
+          | DisplayPathTemplate
+          | DisplayFormatTemplate
+          | DisplayLiteralTemplate
+          | DisplayTemplateValue[]
+        )[],
+        separator: value.separator,
+        format: 'join',
+      };
+    }
+
+    if (value.format === 'link') {
+      const urlTemplate = toDisplayTemplate(value.url);
+      if (
+        !urlTemplate ||
+        (!isDisplayPathTemplate(urlTemplate) &&
+          !isDisplayFormatTemplate(urlTemplate) &&
+          !isDisplayLiteralTemplate(urlTemplate))
+      ) {
+        return null;
+      }
+
+      if (value.text === undefined) {
+        return {
+          type: 'format',
+          url: urlTemplate,
+          format: 'link',
+        };
+      }
+
+      const textTemplate = toDisplayTemplate(value.text);
+      if (
+        !textTemplate ||
+        (!isDisplayPathTemplate(textTemplate) &&
+          !isDisplayFormatTemplate(textTemplate) &&
+          !isDisplayLiteralTemplate(textTemplate))
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        url: urlTemplate,
+        format: 'link',
+        text: textTemplate,
+      };
+    }
+
+    const innerTemplate = toDisplayTemplate(value.value);
+    if (!innerTemplate) {
+      return null;
+    }
+
+    if (value.format === 'switch') {
+      if (!isDisplayPathTemplate(innerTemplate)) {
+        return null;
+      }
+
+      const defaultTemplate = toDisplayTemplate(value.defaultCase);
+      if (!defaultTemplate) {
+        return null;
+      }
+
+      const caseTemplates: Record<string, DisplayTemplateValue> = {};
+      for (const [caseKey, caseValue] of Object.entries(value.cases)) {
+        const caseTemplate = toDisplayTemplate(caseValue);
+        if (!caseTemplate) {
+          return null;
+        }
+        caseTemplates[caseKey] = caseTemplate;
+      }
+
+      return {
+        type: 'format',
+        value: innerTemplate,
+        format: 'switch',
+        cases: caseTemplates,
+        defaultCase: defaultTemplate,
+      };
+    }
+
+    if (value.format === 'color') {
+      if (
+        !isDisplayPathTemplate(innerTemplate) &&
+        !isDisplayFormatTemplate(innerTemplate) &&
+        !isDisplayLiteralTemplate(innerTemplate)
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        value: innerTemplate,
+        format: 'color',
+        color: value.color,
+      };
+    }
+
+    if (!isDisplayPathTemplate(innerTemplate)) {
+      return null;
+    }
+
+    return {
+      type: 'format',
+      value: innerTemplate,
+      format: value.format,
+    };
+  }
+
+  if (Array.isArray(value)) {
+    const templates = value.map(item => toDisplayTemplate(item));
+    if (templates.some(template => template === null)) {
+      return null;
+    }
+    return templates as DisplayTemplateValue[];
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    const templateObject: Record<string, DisplayTemplateValue> = {};
+    for (const [key, nestedValue] of Object.entries(value)) {
+      const nestedTemplate = toDisplayTemplate(nestedValue);
+      if (nestedTemplate === null) {
+        return null;
+      }
+      templateObject[key] = nestedTemplate;
+    }
+    return templateObject;
+  }
+
+  return null;
+}
+
+function resolveDisplayTemplate(
+  template: DisplayTemplateValue,
+  payload: unknown,
+  renderContext: DisplayRenderContext
+): unknown {
+  if (isDisplayLiteralTemplate(template)) {
+    return template.value;
+  }
+
+  if (isDisplayPathTemplate(template)) {
+    const value = readValueAtPath(payload, template.path);
+    return value === undefined ? null : value;
+  }
+
+  if (isDisplayFormatTemplate(template)) {
+    if (template.format === 'relativeTime') {
+      const value = isDisplayPathTemplate(template.value)
+        ? readValueAtPath(payload, template.value.path)
+        : resolveDisplayTemplate(template.value, payload, renderContext);
+      if (value === undefined || value === null) {
+        return null;
+      }
+
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return String(value);
+      }
+      const diff = Date.now() - value;
+      if (diff < 0) {
+        return 'just now';
+      }
+      return ms(diff);
+    }
+
+    if (template.format === 'duration') {
+      const endValue = isDisplayPathTemplate(template.end)
+        ? readValueAtPath(payload, template.end.path)
+        : isDisplayLiteralTemplate(template.end)
+          ? template.end.value
+          : resolveDisplayTemplate(template.end, payload, renderContext);
+      const startValue = isDisplayPathTemplate(template.start)
+        ? readValueAtPath(payload, template.start.path)
+        : isDisplayLiteralTemplate(template.start)
+          ? template.start.value
+          : resolveDisplayTemplate(template.start, payload, renderContext);
+
+      if (endValue === undefined || endValue === null) {
+        return '?';
+      }
+      if (startValue === undefined || startValue === null) {
+        return '?';
+      }
+      if (
+        typeof endValue !== 'number' ||
+        !Number.isFinite(endValue) ||
+        typeof startValue !== 'number' ||
+        !Number.isFinite(startValue)
+      ) {
+        return '?';
+      }
+
+      const durationValue = ms(endValue - startValue);
+      return durationValue === '0ms' ? '--' : durationValue;
+    }
+
+    if (template.format === 'capitalize') {
+      const value = isDisplayPathTemplate(template.value)
+        ? readValueAtPath(payload, template.value.path)
+        : resolveDisplayTemplate(template.value, payload, renderContext);
+      if (value === undefined || value === null) {
+        return null;
+      }
+      return title(String(value).toLowerCase());
+    }
+
+    if (template.format === 'scope') {
+      return renderContext.scope;
+    }
+
+    if (template.format === 'join') {
+      const parts = template.values.flatMap(entry => {
+        const resolved = resolveDisplayTemplate(entry, payload, renderContext);
+        if (resolved === null || resolved === undefined) {
+          return [];
+        }
+
+        if (Array.isArray(resolved)) {
+          return resolved.map(value => String(value)).filter(Boolean);
+        }
+
+        return [String(resolved)];
+      });
+
+      if (parts.length === 0) {
+        return null;
+      }
+
+      return parts.join(template.separator);
+    }
+
+    if (template.format === 'switch') {
+      const selectorValue = readValueAtPath(payload, template.value.path);
+      const caseKey =
+        selectorValue === undefined || selectorValue === null
+          ? null
+          : String(selectorValue);
+      const selectedTemplate =
+        caseKey && Object.prototype.hasOwnProperty.call(template.cases, caseKey)
+          ? template.cases[caseKey]
+          : template.defaultCase;
+
+      return resolveDisplayTemplate(selectedTemplate, payload, renderContext);
+    }
+
+    if (template.format === 'link') {
+      const urlValue = isDisplayPathTemplate(template.url)
+        ? readValueAtPath(payload, template.url.path)
+        : isDisplayLiteralTemplate(template.url)
+          ? template.url.value
+          : resolveDisplayTemplate(template.url, payload, renderContext);
+      if (urlValue === undefined || urlValue === null) {
+        return null;
+      }
+
+      const rawUrl = String(urlValue);
+      const url = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawUrl)
+        ? rawUrl
+        : `https://${rawUrl}`;
+      const textValue =
+        template.text === undefined
+          ? url
+          : isDisplayPathTemplate(template.text)
+            ? readValueAtPath(payload, template.text.path)
+            : resolveDisplayTemplate(template.text, payload, renderContext);
+      const text =
+        textValue === undefined || textValue === null ? url : String(textValue);
+
+      return output.link(text, url, {
+        color: false,
+        fallback: () => text,
+      });
+    }
+
+    if (template.format === 'conditional') {
+      for (const entry of template.values) {
+        const resolved = resolveDisplayTemplate(entry, payload, renderContext);
+        if (resolved !== null && resolved !== undefined) {
+          return resolved;
+        }
+      }
+      return null;
+    }
+
+    const value = isDisplayPathTemplate(template.value)
+      ? readValueAtPath(payload, template.value.path)
+      : resolveDisplayTemplate(template.value, payload, renderContext);
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const stringValue = String(value);
+    switch (template.color) {
+      case 'gray':
+        return chalk.gray(stringValue);
+      case 'red':
+        return chalk.red(stringValue);
+      case 'green':
+        return chalk.green(stringValue);
+      case 'yellow':
+        return chalk.yellow(stringValue);
+      case 'blue':
+        return chalk.blue(stringValue);
+      case 'magenta':
+        return chalk.magenta(stringValue);
+      case 'cyan':
+        return chalk.cyan(stringValue);
+      case 'white':
+        return chalk.white(stringValue);
+      default:
+        return stringValue;
+    }
+  }
+
+  if (Array.isArray(template)) {
+    return template.map(entry =>
+      resolveDisplayTemplate(entry, payload, renderContext)
+    );
+  }
+
+  return Object.entries(template).reduce<Record<string, unknown>>(
+    (acc, [key, value]) => {
+      acc[key] = resolveDisplayTemplate(value, payload, renderContext);
+      return acc;
+    },
+    {}
+  );
+}
+
+function createDisplayPathRecorder(
+  path: readonly string[] = []
+): DisplayUnknownAccessor {
+  return new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        if (prop === DISPLAY_PATH_SYMBOL) {
+          return path;
+        }
+        if (prop === DISPLAY_SCALAR_SYMBOL) {
+          return 'string';
+        }
+        if (typeof prop === 'symbol') {
+          return undefined;
+        }
+        return createDisplayPathRecorder([...path, String(prop)]);
+      },
+    }
+  ) as DisplayUnknownAccessor;
+}
+
+function getDisplayPropertyPayload(
+  payload: unknown,
+  displayProperty: string | undefined
+): unknown {
+  if (!displayProperty) {
+    return payload;
+  }
+  const selected = readValueAtPath(payload, displayProperty);
+  return selected === undefined ? payload : selected;
+}
+
+function buildDisplayFieldsTemplate(
+  fieldsSelector: InferredCommandSuccessResponseDisplayConfig['fields']
+): DisplayTemplateValue | null {
+  if (displayTemplateCache.has(fieldsSelector)) {
+    return displayTemplateCache.get(fieldsSelector) ?? null;
+  }
+
+  let template: DisplayTemplateValue | null = null;
+  try {
+    const selection = fieldsSelector(createDisplayPathRecorder());
+    template = toDisplayTemplate(selection);
+  } catch {
+    template = null;
+  }
+
+  displayTemplateCache.set(fieldsSelector, template);
+  return template;
+}
+
+function applyDisplayFields(
+  payload: unknown,
+  fieldsSelector: InferredCommandSuccessResponseDisplayConfig['fields'],
+  renderContext: DisplayRenderContext
+): unknown {
+  const template = buildDisplayFieldsTemplate(fieldsSelector);
+  if (!template) {
+    return payload;
+  }
+
+  if (
+    Array.isArray(payload) &&
+    !Array.isArray(template) &&
+    !isDisplayPathTemplate(template)
+  ) {
+    return payload.map(item =>
+      resolveDisplayTemplate(template, item, renderContext)
+    );
+  }
+
+  return resolveDisplayTemplate(template, payload, renderContext);
+}
+
+function stringifyDisplayTableCell(value: unknown): string {
+  if (value === undefined) {
+    return '';
+  }
+  if (value === null) {
+    return 'null';
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map(entry => stringifyDisplayTableCell(entry))
+      .filter(Boolean)
+      .join(' ');
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function formatDisplayRowsAsTable(mapped: unknown): string | null {
+  if (!Array.isArray(mapped) || mapped.length === 0) {
+    return null;
+  }
+
+  const rows: Record<string, unknown>[] = mapped.map(item =>
+    item !== null && typeof item === 'object' && !Array.isArray(item)
+      ? (item as Record<string, unknown>)
+      : ({ value: item } as Record<string, unknown>)
+  );
+  const columns = Object.keys(rows[0] ?? {});
+  if (columns.length === 0) {
+    return null;
+  }
+
+  const headers = columns.map(column => chalk.bold(chalk.cyan(column)));
+  const bodyRows = rows.map(row =>
+    columns.map(column => stringifyDisplayTableCell(row[column]))
+  );
+
+  return table([headers, ...bodyRows], { hsep: 3 });
+}
+
+function formatDisplayObjectAsCard(mapped: unknown): string | null {
+  if (!mapped || Array.isArray(mapped) || typeof mapped !== 'object') {
+    return null;
+  }
+
+  const entries = Object.entries(mapped as Record<string, unknown>);
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const rows: Array<[string, string]> = entries.map(([key, value]) => [
+    key,
+    stringifyDisplayTableCell(value),
+  ]);
+  return renderSectionRows(rows);
+}
+
+function getDisplayForStatus(
+  display: InferredCommandResponseDisplayByStatus | undefined,
+  status: number
+) {
+  const statusKey = String(status) as HttpStatusCode;
+  return display?.[statusKey];
+}
+
+function isSuccessDisplayConfig(
+  value:
+    | InferredCommandSuccessResponseDisplayConfig
+    | InferredCommandErrorResponseDisplayConfig
+    | undefined
+): value is InferredCommandSuccessResponseDisplayConfig {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    'fields' in value &&
+    typeof (value as { fields?: unknown }).fields === 'function'
+  );
+}
+
 async function executeInferredRequest(
   client: Client,
   request: RequestPreview,
-  parsedOptions: Record<string, string | boolean>
+  parsedOptions: Record<string, string | boolean>,
+  display: InferredCommandResponseDisplayByStatus | undefined,
+  context: InferredCommandContext
 ): Promise<number> {
   if (!request.url || !request.method) {
     output.error('Could not resolve inferred OpenAPI request.');
@@ -617,9 +2275,41 @@ async function executeInferredRequest(
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const body = await response.json();
-      client.stdout.write(
-        `${formatOutput(body, { raw: isEnabledFlag(parsedOptions.raw) })}\n`
-      );
+      const rawOutput = isEnabledFlag(parsedOptions.raw);
+      if (rawOutput) {
+        client.stdout.write(`${formatOutput(body, { raw: false })}\n`);
+        return 0;
+      }
+
+      const displayForStatus = getDisplayForStatus(display, response.status);
+      if (isSuccessDisplayConfig(displayForStatus)) {
+        const displayPayload = getDisplayPropertyPayload(
+          body,
+          displayForStatus.displayProperty
+        );
+        const mapped = applyDisplayFields(
+          displayPayload,
+          displayForStatus.fields,
+          {
+            scope: context.team?.value ?? null,
+          }
+        );
+        const tableOutput = formatDisplayRowsAsTable(mapped);
+        if (tableOutput) {
+          client.stdout.write(`\n${tableOutput}\n\n`);
+          return 0;
+        }
+
+        const cardOutput = formatDisplayObjectAsCard(mapped);
+        if (cardOutput) {
+          client.stdout.write(`\n${cardOutput}\n\n`);
+          return 0;
+        }
+        client.stdout.write(`${formatOutput(mapped, { raw: false })}\n`);
+        return 0;
+      }
+
+      client.stdout.write(`${formatOutput(body, { raw: false })}\n`);
       return 0;
     }
 
@@ -627,6 +2317,17 @@ async function executeInferredRequest(
     client.stdout.write(body.endsWith('\n') ? body : `${body}\n`);
     return 0;
   } catch (error) {
+    if (isEnabledFlag(parsedOptions.raw) && error instanceof APIError) {
+      const errorPayload = {
+        error: {
+          status: error.status,
+          code: error.code ?? null,
+          message: error.serverMessage ?? error.message,
+        },
+      };
+      client.stdout.write(`${formatOutput(errorPayload, { raw: false })}\n`);
+      return 1;
+    }
     output.prettyError(error);
     return 1;
   }
@@ -1220,7 +2921,13 @@ export async function runInferredCommand(
   }
 
   if (options.client) {
-    return executeInferredRequest(options.client, request, parsedOptions);
+    return executeInferredRequest(
+      options.client,
+      request,
+      parsedOptions,
+      resolved.config.display,
+      context
+    );
   }
 
   output.print(

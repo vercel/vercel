@@ -3,6 +3,7 @@ import {
   inferCommands,
   resolveInferredCommand,
   runInferredCommand,
+  util,
 } from '../../../../src/util/openapi/infer-commands';
 import { client } from '../../../mocks/client';
 import { OpenApiCache } from '../../../../src/util/openapi/openapi-cache';
@@ -17,6 +18,17 @@ describe('inferCommands', () => {
       aliases: ['project'],
       list: {
         value: 'ls',
+        display: {
+          '200': {
+            displayProperty: 'projects',
+            fields: (project: any) => ({
+              id: project.id,
+            }),
+          },
+          '400': {
+            errorFields: ['error.code', 'error.message'],
+          },
+        },
         arguments: {
           'bodyFields.name': {
             required: true,
@@ -69,6 +81,12 @@ describe('inferCommands', () => {
         operationId: 'list',
         config: expect.objectContaining({
           value: 'ls',
+          display: expect.objectContaining({
+            '200': expect.objectContaining({
+              displayProperty: 'projects',
+              fields: expect.any(Function),
+            }),
+          }),
         }),
       })
     );
@@ -217,8 +235,604 @@ describe('inferCommands', () => {
       api: client.apiUrl,
     });
     expect(exitCode).toBe(0);
-    expect(client.stdout.getFullOutput()).toContain('"projects"');
+    expect(client.stdout.getFullOutput()).toContain('id');
+    expect(client.stdout.getFullOutput()).toContain('prj_123');
+    expect(client.stdout.getFullOutput()).not.toContain('"id"');
     expect(client.stderr.getFullOutput()).not.toContain('"request"');
+  });
+
+  it('applies configured display fields for successful responses', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ id: 'prj_123' }],
+        pagination: { count: 1, next: 123, prev: null },
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(commands, ['projects', 'ls'], {
+      client,
+      api: client.apiUrl,
+    });
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('id');
+    expect(stdout).toContain('prj_123');
+    expect(stdout).not.toContain('"id"');
+    expect(stdout).not.toContain('"pagination"');
+  });
+
+  it('returns full JSON when --raw is passed', async () => {
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ id: 'prj_123' }],
+        pagination: { count: 1, next: 123, prev: null },
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commands,
+      ['projects', 'ls', '--raw'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('"pagination": {');
+    expect(stdout).toContain('"count": 1');
+    expect(stdout).toContain('"next": 123');
+    expect(stdout).not.toContain('"pagination.next"');
+  });
+
+  it('renders table rows when fields use nested format helpers', async () => {
+    const commandsWithNestedDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                'Project Name': util.color.cyan(project.name),
+                Updated: util.color.gray(util.relativeTime(project.updatedAt)),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ name: 'alpha', updatedAt: 9_000 }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithNestedDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Project Name');
+    expect(stdout).toContain('Updated');
+    expect(stdout).toContain('alpha');
+    expect(stdout).toContain('1s');
+    expect(stdout).not.toContain('"name"');
+    expect(stdout).not.toContain('"updatedAt"');
+  });
+
+  it('infers table rendering for array display payloads', async () => {
+    const commandsWithImplicitTableDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              fields: (project: any) => ({
+                'Project Name': project.name,
+                Updated: util.relativeTime(project.updatedAt),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ name: 'alpha', updatedAt: 9_000 }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithImplicitTableDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Project Name');
+    expect(stdout).toContain('Updated');
+    expect(stdout).toContain('alpha');
+    expect(stdout).toContain('1s');
+    expect(stdout).not.toContain('"name"');
+  });
+
+  it('renders card rows for object display payloads', async () => {
+    const commandsWithCardDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              fields: (item: any) => ({
+                'Project Name': item.name,
+                Updated: util.relativeTime(item.updatedAt),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        name: 'alpha',
+        updatedAt: 9_000,
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithCardDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Project Name');
+    expect(stdout).toContain('Updated');
+    expect(stdout).toContain('alpha');
+    expect(stdout).toContain('1s');
+    expect(stdout).not.toContain('"Project Name"');
+    expect(stdout).not.toContain('"updatedAt"');
+  });
+
+  it('supports util.switch with DEFAULT branch for formatted fields', async () => {
+    const commandsWithSwitchDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                'Node Version': util.switch({
+                  '24.x': util.color.green(project.nodeVersion),
+                  '22.x': util.color.green(project.nodeVersion),
+                  '20.x': util.color.yellow(project.nodeVersion),
+                  DEFAULT: util.color.red(project.nodeVersion),
+                }),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ nodeVersion: '24.x' }, { nodeVersion: '18.x' }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithSwitchDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Node Version');
+    expect(stdout).toContain('24.x');
+    expect(stdout).toContain('18.x');
+    expect(stdout).not.toContain('"nodeVersion"');
+  });
+
+  it('supports util.link with optional display text', async () => {
+    const commandsWithLinkDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                URL: util.link(project.url),
+                Visit: util.link(project.url, project.name),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ url: 'alpha.vercel.app', name: 'alpha' }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithLinkDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('URL');
+    expect(stdout).toContain('Visit');
+    expect(stdout).toContain('https://alpha.vercel.app');
+    expect(stdout).toContain('alpha');
+    expect(stdout).not.toContain('"url"');
+  });
+
+  it('supports util.conditional fallback for nullish display values', async () => {
+    const commandsWithConditionalDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                URL: util.conditional(
+                  util.link(project.url, project.name),
+                  '--'
+                ),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [
+          { url: null, name: 'alpha' },
+          { url: 'beta.vercel.app', name: 'beta' },
+        ],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithConditionalDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('URL');
+    expect(stdout).toContain('--');
+    expect(stdout).toContain('beta');
+    expect(stdout).not.toContain('"name"');
+  });
+
+  it('supports util.duration formatting for deployment timing fields', async () => {
+    const commandsWithDurationDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                Duration: util.duration(project.ready, project.buildingAt),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [
+          { ready: 10_000, buildingAt: 5_000 },
+          { ready: 7_000, buildingAt: 7_000 },
+          { ready: null, buildingAt: 2_000 },
+        ],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithDurationDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Duration');
+    expect(stdout).toContain('5s');
+    expect(stdout).toContain('--');
+    expect(stdout).toContain('?');
+  });
+
+  it('supports icon and capitalize with inline array display composition', async () => {
+    const commandsWithInlineStatusDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                Status: util.switch({
+                  READY: [
+                    util.color.green(util.icon('circle-fill')),
+                    util.capitalize(project.readyState),
+                  ],
+                  DEFAULT: util.capitalize(project.readyState),
+                }),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ readyState: 'READY' }, { readyState: 'ERROR' }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithInlineStatusDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Status');
+    expect(stdout).toContain('● Ready');
+    expect(stdout).toContain('Error');
+    expect(stdout).not.toContain('["');
+  });
+
+  it('supports nesting capitalize with conditional fallback', async () => {
+    const commandsWithNestedConditionalDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                Environment: util.capitalize(
+                  util.conditional(
+                    project.customEnvironment?.slug,
+                    project.target,
+                    '-'
+                  )
+                ),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ customEnvironment: null, target: 'production' }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithNestedConditionalDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+    expect(exitCode).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Environment');
+    expect(stdout).toContain('Production');
+  });
+
+  it('supports util.scope and util.join in display fields', async () => {
+    const commandsWithScopeJoinDisplay = inferCommands({
+      projects: {
+        list: {
+          value: 'ls',
+          display: {
+            '200': {
+              displayProperty: 'projects',
+              table: true,
+              fields: (project: any) => ({
+                Project: util.join([util.scope(), project.id], '/'),
+              }),
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      listEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+
+    const scenario = Router();
+    scenario.get('/v9/projects', (_req, res) => {
+      res.status(200).json({
+        projects: [{ id: 'prj_123' }],
+      });
+    });
+    client.useScenario(scenario);
+    client.config.currentTeam = 'team_current_123';
+
+    const exitCode = await runInferredCommand(
+      commandsWithScopeJoinDisplay,
+      ['projects', 'ls'],
+      {
+        client,
+        api: client.apiUrl,
+        scope: 'jsee',
+      }
+    );
+    expect(exitCode).toBe(0);
+
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('Project');
+    expect(stdout).toContain('jsee/prj_123');
   });
 
   it('prints formatted request preview when dry-run is enabled', async () => {
