@@ -296,7 +296,6 @@ jobs:
 
   publish-npm:
     name: Publish native npm packages
-    if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -326,6 +325,12 @@ jobs:
           merge-multiple: true
 
       - name: Publish native npm packages
+        shell: bash
         env:
           NPM_CONFIG_PROVENANCE: 'true'
-        run: node packages/vc-native/scripts/publish-packages.mjs
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            node packages/vc-native/scripts/publish-packages.mjs
+          else
+            node packages/vc-native/scripts/publish-packages.mjs --dry-run
+          fi
