@@ -1,5 +1,60 @@
 # @vercel/python
 
+## 6.41.0
+
+### Minor Changes
+
+- bf42168: Provide better suggestion for how to fix entry point error
+
+### Patch Changes
+
+- 94a214c: Use copy link mode for injected uv pip installs to avoid cross-device cache clone failures.
+
+## 6.40.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- f93148b: Reduce redundant file stat and subprocess calls.
+- 979d70a: [services] `services` schema support
+
+## 6.39.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
+## 6.38.0
+
+### Minor Changes
+
+- fa5f57a: Enable Python build dependency caching by default.
+
+### Patch Changes
+
+- 8e29c9c: Improve Python entrypoint error messages and documentation links.
+- 2da36f3: Show a `--functions-beta`-aware hint at the Hive-extended 1 GB size-limit error path.
+
+## 6.37.0
+
+### Minor Changes
+
+- 25e84c6: Support specifying entrypoint in vercel.tool.entrypoint in pyproject.toml
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 6.36.1
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
 ## 6.36.0
 
 ### Minor Changes

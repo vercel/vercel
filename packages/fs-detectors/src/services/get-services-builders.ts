@@ -1,5 +1,5 @@
 import type { Route } from '@vercel/routing-utils';
-import type { Builder } from '@vercel/build-utils';
+import type { Builder, ExperimentalServices } from '@vercel/build-utils';
 import type { ResolvedService } from './types';
 import { detectServices } from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
@@ -13,6 +13,8 @@ export interface ErrorResponse {
 
 export interface GetServicesBuildersOptions {
   workPath?: string;
+  configuredServices?: ExperimentalServices;
+  projectFramework?: string | null;
 }
 
 export interface ServicesBuildersResult {
@@ -21,10 +23,17 @@ export interface ServicesBuildersResult {
   warnings: ErrorResponse[];
   hostRewriteRoutes: Route[] | null;
   defaultRoutes: Route[] | null;
+  fallbackRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: ResolvedService[];
+  useImplicitEnvInjection?: boolean;
+}
+
+function isExperimentalServicesAutoDetectionEnabled(): boolean {
+  const env = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+  return env === '1' || env?.toLowerCase() === 'true';
 }
 
 /**
@@ -36,7 +45,33 @@ export interface ServicesBuildersResult {
 export async function getServicesBuilders(
   options: GetServicesBuildersOptions
 ): Promise<ServicesBuildersResult> {
-  const { workPath } = options;
+  const { workPath, configuredServices, projectFramework } = options;
+  const hasServiceDefinitions =
+    configuredServices != null && Object.keys(configuredServices).length > 0;
+
+  if (
+    projectFramework === 'services' &&
+    !hasServiceDefinitions &&
+    !isExperimentalServicesAutoDetectionEnabled()
+  ) {
+    return {
+      builders: null,
+      errors: [
+        {
+          code: 'MISSING_EXPERIMENTAL_SERVICES',
+          message:
+            'Project framework is set to "services", but no services are declared. Add `experimentalServices` to vercel.json with at least one service, or change the project framework setting.',
+        },
+      ],
+      warnings: [],
+      hostRewriteRoutes: null,
+      defaultRoutes: null,
+      fallbackRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
+  }
 
   if (!workPath) {
     return {
@@ -50,6 +85,7 @@ export async function getServicesBuilders(
       warnings: [],
       hostRewriteRoutes: null,
       defaultRoutes: null,
+      fallbackRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
@@ -76,6 +112,7 @@ export async function getServicesBuilders(
       warnings: warningResponses,
       hostRewriteRoutes: null,
       defaultRoutes: null,
+      fallbackRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
@@ -88,13 +125,13 @@ export async function getServicesBuilders(
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
+          message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
       warnings: warningResponses,
       hostRewriteRoutes: null,
       defaultRoutes: null,
+      fallbackRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
@@ -112,6 +149,8 @@ export async function getServicesBuilders(
       result.routes.hostRewrites.length > 0 ? result.routes.hostRewrites : null,
     defaultRoutes:
       result.routes.defaults.length > 0 ? result.routes.defaults : null,
+    fallbackRoutes:
+      result.routes.fallbacks.length > 0 ? result.routes.fallbacks : null,
     redirectRoutes: [],
     rewriteRoutes:
       result.routes.rewrites.length > 0 ||
@@ -125,5 +164,6 @@ export async function getServicesBuilders(
         : null,
     errorRoutes: [],
     services: result.services,
+    useImplicitEnvInjection: result.useImplicitEnvInjection,
   };
 }

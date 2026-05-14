@@ -1,5 +1,40 @@
 # @vercel/oidc
 
+## 3.1.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [ae20217]
+  - @vercel/oidc@3.4.1
+
+## 3.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/oidc@3.4.0
+
+## 3.0.10
+
+### Patch Changes
+
+- Updated dependencies [bf07448]
+  - @vercel/oidc@3.3.1
+
+## 3.0.9
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [56c9f89]
+  - @vercel/oidc@3.3.0
+
 ## 3.0.8
 
 ### Patch Changes

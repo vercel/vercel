@@ -1,5 +1,22 @@
 # @vercel/router-sdk
 
+## 0.4.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+## 0.3.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/routing-utils@6.2.0
+
 ## 0.2.1
 
 ### Patch Changes

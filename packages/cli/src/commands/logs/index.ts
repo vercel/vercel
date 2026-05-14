@@ -1,4 +1,5 @@
 import { isErrnoException } from '@vercel/error-utils';
+import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
 import { format } from 'date-fns';
 import type Client from '../../util/client';
@@ -6,7 +7,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
 import { formatProject } from '../../util/projects/format-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { getLinkedProject } from '../../util/projects/link';
@@ -22,7 +23,7 @@ import {
   type RequestLogMessage,
 } from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { logsCommand } from './command';
@@ -32,6 +33,22 @@ interface BranchDeployment {
   id: string;
   url: string;
 }
+
+interface LogsTarget {
+  projectId: string;
+  projectSlug: string;
+  orgSlug: string;
+  ownerId: string;
+  deployment?: Deployment;
+}
+
+interface ResolveLogsTargetOptions {
+  contextName: string;
+  deploymentOption?: string;
+  projectOption?: string;
+}
+
+type ResolveLogsTargetResult = LogsTarget | { exitCode: number };
 
 async function getLatestDeploymentByBranch(
   client: Client,
@@ -203,6 +220,162 @@ function parseSources(sources?: string | string[]): string[] {
   return sources;
 }
 
+function isNonLiveTerminalDeployment(deployment: Deployment): boolean {
+  return (
+    deployment.readyState === 'ERROR' || deployment.readyState === 'CANCELED'
+  );
+}
+
+// Both forms wrap the command in backticks. `plain: true` uses literal
+// backticks with no color (suitable for embedding in JSON output); the default
+// uses gray backticks and cyan text for terminal display.
+function getInspectCommand(
+  deployment: Deployment,
+  contextName?: string,
+  { plain = false }: { plain?: boolean } = {}
+): string {
+  const scopeOption = contextName ? ` --scope ${contextName}` : '';
+  const command = `inspect https://${deployment.url}${scopeOption}`;
+  return plain
+    ? `\`${getCommandNamePlain(command)}\``
+    : getCommandName(command);
+}
+
+function printNonLiveDeploymentError(
+  deployment: Deployment,
+  contextName?: string
+): void {
+  const inspectCommand = getInspectCommand(deployment, contextName);
+  output.error(
+    `Logs are unavailable because deployment ${chalk.bold(
+      deployment.id
+    )} never reached READY and ended in ${deployment.readyState}.\n` +
+      `Run ${inspectCommand} for deployment details.`
+  );
+}
+
+async function resolveLogsTarget(
+  client: Client,
+  { contextName, deploymentOption, projectOption }: ResolveLogsTargetOptions
+): Promise<ResolveLogsTargetResult> {
+  if (deploymentOption) {
+    output.spinner(`Resolving deployment "${deploymentOption}"`, 1000);
+    let deployment: Awaited<ReturnType<typeof getDeployment>>;
+    try {
+      deployment = await getDeployment(client, contextName, deploymentOption);
+    } catch (err) {
+      if (err instanceof DeploymentNotFound) {
+        output.error(
+          `Deployment not found: ${deploymentOption} under ${chalk.bold(
+            contextName
+          )}`
+        );
+        return { exitCode: 1 };
+      }
+      if (err instanceof InvalidDeploymentId) {
+        output.error(`Invalid deployment ID: ${deploymentOption}`);
+        return { exitCode: 1 };
+      }
+      throw err;
+    } finally {
+      output.stopSpinner();
+    }
+
+    if (!deployment.projectId) {
+      output.error('Deployment is not associated with a project.');
+      return { exitCode: 1 };
+    }
+
+    // `getDeployment()` already resolved under `client.config.currentTeam` via
+    // `client.fetch()`, and project/log lookups should stay in that same scope.
+    output.spinner(`Fetching project "${deployment.projectId}"`, 1000);
+    const project = await getProjectByIdOrName(client, deployment.projectId);
+    output.stopSpinner();
+
+    if (project instanceof ProjectNotFound) {
+      output.error(
+        `Project not found: ${deployment.projectId} under ${chalk.bold(
+          contextName
+        )}`
+      );
+      return { exitCode: 1 };
+    }
+
+    if (projectOption) {
+      output.spinner(`Fetching project "${projectOption}"`, 1000);
+      const explicitProject = await getProjectByIdOrName(client, projectOption);
+      output.stopSpinner();
+
+      if (explicitProject instanceof ProjectNotFound) {
+        output.error(
+          `Project not found: ${projectOption} under ${chalk.bold(contextName)}`
+        );
+        return { exitCode: 1 };
+      }
+
+      if (explicitProject.id !== project.id) {
+        output.error(
+          `The deployment "${deploymentOption}" does not belong to "${projectOption}" project. Remove either the deployment selection or the ${chalk.bold(
+            '--project'
+          )} option.`
+        );
+        return { exitCode: 1 };
+      }
+    }
+
+    return {
+      projectId: project.id,
+      projectSlug: project.name,
+      orgSlug: contextName,
+      ownerId: project.accountId,
+      deployment,
+    };
+  }
+
+  if (projectOption) {
+    output.spinner(`Fetching project "${projectOption}"`, 1000);
+    const project = await getProjectByIdOrName(client, projectOption);
+    output.stopSpinner();
+
+    if (project instanceof ProjectNotFound) {
+      output.error(
+        `Project not found: ${projectOption} under ${chalk.bold(contextName)}`
+      );
+      return { exitCode: 1 };
+    }
+
+    return {
+      projectId: project.id,
+      projectSlug: project.name,
+      orgSlug: contextName,
+      ownerId: project.accountId,
+    };
+  }
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return { exitCode: link.exitCode };
+  }
+  if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin, or specify a project with ${chalk.bold('--project')}.`
+    );
+    return { exitCode: 1 };
+  }
+
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+
+  return {
+    projectId: link.project.id,
+    projectSlug: link.project.name,
+    orgSlug: link.org.slug,
+    ownerId: link.org.id,
+  };
+}
+
 export default async function logs(client: Client) {
   let parsedArguments;
   const flagsSpecification = getFlagsSpecification(logsCommand.options);
@@ -255,12 +428,8 @@ export default async function logs(client: Client) {
   const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
 
-  // Implicit --follow when deployment is specified (for backwards compatibility)
-  // unless --no-follow is explicitly set
-  const followFlagValue = parsedArguments.flags['--follow'];
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
-  const followOption =
-    deploymentOption && !noFollowFlagValue ? true : followFlagValue;
+  const followOption = parsedArguments.flags['--follow'];
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);
@@ -274,6 +443,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionLimit(limitOption);
   telemetry.trackCliFlagJson(jsonOption);
   telemetry.trackCliFlagFollow(followOption);
+  telemetry.trackCliFlagNoFollow(noFollowFlagValue);
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionSearch(searchOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
@@ -306,7 +476,7 @@ export default async function logs(client: Client) {
     }
   }
 
-  let contextName: string | null = null;
+  let contextName: string;
 
   try {
     ({ contextName } = await getScope(client));
@@ -321,71 +491,37 @@ export default async function logs(client: Client) {
     throw err;
   }
 
-  let projectId: string;
-  let projectSlug: string;
-  let orgSlug: string;
-  let ownerId: string;
-
-  if (projectOption) {
-    output.spinner(`Fetching project "${projectOption}"`, 1000);
-    const project = await getProjectByIdOrName(
-      client,
-      projectOption,
-      client.config.currentTeam
-    );
-    output.stopSpinner();
-
-    if (project instanceof ProjectNotFound) {
-      output.error(`Project not found: ${projectOption}`);
-      return 1;
-    }
-    projectId = project.id;
-    projectSlug = project.name;
-    orgSlug = contextName!;
-    ownerId = project.accountId;
-  } else {
-    const link = await getLinkedProject(client);
-    if (link.status === 'error') {
-      return link.exitCode;
-    } else if (link.status === 'not_linked') {
-      output.error(
-        `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
-          'link'
-        )} to begin, or specify a project with ${chalk.bold('--project')}.`
-      );
-      return 1;
-    }
-    client.config.currentTeam =
-      link.org.type === 'team' ? link.org.id : undefined;
-    projectId = link.project.id;
-    projectSlug = link.project.name;
-    orgSlug = link.org.slug;
-    ownerId = link.org.id;
+  const logsTarget = await resolveLogsTarget(client, {
+    contextName,
+    deploymentOption,
+    projectOption,
+  });
+  if ('exitCode' in logsTarget) {
+    return logsTarget.exitCode;
   }
 
-  let deploymentId: string | undefined;
-  if (deploymentOption) {
-    output.spinner(`Resolving deployment "${deploymentOption}"`, 1000);
-    try {
-      const deployment = await getDeployment(
-        client,
-        contextName!,
-        deploymentOption
+  const { projectId, projectSlug, orgSlug, ownerId, deployment } = logsTarget;
+  let deploymentId = deployment?.id;
+
+  if (deployment && isNonLiveTerminalDeployment(deployment)) {
+    const inspectContextName = detectExplicitScope(client)
+      ? contextName
+      : undefined;
+    const inspectCommand = getInspectCommand(deployment, inspectContextName, {
+      plain: true,
+    });
+
+    if (jsonOption) {
+      client.stdout.write(
+        `${JSON.stringify({
+          type: 'deployment_error',
+          message: `Logs are unavailable because deployment ${deployment.id} never reached READY and ended in ${deployment.readyState}. Run ${inspectCommand} for deployment details.`,
+        })}\n`
       );
-      deploymentId = deployment.id;
-      output.stopSpinner();
-    } catch (err) {
-      output.stopSpinner();
-      if (err instanceof DeploymentNotFound) {
-        output.error(`Deployment not found: ${deploymentOption}`);
-        return 1;
-      }
-      if (err instanceof InvalidDeploymentId) {
-        output.error(`Invalid deployment ID: ${deploymentOption}`);
-        return 1;
-      }
-      throw err;
+    } else {
+      printNonLiveDeploymentError(deployment, inspectContextName);
     }
+    return 1;
   }
 
   // Determine branch filter:

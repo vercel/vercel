@@ -6,6 +6,20 @@ Env vars are scoped to **environments**: production, preview (can be branch-spec
 
 Variables can be plain text or sensitive (encrypted, not readable after creation).
 
+## Inspecting Env Vars
+
+`vercel env ls` shows configured variable names, targets, and metadata. Plain values may appear in JSON output; sensitive values are not readable after creation.
+
+For metadata-oriented investigations, start with:
+
+```bash
+# Run from a linked project directory
+vercel env ls --format json
+vercel env ls production --format json
+```
+
+If CLI output does not include required metadata, use `vercel api` after checking available endpoints with `vercel api list`. Do not invent unsupported `env ls` scope/project flags; link or switch scope first when the command requires project context.
+
 ## Managing Env Vars
 
 ```bash

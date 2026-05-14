@@ -7,7 +7,6 @@ import type Client from '../../util/client';
 import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import { printError } from '../../util/error';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
-import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
@@ -224,10 +223,10 @@ export async function login(
     await updateCurrentTeamAfterLogin(client);
   }
 
-  client.persistAuthConfig();
+  client.writeToAuthConfigFile();
   client.writeToConfigFile();
 
-  o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+  o.debug(`Saved credentials in "${hp(client.getGlobalPathConfig())}"`);
 
   o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in.

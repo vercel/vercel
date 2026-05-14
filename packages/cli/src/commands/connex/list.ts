@@ -1,12 +1,22 @@
 import chalk from 'chalk';
-import ms from 'ms';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
 import { selectConnexTeam } from '../../util/connex/select-team';
+import { getLinkedProject } from '../../util/projects/link';
 import table from '../../util/output/table';
 import { packageName } from '../../util/pkg-name';
+
+interface LinkedProject {
+  id: string;
+  name: string;
+}
+
+interface ConnexClientProjectLink {
+  projectId: string;
+  project?: LinkedProject;
+}
 
 interface ConnexClient {
   id: string;
@@ -15,6 +25,13 @@ interface ConnexClient {
   type: string;
   typeName?: string;
   createdAt: number;
+  includes?: {
+    projects?: {
+      items: ConnexClientProjectLink[];
+      hasMore: boolean;
+      cursor?: string | null;
+    };
+  };
 }
 
 interface ListClientsResponse {
@@ -25,6 +42,7 @@ interface ListClientsResponse {
 export async function list(
   client: Client,
   flags: {
+    '--all-projects'?: boolean;
     '--limit'?: number;
     '--next'?: string;
     '--format'?: string;
@@ -37,11 +55,37 @@ export async function list(
     return 1;
   }
   const asJson = formatResult.jsonOutput;
+  const allProjects = flags['--all-projects'] === true;
 
-  await selectConnexTeam(
-    client,
-    'Select the team whose Connex clients you want to list'
-  );
+  let projectId: string | undefined;
+  let projectName: string | undefined;
+
+  if (!allProjects) {
+    const linked = await getLinkedProject(client);
+    if (linked.status === 'error') {
+      return linked.exitCode;
+    }
+    if (linked.status === 'linked') {
+      if (linked.org.type === 'team') {
+        client.config.currentTeam = linked.org.id;
+      } else {
+        client.config.currentTeam = undefined;
+      }
+      projectId = linked.project.id;
+      projectName = linked.project.name;
+    }
+    // status === 'not_linked' → fall through to unscoped mode
+  }
+
+  // Unscoped mode: no project link in scope, or `--all-projects` was passed.
+  // Resolve a team explicitly so we have one for the API call.
+  const unscoped = !projectId;
+  if (unscoped) {
+    await selectConnexTeam(
+      client,
+      'Select the team whose connectors you want to list'
+    );
+  }
 
   const params = new URLSearchParams();
   if (flags['--limit'] !== undefined) {
@@ -50,10 +94,15 @@ export async function list(
   if (flags['--next']) {
     params.set('cursor', flags['--next']);
   }
+  if (unscoped) {
+    params.set('include', 'projects');
+  } else if (projectId) {
+    params.set('projectId', projectId);
+  }
   const query = params.toString();
-  const url = `/v1/connex/clients${query ? `?${query}` : ''}`;
+  const url = `/v1/connect/connectors${query ? `?${query}` : ''}`;
 
-  output.spinner('Fetching Connex clients…');
+  output.spinner('Fetching connectors…');
   let response: ListClientsResponse;
   try {
     response = await client.fetch<ListClientsResponse>(url);
@@ -62,7 +111,7 @@ export async function list(
     const status = (err as { status?: number }).status;
     if (status === 404) {
       output.error(
-        'Connex is not enabled for this team. Contact support to enable it.'
+        'Connect is not enabled for this team. Contact support to enable it.'
       );
       return 1;
     }
@@ -74,14 +123,33 @@ export async function list(
   const clients = response.clients ?? [];
 
   if (asJson) {
-    const jsonClients = clients.map(c => ({
-      uid: c.uid,
-      id: c.id,
-      name: c.name,
-      type: c.type,
-      typeName: c.typeName,
-      createdAt: c.createdAt,
-    }));
+    const jsonClients = clients.map(c => {
+      const item: {
+        uid: string;
+        id: string;
+        name: string;
+        type: string;
+        typeName?: string;
+        createdAt: number;
+        projects?: LinkedProject[];
+        hasMoreProjects?: boolean;
+      } = {
+        uid: c.uid,
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        typeName: c.typeName,
+        createdAt: c.createdAt,
+      };
+      if (unscoped) {
+        const projectsInclude = c.includes?.projects;
+        item.projects = (projectsInclude?.items ?? [])
+          .map(p => p.project)
+          .filter((p): p is LinkedProject => Boolean(p));
+        item.hasMoreProjects = projectsInclude?.hasMore === true;
+      }
+      return item;
+    });
     client.stdout.write(
       `${JSON.stringify({ clients: jsonClients, cursor: response.cursor }, null, 2)}\n`
     );
@@ -89,39 +157,64 @@ export async function list(
   }
 
   if (clients.length === 0) {
-    output.log(
-      `No Connex clients found. Create one with \`${packageName} connex create <type>\`.`
-    );
+    if (unscoped) {
+      output.log(
+        `No connectors found. Create one with \`${packageName} connect create <type>\`.`
+      );
+    } else {
+      output.log(
+        `No connectors linked to ${chalk.bold(projectName ?? 'this project')}. Run \`${packageName} connect list --all-projects\` to see every connector in the team.`
+      );
+    }
     return 0;
   }
 
-  const now = Date.now();
-  const rows = clients.map(c => [
-    c.uid || chalk.gray('–'),
-    c.id,
-    c.name || chalk.gray('–'),
-    c.typeName || c.type,
-    c.createdAt
-      ? chalk.gray(`${ms(Math.max(0, now - c.createdAt))} ago`)
-      : chalk.gray('–'),
-  ]);
+  if (!unscoped && projectName) {
+    output.log(`Connectors linked to ${chalk.bold(projectName)}:`);
+  }
+
+  const headers = ['UID', 'ID', 'Name', 'Type'];
+  if (unscoped) {
+    headers.push('Projects');
+  }
+  const rows = clients.map(c => {
+    const row = [
+      c.uid || chalk.gray('–'),
+      c.id,
+      c.name || chalk.gray('–'),
+      c.typeName || c.type,
+    ];
+    if (unscoped) {
+      const projectsInclude = c.includes?.projects;
+      const names = (projectsInclude?.items ?? [])
+        .map(p => p.project?.name)
+        .filter((n): n is string => Boolean(n));
+      const more = projectsInclude?.hasMore === true;
+      let cell: string;
+      if (names.length === 0 && !more) {
+        cell = chalk.gray('–');
+      } else {
+        const parts: string[] = [];
+        if (names.length) parts.push(names.join(', '));
+        if (more) parts.push(chalk.gray('+ more'));
+        cell = parts.join(' ');
+      }
+      row.push(cell);
+    }
+    return row;
+  });
 
   output.print(
-    `${table(
-      [
-        ['UID', 'ID', 'Name', 'Type', 'Created'].map(h =>
-          chalk.bold(chalk.cyan(h))
-        ),
-        ...rows,
-      ],
-      { hsep: 4 }
-    )}\n`
+    `${table([headers.map(h => chalk.bold(chalk.cyan(h))), ...rows], {
+      hsep: 4,
+    })}\n`
   );
 
   if (response.cursor) {
-    output.log(
-      `To see more, run \`${packageName} connex list --next ${response.cursor}\``
-    );
+    const nextCommand = allProjects
+      ? `${packageName} connect list --all-projects --next ${response.cursor}`
+      : `${packageName} connect list --next ${response.cursor}`;
+    output.log(`To see more, run \`${nextCommand}\``);
   }
 
   return 0;

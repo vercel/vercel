@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join, posix as pathPosix } from 'path';
+import { join, relative, posix as pathPosix } from 'path';
 import {
   PythonFramework,
   NowBuildError,
@@ -42,6 +42,29 @@ export const PYTHON_CANDIDATE_ENTRYPOINTS = getCandidateEntrypointsInDirs(
   PYTHON_ENTRYPOINT_DIRS
 );
 
+const PYTHON_ENTRYPOINT_DOCS_URL =
+  'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
+
+const SKIP_DIRS = new Set(['__pycache__', 'node_modules']);
+
+interface EntrypointDiagnostics {
+  /** Candidate files that exist on disk but don't export app/application/handler */
+  existingWithoutEntrypoint: string[];
+  /** Raw scripts.app value from pyproject.toml, if present */
+  pyprojectAppScript?: string;
+  /** Module paths checked for pyproject.toml scripts.app resolution */
+  pyprojectCheckedPaths?: string[];
+  /** Files anywhere in the tree (recursive) that export a valid app/handler */
+  validCandidatesElsewhere?: PythonEntrypoint[];
+  /** Directory containing Django manage.py, if detected */
+  djangoManageBaseDir?: string;
+}
+
+interface FindResult {
+  entrypoint: PythonEntrypoint | null;
+  existingWithoutEntrypoint: string[];
+}
+
 function getCandidateEntrypointsInDirs(dirs: string[]) {
   return dirs.flatMap((dir: string) =>
     PYTHON_ENTRYPOINT_FILENAMES.map((filename: string) =>
@@ -59,6 +82,67 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+function getFrameworkDisplayName(framework: string): string {
+  switch (framework) {
+    case 'fastapi':
+      return 'FastAPI';
+    case 'flask':
+      return 'Flask';
+    case 'django':
+      return 'Django';
+    case 'fasthtml':
+      return 'FastHTML';
+    default:
+      return framework;
+  }
+}
+
+function getFrameworkEntrypointDocsUrl(framework: string): string {
+  switch (framework) {
+    case 'fastapi':
+      return 'https://vercel.com/docs/frameworks/backend/fastapi#exporting-the-fastapi-application';
+    case 'flask':
+      return 'https://vercel.com/docs/frameworks/backend/flask#exporting-the-flask-application';
+    case 'django':
+      return 'https://vercel.com/docs/frameworks/full-stack/django#configure-the-django-entrypoint';
+    default:
+      return PYTHON_ENTRYPOINT_DOCS_URL;
+  }
+}
+
+function getMissingExportMessage(
+  framework: string,
+  entrypoints: string[]
+): string {
+  const fileList = entrypoints.slice(0, 3).join(', ');
+  const found = `Found ${fileList}`;
+  const subject = entrypoints.length === 1 ? 'it' : 'none';
+  const verb = entrypoints.length === 1 ? 'does not define' : 'define';
+  const displayName = getFrameworkDisplayName(framework);
+
+  switch (framework) {
+    case 'fastapi':
+      return `${found} but ${subject} ${verb} a top-level "app" FastAPI instance.`;
+    case 'flask':
+      return `${found} but ${subject} ${verb} a top-level "app" Flask instance.`;
+    case 'django':
+      return `${found} but ${subject} ${verb} a top-level "application" ASGI or WSGI instance.`;
+    case 'fasthtml':
+      return `${found} but ${subject} ${verb} a top-level "app" ${displayName} instance.`;
+    default:
+      return entrypoints.length === 1
+        ? `Found ${fileList} but it does not export a top-level "app", "application", or "handler" variable.`
+        : `Found ${fileList} but none export a top-level "app", "application", or "handler" variable.`;
+  }
+}
+
+export function entrypointToModule(entrypoint: string): string {
+  return entrypoint
+    .replace(/\\/g, '/')
+    .replace(/\.py$/i, '')
+    .replace(/\//g, '.');
+}
+
 /**
  * Check if a Python file contains a top-level app/handler.
  * Returns the matched variable name (e.g. "app"), or null if not found.
@@ -73,31 +157,82 @@ async function checkEntrypoint(
   return findAppOrHandler(content);
 }
 
-export async function getPyprojectEntrypoint(
+/**
+ * Recursively walk workPath collecting .py files, skipping hidden dirs,
+ * __pycache__, and node_modules. Only used on error paths.
+ */
+async function findPythonFilesRecursive(
+  dir: string,
+  rootDir: string
+): Promise<string[]> {
+  const results: string[] = [];
+  let entries;
+  try {
+    entries = await fs.promises.readdir(dir, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...(await findPythonFilesRecursive(fullPath, rootDir)));
+    } else if (entry.isFile() && entry.name.endsWith('.py')) {
+      results.push(relative(rootDir, fullPath).replace(/\\/g, '/'));
+    }
+  }
+  return results;
+}
+
+/**
+ * Recursive scan returning every .py file that exports a valid app/handler.
+ * Used only on the error path to suggest a tool.vercel.entrypoint snippet.
+ */
+async function findEntrypointCandidates(
   workPath: string
+): Promise<PythonEntrypoint[]> {
+  const pyFiles = await findPythonFilesRecursive(workPath, workPath);
+  const candidates: PythonEntrypoint[] = [];
+  for (const relPath of pyFiles) {
+    try {
+      const content = await fs.promises.readFile(
+        join(workPath, relPath),
+        'utf-8'
+      );
+      const varName = await findAppOrHandler(content);
+      if (varName) {
+        candidates.push({ entrypoint: relPath, variableName: varName });
+      }
+    } catch {}
+  }
+  return candidates;
+}
+
+function renderCandidateSuggestion(candidates: PythonEntrypoint[]): string {
+  const lines = candidates.map(
+    c => `  ${c.entrypoint} (variable: ${c.variableName})`
+  );
+  const suggested = candidates[0];
+  const moduleAttr = `${entrypointToModule(suggested.entrypoint)}:${suggested.variableName}`;
+  return (
+    `but found potential entrypoints:\n${lines.join('\n')}\n\n` +
+    `Add this to your pyproject.toml:\n\n` +
+    `[tool.vercel]\n` +
+    `entrypoint = "${moduleAttr}"`
+  );
+}
+
+async function resolveModuleAttrEntrypoint(
+  workPath: string,
+  value: string
 ): Promise<PythonEntrypoint | null> {
-  const pyprojectData = await readConfigFile<{
-    project?: { scripts?: Record<string, unknown> };
-  }>(join(workPath, 'pyproject.toml'));
-  if (!pyprojectData) return null;
-
-  // If `pyproject.toml` has a [project.scripts] table and contains a script
-  // named "app", parse the value (format: "module:attr") to determine the
-  // module and map it to a file path.
-  const scripts = pyprojectData.project?.scripts as
-    | Record<string, unknown>
-    | undefined;
-  const appScript = scripts?.app;
-  if (typeof appScript !== 'string') return null;
-
   // Expect values like "package.module:app". Extract the module portion.
-  const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
+  const match = value.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
   if (!match) return null;
   const modulePath = match[1];
   const variableName = match[2];
   const relPath = modulePath.replace(/\./g, '/');
 
-  // Prefer an existing file match if present; otherwise fall back to "<module>.py".
   const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
   for (const candidate of candidates) {
     if (await fileExists(join(workPath, candidate))) {
@@ -107,18 +242,97 @@ export async function getPyprojectEntrypoint(
   return null;
 }
 
+export async function getVercelToolsEntrypoint(
+  workPath: string
+): Promise<PythonEntrypoint | null> {
+  const pyprojectData = await readConfigFile<{
+    tool?: { vercel?: { entrypoint?: unknown } };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return null;
+
+  const vercelEntrypoint = pyprojectData.tool?.vercel?.entrypoint;
+  if (typeof vercelEntrypoint !== 'string') return null;
+  return resolveModuleAttrEntrypoint(workPath, vercelEntrypoint);
+}
+
+// Legacy: kept for compatibility. Prefer tool.vercel.entrypoint.
+export async function getPyprojectScriptsEntrypoint(
+  workPath: string
+): Promise<PythonEntrypoint | null> {
+  const pyprojectData = await readConfigFile<{
+    project?: { scripts?: Record<string, unknown> };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return null;
+
+  const scripts = pyprojectData.project?.scripts as
+    | Record<string, unknown>
+    | undefined;
+  const appScript = scripts?.app;
+  if (typeof appScript !== 'string') return null;
+  return resolveModuleAttrEntrypoint(workPath, appScript);
+}
+
+interface PyprojectEntrypointResult {
+  entrypoint: PythonEntrypoint | null;
+  appScript?: string;
+  checkedPaths?: string[];
+}
+
+/**
+ * Like getPyprojectScriptsEntrypoint but returns diagnostic metadata
+ * (the raw script value and checked paths) so callers can produce
+ * targeted error messages when resolution fails.
+ */
+async function getPyprojectEntrypointWithDiagnostics(
+  workPath: string
+): Promise<PyprojectEntrypointResult> {
+  const pyprojectData = await readConfigFile<{
+    project?: { scripts?: Record<string, unknown> };
+  }>(join(workPath, 'pyproject.toml'));
+  if (!pyprojectData) return { entrypoint: null };
+
+  const scripts = pyprojectData.project?.scripts as
+    | Record<string, unknown>
+    | undefined;
+  const appScript = scripts?.app;
+  if (typeof appScript !== 'string') return { entrypoint: null };
+
+  // Expect values like "package.module:app". Extract the module portion.
+  const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
+  if (!match) return { entrypoint: null, appScript };
+  const modulePath = match[1];
+  const variableName = match[2];
+  const relPath = modulePath.replace(/\./g, '/');
+
+  const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
+  for (const candidate of candidates) {
+    if (await fileExists(join(workPath, candidate))) {
+      return { entrypoint: { entrypoint: candidate, variableName } };
+    }
+  }
+  return { entrypoint: null, appScript, checkedPaths: candidates };
+}
+
 async function findValidEntrypoint(
   workPath: string,
   candidates: string[]
-): Promise<PythonEntrypoint | null> {
+): Promise<FindResult> {
+  const existingWithoutEntrypoint: string[] = [];
   for (const candidate of candidates) {
-    const varName = await checkEntrypoint(workPath, candidate);
+    const absPath = join(workPath, candidate);
+    if (!(await fileExists(absPath))) continue;
+    const content = await fs.promises.readFile(absPath, 'utf-8');
+    const varName = await findAppOrHandler(content);
     if (varName) {
       debug(`Detected Python entrypoint: ${candidate} (variable: ${varName})`);
-      return { entrypoint: candidate, variableName: varName };
+      return {
+        entrypoint: { entrypoint: candidate, variableName: varName },
+        existingWithoutEntrypoint,
+      };
     }
+    existingWithoutEntrypoint.push(candidate);
   }
-  return null;
+  return { entrypoint: null, existingWithoutEntrypoint };
 }
 
 /**
@@ -153,32 +367,72 @@ async function getSubdirectories(workPath: string): Promise<string[]> {
   }
 }
 
-function makeDetectError(framework: string): NowBuildError {
-  const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-  return new NowBuildError({
-    code: `${framework!.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
-    message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
-    link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
-    action: 'Learn More',
-  });
+function makeDiagnosticError(
+  framework: string,
+  diagnostics: EntrypointDiagnostics
+): NowBuildError {
+  const code = `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`;
+  const link = getFrameworkEntrypointDocsUrl(framework);
+  const action = 'Learn More';
+  const displayName = getFrameworkDisplayName(framework);
+  const elsewhere = diagnostics.validCandidatesElsewhere ?? [];
+  const suggestion =
+    elsewhere.length > 0 ? renderCandidateSuggestion(elsewhere) : null;
+
+  let message: string;
+
+  if (diagnostics.existingWithoutEntrypoint.length > 0) {
+    message = getMissingExportMessage(
+      framework,
+      diagnostics.existingWithoutEntrypoint
+    );
+    if (suggestion) message += `\n\n${suggestion}`;
+  } else if (diagnostics.djangoManageBaseDir !== undefined) {
+    const where = diagnostics.djangoManageBaseDir || '.';
+    message =
+      `Found Django manage.py in "${where}" but could not resolve the application entrypoint. ` +
+      `Ensure WSGI_APPLICATION or ASGI_APPLICATION is set in your Django settings.`;
+    if (suggestion) message += `\n\n${suggestion}`;
+  } else if (
+    diagnostics.pyprojectAppScript &&
+    diagnostics.pyprojectCheckedPaths?.length
+  ) {
+    const checked = diagnostics.pyprojectCheckedPaths.join(' or ');
+    message = `pyproject.toml [project.scripts] defines app = "${diagnostics.pyprojectAppScript}" but ${checked} was not found.`;
+    if (suggestion) message += `\n\n${suggestion}`;
+  } else if (suggestion) {
+    message = `No ${displayName} entrypoint found in default locations, ${suggestion}`;
+  } else {
+    const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
+    message = `No ${displayName} entrypoint found. Set "tool.vercel.entrypoint" in pyproject.toml or define an entrypoint in one of: ${searchedList}.`;
+  }
+
+  return new NowBuildError({ code, message, link, action });
 }
 
 /**
  * Detect a Python entrypoint for any Python framework using AST-based detection.
  */
-export async function detectGenericPythonEntrypoint(
-  workPath: string
-): Promise<DetectedPythonEntrypoint | null> {
+export async function detectGenericPythonEntrypoint(workPath: string): Promise<{
+  detected: DetectedPythonEntrypoint | null;
+  findDiagnostics: FindResult;
+}> {
   try {
     // Search candidate locations using AST-based detection
-    const found = await findValidEntrypoint(
+    const result = await findValidEntrypoint(
       workPath,
       PYTHON_CANDIDATE_ENTRYPOINTS
     );
-    return found ? { entrypoint: found } : null;
+    return {
+      detected: result.entrypoint ? { entrypoint: result.entrypoint } : null,
+      findDiagnostics: result,
+    };
   } catch {
     debug('Failed to discover Python entrypoint');
-    return null;
+    return {
+      detected: null,
+      findDiagnostics: { entrypoint: null, existingWithoutEntrypoint: [] },
+    };
   }
 }
 
@@ -186,9 +440,17 @@ export async function detectGenericPythonEntrypoint(
  * Detect a Django Python entrypoint: look for manage.py with
  * DJANGO_SETTINGS_MODULE, then fall back to AST-based detection if needed.
  */
-export async function detectDjangoPythonEntrypoint(
-  workPath: string
-): Promise<DetectedPythonEntrypoint | null> {
+export async function detectDjangoPythonEntrypoint(workPath: string): Promise<{
+  detected: DetectedPythonEntrypoint | null;
+  findDiagnostics: FindResult;
+}> {
+  const emptyResult = {
+    detected: null,
+    findDiagnostics: {
+      entrypoint: null,
+      existingWithoutEntrypoint: [],
+    } as FindResult,
+  };
   try {
     // Get root directories (workPath root + immediate subdirs)
     const subdirs = await getSubdirectories(workPath);
@@ -199,18 +461,25 @@ export async function detectDjangoPythonEntrypoint(
       const currPath = join(workPath, rootDir);
       const isDjango = await checkDjangoManage(currPath);
       if (isDjango) {
-        return { baseDir: rootDir, error: makeDetectError('django') };
+        // Defer to the Django framework hook for entrypoint resolution.
+        return {
+          detected: { baseDir: rootDir },
+          findDiagnostics: { entrypoint: null, existingWithoutEntrypoint: [] },
+        };
       }
     }
 
     // Fall back to AST-based detection,
     // Look in all immediate subdirectories, not just those specified in PYTHON_ENTRYPOINT_DIRS.
     const candidates = getCandidateEntrypointsInDirs(rootDirs);
-    const found = await findValidEntrypoint(workPath, candidates);
-    return found ? { entrypoint: found } : null;
+    const result = await findValidEntrypoint(workPath, candidates);
+    return {
+      detected: result.entrypoint ? { entrypoint: result.entrypoint } : null,
+      findDiagnostics: result,
+    };
   } catch {
     debug('Failed to discover Django Python entrypoint');
-    return null;
+    return emptyResult;
   }
 }
 
@@ -230,6 +499,18 @@ export async function detectPythonEntrypoint(
     const entrypoint = configEntryFile.endsWith('.py')
       ? configEntryFile
       : `${configEntryFile}.py`;
+    const entrypointExists = await fileExists(join(workPath, entrypoint));
+
+    if (!entrypointExists) {
+      return {
+        error: new NowBuildError({
+          code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+          message: `Configured Python entrypoint "${entrypoint}" was not found.`,
+          link: PYTHON_ENTRYPOINT_DOCS_URL,
+          action: 'Learn More',
+        }),
+      };
+    }
 
     let varName: string | null =
       configEntryVar ?? (await checkEntrypoint(workPath, entrypoint));
@@ -255,7 +536,7 @@ export async function detectPythonEntrypoint(
         error: new NowBuildError({
           code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
           message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
-          link: 'https://vercel.com/docs/functions/serverless-functions/runtimes/python',
+          link: PYTHON_ENTRYPOINT_DOCS_URL,
           action: 'Learn More',
         }),
       };
@@ -265,14 +546,46 @@ export async function detectPythonEntrypoint(
     return null;
   }
 
-  // Otherwise do a search
-  const result =
-    framework === 'django'
-      ? await detectDjangoPythonEntrypoint(workPath)
-      : await detectGenericPythonEntrypoint(workPath);
-  if (result) return result;
-  const pyprojectEntry = await getPyprojectEntrypoint(workPath);
-  return pyprojectEntry
-    ? { entrypoint: pyprojectEntry }
-    : { error: makeDetectError(framework) };
+  // Check `tool.vercel.entrypoint` in pyproject.toml first.
+  const vercelEntry = await getVercelToolsEntrypoint(workPath);
+  if (vercelEntry) return { entrypoint: vercelEntry };
+
+  // Then do a framework-specific search, collecting diagnostics for better error messages
+  let findDiagnostics: FindResult;
+  let djangoManageBaseDir: string | undefined;
+
+  if (framework === 'django') {
+    const djangoResult = await detectDjangoPythonEntrypoint(workPath);
+    findDiagnostics = djangoResult.findDiagnostics;
+    if (djangoResult.detected) {
+      if (djangoResult.detected.entrypoint) return djangoResult.detected;
+      djangoManageBaseDir = djangoResult.detected.baseDir;
+    }
+  } else {
+    const genericResult = await detectGenericPythonEntrypoint(workPath);
+    findDiagnostics = genericResult.findDiagnostics;
+    if (genericResult.detected) return genericResult.detected;
+  }
+
+  // Fall back to `project.scripts.app` in pyproject.toml.
+  const pyprojectResult = await getPyprojectEntrypointWithDiagnostics(workPath);
+  if (pyprojectResult.entrypoint) {
+    return { entrypoint: pyprojectResult.entrypoint };
+  }
+
+  // No entrypoint found — build a targeted error from collected diagnostics.
+  // Run a recursive AST-validated scan to surface valid candidates outside
+  // the standard locations and suggest a tool.vercel.entrypoint snippet.
+  const validCandidatesElsewhere = await findEntrypointCandidates(workPath);
+  const diagnostics: EntrypointDiagnostics = {
+    existingWithoutEntrypoint: findDiagnostics.existingWithoutEntrypoint,
+    pyprojectAppScript: pyprojectResult.appScript,
+    pyprojectCheckedPaths: pyprojectResult.checkedPaths,
+    validCandidatesElsewhere,
+    djangoManageBaseDir,
+  };
+  const error = makeDiagnosticError(framework, diagnostics);
+  return djangoManageBaseDir !== undefined
+    ? { baseDir: djangoManageBaseDir, error }
+    : { error };
 }

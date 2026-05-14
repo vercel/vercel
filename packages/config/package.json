@@ -1,6 +1,6 @@
 {
   "name": "@vercel/config",
-  "version": "0.2.1",
+  "version": "0.4.0",
   "description": "A TypeScript SDK for programmatically configuring Vercel projects",
   "license": "MIT",
   "homepage": "https://vercel.com/docs/projects/project-configuration",
@@ -48,7 +48,6 @@
   "devDependencies": {
     "@types/node": "20.11.0",
     "tsx": "4.7.0",
-    "typescript": "4.9.5",
     "vite": "^5.1.6",
     "vitest": "^2.0.1"
   },

@@ -66,7 +66,7 @@ export default async function reauthenticate(
     refreshToken: tokens.refresh_token,
   });
 
-  client.persistAuthConfig();
+  client.writeToAuthConfigFile();
 
   output.success(`Authentication complete for ${bold(error.scope)} scope.`);
 

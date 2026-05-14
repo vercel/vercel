@@ -282,6 +282,30 @@ export function getRegExpFromPath(rePath: string): RegExp | false {
 }
 
 /**
+ * React Router v7 single-fetch rewrites loader/action requests from
+ * `<path>` to `<path>.data` for client-side navigations. For most routes
+ * the `.data` URL mirrors the document path, but the root index route is
+ * special: its single-fetch URL is `/_root.data`, not `/index.data`.
+ *
+ * Returns the list of `output` keys (relative to the Build Output `output`
+ * map) that should resolve to the same function as the given `path`, so
+ * that single-fetch requests hit the dedicated route bundle and preserve
+ * any per-route `runtime` / `memory` / `regions` overrides instead of
+ * falling through to the SSR catch-all.
+ */
+export function getReactRouterDataPaths(path: string): string[] {
+  const paths = [`${path}.data`];
+  // `getPathFromRoute()` resolves the root index route (and any
+  // layout-nested index without an intermediate path segment) to
+  // `path === 'index'`. React Router uses `/_root.data` for that route's
+  // single-fetch URL, so register that variant as well.
+  if (path === 'index') {
+    paths.push('_root.data');
+  }
+  return paths;
+}
+
+/**
  * Updates the `dest` process.env object to match the `source` one.
  * A function is returned to restore the `dest` env back to how
  * it was originally.

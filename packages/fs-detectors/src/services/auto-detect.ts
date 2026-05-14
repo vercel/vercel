@@ -27,7 +27,7 @@ const DETECTION_FRAMEWORKS = frameworkList.filter(
 );
 
 /**
- * Auto-detect services when experimentalServices is not configured.
+ * Auto-detect services when services are not configured.
  *
  * Scans the project for frameworks, supporting multiple layouts:
  *
@@ -72,7 +72,7 @@ export async function autoDetectServices(
       errors: [
         {
           code: 'MULTIPLE_FRAMEWORKS_ROOT',
-          message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit experimentalServices config.`,
+          message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit services config.`,
         },
       ],
     };
@@ -101,7 +101,7 @@ export async function autoDetectServices(
         errors: [
           {
             code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-            message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit experimentalServices config.`,
+            message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit services config.`,
           },
         ],
       };
@@ -122,7 +122,7 @@ export async function autoDetectServices(
       {
         code: 'NO_SERVICES_CONFIGURED',
         message:
-          'No services detected. Configure experimentalServices in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
+          'No services detected. Configure services in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
       },
     ],
   };
@@ -230,7 +230,7 @@ async function detectBackendServices(fs: DetectorFilesystem): Promise<{
         services: {},
         error: {
           code: 'SERVICE_NAME_CONFLICT',
-          message: `Service name conflict: "${serviceName}" exists in both ${BACKEND_DIR}/ and ${SERVICES_DIR}/${serviceName}/. Rename one of the directories or use explicit experimentalServices config.`,
+          message: `Service name conflict: "${serviceName}" exists in both ${BACKEND_DIR}/ and ${SERVICES_DIR}/${serviceName}/. Rename one of the directories or use explicit services config.`,
           serviceName,
         },
       };
@@ -301,7 +301,7 @@ async function detectServiceInDir(
     return {
       error: {
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-        message: `Multiple frameworks detected in ${dirPath}/: ${frameworkNames}. Use explicit experimentalServices config.`,
+        message: `Multiple frameworks detected in ${dirPath}/: ${frameworkNames}. Use explicit services config.`,
         serviceName,
       },
     };

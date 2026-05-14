@@ -13,6 +13,7 @@ import {
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -100,6 +101,7 @@ import {
   type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
 import readJSONFile from '../../util/read-json-file';
+import { getStaticServiceSchedules } from '../../util/service-schedules';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
 import ua from '../../util/ua';
@@ -325,12 +327,12 @@ export default async function main(client: Client): Promise<number> {
     }
     const { argv: originalArgv } = client;
     client.cwd = join(cwd, projectRootDirectory);
-    client.argv = [
+    client.setArgv([
       ...originalArgv.slice(0, 2),
       'pull',
       `--environment`,
       target,
-    ];
+    ]);
     const result = await pullCommandLogic(
       client,
       client.cwd,
@@ -342,7 +344,7 @@ export default async function main(client: Client): Promise<number> {
       return result;
     }
     client.cwd = cwd;
-    client.argv = originalArgv;
+    client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
   }
 
@@ -606,16 +608,14 @@ async function doBuild(
     compileResult.configPath ||
     join(workPath, 'vercel.json');
 
-  const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
+  const [pkg, vercelConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(vercelConfigPath),
-    readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
-  if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
 
   if (hasInstrumentation) {
     output.debug(
@@ -628,11 +628,9 @@ async function doBuild(
     vercelConfig[fileNameSymbol] = compileResult.wasCompiled
       ? compileResult.sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME
       : 'vercel.json';
-  } else if (nowConfig) {
-    nowConfig[fileNameSymbol] = 'now.json';
   }
 
-  const localConfig = vercelConfig || nowConfig || {};
+  const localConfig = vercelConfig || {};
   const validateError = validateConfig(localConfig);
 
   if (validateError) {
@@ -694,6 +692,7 @@ async function doBuild(
 
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: Service[] | undefined;
   let isZeroConfig = false;
 
@@ -734,18 +733,20 @@ async function doBuild(
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
 
-    // Inject service URL environment variables so they're available during builds.
-    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
-    // these env vars are baked into the client bundle so they can be accessed in the client code.
-    // User-defined env vars take precedence and won't be overwritten.
-    if (detectedServices && detectedServices.length > 0) {
-      const serviceUrlEnvVars = getServiceUrlEnvVars({
+    // Legacy URL injection for `experimentalServices`. The `services` field
+    // opts out of this and uses explicit per-service
+    // `env` declarations (handled inside the builder loop below).
+    if (
+      detectedBuilders.useImplicitEnvInjection &&
+      detectedServices &&
+      detectedServices.length > 0
+    ) {
+      const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
         services: detectedServices,
         frameworkList,
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
       });
-
       for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
         process.env[key] = value;
         output.debug(`Injected service URL env var: ${key}=${value}`);
@@ -776,6 +777,7 @@ async function doBuild(
       phase: 'error',
     });
     zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+    zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
@@ -1035,6 +1037,29 @@ async function doBuild(
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
+
+      // Inject per-service URL environment variables so they're available during builds.
+      // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+      // these env vars are baked into the client bundle so they can be accessed in the client code.
+      // User-defined env takes precedence and won't be overwritten. The env will be cleared
+      // after the build is complete
+      const restoreEnv = new Map<string, string | undefined>();
+      if (detectedServices && service?.env) {
+        const perServiceEnv = getServiceUrlEnvVars({
+          requestedEnv: service.env,
+          consumerService: service,
+          services: detectedServices,
+          frameworkList,
+          currentEnv: process.env,
+          deploymentUrl: process.env.VERCEL_URL,
+        });
+        for (const [key, value] of Object.entries(perServiceEnv)) {
+          if (key in process.env) continue;
+          restoreEnv.set(key, process.env[key]);
+          process.env[key] = value;
+          output.debug(`Injected service URL env var: ${key}=${value}`);
+        }
+      }
       let buildResult: BuildResultV2 | BuildResultV3;
       let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
@@ -1069,6 +1094,15 @@ async function doBuild(
           }
         }
       } finally {
+        // Restore any process.env keys we set from service envVars so the
+        // next builder iteration starts from a clean slate.
+        for (const [key, prior] of restoreEnv) {
+          if (prior === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = prior;
+          }
+        }
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan
@@ -1237,21 +1271,20 @@ async function doBuild(
         isScheduleTriggeredService(service) &&
         !('crons' in buildResult && buildResult.crons?.length)
       ) {
-        if (
-          typeof service.runtime === 'string' &&
-          typeof service.schedule === 'string' &&
-          service.schedule !== '<dynamic>'
-        ) {
+        const staticSchedules = getStaticServiceSchedules(service.schedule);
+        if (typeof service.runtime === 'string' && staticSchedules.length > 0) {
           const cronEntrypoint =
             service.entrypoint || service.builder.src || 'index';
-          synthesizedServiceCrons.push({
-            path: getInternalServiceCronPath(
-              service.name,
-              cronEntrypoint,
-              service.handlerFunction || 'cron'
-            ),
-            schedule: service.schedule,
-          });
+          for (const schedule of staticSchedules) {
+            synthesizedServiceCrons.push({
+              path: getInternalServiceCronPath(
+                service.name,
+                cronEntrypoint,
+                service.handlerFunction || 'cron'
+              ),
+              schedule,
+            });
+          }
         } else {
           throw new NowBuildError({
             code: 'CRON_SERVICE_NO_CRONS',
@@ -1494,10 +1527,17 @@ async function doBuild(
       routes: zeroConfigRoutes,
     });
   }
-  const mergedRoutes = mergeRoutes({
+  let mergedRoutes = mergeRoutes({
     userRoutes: routesResult.routes,
     builds: builderRoutes,
   });
+  if (zeroConfigFallbackRoutes.length) {
+    mergedRoutes = appendRoutesToPhase({
+      routes: mergedRoutes,
+      newRoutes: zeroConfigFallbackRoutes,
+      phase: 'filesystem',
+    });
+  }
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedCrons = mergeCrons(
@@ -1588,6 +1628,7 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
 }
 
 const LAMBDA_SIZE_LIMIT_MB = 250;
+const CLOSE_TO_LIMIT_MB = LAMBDA_SIZE_LIMIT_MB - 5;
 
 function printFileSizeBreakdown(files: Map<string, number>): void {
   // Group files by package or directory structure
@@ -1606,7 +1647,7 @@ function printFileSizeBreakdown(files: Map<string, number>): void {
     .slice(0, 10);
 
   if (sortedDeps.length > 0) {
-    output.print(chalk.yellow('  Large dependencies:\n'));
+    output.print(chalk.yellow('Large dependencies:\n'));
     for (const [dep, size] of sortedDeps) {
       if (size >= 0.5) {
         // Only show files >= 500KB
@@ -1652,46 +1693,44 @@ async function analyzeVcConfigFiles(
     (r): r is NonNullable<typeof r> => r !== null
   );
 
-  // Separate exceeded and normal functions
+  // Sort by size descending (largest first)
   const sortedResults = validResults.sort((a, b) => b.size - a.size);
-  const exceededFunctions = sortedResults.filter(
-    r => r.size > LAMBDA_SIZE_LIMIT_MB
-  );
-  const normalFunctions = sortedResults.filter(
-    r => r.size <= LAMBDA_SIZE_LIMIT_MB
-  );
 
-  // Show warning once if there are exceeded functions
-  if (exceededFunctions.length > 0) {
-    output.print(
-      `${chalk.red.bold(`⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached`)}\n\n`
-    );
+  output.print(chalk.bold(`\nServerless function size info:\n`));
 
-    // List all affected functions
-    for (const result of exceededFunctions) {
+  let numExceeded = 0;
+  for (const result of sortedResults) {
+    const exceeded = result.size >= LAMBDA_SIZE_LIMIT_MB;
+    const close = result.size >= CLOSE_TO_LIMIT_MB && !exceeded;
+
+    // Print warning if function exceeded or is close to limit
+    if (exceeded) {
+      numExceeded++;
       output.print(
-        `${chalk.red('Function :')} ${chalk.red.bold(result.path)}\n` +
-          `${chalk.red('Size     :')} ${chalk.red.bold(result.size.toFixed(2))} MB\n`
+        chalk.yellow(
+          `\n⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached\n`
+        )
       );
-
-      // Show breakdown of largest files/dependencies
-      printFileSizeBreakdown(result.files);
-      output.print('\n');
+    } else if (close) {
+      output.print(
+        chalk.yellow(
+          `\n⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed almost reached\n`
+        )
+      );
     }
 
-    // Show summary of normal functions
-    if (normalFunctions.length > 0) {
-      output.print(chalk.cyan(`Other functions:\n`));
-      for (const result of normalFunctions) {
-        output.print(
-          `${chalk.cyan(result.path)}: ${chalk.bold(result.size.toFixed(2))} MB\n`
-        );
-      }
-    }
+    output.print(
+      `${chalk.cyan('Function :')} ${chalk.cyan.bold(result.path)}\n` +
+        `${chalk.cyan('Size     :')} ${chalk.cyan.bold(result.size.toFixed(2))} MB\n`
+    );
+    printFileSizeBreakdown(result.files);
+  }
 
+  // Throw error if any functions exceeded the limit
+  if (numExceeded > 0) {
     throw new NowBuildError({
       code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
-      message: `${exceededFunctions.length} function${exceededFunctions.length === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
+      message: `${numExceeded} function${numExceeded === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
       link: 'https://vercel.link/serverless-function-size',
       action: 'Learn More',
     });
@@ -2115,9 +2154,10 @@ function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {
 }
 
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
   for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    chunks.push(Uint8Array.from(buffer));
   }
   return Buffer.concat(chunks).toString('utf-8');
 }

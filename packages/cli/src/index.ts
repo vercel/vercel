@@ -56,10 +56,7 @@ import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
-import {
-  getDefaultAuthConfig,
-  defaultGlobalConfig,
-} from './util/config/get-default';
+import { defaultAuthConfig, defaultGlobalConfig } from '@vercel/cli-config';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
@@ -311,10 +308,20 @@ const main = async () => {
 
   let authConfig: AuthConfig;
   try {
-    authConfig = configFiles.readAuthConfigFile(config);
+    authConfig = configFiles.readAuthConfigFile();
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOENT') {
-      authConfig = getDefaultAuthConfig();
+      authConfig = defaultAuthConfig;
+      try {
+        configFiles.writeToAuthConfigFile(authConfig);
+      } catch (err: unknown) {
+        output.error(
+          `An unexpected error occurred while trying to write the auth config to "${hp(
+            VERCEL_AUTH_CONFIG_PATH
+          )}" ${errorToString(err)}`
+        );
+        return 1;
+      }
     } else {
       output.error(
         `An unexpected error occurred while trying to read the auth config in "${hp(
@@ -955,7 +962,7 @@ const main = async () => {
           telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).cache;
           break;
-        case 'connex':
+        case 'connect':
           if (process.env.FF_CONNEX_ENABLED) {
             telemetry.trackCliCommandConnex(userSuppliedSubCommand);
             func = (await import('./commands-bulk.js')).connex;

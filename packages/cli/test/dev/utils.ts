@@ -9,7 +9,7 @@ import stripAnsi from 'strip-ansi';
 import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 import { spawnSync, execFileSync } from 'child_process';
 
-jest.setTimeout(10 * 60 * 1000);
+vi.setConfig({ testTimeout: 10 * 60 * 1000, hookTimeout: 10 * 60 * 1000 });
 
 const isCI = !!process.env.CI;
 
@@ -19,11 +19,11 @@ export function sleep(ms: number) {
 
 const BASE_PORT = 3000;
 const PORTS_PER_WORKER = 1000;
-const rawWorkerId = Number.parseInt(process.env.JEST_WORKER_ID || '1', 10);
+const rawWorkerId = Number.parseInt(process.env.VITEST_WORKER_ID || '1', 10);
 const workerId =
   Number.isFinite(rawWorkerId) && rawWorkerId > 0 ? rawWorkerId : 1;
 
-// Jest may run dev integration files in parallel workers. Keep each worker
+// Vitest may run dev integration files in parallel workers. Keep each worker
 // in its own port range to avoid cross-worker collisions.
 let port = BASE_PORT + (workerId - 1) * PORTS_PER_WORKER;
 

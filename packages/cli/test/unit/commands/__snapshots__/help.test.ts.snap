@@ -8,19 +8,17 @@ exports[`help command > alias help output snapshots > alias help column width 40
 
   Commands:
 
-  list                      Show   
-                            all    
-                            aliases
-  remove  alias             Remove 
-                            an     
-                            alias  
-                            using  
-                            its    
-                            hostna…
-  set     deployment alias  Create 
-                            a new  
-                            alias  
-                            (defau…
+  list                     Show all
+                           aliases 
+  remove  alias            Remove  
+                           an alias
+                           using   
+                           its     
+                           hostname
+  set     id-or-url alias  Create a
+                           new     
+                           alias   
+                           (defaul…
 
 
   Global Options:
@@ -96,9 +94,9 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
   Commands:
 
-  list                      Show all aliases                               
-  remove  alias             Remove an alias using its hostname             
-  set     deployment alias  Create a new alias (default)                   
+  list                     Show all aliases                                
+  remove  alias            Remove an alias using its hostname              
+  set     id-or-url alias  Create a new alias (default)                    
 
 
   Global Options:
@@ -142,9 +140,9 @@ exports[`help command > alias help output snapshots > alias help column width 12
 
   Commands:
 
-  list                      Show all aliases                                                                       
-  remove  alias             Remove an alias using its hostname                                                     
-  set     deployment alias  Create a new alias (default)                                                           
+  list                     Show all aliases                                                                        
+  remove  alias            Remove an alias using its hostname                                                      
+  set     id-or-url alias  Create a new alias (default)                                                            
 
 
   Global Options:
@@ -238,7 +236,7 @@ exports[`help command > alias help output snapshots > alias remove subcommand > 
 
 exports[`help command > alias help output snapshots > alias set subcommand > alias set subcommand help column width 120 1`] = `
 "
-  ▲ vercel alias set deployment alias
+  ▲ vercel alias set id-or-url alias
 
   Create a new alias                                                                                                    
 
@@ -753,16 +751,81 @@ exports[`help command > certs help output snapshots > certs remove help output s
 "
 `;
 
+exports[`help command > connex help output snapshots > connex attach subcommand > connex attach subcommand help column width 120 1`] = `
+"
+  ▲ vercel connect attach client [options]
+
+  Attach a Vercel project to a connector for one or more environments                                                   
+
+  Options:
+
+  -e,  --environment <ENV>        Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or
+                                  -e production,preview). Defaults to all environments.                                    
+  -F,  --format <FORMAT>          Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>     Project name or ID (default: current linked project)                                     
+       --trigger-branch <BRANCH>  Target a specific git branch for the trigger destination (default: production). Only     
+                                  valid with --triggers.                                                                   
+       --trigger-path <PATH>      Path on the destination project that receives the forwarded webhook (default:            
+                                  /{service}). Only valid with --triggers.                                                 
+       --triggers                 Also register this project as a trigger destination so the connector forwards verified   
+                                  webhooks to it (max 3 destinations per connector)                                        
+  -y,  --yes                      Skip the confirmation prompt                                                             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Attach the current project to a connector for all environments
+
+    $ vercel connect attach scl_abc123
+
+  - Restrict to specific environments
+
+    $ vercel connect attach scl_abc123 -e production -e preview
+
+  - Attach a different project by name
+
+    $ vercel connect attach slack/my-bot --project my-app
+
+  - Attach and register the project as a trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers
+
+  - Attach and register a preview-branch trigger destination
+
+    $ vercel connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack
+
+  - Non-interactive output as JSON
+
+    $ vercel connect attach scl_abc123 --yes --format=json
+
+"
+`;
+
 exports[`help command > connex help output snapshots > connex create subcommand > connex create subcommand help column width 120 1`] = `
 "
-  ▲ vercel connex create type [options]
+  ▲ vercel connect create type [options]
 
-  Create a new Connex client                                                                                            
+  Create a new connector                                                                                                
 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -n,  --name <NAME>      Name of the Connex client                                                                     
+  -n,  --name <NAME>      Name of the connector                                                                         
+       --triggers         Enable webhook triggers for this connector                                                    
 
 
   Global Options:
@@ -783,31 +846,86 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
   - Create a Slack app
 
-    $ vercel connex create slack
+    $ vercel connect create slack
 
   - Create with a custom name
 
-    $ vercel connex create slack --name my-bot
+    $ vercel connect create slack --name my-bot
+
+  - Create with webhook triggers enabled
+
+    $ vercel connect create slack --name my-bot --triggers
 
   - Output as JSON
 
-    $ vercel connex create slack --format=json
+    $ vercel connect create slack --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex detach subcommand > connex detach subcommand help column width 120 1`] = `
+"
+  ▲ vercel connect detach client [options]
+
+  Detach a Vercel project from a connector                                                                              
+
+  Options:
+
+  -F,  --format <FORMAT>       Specify the output format (json)                                                         
+  -p,  --project <NAME_OR_ID>  Project name or ID (default: current linked project)                                     
+  -y,  --yes                   Skip the confirmation prompt                                                             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Detach the current project from a connector
+
+    $ vercel connect detach scl_abc123
+
+  - Detach a different project by name
+
+    $ vercel connect detach slack/my-bot --project my-app
+
+  - Non-interactive output as JSON
+
+    $ vercel connect detach scl_abc123 --yes --format=json
 
 "
 `;
 
 exports[`help command > connex help output snapshots > connex help column width 80 1`] = `
 "
-  ▲ vercel connex command
+  ▲ vercel connect command
 
-  Manage Vercel Connect clients                                                 
+  Manage connectors                                                             
 
   Commands:
 
-  create  type  Create a new Connex client                              
-  list          List Connex clients for the current team                
-  token   id    Get a token for a Connex client (accepts a client ID    
-                like scl_abc or a UID like slack/my-bot)                
+  create  type    Create a new connector                                
+  list            List connectors linked to the current project (falls  
+                  back to every connector in the team when no project is
+                  linked or when --all-projects is set)                 
+  token   id      Get a token for a connector (accepts a connector ID   
+                  like scl_abc or a UID like slack/my-bot)              
+  attach  client  Attach a Vercel project to a connector for one or more
+                  environments                                          
+  detach  client  Detach a Vercel project from a connector              
+  remove  client  Delete a connector                                    
+  open    id      Open a connector in the Vercel dashboard              
 
 
   Global Options:
@@ -830,29 +948,39 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   - Create a Slack app
 
-    $ vercel connex create slack
+    $ vercel connect create slack
 
-  - List Connex clients on the current team
+  - List connectors on the current team
 
-    $ vercel connex list
+    $ vercel connect list
 
   - Get a token
 
-    $ vercel connex token scl_abc123
+    $ vercel connect token scl_abc123
+
+  - Attach the current project to a connector
+
+    $ vercel connect attach scl_abc123
+
+  - Open a connector in the dashboard
+
+    $ vercel connect open scl_abc123
 
 "
 `;
 
 exports[`help command > connex help output snapshots > connex list subcommand > connex list subcommand help column width 120 1`] = `
 "
-  ▲ vercel connex list [options]
+  ▲ vercel connect list [options]
 
-  List Connex clients for the current team                                                                              
+  List connectors linked to the current project (falls back to every connector in the team when no project is linked or 
+  when --all-projects is set)                                                                                           
 
   Options:
 
+       --all-projects     List every connector in the team, regardless of project link                                  
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --limit <COUNT>    Number of clients to return per page                                                          
+       --limit <COUNT>    Number of connectors to return per page                                                       
        --next <CURSOR>    Cursor for the next page of results                                                           
 
 
@@ -872,38 +1000,84 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
 
   Examples:
 
-  - List Connex clients for the current team
+  - List connectors linked to the current project
 
-    $ vercel connex list
+    $ vercel connect list
+
+  - List every connector in the team
+
+    $ vercel connect list --all-projects
 
   - Limit the number of results
 
-    $ vercel connex list --limit 10
+    $ vercel connect list --limit 10
 
   - Fetch the next page of results
 
-    $ vercel connex list --next <cursor>
+    $ vercel connect list --next <cursor>
 
   - Output as JSON
 
-    $ vercel connex list --format=json
+    $ vercel connect list --format=json
+
+"
+`;
+
+exports[`help command > connex help output snapshots > connex open subcommand > connex open subcommand help column width 120 1`] = `
+"
+  ▲ vercel connect open id [options]
+
+  Open a connector in the Vercel dashboard                                                                              
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Open a connector by ID
+
+    $ vercel connect open scl_abc123
+
+  - Open a connector by UID
+
+    $ vercel connect open slack/my-bot
+
+  - Print the dashboard URL as JSON
+
+    $ vercel connect open scl_abc123 --format=json
 
 "
 `;
 
 exports[`help command > connex help output snapshots > connex token subcommand > connex token subcommand help column width 120 1`] = `
 "
-  ▲ vercel connex token id [options]
+  ▲ vercel connect token id [options]
 
-  Get a token for a Connex client (accepts a client ID like scl_abc or a UID like slack/my-bot)                         
+  Get a token for a connector (accepts a connector ID like scl_abc or a UID like slack/my-bot)                          
 
   Options:
 
   -F,  --format <FORMAT>       Specify the output format (json)                                                              
-       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the client's      
+       --installation-id <ID>  Target a specific installation (only useful with --subject app; defaults to the connector's   
                                default installation)                                                                         
        --scopes <SCOPES>       Scopes (comma- or space-separated)                                                            
-  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the client's default     
+  -s,  --subject <TYPE>        Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector's default  
                                installation)                                                                                 
   -y,  --yes                   Accept default value for all prompts                                                          
 
@@ -924,29 +1098,29 @@ exports[`help command > connex help output snapshots > connex token subcommand >
 
   Examples:
 
-  - Get a user token by client ID
+  - Get a user token by connector ID
 
-    $ vercel connex token scl_abc123
+    $ vercel connect token scl_abc123
 
-  - Get a token by client UID
+  - Get a token by connector UID
 
-    $ vercel connex token slack/my-bot
+    $ vercel connect token slack/my-bot
 
   - Get an app token (default installation)
 
-    $ vercel connex token scl_abc123 --subject app
+    $ vercel connect token scl_abc123 --subject app
 
   - Get an app token for a specific installation
 
-    $ vercel connex token scl_abc123 --subject app --installation-id inst_1
+    $ vercel connect token scl_abc123 --subject app --installation-id inst_1
 
   - Open the browser automatically if authorization/installation is required
 
-    $ vercel connex token scl_abc123 --yes
+    $ vercel connect token scl_abc123 --yes
 
   - Output as JSON (includes expiresAt, installationId, etc.)
 
-    $ vercel connex token scl_abc123 --format=json
+    $ vercel connect token scl_abc123 --format=json
 
 "
 `;
@@ -4805,8 +4979,6 @@ exports[`help command > login help output snapshots > login help column width 40
   -S,  --scope                Set a     
                               custom    
                               scope     
-  -t,  --token <TOKEN>        Login     
-                              token     
   -v,  --version              Output the
                               version   
                               number    
@@ -4839,7 +5011,6 @@ exports[`help command > login help output snapshots > login help column width 80
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
   -S,  --scope                Set a custom scope                                
-  -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
 
 
@@ -4868,7 +5039,6 @@ exports[`help command > login help output snapshots > login help column width 12
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 
@@ -5197,6 +5367,7 @@ exports[`help command > project help output snapshots > project list help output
 
   Options:
 
+  -f,  --filter <NAME>    Filter projects by name (substring match)                                                     
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
   -N,  --next <MS>        Show next page of results                                                                     
        --update-required  A list of projects affected by an upcoming deprecation                                        
@@ -5225,6 +5396,10 @@ exports[`help command > project help output snapshots > project list help output
   - List projects using a deprecated Node.js version in JSON format
 
     $ vercel project ls --update-required --format=json
+
+  - Filter projects by name
+
+    $ vercel project ls --filter my-app
 
 "
 `;
@@ -6675,7 +6850,6 @@ exports[`help command > teams help output snapshots > teams switch help output s
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 

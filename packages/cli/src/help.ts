@@ -5,7 +5,7 @@ const packageName = 'vercel';
 const logo = '▲';
 
 const connexLine = process.env.FF_CONNEX_ENABLED
-  ? '\n      connex               [cmd]       Manage Vercel Connect OAuth clients'
+  ? '\n      connect              [cmd]       Manage connectors'
   : '';
 
 export const help = () => `
@@ -59,6 +59,7 @@ export const help = () => `
       deploy-hooks         [cmd]       Manage deploy hooks for Git-triggered builds
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
+      firewall             [cmd]       Manages Vercel Firewall configuration and custom rules
       httpstat             path        Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
       metrics              <metric>    Queries observability metrics for your project or team

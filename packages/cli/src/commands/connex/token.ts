@@ -43,7 +43,9 @@ export async function token(
 
   const clientId = args[0];
   if (!clientId) {
-    output.error('Missing client ID or UID. Usage: vercel connex token <id>');
+    output.error(
+      'Missing connector ID or UID. Usage: vercel connect token <id>'
+    );
     return 1;
   }
 
@@ -82,13 +84,15 @@ export async function token(
   const errorMessage = result.errorMessage ?? 'Failed to get token';
 
   if (errorCode === 'not_found') {
-    output.error('Client not found or Connex is not enabled for this team.');
+    output.error(
+      'Connector not found or Connect is not enabled for this team.'
+    );
     return 1;
   }
 
   if (errorCode === 'unresolved_token') {
     output.error(
-      `${errorMessage} This client does not support getting a token for the requested subject.`
+      `${errorMessage} This connector does not support getting a token for the requested subject.`
     );
     return 1;
   }
@@ -111,12 +115,11 @@ export async function token(
       ? 'authorization'
       : 'installation';
 
-  // Recovery opens a browser a human must complete. Only attempt it when
-  // the session is fully interactive AND the user hasn't declared
-  // non-interactive mode.
-  const attemptRecovery =
-    !client.nonInteractive &&
-    Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  // Attempt recovery when explicitly opted in (--yes) or when we're in a
+  // fully interactive TTY. In any other context (pipe, script, agent)
+  // we fail fast so `TOKEN=$(vc connect token ...)` stays safe.
+  const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
 
   if (!attemptRecovery) {
     const { requestCode } = generateRequestCode();
@@ -124,13 +127,16 @@ export async function token(
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
-      `Or re-run \`vercel connex token ${clientId}\` in an interactive terminal.`
+      `Or re-run with --yes to open the browser automatically: vercel connect token ${clientId} --yes`
     );
     return 1;
   }
 
   output.error(errorMessage);
-  if (!flags['--yes']) {
+  // Only prompt when we have a real TTY and the user hasn't pre-approved.
+  // Agents/scripts that reach this branch did so via --yes, so they
+  // skip straight to the browser + poll.
+  if (!flags['--yes'] && isInteractive) {
     const confirmed = await client.input.confirm(
       `Open browser to ${actionLabel}?`,
       true
@@ -203,7 +209,7 @@ function buildActionUrl(
     teamId,
     request_code: requestCode,
   });
-  return `https://vercel.com/api/v1/connex/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
+  return `https://vercel.com/api/v1/connect/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }
 
 function printTokenResult(
@@ -230,7 +236,7 @@ async function fetchToken(
 ): Promise<TokenResult> {
   try {
     const data = await client.fetch<ConnexTokenResponse>(
-      `/v1/connex/token/${encodeURIComponent(clientId)}`,
+      `/v1/connect/token/${encodeURIComponent(clientId)}`,
       {
         method: 'POST',
         body: JSON.stringify(body),

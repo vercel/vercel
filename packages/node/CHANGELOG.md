@@ -1,5 +1,55 @@
 # @vercel/node
 
+## 5.8.1
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
+## 5.8.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/build-utils@13.23.0
+
+## 5.7.17
+
+### Patch Changes
+
+- f0d7d32: Disable response streaming for lambdas with `awsLambdaHandler` set inside `getLambdaSupportsStreaming`. This closes a gap where non-Node builders (e.g. `@vercel/redwood`) constructed `NodejsLambda` with `awsLambdaHandler` but no explicit `supportsResponseStreaming`, causing `finalizeLambda` to silently flip streaming on for AWS custom handlers. With the gate now enforced centrally in `finalizeLambda`, the equivalent `@vercel/node` build-time check from #16266 is consolidated away — all builders go through the same gate.
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
+## 5.7.16
+
+### Patch Changes
+
+- 94c29b8: Disable response streaming for AWS custom handler lambdas
+- Updated dependencies [e53dd86]
+  - @vercel/build-utils@13.22.0
+
+## 5.7.15
+
+### Patch Changes
+
+- f7b5377: fix(node): replace deprecated `url.parse()` with WHATWG URL API to silence DEP0169 deprecation warning on cold starts
+
+## 5.7.14
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+  - @vercel/build-utils@13.21.0
+  - @vercel/error-utils@2.1.0
+
 ## 5.7.13
 
 ### Patch Changes

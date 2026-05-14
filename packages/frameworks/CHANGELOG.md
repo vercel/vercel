@@ -1,5 +1,28 @@
 # @vercel/frameworks
 
+## 3.26.0
+
+### Minor Changes
+
+- 51785a6: Add Ash framework preset
+
+## 3.25.1
+
+### Patch Changes
+
+- c95a7ca: Move framework import screenshots from Cloudinary (`assets.vercel.com`) to Vercel Blob. The four affected entries (Next.js, Nuxt, SvelteKit, SvelteKit legacy) now point at `https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/*.png`. Same images, different host — consumers see no behavior change.
+
+## 3.25.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/error-utils@2.1.0
+
 ## 3.24.2
 
 ### Patch Changes

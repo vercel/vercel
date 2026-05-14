@@ -183,6 +183,13 @@ export interface ServiceQueueTopic {
   initialDelaySeconds?: number;
 }
 
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
+  service: string;
+}
+
+export type EnvVar = ServiceRefEnvVar;
+
 export interface GitDeploymentConfig {
   [branch: string]: boolean;
 }
@@ -453,10 +460,11 @@ export interface VercelConfig {
    */
   cleanUrls?: boolean;
   /**
-   * An object containing the deployment's environment variable names and values. Secrets can be referenced by prefixing the value with `@`
-   * @deprecated
+   * Environment variables to expose to the deployment. Either a flat
+   * `Record<string, string>` of literal values (the deprecated shape, kept for
+   * back-compat) or an `EnvVar` record
    */
-  env?: Record<string, string>;
+  env?: Record<string, string> | Record<string, EnvVar>;
   /**
    * An array of the passive regions the deployment's Serverless Functions should be deployed to that can be failed over to during a lambda outage
    */
@@ -653,9 +661,9 @@ export interface VercelConfig {
        */
       topics?: string[] | ServiceQueueTopic[];
       /**
-       * Custom prefix to use to inject service URL env vars.
+       * Environment variables to inject into this service at build and runtime.
        */
-      envPrefix?: string;
+      env?: Record<string, EnvVar>;
     }
   >;
   /**

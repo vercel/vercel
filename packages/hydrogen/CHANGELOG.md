@@ -1,5 +1,12 @@
 # @vercel/hydrogen
 
+## 1.3.7
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+
 ## 1.3.6
 
 ### Patch Changes

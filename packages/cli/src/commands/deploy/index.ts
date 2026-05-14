@@ -47,6 +47,7 @@ import {
   DomainNotVerified,
   DomainPermissionDenied,
   DomainVerificationFailed,
+  DeprecatedNowJson,
   InvalidDomain,
   isAPIError,
   MissingBuildScript,
@@ -62,6 +63,7 @@ import getSubcommand from '../../util/get-subcommand';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
@@ -225,7 +227,10 @@ async function handleInitDeployment(
   }
 
   await compileVercelConfig(paths[0]);
-  let localConfig = client.localConfig || readLocalConfig(paths[0]);
+  const shouldUseEarlyLocalConfig = paths[0] === client.cwd;
+  let localConfig = shouldUseEarlyLocalConfig
+    ? client.localConfig || readLocalConfig(paths[0])
+    : readLocalConfig(paths[0]);
 
   if (localConfig) {
     client.localConfig = localConfig;
@@ -260,6 +265,7 @@ async function handleInitDeployment(
     flagName: 'target',
     flags: parsedArguments.flags,
   });
+  telemetryClient.trackTargetEnvironment(target);
 
   const parsedArchive = parsedArguments.flags['--archive'];
   if (
@@ -288,7 +294,7 @@ async function handleInitDeployment(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: undefined,
       nowConfig: localConfig,
@@ -727,7 +733,14 @@ async function handleInitDeployment(
       return 0;
     }
 
-    return printDeploymentStatus(deployment, deployStamp, noWait, false, true);
+    return printDeploymentStatus(
+      client,
+      deployment,
+      deployStamp,
+      noWait,
+      false,
+      true
+    );
   } catch (err: unknown) {
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
@@ -767,7 +780,8 @@ async function handleInitDeployment(
       err instanceof MissingBuildScript ||
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment ||
-      err instanceof ConflictingConfigFiles
+      err instanceof ConflictingConfigFiles ||
+      err instanceof DeprecatedNowJson
     ) {
       handleCreateDeployError(err, localConfig);
       return 1;
@@ -801,6 +815,7 @@ async function handleContinueSubcommand(
 
   const idFlag = parsedArguments.flags['--id'];
   const parsedArchive = parsedArguments.flags['--archive'];
+  const errorMessage = parsedArguments.flags['--error'];
 
   if (typeof parsedArchive === 'string' && !isValidArchive(parsedArchive)) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
@@ -808,6 +823,16 @@ async function handleContinueSubcommand(
   }
 
   telemetryClient.trackCliOptionArchive(parsedArchive);
+
+  if (parsedArchive && errorMessage !== undefined) {
+    output.error(`Cannot use ${param('--archive')} with ${param('--error')}`);
+    return 1;
+  }
+
+  if (errorMessage !== undefined && errorMessage.trim() === '') {
+    output.error(`${param('--error')} requires an error message`);
+    return 1;
+  }
 
   if (!idFlag) {
     if (client.nonInteractive) {
@@ -856,7 +881,7 @@ async function handleContinueSubcommand(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm: true,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: undefined,
       nowConfig: localConfig,
@@ -871,6 +896,22 @@ async function handleContinueSubcommand(
 
   if (link.repoRoot) {
     cwd = link.repoRoot;
+  }
+
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  if (errorMessage !== undefined) {
+    try {
+      await client.fetch(`/deployments/${idFlag}/continue`, {
+        method: 'POST',
+        body: { errorMessage },
+      });
+      output.success(`Marked deployment ${idFlag} as errored`);
+      return 0;
+    } catch (error) {
+      printError(error);
+      return 1;
+    }
   }
 
   // Resolve vercelOutputDir - prebuilt is implicit for continue
@@ -915,8 +956,6 @@ async function handleContinueSubcommand(
       return 1;
     }
   }
-
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const deployStamp = stamp();
 
@@ -1023,9 +1062,23 @@ async function handleDefaultDeploy(
   // #endregion
 
   // #region Config loading
-  await compileVercelConfig(paths[0]);
+  try {
+    await compileVercelConfig(paths[0]);
+  } catch (err) {
+    if (
+      err instanceof ConflictingConfigFiles ||
+      err instanceof DeprecatedNowJson
+    ) {
+      output.prettyError(err);
+      return 1;
+    }
+    throw err;
+  }
 
-  let localConfig = client.localConfig || readLocalConfig(paths[0]);
+  const shouldUseEarlyLocalConfig = paths[0] === client.cwd;
+  let localConfig = shouldUseEarlyLocalConfig
+    ? client.localConfig || readLocalConfig(paths[0])
+    : readLocalConfig(paths[0]);
 
   if (localConfig) {
     client.localConfig = localConfig;
@@ -1090,6 +1143,7 @@ async function handleDefaultDeploy(
     flagName: 'target',
     flags: parsedArguments.flags,
   });
+  telemetryClient.trackTargetEnvironment(target);
 
   // Validate that --skip-domain is only used with production deployments
   const skipDomain = parsedArguments.flags['--skip-domain'];
@@ -1127,7 +1181,7 @@ async function handleDefaultDeploy(
 
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
-    setupMsg: 'Set up and deploy',
+    setupMsg: 'Set up',
     projectName: getProjectName({
       nameParam: parsedArguments.flags['--name'],
       nowConfig: localConfig,
@@ -1902,7 +1956,13 @@ async function handleDefaultDeploy(
 
   const { isAgent } = await determineAgent();
   const guidanceMode = parsedArguments.flags['--guidance'] ?? isAgent;
-  return printDeploymentStatus(deployment, deployStamp, noWait, guidanceMode);
+  return printDeploymentStatus(
+    client,
+    deployment,
+    deployStamp,
+    noWait,
+    guidanceMode
+  );
 }
 
 function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
@@ -1967,7 +2027,8 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
     error instanceof MissingBuildScript ||
     error instanceof ConflictingFilePath ||
     error instanceof ConflictingPathSegment ||
-    error instanceof ConflictingConfigFiles
+    error instanceof ConflictingConfigFiles ||
+    error instanceof DeprecatedNowJson
   ) {
     output.error(error.message);
     return 1;
@@ -2040,7 +2101,7 @@ async function handleContinueDeployment({
     return 1;
   }
 
-  output.spinner(`Continuing deployment...`, 0);
+  output.spinner(`Continuing deployment…`, 0);
 
   try {
     let finalDeployment: any = null;
@@ -2065,7 +2126,7 @@ async function handleContinueDeployment({
       if (event.type === 'file-count') {
         const { total, missing } = event.payload;
         output.spinner(
-          `Uploading ${missing.length} of ${total.size} files...`,
+          `Uploading ${missing.length} of ${total.size} files…`,
           0
         );
       }
@@ -2075,7 +2136,7 @@ async function handleContinueDeployment({
       }
 
       if (event.type === 'all-files-uploaded') {
-        output.spinner('Continuing deployment...', 0);
+        output.spinner('Continuing deployment…', 0);
       }
 
       if (event.type === 'created') {
@@ -2083,24 +2144,23 @@ async function handleContinueDeployment({
         output.stopSpinner();
 
         if (finalDeployment.inspectorUrl) {
-          output.print(
-            prependEmoji(
-              `Inspect: ${chalk.bold(finalDeployment.inspectorUrl)} ${deployStamp()}`,
-              emoji('inspect')
-            ) + '\n'
+          printAlignedLabel(
+            'Inspect',
+            chalk.cyan(finalDeployment.inspectorUrl)
           );
         }
 
+        const isProdDeployment = finalDeployment.target === 'production';
         const previewUrl = `https://${finalDeployment.url}`;
-        output.print(
-          prependEmoji(
-            `Preview: ${chalk.bold(previewUrl)} ${deployStamp()}`,
-            emoji('success')
-          ) + '\n'
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
         if (noWait) {
           return printDeploymentStatus(
+            client,
             finalDeployment,
             deployStamp,
             noWait,
@@ -2108,11 +2168,11 @@ async function handleContinueDeployment({
           );
         }
 
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'building') {
-        output.spinner('Building...', 0);
+        output.spinner('Building…', 0);
       }
 
       if (event.type === 'ready') {
@@ -2131,12 +2191,7 @@ async function handleContinueDeployment({
         ) {
           const primaryDomain = finalDeployment.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Production: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
       }
 
@@ -2158,7 +2213,13 @@ async function handleContinueDeployment({
       return 1;
     }
 
-    return printDeploymentStatus(finalDeployment, deployStamp, noWait, false);
+    return printDeploymentStatus(
+      client,
+      finalDeployment,
+      deployStamp,
+      noWait,
+      false
+    );
   } catch (err: unknown) {
     output.stopSpinner();
     if (isError(err)) {

@@ -41,7 +41,7 @@ export default async function selectOrg(
     config: { currentTeam },
   } = client;
 
-  output.spinner('Loading scopes…', 1000);
+  output.spinner('Loading teams…', 1000);
   let user: User;
   let teams: Team[];
   try {
@@ -95,14 +95,14 @@ export default async function selectOrg(
       reason: 'missing_scope',
       message:
         choices.length > 0
-          ? 'Provide --scope or --team explicitly. No default is applied in non-interactive mode.'
-          : 'No scopes available.',
+          ? 'Provide --team or --scope explicitly. No default is applied in non-interactive mode.'
+          : 'No teams available.',
       choices: choices.map(c => ({
         id: c.value.id,
         name: c.value.slug,
       })),
       next: choices.map(c => ({
-        command: `${packageName} link --scope ${c.value.slug}`,
+        command: `${packageName} link --team ${c.value.slug}`,
       })),
     };
     outputActionRequired(client, actionRequired);
