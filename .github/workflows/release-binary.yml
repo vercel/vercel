@@ -2,8 +2,6 @@ name: Release Binary
 
 on:
   push:
-    branches:
-      - 'ijjk-small-icu-release-binary'
     tags:
       - 'vercel@*'
   workflow_dispatch:
