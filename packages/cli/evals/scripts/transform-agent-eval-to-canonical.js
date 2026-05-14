@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 function parseArgs(argv) {
@@ -49,6 +49,15 @@ async function listFilesRecursively(rootDir) {
 
   await walk(rootDir);
   return files;
+}
+
+async function directoryExists(dir) {
+  try {
+    return (await stat(dir)).isDirectory();
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return false;
+    throw error;
+  }
 }
 
 function collectModelValues(value, models = new Set(), seen = new Set()) {
@@ -244,6 +253,13 @@ async function main() {
   }
 
   const resultsDir = path.resolve(args['results-dir']);
+  if (!(await directoryExists(resultsDir))) {
+    console.log(
+      `Results directory does not exist; nothing to upload: ${resultsDir}`
+    );
+    return;
+  }
+
   const topLevelDirs = await listDirectories(resultsDir);
   if (topLevelDirs.length === 0) {
     console.log('Results directory is empty; nothing to upload.');
