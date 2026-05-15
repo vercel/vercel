@@ -1,10 +1,64 @@
 import path from 'path';
 import { remove } from 'fs-extra';
 import { build } from '../src';
+import {
+  getTanStackNitroFallbackBuildCommand,
+  TANSTACK_NITRO_FALLBACK_BUILD_COMMAND,
+} from '../src/tanstack';
 
 vi.setConfig({ testTimeout: 2 * 60 * 1000, hookTimeout: 2 * 60 * 1000 });
 
 describe('build()', () => {
+  describe('getTanStackNitroFallbackBuildCommand()', () => {
+    const tanstackFramework = { slug: 'tanstack-start' } as any;
+    const basePkg = {
+      scripts: {
+        build: 'vite build',
+      },
+      dependencies: {
+        '@tanstack/router-plugin': 'latest',
+        '@tanstack/react-start': 'latest',
+      },
+      devDependencies: {},
+    } as any;
+
+    it('returns fallback command for TanStack Start with vite build and no nitro dependency', () => {
+      const command = getTanStackNitroFallbackBuildCommand({
+        framework: tanstackFramework,
+        pkg: basePkg,
+        config: { zeroConfig: true, projectSettings: {} },
+        buildCommand: null,
+      });
+      expect(command).toBe(TANSTACK_NITRO_FALLBACK_BUILD_COMMAND);
+    });
+
+    it('does not return fallback command when nitro dependency exists', () => {
+      const command = getTanStackNitroFallbackBuildCommand({
+        framework: tanstackFramework,
+        pkg: {
+          ...basePkg,
+          dependencies: { ...basePkg.dependencies, nitro: 'latest' },
+        },
+        config: { zeroConfig: true, projectSettings: {} },
+        buildCommand: null,
+      });
+      expect(command).toBe(null);
+    });
+
+    it('does not return fallback command when project settings build command is set', () => {
+      const command = getTanStackNitroFallbackBuildCommand({
+        framework: tanstackFramework,
+        pkg: basePkg,
+        config: {
+          zeroConfig: true,
+          projectSettings: { buildCommand: 'custom build' },
+        },
+        buildCommand: null,
+      });
+      expect(command).toBe(null);
+    });
+  });
+
   describe('Build Output API v1', () => {
     it('should detect the output format', async () => {
       const workPath = path.join(
