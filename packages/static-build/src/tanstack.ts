@@ -1,9 +1,12 @@
 import type { Config, PackageJson } from '@vercel/build-utils';
 
+// Nightly Nitro is required for `nitro build --builder vite`.
+export const TANSTACK_NITRO_NIGHTLY_PACKAGE = 'nitro@npm:nitro-nightly@latest';
+
 // Install Nitro into the project directory, then run the local binary so Node
 // resolves `vite` from the project's node_modules (not an isolated `npx` cache).
 export function getTanStackNitroBuildCommand(): string {
-  return 'npm install --no-save nitro && ./node_modules/.bin/nitro build --builder vite';
+  return `npm install --no-save ${TANSTACK_NITRO_NIGHTLY_PACKAGE} && ./node_modules/.bin/nitro build --builder vite`;
 }
 
 function isExperimentalInjectNitroEnabled() {

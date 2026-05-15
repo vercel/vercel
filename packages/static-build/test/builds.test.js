@@ -452,7 +452,7 @@ it(
       npmPath,
       [
         '#!/bin/sh',
-        'if [ "$1" = "install" ] && [ "$2" = "--no-save" ] && [ "$3" = "nitro" ]; then',
+        'if [ "$1" = "install" ] && [ "$2" = "--no-save" ] && [ "$3" = "nitro@npm:nitro-nightly@latest" ]; then',
         '  exit 0',
         'fi',
         'echo "unexpected npm args: $@" >&2',

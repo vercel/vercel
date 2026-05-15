@@ -4,6 +4,7 @@ import { build } from '../src';
 import {
   getTanStackNitroBuildCommand,
   shouldUseTanStackNitroFallback,
+  TANSTACK_NITRO_NIGHTLY_PACKAGE,
 } from '../src/tanstack';
 
 vi.setConfig({ testTimeout: 2 * 60 * 1000, hookTimeout: 2 * 60 * 1000 });
@@ -36,7 +37,7 @@ describe('build()', () => {
       });
       expect(enabled).toBe(true);
       expect(getTanStackNitroBuildCommand()).toBe(
-        'npm install --no-save nitro && ./node_modules/.bin/nitro build --builder vite'
+        `npm install --no-save ${TANSTACK_NITRO_NIGHTLY_PACKAGE} && ./node_modules/.bin/nitro build --builder vite`
       );
     });
 

@@ -401,7 +401,7 @@ export const build: BuildV2 = async ({
       `TanStack Nitro fallback running in ${entrypointDir} (entrypoint: ${entrypoint})`
     );
     console.warn(
-      'Detected TanStack Start with SSR enabled but no `nitro` dependency. Installing Nitro locally and running `./node_modules/.bin/nitro build --builder vite` instead of the `vite build` script.'
+      'Detected TanStack Start with SSR enabled but no `nitro` dependency. Installing nitro-nightly locally and running `./node_modules/.bin/nitro build --builder vite` instead of the `vite build` script.'
     );
     buildCommand = getTanStackNitroBuildCommand();
   }
