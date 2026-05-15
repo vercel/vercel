@@ -428,25 +428,14 @@ it(
       path.join(os.tmpdir(), 'vercel-static-build-bin-shim-')
     );
     const npmPath = path.join(shimDir, 'npm');
-    const nitroPath = path.join(shimDir, 'nitro');
     const previousPath = process.env.PATH;
     const previousInjectNitro = process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
 
     await fs.copy(fixture, workFixture);
+    const nitroBinDir = path.join(workFixture, 'node_modules', '.bin');
+    await fs.mkdirp(nitroBinDir);
     await fs.writeFile(
-      npmPath,
-      [
-        '#!/bin/sh',
-        'if [ "$1" = "install" ] && [ "$2" = "--no-save" ]; then',
-        '  exit 0',
-        'fi',
-        'echo "unexpected npm args: $@" >&2',
-        'exit 1',
-        '',
-      ].join('\n')
-    );
-    await fs.writeFile(
-      nitroPath,
+      path.join(nitroBinDir, 'nitro'),
       [
         '#!/bin/sh',
         'if [ "$1" = "build" ] && [ "$2" = "--builder" ] && [ "$3" = "vite" ]; then',
@@ -459,8 +448,20 @@ it(
         '',
       ].join('\n')
     );
+    await fs.writeFile(
+      npmPath,
+      [
+        '#!/bin/sh',
+        'if [ "$1" = "install" ] && [ "$2" = "--no-save" ] && [ "$3" = "nitro" ]; then',
+        '  exit 0',
+        'fi',
+        'echo "unexpected npm args: $@" >&2',
+        'exit 1',
+        '',
+      ].join('\n')
+    );
+    await fs.chmod(path.join(nitroBinDir, 'nitro'), 0o755);
     await fs.chmod(npmPath, 0o755);
-    await fs.chmod(nitroPath, 0o755);
 
     process.env.PATH = `${shimDir}${path.delimiter}${previousPath || ''}`;
     process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO = '1';
@@ -471,7 +472,7 @@ it(
       expect(buildResult.output['index.html']).toBeTruthy();
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Installing Nitro and running `nitro build --builder vite`'
+          './node_modules/.bin/nitro build --builder vite'
         )
       );
     } finally {

@@ -53,9 +53,8 @@ import {
 import { getHugoUrl } from './utils/hugo';
 import { once } from 'events';
 import {
-  getTanStackNitroInstallCommand,
+  getTanStackNitroBuildCommand,
   shouldUseTanStackNitroFallback,
-  TANSTACK_NITRO_BUILD_COMMAND,
 } from './tanstack';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -398,17 +397,13 @@ export const build: BuildV2 = async ({
       buildCommand,
     });
   if (useTanStackNitroFallback) {
-    const dependencies = {
-      ...pkg.dependencies,
-      ...pkg.devDependencies,
-    };
-    const viteNote = dependencies.vite
-      ? ''
-      : ' Installing `vite` alongside `nitro` because it is not declared as a dependency.';
-    console.warn(
-      `Detected TanStack Start with SSR enabled but no \`nitro\` dependency. Installing Nitro and running \`nitro build --builder vite\` instead of the \`vite build\` script.${viteNote}`
+    debug(
+      `TanStack Nitro fallback running in ${entrypointDir} (entrypoint: ${entrypoint})`
     );
-    buildCommand = null;
+    console.warn(
+      'Detected TanStack Start with SSR enabled but no `nitro` dependency. Installing Nitro locally and running `./node_modules/.bin/nitro build --builder vite` instead of the `vite build` script.'
+    );
+    buildCommand = getTanStackNitroBuildCommand();
   }
 
   if (pkg || buildCommand) {
@@ -774,22 +769,8 @@ export const build: BuildV2 = async ({
       }
 
       try {
-        const found = useTanStackNitroFallback
-          ? (await execCommand(getTanStackNitroInstallCommand(pkg), {
-              env: {
-                YARN_NODE_LINKER: 'node-modules',
-                ...cliEnv,
-              },
-              cwd: entrypointDir,
-            })) &&
-            (await execCommand(TANSTACK_NITRO_BUILD_COMMAND, {
-              env: {
-                YARN_NODE_LINKER: 'node-modules',
-                ...cliEnv,
-              },
-              cwd: entrypointDir,
-            }))
-          : typeof buildCommand === 'string'
+        const found =
+          typeof buildCommand === 'string'
             ? await execCommand(buildCommand, {
                 // Yarn v2 PnP mode may be activated, so force
                 // "node-modules" linker style

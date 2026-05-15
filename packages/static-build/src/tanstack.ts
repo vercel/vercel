@@ -1,6 +1,10 @@
 import type { Config, PackageJson } from '@vercel/build-utils';
 
-export const TANSTACK_NITRO_BUILD_COMMAND = 'nitro build --builder vite';
+// Install Nitro into the project directory, then run the local binary so Node
+// resolves `vite` from the project's node_modules (not an isolated `npx` cache).
+export function getTanStackNitroBuildCommand(): string {
+  return 'npm install --no-save nitro && ./node_modules/.bin/nitro build --builder vite';
+}
 
 function isExperimentalInjectNitroEnabled() {
   const value = process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
@@ -50,16 +54,4 @@ export function shouldUseTanStackNitroFallback({
   }
 
   return true;
-}
-
-export function getTanStackNitroInstallCommand(pkg: PackageJson): string {
-  const dependencies = {
-    ...pkg.dependencies,
-    ...pkg.devDependencies,
-  };
-  const packages = dependencies.vite ? 'nitro' : 'nitro vite';
-
-  // Install into the project so Nitro can resolve `vite` from node_modules
-  // instead of an isolated `npx` cache.
-  return `npm install --no-save ${packages}`;
 }

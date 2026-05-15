@@ -2,9 +2,8 @@ import path from 'path';
 import { remove } from 'fs-extra';
 import { build } from '../src';
 import {
-  getTanStackNitroInstallCommand,
+  getTanStackNitroBuildCommand,
   shouldUseTanStackNitroFallback,
-  TANSTACK_NITRO_BUILD_COMMAND,
 } from '../src/tanstack';
 
 vi.setConfig({ testTimeout: 2 * 60 * 1000, hookTimeout: 2 * 60 * 1000 });
@@ -36,19 +35,8 @@ describe('build()', () => {
         buildCommand: null,
       });
       expect(enabled).toBe(true);
-      expect(getTanStackNitroInstallCommand(basePkg)).toBe(
-        'npm install --no-save nitro vite'
-      );
-      expect(TANSTACK_NITRO_BUILD_COMMAND).toBe('nitro build --builder vite');
-    });
-
-    it('installs only nitro when vite is already declared', () => {
-      const pkg = {
-        ...basePkg,
-        devDependencies: { vite: 'latest' },
-      };
-      expect(getTanStackNitroInstallCommand(pkg)).toBe(
-        'npm install --no-save nitro'
+      expect(getTanStackNitroBuildCommand()).toBe(
+        'npm install --no-save nitro && ./node_modules/.bin/nitro build --builder vite'
       );
     });
 
