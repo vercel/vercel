@@ -823,12 +823,9 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
   Options:
 
-       --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
-       --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
-  -F,  --format <FORMAT>         Specify the output format (json)                                                            
-       --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
-  -n,  --name <NAME>             Name of the connector                                                                       
-       --triggers                Enable webhook triggers for this connector                                                  
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -n,  --name <NAME>      Name of the connector                                                                         
+       --triggers         Enable webhook triggers for this connector                                                    
 
 
   Global Options:
@@ -858,10 +855,6 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with webhook triggers enabled
 
     $ vercel connect create slack --name my-bot --triggers
-
-  - Create with branding (icon and colors)
-
-    $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
 
   - Output as JSON
 
