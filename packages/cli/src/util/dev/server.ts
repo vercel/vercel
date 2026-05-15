@@ -1442,7 +1442,12 @@ export default class DevServer {
       .replace(/^\[(.+)\]$/, '$1'); // unwrap [IPv6]
 
     // Always allow loopback addresses.
-    const loopback = new Set(['localhost', '127.0.0.1', '::1', '::ffff:127.0.0.1']);
+    const loopback = new Set([
+      'localhost',
+      '127.0.0.1',
+      '::1',
+      '::ffff:127.0.0.1',
+    ]);
     if (loopback.has(hostname.toLowerCase())) {
       return true;
     }
