@@ -1,0 +1,180 @@
+name: Version Packages NPM Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  npm-gate:
+    name: Check NPM Availability
+    if: github.event.pull_request.title == 'Version Packages'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure releasable packages already exist on npm
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const marker = '<!-- version-packages-npm-gate -->';
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const changedPackageJsonFiles = files
+              .map(file => file.filename)
+              .filter(filename => filename.endsWith('/package.json'));
+
+            const packageMap = new Map();
+            for (const packageJsonPath of changedPackageJsonFiles) {
+              const { data } = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path: packageJsonPath,
+                ref: pr.head.sha,
+              });
+
+              if (!('content' in data) || typeof data.content !== 'string') {
+                core.warning(`Skipping ${packageJsonPath}; file content is unavailable.`);
+                continue;
+              }
+
+              const packageJson = JSON.parse(
+                Buffer.from(data.content, 'base64').toString('utf8')
+              );
+
+              if (packageJson.private === true || typeof packageJson.name !== 'string') {
+                continue;
+              }
+
+              packageMap.set(packageJson.name, packageJsonPath);
+            }
+
+            async function packageExistsOnNpm(packageName) {
+              const response = await fetch(
+                `https://registry.npmjs.org/${encodeURIComponent(packageName)}`
+              );
+
+              if (response.status === 404) {
+                return false;
+              }
+
+              if (!response.ok) {
+                throw new Error(
+                  `NPM registry lookup failed for ${packageName} with status ${response.status}`
+                );
+              }
+
+              return true;
+            }
+
+            const unpublishedPackages = [];
+            for (const [packageName, packageJsonPath] of packageMap) {
+              const exists = await packageExistsOnNpm(packageName);
+              if (!exists) {
+                unpublishedPackages.push({
+                  packageName,
+                  packageJsonPath,
+                });
+              }
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+
+            const existingComment = comments.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
+              comment.body.includes(marker)
+            );
+
+            if (unpublishedPackages.length === 0) {
+              if (existingComment) {
+                await github.rest.issues.deleteComment({
+                  owner,
+                  repo,
+                  comment_id: existingComment.id,
+                });
+              }
+              core.info('All releasable packages already exist on npm.');
+              return;
+            }
+
+            const packageLines = unpublishedPackages
+              .map(
+                ({ packageName, packageJsonPath }) =>
+                  `- \`${packageName}\` (\`${packageJsonPath}\`)`
+              )
+              .join('\n');
+
+            const commentBody = [
+              marker,
+              '## Release blocked: package missing on npm',
+              '',
+              'This `Version Packages` PR includes package(s) that do not exist on npm yet:',
+              '',
+              packageLines,
+              '',
+              'Trusted publishing in this repo cannot publish first-time npm packages.',
+              'Publish these package(s) once with the required bootstrap flow, then re-run release generation.',
+            ].join('\n');
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+                body: commentBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: commentBody,
+              });
+            }
+
+            core.setFailed(
+              `Release blocked. Missing package(s) on npm: ${unpublishedPackages
+                .map(pkg => pkg.packageName)
+                .join(', ')}`
+            );
+
+  summary:
+    name: Summary (version packages npm gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    if: always()
+    needs:
+      - npm-gate
+    steps:
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
