@@ -22,6 +22,7 @@ import {
   Span,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  BUILDER_PRE_DEPLOY_STEP,
   type BuildOptions,
   type GlobOptions,
   type BuildVX,
@@ -231,6 +232,7 @@ export const build: BuildVX = async ({
   config,
   span: parentSpan,
   service,
+  registerPreDeploy,
 }) => {
   let entrypoint: string | undefined =
     rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
@@ -624,6 +626,28 @@ export const build: BuildVX = async ({
   if (quirksResult.buildEnv) {
     Object.assign(pythonEnv, quirksResult.buildEnv);
   }
+
+  // Register a pre-deploy command that will be fired in the end of the
+  // build process (if all builders including this one succeed)
+  const preDeployCommand = config?.preDeployCommand;
+  if (registerPreDeploy && typeof preDeployCommand === 'string') {
+    const capturedEnv = { ...pythonEnv };
+    const capturedCwd = workPath;
+    registerPreDeploy(async () => {
+      await builderSpan
+        .child(BUILDER_PRE_DEPLOY_STEP, {
+          preDeployCommand,
+        })
+        .trace(async () => {
+          console.log(`Running pre-deploy command: \`${preDeployCommand}\``);
+          await execCommand(preDeployCommand, {
+            env: capturedEnv,
+            cwd: capturedCwd,
+          });
+        });
+    });
+  }
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypointToModule(entrypoint);
 

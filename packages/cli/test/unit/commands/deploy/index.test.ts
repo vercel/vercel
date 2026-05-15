@@ -1703,6 +1703,15 @@ describe('deploy', () => {
     it('should display the primary production domain when aliased', async () => {
       const user = useUser();
       useTeams('team_dummy');
+      let projectFetchCount = 0;
+      client.scenario.get(`/v9/projects/static`, (_req, res) => {
+        projectFetchCount++;
+        res.json({
+          ...defaultProject,
+          name: 'static',
+          id: 'static',
+        });
+      });
       useProject({
         ...defaultProject,
         name: 'static',
@@ -1790,6 +1799,8 @@ describe('deploy', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+      expect(projectFetchCount).toEqual(1);
+      expect(callCount).toEqual(2);
     });
 
     it('should not display aliased domain for preview deployments', async () => {

@@ -495,6 +495,7 @@ async function handleInitDeployment(
       manual: true,
       jsonOutput: asJson,
       functionsBeta: functionsBeta || undefined,
+      linkedProject: project,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1446,6 +1447,7 @@ async function handleDefaultDeploy(
       agentName: client.agentName,
       jsonOutput: asJson,
       functionsBeta: functionsBeta || undefined,
+      linkedProject: project,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1632,7 +1634,9 @@ async function handleDefaultDeploy(
       return 1;
     }
 
-    if (!noWait) {
+    // The deploy status loop already returns the final payload for the normal
+    // READY + alias-assigned path, so skip the old no-op success refetch.
+    if (!noWait && shouldReconcileFinalDeployment(deployment)) {
       await getDeployment(client, contextName, deployment.id);
     }
 
@@ -2252,6 +2256,46 @@ function getDeploymentOutputJson(
     deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
     ...(error ? { error } : {}),
   };
+}
+
+// Keep one reconciliation fetch for ambiguous terminal states where alias/check
+// details may have changed after the payload we are holding was produced.
+function shouldReconcileFinalDeployment(
+  deployment:
+    | {
+        readyState?: string;
+        aliasAssigned?: boolean | number | null;
+        aliasError?: unknown;
+        checksConclusion?: string;
+        checks?: {
+          'deployment-alias'?: {
+            state?: string;
+          };
+        };
+      }
+    | null
+    | undefined
+): boolean {
+  if (!deployment) {
+    return false;
+  }
+
+  if (deployment.readyState !== 'READY') {
+    return true;
+  }
+
+  if (deployment.aliasError || !deployment.aliasAssigned) {
+    return true;
+  }
+
+  if (
+    deployment.checksConclusion === 'failed' ||
+    deployment.checks?.['deployment-alias']?.state === 'failed'
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 // v2 checks: fetch check runs and print failures
