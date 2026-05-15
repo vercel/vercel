@@ -68,7 +68,7 @@ describe('vercel traces get', () => {
   it('prints the summary block to stdout for a 200 response', async () => {
     mockLinkedProject();
     let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/api/v1/projects/traces', (req, res) => {
+    client.scenario.get('/v1/projects/traces', (req, res) => {
       receivedQuery = req.query as Record<string, unknown>;
       res.json({ trace: sampleTrace });
     });
@@ -98,7 +98,7 @@ describe('vercel traces get', () => {
 
   it('works when `get` is omitted (shortcut form)', async () => {
     mockLinkedProject();
-    client.scenario.get('/api/v1/projects/traces', (_req, res) => {
+    client.scenario.get('/v1/projects/traces', (_req, res) => {
       res.json({ trace: sampleTrace });
     });
 
@@ -113,7 +113,7 @@ describe('vercel traces get', () => {
 
   it('prints the raw trace JSON to stdout with --json', async () => {
     mockLinkedProject();
-    client.scenario.get('/api/v1/projects/traces', (_req, res) => {
+    client.scenario.get('/v1/projects/traces', (_req, res) => {
       res.json({ trace: sampleTrace });
     });
 
@@ -151,7 +151,7 @@ describe('vercel traces get', () => {
   it('works from a non-linked dir with --scope and --project flags', async () => {
     mockNotLinked();
     let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/api/v1/projects/traces', (req, res) => {
+    client.scenario.get('/v1/projects/traces', (req, res) => {
       receivedQuery = req.query as Record<string, unknown>;
       res.json({ trace: sampleTrace });
     });
@@ -178,7 +178,7 @@ describe('vercel traces get', () => {
   it('lets --scope and --project override the linked project', async () => {
     mockLinkedProject();
     let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/api/v1/projects/traces', (req, res) => {
+    client.scenario.get('/v1/projects/traces', (req, res) => {
       receivedQuery = req.query as Record<string, unknown>;
       res.json({ trace: sampleTrace });
     });
@@ -205,7 +205,7 @@ describe('vercel traces get', () => {
   it('falls back to the linked team when only --project is provided', async () => {
     mockLinkedProject();
     let receivedQuery: Record<string, unknown> | undefined;
-    client.scenario.get('/api/v1/projects/traces', (req, res) => {
+    client.scenario.get('/v1/projects/traces', (req, res) => {
       receivedQuery = req.query as Record<string, unknown>;
       res.json({ trace: sampleTrace });
     });
@@ -227,71 +227,30 @@ describe('vercel traces get', () => {
     });
   });
 
-  it('retries through 404s and prints the summary once a 200 arrives', async () => {
+  it('exits 1 on 404 without retrying', async () => {
     mockLinkedProject();
     let calls = 0;
-    client.scenario.get('/api/v1/projects/traces', (_req, res) => {
+    client.scenario.get('/v1/projects/traces', (_req, res) => {
       calls += 1;
-      if (calls < 3) {
-        res.status(404).json({ error: { message: 'not found' } });
-        return;
-      }
-      res.json({ trace: sampleTrace });
-    });
-
-    client.setArgv('traces', 'get', 'req_eventual');
-    const exitCode = await traces(client);
-
-    expect(calls).toBe(3);
-    expect(exitCode).toBe(0);
-    expect(client.stdout.getFullOutput()).toContain(
-      'Request id:   req_eventual'
-    );
-  });
-
-  it('exits 124 with an actionable stderr message when the timeout is exhausted', async () => {
-    mockLinkedProject();
-    client.scenario.get('/api/v1/projects/traces', (_req, res) => {
       res.status(404).json({ error: { message: 'not found' } });
     });
 
-    // 100ms budget — the first 500ms backoff already overshoots, so we bail
-    // after a single attempt without paying real backoff time.
-    client.setArgv('traces', 'get', 'req_timeout', '--timeout', '100');
-    const exitCode = await traces(client);
-
-    expect(exitCode).toBe(124);
-    const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain(
-      'Trace not yet available for request req_timeout.'
-    );
-    expect(stderr).toContain('--timeout 60000');
-  });
-
-  it('exits 1 immediately on 401 without retrying', async () => {
-    mockLinkedProject();
-    let calls = 0;
-    client.scenario.get('/api/v1/projects/traces', (_req, res) => {
-      calls += 1;
-      res.status(401).json({ error: { message: 'unauthorized' } });
-    });
-
-    client.setArgv('traces', 'get', 'req_401');
+    client.setArgv('traces', 'get', 'req_missing');
     const exitCode = await traces(client);
 
     expect(calls).toBe(1);
     expect(exitCode).toBe(1);
   });
 
-  it('exits 1 on 404 when --no-wait is set (single attempt)', async () => {
+  it('exits 1 immediately on 401 without retrying', async () => {
     mockLinkedProject();
     let calls = 0;
-    client.scenario.get('/api/v1/projects/traces', (_req, res) => {
+    client.scenario.get('/v1/projects/traces', (_req, res) => {
       calls += 1;
-      res.status(404).json({ error: { message: 'not found' } });
+      res.status(401).json({ error: { message: 'unauthorized' } });
     });
 
-    client.setArgv('traces', 'get', 'req_nowait', '--no-wait');
+    client.setArgv('traces', 'get', 'req_401');
     const exitCode = await traces(client);
 
     expect(calls).toBe(1);
