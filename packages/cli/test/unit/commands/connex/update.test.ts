@@ -240,6 +240,83 @@ describe('connex update', () => {
     await expect(client.stderr).toOutput('Connector slack/branded updated');
   });
 
+  it('should reject a truncated PNG before any network call', async () => {
+    let uploadHit = false;
+    client.scenario.post('/v2/files', (_req, res) => {
+      uploadHit = true;
+      res.json({});
+    });
+
+    // 4-byte PNG prefix only — fails the >=12-byte minimum check.
+    const TRUNCATED = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    const iconPath = await writeTmpFile('logo.png', TRUNCATED);
+
+    client.setArgv('connect', 'update', 'scl_abc', '--icon', iconPath);
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(uploadHit).toBe(false);
+    await expect(client.stderr).toOutput('is not a PNG or JPEG');
+  });
+
+  it('should reject icons larger than 5 MB before any network call', async () => {
+    let uploadHit = false;
+    client.scenario.post('/v2/files', (_req, res) => {
+      uploadHit = true;
+      res.json({});
+    });
+
+    // Real PNG signature followed by enough padding to exceed 5 MB.
+    const OVERSIZED = Buffer.alloc(5 * 1024 * 1024 + 13);
+    OVERSIZED.set(
+      [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d],
+      0
+    );
+    const iconPath = await writeTmpFile('big.png', OVERSIZED);
+
+    client.setArgv('connect', 'update', 'scl_abc', '--icon', iconPath);
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(uploadHit).toBe(false);
+    await expect(client.stderr).toOutput('maximum is');
+  });
+
+  it('should resolve --icon path against client.cwd', async () => {
+    let patchHit = false;
+    client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
+      res.json(
+        fakeConnexClient({
+          id: (req.params as any).id,
+          uid: 'slack/cwd-test',
+        })
+      );
+    });
+    client.scenario.post('/v2/files', (_req, res) => {
+      res.json({});
+    });
+    client.scenario.patch('/v1/connect/connectors/:id', (_req, res) => {
+      patchHit = true;
+      res.json(fakeConnexClient({ id: 'scl_cwd_test' }));
+    });
+
+    // Write the icon into a tmp dir, then point client.cwd at that dir and
+    // pass a RELATIVE path. The CLI must resolve it against client.cwd.
+    const iconDir = setupTmpDir();
+    const { writeFile: wf } = await import('node:fs/promises');
+    await wf(join(iconDir, 'logo.png'), new Uint8Array(PNG_BYTES));
+    client.cwd = iconDir;
+
+    client.setArgv('connect', 'update', 'scl_cwd_test', '--icon', './logo.png');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(patchHit).toBe(true);
+  });
+
   it('should accept JPEG icon', async () => {
     let patchBody: Record<string, unknown> | undefined;
     client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
@@ -338,13 +415,7 @@ describe('connex update', () => {
 
     const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
 
-    client.setArgv(
-      'connect',
-      'update',
-      'scl_stale',
-      '--icon',
-      iconPath
-    );
+    client.setArgv('connect', 'update', 'scl_stale', '--icon', iconPath);
 
     const exitCode = await connect(client);
 
