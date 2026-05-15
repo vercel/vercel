@@ -10,6 +10,7 @@ import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
 import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import {
+  buildOutcomeEnvConfig,
   resolveFlagEnvironment,
   resolveFlagUpdateMessage,
 } from '../../util/flags/environment-variant';
@@ -17,7 +18,6 @@ import {
   resolveFlagRollout,
   type ResolvedFlagRollout,
 } from '../../util/flags/rollout';
-import type { Flag } from '../../util/flags/types';
 import output from '../../output-manager';
 import { FlagsRolloutTelemetryClient } from '../../util/telemetry/commands/flags/rollout';
 import { rolloutSubcommand } from './command';
@@ -134,9 +134,12 @@ export default async function rollout(
       start,
       currentOutcome: flag.environments[selectedEnvironment].fallthrough,
     });
-    const nextEnvironmentConfig = buildRolloutEnvironmentConfig(
+    const nextEnvironmentConfig = buildOutcomeEnvConfig(
       flag.environments[selectedEnvironment],
-      rolloutConfig
+      {
+        outcome: rolloutConfig.outcome,
+        defaultVariantId: rolloutConfig.defaultVariant.id,
+      }
     );
 
     if (
@@ -190,27 +193,6 @@ export default async function rollout(
   }
 
   return 0;
-}
-
-function buildRolloutEnvironmentConfig(
-  envConfig: Flag['environments'][string],
-  rolloutConfig: ResolvedFlagRollout
-) {
-  return {
-    ...envConfig,
-    active: true,
-    reuse: envConfig.reuse
-      ? {
-          ...envConfig.reuse,
-          active: false,
-        }
-      : undefined,
-    pausedOutcome: envConfig.pausedOutcome || {
-      type: 'variant' as const,
-      variantId: rolloutConfig.defaultVariant.id,
-    },
-    fallthrough: rolloutConfig.outcome,
-  };
 }
 
 function getDefaultRolloutMessage(
