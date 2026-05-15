@@ -10,7 +10,11 @@ import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
 import { homedir } from 'os';
-import { isAbsolute, resolve as resolvePath } from 'path';
+import {
+  isAbsolute,
+  resolve as resolvePath,
+  relative as relativePath,
+} from 'path';
 import {
   createPrompt,
   isDownKey,
@@ -40,6 +44,7 @@ import { OpenApiCache } from './openapi-cache';
 import { resolveEndpointByTagAndOperationId } from './resolve-by-tag-operation';
 import type { BodyField, Parameter } from './types';
 import { getLinkFromDir, getVercelDirectory } from '../projects/link';
+import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import getUser from '../get-user';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import { APIError, ProjectNotFound } from '../errors-ts';
@@ -81,6 +86,11 @@ export type DisplayColorName =
 export interface DisplayRelativeTimeValue {
   value: DisplayNumberInput;
   format: 'relativeTime';
+}
+
+export interface DisplayDateValue {
+  value: DisplayNestableValue;
+  format: 'date';
 }
 
 export interface DisplayDurationValue {
@@ -135,6 +145,7 @@ export interface DisplayColorValue {
 
 export type DisplayFormattedValue =
   | DisplayRelativeTimeValue
+  | DisplayDateValue
   | DisplayDurationValue
   | DisplayCapitalizeValue
   | DisplayScopeValue
@@ -219,6 +230,12 @@ type DisplayRelativeTimeTemplate = {
   format: 'relativeTime';
 };
 
+type DisplayDateTemplate = {
+  type: 'format';
+  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
+  format: 'date';
+};
+
 type DisplayDurationTemplate = {
   type: 'format';
   end: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
@@ -295,6 +312,7 @@ type DisplayLiteralTemplate = {
 
 type DisplayFormatTemplate =
   | DisplayRelativeTimeTemplate
+  | DisplayDateTemplate
   | DisplayDurationTemplate
   | DisplayCapitalizeTemplate
   | DisplayScopeTemplate
@@ -522,6 +540,9 @@ export interface InferredCommandParamConfig {
   required: boolean | 'project' | 'team';
   value?: string;
   filter?: InferredCommandParamFilter;
+  inferFrom?: 'project' | 'team';
+  defaultValue?: string | boolean;
+  omitWhenOption?: string;
 }
 
 export interface InferredCommandExample {
@@ -739,6 +760,9 @@ function resolveSwitchSelectorToken(
 export const util = {
   relativeTime(value: DisplayNumberInput): DisplayRelativeTimeValue {
     return { value, format: 'relativeTime' };
+  },
+  date(value: DisplayNestableValue): DisplayDateValue {
+    return { value, format: 'date' };
   },
   capitalize(value: DisplayNestableValue): DisplayCapitalizeValue {
     return { value, format: 'capitalize' };
@@ -1164,13 +1188,34 @@ async function resolveInferredContext(
 ): Promise<InferredCommandContext> {
   const cwd = resolveCommandCwd(cwdOverride);
 
-  let linkedProject: { projectId: string; orgId: string } | null = null;
+  let linkedProject: { projectId: string; orgId?: string } | null = null;
   try {
     linkedProject = await getLinkFromDir<{ projectId: string; orgId: string }>(
       getVercelDirectory(cwd)
     );
   } catch {
     linkedProject = null;
+  }
+
+  if (!linkedProject && client) {
+    try {
+      const repoLink = await getRepoLink(client, cwd);
+      if (repoLink?.repoConfig) {
+        const matches = findProjectsFromPath(
+          repoLink.repoConfig.projects,
+          relativePath(repoLink.rootPath, cwd)
+        );
+        const selected = matches[0];
+        if (selected) {
+          linkedProject = {
+            projectId: selected.id,
+            orgId: selected.orgId ?? repoLink.repoConfig.orgId,
+          };
+        }
+      }
+    } catch {
+      // Best-effort only; command execution can proceed without project context.
+    }
   }
 
   const scopeValue = scopeOverride ?? teamOverride;
@@ -1485,6 +1530,10 @@ function isDisplayFormatTemplate(
     return isTemplateLeaf(formatValue);
   }
 
+  if (format === 'date') {
+    return isTemplateLeaf(formatValue);
+  }
+
   if (format === 'duration') {
     const endValue = (value as { end?: unknown }).end;
     const startValue = (value as { start?: unknown }).start;
@@ -1648,6 +1697,11 @@ function isDisplayFormattedValue(
   }
 
   if (format === 'relativeTime') {
+    const inner = (value as { value?: unknown }).value;
+    return isDisplayNestableValue(inner);
+  }
+
+  if (format === 'date') {
     const inner = (value as { value?: unknown }).value;
     return isDisplayNestableValue(inner);
   }
@@ -1825,6 +1879,24 @@ function toDisplayTemplate(value: unknown): DisplayTemplateValue | null {
         type: 'format',
         value: innerTemplate,
         format: 'relativeTime',
+      };
+    }
+
+    if (value.format === 'date') {
+      const innerTemplate = toDisplayTemplate(value.value);
+      if (
+        !innerTemplate ||
+        (!isDisplayPathTemplate(innerTemplate) &&
+          !isDisplayFormatTemplate(innerTemplate) &&
+          !isDisplayLiteralTemplate(innerTemplate))
+      ) {
+        return null;
+      }
+
+      return {
+        type: 'format',
+        value: innerTemplate,
+        format: 'date',
       };
     }
 
@@ -2084,6 +2156,26 @@ function resolveDisplayTemplate(
         return 'just now';
       }
       return ms(diff);
+    }
+
+    if (template.format === 'date') {
+      const value = isDisplayPathTemplate(template.value)
+        ? readValueAtPath(payload, template.value.path)
+        : resolveDisplayTemplate(template.value, payload, renderContext);
+      if (value === undefined || value === null) {
+        return null;
+      }
+
+      const date =
+        typeof value === 'number' || typeof value === 'string'
+          ? new Date(value)
+          : value instanceof Date
+            ? value
+            : null;
+      if (!date || Number.isNaN(date.getTime())) {
+        return String(value);
+      }
+      return date.toISOString();
     }
 
     if (template.format === 'duration') {
@@ -2878,7 +2970,12 @@ function buildRequestPreview(
     definition: NormalizedParamDefinition,
     providedValue: string | boolean | undefined
   ) => {
-    const value = resolveDefinitionValue(definition, providedValue, context);
+    const value = resolveDefinitionValue(
+      definition,
+      providedValue,
+      context,
+      providedOptions
+    );
 
     if (value === undefined || definition.source.location === null) {
       return;
@@ -3226,7 +3323,7 @@ const projectAutocompletePrompt = createPrompt<
       if (activeRow?.kind === 'choice') {
         done({
           kind: 'project',
-          value: activeRow.choice.name,
+          value: activeRow.choice.id,
           scopeId: activeScope.id,
           scopeSlug: activeScope.slug,
         });
@@ -3640,7 +3737,7 @@ async function promptForProjectValue(
           );
           return filteredChoices.slice(0, 40).map(choice => ({
             name: `${choice.name}`,
-            value: choice.name,
+            value: choice.id,
             description: formatProjectDescription(choice),
           }));
         },
@@ -3824,21 +3921,54 @@ async function promptForMissingRequiredInputs(
 function resolveDefinitionValue(
   definition: NormalizedParamDefinition,
   providedValue: string | boolean | undefined,
-  context: InferredCommandContext
+  context: InferredCommandContext,
+  providedOptions?: Record<string, string | boolean>
 ): string | boolean | undefined {
+  if (isDefinitionOmittedByOption(definition, providedOptions)) {
+    return undefined;
+  }
+  const contextualViewValue =
+    definition.source.location === 'query' &&
+    definition.source.name === 'view' &&
+    definition.config.required === 'project'
+      ? context.project?.id
+        ? 'project'
+        : undefined
+      : undefined;
   const implicitTeamValue =
     definition.source.location === 'query' &&
     definition.source.name === 'teamId'
       ? context.team?.value
       : undefined;
+  const inferredContextValue =
+    definition.config.inferFrom === 'project'
+      ? context.project?.id
+      : definition.config.inferFrom === 'team'
+        ? context.team?.value
+        : undefined;
   return (
     providedValue ??
+    contextualViewValue ??
+    inferredContextValue ??
+    definition.config.defaultValue ??
     (definition.config.required === 'project'
       ? context.project?.id
       : definition.config.required === 'team'
         ? context.team?.value
         : implicitTeamValue)
   );
+}
+
+function isDefinitionOmittedByOption(
+  definition: NormalizedParamDefinition,
+  providedOptions: Record<string, string | boolean> | undefined
+): boolean {
+  const omitWhenOption = definition.config.omitWhenOption;
+  if (!omitWhenOption) {
+    return false;
+  }
+  const omitFlagValue = providedOptions?.[omitWhenOption];
+  return omitFlagValue === true || omitFlagValue === 'true';
 }
 
 function collectMissingRequiredInputs(
@@ -3878,6 +4008,10 @@ function collectMissingRequiredInputs(
     definition: NormalizedParamDefinition,
     providedValue: string | boolean | undefined
   ) => {
+    if (isDefinitionOmittedByOption(definition, providedOptions)) {
+      return;
+    }
+
     if (
       definition.config.required !== true &&
       definition.config.required !== 'project' &&
@@ -3893,7 +4027,8 @@ function collectMissingRequiredInputs(
     const resolvedValue = resolveDefinitionValue(
       definition,
       providedValue,
-      context
+      context,
+      providedOptions
     );
     if (resolvedValue !== undefined) {
       return;

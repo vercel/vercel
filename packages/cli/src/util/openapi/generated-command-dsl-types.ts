@@ -1244,7 +1244,7 @@ export interface OpenApiInputNamesByTagOperation {
       | 'query.slug'
       | 'query.teamId'
       | 'query.view';
-    gitNamespaces: 'query.host' | 'query.provider';
+    gitNamespaces: 'query.host' | 'query.provider' | 'query.viewerMetadata';
     searchRepo:
       | 'query.host'
       | 'query.installationId'
