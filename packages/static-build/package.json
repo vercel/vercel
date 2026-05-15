@@ -15,11 +15,11 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
-    "test-unit": "pnpm test test/build.test.ts test/hugo.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
+    "test-unit": "pnpm test test/build.test.ts test/hugo.test.ts test/gatsby.test.ts test/prepare-cache.test.ts test/tanstack-start.test.ts",
     "test-e2e": "pnpm test test/integration-*.test.js",
     "type-check": "tsc --noEmit",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/build.test.ts' 'test/hugo.test.ts' 'test/gatsby.test.ts' 'test/prepare-cache.test.ts'",
+    "vitest-unit": "glob --absolute 'test/build.test.ts' 'test/hugo.test.ts' 'test/gatsby.test.ts' 'test/prepare-cache.test.ts' 'test/tanstack-start.test.ts'",
     "vitest-e2e": "glob --absolute 'test/integration-*.test.js'"
   },
   "dependencies": {

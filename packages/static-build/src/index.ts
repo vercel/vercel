@@ -44,6 +44,7 @@ import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
+import * as TanStackStartUtils from './utils/tanstack-start';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
 import {
@@ -374,13 +375,13 @@ export const build: BuildV2 = async ({
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
   const framework = getFramework(config, pkg);
   const localFileSystemDetector = new LocalFileSystemDetector(workPath);
-  const { detectedVersion = null } =
-    (await detectFrameworkRecord({
-      fs: localFileSystemDetector,
-      frameworkList: frameworks,
-    })) ?? {};
+  const detectedFrameworkRecord = await detectFrameworkRecord({
+    fs: localFileSystemDetector,
+    frameworkList: frameworks,
+  });
+  const { detectedVersion = null } = detectedFrameworkRecord ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
-  const buildCommand = getCommand('build', pkg, config, framework);
+  let buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
 
   if (pkg || buildCommand) {
@@ -483,6 +484,19 @@ export const build: BuildV2 = async ({
             break;
         }
       }
+    }
+
+    if (
+      !meta.isDev &&
+      (framework?.slug === 'tanstack-start' ||
+        detectedFrameworkRecord?.slug === 'tanstack-start')
+    ) {
+      buildCommand = await TanStackStartUtils.prepareTanStackStartBuildCommand({
+        buildCommand,
+        dir: entrypointDir,
+        meta,
+        packageBuildScript: pkg?.scripts?.build,
+      });
     }
 
     const nodeVersion = await getNodeVersion(
