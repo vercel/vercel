@@ -6,12 +6,10 @@ import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { help } from '../help';
 import { getSubcommand, tracesCommand } from './command';
-import { fetchTrace, TimeoutError } from './fetch-trace';
+import { fetchTrace } from './fetch-trace';
 import { renderSummary } from './render-summary';
 import { resolveScope } from './scope-resolver';
 import type { TracesTelemetryClient } from '../../util/telemetry/commands/traces';
-
-const DEFAULT_TIMEOUT_MS = 30_000;
 
 export default async function get(
   client: Client,
@@ -34,17 +32,11 @@ export default async function get(
   const json = parsedArgs.flags['--json'];
   const scopeFlag = parsedArgs.flags['--scope'];
   const projectFlag = parsedArgs.flags['--project'];
-  const timeoutFlag = parsedArgs.flags['--timeout'];
-  const noWait = parsedArgs.flags['--no-wait'];
-  const timeoutMs =
-    typeof timeoutFlag === 'number' ? timeoutFlag : DEFAULT_TIMEOUT_MS;
 
   telemetry.trackCliArgumentRequestId(requestId);
   telemetry.trackCliFlagJson(json);
   // `--scope` is tracked globally in `src/index.ts`; only project is local.
   telemetry.trackCliOptionProject(projectFlag);
-  telemetry.trackCliOptionTimeout(timeoutFlag);
-  telemetry.trackCliFlagNoWait(noWait);
 
   if (!requestId) {
     output.print(
@@ -71,31 +63,22 @@ export default async function get(
   }
 
   output.spinner('Fetching trace…');
-  const result = await fetchTrace({
-    client,
-    teamId: scope.teamId,
-    projectId: scope.projectId,
-    requestId,
-    timeoutMs,
-    retry: !noWait,
-  });
+  let trace;
+  try {
+    ({ trace } = await fetchTrace({
+      client,
+      teamId: scope.teamId,
+      projectId: scope.projectId,
+      requestId,
+    }));
+  } catch (err) {
+    output.stopSpinner();
+    printError(err);
+    return 1;
+  }
   // The spinner must be stopped manually before writing to stdout — only the
   // `output.*` helpers (which go through `print()`) clear it implicitly.
   output.stopSpinner();
-
-  if (result instanceof TimeoutError) {
-    client.stderr.write(
-      `Trace not yet available for request ${requestId}. Try again or rerun with \`--timeout 60000\`.\n`
-    );
-    return 124;
-  }
-
-  if (result instanceof Error) {
-    printError(result);
-    return 1;
-  }
-
-  const { trace } = result;
 
   if (json) {
     client.stdout.write(`${JSON.stringify(trace, null, 2)}\n`);
