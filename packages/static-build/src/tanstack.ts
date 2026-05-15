@@ -4,6 +4,11 @@ import type { Framework } from '@vercel/frameworks';
 export const TANSTACK_NITRO_FALLBACK_BUILD_COMMAND =
   'npx nitro build --builder vite';
 
+function isExperimentalInjectNitroEnabled() {
+  const value = process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
 interface TanStackNitroFallbackBuildCommandOptions {
   framework?: Framework;
   pkg?: PackageJson | null;
@@ -17,6 +22,10 @@ export function getTanStackNitroFallbackBuildCommand({
   config,
   buildCommand,
 }: TanStackNitroFallbackBuildCommandOptions): string | null {
+  if (!isExperimentalInjectNitroEnabled()) {
+    return null;
+  }
+
   if (framework?.slug !== 'tanstack-start') {
     return null;
   }
