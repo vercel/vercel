@@ -176,12 +176,14 @@ export async function detectRailwayServices(options: {
       serviceConfig.entrypoint = cf.dirPath;
     }
 
-    const buildCommand = combineBuildCommand(
-      cf.config.build?.buildCommand,
-      cf.config.deploy?.preDeployCommand
-    );
-    if (buildCommand) {
-      serviceConfig.buildCommand = buildCommand;
+    if (cf.config.build?.buildCommand) {
+      serviceConfig.buildCommand = cf.config.build.buildCommand;
+    }
+    const railwayPreDeploy = cf.config.deploy?.preDeployCommand;
+    if (railwayPreDeploy) {
+      serviceConfig.preDeployCommand = Array.isArray(railwayPreDeploy)
+        ? railwayPreDeploy.join(' && ')
+        : railwayPreDeploy;
     }
 
     services[serviceName] = serviceConfig;
@@ -311,23 +313,6 @@ function deriveServiceName(dirPath: string): string {
   }
   const segments = dirPath.split('/');
   return segments[segments.length - 1];
-}
-
-function combineBuildCommand(
-  buildCommand: string | undefined,
-  preDeployCommand: string | string[] | undefined
-): string | undefined {
-  const preDeploy = Array.isArray(preDeployCommand)
-    ? preDeployCommand.join(' && ')
-    : preDeployCommand;
-
-  if (preDeploy && buildCommand) {
-    return `${buildCommand} && ${preDeploy}`;
-  } else if (preDeploy) {
-    return preDeploy;
-  } else {
-    return buildCommand;
-  }
 }
 
 /**

@@ -67,7 +67,6 @@ import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
-import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
@@ -121,7 +120,7 @@ const handleRejection = async (err: any) => {
       await handleUnexpected(err);
     } else {
       output.error(`An unexpected rejection occurred\n  ${err}`);
-      await reportError(getSentry(), client, err);
+      await reportError(await getSentry(), client, err);
     }
   } else {
     output.error('An unexpected empty rejection occurred');
@@ -140,7 +139,7 @@ const handleUnexpected = async (err: Error) => {
   }
 
   output.error(`An unexpected error occurred!\n${err.stack}`);
-  await reportError(getSentry(), client, err);
+  await reportError(await getSentry(), client, err);
 
   process.exit(1);
 };
@@ -859,6 +858,7 @@ const main = async () => {
 
       // Try to execute as an extension
       try {
+        const { execExtension } = await import('./util/extension/exec');
         exitCode = await execExtension(
           client,
           targetCommand,
@@ -963,14 +963,9 @@ const main = async () => {
           func = (await import('./commands-bulk.js')).cache;
           break;
         case 'connect':
-          if (process.env.FF_CONNEX_ENABLED) {
-            telemetry.trackCliCommandConnex(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).connex;
-            break;
-          } else {
-            func = null;
-            break;
-          }
+          telemetry.trackCliCommandConnex(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).connex;
+          break;
         case 'contract':
           telemetry.trackCliCommandContract(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).contract;
@@ -1247,7 +1242,7 @@ const main = async () => {
       }
       output.prettyError(err);
     } else {
-      await reportError(getSentry(), client, err);
+      await reportError(await getSentry(), client, err);
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message

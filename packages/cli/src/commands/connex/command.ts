@@ -387,7 +387,8 @@ export const detachSubcommand = {
 export const connexCommand = {
   name: 'connect',
   aliases: [],
-  description: 'Manage connectors',
+  description:
+    'Manage connectors (Beta).\n\nVercel Connect is currently in beta. Behavior, commands, and output may change before general availability.',
   arguments: [],
   options: [],
   subcommands: [

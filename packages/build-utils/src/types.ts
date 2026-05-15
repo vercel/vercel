@@ -110,6 +110,13 @@ export interface BuildOptions {
   buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 
   /**
+   * Called by the builder to register a callback that will execute the
+   * service's pre-deploy command. The CLI collects these and invokes
+   * them only after every builder has succeeded.
+   */
+  registerPreDeploy?: (callback: () => Promise<void>) => void;
+
+  /**
    * The current trace state from the internal vc tracing
    */
   span?: Span;
@@ -608,6 +615,7 @@ export interface Service {
   runtime?: string;
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
   /* web service config */
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
@@ -999,3 +1007,39 @@ export type Services = Record<string, ServiceConfig>;
  * }
  */
 export type ExperimentalServiceGroups = Record<string, string[]>;
+
+/**
+ * Result of a runtime builder's normalized entrypoint detection.
+ *
+ * - `kind: 'file'` — `entrypoint` is a path relative to the scanned `workPath`
+ *   (e.g. `"src/index.ts"`, `"main.go"`, `"main.py"`).
+ * - `kind: 'py-module:attr'` — `entrypoint` is a Python `module:attr` reference
+ *   where the module is dot-separated and resolved relative to the scanned
+ *   `workPath` (e.g. `"main:app"`, `"src.main:app"`).
+ *
+ * @experimental This feature is experimental and may change.
+ */
+export type DetectedEntrypoint =
+  | { kind: 'file'; entrypoint: string }
+  | { kind: 'py-module:attr'; entrypoint: string }
+  | null;
+
+/**
+ * Input to a runtime builder's normalized entrypoint detector.
+ * @experimental This feature is experimental and may change.
+ */
+export interface DetectEntrypointOptions {
+  /** Path to the candidate service directory relative to project root. */
+  workPath: string;
+  /** Framework slug detected for this directory, if any. */
+  framework?: string;
+}
+
+/**
+ * Normalized entrypoint detector signature, implemented by each runtime builder
+ * and consumed by services auto-detection to populate suggested service configs.
+ * @experimental This feature is experimental and may change.
+ */
+export type DetectEntrypointFn = (
+  opts: DetectEntrypointOptions
+) => Promise<DetectedEntrypoint>;

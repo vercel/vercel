@@ -429,7 +429,6 @@ describe('env update', () => {
       );
       const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
         sensitiveEnvironmentVariablePolicy: 'on',
-        // biome-ignore lint/suspicious/noExplicitAny: partial team shape
       } as any);
 
       const cwd = setupUnitFixture('vercel-env-pull');
