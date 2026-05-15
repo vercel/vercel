@@ -618,11 +618,7 @@ export class ServicesOrchestrator {
         | BuilderVX
         | undefined;
 
-      const versionAccepted =
-        builder?.version === 3 ||
-        builder?.version === -1 ||
-        builder?.version === 2;
-      if (!versionAccepted || !builder?.startDevServer) {
+      if (!builder?.startDevServer) {
         return null;
       }
 
