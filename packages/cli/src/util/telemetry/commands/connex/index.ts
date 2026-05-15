@@ -95,8 +95,10 @@ export class ConnexTelemetryClient
     if (v) {
       this.trackCliOption({
         option: 'background-color',
-        // Hex colors are not sensitive.
-        value: v,
+        // Hex colors are not sensitive; arbitrary text might be. Only emit
+        // the raw value when it parses as #RRGGBB, otherwise redact so a
+        // rejected value isn't sent verbatim before validation runs.
+        value: isValidHexColor(v) ? v : this.redactedValue,
       });
     }
   }
@@ -105,7 +107,7 @@ export class ConnexTelemetryClient
     if (v) {
       this.trackCliOption({
         option: 'accent-color',
-        value: v,
+        value: isValidHexColor(v) ? v : this.redactedValue,
       });
     }
   }
