@@ -1455,6 +1455,13 @@ export default class DevServer {
     // Allow the explicit listen address when the server is already running.
     if (this._address) {
       const listenHostname = this._address.hostname.toLowerCase();
+      // When the server is bound to a wildcard interface (0.0.0.0 or ::),
+      // the operator has explicitly chosen to expose it to all network
+      // interfaces. Any Host header is therefore reachable and legitimate;
+      // blocking LAN requests would break intentional LAN development.
+      if (listenHostname === '0.0.0.0' || listenHostname === '::') {
+        return true;
+      }
       if (hostname.toLowerCase() === listenHostname) {
         return true;
       }
