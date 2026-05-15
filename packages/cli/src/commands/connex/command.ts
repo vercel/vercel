@@ -27,6 +27,31 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Enable webhook triggers for this connector',
     },
+    {
+      name: 'icon',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)',
+    },
+    {
+      name: 'background-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Background color for the connector icon (e.g. #1A2B3C)',
+    },
+    {
+      name: 'accent-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Accent color for the connector icon (e.g. #1A2B3C)',
+    },
     formatOption,
   ],
   examples: [
@@ -41,6 +66,10 @@ export const createSubcommand = {
     {
       name: 'Create with webhook triggers enabled',
       value: `${packageName} connect create slack --name my-bot --triggers`,
+    },
+    {
+      name: 'Create with branding (icon and colors)',
+      value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
     },
     {
       name: 'Output as JSON',

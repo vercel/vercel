@@ -338,13 +338,7 @@ describe('connex update', () => {
 
     const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
 
-    client.setArgv(
-      'connect',
-      'update',
-      'scl_stale',
-      '--icon',
-      iconPath
-    );
+    client.setArgv('connect', 'update', 'scl_stale', '--icon', iconPath);
 
     const exitCode = await connect(client);
 

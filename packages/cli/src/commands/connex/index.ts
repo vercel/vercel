@@ -96,6 +96,13 @@ export default async function connex(client: Client): Promise<number> {
 
         const createFlagsSpec = getFlagsSpecification(createSubcommand.options);
         const createParsedArgs = parseArguments(subArgs, createFlagsSpec);
+        telemetry.trackCliOptionIcon(createParsedArgs.flags['--icon']);
+        telemetry.trackCliOptionBackgroundColor(
+          createParsedArgs.flags['--background-color']
+        );
+        telemetry.trackCliOptionAccentColor(
+          createParsedArgs.flags['--accent-color']
+        );
         return await create(
           client,
           createParsedArgs.args,
