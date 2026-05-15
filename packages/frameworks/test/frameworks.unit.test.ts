@@ -4,11 +4,11 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
 import nodeFetch from 'node-fetch';
-import { URL, URLSearchParams } from 'url';
+import { URL } from 'url';
 import frameworkList from '../src/frameworks';
 
 // bump timeout for Windows as network can be slower
-jest.setTimeout(15 * 1000);
+vi.setConfig({ testTimeout: 15 * 1000, hookTimeout: 15 * 1000 });
 
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
 
@@ -206,14 +206,18 @@ const Schema = {
   },
 };
 
-async function getDeployment(host: string) {
-  const query = new URLSearchParams();
-  query.set('url', host);
-  const res = await nodeFetch(
-    `https://api.vercel.com/v11/deployments/get?${query}`
+async function isDemoPublic(demoUrl: string) {
+  const logsUrl = new URL('/_logs', demoUrl);
+  const res = await nodeFetch(logsUrl.toString(), {
+    redirect: 'manual',
+  });
+  const location = res.headers.get('location');
+
+  return (
+    res.status >= 300 &&
+    res.status < 400 &&
+    location === `https://vercel.com/deployments/${logsUrl.host}/logs`
   );
-  const body = await res.json();
-  return body;
 }
 
 describe('frameworks', () => {
@@ -315,10 +319,8 @@ describe('frameworks', () => {
       frameworkList
         .filter(f => typeof f.demo === 'string')
         .map(async f => {
-          const url = new URL(f.demo!);
-          const deployment = await getDeployment(url.hostname);
           assert.equal(
-            deployment.public,
+            await isDemoPublic(f.demo!),
             true,
             `Demo URL ${f.demo} is not "public". Disable "build logs and source protection" in project settings.`
           );

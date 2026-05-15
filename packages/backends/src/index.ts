@@ -1,6 +1,12 @@
+import { existsSync } from 'node:fs';
+import { delimiter, join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
+import { generateProjectManifest } from './diagnostics.js';
 import {
   defaultCachePathGlob,
+  execCommand,
+  getNodeBinPaths,
+  getReportedServiceType,
   glob,
   NodejsLambda,
   debug,
@@ -15,6 +21,8 @@ import {
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
 import { applyServiceVcInit } from './service-vc-init.js';
+import { applyCronDispatch } from './cron-dispatch.js';
+import { buildCronRouteTable, getServiceCrons } from './crons.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
@@ -25,6 +33,7 @@ export {
   getBuildSummary,
   srvxOptions,
 } from './cervel/index.js';
+export { detectEntrypoint } from './find-entrypoint.js';
 export type {
   CervelBuildOptions,
   CervelServeOptions,
@@ -35,13 +44,32 @@ import { introspection } from './rolldown/introspection.js';
 import { nft } from './rolldown/nft.js';
 import { maybeDoBuildCommand } from './build.js';
 import { typescript } from './typescript.js';
+import { Colors as c } from './cervel/utils.js';
 
 // Re-export introspection functions
 export { introspectApp } from './introspection/index.js';
+export { diagnostics } from './diagnostics.js';
 
 export const version = 2;
 
+/** Non-empty Build Command from project settings / vercel.json (not the default `build` script). */
+function hasExplicitBuildCommand(
+  config: Parameters<BuildV2>[0]['config']
+): boolean {
+  const cmd = config.buildCommand ?? config.projectSettings?.buildCommand;
+  return typeof cmd === 'string' && cmd.trim().length > 0;
+}
+
 export const build: BuildV2 = async args => {
+  // Reject `module:function` colon syntax in entrypoints. fs-detectors
+  // parses it into `Service.handlerFunction` regardless of service
+  // type.
+  if (typeof args.config?.handlerFunction === 'string') {
+    throw new Error(
+      `Named-function entrypoints are not supported for JavaScript services (got "${args.entrypoint}:${args.config.handlerFunction}"). Put each handler in its own file with a default export.`
+    );
+  }
+
   const downloadResult = await downloadInstallAndBundle(args);
   const nodeVersion = await getNodeVersion(
     args.workPath,
@@ -65,11 +93,52 @@ export const build: BuildV2 = async args => {
   const buildSpan = span.child('vc.builder.backends.build');
 
   return buildSpan.trace(async () => {
-    const entrypoint = await findEntrypointOrThrow(args.workPath);
+    // Use an explicit entrypoint when provided by CLI/fs-detectors.
+    // Fall back to candidate-list discovery when:
+    // - The CLI/framework passes the `package.json` sentinel.
+    // - The file doesn't exist (framework-preset placeholders like
+    //   `useRuntime.src: 'index.js'` reach us unreplaced under
+    //   VERCEL_EXPERIMENTAL_BACKENDS).
+    const explicit =
+      args.entrypoint && args.entrypoint !== 'package.json'
+        ? args.entrypoint
+        : null;
+    const entrypoint =
+      explicit && existsSync(join(args.workPath, explicit))
+        ? explicit
+        : await findEntrypointOrThrow(args.workPath);
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
 
+    const cronEntries = await getServiceCrons({
+      service: args.service,
+      entrypoint,
+    });
+    const isCronService = cronEntries !== undefined;
+
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
+
+    const preDeployCommand = args.config.preDeployCommand;
+    if (args.registerPreDeploy && typeof preDeployCommand === 'string') {
+      const repoRoot = args.repoRootPath || args.workPath;
+      const nodeBinPaths = getNodeBinPaths({
+        base: repoRoot,
+        start: args.workPath,
+      });
+      const nodeBinPath = nodeBinPaths.join(delimiter);
+      const capturedEnv = {
+        ...downloadResult.spawnEnv,
+        PATH: `${nodeBinPath}${delimiter}${downloadResult.spawnEnv?.PATH || process.env.PATH}`,
+      };
+      const capturedCwd = args.workPath;
+      args.registerPreDeploy(async () => {
+        debug(`Running pre-deploy command: \`${preDeployCommand}\``);
+        await execCommand(preDeployCommand, {
+          env: capturedEnv,
+          cwd: capturedCwd,
+        });
+      });
+    }
 
     const functionConfig = args.config.functions?.[entrypoint];
     if (functionConfig) {
@@ -88,11 +157,16 @@ export const build: BuildV2 = async args => {
     const rolldownResult = await rolldown({
       ...args,
       span: buildSpan,
+      // Cron-service users may have just an entrypoint and a
+      // vercel.json with no package.json. Default `.js` to CJS so the
+      // bundle step can resolve the format like Node would at runtime.
+      defaultFormat: isCronService ? 'cjs' : undefined,
     });
 
-    // Only hono's introspection is supported for now
+    // Only hono's introspection is supported for now.
+    // Cron services should have no public routes, so introspection is skipped.
     const introspectionPromise =
-      rolldownResult.framework.slug === 'hono'
+      !isCronService && rolldownResult.framework.slug === 'hono'
         ? introspection({
             ...args,
             span: buildSpan,
@@ -105,12 +179,25 @@ export const build: BuildV2 = async args => {
             additionalDeps: [],
           });
 
-    // This must come after the build command since turbo repo worksapce deps may need to be transpiled.
-    const typescriptPromise = typescript({
-      entrypoint,
-      workPath: args.workPath,
-      span: buildSpan,
-    });
+    // This must come after the build command since turbo repo workspace deps may need to be transpiled.
+    // Skip tsc when the user configured a Build Command — they own compilation/typechecking there.
+    let typescriptPromise: Promise<unknown>;
+    if (hasExplicitBuildCommand(args.config)) {
+      console.log(
+        c.gray(
+          `${c.bold(c.cyan('✓'))} Typecheck skipped ${c.gray(
+            '(Build Command is configured)'
+          )}`
+        )
+      );
+      typescriptPromise = Promise.resolve();
+    } else {
+      typescriptPromise = typescript({
+        entrypoint,
+        workPath: args.workPath,
+        span: buildSpan,
+      });
+    }
 
     const localBuildFiles =
       userBuildResult?.localBuildFiles.size > 0
@@ -131,6 +218,24 @@ export const build: BuildV2 = async args => {
       conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
+
+    try {
+      await generateProjectManifest({
+        workPath: args.workPath,
+        nodeVersion,
+        cliType: downloadResult.cliType,
+        lockfilePath: downloadResult.lockfilePath,
+        lockfileVersion: downloadResult.lockfileVersion,
+        framework: rolldownResult.framework.slug || undefined,
+        serviceType: args.service
+          ? getReportedServiceType(args.service)
+          : undefined,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write node manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
 
     const baseDir = args.repoRootPath || args.workPath;
     const includeResults = await Promise.all(
@@ -161,7 +266,16 @@ export const build: BuildV2 = async args => {
 
     let lambdaFiles = files;
     let lambdaHandler = handler;
-    if (shouldStripServiceRoutePrefix) {
+    if (isCronService && cronEntries) {
+      const dispatched = await applyCronDispatch({
+        files,
+        handler,
+        workPath: nftWorkPath,
+        routes: buildCronRouteTable(cronEntries),
+      });
+      lambdaFiles = dispatched.files;
+      lambdaHandler = dispatched.handler;
+    } else if (shouldStripServiceRoutePrefix) {
       const shimmedLambda = await applyServiceVcInit({
         files,
         handler,
@@ -219,17 +333,20 @@ export const build: BuildV2 = async args => {
       };
     };
 
-    // Build routes: filesystem handler, then introspected routes, then catch-all
-    const routes = [
-      {
-        handle: 'filesystem',
-      },
-      ...introspectionResult.routes.map(remapRouteDestination),
-      {
-        src: getServiceCatchallSource(serviceRoutePrefix),
-        dest: internalServiceFunctionPath ?? '/',
-      },
-    ];
+    // Build routes: filesystem handler, then introspected routes, then catch-all.
+    // Cron services only respond at their internal cron path (`_svc/{name}/crons/...`),
+    // which the CLI services pipeline rewrites to `_svc/{name}/index` independently
+    // of this builder.
+    const routes = isCronService
+      ? [{ handle: 'filesystem' }]
+      : [
+          { handle: 'filesystem' },
+          ...introspectionResult.routes.map(remapRouteDestination),
+          {
+            src: getServiceCatchallSource(serviceRoutePrefix),
+            dest: internalServiceFunctionPath ?? '/',
+          },
+        ];
 
     const output: Record<string, Lambda> = internalServiceOutputPath
       ? { [internalServiceOutputPath]: lambda }
@@ -253,6 +370,17 @@ export const build: BuildV2 = async args => {
     return {
       routes,
       output,
+      // Emit only the public {path, schedule} shape; `exportName` is an
+      // internal plumbing field consumed by `buildCronRouteTable` and
+      // doesn't belong in the build artifact.
+      ...(cronEntries
+        ? {
+            crons: cronEntries.map(({ path, schedule }) => ({
+              path,
+              schedule,
+            })),
+          }
+        : {}),
     };
   });
 };

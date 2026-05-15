@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import os
 from collections.abc import Iterable, Mapping
 from importlib import import_module
 from typing import cast
+
+OIDC_HEADER_NAME = "x-vercel-oidc-token"
+INTERNAL_OIDC_HEADER_NAME = "x-vercel-internal-oidc-token"
 
 
 def _iter_header_items(headers: object) -> list[tuple[object, object]]:
@@ -47,14 +51,12 @@ def _iter_event_header_pairs(
 def _normalize_internal_oidc_header(
     headers: list[tuple[str, str]],
 ) -> list[tuple[str, str]]:
-    has_public_oidc = any(
-        key.lower() == "x-vercel-oidc-token" for key, _ in headers
-    )
+    has_public_oidc = any(key.lower() == OIDC_HEADER_NAME for key, _ in headers)
     internal_oidc_token = next(
         (
             value
             for key, value in headers
-            if key.lower() == "x-vercel-internal-oidc-token"
+            if key.lower() == INTERNAL_OIDC_HEADER_NAME
         ),
         None,
     )
@@ -62,13 +64,45 @@ def _normalize_internal_oidc_header(
     without_internal = [
         (key, value)
         for key, value in headers
-        if key.lower() != "x-vercel-internal-oidc-token"
+        if key.lower() != INTERNAL_OIDC_HEADER_NAME
     ]
 
-    if not has_public_oidc and internal_oidc_token is not None:
-        without_internal.append(("x-vercel-oidc-token", internal_oidc_token))
+    oidc_token = get_oidc_token_for_request(
+        has_public_oidc=has_public_oidc,
+        internal_oidc_token=internal_oidc_token,
+    )
+    if oidc_token:
+        without_internal.append((OIDC_HEADER_NAME, oidc_token))
 
     return without_internal
+
+
+def get_oidc_token_for_request(
+    *,
+    has_public_oidc: bool,
+    internal_oidc_token: str | None,
+) -> str | None:
+    if has_public_oidc:
+        return None
+    if internal_oidc_token:
+        return internal_oidc_token
+    return os.environ.get("VERCEL_OIDC_TOKEN") or None
+
+
+def append_oidc_header_if_missing(
+    headers_list: list[tuple[bytes, bytes]],
+    *,
+    internal_oidc_token: str | None,
+) -> None:
+    oidc_token = get_oidc_token_for_request(
+        has_public_oidc=any(
+            decode_header_bytes(k).lower() == OIDC_HEADER_NAME
+            for k, _ in headers_list
+        ),
+        internal_oidc_token=internal_oidc_token,
+    )
+    if oidc_token:
+        headers_list.append((OIDC_HEADER_NAME.encode(), oidc_token.encode()))
 
 
 def set_headers(headers: Mapping[str, str] | None) -> None:

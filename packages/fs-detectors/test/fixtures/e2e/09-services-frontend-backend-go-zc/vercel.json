@@ -2,5 +2,10 @@
   "uploadNowJson": true,
   "projectSettings": {
     "framework": "services"
+  },
+  "build": {
+    "env": {
+      "VERCEL_USE_EXPERIMENTAL_SERVICES": "1"
+    }
   }
 }

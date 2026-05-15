@@ -1,4 +1,5 @@
 import type { HasField, Route } from '@vercel/routing-utils';
+import { isScheduleTriggeredService } from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -7,16 +8,16 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
+  type EnvVars,
   type InferredServicesResult,
   type ResolvedServicesResult,
   type Service,
-  type ServicesConfig,
+  type InferredServicesConfig,
   type ServicesRoutes,
 } from './types';
 import {
   getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
-  getInternalServiceWorkerPath,
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
@@ -37,9 +38,18 @@ function emptyRoutes(): ServicesRoutes {
     hostRewrites: [],
     rewrites: [],
     defaults: [],
+    fallbacks: [],
     crons: [],
     workers: [],
   };
+}
+
+function isEnvVars(
+  env: Record<string, string> | EnvVars | undefined
+): env is EnvVars {
+  if (!env) return false;
+  const first = Object.values(env)[0];
+  return typeof first === 'object' && first !== null;
 }
 
 function withResolvedResult(
@@ -49,6 +59,7 @@ function withResolvedResult(
   return {
     services: resolved.services,
     source: resolved.source,
+    useImplicitEnvInjection: resolved.useImplicitEnvInjection,
     routes: resolved.routes,
     errors: resolved.errors,
     warnings: resolved.warnings,
@@ -61,11 +72,13 @@ function withResolvedResult(
  * This lets us define the conventions of how we'd like the services configuration
  * to look like.
  */
-function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
-  const inferredConfig: ServicesConfig = {};
+function toInferredLayoutConfig(
+  services: InferredServicesConfig
+): InferredServicesConfig {
+  const inferredConfig: InferredServicesConfig = {};
 
   for (const [name, service] of Object.entries(services)) {
-    const serviceConfig: ServicesConfig[string] = {};
+    const serviceConfig: InferredServicesConfig[string] = {};
 
     if (typeof service.entrypoint === 'string') {
       serviceConfig.entrypoint = service.entrypoint;
@@ -93,7 +106,7 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
 /**
  * Detect and resolve services within a project.
  *
- * Reads vercel.json and resolves `experimentalServices` into Service objects.
+ * Reads vercel.json and resolves configured services into Service objects.
  * Returns an error if no services are configured.
  */
 export async function detectServices(
@@ -112,13 +125,18 @@ export async function detectServices(
     return withResolvedResult({
       services: [],
       source: 'configured',
+      useImplicitEnvInjection: true,
       routes: emptyRoutes(),
       errors: [configError],
       warnings: [],
     });
   }
 
-  const configuredServices = vercelConfig?.experimentalServices;
+  const hasNonEmptyPublicServicesConfig =
+    vercelConfig?.services && Object.keys(vercelConfig.services).length > 0;
+  const configuredServices = hasNonEmptyPublicServicesConfig
+    ? vercelConfig.services
+    : vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -130,6 +148,7 @@ export async function detectServices(
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes: emptyRoutes(),
         errors: railwayResult.errors,
         warnings: railwayResult.warnings,
@@ -158,6 +177,7 @@ export async function detectServices(
         {
           services: [],
           source: 'auto-detected',
+          useImplicitEnvInjection: true,
           routes: emptyRoutes(),
           errors: result.errors,
           warnings: railwayResult.warnings,
@@ -178,6 +198,7 @@ export async function detectServices(
       const resolved: ResolvedServicesResult = {
         services: result.services,
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes,
         errors: result.errors,
         warnings: [],
@@ -204,6 +225,7 @@ export async function detectServices(
       return withResolvedResult({
         services: [],
         source: 'auto-detected',
+        useImplicitEnvInjection: true,
         routes: emptyRoutes(),
         errors: autoResult.errors,
         warnings: [],
@@ -213,12 +235,12 @@ export async function detectServices(
     return withResolvedResult({
       services: [],
       source: 'auto-detected',
+      useImplicitEnvInjection: true,
       routes: emptyRoutes(),
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
+          message: 'No services configured. Add `services` to vercel.json.',
         },
       ],
       warnings: [],
@@ -229,7 +251,13 @@ export async function detectServices(
   const result = await resolveAllConfiguredServices(
     configuredServices,
     scopedFs,
-    'configured'
+    'configured',
+    {
+      requireFileEntrypointForBackendRuntimes: Boolean(
+        hasNonEmptyPublicServicesConfig
+      ),
+      rootEnv: isEnvVars(vercelConfig?.env) ? vercelConfig?.env : undefined,
+    }
   );
 
   // Generate routes
@@ -238,6 +266,9 @@ export async function detectServices(
   return withResolvedResult({
     services: result.services,
     source: 'configured',
+    // GA `services` opts into explicit `env`; experimentalServices keeps
+    // the legacy `{NAME}_URL` injection.
+    useImplicitEnvInjection: !hasNonEmptyPublicServicesConfig,
     routes,
     errors: result.errors,
     warnings: [],
@@ -264,11 +295,10 @@ export async function detectServices(
  * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
- * - Worker services:
- *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
- *   that rewrite to `/_svc/{serviceName}/index`.
+ * - Worker and queue-triggered job services:
+ *   Use private path routing. The generated function is not publicly accessible.
  *
- * - Cron services:
+ * - Schedule-triggered job services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
@@ -276,6 +306,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
   const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
+  const fallbacks: Route[] = [];
   const crons: Route[] = [];
   const workers: Route[] = [];
 
@@ -327,13 +358,12 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     if (isStaticBuild(service)) {
       // Static/SPA service: serve index.html for client-side routing
       if (routePrefix === '/') {
-        defaults.push({ handle: 'filesystem' });
-        defaults.push({
+        fallbacks.push({
           src: scopeRouteSourceToOwnership('/(.*)', ownershipGuard),
           dest: '/index.html',
         });
       } else {
-        rewrites.push({
+        fallbacks.push({
           src: scopeRouteSourceToOwnership(
             `^/${normalizedPrefix}(?:/.*)?$`,
             ownershipGuard
@@ -365,23 +395,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     }
   }
 
-  const workerServices = services.filter(s => s.type === 'worker');
-  for (const service of workerServices) {
-    const workerEntrypoint =
-      service.entrypoint || service.builder.src || 'index';
-    const workerPath = getInternalServiceWorkerPath(
-      service.name,
-      workerEntrypoint
-    );
-    const functionPath = getInternalServiceFunctionPath(service.name);
-    workers.push({
-      src: `^${escapeRegex(workerPath)}$`,
-      dest: functionPath,
-      check: true,
-    });
-  }
-
-  const cronServices = services.filter(s => s.type === 'cron');
+  const cronServices = services.filter(isScheduleTriggeredService);
   for (const service of cronServices) {
     const cronPrefix = getInternalServiceCronPathPrefix(service.name);
     const functionPath = getInternalServiceFunctionPath(service.name);
@@ -392,7 +406,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     });
   }
 
-  return { hostRewrites, rewrites, defaults, crons, workers };
+  return { hostRewrites, rewrites, defaults, fallbacks, crons, workers };
 }
 
 function escapeRegex(str: string): string {

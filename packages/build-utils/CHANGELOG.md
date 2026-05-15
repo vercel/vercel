@@ -1,5 +1,95 @@
 # @vercel/build-utils
 
+## 13.25.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+## 13.24.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+## 13.23.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+
+## 13.22.1
+
+### Patch Changes
+
+- f0d7d32: Disable response streaming for lambdas with `awsLambdaHandler` set inside `getLambdaSupportsStreaming`. This closes a gap where non-Node builders (e.g. `@vercel/redwood`) constructed `NodejsLambda` with `awsLambdaHandler` but no explicit `supportsResponseStreaming`, causing `finalizeLambda` to silently flip streaming on for AWS custom handlers. With the gate now enforced centrally in `finalizeLambda`, the equivalent `@vercel/node` build-time check from #16266 is consolidated away — all builders go through the same gate.
+
+## 13.22.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
+## 13.21.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 13.20.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Add shared build output deserialization helpers for existing callers. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 13.19.1
+
+### Patch Changes
+
+- [build-utils] simplify streaming lambda check ([#15795](https://github.com/vercel/vercel/pull/15795))
+
+## 13.19.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Added a shared build result validation helper in `@vercel/build-utils` for existing callers. ([#16030](https://github.com/vercel/vercel/pull/16030))
+
+## 13.18.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 13.17.2
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 13.17.1
+
+### Patch Changes
+
+- Align deserialize logic with existing callers. ([#16002](https://github.com/vercel/vercel/pull/16002))
+
 ## 13.17.0
 
 ### Minor Changes

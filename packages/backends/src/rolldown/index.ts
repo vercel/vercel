@@ -5,6 +5,7 @@ import { resolveEntrypointAndFormat } from './resolve-format.js';
 import { build as rolldownBuild } from 'rolldown';
 import { builtinModules } from 'node:module';
 import { join, dirname, relative, extname } from 'node:path';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { type Files, FileBlob, isBackendFramework } from '@vercel/build-utils';
 import { nft } from './nft.js';
@@ -19,6 +20,7 @@ export const rolldown = async (
     'entrypoint' | 'workPath' | 'repoRootPath' | 'config'
   > & {
     span?: Span;
+    defaultFormat?: 'esm' | 'cjs';
   }
 ) => {
   const files: Files = {};
@@ -162,13 +164,19 @@ export const rolldown = async (
             return { id, external: true };
           }
 
-          // Track local files for NFT
+          // Track local files for NFT (skip resolver artifacts that point at missing paths,
+          // e.g. optional workspace packages or broken pnpm links).
           if (resolved?.id && isLocalImport(resolved.id)) {
-            localBuildFiles.add(resolved.id);
+            if (existsSync(resolved.id)) {
+              localBuildFiles.add(resolved.id);
+            }
           } else if (!resolved && !(isBareImport(id) && importer)) {
             // Entry point (no importer) or unresolved local file
             // Skip bare imports from importers (e.g. @repo/pkg that failed to resolve)
-            localBuildFiles.add(join(args.workPath, id));
+            const candidate = join(args.workPath, id);
+            if (existsSync(candidate)) {
+              localBuildFiles.add(candidate);
+            }
           }
 
           // If the importer is a shim, let bare imports be external (don't shim again)

@@ -15,7 +15,9 @@ vercel blob copy <from-url> <to-pathname>                # copy
 ## Store Management
 
 ```bash
-vercel blob store add              # create a new store
-vercel blob store get              # show store details
-vercel blob store remove           # remove a store
+vercel blob create-store my-store --access private     # create a new store
+vercel blob get-store <store-id>                       # show store details
+vercel blob delete-store <store-id> --yes              # remove a store
+vercel blob empty-store --yes                          # delete all blobs in the selected store
+vercel blob list-stores --all --json                   # list stores
 ```

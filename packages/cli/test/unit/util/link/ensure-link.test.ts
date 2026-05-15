@@ -148,7 +148,7 @@ describe('ensureLink', () => {
       const outputActionRequired = vi.mocked(agentOutput.outputActionRequired);
 
       (client as { nonInteractive: boolean }).nonInteractive = true;
-      client.argv = ['/node', '/vc.js', 'deploy', '--cwd=/path'];
+      client.setArgv('deploy', '--cwd=/path');
       await ensureLink('deploy', client, client.cwd, {});
       (client as { nonInteractive: boolean }).nonInteractive = false;
 

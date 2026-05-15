@@ -26,4 +26,4 @@ vercel dns add example.com sub CNAME target.example.com
 vercel dns rm rec_abc123
 ```
 
-Use `vercel <command> -h` for full flag details.
+Use `vercel <command> --help` for full flag details.

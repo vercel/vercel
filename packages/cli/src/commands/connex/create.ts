@@ -1,6 +1,7 @@
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import type { JSONObject } from '@vercel-internals/types';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
 import { getProjectLink } from '../../util/projects/link';
@@ -9,11 +10,17 @@ import {
   generateRequestCode,
   awaitConnexResult,
 } from '../../util/connex/request-code';
+import type { ConnexClient } from './types';
 
 export async function create(
   client: Client,
   args: string[],
-  flags: { '--name'?: string; '--format'?: string; '--json'?: boolean }
+  flags: {
+    '--name'?: string;
+    '--format'?: string;
+    '--json'?: boolean;
+    '--triggers'?: boolean;
+  }
 ): Promise<number> {
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
@@ -24,14 +31,14 @@ export async function create(
 
   const serviceType = args[0];
   if (!serviceType) {
-    output.error('Missing service type. Usage: vercel connex create <type>');
+    output.error('Missing service type. Usage: vercel connect create <type>');
     return 1;
   }
 
   // Resolve team
   await selectConnexTeam(
     client,
-    'Select the team where you want to create this client'
+    'Select the team where you want to create this connector'
   );
 
   // Get app name from flag or interactive prompt
@@ -39,7 +46,7 @@ export async function create(
   if (!name) {
     if (!client.stdin.isTTY) {
       output.error(
-        'Missing required flag --name. In non-interactive mode, provide --name for the client.'
+        'Missing required flag --name. In non-interactive mode, provide --name for the connector.'
       );
       return 1;
     }
@@ -50,63 +57,104 @@ export async function create(
     });
   }
 
-  // Generate request code and call the managed create redirect endpoint
-  const { original, hash } = generateRequestCode();
+  // Generate request code and attempt to create the managed client directly
+  const { verifier, requestCode } = generateRequestCode();
   const link = await getProjectLink(client, client.cwd);
 
-  output.spinner('Setting up...');
-  let browserUrl: string;
-  try {
-    let url = `/v1/connex/clients/managed?service=${encodeURIComponent(serviceType)}&name=${encodeURIComponent(name)}&request_code=${encodeURIComponent(hash)}&autoinstall=true`;
-    if (link?.projectId) {
-      url += `&projectId=${encodeURIComponent(link.projectId)}`;
-    }
-    const res = await client.fetch(url, { json: false, redirect: 'manual' });
+  const body: JSONObject = {
+    service: serviceType,
+    name,
+    request_code: requestCode,
+  };
+  if (link?.projectId) {
+    body.projectId = link.projectId;
+  }
+  body.triggers = { enabled: flags['--triggers'] === true };
 
-    const location = res.headers.get('location');
-    if (!location) {
-      output.stopSpinner();
-      output.error('Unexpected response from API: no redirect URL');
-      return 1;
-    }
-    browserUrl = location;
+  output.spinner('Setting up...');
+  let createdClient: ConnexClient | null = null;
+  let browserUrl: string | undefined;
+  try {
+    createdClient = await client.fetch<ConnexClient>(
+      '/v1/connect/connectors/managed?autoinstall=true',
+      { method: 'POST', body }
+    );
   } catch (err: unknown) {
-    output.stopSpinner();
-    const status = (err as { status?: number }).status;
-    if (status === 404) {
+    const apiErr = err as { status?: number; registerUrl?: string };
+    if (apiErr.status === 422 && apiErr.registerUrl) {
+      browserUrl = apiErr.registerUrl;
+    } else if (apiErr.status === 404) {
+      output.stopSpinner();
       output.error(
-        'Connex is not enabled for this team. Contact support to enable it.'
+        'Connect is not enabled for this team. Contact support to enable it.'
       );
       return 1;
+    } else {
+      output.stopSpinner();
+      printError(err);
+      return 1;
     }
-    printError(err);
-    return 1;
   }
   output.stopSpinner();
 
-  // Open browser
-  output.log(`Opening browser for ${serviceType} app setup...`);
-  output.log(`If the browser doesn't open, visit:\n${browserUrl}`);
-  open(browserUrl).catch((err: unknown) =>
-    output.debug(`Failed to open browser: ${err}`)
-  );
+  let hasBeenInstalled = false;
+  if (browserUrl) {
+    // Registration required — open browser and wait for user to complete setup
+    output.log(`Opening browser for ${serviceType} app setup...`);
+    output.log(`If the browser doesn't open, visit:\n${browserUrl}`);
+    open(browserUrl).catch((err: unknown) =>
+      output.debug(`Failed to open browser: ${err}`)
+    );
 
-  // Poll for result
-  output.spinner('Waiting for you to complete setup in the browser...');
-  const data = await awaitConnexResult(client, original);
-  output.stopSpinner();
+    output.spinner('Waiting for you to complete setup in the browser...');
+    const resultFromBrowser = await awaitConnexResult(client, verifier);
+    output.stopSpinner();
 
-  if (!data) {
+    if (
+      resultFromBrowser &&
+      'clientId' in resultFromBrowser &&
+      typeof resultFromBrowser.clientId === 'string'
+    ) {
+      const clientId = resultFromBrowser.clientId;
+      createdClient = await client.fetch<ConnexClient>(
+        `/v1/connect/connectors/${clientId}`
+      );
+    }
+    if (
+      resultFromBrowser &&
+      'installationId' in resultFromBrowser &&
+      resultFromBrowser.installationId
+    ) {
+      hasBeenInstalled = true;
+    }
+  }
+
+  if (!createdClient) {
     return 1;
   }
 
-  const clientId = data.clientId as string;
   if (asJson) {
-    client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
-  } else if (data.installationId) {
-    output.success(`${serviceType} client created and installed: ${clientId}`);
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          id: createdClient.id,
+          uid: createdClient.uid,
+          type: createdClient.type,
+          name: createdClient.name,
+          supportedSubjectTypes: createdClient.supportedSubjectTypes,
+        },
+        null,
+        2
+      )}\n`
+    );
+  } else if (hasBeenInstalled) {
+    output.success(
+      `${serviceType} connector created and installed: ${createdClient.id} (UID ${createdClient.uid})`
+    );
   } else {
-    output.success(`${serviceType} client created: ${clientId}`);
+    output.success(
+      `${serviceType} connector created: ${createdClient.id} (UID ${createdClient.uid})`
+    );
   }
   return 0;
 }

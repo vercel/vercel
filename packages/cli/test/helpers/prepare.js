@@ -30,11 +30,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'empty-directory': {},
     'config-scope-property-email': {
-      'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
+      'vercel.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
       'index.html': '<span>test scope email</span',
     },
     'config-scope-property-username': {
-      'now.json': `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
+      'vercel.json': `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
       'index.html': '<span>test scope username</span',
     },
     'builds-wrong': {
@@ -50,7 +50,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': '<h1>Should fail</h1>',
     },
     'builds-no-list': {
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         routes: [
           {
             src: '/(.*)',
@@ -63,7 +63,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
     },
     'build-env': {
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         build: {
           env: {
             FOO: 'bar',
@@ -78,11 +78,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
-      'now.json': getRevertAliasConfigFile(),
+      'vercel.json': getRevertAliasConfigFile(),
     },
     'now-revert-alias-2': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-2' }),
-      'now.json': getRevertAliasConfigFile(),
+      'vercel.json': getRevertAliasConfigFile(),
     },
     'now-dev-fail-dev-script': {
       'package.json': JSON.stringify(
@@ -144,18 +144,14 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': 'Static V2',
     },
     'redirects-v2': {
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         name: 'redirects-v2',
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
     },
-    'deploy-with-only-readme-now-json': {
-      'now.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
-    },
     'deploy-with-only-readme-vercel-json': {
       'vercel.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
+      'content.txt': 'content file contents',
     },
     'deploy-default-with-sub-directory': {
       'vercel.json': JSON.stringify({ version: 2 }),
@@ -164,9 +160,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'deploy-default-with-conflicting-sub-directory': {
       'list/vercel.json': JSON.stringify({ version: 2 }),
-      'list/list/README.md': 'nested nested readme contents',
-      'list/README.md':
-        'readme contents for deploy-default-with-conflicting-sub-directory',
+      'list/list/content.txt':
+        'nested contents for deploy-default-with-conflicting-sub-directory',
+      'list/content.txt':
+        'root contents for deploy-default-with-conflicting-sub-directory',
     },
     'deploy-default-with-prebuilt-preview': {
       'vercel.json': JSON.stringify({ version: 2 }),
@@ -201,7 +198,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
       'dir/index.html': '<h1>hello index</h1>',
       'dir/another.html': '<h1>hello another</h1>',
-      'dir/now.json': JSON.stringify({
+      'dir/vercel.json': JSON.stringify({
         name: 'nested-level',
       }),
     },
@@ -251,6 +248,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
     },
     'zero-config-next-js-nested': {
+      // `pnpm-workspace.yaml` makes this fixture a workspace, which is what
+      // triggers the "In which directory is your code located?" prompt under
+      // the new input-root-directory behavior (prompt fires only when
+      // `getWorkspaces()` returns non-empty).
+      'pnpm-workspace.yaml': "packages:\n  - 'app'\n",
       'app/pages/index.js':
         'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
       'app/package.json': JSON.stringify({
@@ -273,7 +275,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 128,
@@ -287,7 +289,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 123,
@@ -304,7 +306,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.end('done');
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 128,
@@ -322,7 +324,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           res.end('done');
         };
       `,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
             memory: 128,
@@ -357,7 +359,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'github-and-scope-config': {
       'index.txt': 'I Am a Website!',
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         scope: 'i-do-not-exist',
         github: {
           autoAlias: true,
@@ -404,7 +406,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'project-root-directory': {
       'src/index.html': '<h1>I am a website.</h1>',
-      'src/now.json': JSON.stringify({
+      'src/vercel.json': JSON.stringify({
         rewrites: [
           {
             source: '/i-do-exist',

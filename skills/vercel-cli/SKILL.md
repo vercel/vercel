@@ -1,11 +1,13 @@
 ---
 name: vercel-cli
-description: Deploy, manage, and develop projects on Vercel from the command line
+description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, projects and teams, environment variables, domains and DNS, logs, metrics, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, preview access, local development, or `vercel api` fallback.
 ---
 
 # Vercel CLI Skill
 
-The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line. Use `vercel <command> -h` for full flag details on any command.
+The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line. Use `vercel <command> --help` for full flag details on any command.
+
+The installed CLI help is the source of truth for obscure or newly added flags. If a command example here is not enough, check `vercel <command> --help` before acting instead of guessing.
 
 ## Critical: Project Linking
 
@@ -37,22 +39,29 @@ vercel --prod     # production deployment
 Use this to route to the correct reference file:
 
 - **Deploy** → `references/deployment.md`
+- **Rolling releases, deploy hooks, cron jobs, cache, git connection, Edge Config, redirects, custom environments** → `references/project-infra.md`
 - **Local development** → `references/local-development.md`
 - **Environment variables** → `references/environment-variables.md`
 - **CI/CD automation** → `references/ci-automation.md`
 - **Domains or DNS** → `references/domains-and-dns.md`
 - **Projects or teams** → `references/projects-and-teams.md`
-- **Logs, debugging, or accessing preview deploys** → `references/monitoring-and-debugging.md`
+- **Logs, metrics, activity, performance, preview access, or production debugging** → `references/monitoring-and-debugging.md`
+- **Alerts, usage, contracts, billing purchases, tokens, telemetry, or CLI upgrades** → `references/platform-ops.md`
 - **Blob storage** → `references/storage.md`
 - **Integrations (databases, storage, etc.)** → `references/integrations.md`
+- **Connectors (`vercel connect`)** → `references/connectors.md`
 - **Routing rules** → `references/routing.md`
+- **Firewall (WAF rules, IP blocks, rate limiting)** → `references/firewall.md`
 - **Access a preview deployment** → use `vercel curl` (see `references/monitoring-and-debugging.md`)
-- **CLI doesn't have a command for it** → use `vercel api` as a fallback (see `references/advanced.md`)
+- **CLI command is unavailable or output is missing required fields** → use `vercel api` after first-class CLI paths are unavailable or insufficient (see `references/advanced.md`)
 - **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`
 - **Monorepos (Turborepo, Nx, workspaces)** → `references/monorepos.md`
 - **Bun runtime** → `references/bun.md`
 - **Feature flags** → `references/flags.md`
-- **Advanced (API, webhooks)** → `references/advanced.md`
+- **Microfrontends** → `references/microfrontends.md`
+- **Sandbox** → `references/sandbox.md`
+- **Agent, MCP, skills discovery, or AI Gateway** → `references/agent-and-ai.md`
+- **Advanced (API, webhooks, oauth apps)** → `references/advanced.md`
 - **Global flags** → `references/global-options.md`
 - **First-time setup** → `references/getting-started.md`
 
@@ -61,7 +70,8 @@ Use this to route to the correct reference file:
 - **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
 - **Letting commands auto-link in monorepos**: Many commands implicitly run `vercel link` if `.vercel/` doesn't exist. This creates `project.json`, which may be wrong. Run `vercel link` (or `--repo`) explicitly first.
 - **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
-- **Forgetting `--yes` in CI**: Required to skip interactive prompts.
+- **Forgetting non-interactive flags in CI/agent runs**: Use `--non-interactive` when you need prompt-free behavior, and add `--yes` only for commands that require confirmation.
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.
 - **Disabling deployment protection**: Use `vercel curl` instead to access preview deploys.
+- **Using `vercel api` too early**: Prefer first-class CLI commands when they expose the needed data or mutation.

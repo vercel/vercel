@@ -82,6 +82,13 @@ export async function buildRequest(
  * @param field - The field string (key=value)
  * @param typed - Whether to parse value types (bool, int, file)
  */
+export async function parseCliKeyValueField(
+  field: string,
+  typed: boolean
+): Promise<{ key: string; value: JSONValue }> {
+  return parseField(field, typed);
+}
+
 async function parseField(
   field: string,
   typed: boolean
@@ -137,12 +144,14 @@ async function parseField(
 /**
  * Read all input from stdin
  */
-async function readStdin(): Promise<string> {
+export async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
-    chunks.push(chunk as Buffer);
+    chunks.push(Buffer.from(chunk));
   }
-  return Buffer.concat(chunks).toString('utf-8');
+  return Buffer.concat(chunks as unknown as readonly Uint8Array[]).toString(
+    'utf-8'
+  );
 }
 
 /**

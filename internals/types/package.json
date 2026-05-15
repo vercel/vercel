@@ -9,6 +9,7 @@
   ],
   "dependencies": {
     "@types/node": "20.11.0",
+    "@vercel/cli-config": "workspace:*",
     "@vercel-internals/constants": "workspace:*",
     "@vercel/build-utils": "workspace:*",
     "@vercel/routing-utils": "workspace:*"
@@ -16,6 +17,6 @@
   "devDependencies": {
     "@vercel-internals/tsconfig": "workspace:*",
     "@vercel/style-guide": "4.0.2",
-    "typescript": "4.9.4"
+    "typescript": "5.9.3"
   }
 }

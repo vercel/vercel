@@ -1,5 +1,85 @@
 # @vercel/static-build
 
+## 2.9.27
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.5
+
+## 2.9.26
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.4
+
+## 2.9.25
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.3
+
+## 2.9.24
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.2
+
+## 2.9.23
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.1
+
+## 2.9.22
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/gatsby-plugin-vercel-builder@2.2.0
+  - @vercel/static-config@3.3.0
+
+## 2.9.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.1.21
+
+## 2.9.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.1.20
+
+## 2.9.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.1.19
+
+## 2.9.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.1.18
+
+## 2.9.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.1.17
+
+## 2.9.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.1.16
+
 ## 2.9.15
 
 ### Patch Changes

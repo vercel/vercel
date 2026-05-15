@@ -106,8 +106,8 @@ export async function detectRailwayServices(options: {
       useExperimentalFrameworks: true,
     });
 
-    // we don't have write access to the FS, so can't just define an entrypoint,
-    // the best we can do is to suggest how to define a cron service properly
+    // we don't have write access to the FS, so can't just define an entrypoint.
+    // The best we can do is suggest a canonical schedule-triggered job service.
     if (cf.config.deploy?.cronSchedule) {
       const schedule = cf.config.deploy.cronSchedule;
       const runtime =
@@ -116,7 +116,8 @@ export async function detectRailwayServices(options: {
           : undefined;
 
       const hint: Record<string, string> = {
-        type: 'cron',
+        type: 'job',
+        trigger: 'schedule',
         schedule,
         entrypoint: '<path-to-handler>',
       };
@@ -128,7 +129,7 @@ export async function detectRailwayServices(options: {
         code: 'RAILWAY_CRON_HINT',
         message:
           `Found Railway cron in ${dirLabel}/ (schedule: "${schedule}"). ` +
-          `Vercel crons work with a file entrypoint. You can add the following to define this cron service:\n` +
+          `Vercel crons work with a file entrypoint. You can add the following to define this scheduled job service:\n` +
           `"${deriveServiceName(cf.dirPath)}": ${JSON.stringify(hint, null, 2)}`,
       });
       continue;
@@ -152,7 +153,7 @@ export async function detectRailwayServices(options: {
     if (frameworks.length === 0) {
       warnings.push({
         code: 'SERVICE_SKIPPED',
-        message: `Skipped service in ${dirLabel}/: no framework detected. Configure it manually in experimentalServices.`,
+        message: `Skipped service in ${dirLabel}/: no framework detected. Configure it manually in services.`,
       });
       continue;
     }
@@ -161,7 +162,7 @@ export async function detectRailwayServices(options: {
       const names = frameworks.map(f => f.name).join(', ');
       errors.push({
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-        message: `Multiple frameworks detected in ${dirLabel}/: ${names}. Use explicit experimentalServices config.`,
+        message: `Multiple frameworks detected in ${dirLabel}/: ${names}. Use explicit services config.`,
         serviceName,
       });
       continue;
@@ -175,12 +176,14 @@ export async function detectRailwayServices(options: {
       serviceConfig.entrypoint = cf.dirPath;
     }
 
-    const buildCommand = combineBuildCommand(
-      cf.config.build?.buildCommand,
-      cf.config.deploy?.preDeployCommand
-    );
-    if (buildCommand) {
-      serviceConfig.buildCommand = buildCommand;
+    if (cf.config.build?.buildCommand) {
+      serviceConfig.buildCommand = cf.config.build.buildCommand;
+    }
+    const railwayPreDeploy = cf.config.deploy?.preDeployCommand;
+    if (railwayPreDeploy) {
+      serviceConfig.preDeployCommand = Array.isArray(railwayPreDeploy)
+        ? railwayPreDeploy.join(' && ')
+        : railwayPreDeploy;
     }
 
     services[serviceName] = serviceConfig;
@@ -310,23 +313,6 @@ function deriveServiceName(dirPath: string): string {
   }
   const segments = dirPath.split('/');
   return segments[segments.length - 1];
-}
-
-function combineBuildCommand(
-  buildCommand: string | undefined,
-  preDeployCommand: string | string[] | undefined
-): string | undefined {
-  const preDeploy = Array.isArray(preDeployCommand)
-    ? preDeployCommand.join(' && ')
-    : preDeployCommand;
-
-  if (preDeploy && buildCommand) {
-    return `${buildCommand} && ${preDeploy}`;
-  } else if (preDeploy) {
-    return preDeploy;
-  } else {
-    return buildCommand;
-  }
 }
 
 /**

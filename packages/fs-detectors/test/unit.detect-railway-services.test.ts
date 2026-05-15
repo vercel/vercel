@@ -204,8 +204,8 @@ describe('detectRailwayServices', () => {
     });
   });
 
-  describe('cron hints', () => {
-    it('should skip cron services and emit a hint with schedule and command', async () => {
+  describe('schedule-triggered job hints', () => {
+    it('should skip Railway scheduled jobs and emit a schedule-triggered job hint', async () => {
       const fs = new VirtualFilesystem({
         'web/railway.json': JSON.stringify({}),
         'web/package.json': JSON.stringify({
@@ -232,7 +232,8 @@ describe('detectRailwayServices', () => {
       const hint = result.warnings.find(w => w.code === 'RAILWAY_CRON_HINT');
       expect(hint).toBeDefined();
       expect(hint!.message).toContain('0 0 * * *');
-      expect(hint!.message).toContain('"type": "cron"');
+      expect(hint!.message).toContain('"type": "job"');
+      expect(hint!.message).toContain('"trigger": "schedule"');
       expect(hint!.message).toContain('"runtime": "python"');
     });
 
@@ -259,7 +260,7 @@ describe('detectRailwayServices', () => {
   });
 
   describe('preDeployCommand', () => {
-    it('should append preDeployCommand string to buildCommand', async () => {
+    it('should map preDeployCommand string to preDeployCommand field', async () => {
       const fs = new VirtualFilesystem({
         'railway.json': JSON.stringify({
           build: { buildCommand: 'npm run build' },
@@ -272,30 +273,11 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.web.buildCommand).toBe(
-        'npm run build && npm run db:migrate'
-      );
+      expect(result.services!.web.buildCommand).toBe('npm run build');
+      expect(result.services!.web.preDeployCommand).toBe('npm run db:migrate');
     });
 
-    it('should append preDeployCommand array to buildCommand', async () => {
-      const fs = new VirtualFilesystem({
-        'railway.json': JSON.stringify({
-          build: { buildCommand: 'npm run build' },
-          deploy: { preDeployCommand: ['npm run db:migrate'] },
-        }),
-        'package.json': JSON.stringify({
-          dependencies: { next: '14.0.0' },
-        }),
-      });
-
-      const result = await detectRailwayServices({ fs });
-
-      expect(result.services!.web.buildCommand).toBe(
-        'npm run build && npm run db:migrate'
-      );
-    });
-
-    it('should use preDeployCommand alone when no buildCommand', async () => {
+    it('should set preDeployCommand alone when no buildCommand', async () => {
       const fs = new VirtualFilesystem({
         'api/railway.json': JSON.stringify({
           deploy: { preDeployCommand: 'python manage.py migrate' },
@@ -306,7 +288,8 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.api.buildCommand).toBe(
+      expect(result.services!.api.buildCommand).toBeUndefined();
+      expect(result.services!.api.preDeployCommand).toBe(
         'python manage.py migrate'
       );
     });
@@ -324,6 +307,7 @@ describe('detectRailwayServices', () => {
       const result = await detectRailwayServices({ fs });
 
       expect(result.services!.web.buildCommand).toBe('npm run build');
+      expect(result.services!.web.preDeployCommand).toBeUndefined();
     });
   });
 

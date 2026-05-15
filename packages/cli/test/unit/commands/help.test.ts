@@ -440,6 +440,56 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('connex list subcommand', () => {
+      it('connex list subcommand help column width 120', () => {
+        expect(
+          help(connex.listSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex token subcommand', () => {
+      it('connex token subcommand help column width 120', () => {
+        expect(
+          help(connex.tokenSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex open subcommand', () => {
+      it('connex open subcommand help column width 120', () => {
+        expect(
+          help(connex.openSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex attach subcommand', () => {
+      it('connex attach subcommand help column width 120', () => {
+        expect(
+          help(connex.attachSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('connex detach subcommand', () => {
+      it('connex detach subcommand help column width 120', () => {
+        expect(
+          help(connex.detachSubcommand, {
+            columns: 120,
+            parent: connex.connexCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration help output snapshots', () => {

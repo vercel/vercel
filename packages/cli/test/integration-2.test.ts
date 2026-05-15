@@ -21,7 +21,7 @@ import type { CLIProcess } from './helpers/types';
 import stripAnsi from 'strip-ansi';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
@@ -44,22 +44,36 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(process, /Set up[^?]+\?/);
-  process.stdin?.write('yes\n');
-
-  await waitForPrompt(process, /Which scope [^?]+\?/);
+  await waitForPrompt(
+    process,
+    /Set up (?:and (?:deploy|develop) )?[“"][^”"]+[”"]/
+  );
+  await waitForPrompt(process, /Which team[^?]*\?/);
   process.stdin?.write('\n');
 
   await waitForPrompt(process, 'Link to existing project?');
   process.stdin?.write('no\n');
 
-  await waitForPrompt(process, 'What’s your project’s name?');
+  await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(process, 'In which directory is your code located?');
-  process.stdin?.write('\n');
+  // The "In which directory…" prompt fires only when framework detection finds
+  // nothing at the root. Some fixtures trigger framework detection (e.g.
+  // `dev-proxy-headers-and-env` via server.js), others don't (e.g.
+  // `project-link-deploy` with empty package.json). Wait for whichever fires.
+  let sawDirectoryPrompt = false;
+  await waitForPrompt(process, chunk => {
+    if (chunk.includes('In which directory is your code located?')) {
+      sawDirectoryPrompt = true;
+      return true;
+    }
+    return chunk.includes('Customize settings?');
+  });
 
-  await waitForPrompt(process, 'Want to modify these settings?');
+  if (sawDirectoryPrompt) {
+    process.stdin?.write('\n');
+    await waitForPrompt(process, 'Customize settings?');
+  }
 
   if (overrides) {
     process.stdin?.write('yes\n');
@@ -72,13 +86,13 @@ async function setupProject(
     );
     process.stdin?.write('a\n'); // 'a' means select all
 
-    await waitForPrompt(process, `What's your Build Command?`);
+    await waitForPrompt(process, 'Build Command?');
     process.stdin?.write(`${buildCommand || ''}\n`);
 
-    await waitForPrompt(process, `What's your Development Command?`);
+    await waitForPrompt(process, 'Development Command?');
     process.stdin?.write(`${devCommand || ''}\n`);
 
-    await waitForPrompt(process, `What's your Output Directory?`);
+    await waitForPrompt(process, 'Output Directory?');
     process.stdin?.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin?.write('no\n');
@@ -112,7 +126,7 @@ async function setupProject(
     process.stdin?.write('\n');
   }
 
-  await waitForPrompt(process, 'Linked to');
+  await waitForPrompt(process, /Linked\s+/);
 }
 
 beforeAll(async () => {
@@ -269,7 +283,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
   }
 });
 
-test('should prefill "project name" prompt with now.json `name`', async () => {
+test('should prefill "project name" prompt with vercel.json `name`', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
@@ -302,22 +316,20 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
     }
   });
 
-  await waitForPrompt(now, /Set up and deploy[^?]+\?/);
-  now.stdin?.write('yes\n');
-
-  await waitForPrompt(now, 'Which scope should contain your project?');
+  await waitForPrompt(now, /Set up [“"]/);
+  await waitForPrompt(now, 'Which team?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Link to existing project?');
   now.stdin?.write('no\n');
 
-  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
 
   await waitForPrompt(now, 'In which directory is your code located?');
   now.stdin?.write('\n');
 
-  await waitForPrompt(now, 'Want to modify these settings?');
+  await waitForPrompt(now, 'Customize settings?');
   now.stdin?.write('no\n');
 
   await waitForPrompt(
@@ -326,7 +338,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   );
   now.stdin?.write('\n');
 
-  await waitForPrompt(now, /Linked to/);
+  await waitForPrompt(now, /Linked\s+/);
 
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -394,7 +406,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stdout).not.toContain('Linked to');
+  expect(output.stdout).not.toMatch(/Linked\s+/);
 });
 
 test('deploy shows notice when project in `.vercel` does not exists', async () => {
@@ -419,7 +431,8 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
 
   let detectedNotice = false;
 
-  // kill after first prompt
+  // Terminate after the first status line. The "Set up and deploy?" prompt was
+  // removed, so writing to stdin would leak into the next real prompt.
   await waitForPrompt(now, chunk => {
     detectedNotice =
       detectedNotice ||
@@ -427,9 +440,9 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
         'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
-    return /Set up and deploy[^?]+\?/.test(chunk);
+    return /Set up [“"][^”"]+[”"]/.test(chunk);
   });
-  now.stdin?.write('no\n');
+  now.kill('SIGTERM');
 
   expect(detectedNotice, 'detectedNotice').toBe(true);
 });
@@ -479,7 +492,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   expect(pageResponse1.status).toBe(200);
   expect(await pageResponse1.text()).toMatch(/I am a website/gm);
 
-  // Ensures that the `now.json` file has been applied
+  // Ensures that the `vercel.json` file has been applied
   const pageResponse2 = await nodeFetch(`${secondResult.stdout}/i-do-exist`);
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
@@ -550,6 +563,8 @@ test('add a sensitive env var', async () => {
   expect(output.stderr).toContain(
     'Added Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('override an existing env var', async () => {
@@ -612,6 +627,8 @@ test('override an existing env var', async () => {
   expect(outputOverride.stderr).toContain(
     'Overrode Environment Variable envVarName to Project'
   );
+
+  await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
@@ -784,21 +801,7 @@ describe('telemetry submits data', () => {
   });
 });
 
-test('deploys with only now.json and README.md', async () => {
-  const directory = await setupE2EFixture('deploy-with-only-readme-now-json');
-
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
-    cwd: directory,
-  });
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
-  const text = await res.text();
-  expect(text).toMatch(/readme contents/);
-});
-
-test('deploys with only vercel.json and README.md', async () => {
+test('deploys with only vercel.json and a static file', async () => {
   const directory = await setupE2EFixture(
     'deploy-with-only-readme-vercel-json'
   );
@@ -813,19 +816,19 @@ test('deploys with only vercel.json and README.md', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  // assert timing order of showing URLs vs status updates
-  // Preview URL appears twice: once with loading emoji, then again with success emoji
+  // assert timing order of showing URLs vs status updates: Inspect and Preview
+  // rows print first, then build status (Queued/Building) transitions to Completing.
   expect(stripAnsi(stderr)).toMatch(
-    /Inspect.*\nPreview.*\n(Queued|Building).*[\s\S]*Completing/
+    /Inspect[\s\S]+Preview[\s\S]+(Queued|Building)[\s\S]+Completing/
   );
 
   const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
+  const res = await nodeFetch(`https://${host}/content.txt`);
   const text = await res.text();
-  expect(text).toMatch(/readme contents/);
+  expect(text).toMatch(/content file contents/);
 });
 
-test('reject conflicting `vercel.json` and `now.json` files', async () => {
+test('reject deprecated `now.json` files', async () => {
   const directory = await setupE2EFixture('conflicting-now-json-vercel-json');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
@@ -834,7 +837,7 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
-    'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    'The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.'
   );
 });
 
@@ -938,6 +941,15 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   });
 });
 
+// The deploy refuses for one of two reasons depending on whether the team has
+// SAML enforcement: either the API returns a plain `forbidden` 403 (handled by
+// `getLinkedProject` in `src/util/projects/link.ts`), or it returns a SAML
+// challenge that we now bail on in `src/util/login/reauthenticate.ts` (see the
+// non-interactive / external-token guards). Both messages are acceptable; what
+// matters for these tests is that the deploy exits 1 and tells the user why.
+const unauthorizedDeployErrorRe =
+  /Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\.|(?:SAML )?[Rr]e-authentication is required for .* scope/;
+
 test('reject deploying with wrong team .vercel config', async () => {
   const directory = await setupE2EFixture('unauthorized-vercel-config');
 
@@ -946,9 +958,7 @@ test('reject deploying with wrong team .vercel config', async () => {
   });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toContain(
-    'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
-  );
+  expect(stderr).toMatch(unauthorizedDeployErrorRe);
 });
 
 test('reject deploying with invalid token', async () => {
@@ -958,9 +968,7 @@ test('reject deploying with invalid token', async () => {
   });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toMatch(
-    /Error: Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\./g
-  );
+  expect(stderr).toMatch(unauthorizedDeployErrorRe);
 });
 
 test('[vc link] should detect frameworks in project rootDirectory', async () => {
@@ -981,23 +989,21 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'What’s your project’s name?');
+  await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write(`${projectRootDir}\n`);
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -1023,7 +1029,7 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Ensure the message is correct pattern
-  expect(stderr).toMatch(/Linked to /m);
+  expect(stderr).toMatch(/Linked\s+/m);
 
   // Ensure .gitignore contains .vercel and .env*.local (from env pull)
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
@@ -1094,16 +1100,14 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, /Set up[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, 'What’s your project’s name?');
+  await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
@@ -1112,7 +1116,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Linked to');
+  await waitForPrompt(vc, /Linked\s+/);
 
   const output = await vc;
 
@@ -1274,28 +1278,25 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
     },
   });
 
-  await waitForPrompt(vc, 'Set up and deploy');
-  vc.stdin?.write('y\n');
-  await waitForPrompt(vc, /Which scope [^?]+\?/);
+  await waitForPrompt(vc, 'Set up');
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('n\n');
-  await waitForPrompt(vc, 'What’s your project’s name?');
+  await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Want to modify these settings?');
+  await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('y\n');
   await waitForPrompt(
     vc,
     'Which settings would you like to overwrite (select multiple)?'
   );
   vc.stdin?.write('a\n');
-  await waitForPrompt(vc, "What's your Development Command?");
+  await waitForPrompt(vc, 'Development Command?');
   vc.stdin?.write('echo "DEV COMMAND"\n');
   // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
-  await waitForPrompt(vc, "What's your Output Directory?");
+  await waitForPrompt(vc, 'Output Directory?');
   vc.stdin?.write('output\n');
   await waitForPrompt(vc, 'Do you want to change additional project settings?');
   vc.stdin?.write('n\n');
@@ -1305,7 +1306,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   );
   vc.stdin?.write('\x1b[B'); // Down Arrow
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Linked to');
+  await waitForPrompt(vc, /Linked\s+/);
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
@@ -1414,6 +1415,9 @@ test.each([
 ] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
   vercelAuth,
   expectedStatus,
+}: {
+  vercelAuth: 'none' | 'standard';
+  expectedStatus: number;
 }) => {
   const dir = await setupE2EFixture('project-vercel-auth');
   const projectName = `project-vercel-auth-${

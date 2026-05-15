@@ -41,8 +41,11 @@ export async function getServicesSetupState(
   const detectServicesResult = await detectServices({
     fs: new LocalFileSystemDetector(workPath),
   });
+  // `resolved` is undefined when no services are detected at all (common for
+  // empty or simple fixtures). Defensive optional chain avoids crashing the
+  // setup flow before any prompts can fire.
   const hasConfiguredServices =
-    detectServicesResult.resolved.source === 'configured';
+    detectServicesResult.resolved?.source === 'configured';
   const inferredServices = hasConfiguredServices
     ? null
     : detectServicesResult.inferred;
@@ -59,7 +62,8 @@ export async function getServicesSetupState(
 }
 
 export function displayConfiguredServicesSetup(
-  detectServicesResult: DetectServicesResult
+  detectServicesResult: DetectServicesResult,
+  configFileName = 'vercel.json'
 ): void {
   if (detectServicesResult.services.length > 0) {
     displayDetectedServices(detectServicesResult.services);
@@ -67,7 +71,7 @@ export function displayConfiguredServicesSetup(
   if (detectServicesResult.errors.length > 0) {
     displayServiceErrors(detectServicesResult.errors);
   }
-  displayServicesConfigNote();
+  displayServicesConfigNote(configFileName);
 }
 
 function formatDetectedServicesSummary(services: Service[]): string {
@@ -183,7 +187,10 @@ export async function promptForInferredServicesSetup({
     return choice;
   }
 
-  await writeServicesConfig(workPath, inferred.config);
-  output.log('Added services configuration to vercel.json.');
+  const { configFileName } = await writeServicesConfig(
+    workPath,
+    inferred.config
+  );
+  output.print(`  Added services configuration to ${configFileName}.\n`);
   return { type: 'services' };
 }

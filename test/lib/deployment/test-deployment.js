@@ -7,6 +7,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
+const { handleTransientError } = require('./transient-error.js');
 const {
   scanParentDirs,
   getSupportedNodeVersion,
@@ -194,7 +195,18 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     if (!isShowingBuildPreviewPage) {
       break;
     } else {
-      result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+      try {
+        result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+      } catch (error) {
+        if (handleTransientError(error, 'preview_page')) {
+          console.log(
+            `Transient error checking preview page for ${probeUrl} (attempt ${retryCount}): ${error.message}`
+          );
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        throw error;
+      }
       isShowingBuildPreviewPage = checkForPreviewPage(result.text);
       if (!isShowingBuildPreviewPage) {
         break;
@@ -409,7 +421,9 @@ async function testDeployment(fixturePath, opts = {}) {
     opts.projectSettings.nodeVersion = nodeVersion;
   }
 
-  const probePath = path.resolve(fixturePath, 'probe.js');
+  const cjsProbePath = path.resolve(fixturePath, 'probe.cjs');
+  const jsProbePath = path.resolve(fixturePath, 'probe.js');
+  const probePath = fs.existsSync(cjsProbePath) ? cjsProbePath : jsProbePath;
   let probes = [];
   if ('probes' in nowJson) {
     probes = nowJson.probes;
@@ -419,10 +433,11 @@ async function testDeployment(fixturePath, opts = {}) {
     // we'll run probes after we have the deployment url below
   } else {
     console.warn(
-      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
+      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.cjs, probe.js, or vercel.json`
     );
   }
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
+  delete bodies['probe.cjs'];
   delete bodies['probe.js'];
   delete bodies['probes.json'];
 
@@ -479,7 +494,7 @@ async function testDeployment(fixturePath, opts = {}) {
 async function nowDeployIndexTgz(file) {
   const bodies = {
     'index.tgz': fs.readFileSync(file),
-    'now.json': Buffer.from(JSON.stringify({ version: 2 })),
+    'vercel.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
   return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;
@@ -487,7 +502,19 @@ async function nowDeployIndexTgz(file) {
 
 async function fetchDeploymentUrl(url, opts) {
   for (let i = 0; i < 50; i += 1) {
-    const resp = await fetch(url, opts);
+    let resp;
+    try {
+      resp = await fetch(url, opts);
+    } catch (error) {
+      if (handleTransientError(error, 'deployment_url')) {
+        console.log(
+          `Transient error fetching deployment url ${url} (attempt ${i}): ${error.message}`
+        );
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw error;
+    }
     const text = await resp.text();
     if (typeof text !== 'undefined' && !text.includes('Join Free')) {
       return { resp, text };
@@ -501,7 +528,19 @@ async function fetchDeploymentUrl(url, opts) {
 
 async function fetchTgzUrl(url) {
   for (let i = 0; i < 500; i += 1) {
-    const resp = await fetch(url);
+    let resp;
+    try {
+      resp = await fetch(url);
+    } catch (error) {
+      if (handleTransientError(error, 'tgz_url')) {
+        console.log(
+          `Transient error fetching tgz url ${url} (attempt ${i}): ${error.message}`
+        );
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw error;
+    }
     if (resp.status === 200) {
       const buffer = await resp.buffer();
       if (buffer[0] === 0x1f) {

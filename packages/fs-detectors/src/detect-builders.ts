@@ -8,6 +8,7 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
+  Services,
   ExperimentalServices,
   ProjectSettings,
   Service,
@@ -29,8 +30,21 @@ export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
 
 /**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
+ * These files are excluded from static file serving.
  */
-export const REGEX_VERCEL_PLATFORM_FILES = `api/**,package.json,${REGEX_MIDDLEWARE_FILES}`;
+export const REGEX_VERCEL_PLATFORM_FILES = [
+  'api/**',
+  'node_modules/**',
+  REGEX_MIDDLEWARE_FILES,
+  'package.json',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lock',
+  'bun.lockb',
+  '.gitignore',
+  'README.md',
+].join(',');
 
 /**
  * Pattern for non-Vercel platform files.
@@ -51,6 +65,7 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
+  services?: Services;
   experimentalServices?: ExperimentalServices;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
@@ -121,18 +136,24 @@ export async function detectBuilders(
   warnings: ErrorResponse[];
   hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
+  fallbackRoutes?: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
+  useImplicitEnvInjection?: boolean;
 }> {
-  const { experimentalServices: services, projectSettings = {} } = options;
+  const { services, experimentalServices, projectSettings = {} } = options;
   const { framework } = projectSettings;
-  const hasServicesConfig = services != null && typeof services === 'object';
+  const configuredServices = services ?? experimentalServices;
+  const hasServicesConfig =
+    configuredServices != null && typeof configuredServices === 'object';
 
   if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
+      configuredServices: configuredServices,
+      projectFramework: framework,
     });
   }
 

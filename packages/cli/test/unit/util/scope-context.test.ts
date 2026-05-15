@@ -42,7 +42,7 @@ describe('resolveScopeContext', () => {
 
     it('should detect --scope flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '--scope', mockTeam.slug];
+      client.setArgv('projects', 'ls', '--scope', mockTeam.slug);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -51,7 +51,7 @@ describe('resolveScopeContext', () => {
 
     it('should detect --scope=value flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', `--scope=${mockTeam.slug}`];
+      client.setArgv('projects', 'ls', `--scope=${mockTeam.slug}`);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -60,7 +60,16 @@ describe('resolveScopeContext', () => {
 
     it('should detect --team flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '--team', mockTeam.slug];
+      client.setArgv('projects', 'ls', '--team', mockTeam.slug);
+
+      const ctx = await getScope(client, { resolveLocalScope: true });
+
+      expect(ctx.explicitScopeProvided).toBe(true);
+    });
+
+    it('should detect -S flag as explicit scope', async () => {
+      client.config.currentTeam = mockTeam.id;
+      client.setArgv('projects', 'ls', '-S', mockTeam.slug);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -69,7 +78,7 @@ describe('resolveScopeContext', () => {
 
     it('should detect -T flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '-T', mockTeam.slug];
+      client.setArgv('projects', 'ls', '-T', mockTeam.slug);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -151,7 +160,7 @@ describe('resolveScopeContext', () => {
       const cwd = setupTmpDir();
       client.cwd = cwd;
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '--scope', mockTeam.slug];
+      client.setArgv('projects', 'ls', '--scope', mockTeam.slug);
 
       await outputFile(
         join(cwd, '.vercel', 'repo.json'),
@@ -227,7 +236,7 @@ describe('resolveScopeContext', () => {
     });
 
     it('should return false when no scope indicators present', async () => {
-      client.argv = ['deploy'];
+      client.setArgv('deploy');
       client.localConfig = {};
 
       const ctx = await getScope(client, { resolveLocalScope: true });
@@ -236,7 +245,7 @@ describe('resolveScopeContext', () => {
     });
 
     it('should not false-positive on unrelated flags', async () => {
-      client.argv = ['deploy', '--force', '--yes'];
+      client.setArgv('deploy', '--force', '--yes');
       client.localConfig = {};
 
       const ctx = await getScope(client, { resolveLocalScope: true });

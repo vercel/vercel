@@ -8,6 +8,7 @@ import {
 } from './package-versions';
 import {
   download,
+  getReportedServiceType,
   glob,
   Lambda,
   FileBlob,
@@ -17,9 +18,11 @@ import {
   scanParentDirs,
   getEnvForPackageManager,
   isPythonFramework,
+  isScheduleTriggeredService,
   Span,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  BUILDER_PRE_DEPLOY_STEP,
   type BuildOptions,
   type GlobOptions,
   type BuildVX,
@@ -62,12 +65,17 @@ import {
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
+const PYTHON_ENTRYPOINT_DOCS_URL =
+  'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
 
 import {
   detectPythonEntrypoint,
+  entrypointToModule,
   type DetectedPythonEntrypoint,
   type PythonEntrypoint,
 } from './entrypoint';
+
+export { detectEntrypoint } from './entrypoint';
 
 export const version = -1;
 
@@ -187,6 +195,21 @@ export async function downloadFilesInWorkPath({
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev && entrypoint) {
+    const normalizedEntrypoint = entrypoint.endsWith('.py')
+      ? entrypoint
+      : `${entrypoint}.py`;
+    if (
+      !hasProp(downloadedFiles, entrypoint) &&
+      !hasProp(downloadedFiles, normalizedEntrypoint)
+    ) {
+      throw new NowBuildError({
+        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+        message: `Configured Python entrypoint "${normalizedEntrypoint}" was not found.`,
+        link: PYTHON_ENTRYPOINT_DOCS_URL,
+        action: 'Learn More',
+      });
+    }
+
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
     // Replace dots in the entrypoint basename with underscores so the cache
@@ -209,6 +232,7 @@ export const build: BuildVX = async ({
   config,
   span: parentSpan,
   service,
+  registerPreDeploy,
 }) => {
   let entrypoint: string | undefined =
     rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
@@ -265,9 +289,12 @@ export const build: BuildVX = async ({
       entrypoint
         ? {
             filePath: entrypoint,
-            // For cron services, the WSGI variable is always 'app' (created dynamically).
+            // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
             // For other services, handlerFunction is used as the entrypoint variable name.
-            varName: service?.type === 'cron' ? undefined : handlerFunction,
+            varName:
+              service && isScheduleTriggeredService(service)
+                ? undefined
+                : handlerFunction,
           }
         : undefined,
       service
@@ -301,20 +328,19 @@ export const build: BuildVX = async ({
         rootDir,
       });
       versionSpan.setAttributes({
-        'python.version': pythonVersionString(resolution.pythonVersion),
+        'python.version':
+          pythonVersionString(resolution.pythonVersion) ?? 'unknown',
         'python.versionSource': resolution.versionSource,
       });
       return resolution;
     });
 
   if (pinVersionFilePath) {
-    console.log(
-      `Writing .python-version file with version ${pythonVersionString(pythonVersion)}`
-    );
-    await writeFile(
-      pinVersionFilePath,
-      `${pythonVersionString(pythonVersion)}\n`
-    );
+    const versionToPin = pythonVersionString(pythonVersion);
+    if (versionToPin) {
+      console.log(`Writing .python-version file with version ${versionToPin}`);
+      await writeFile(pinVersionFilePath, `${versionToPin}\n`);
+    }
   }
 
   // Create a virtual environment so dependencies can be installed via
@@ -345,6 +371,14 @@ export const build: BuildVX = async ({
     : join(workPath, '.vercel', 'python', '.venv');
   const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
   const hasCachedUv = fs.existsSync(uvCacheDir);
+  const restoredCache =
+    hasCachedVenv && hasCachedUv
+      ? 'both'
+      : hasCachedVenv
+        ? 'venv'
+        : hasCachedUv
+          ? 'uv'
+          : 'none';
   if (hasCachedVenv || hasCachedUv) {
     debug(
       `Build cache detected: venv=${hasCachedVenv}, uv-cache=${hasCachedUv}`
@@ -405,6 +439,8 @@ export const build: BuildVX = async ({
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
       installCommand: projectInstallCommand || undefined,
+      runtime: 'python',
+      'python.cache.restored': restoredCache,
     })
     .trace(async () => {
       if (projectInstallCommand) {
@@ -566,7 +602,7 @@ export const build: BuildVX = async ({
   await uv.pip({
     venvPath,
     projectDir: join(workPath, entryDirectory),
-    args: ['install', runtimeDep],
+    args: ['install', '--link-mode', 'copy', runtimeDep],
   });
 
   if (shouldInstallVercelWorkers) {
@@ -578,7 +614,7 @@ export const build: BuildVX = async ({
     await uv.pip({
       venvPath,
       projectDir: join(workPath, entryDirectory),
-      args: ['install', workersDep],
+      args: ['install', '--link-mode', 'copy', workersDep],
     });
   }
 
@@ -590,8 +626,30 @@ export const build: BuildVX = async ({
   if (quirksResult.buildEnv) {
     Object.assign(pythonEnv, quirksResult.buildEnv);
   }
+
+  // Register a pre-deploy command that will be fired in the end of the
+  // build process (if all builders including this one succeed)
+  const preDeployCommand = config?.preDeployCommand;
+  if (registerPreDeploy && typeof preDeployCommand === 'string') {
+    const capturedEnv = { ...pythonEnv };
+    const capturedCwd = workPath;
+    registerPreDeploy(async () => {
+      await builderSpan
+        .child(BUILDER_PRE_DEPLOY_STEP, {
+          preDeployCommand,
+        })
+        .trace(async () => {
+          console.log(`Running pre-deploy command: \`${preDeployCommand}\``);
+          await execCommand(preDeployCommand, {
+            env: capturedEnv,
+            cwd: capturedCwd,
+          });
+        });
+    });
+  }
+
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const moduleName = entrypointToModule(entrypoint);
 
   if (handlerFunction) {
     const entrypointPath = join(workPath, entrypoint);
@@ -791,14 +849,17 @@ from vercel_runtime.vc_init import vc_handler
   });
 
   // Write project manifest for diagnostics (best-effort, never fails the build).
-  // Requires uv.lock to resolve versions and dependency graph.
-  if (uvLockPath) {
+  // Requires uv.lock to resolve versions and dependency graph.  Skipped in
+  // `vercel dev` since the CLI only reads the manifest in `vercel build`.
+  if (uvLockPath && !meta.isDev) {
     try {
       await generateProjectManifest({
         workPath,
         pythonPackage,
         pythonVersion,
         uvLockPath,
+        framework,
+        serviceType: service ? getReportedServiceType(service) : undefined,
       });
     } catch (err) {
       debug(
@@ -844,12 +905,6 @@ export const prepareCache: PrepareCache = async ({
   repoRootPath,
   workPath,
 }) => {
-  // Feature-gated: only enabled when the platform sets this env var.
-  // This allows incremental rollout to specific teams before general availability.
-  if (process.env.VERCEL_PYTHON_PREPARE_CACHE !== '1') {
-    return {};
-  }
-
   const root = repoRootPath || workPath;
   const ignore = ['**/*.pyc', '**/__pycache__/**'];
 

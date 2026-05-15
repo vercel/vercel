@@ -1,5 +1,96 @@
 # @vercel/cervel
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [0a691bf]
+- Updated dependencies [fb0cb8d]
+  - @vercel/backends@0.7.0
+
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [9615277]
+  - @vercel/backends@0.6.0
+
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [22f77b9]
+  - @vercel/backends@0.5.0
+
+## 0.1.2
+
+### Patch Changes
+
+- @vercel/backends@0.4.1
+
+## 0.1.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [e53dd86]
+- Updated dependencies [ae20217]
+- Updated dependencies [b4ada64]
+  - @vercel/backends@0.4.0
+
+## 0.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/backends@0.3.0
+
+## 0.0.55
+
+### Patch Changes
+
+- Updated dependencies [[`2aa78415831fe89d1b21dd89704706bd1ad5e78d`](https://github.com/vercel/vercel/commit/2aa78415831fe89d1b21dd89704706bd1ad5e78d)]:
+  - @vercel/backends@0.2.0
+
+## 0.0.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.1.2
+
+## 0.0.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.1.1
+
+## 0.0.52
+
+### Patch Changes
+
+- Updated dependencies [[`055f6239a4fe763b9f3b33cfbb5baa2e0e214767`](https://github.com/vercel/vercel/commit/055f6239a4fe763b9f3b33cfbb5baa2e0e214767)]:
+  - @vercel/backends@0.1.0
+
+## 0.0.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.64
+
+## 0.0.50
+
+### Patch Changes
+
+- Updated dependencies [[`2babfa22946d80a92f1307a8d860a9039d695b09`](https://github.com/vercel/vercel/commit/2babfa22946d80a92f1307a8d860a9039d695b09), [`2babfa22946d80a92f1307a8d860a9039d695b09`](https://github.com/vercel/vercel/commit/2babfa22946d80a92f1307a8d860a9039d695b09)]:
+  - @vercel/backends@0.0.63
+
 ## 0.0.49
 
 ### Patch Changes

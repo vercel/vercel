@@ -3,11 +3,19 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, delimiter, dirname, basename } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
-import { debug, NowBuildError } from '@vercel/build-utils';
+import {
+  debug,
+  isScheduleTriggeredService,
+  NowBuildError,
+} from '@vercel/build-utils';
 import { buildCronRouteTable, getServiceCrons } from './crons';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
-import { detectPythonEntrypoint, type PythonEntrypoint } from './entrypoint';
+import {
+  detectPythonEntrypoint,
+  entrypointToModule,
+  type PythonEntrypoint,
+} from './entrypoint';
 import { runFrameworkHook } from './index';
 import { getDefaultPythonVersion } from './version';
 import {
@@ -770,7 +778,7 @@ export const startDevServer: StartDevServer = async opts => {
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
 
-  // For cron/worker services, use the raw entrypoint directly, because
+  // For schedule-triggered job and worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let resolved: PythonEntrypoint | undefined;
   const handlerFunction =
@@ -784,9 +792,12 @@ export const startDevServer: StartDevServer = async opts => {
     entrypoint
       ? {
           filePath: entrypoint,
-          // For cron services, the WSGI variable is always 'app' (created dynamically).
-          // For other services, handlerFunction is used as the entrypoint variable name.
-          varName: service?.type === 'cron' ? undefined : handlerFunction,
+          // Schedule-triggered services create their own "app" wrapper dynamically.
+          // Other services use handlerFunction as the entrypoint variable name.
+          varName:
+            service && isScheduleTriggeredService(service)
+              ? undefined
+              : handlerFunction,
         }
       : undefined,
     service
@@ -815,8 +826,7 @@ export const startDevServer: StartDevServer = async opts => {
   }
   const { entrypoint: entry, variableName } = resolved;
 
-  // Convert to module path, e.g. "src/app.py" -> "src.app"
-  const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
+  const modulePath = entrypointToModule(entry);
 
   // Track child process and listeners
   let childProcess: ChildProcess | null = null;

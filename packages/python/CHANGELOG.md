@@ -1,5 +1,100 @@
 # @vercel/python
 
+## 6.42.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+## 6.41.0
+
+### Minor Changes
+
+- bf42168: Provide better suggestion for how to fix entry point error
+
+### Patch Changes
+
+- 94a214c: Use copy link mode for injected uv pip installs to avoid cross-device cache clone failures.
+
+## 6.40.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- f93148b: Reduce redundant file stat and subprocess calls.
+- 979d70a: [services] `services` schema support
+
+## 6.39.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+
+## 6.38.0
+
+### Minor Changes
+
+- fa5f57a: Enable Python build dependency caching by default.
+
+### Patch Changes
+
+- 8e29c9c: Improve Python entrypoint error messages and documentation links.
+- 2da36f3: Show a `--functions-beta`-aware hint at the Hive-extended 1 GB size-limit error path.
+
+## 6.37.0
+
+### Minor Changes
+
+- 25e84c6: Support specifying entrypoint in vercel.tool.entrypoint in pyproject.toml
+
+### Patch Changes
+
+- Updated dependencies [8e999cb]
+  - @vercel/python-analysis@0.11.1
+
+## 6.36.1
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
+## 6.36.0
+
+### Minor Changes
+
+- Add framework to package manifest for python and backends builders. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+### Patch Changes
+
+- Don't pass --python 3.0 to uv venv when running vc dev ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+## 6.35.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+## 6.34.0
+
+### Minor Changes
+
+- Generate PROJECTMANIFEST in @vercel/backends for Node deployments. ([#15991](https://github.com/vercel/vercel/pull/15991))
+
+## 6.33.3
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 6.33.2
+
+### Patch Changes
+
+- Update the error for custom installCommand builds >250MB. ([#15946](https://github.com/vercel/vercel/pull/15946))
+
 ## 6.33.1
 
 ### Patch Changes

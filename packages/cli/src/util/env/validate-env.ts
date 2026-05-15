@@ -114,6 +114,48 @@ export function trimValue(value: string): string {
   return value.replace(/\n$/, '').trim();
 }
 
+export interface NormalizeStdinEnvValueResult {
+  value: string;
+  strippedTrailingNewline: boolean;
+}
+
+/**
+ * Normalize a single trailing line ending from stdin when the payload is
+ * otherwise a single line. This preserves intentional multiline secrets while
+ * fixing the common `echo "secret" | vercel env add ...` case.
+ */
+export function normalizeStdinEnvValue(
+  value: string
+): NormalizeStdinEnvValueResult {
+  let valueWithoutTrailingNewline = value;
+
+  if (value.endsWith('\r\n')) {
+    valueWithoutTrailingNewline = value.slice(0, -2);
+  } else if (value.endsWith('\n')) {
+    valueWithoutTrailingNewline = value.slice(0, -1);
+  } else {
+    return {
+      value,
+      strippedTrailingNewline: false,
+    };
+  }
+
+  if (
+    valueWithoutTrailingNewline.includes('\n') ||
+    valueWithoutTrailingNewline.includes('\r')
+  ) {
+    return {
+      value,
+      strippedTrailingNewline: false,
+    };
+  }
+
+  return {
+    value: valueWithoutTrailingNewline,
+    strippedTrailingNewline: true,
+  };
+}
+
 /**
  * Returns the public prefix if the key starts with one, null otherwise.
  */

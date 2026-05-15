@@ -1,5 +1,50 @@
 # vercel-workers
 
+## 0.0.23
+
+### Patch Changes
+
+- cd8f705: [vercel-workers] Fall back to `receive_message_by_id` for v2beta metadata-only callbacks
+
+## 0.0.22
+
+### Patch Changes
+
+- 9599101: [python/vercel-workers] Adds QueueClient and AsyncQueueClient
+
+## 0.0.21
+
+### Patch Changes
+
+- 6935baa: Refactor Python queue sdk into `_queue/`
+- 574c9f1: [vercel-workers] Replaces retention_seconds and delay_seconds with retention and delay which support timedelta, e.g retention=timedelta(hours=6)
+
+## 0.0.20
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
+## 0.0.19
+
+### Patch Changes
+
+- b357f9d: Align queue deployment pinning with the TypeScript SDK by distinguishing automatic pinning, explicit deployment IDs, and explicit unpinned sends.
+- fddd88c: [vercel-workers] payload type validation
+- fb68ac6: Add explicit Python queue worker retry and acknowledgement directives. Workers can now return or raise `RetryAfter` and `Ack` to control retry and acknowledgement behavior.
+
+## 0.0.18
+
+### Patch Changes
+
+- daf8c59: [vercel-workers] remove `consumer` from public api
+
+## 0.0.17
+
+### Patch Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
 ## 0.0.16
 
 ### Patch Changes

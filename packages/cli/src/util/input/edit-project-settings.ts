@@ -28,7 +28,8 @@ export async function editProjectSettings(
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
-  localConfigurationOverrides: PartialProjectSettings | null
+  localConfigurationOverrides: PartialProjectSettings | null,
+  configFileName = 'vercel.json'
 ): Promise<ProjectSettings> {
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
@@ -55,15 +56,15 @@ export async function editProjectSettings(
       if (localConfigValue) settings[setting] = localConfigValue;
     }
 
-    output.print('Local settings detected in vercel.json:\n');
+    output.print(`  Local settings detected in ${configFileName}:\n`);
 
     // Print provided overrides including framework
     for (const setting of settingKeys) {
       const override = localConfigurationOverrides[setting];
       if (override) {
         output.print(
-          `${chalk.dim(
-            `- ${chalk.bold(`${settingMap[setting]}:`)} ${override}`
+          `  ${chalk.dim(
+            `${chalk.bold(`${settingMap[setting]}:`)} ${override}`
           )}\n`
         );
       }
@@ -78,7 +79,7 @@ export async function editProjectSettings(
       if (overrideFramework) {
         framework = overrideFramework;
         output.print(
-          `Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`
+          `  Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`
         );
       }
     }
@@ -90,26 +91,31 @@ export async function editProjectSettings(
     return settings;
   }
 
-  const styledFramework = (frameworkName: string) => {
-    const frameworkStyle = {
-      text: frameworkName,
-      color: chalk.blue,
-    };
-
-    if (frameworkName === 'Hono') {
-      frameworkStyle.text = '🔥 Hono';
-      frameworkStyle.color = chalk.hex('#FFA500');
-    }
-
-    return chalk.bold(frameworkStyle.color(frameworkStyle.text));
-  };
-
   // A missing framework slug implies the "Other" framework was selected
-  output.log(
-    !framework.slug
-      ? `No framework detected. Default Project Settings:\n`
-      : `Auto-detected Project Settings for ${styledFramework(framework.name)}\n`
-  );
+  if (!framework.slug) {
+    output.print(`  No framework detected. Default Project Settings:\n`);
+  } else {
+    // Compress "Auto-detected Project Settings for X" into a single line that
+    // also names the key commands the user is about to run with.
+    // Use output.print (not output.log) to skip the gray "> " prefix so this
+    // line visually matches the bold-label block (Linked / Inspect / Production).
+    // Title Case the inline labels so they match the checkbox panel below.
+    const buildCmd = framework.settings.buildCommand?.value ?? null;
+    const outputSetting = framework.settings.outputDirectory;
+    const outputDir = outputSetting
+      ? isSettingValue(outputSetting)
+        ? outputSetting.value
+        : outputSetting.placeholder
+      : null;
+    const inline = [
+      buildCmd ? `${settingMap.buildCommand}: ${buildCmd}` : null,
+      outputDir ? `${settingMap.outputDirectory}: ${outputDir}` : null,
+    ].filter(Boolean);
+    const detail = inline.length ? chalk.dim(` (${inline.join(', ')})`) : '';
+    // 2-space indent matches the Set up status line and the printAlignedLabel block.
+    // Framework name is plain (not bold) per prototype — only "Detected" is bold.
+    output.print(`  ${chalk.bold('Detected')} ${framework.name}${detail}\n`);
+  }
 
   settings.framework = framework.slug;
 
@@ -128,8 +134,8 @@ export async function editProjectSettings(
 
       if (!override && defaultSetting) {
         output.print(
-          `${chalk.dim(
-            `- ${chalk.bold(`${settingMap[setting]}:`)} ${
+          `  ${chalk.dim(
+            `${chalk.bold(`${settingMap[setting]}:`)} ${
               isSettingValue(defaultSetting)
                 ? defaultSetting.value
                 : chalk.italic(`${defaultSetting.placeholder}`)
@@ -143,7 +149,7 @@ export async function editProjectSettings(
   // Prompt the user if they want to modify any settings not defined by local configuration.
   if (
     autoConfirm ||
-    !(await client.input.confirm('Want to modify these settings?', false))
+    !(await client.input.confirm('Customize settings?', false))
   ) {
     return settings;
   }
@@ -169,7 +175,7 @@ export async function editProjectSettings(
   for (const setting of settingFields) {
     const field = settingMap[setting];
     settings[setting] = await client.input.text({
-      message: `What's your ${chalk.bold(field)}?`,
+      message: `${chalk.bold(field)}?`,
     });
   }
   return settings;

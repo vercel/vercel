@@ -1,5 +1,5 @@
 import { join } from 'path';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import workspaceManagers from '../src/workspaces/workspace-managers';
 import {
   detectFramework,
@@ -20,7 +20,7 @@ describe('DetectorFilesystem', () => {
     };
 
     const fs = new VirtualFilesystem(files);
-    const hasPathSpy = jest.spyOn(fs, '_hasPath');
+    const hasPathSpy = vi.spyOn(fs, '_hasPath');
 
     expect(await fs.readdir('/', { potentialFiles: ['config.rb'] })).toEqual([
       { name: 'package.json', path: 'package.json', type: 'file' },
@@ -75,9 +75,9 @@ describe('DetectorFilesystem', () => {
   it('should be able to write files', async () => {
     const files = {};
     const fs = new VirtualFilesystem(files);
-    const hasPathSpy = jest.spyOn(fs, '_hasPath');
-    const isFileSpy = jest.spyOn(fs, '_isFile');
-    const readFileSpy = jest.spyOn(fs, '_readFile');
+    const hasPathSpy = vi.spyOn(fs, '_hasPath');
+    const isFileSpy = vi.spyOn(fs, '_isFile');
+    const readFileSpy = vi.spyOn(fs, '_readFile');
 
     await fs.writeFile('file.txt', 'Hello World');
 
@@ -503,6 +503,33 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('remix');
   });
 
+  it('Should detect TanStack Start without `nitro` via `@tanstack/react-start`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@tanstack/router-plugin': 'latest',
+          '@tanstack/react-start': 'latest',
+          vite: 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('tanstack-start');
+  });
+
+  it('Should keep TanStack Router apps as `vite` without Start packages', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@tanstack/router-plugin': 'latest',
+          vite: 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('vite');
+  });
+
   it('Should detect React Router v7 as `react-router` via `vite.config.ts`', async () => {
     const fs = new VirtualFilesystem({
       'vite.config.ts': 'import { reactRouter } from "@react-router/dev/vite"',
@@ -594,6 +621,23 @@ describe('detectFrameworks()', () => {
       f => f.slug
     );
     expect(slugs).toEqual(['remix']);
+  });
+
+  it('Should detect TanStack Start without `nitro` and supersede `vite`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@tanstack/router-plugin': 'latest',
+          '@tanstack/react-start': 'latest',
+          vite: 'latest',
+        },
+      }),
+    });
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['tanstack-start']);
   });
 
   describe('Hono', () => {

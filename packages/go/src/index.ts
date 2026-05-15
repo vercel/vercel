@@ -47,6 +47,8 @@ import {
 
 import { GO_CANDIDATE_ENTRYPOINTS, detectGoEntrypoint } from './entrypoint';
 
+export { detectEntrypoint, detectGoEntrypoint } from './entrypoint';
+
 import {
   buildStandaloneServer,
   startStandaloneDevServer,

@@ -1,5 +1,17 @@
 # @vercel/go
 
+## 3.7.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+## 3.6.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 3.5.0
 
 ### Minor Changes

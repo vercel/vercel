@@ -10,7 +10,7 @@ import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
-import { emoji, prependEmoji } from '../emoji';
+import type { EmojiLabel } from '../emoji';
 import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
@@ -22,6 +22,7 @@ import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
 const home = homedir();
 
@@ -46,6 +47,12 @@ export interface RepoLink {
   rootPath: string;
   repoConfigPath: string;
   repoConfig?: RepoProjectsConfig;
+}
+
+export interface ResolvedGitRemote {
+  rootPath: string;
+  remoteName: string;
+  repoUrl: string;
 }
 
 export interface EnsureRepoLinkOptions {
@@ -82,6 +89,130 @@ export async function getRepoLink(
   );
 
   return { rootPath, repoConfig, repoConfigPath };
+}
+
+export async function resolveGitRemote(
+  client: Client,
+  rootPath: string,
+  {
+    yes,
+    existingRemoteName,
+  }: {
+    yes: boolean;
+    /** When set, skip remote selection and use this remote. */
+    existingRemoteName?: string;
+  }
+): Promise<ResolvedGitRemote | undefined> {
+  // Use getGitConfigPath to correctly resolve the config path for
+  // regular repos, worktrees, and submodules. Falls back to the
+  // traditional path if git commands fail.
+  const gitConfigPath =
+    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
+  const remoteUrls = await getRemoteUrls(gitConfigPath);
+  if (!remoteUrls) {
+    return undefined;
+  }
+
+  let remoteName: string;
+  if (existingRemoteName) {
+    // Re-use the remote from the existing repo.json
+    remoteName = existingRemoteName;
+    if (!remoteUrls[remoteName]) {
+      throw new Error(
+        `Git remote "${remoteName}" from repo.json no longer exists`
+      );
+    }
+  } else {
+    const remoteNames = Object.keys(remoteUrls).sort();
+    if (remoteNames.length === 1) {
+      remoteName = remoteNames[0];
+    } else {
+      const defaultRemote = remoteNames.includes('origin')
+        ? 'origin'
+        : remoteNames[0];
+      if (yes) {
+        remoteName = defaultRemote;
+      } else {
+        remoteName = await client.input.select({
+          message: 'Which Git remote should be used?',
+          choices: remoteNames.map(name => {
+            return { name: name, value: name };
+          }),
+          default: defaultRemote,
+        });
+      }
+    }
+  }
+
+  return { rootPath, remoteName, repoUrl: remoteUrls[remoteName] };
+}
+
+export async function fetchProjectsForRepoUrl(
+  client: Client,
+  repoUrl: string,
+  orgId: string
+): Promise<Project[]> {
+  const query = new URLSearchParams({ repoUrl });
+  const projectsIterator = client.fetchPaginated<{
+    projects: Project[];
+  }>(`/v9/projects?${query}`, { accountId: orgId });
+
+  let projects: Project[] = [];
+  for await (const chunk of projectsIterator) {
+    projects = projects.concat(chunk.projects);
+  }
+  return projects;
+}
+
+export async function linkRepoProject(
+  client: Client,
+  cwd: string,
+  {
+    project,
+    orgId,
+    orgSlug,
+    remoteName,
+    successEmoji = 'link',
+  }: {
+    project: Project;
+    orgId: string;
+    orgSlug: string;
+    remoteName: string;
+    successEmoji?: EmojiLabel;
+  }
+): Promise<RepoLink> {
+  const repoLink = await getRepoLink(client, cwd);
+  if (!repoLink) {
+    throw new Error('Could not determine Git repository root directory');
+  }
+
+  const directory = normalizePath(project.rootDirectory || '.');
+  const projectConfig: RepoProjectConfig = {
+    id: project.id,
+    name: project.name,
+    directory,
+    orgId,
+  };
+  const existingProjects = repoLink.repoConfig?.projects ?? [];
+  const filteredProjects = existingProjects.filter(
+    p => p.id !== project.id && normalizePath(p.directory) !== directory
+  );
+  const repoConfig: RepoProjectsConfig = {
+    remoteName,
+    projects: [...filteredProjects, projectConfig],
+  };
+
+  await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
+  await writeReadme(repoLink.rootPath);
+  await addToGitIgnore(repoLink.rootPath);
+
+  printAlignedLabel('Linked', `${orgSlug}/${project.name}`);
+
+  return {
+    repoConfig,
+    repoConfigPath: repoLink.repoConfigPath,
+    rootPath: repoLink.rootPath,
+  };
 }
 
 /**
@@ -124,69 +255,31 @@ async function discoverRepoProjects(
   const promptAction = existingRemoteName ? 'add' : 'link';
   const confirmMessage =
     promptAction === 'add'
-      ? `Add Project(s) for Git repository at ${chalk.cyan(
+      ? `Add Project(s) for Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )}?`
-      : `Link Git repository at ${chalk.cyan(
+      : `Link Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )} to your Project(s)?`;
 
   const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
 
   if (!shouldLink) {
-    output.print(`Canceled. Repository not linked.\n`);
+    output.print(`  Canceled. Repository not linked.\n`);
     return;
   }
 
-  const org = await selectOrg(
-    client,
-    'Which scope should contain your Project(s)?',
-    yes
-  );
+  const org = await selectOrg(client, 'Which team?', yes);
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  // Use getGitConfigPath to correctly resolve the config path for
-  // regular repos, worktrees, and submodules. Falls back to the
-  // traditional path if git commands fail.
-  const gitConfigPath =
-    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
-  const remoteUrls = await getRemoteUrls(gitConfigPath);
-  if (!remoteUrls) {
+  const remote = await resolveGitRemote(client, rootPath, {
+    yes,
+    existingRemoteName,
+  });
+  if (!remote) {
     throw new Error('Could not determine Git remote URLs');
   }
-
-  let remoteName: string;
-  if (existingRemoteName) {
-    // Re-use the remote from the existing repo.json
-    remoteName = existingRemoteName;
-    if (!remoteUrls[remoteName]) {
-      throw new Error(
-        `Git remote "${remoteName}" from repo.json no longer exists`
-      );
-    }
-  } else {
-    const remoteNames = Object.keys(remoteUrls).sort();
-    if (remoteNames.length === 1) {
-      remoteName = remoteNames[0];
-    } else {
-      // Prompt user to select which remote to use
-      const defaultRemote = remoteNames.includes('origin')
-        ? 'origin'
-        : remoteNames[0];
-      if (yes) {
-        remoteName = defaultRemote;
-      } else {
-        remoteName = await client.input.select({
-          message: 'Which Git remote should be used?',
-          choices: remoteNames.map(name => {
-            return { name: name, value: name };
-          }),
-          default: defaultRemote,
-        });
-      }
-    }
-  }
-  const repoUrl = remoteUrls[remoteName];
+  const { remoteName, repoUrl } = remote;
   const parsedRepoUrl = parseRepoUrl(repoUrl);
   if (!parsedRepoUrl) {
     throw new Error(`Failed to parse Git URL: ${repoUrl}`);
@@ -197,18 +290,8 @@ async function discoverRepoProjects(
   output.spinner(
     `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
   );
-  let projects: Project[] = [];
-  const query = new URLSearchParams({ repoUrl });
-  const projectsIterator = client.fetchPaginated<{
-    projects: Project[];
-  }>(`/v9/projects?${query}`);
   const detectedProjects = await detectedProjectsPromise;
-  for await (const chunk of projectsIterator) {
-    projects = projects.concat(chunk.projects);
-    if (chunk.pagination.next) {
-      output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
-    }
-  }
+  let projects = await fetchProjectsForRepoUrl(client, repoUrl, org.id);
 
   // Filter out projects that are already linked in repo.json (by ID or directory)
   if (existingProjectIds || existingDirectories) {
@@ -221,16 +304,16 @@ async function discoverRepoProjects(
   }
 
   if (projects.length === 0) {
-    output.log(
-      `No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.`
+    output.print(
+      `  No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.\n`
     );
   } else {
-    output.log(
-      `Found ${pluralize(
+    output.print(
+      `  Found ${pluralize(
         'Project',
         projects.length,
         true
-      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
+      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}\n`
     );
   }
 
@@ -254,12 +337,12 @@ async function discoverRepoProjects(
     0
   );
   if (detectedProjectsCount > 0) {
-    output.log(
-      `Detected ${pluralize(
+    output.print(
+      `  Detected ${pluralize(
         'new Project',
         detectedProjectsCount,
         true
-      )} that may be created.`
+      )} that may be created.\n`
     );
   }
 
@@ -316,7 +399,7 @@ async function discoverRepoProjects(
   }
 
   if (selected.length === 0) {
-    output.print(`No Projects were selected. Repository not linked.\n`);
+    output.print(`  No Projects were selected. Repository not linked.\n`);
     return;
   }
 
@@ -337,12 +420,12 @@ async function discoverRepoProjects(
       parsedRepoUrl.provider,
       `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
     );
-    output.log(
-      `Created new Project: ${output.link(
+    output.print(
+      `  Created new Project: ${output.link(
         orgAndName,
         `https://vercel.com/${orgAndName}`,
         { fallback: false }
-      )}`
+      )}\n`
     );
   }
 
@@ -389,20 +472,11 @@ export async function ensureRepoLink(
 
     await writeReadme(rootPath);
 
-    // update .gitignore
-    const isGitIgnoreUpdated = await addToGitIgnore(rootPath);
+    await addToGitIgnore(rootPath);
 
-    output.print(
-      prependEmoji(
-        `Linked to ${pluralize(
-          'Project',
-          result.projects.length,
-          true
-        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${
-          isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-        })`,
-        emoji('link')
-      ) + '\n'
+    printAlignedLabel(
+      'Linked',
+      `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
     );
   }
 
@@ -456,7 +530,7 @@ export async function addRepoLink(
   }
 
   if (result.projects.length === 0) {
-    output.print(`No new Projects were added.\n`);
+    output.print(`  No new Projects were added.\n`);
     return { repoConfig, repoConfigPath, rootPath };
   }
 
@@ -475,15 +549,9 @@ export async function addRepoLink(
 
   await outputJSON(repoConfigPath, updatedConfig, { spaces: 2 });
 
-  output.print(
-    prependEmoji(
-      `Added ${pluralize(
-        'Project',
-        result.projects.length,
-        true
-      )} under ${chalk.bold(result.orgSlug)}`,
-      emoji('link')
-    ) + '\n'
+  printAlignedLabel(
+    'Added',
+    `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`
   );
 
   return {
@@ -595,5 +663,8 @@ export function findProjectsFromPath(
   // selections (with the deepest directory depth), so pick the first
   // one and filter on those matches.
   const firstMatch = matches[0];
+  if (!firstMatch) {
+    return [];
+  }
   return matches.filter(match => match.directory === firstMatch.directory);
 }
