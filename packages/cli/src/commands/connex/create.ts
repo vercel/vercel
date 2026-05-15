@@ -66,7 +66,7 @@ export async function create(
   let preparedIcon: PreparedIcon | undefined;
   if (iconFlag) {
     try {
-      preparedIcon = await prepareConnexIcon(iconFlag);
+      preparedIcon = await prepareConnexIcon(iconFlag, client.cwd);
     } catch (err) {
       output.error((err as Error).message);
       return 1;
@@ -161,10 +161,26 @@ export async function create(
 
   let hasBeenInstalled = false;
   if (browserUrl) {
-    // Registration required — open browser and wait for user to complete setup
+    // Registration required — open browser and wait for user to complete setup.
+    // Append branding (icon SHA + colors) as query params so the dashboard
+    // registration form can prefill itself and create the upstream Slack/GitHub
+    // app with branding from the start. The follow-up PATCH below stays in
+    // place as a safety net for the dashboard rollout window.
+    const urlWithBranding = new URL(browserUrl);
+    if (iconSha) {
+      urlWithBranding.searchParams.set('icon', iconSha);
+    }
+    if (backgroundColor) {
+      urlWithBranding.searchParams.set('backgroundColor', backgroundColor);
+    }
+    if (accentColor) {
+      urlWithBranding.searchParams.set('accentColor', accentColor);
+    }
+    const finalBrowserUrl = urlWithBranding.toString();
+
     output.log(`Opening browser for ${serviceType} app setup...`);
-    output.log(`If the browser doesn't open, visit:\n${browserUrl}`);
-    open(browserUrl).catch((err: unknown) =>
+    output.log(`If the browser doesn't open, visit:\n${finalBrowserUrl}`);
+    open(finalBrowserUrl).catch((err: unknown) =>
       output.debug(`Failed to open browser: ${err}`)
     );
 
@@ -206,10 +222,9 @@ export async function create(
           );
         } catch (err) {
           output.stopSpinner();
-          output.error(
+          output.warn(
             `Failed to apply branding: ${(err as Error).message}. The connector was created but branding was not applied.`
           );
-          return 1;
         }
         output.stopSpinner();
       }
@@ -236,6 +251,9 @@ export async function create(
           type: createdClient.type,
           name: createdClient.name,
           supportedSubjectTypes: createdClient.supportedSubjectTypes,
+          icon: createdClient.icon ?? null,
+          backgroundColor: createdClient.backgroundColor ?? null,
+          accentColor: createdClient.accentColor ?? null,
         },
         null,
         2

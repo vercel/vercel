@@ -69,7 +69,7 @@ export const createSubcommand = {
     },
     {
       name: 'Create with branding (icon and colors)',
-      value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color #1A2B3C --accent-color #FF0066`,
+      value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
     },
     {
       name: 'Output as JSON',
@@ -123,7 +123,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Update the connector colors',
-      value: `${packageName} connect update scl_abc123 --background-color #1A2B3C --accent-color #FF0066`,
+      value: `${packageName} connect update scl_abc123 --background-color '#1A2B3C' --accent-color '#FF0066'`,
     },
     {
       name: 'Output as JSON',

@@ -2,6 +2,7 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { join } from 'path';
 import { writeFile } from 'node:fs/promises';
 import { mkdirp, writeJSON } from 'fs-extra';
+import open from 'open';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
@@ -49,6 +50,7 @@ describe('connex create', () => {
   beforeEach(() => {
     client.reset();
     writeConfigSpy.mockClear();
+    (open as unknown as ReturnType<typeof vi.fn>).mockClear();
     useUser();
     team = useTeam();
     client.config.currentTeam = team.id;
@@ -157,6 +159,93 @@ describe('connex create', () => {
 
     expect(exitCode).toBe(0);
     await expect(client.stdout).toOutput('"id": "scl_json123"');
+  });
+
+  it('should redact invalid color values in telemetry', async () => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--name',
+      'my-bot',
+      '--background-color',
+      'not-a-hex',
+      '--accent-color',
+      '#ff0066'
+    );
+
+    await connect(client);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:create', value: 'create' },
+      { key: 'option:background-color', value: '[REDACTED]' },
+      { key: 'option:accent-color', value: '#ff0066' },
+    ]);
+  });
+
+  it('should include branding fields in --format=json output', async () => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      res.json(
+        fakeConnexClient({
+          id: 'scl_json_branded',
+          uid: 'uid_json_branded',
+          icon: 'sha1abcdef',
+          backgroundColor: '#1a2b3c',
+          accentColor: '#ff0066',
+        })
+      );
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--name',
+      'my-bot',
+      '--format=json'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    const parsed = JSON.parse(stdout.trim());
+    expect(parsed.icon).toBe('sha1abcdef');
+    expect(parsed.backgroundColor).toBe('#1a2b3c');
+    expect(parsed.accentColor).toBe('#ff0066');
+  });
+
+  it('should emit null branding fields in --format=json when API omits them', async () => {
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      res.json(
+        fakeConnexClient({
+          id: 'scl_json_no_brand',
+          uid: 'uid_json_no_brand',
+        })
+      );
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--name',
+      'my-bot',
+      '--format=json'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    const parsed = JSON.parse(stdout.trim());
+    expect(parsed.icon).toBeNull();
+    expect(parsed.backgroundColor).toBeNull();
+    expect(parsed.accentColor).toBeNull();
   });
 
   it('should open browser and poll when POST returns 422 with registerUrl', async () => {
@@ -587,6 +676,157 @@ describe('connex create', () => {
       await expect(client.stderr).toOutput('scl_browser_branded');
     });
 
+    it('should append branding query params to registerUrl when 422 triggers browser flow', async () => {
+      client.scenario.post('/v2/files', (_req, res) => {
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+        res.statusCode = 422;
+        res.json({
+          error: {
+            code: 'registration_required',
+            message: 'Registration required',
+            // registerUrl already carries query params — confirm we preserve them.
+            registerUrl:
+              'https://vercel.com/api/v1/connex/clients/managed?teamId=team_abc&service=slack&name=my-bot&uid=uid_abc&request_code=rc_123&projectId=proj_1',
+          },
+        });
+      });
+      client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+        res.json({
+          status: 'success',
+          data: { clientId: 'scl_branded_url' },
+        });
+      });
+      client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
+        res.json(
+          fakeConnexClient({
+            id: (req.params as any).id,
+            uid: 'uid_branded_url',
+          })
+        );
+      });
+      client.scenario.patch('/v1/connect/connectors/:id', (req, res) => {
+        res.json(
+          fakeConnexClient({
+            id: 'scl_branded_url',
+            uid: 'uid_branded_url',
+            icon: req.body.icon,
+            backgroundColor: req.body.backgroundColor,
+            accentColor: req.body.accentColor,
+          })
+        );
+      });
+
+      const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        iconPath,
+        '--background-color',
+        '#aabbcc',
+        '--accent-color',
+        '#112233'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+
+      const openMock = open as unknown as ReturnType<typeof vi.fn>;
+      expect(openMock).toHaveBeenCalledTimes(1);
+      const openedArg = openMock.mock.calls[0][0] as string;
+      const opened = new URL(openedArg);
+
+      // Branding params appended.
+      const iconParam = opened.searchParams.get('icon');
+      expect(typeof iconParam).toBe('string');
+      expect(iconParam).toHaveLength(40); // SHA-1 hex, not the file path.
+      expect(iconParam).not.toContain('/');
+      expect(opened.searchParams.get('backgroundColor')).toBe('#aabbcc');
+      expect(opened.searchParams.get('accentColor')).toBe('#112233');
+
+      // Pre-existing params preserved.
+      expect(opened.searchParams.get('teamId')).toBe('team_abc');
+      expect(opened.searchParams.get('service')).toBe('slack');
+      expect(opened.searchParams.get('name')).toBe('my-bot');
+      expect(opened.searchParams.get('request_code')).toBe('rc_123');
+
+      // Origin + path preserved.
+      expect(opened.origin).toBe('https://vercel.com');
+      expect(opened.pathname).toBe('/api/v1/connex/clients/managed');
+    });
+
+    it('should warn but still succeed when browser-flow branding PATCH fails', async () => {
+      let patchHit = false;
+      client.scenario.post('/v2/files', (_req, res) => {
+        res.json({});
+      });
+      client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+        res.statusCode = 422;
+        res.json({
+          error: {
+            code: 'registration_required',
+            message: 'Registration required',
+            registerUrl: 'https://vercel.com/test/~/connex/register?type=slack',
+          },
+        });
+      });
+      let pollCount = 0;
+      client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+        pollCount++;
+        if (pollCount < 2) {
+          res.json({ status: 'pending' });
+        } else {
+          res.json({
+            status: 'success',
+            data: { clientId: 'scl_browser_patch_fail' },
+          });
+        }
+      });
+      client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
+        res.json(
+          fakeConnexClient({
+            id: (req.params as any).id,
+            uid: 'uid_browser_patch_fail',
+          })
+        );
+      });
+      client.scenario.patch('/v1/connect/connectors/:id', (_req, res) => {
+        patchHit = true;
+        res.statusCode = 500;
+        res.json({ error: { code: 'internal', message: 'patch boom' } });
+      });
+
+      const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        iconPath,
+        '--background-color',
+        '#aabbcc',
+        '--accent-color',
+        '#112233'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchHit).toBe(true);
+      await expect(client.stderr).toOutput('Failed to apply branding');
+      await expect(client.stderr).toOutput('scl_browser_patch_fail');
+    });
+
     it('should reject invalid hex before any network call', async () => {
       let uploadHit = false;
       let postHit = false;
@@ -743,6 +983,66 @@ describe('connex create', () => {
       await expect(client.stderr).toOutput(
         'Failed to upload icon: File is too large'
       );
+    });
+
+    it('should reject a truncated PNG before any network call', async () => {
+      let uploadHit = false;
+      client.scenario.post('/v2/files', (_req, res) => {
+        uploadHit = true;
+        res.json({});
+      });
+
+      // 4-byte PNG prefix only — passes the old check, fails the >=12 check.
+      const TRUNCATED = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+      const iconPath = await writeTmpFile('logo.png', TRUNCATED);
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        iconPath
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(uploadHit).toBe(false);
+      await expect(client.stderr).toOutput('is not a PNG or JPEG');
+    });
+
+    it('should reject icons larger than 5 MB before any network call', async () => {
+      let uploadHit = false;
+      client.scenario.post('/v2/files', (_req, res) => {
+        uploadHit = true;
+        res.json({});
+      });
+
+      // Real PNG signature followed by enough padding to exceed 5 MB.
+      const OVERSIZED = Buffer.alloc(5 * 1024 * 1024 + 13);
+      OVERSIZED.set(
+        [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d],
+        0
+      );
+      const iconPath = await writeTmpFile('big.png', OVERSIZED);
+
+      client.setArgv(
+        'connect',
+        'create',
+        'slack',
+        '--name',
+        'my-bot',
+        '--icon',
+        iconPath
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(uploadHit).toBe(false);
+      await expect(client.stderr).toOutput('maximum is');
     });
   });
 

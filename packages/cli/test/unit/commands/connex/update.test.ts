@@ -14,8 +14,10 @@ const PNG_BYTES = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
   0x48, 0x44, 0x52,
 ]);
-// JPEG magic header.
-const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a]);
+// JPEG magic header padded to >=12 bytes to satisfy the CLI preflight.
+const JPEG_BYTES = Buffer.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+]);
 
 async function writeTmpFile(name: string, bytes: Buffer): Promise<string> {
   const dir = setupTmpDir();
@@ -178,6 +180,14 @@ describe('connex update', () => {
     let patchBody: Record<string, unknown> | undefined;
     let patchedId: string | undefined;
 
+    client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
+      res.json(
+        fakeConnexClient({
+          id: (req.params as any).id,
+          uid: 'slack/branded',
+        })
+      );
+    });
     client.scenario.post('/v2/files', (req, res) => {
       uploadHeaders = req.headers;
       res.json({});
@@ -232,6 +242,14 @@ describe('connex update', () => {
 
   it('should accept JPEG icon', async () => {
     let patchBody: Record<string, unknown> | undefined;
+    client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
+      res.json(
+        fakeConnexClient({
+          id: (req.params as any).id,
+          uid: 'slack/jpeg',
+        })
+      );
+    });
     client.scenario.post('/v2/files', (_req, res) => {
       res.json({});
     });
@@ -302,8 +320,50 @@ describe('connex update', () => {
     await expect(client.stderr).toOutput('Connector not found: scl_missing');
   });
 
+  it('should not upload icon when connector probe 404s', async () => {
+    let uploadHit = false;
+    let patchHit = false;
+    client.scenario.get('/v1/connect/connectors/:id', (_req, res) => {
+      res.statusCode = 404;
+      res.json({ error: { code: 'not_found', message: 'Not Found' } });
+    });
+    client.scenario.post('/v2/files', (_req, res) => {
+      uploadHit = true;
+      res.json({});
+    });
+    client.scenario.patch('/v1/connect/connectors/:id', (_req, res) => {
+      patchHit = true;
+      res.json(fakeConnexClient());
+    });
+
+    const iconPath = await writeTmpFile('logo.png', PNG_BYTES);
+
+    client.setArgv(
+      'connect',
+      'update',
+      'scl_stale',
+      '--icon',
+      iconPath
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(uploadHit).toBe(false);
+    expect(patchHit).toBe(false);
+    await expect(client.stderr).toOutput('Connector not found: scl_stale');
+  });
+
   it('should surface upload server error and skip PATCH', async () => {
     let patchHit = false;
+    client.scenario.get('/v1/connect/connectors/:id', (req, res) => {
+      res.json(
+        fakeConnexClient({
+          id: (req.params as any).id,
+          uid: 'slack/abc',
+        })
+      );
+    });
     client.scenario.post('/v2/files', (_req, res) => {
       res.statusCode = 400;
       res.json({
