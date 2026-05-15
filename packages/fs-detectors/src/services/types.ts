@@ -78,7 +78,7 @@ export interface ResolvedServicesResult {
 }
 
 export interface InferredServicesResult {
-  source: 'layout' | 'procfile' | 'railway';
+  source: 'layout' | 'procfile' | 'railway' | 'render';
   config: InferredServicesConfig;
   services: Service[];
   warnings: ServiceDetectionWarning[];
