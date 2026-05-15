@@ -43,6 +43,8 @@ import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
 import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
 import { tryOpenApiFallback } from './util/openapi';
+import { runInferredCommand } from './util/openapi/infer-commands';
+import { inferredOpenApiCommands } from './util/openapi/inferred-commands-config';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -174,6 +176,15 @@ const main = async () => {
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
   const isTelemetryFlushCommand =
     process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
+  const originalCliArgs = process.argv.slice(2);
+  const inferEnabled = originalCliArgs.includes('--infer');
+  const inferHelpRequested = originalCliArgs.includes('--infer-help');
+  const rawCliArgs = originalCliArgs.filter(
+    arg => arg !== '--infer' && arg !== '--infer-help'
+  );
+  const argvForParsing = inferEnabled
+    ? [process.argv[0], process.argv[1], ...rawCliArgs]
+    : process.argv;
 
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -183,7 +194,7 @@ const main = async () => {
 
   const parseInitialArgs = () =>
     parseArguments(
-      process.argv,
+      argvForParsing,
       {
         '--version': Boolean,
         '-v': '--version',
@@ -257,6 +268,21 @@ const main = async () => {
     // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.log(pkg.version);
     return 0;
+  }
+
+  if (inferEnabled) {
+    const inferredCommandExitCode = await runInferredCommand(
+      inferredOpenApiCommands,
+      rawCliArgs,
+      {
+        execute: false,
+        help: inferHelpRequested,
+        columns: process.stderr.columns ?? 80,
+      }
+    );
+    if (inferredCommandExitCode !== null) {
+      return inferredCommandExitCode;
+    }
   }
 
   // Handle bare `-h` directly
@@ -531,7 +557,7 @@ const main = async () => {
     authConfig,
     localConfig,
     localConfigPath,
-    argv: process.argv,
+    argv: argvForParsing,
     telemetryEventStore,
     isAgent,
     agentName: detectedAgent?.name,
@@ -846,6 +872,21 @@ const main = async () => {
       }
 
       client.config.currentTeam = related.id;
+    }
+  }
+
+  if (inferEnabled) {
+    const inferredCommandExecutionExitCode = await runInferredCommand(
+      inferredOpenApiCommands,
+      rawCliArgs,
+      {
+        client,
+        help: inferHelpRequested,
+        columns: process.stderr.columns ?? 80,
+      }
+    );
+    if (inferredCommandExecutionExitCode !== null) {
+      return finishWithExitCode(inferredCommandExecutionExitCode);
     }
   }
 
