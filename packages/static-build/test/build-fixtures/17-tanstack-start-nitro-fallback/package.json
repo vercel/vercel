@@ -1,0 +1,8 @@
+{
+  "name": "17-tanstack-start-nitro-fallback",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "vite build"
+  }
+}

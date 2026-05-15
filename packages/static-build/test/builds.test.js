@@ -1,4 +1,5 @@
 const path = require('path');
+const os = require('os');
 const fs = require('fs-extra');
 const builder = require('../');
 const { createRunBuildLambda } = require('../../../test/lib/run-build-lambda');
@@ -409,6 +410,59 @@ it(
     expect(warnSpy).toHaveBeenCalledWith(
       'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
     );
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should use Nitro fallback build command for TanStack Start when experimental env is enabled',
+  async () => {
+    const fixture = path.join(
+      __dirname,
+      'build-fixtures/17-tanstack-start-nitro-fallback'
+    );
+    const shimDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'vercel-static-build-npx-shim-')
+    );
+    const npxPath = path.join(shimDir, 'npx');
+    const previousPath = process.env.PATH;
+    const previousInjectNitro = process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
+
+    await fs.writeFile(
+      npxPath,
+      [
+        '#!/bin/sh',
+        'if [ "$1" = "nitro" ]; then',
+        '  mkdir -p dist',
+        '  echo "<html>nitro-fallback</html>" > dist/index.html',
+        '  exit 0',
+        'fi',
+        'echo "unexpected npx args: $@" >&2',
+        'exit 1',
+        '',
+      ].join('\n')
+    );
+    await fs.chmod(npxPath, 0o755);
+
+    process.env.PATH = `${shimDir}${path.delimiter}${previousPath || ''}`;
+    process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO = '1';
+
+    try {
+      const { buildResult } = await runBuildLambda(fixture);
+
+      expect(buildResult.output['index.html']).toBeTruthy();
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Detected TanStack Start with SSR enabled but no `nitro` dependency. Running `npx nitro build --builder vite` instead of the `vite build` script.'
+      );
+    } finally {
+      process.env.PATH = previousPath;
+      if (previousInjectNitro === undefined) {
+        delete process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
+      } else {
+        process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO = previousInjectNitro;
+      }
+      await fs.remove(shimDir);
+    }
   },
   FOUR_MINUTES
 );
