@@ -50,10 +50,14 @@ describe('env pull', () => {
     expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+    const gitignore = await fs.readFile(path.join(cwd, '.gitignore'), 'utf8');
 
     // check for development env value
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+    expect(gitignore.replaceAll('\r\n', '\n')).toBe(
+      '.next\nyarn.lock\n!.vercel\n.env*\n'
+    );
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {

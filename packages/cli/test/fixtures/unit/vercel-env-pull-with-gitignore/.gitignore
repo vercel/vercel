@@ -1,4 +1,4 @@
 .next
 yarn.lock
 !.vercel
-.env*.local
+.env*
