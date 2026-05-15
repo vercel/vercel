@@ -55,6 +55,7 @@ import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { tokensCommand } from './tokens/command';
 import { telemetryCommand } from './telemetry/command';
+import { tracesCommand } from './traces/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
 import { whoamiCommand } from './whoami/command';
@@ -119,6 +120,7 @@ const commandsStructs = [
   teamsCommand,
   tokensCommand,
   telemetryCommand,
+  tracesCommand,
   upgradeCommand,
   webhooksCommand,
   usageCommand,
