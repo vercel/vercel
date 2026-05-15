@@ -427,26 +427,41 @@ it(
     const shimDir = await fs.mkdtemp(
       path.join(os.tmpdir(), 'vercel-static-build-bin-shim-')
     );
-    const npxPath = path.join(shimDir, 'npx');
+    const npmPath = path.join(shimDir, 'npm');
     const previousPath = process.env.PATH;
     const previousInjectNitro = process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
 
     await fs.copy(fixture, workFixture);
+    const nitroBinDir = path.join(workFixture, 'node_modules', '.bin');
+    await fs.mkdirp(nitroBinDir);
     await fs.writeFile(
-      npxPath,
+      path.join(nitroBinDir, 'nitro'),
       [
         '#!/bin/sh',
-        'if [ "$1" = "--yes" ] && [ "$2" = "-p" ] && [ "$3" = "nitro@npm:nitro-nightly@latest" ] && [ "$4" = "nitro" ] && [ "$5" = "build" ] && [ "$6" = "--builder" ] && [ "$7" = "vite" ]; then',
+        'if [ "$1" = "build" ] && [ "$2" = "--builder" ] && [ "$3" = "vite" ]; then',
         '  mkdir -p dist',
         '  echo "<html>nitro-fallback</html>" > dist/index.html',
         '  exit 0',
         'fi',
-        'echo "unexpected npx args: $@" >&2',
+        'echo "unexpected nitro args: $@" >&2',
         'exit 1',
         '',
       ].join('\n')
     );
-    await fs.chmod(npxPath, 0o755);
+    await fs.writeFile(
+      npmPath,
+      [
+        '#!/bin/sh',
+        'if [ "$1" = "install" ] && [ "$2" = "--no-save" ] && [ "$3" = "nitro@npm:nitro-nightly@latest" ]; then',
+        '  exit 0',
+        'fi',
+        'echo "unexpected npm args: $@" >&2',
+        'exit 1',
+        '',
+      ].join('\n')
+    );
+    await fs.chmod(path.join(nitroBinDir, 'nitro'), 0o755);
+    await fs.chmod(npmPath, 0o755);
 
     process.env.PATH = `${shimDir}${path.delimiter}${previousPath || ''}`;
     process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO = '1';
@@ -456,7 +471,9 @@ it(
 
       expect(buildResult.output['index.html']).toBeTruthy();
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('npx --yes -p nitro@npm:nitro-nightly@latest')
+        expect.stringContaining(
+          './node_modules/.bin/nitro build --builder vite'
+        )
       );
     } finally {
       process.env.PATH = previousPath;
