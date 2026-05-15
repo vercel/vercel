@@ -4,7 +4,7 @@ import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
 
-import DevServer from '../../util/dev/server';
+import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
@@ -206,20 +206,32 @@ export default async function dev(
         telemetry.trackOidcTokenRefresh(++refreshCount);
       }
     } catch (error) {
-      // Throw any error aside from an abort error.
-      if (!(error instanceof Error && error.name === 'AbortError')) {
-        throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        output.debug('OIDC token refresh was aborted');
+        return;
       }
-      output.debug('OIDC token refresh was aborted');
+      // if on forced restart after OIDC refresh
+      // we can't restart a dev command, then we can only
+      // show the error and exit
+      if (error instanceof DevCommandExitError) {
+        output.error(error.message);
+        await cleanup(error.exitCode);
+        return;
+      }
+      throw error;
     }
   });
 
   let cleanupInProgress = false;
-  const cleanup = async (signal: string) => {
+  const cleanup = async (reason: string | number) => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
-    output.debug(`Received ${signal}, shutting down...`);
+    output.debug(
+      typeof reason === 'number'
+        ? `Exiting with code ${reason}, shutting down...`
+        : `Received ${reason}, shutting down...`
+    );
 
     clearTimeout(timeout);
     controller.abort();
@@ -230,17 +242,23 @@ export default async function dev(
 
     await devServer.stop();
 
-    let exitCode = 0;
-    switch (signal) {
-      case 'SIGINT':
-        exitCode = 130;
-        break;
-      case 'SIGTERM':
-        exitCode = 143;
-        break;
-      case 'SIGHUP':
-        exitCode = 129;
-        break;
+    let exitCode: number;
+    if (typeof reason === 'number') {
+      exitCode = reason;
+    } else {
+      switch (reason) {
+        case 'SIGINT':
+          exitCode = 130;
+          break;
+        case 'SIGTERM':
+          exitCode = 143;
+          break;
+        case 'SIGHUP':
+          exitCode = 129;
+          break;
+        default:
+          exitCode = 0;
+      }
     }
 
     process.exit(exitCode);

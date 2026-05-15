@@ -131,6 +131,15 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
   return 0;
 }
 
+export class DevCommandExitError extends Error {
+  exitCode: number;
+  constructor(message: string, exitCode: number) {
+    super(message);
+    this.name = 'DevCommandExitError';
+    this.exitCode = exitCode;
+  }
+}
+
 export default class DevServer {
   public cwd: string;
   public repoRoot: string;
@@ -2691,8 +2700,20 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, this.address.port));
     });
 
-    p.on('exit', (code, signal) => {
-      output.debug(`Dev command exited with "${signal || code}"`);
+    const devProcessExited = new Promise<never>((_, reject) => {
+      p.on('error', err => {
+        output.debug(`Dev command errored: ${err}`);
+        reject(err);
+      });
+      p.on('exit', (code, signal) => {
+        output.debug(`Dev command exited with "${signal || code}"`);
+        reject(
+          new DevCommandExitError(
+            `Dev command “${devCommand}” exited with code ${signal || code}`,
+            code ?? 1
+          )
+        );
+      });
     });
 
     p.on('close', (code, signal) => {
@@ -2700,10 +2721,10 @@ export default class DevServer {
       this.devProcessOrigin = undefined;
     });
 
-    const devProcessHost = await checkForPort(
-      port,
-      DEV_SERVER_PORT_BIND_TIMEOUT
-    );
+    const devProcessHost = await Promise.race([
+      checkForPort(port, DEV_SERVER_PORT_BIND_TIMEOUT),
+      devProcessExited,
+    ]);
     this.devProcessOrigin = `http://${devProcessHost}:${port}`;
   }
 }
