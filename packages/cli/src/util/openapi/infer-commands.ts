@@ -990,6 +990,11 @@ type ProjectAutocompleteChoice = {
   updatedAt: number | null;
 };
 
+type ProjectScopeSearchResult = {
+  matchedScopeSlug: string | null;
+  searchedTeamSlugs: string[];
+};
+
 type InferredOperationDescriptionsByTag = Map<string, Map<string, string>>;
 
 let inferredOperationDescriptionsByTagPromise:
@@ -3081,6 +3086,93 @@ function getScopeHintForPrompt(
   return context.team?.value ?? null;
 }
 
+function getExplicitProjectLookupValue(
+  argumentDefinitions: NormalizedParamDefinition[],
+  optionDefinitions: NormalizedParamDefinition[],
+  providedArguments: Record<string, string>,
+  providedOptions: Record<string, string | boolean>
+): string | null {
+  for (const definition of argumentDefinitions) {
+    if (definition.config.required !== 'project') {
+      continue;
+    }
+    const value = providedArguments[definition.outputName];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  for (const definition of optionDefinitions) {
+    if (definition.config.required !== 'project') {
+      continue;
+    }
+    const value = providedOptions[definition.outputName];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+async function searchAccessibleTeamsForProject(
+  client: Client,
+  projectLookup: string,
+  currentTeamValue: string | null
+): Promise<ProjectScopeSearchResult | null> {
+  let teams: Array<{ id: string; slug: string; limited?: boolean }> = [];
+  try {
+    teams = await getTeams(client);
+  } catch {
+    return null;
+  }
+
+  const searchableTeams = teams
+    .filter(team => team.limited !== true)
+    .slice()
+    .sort((left, right) => {
+      const leftMatchesCurrent =
+        left.slug === currentTeamValue || left.id === currentTeamValue;
+      const rightMatchesCurrent =
+        right.slug === currentTeamValue || right.id === currentTeamValue;
+      if (leftMatchesCurrent === rightMatchesCurrent) {
+        return left.slug.localeCompare(right.slug);
+      }
+      return leftMatchesCurrent ? -1 : 1;
+    });
+
+  const searchedTeamSlugs: string[] = [];
+  for (const team of searchableTeams) {
+    searchedTeamSlugs.push(team.slug);
+    try {
+      const project = await getProjectByIdOrName(
+        client,
+        projectLookup,
+        team.id
+      );
+      if (!(project instanceof ProjectNotFound)) {
+        return {
+          matchedScopeSlug: team.slug,
+          searchedTeamSlugs,
+        };
+      }
+    } catch (error) {
+      if (
+        error instanceof APIError &&
+        (error.status === 403 || error.status === 404)
+      ) {
+        // Skip inaccessible/not found in this team and continue searching.
+      }
+      // Best-effort lookup: ignore unexpected failures and continue search.
+    }
+  }
+
+  return {
+    matchedScopeSlug: null,
+    searchedTeamSlugs,
+  };
+}
+
 async function loadProjectAutocompleteChoices(
   client: Client,
   scopeHint: string | null,
@@ -4436,6 +4528,12 @@ export async function runInferredCommand(
   if (options.dryRun === true) {
     parsedOptions['dry-run'] = true;
   }
+  const dryRunFlag = parsedOptions['dry-run'];
+  const isDryRun =
+    options.dryRun === true ||
+    dryRunFlag === true ||
+    dryRunFlag === 'true' ||
+    dryRunFlag === '';
 
   const providedArguments = argumentDefinitions.reduce<Record<string, string>>(
     (acc, definition, index) => {
@@ -4530,6 +4628,59 @@ export async function runInferredCommand(
       printMissingRequiredInputs(missingRequiredInputs);
       return 1;
     }
+
+    const hasTeamScopeOption = optionDefinitions.some(
+      definition =>
+        definition.source.location === 'query' &&
+        definition.source.name === 'teamId'
+    );
+    const explicitProjectLookup = getExplicitProjectLookupValue(
+      argumentDefinitions,
+      optionDefinitions,
+      providedArguments,
+      providedOptions
+    );
+    const scopeExplicitlyProvided =
+      parsedInput.options.scope !== undefined ||
+      parsedInput.options.team !== undefined ||
+      options.scope !== undefined ||
+      options.team !== undefined;
+
+    if (
+      !isDryRun &&
+      hasTeamScopeOption &&
+      explicitProjectLookup &&
+      !scopeExplicitlyProvided
+    ) {
+      const teamScopeSearchResult = await searchAccessibleTeamsForProject(
+        options.client,
+        explicitProjectLookup,
+        context.team?.value ?? null
+      );
+
+      if (teamScopeSearchResult && teamScopeSearchResult.matchedScopeSlug) {
+        if (context.team) {
+          context.team.value = teamScopeSearchResult.matchedScopeSlug;
+        } else {
+          context.team = {
+            value: teamScopeSearchResult.matchedScopeSlug,
+            source: 'current-team',
+          };
+        }
+      } else if (teamScopeSearchResult) {
+        const searchedTeams =
+          teamScopeSearchResult.searchedTeamSlugs.length > 0
+            ? teamScopeSearchResult.searchedTeamSlugs.join(', ')
+            : '(none)';
+        output.error(
+          `Project "${explicitProjectLookup}" was not found in accessible teams.`
+        );
+        output.print(
+          `Searched teams (non-limited): ${searchedTeams}\nPass --scope <team> to target a specific team.\n`
+        );
+        return 1;
+      }
+    }
   }
 
   const request = buildRequestPreview(
@@ -4541,13 +4692,6 @@ export async function runInferredCommand(
     context,
     typeof parsedOptions.api === 'string' ? parsedOptions.api : undefined
   );
-
-  const dryRunFlag = parsedOptions['dry-run'];
-  const isDryRun =
-    options.dryRun === true ||
-    dryRunFlag === true ||
-    dryRunFlag === 'true' ||
-    dryRunFlag === '';
 
   if (isDryRun) {
     printDryRunPreview({

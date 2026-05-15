@@ -9,6 +9,9 @@ import { client } from '../../../mocks/client';
 import { OpenApiCache } from '../../../../src/util/openapi/openapi-cache';
 import type { EndpointInfo } from '../../../../src/util/openapi/types';
 import * as linkUtils from '../../../../src/util/projects/link';
+import * as teamUtils from '../../../../src/util/teams/get-teams';
+import * as projectUtils from '../../../../src/util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../../../src/util/errors-ts';
 import { Router } from 'express';
 
 describe('inferCommands', () => {
@@ -1615,6 +1618,126 @@ describe('inferCommands', () => {
     const output = client.stderr.getFullOutput();
     expect(output).toContain('my-project');
     expect(output).toContain('jsee');
+  });
+
+  it('searches accessible teams for explicit project when scope is omitted', async () => {
+    const commandsWithContextPrompts = inferCommands({
+      projects: {
+        inspect: {
+          value: 'inspect',
+          arguments: {
+            'path.idOrName': {
+              required: 'project',
+              value: 'name',
+            },
+          },
+          options: {
+            'query.teamId': {
+              required: 'team',
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      inspectEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue(null);
+    vi.spyOn(teamUtils, 'default').mockResolvedValue([
+      { id: 'team_vercel', slug: 'vercel', limited: false },
+      { id: 'team_jsee', slug: 'jsee', limited: false },
+    ] as any);
+    vi.spyOn(projectUtils, 'default').mockImplementation(
+      async (_client, projectIdOrName, orgId) => {
+        if (orgId === 'team_jsee') {
+          return { id: projectIdOrName, name: 'my-project' } as any;
+        }
+        return new ProjectNotFound(String(projectIdOrName));
+      }
+    );
+    client.config.currentTeam = 'vercel';
+
+    const scenario = Router();
+    scenario.get('/v9/projects/:idOrName', (req, res) => {
+      expect(req.query.teamId).toBe('jsee');
+      res.status(200).json({ id: req.params.idOrName });
+    });
+    client.useScenario(scenario);
+
+    const exitCode = await runInferredCommand(
+      commandsWithContextPrompts,
+      ['projects', 'inspect', 'prj_other_team'],
+      {
+        client,
+        api: client.apiUrl,
+      }
+    );
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('prints searched teams when explicit project is not found in accessible teams', async () => {
+    const commandsWithContextPrompts = inferCommands({
+      projects: {
+        inspect: {
+          value: 'inspect',
+          arguments: {
+            'path.idOrName': {
+              required: 'project',
+              value: 'name',
+            },
+          },
+          options: {
+            'query.teamId': {
+              required: 'team',
+            },
+          },
+        },
+      },
+    });
+
+    vi.spyOn(OpenApiCache.prototype, 'load').mockResolvedValue(true);
+    vi.spyOn(OpenApiCache.prototype, 'getEndpoints').mockReturnValue([
+      inspectEndpoint,
+    ]);
+    vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
+    vi.spyOn(linkUtils, 'getLinkFromDir').mockResolvedValue(null);
+    vi.spyOn(teamUtils, 'default').mockResolvedValue([
+      { id: 'team_vercel', slug: 'vercel', limited: false },
+      { id: 'team_private', slug: 'private-team', limited: true },
+      { id: 'team_jsee', slug: 'jsee', limited: false },
+    ] as any);
+    vi.spyOn(projectUtils, 'default').mockResolvedValue(
+      new ProjectNotFound('prj_missing')
+    );
+    client.config.currentTeam = 'vercel';
+    const previousNonInteractive = client.nonInteractive;
+    client.nonInteractive = true;
+    try {
+      const exitCode = await runInferredCommand(
+        commandsWithContextPrompts,
+        ['projects', 'inspect', 'prj_missing'],
+        {
+          client,
+          api: client.apiUrl,
+        }
+      );
+
+      expect(exitCode).toBe(1);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain(
+        'Project "prj_missing" was not found in accessible teams.'
+      );
+      expect(output).toContain('Searched teams (non-limited):');
+      expect(output).toContain('vercel');
+      expect(output).toContain('jsee');
+      expect(output).not.toContain('private-team');
+    } finally {
+      client.nonInteractive = previousNonInteractive;
+    }
   });
 
   it('supports built-in deployments filter using project and team scope', async () => {
