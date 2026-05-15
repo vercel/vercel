@@ -43,7 +43,7 @@ export const inferredOpenApiCommands = inferCommands({
         'path.idOrUrl': { required: true, value: 'id', filter: 'deployments' },
       },
       options: {
-        'query.teamId': { required: 'team' },
+        'query.teamId': { inferFrom: 'team' },
       },
       display: {
         '200': {
@@ -65,8 +65,8 @@ export const inferredOpenApiCommands = inferCommands({
       value: 'list',
       aliases: ['ls'],
       options: {
-        'query.projectId': { required: 'project' },
-        'query.teamId': { required: 'team' },
+        'query.projectId': { inferFrom: 'project' },
+        'query.teamId': { inferFrom: 'team' },
       },
       display: {
         '200': {
@@ -101,10 +101,10 @@ export const inferredOpenApiCommands = inferCommands({
       value: 'list',
       aliases: ['ls'],
       options: {
-        'query.search': { required: false, value: 'filter' },
-        'query.limit': { required: false },
-        'query.from': { required: false, value: 'next' },
-        'query.teamId': { required: 'team' },
+        'query.search': { value: 'filter' },
+        'query.until': { value: 'next' },
+        'query.deprecated': { value: 'update-required' },
+        'query.teamId': { inferFrom: 'team' },
       },
       display: {
         '200': {
@@ -141,10 +141,10 @@ export const inferredOpenApiCommands = inferCommands({
     getProject: {
       value: 'inspect',
       arguments: {
-        'path.idOrName': { required: 'project' },
+        'path.idOrName': { required: true, inferFrom: 'project' },
       },
       options: {
-        'query.teamId': { required: 'team' },
+        'query.teamId': { inferFrom: 'team' },
       },
       display: {
         '200': {
@@ -211,9 +211,9 @@ export const inferredOpenApiCommands = inferCommands({
         'bodyFields.name': { required: true },
       },
       options: {
-        'query.teamId': { required: 'team' },
-        'bodyFields.framework': { required: false },
-        'bodyFields.rootDirectory': { required: false, value: 'root' },
+        'query.teamId': { inferFrom: 'team' },
+        'bodyFields.framework': {},
+        'bodyFields.rootDirectory': { value: 'root' },
       },
     },
   },
@@ -221,28 +221,35 @@ export const inferredOpenApiCommands = inferCommands({
     filterProjectEnvs: {
       value: 'list',
       arguments: {
-        'path.idOrName': { required: 'project', value: 'project' },
+        'path.idOrName': {
+          required: true,
+          inferFrom: 'project',
+          value: 'project',
+        },
       },
       options: {
-        'query.teamId': { required: 'team' },
+        'query.teamId': { inferFrom: 'team' },
         'query.customEnvironmentSlug': {
-          required: false,
           value: 'environment',
         },
-        'query.gitBranch': { required: false, value: 'git-branch' },
-        'query.decrypt': { required: false },
+        'query.gitBranch': { value: 'git-branch' },
+        'query.decrypt': {},
       },
     },
     createProjectEnv: {
       value: 'add',
       arguments: {
-        'path.idOrName': { required: 'project', value: 'project' },
+        'path.idOrName': {
+          required: true,
+          inferFrom: 'project',
+          value: 'project',
+        },
         name: { required: true },
       },
       options: {
-        'query.teamId': { required: 'team' },
-        'query.upsert': { required: false, value: 'force' },
-        value: { required: false },
+        'query.teamId': { inferFrom: 'team' },
+        'query.upsert': { value: 'force' },
+        value: {},
       },
     },
   },
@@ -250,8 +257,8 @@ export const inferredOpenApiCommands = inferCommands({
     getWebhooks: {
       value: 'list',
       options: {
-        'query.teamId': { required: 'team' },
-        'query.projectId': { required: false, value: 'project' },
+        'query.teamId': { inferFrom: 'team' },
+        'query.projectId': { value: 'project' },
       },
     },
     getWebhook: {
@@ -260,7 +267,7 @@ export const inferredOpenApiCommands = inferCommands({
         'path.id': { required: true },
       },
       options: {
-        'query.teamId': { required: 'team' },
+        'query.teamId': { inferFrom: 'team' },
       },
     },
     createWebhook: {
@@ -269,9 +276,9 @@ export const inferredOpenApiCommands = inferCommands({
         'bodyFields.url': { required: true, value: 'url' },
       },
       options: {
-        'query.teamId': { required: 'team' },
-        'bodyFields.events': { required: false, value: 'event' },
-        'bodyFields.projectIds': { required: false, value: 'project' },
+        'query.teamId': { inferFrom: 'team' },
+        'bodyFields.events': { value: 'event' },
+        'bodyFields.projectIds': { value: 'project' },
       },
     },
   },
@@ -279,19 +286,19 @@ export const inferredOpenApiCommands = inferCommands({
     listDeployHooks: {
       value: 'list',
       options: {
-        'query.projectId': { required: false, value: 'project' },
-        'query.teamId': { required: 'team' },
+        'query.projectId': { value: 'project' },
+        'query.teamId': { inferFrom: 'team' },
       },
     },
     createDeployHook: {
       value: 'create',
       arguments: {
-        'bodyFields.name': { required: false, value: 'name' },
+        'bodyFields.name': { value: 'name' },
       },
       options: {
-        'query.projectId': { required: false, value: 'project' },
-        'query.teamId': { required: 'team' },
-        'bodyFields.ref': { required: false, value: 'ref' },
+        'query.projectId': { value: 'project' },
+        'query.teamId': { inferFrom: 'team', value: 'team' },
+        'bodyFields.ref': { value: 'ref' },
       },
     },
   },

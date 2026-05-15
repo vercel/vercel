@@ -179,7 +179,10 @@ const main = async () => {
     process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
   const originalCliArgs = process.argv.slice(2);
   const inferEnabled = originalCliArgs.includes('--infer');
-  const rawCliArgs = originalCliArgs.filter(arg => arg !== '--infer');
+  const inferHelpRequested = originalCliArgs.includes('--infer-help');
+  const rawCliArgs = originalCliArgs.filter(
+    arg => arg !== '--infer' && arg !== '--infer-help'
+  );
   const argvForParsing = inferEnabled
     ? [process.argv[0], process.argv[1], ...rawCliArgs]
     : process.argv;
@@ -274,27 +277,8 @@ const main = async () => {
       rawCliArgs,
       {
         execute: false,
-        help:
-          rawCliArgs.includes('-h') ||
-          rawCliArgs.includes('--help') ||
-          Boolean(parsedArgs.flags['--help']),
+        help: inferHelpRequested,
         columns: process.stderr.columns ?? 80,
-        cwd:
-          typeof parsedArgs.flags['--cwd'] === 'string'
-            ? parsedArgs.flags['--cwd']
-            : undefined,
-        scope:
-          typeof parsedArgs.flags['--scope'] === 'string'
-            ? parsedArgs.flags['--scope']
-            : undefined,
-        team:
-          typeof parsedArgs.flags['--team'] === 'string'
-            ? parsedArgs.flags['--team']
-            : undefined,
-        api:
-          typeof parsedArgs.flags['--api'] === 'string'
-            ? parsedArgs.flags['--api']
-            : undefined,
       }
     );
     if (inferredCommandExitCode !== null) {
@@ -898,24 +882,8 @@ const main = async () => {
       rawCliArgs,
       {
         client,
-        help:
-          rawCliArgs.includes('-h') ||
-          rawCliArgs.includes('--help') ||
-          Boolean(parsedArgs.flags['--help']),
+        help: inferHelpRequested,
         columns: process.stderr.columns ?? 80,
-        cwd:
-          typeof parsedArgs.flags['--cwd'] === 'string'
-            ? parsedArgs.flags['--cwd']
-            : undefined,
-        scope:
-          typeof parsedArgs.flags['--scope'] === 'string'
-            ? parsedArgs.flags['--scope']
-            : undefined,
-        team:
-          typeof parsedArgs.flags['--team'] === 'string'
-            ? parsedArgs.flags['--team']
-            : undefined,
-        api: client.apiUrl,
       }
     );
     if (inferredCommandExecutionExitCode !== null) {

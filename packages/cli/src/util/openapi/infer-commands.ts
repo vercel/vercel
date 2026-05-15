@@ -32,14 +32,6 @@ import table from '../output/table';
 import type Client from '../client';
 import getTeamById from '../teams/get-team-by-id';
 import getTeams from '../teams/get-teams';
-import type {
-  OpenApiCommandTag,
-  OpenApiDisplayPropertiesByTagOperationStatus,
-  OpenApiDisplayResponseShapeByTagOperationStatusProperty,
-  OpenApiInputNamesByTagOperation,
-  OpenApiOperationIdsByTag,
-  OpenApiResponseStatusCodesByTagOperation,
-} from './generated-command-dsl-types';
 import { OpenApiCache } from './openapi-cache';
 import { resolveEndpointByTagAndOperationId } from './resolve-by-tag-operation';
 import type { BodyField, Parameter } from './types';
@@ -49,550 +41,65 @@ import getUser from '../get-user';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import { APIError, ProjectNotFound } from '../errors-ts';
 import stripAnsi from 'strip-ansi';
+import { getCommandName } from '../pkg-name';
+import {
+  DISPLAY_PATH_SYMBOL,
+  DISPLAY_SCALAR_SYMBOL,
+  type DisplayCapitalizeValue,
+  type DisplayColorInput,
+  type DisplayColorValue,
+  type DisplayConditionalValue,
+  type DisplayDateValue,
+  type DisplayDurationValue,
+  type DisplayFormatTemplate,
+  type DisplayFormattedValue,
+  type DisplayIconName,
+  type DisplayIconValue,
+  type DisplayJoinValue,
+  type DisplayLinkValue,
+  type DisplayLiteralTemplate,
+  type DisplayNestableValue,
+  type DisplayNumberInput,
+  type DisplayPathTemplate,
+  type DisplayRelativeTimeValue,
+  type DisplayScalarToken,
+  type DisplayScopeValue,
+  type DisplaySwitchCaseValue,
+  type DisplaySwitchCasesInput,
+  type DisplaySwitchValue,
+  type DisplayTemplateValue,
+  type DisplayUnknownAccessor,
+  type HttpStatusCode,
+  type InferredCommandArgumentConfig,
+  type InferredCommandConfig,
+  type InferredCommandErrorResponseDisplayConfig,
+  type InferredCommandParamConfig,
+  type InferredCommandParamConfigBase,
+  type InferredCommandResponseDisplayByStatus,
+  type InferredCommandSuccessResponseDisplayConfig,
+  type InferredCommands,
+  type InferredTagConfig,
+} from './command-dsl-types';
 
-type OptionalRecord<K extends PropertyKey, V> = {
-  [P in K]?: V;
-};
-
-const DISPLAY_PATH_SYMBOL = Symbol('inferredDisplayPath');
-const DISPLAY_SCALAR_SYMBOL = Symbol('inferredDisplayScalar');
-
-type DisplayScalarKind = 'string' | 'number' | 'boolean';
-
-type DisplayBaseToken<Kind extends DisplayScalarKind> = {
-  readonly [DISPLAY_PATH_SYMBOL]: readonly string[];
-  readonly [DISPLAY_SCALAR_SYMBOL]: Kind;
-};
-
-export type DisplayStringToken = DisplayBaseToken<'string'>;
-export type DisplayNumberToken = DisplayBaseToken<'number'>;
-export type DisplayBooleanToken = DisplayBaseToken<'boolean'>;
-
-export type DisplayScalarToken =
-  | DisplayStringToken
-  | DisplayNumberToken
-  | DisplayBooleanToken;
-
-export type DisplayColorName =
-  | 'gray'
-  | 'red'
-  | 'green'
-  | 'yellow'
-  | 'blue'
-  | 'magenta'
-  | 'cyan'
-  | 'white';
-
-export interface DisplayRelativeTimeValue {
-  value: DisplayNumberInput;
-  format: 'relativeTime';
-}
-
-export interface DisplayDateValue {
-  value: DisplayNestableValue;
-  format: 'date';
-}
-
-export interface DisplayDurationValue {
-  end: DisplayNumberInput;
-  start: DisplayNumberInput;
-  format: 'duration';
-}
-
-export interface DisplayCapitalizeValue {
-  value: DisplayNestableValue;
-  format: 'capitalize';
-}
-
-export interface DisplayScopeValue {
-  format: 'scope';
-}
-
-export interface DisplayIconValue {
-  format: 'icon';
-  name: DisplayIconName;
-}
-
-export interface DisplayJoinValue {
-  values: readonly DisplayNestableValue[];
-  separator: string;
-  format: 'join';
-}
-
-export interface DisplaySwitchValue {
-  value: DisplayScalarToken;
-  format: 'switch';
-  cases: Record<string, DisplaySwitchCaseValue>;
-  defaultCase: DisplaySwitchCaseValue;
-}
-
-export interface DisplayLinkValue {
-  url: DisplayNestableValue;
-  format: 'link';
-  text?: DisplayNestableValue;
-}
-
-export interface DisplayConditionalValue {
-  format: 'conditional';
-  values: readonly DisplayNestableValue[];
-}
-
-export interface DisplayColorValue {
-  value: DisplayNestableValue;
-  format: 'color';
-  color: DisplayColorName;
-}
-
-export type DisplayFormattedValue =
-  | DisplayRelativeTimeValue
-  | DisplayDateValue
-  | DisplayDurationValue
-  | DisplayCapitalizeValue
-  | DisplayScopeValue
-  | DisplayIconValue
-  | DisplayJoinValue
-  | DisplayColorValue
-  | DisplaySwitchValue
-  | DisplayLinkValue
-  | DisplayConditionalValue;
-
-type DisplayLiteralValue = string | number | boolean;
-export type DisplayIconName =
-  | 'circle-fill'
-  | 'warning'
-  | 'info'
-  | 'error'
-  | 'check';
-
-type DisplayInlineValue =
-  | DisplayScalarToken
-  | DisplayFormattedValue
-  | DisplayLiteralValue;
-type DisplayInlineValueList = readonly DisplayInlineValue[];
-type DisplayNestableValue =
-  | DisplayScalarToken
-  | DisplayFormattedValue
-  | DisplayLiteralValue
-  | null
-  | undefined;
-type DisplayNumberInput = DisplayNestableValue;
-
-type DisplaySwitchCaseValue = DisplayInlineValue | DisplayInlineValueList;
-
-type DisplaySwitchCasesInput = {
-  DEFAULT: DisplaySwitchCaseValue;
-} & Record<string, DisplaySwitchCaseValue>;
-
-type DisplayColorInput = DisplayNestableValue;
-
-interface DisplayFieldRecord {
-  [key: string]: DisplayFieldValue;
-}
-
-type DisplayFieldValue =
-  | DisplayInlineValue
-  | DisplayInlineValueList
-  | DisplayFieldRecord;
-
-type DisplayUnknownAccessor = DisplayScalarToken & {
-  readonly [key: string]: DisplayUnknownAccessor;
-  readonly [index: number]: DisplayUnknownAccessor;
-};
-
-type DisplayTypeAccessor<T> = unknown extends T
-  ? DisplayUnknownAccessor
-  : T extends string
-    ? DisplayStringToken
-    : T extends number
-      ? DisplayNumberToken
-      : T extends boolean
-        ? DisplayBooleanToken
-        : T extends readonly (infer Item)[]
-          ? readonly DisplayTypeAccessor<Item>[]
-          : T extends object
-            ? {
-                readonly [Key in keyof T]-?: DisplayTypeAccessor<T[Key]>;
-              }
-            : T extends null
-              ? null
-              : T extends undefined
-                ? undefined
-                : DisplayUnknownAccessor;
-
-type DisplayPathTemplate = {
-  type: 'path';
-  path: readonly string[];
-};
-
-type DisplayRelativeTimeTemplate = {
-  type: 'format';
-  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-  format: 'relativeTime';
-};
-
-type DisplayDateTemplate = {
-  type: 'format';
-  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-  format: 'date';
-};
-
-type DisplayDurationTemplate = {
-  type: 'format';
-  end: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-  start: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-  format: 'duration';
-};
-
-type DisplayCapitalizeTemplate = {
-  type: 'format';
-  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-  format: 'capitalize';
-};
-
-type DisplayScopeTemplate = {
-  type: 'format';
-  format: 'scope';
-};
-
-type DisplayIconTemplate = {
-  type: 'format';
-  format: 'icon';
-  name: DisplayIconName;
-};
-
-type DisplayJoinTemplate = {
-  type: 'format';
-  values: readonly (
-    | DisplayPathTemplate
-    | DisplayFormatTemplate
-    | DisplayLiteralTemplate
-    | DisplayTemplateValue[]
-  )[];
-  separator: string;
-  format: 'join';
-};
-
-type DisplayColorTemplate = {
-  type: 'format';
-  value: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-  format: 'color';
-  color: DisplayColorName;
-};
-
-type DisplaySwitchTemplate = {
-  type: 'format';
-  value: DisplayPathTemplate;
-  format: 'switch';
-  cases: Record<string, DisplayTemplateValue>;
-  defaultCase: DisplayTemplateValue;
-};
-
-type DisplayLinkTemplate = {
-  type: 'format';
-  url: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-  format: 'link';
-  text?: DisplayPathTemplate | DisplayFormatTemplate | DisplayLiteralTemplate;
-};
-
-type DisplayConditionalTemplate = {
-  type: 'format';
-  format: 'conditional';
-  values: readonly (
-    | DisplayPathTemplate
-    | DisplayFormatTemplate
-    | DisplayLiteralTemplate
-    | DisplayTemplateValue[]
-  )[];
-};
-
-type DisplayLiteralTemplate = {
-  type: 'literal';
-  value: DisplayLiteralValue | null;
-};
-
-type DisplayFormatTemplate =
-  | DisplayRelativeTimeTemplate
-  | DisplayDateTemplate
-  | DisplayDurationTemplate
-  | DisplayCapitalizeTemplate
-  | DisplayScopeTemplate
-  | DisplayIconTemplate
-  | DisplayJoinTemplate
-  | DisplayColorTemplate
-  | DisplaySwitchTemplate
-  | DisplayLinkTemplate
-  | DisplayConditionalTemplate;
-
-type DisplayTemplateValue =
-  | DisplayPathTemplate
-  | DisplayLiteralTemplate
-  | DisplayFormatTemplate
-  | { [key: string]: DisplayTemplateValue }
-  | DisplayTemplateValue[];
+export type {
+  DisplayBooleanToken,
+  DisplayFormattedValue,
+  DisplayNumberToken,
+  DisplayScalarToken,
+  DisplayStringToken,
+  InferredCommandArgumentConfig,
+  InferredCommandConfig,
+  InferredCommandOptionConfig,
+  InferredCommandParamConfig,
+  InferredCommandResponseDisplayByStatus,
+  InferredCommandSuccessResponseDisplayConfig,
+  InferredCommands,
+} from './command-dsl-types';
 
 const displayTemplateCache = new WeakMap<
   Function,
   DisplayTemplateValue | null
 >();
-
-export interface InferredCommandConfig {
-  value?: string;
-  aliases?: string[];
-  arguments?: Record<string, InferredCommandParamConfig | undefined>;
-  options?: Record<string, InferredCommandParamConfig | undefined>;
-  examples?: InferredCommandExample[];
-  display?: InferredCommandResponseDisplayByStatus;
-}
-
-type HttpStatusCode = `${1 | 2 | 3 | 4 | 5}${number}${number}`;
-
-export type InferredCommandSuccessResponseDisplayConfig<
-  DisplayProperty extends string | undefined = string | undefined,
-  DisplayAccessor = DisplayUnknownAccessor,
-> = {
-  displayProperty?: DisplayProperty;
-  fields: InferredCommandDisplayFieldsSelector<DisplayAccessor>;
-  table?: boolean;
-} & (
-  | {
-      json?: InferredCommandJsonSelector<DisplayAccessor>;
-    }
-  | {
-      json: 'all';
-    }
-);
-
-type InferredCommandDisplayFieldsSelector<DisplayAccessor> = {
-  bivarianceHack(item: DisplayAccessor): Record<string, DisplayFieldValue>;
-}['bivarianceHack'];
-
-type InferredCommandJsonSelector<DisplayAccessor> = {
-  bivarianceHack(item: DisplayAccessor): Record<string, unknown>;
-}['bivarianceHack'];
-
-export interface InferredCommandErrorResponseDisplayConfig {
-  errorFields: string[];
-}
-
-export type InferredCommandResponseDisplayByStatus = Partial<{
-  [StatusCode in HttpStatusCode]: StatusCode extends `2${string}`
-    ? InferredCommandSuccessResponseDisplayConfig
-    : InferredCommandErrorResponseDisplayConfig;
-}>;
-
-type InferredStatusCodeForOperation<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-> = Tag extends keyof OpenApiResponseStatusCodesByTagOperation
-  ? OperationId extends keyof OpenApiResponseStatusCodesByTagOperation[Tag]
-    ? Extract<
-        OpenApiResponseStatusCodesByTagOperation[Tag][OperationId],
-        string
-      >
-    : never
-  : never;
-
-type InferredDisplayPropertyForOperationStatus<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-  StatusCode extends string,
-> = Tag extends keyof OpenApiDisplayPropertiesByTagOperationStatus
-  ? OperationId extends keyof OpenApiDisplayPropertiesByTagOperationStatus[Tag]
-    ? StatusCode extends keyof OpenApiDisplayPropertiesByTagOperationStatus[Tag][OperationId]
-      ? Extract<
-          OpenApiDisplayPropertiesByTagOperationStatus[Tag][OperationId][StatusCode],
-          string
-        >
-      : never
-    : never
-  : never;
-
-type InferredDisplayResponseShapeForOperationStatusProperty<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-  StatusCode extends string,
-  Property extends string,
-> = Tag extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty
-  ? OperationId extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag]
-    ? StatusCode extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId]
-      ? Property extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId][StatusCode]
-        ? OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId][StatusCode][Property]
-        : never
-      : never
-    : never
-  : never;
-
-type InferredDisplayResponsePropertyMapForOperationStatus<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-  StatusCode extends string,
-> = Tag extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty
-  ? OperationId extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag]
-    ? StatusCode extends keyof OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId]
-      ? OpenApiDisplayResponseShapeByTagOperationStatusProperty[Tag][OperationId][StatusCode]
-      : never
-    : never
-  : never;
-
-type InferredDisplayResponseShapeForOperationStatus<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-  StatusCode extends string,
-> =
-  InferredDisplayResponsePropertyMapForOperationStatus<
-    Tag,
-    OperationId,
-    StatusCode
-  > extends infer PropertyMap
-    ? [PropertyMap] extends [never]
-      ? unknown
-      : PropertyMap
-    : unknown;
-
-type DisplayFieldInputForShape<Shape> = Shape extends readonly (infer Item)[]
-  ? Item
-  : Shape;
-
-type DisplayRootAccessorForShape<Shape> =
-  DisplayFieldInputForShape<Shape> extends infer FieldInput
-    ? FieldInput extends object
-      ? {
-          readonly [Key in keyof FieldInput]-?: DisplayUnknownAccessor;
-        }
-      : DisplayTypeAccessor<FieldInput>
-    : DisplayUnknownAccessor;
-
-type KnownInferredSuccessResponseDisplayConfig<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-  StatusCode extends string,
-> =
-  | (Omit<
-      InferredCommandSuccessResponseDisplayConfig<
-        undefined,
-        DisplayRootAccessorForShape<
-          InferredDisplayResponseShapeForOperationStatus<
-            Tag,
-            OperationId,
-            StatusCode
-          >
-        >
-      >,
-      'displayProperty'
-    > & {
-      displayProperty?: never;
-    })
-  | (InferredDisplayPropertyForOperationStatus<
-      Tag,
-      OperationId,
-      StatusCode
-    > extends infer Property extends string
-      ? {
-          [CurrentProperty in Property]: Omit<
-            InferredCommandSuccessResponseDisplayConfig<
-              CurrentProperty,
-              DisplayTypeAccessor<
-                DisplayFieldInputForShape<
-                  InferredDisplayResponseShapeForOperationStatusProperty<
-                    Tag,
-                    OperationId,
-                    StatusCode,
-                    CurrentProperty
-                  >
-                >
-              >
-            >,
-            'displayProperty'
-          > & {
-            displayProperty: CurrentProperty;
-          };
-        }[Property]
-      : never);
-
-type KnownInferredCommandResponseDisplayByStatus<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-> = Partial<
-  InferredStatusCodeForOperation<Tag, OperationId> extends never
-    ? {}
-    : {
-        [StatusCode in InferredStatusCodeForOperation<
-          Tag,
-          OperationId
-        >]: StatusCode extends `2${string}`
-          ? KnownInferredSuccessResponseDisplayConfig<
-              Tag,
-              OperationId,
-              StatusCode
-            >
-          : InferredCommandErrorResponseDisplayConfig;
-      }
->;
-
-export interface InferredTagConfig {
-  name?: string;
-  aliases?: string[];
-}
-
-export type InferredCommandParamFilter = 'deployments';
-
-export interface InferredCommandParamConfig {
-  required: boolean | 'project' | 'team';
-  value?: string;
-  filter?: InferredCommandParamFilter;
-  inferFrom?: 'project' | 'team';
-  defaultValue?: string | boolean;
-  omitWhenOption?: string;
-}
-
-export interface InferredCommandExample {
-  name: string;
-  value: string;
-}
-
-type InferredInputNamesForOperation<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-> = Tag extends keyof OpenApiInputNamesByTagOperation
-  ? OperationId extends keyof OpenApiInputNamesByTagOperation[Tag]
-    ? Extract<OpenApiInputNamesByTagOperation[Tag][OperationId], string>
-    : never
-  : never;
-
-type KnownInferredCommandConfig<
-  Tag extends OpenApiCommandTag,
-  OperationId extends OpenApiOperationIdsByTag[Tag],
-> = Omit<InferredCommandConfig, 'arguments' | 'options' | 'display'> & {
-  display?: KnownInferredCommandResponseDisplayByStatus<Tag, OperationId>;
-  arguments?: OptionalRecord<
-    InferredInputNamesForOperation<Tag, OperationId>,
-    InferredCommandParamConfig
-  > &
-    Record<string, InferredCommandParamConfig | undefined>;
-  options?: OptionalRecord<
-    InferredInputNamesForOperation<Tag, OperationId>,
-    InferredCommandParamConfig
-  > &
-    Record<string, InferredCommandParamConfig | undefined>;
-};
-
-type KnownOperationsByTag<Tag extends OpenApiCommandTag> = {
-  [OperationId in OpenApiOperationIdsByTag[Tag]]?: KnownInferredCommandConfig<
-    Tag,
-    OperationId
-  >;
-};
-
-type KnownTagConfig<Tag extends OpenApiCommandTag> = InferredTagConfig &
-  KnownOperationsByTag<Tag> &
-  Record<string, unknown>;
-
-type KnownInferredCommands = {
-  [Tag in OpenApiCommandTag]?: KnownTagConfig<Tag>;
-};
-
-export type InferredCommands = KnownInferredCommands &
-  Record<string, (InferredTagConfig & Record<string, unknown>) | undefined>;
 
 export function inferCommands<const T extends InferredCommands>(
   commands: T
@@ -2590,12 +2097,59 @@ function isSuccessDisplayConfig(
   );
 }
 
+function extractPaginationCursor(
+  body: unknown,
+  displayConfig: InferredCommandSuccessResponseDisplayConfig
+): string | null {
+  if (displayConfig.pagination === false) {
+    return null;
+  }
+  const nextPath =
+    typeof displayConfig.pagination === 'object' &&
+    displayConfig.pagination !== null &&
+    typeof displayConfig.pagination.nextPath === 'string'
+      ? displayConfig.pagination.nextPath
+      : 'pagination.next';
+
+  const cursor = readValueAtPath(body, nextPath);
+  if (cursor === null || cursor === undefined || cursor === '') {
+    return null;
+  }
+  return String(cursor);
+}
+
+function buildPaginationRerunSuffix(
+  commandArgs: string[],
+  nextValue: string
+): string {
+  const [tag, operation, ...rest] = commandArgs;
+  const stripped: string[] = [];
+  for (let i = 0; i < rest.length; i++) {
+    const token = rest[i];
+    if (token === '--next' || token === '-N') {
+      const lookahead = rest[i + 1];
+      if (lookahead !== undefined && !lookahead.startsWith('-')) {
+        i++;
+      }
+      continue;
+    }
+    if (token.startsWith('--next=')) {
+      continue;
+    }
+    stripped.push(token);
+  }
+  return [tag, operation, ...stripped, '--next', nextValue]
+    .filter(Boolean)
+    .join(' ');
+}
+
 async function executeInferredRequest(
   client: Client,
   request: RequestPreview,
   parsedOptions: Record<string, string | boolean>,
   display: InferredCommandResponseDisplayByStatus | undefined,
-  context: InferredCommandContext
+  context: InferredCommandContext,
+  commandArgs: string[]
 ): Promise<number> {
   if (!request.url || !request.method) {
     output.error('Could not resolve inferred OpenAPI request.');
@@ -2689,6 +2243,17 @@ async function executeInferredRequest(
         const tableOutput = formatDisplayRowsAsTable(mapped);
         if (tableOutput) {
           client.stdout.write(`\n${tableOutput}\n\n`);
+          const paginationCursor = extractPaginationCursor(
+            body,
+            displayForStatus
+          );
+          if (paginationCursor) {
+            output.log(
+              `To display the next page run ${getCommandName(
+                buildPaginationRerunSuffix(commandArgs, paginationCursor)
+              )}`
+            );
+          }
           return 0;
         }
 
@@ -3093,7 +2658,7 @@ function getExplicitProjectLookupValue(
   providedOptions: Record<string, string | boolean>
 ): string | null {
   for (const definition of argumentDefinitions) {
-    if (definition.config.required !== 'project') {
+    if (definition.config.inferFrom !== 'project') {
       continue;
     }
     const value = providedArguments[definition.outputName];
@@ -3103,7 +2668,7 @@ function getExplicitProjectLookupValue(
   }
 
   for (const definition of optionDefinitions) {
-    if (definition.config.required !== 'project') {
+    if (definition.config.inferFrom !== 'project') {
       continue;
     }
     const value = providedOptions[definition.outputName];
@@ -3929,7 +3494,7 @@ async function promptForMissingRequiredInputs(
   projectPromptMode: ProjectPromptMode
 ): Promise<'completed' | 'restart_required'> {
   const getPriority = (input: MissingRequiredInput): number => {
-    if (input.definition.config.required === 'project') {
+    if (input.definition.config.inferFrom === 'project') {
       return 0;
     }
     return 1;
@@ -3944,7 +3509,7 @@ async function promptForMissingRequiredInputs(
       input.surface === 'options'
         ? `--${input.definition.outputName}`
         : input.definition.outputName;
-    const required = input.definition.config.required;
+    const inferFrom = input.definition.config.inferFrom;
     let trimmedValue = '';
     if (input.definition.config.filter === 'deployments') {
       let deploymentProjectFilter =
@@ -3976,7 +3541,7 @@ async function promptForMissingRequiredInputs(
         providedOptions,
         deploymentProjectFilter
       );
-    } else if (required === 'project') {
+    } else if (inferFrom === 'project') {
       const promptedProject = await promptForProjectValue(
         client,
         getScopeHintForPrompt(context, providedArguments, providedOptions),
@@ -4022,7 +3587,7 @@ function resolveDefinitionValue(
   const contextualViewValue =
     definition.source.location === 'query' &&
     definition.source.name === 'view' &&
-    definition.config.required === 'project'
+    definition.config.inferFrom === 'project'
       ? context.project?.id
         ? 'project'
         : undefined
@@ -4043,11 +3608,7 @@ function resolveDefinitionValue(
     contextualViewValue ??
     inferredContextValue ??
     definition.config.defaultValue ??
-    (definition.config.required === 'project'
-      ? context.project?.id
-      : definition.config.required === 'team'
-        ? context.team?.value
-        : implicitTeamValue)
+    implicitTeamValue
   );
 }
 
@@ -4065,7 +3626,6 @@ function isDefinitionOmittedByOption(
 
 function collectMissingRequiredInputs(
   argumentDefinitions: NormalizedParamDefinition[],
-  optionDefinitions: NormalizedParamDefinition[],
   providedArguments: Record<string, string>,
   providedOptions: Record<string, string | boolean>,
   context: InferredCommandContext,
@@ -4095,8 +3655,7 @@ function collectMissingRequiredInputs(
     }
   };
 
-  const checkDefinition = (
-    surface: ParamSurface,
+  const checkArgument = (
     definition: NormalizedParamDefinition,
     providedValue: string | boolean | undefined
   ) => {
@@ -4104,11 +3663,7 @@ function collectMissingRequiredInputs(
       return;
     }
 
-    if (
-      definition.config.required !== true &&
-      definition.config.required !== 'project' &&
-      definition.config.required !== 'team'
-    ) {
+    if (definition.config.required !== true) {
       return;
     }
 
@@ -4127,58 +3682,38 @@ function collectMissingRequiredInputs(
     }
 
     const outputName = definition.outputName;
-    if (definition.config.required === true) {
+    const inferFrom = definition.config.inferFrom;
+
+    if (inferFrom === 'project') {
       missing.push({
-        surface,
+        surface: 'arguments',
         definition,
-        reason: 'Required input is missing.',
-        hint:
-          surface === 'options'
-            ? `Provide --${outputName} <value>.`
-            : `Provide ${outputName} as a positional argument.`,
+        reason: 'Could not infer a project from the current context.',
+        hint: `Provide ${outputName} explicitly or run from a linked project directory.`,
       });
       return;
     }
 
-    if (definition.config.required === 'project') {
+    if (inferFrom === 'team') {
       missing.push({
-        surface,
+        surface: 'arguments',
         definition,
-        reason: 'Could not infer a project from the current context.',
-        hint:
-          surface === 'options'
-            ? `Provide --${outputName} <value> or run from a linked project directory.`
-            : `Provide ${outputName} explicitly or run from a linked project directory.`,
+        reason: 'Could not infer a team/scope from the current context.',
+        hint: `Provide ${outputName} explicitly or pass --scope <team>.`,
       });
       return;
     }
 
     missing.push({
-      surface,
+      surface: 'arguments',
       definition,
-      reason: 'Could not infer a team/scope from the current context.',
-      hint:
-        surface === 'options'
-          ? outputName === 'scope'
-            ? 'Provide --scope <team>.'
-            : `Provide --${outputName} <value> or pass --scope <team>.`
-          : `Provide ${outputName} explicitly or pass --scope <team>.`,
+      reason: 'Required input is missing.',
+      hint: `Provide ${outputName} as a positional argument.`,
     });
   };
 
   for (const definition of argumentDefinitions) {
-    checkDefinition(
-      'arguments',
-      definition,
-      providedArguments[definition.outputName]
-    );
-  }
-  for (const definition of optionDefinitions) {
-    checkDefinition(
-      'options',
-      definition,
-      providedOptions[definition.outputName]
-    );
+    checkArgument(definition, providedArguments[definition.outputName]);
   }
 
   return missing;
@@ -4191,7 +3726,7 @@ function printMissingRequiredInputs(
     input.surface === 'options'
       ? `--${input.definition.outputName}`
       : input.definition.outputName,
-    `${getRequiredHint(input.definition.config.required)} ${input.reason} ${input.hint}`,
+    `${getRequiredHint(input.definition.config.required, input.definition.config.inferFrom)} ${input.reason} ${input.hint}`,
   ]);
 
   output.error('Missing required inputs for inferred command.');
@@ -4201,37 +3736,38 @@ function printMissingRequiredInputs(
 }
 
 function getRequiredHint(
-  required: InferredCommandParamConfig['required']
+  required: boolean | undefined,
+  inferFrom?: InferredCommandParamConfigBase['inferFrom']
 ): string {
-  if (required === true) {
-    return 'Required';
+  if (required !== true) {
+    return 'Optional';
   }
-  if (required === 'project') {
+  if (inferFrom === 'project') {
     return 'Required if project context is missing';
   }
-  if (required === 'team') {
+  if (inferFrom === 'team') {
     return 'Required if team context is missing';
   }
-  return 'Optional';
+  return 'Required';
 }
 
-function getArgumentInferenceHint(
-  required: InferredCommandParamConfig['required']
+function getInferenceHint(
+  inferFrom: InferredCommandParamConfigBase['inferFrom']
 ): string | null {
-  if (required === 'project') {
+  if (inferFrom === 'project') {
     return 'Inferred from the current project context when available.';
   }
-  if (required === 'team') {
+  if (inferFrom === 'team') {
     return 'Inferred from the current scope/team context when available.';
   }
   return null;
 }
 
 function getArgumentHelpDescription(
-  required: InferredCommandParamConfig['required']
+  config: InferredCommandArgumentConfig
 ): string {
-  const base = getRequiredHint(required);
-  const inferenceHint = getArgumentInferenceHint(required);
+  const base = getRequiredHint(config.required, config.inferFrom);
+  const inferenceHint = getInferenceHint(config.inferFrom);
   return inferenceHint ? `${base}. ${inferenceHint}` : base;
 }
 
@@ -4289,8 +3825,8 @@ function printInferredCommandHelp(
       `Inferred OpenAPI command for operation "${resolved.operationId}".`,
     arguments: Object.entries(normalizedArguments).map(([name, config]) => ({
       name,
-      required: config.required === true,
-      description: getArgumentHelpDescription(config.required),
+      required: config.required === true && !config.inferFrom,
+      description: getArgumentHelpDescription(config),
     })),
     options: buildHelpOptions(normalizedOptions),
     examples: resolved.config.examples ?? [],
@@ -4440,10 +3976,7 @@ export async function runInferredCommand(
   cliArgs: string[],
   options: RunInferredCommandOptions = {}
 ): Promise<number | null> {
-  const helpRequested =
-    options.help === true ||
-    cliArgs.includes('-h') ||
-    cliArgs.includes('--help');
+  const helpRequested = options.help === true;
   const commandArgs = stripHelpTokens(cliArgs);
   const [tagToken, operationToken] = commandArgs;
 
@@ -4575,7 +4108,6 @@ export async function runInferredCommand(
   if (options.client) {
     let missingRequiredInputs = collectMissingRequiredInputs(
       argumentDefinitions,
-      optionDefinitions,
       providedArguments,
       providedOptions,
       context,
@@ -4616,7 +4148,6 @@ export async function runInferredCommand(
       );
       missingRequiredInputs = collectMissingRequiredInputs(
         argumentDefinitions,
-        optionDefinitions,
         providedArguments,
         providedOptions,
         context,
@@ -4683,6 +4214,10 @@ export async function runInferredCommand(
     }
   }
 
+  const apiBaseUrl =
+    typeof parsedOptions.api === 'string'
+      ? parsedOptions.api
+      : options.client?.apiUrl;
   const request = buildRequestPreview(
     metadata,
     argumentDefinitions,
@@ -4690,7 +4225,7 @@ export async function runInferredCommand(
     providedArguments,
     providedOptions,
     context,
-    typeof parsedOptions.api === 'string' ? parsedOptions.api : undefined
+    apiBaseUrl
   );
 
   if (isDryRun) {
@@ -4721,7 +4256,8 @@ export async function runInferredCommand(
       request,
       parsedOptions,
       resolved.config.display,
-      context
+      context,
+      commandArgs
     );
   }
 

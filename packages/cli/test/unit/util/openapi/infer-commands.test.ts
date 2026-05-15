@@ -39,10 +39,9 @@ describe('inferCommands', () => {
         },
         options: {
           'query.teamId': {
-            required: 'team',
+            inferFrom: 'team',
           },
           'query.slug': {
-            required: false,
             value: 'slugFilter',
           },
         },
@@ -219,7 +218,7 @@ describe('inferCommands', () => {
       listEndpoint,
     ]);
 
-    const exitCode = await runInferredCommand(commands, ['-h']);
+    const exitCode = await runInferredCommand(commands, [], { help: true });
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain('Inferred OpenAPI tags');
@@ -1317,7 +1316,8 @@ describe('inferCommands', () => {
           value: 'inspect',
           arguments: {
             'path.teamId': {
-              required: 'team',
+              required: true,
+              inferFrom: 'team',
             },
           },
         },
@@ -1385,13 +1385,10 @@ describe('inferCommands', () => {
     ]);
     vi.spyOn(OpenApiCache.prototype, 'getBodyFields').mockReturnValue([]);
 
-    const exitCode = await runInferredCommand(
-      commands,
-      ['projects', 'ls', '-h'],
-      {
-        columns: 120,
-      }
-    );
+    const exitCode = await runInferredCommand(commands, ['projects', 'ls'], {
+      help: true,
+      columns: 120,
+    });
 
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
@@ -1405,10 +1402,14 @@ describe('inferCommands', () => {
         inspect: {
           value: 'inspect',
           arguments: {
-            'path.idOrName': { required: 'project', value: 'name' },
+            'path.idOrName': {
+              required: true,
+              inferFrom: 'project',
+              value: 'name',
+            },
           },
           options: {
-            'query.teamId': { required: 'team' },
+            'query.teamId': { inferFrom: 'team' },
           },
         },
       },
@@ -1576,13 +1577,14 @@ describe('inferCommands', () => {
           value: 'inspect',
           arguments: {
             'path.idOrName': {
-              required: 'project',
+              required: true,
+              inferFrom: 'project',
               value: 'name',
             },
           },
           options: {
             'query.teamId': {
-              required: 'team',
+              inferFrom: 'team',
             },
           },
         },
@@ -1627,13 +1629,14 @@ describe('inferCommands', () => {
           value: 'inspect',
           arguments: {
             'path.idOrName': {
-              required: 'project',
+              required: true,
+              inferFrom: 'project',
               value: 'name',
             },
           },
           options: {
             'query.teamId': {
-              required: 'team',
+              inferFrom: 'team',
             },
           },
         },
@@ -1686,13 +1689,14 @@ describe('inferCommands', () => {
           value: 'inspect',
           arguments: {
             'path.idOrName': {
-              required: 'project',
+              required: true,
+              inferFrom: 'project',
               value: 'name',
             },
           },
           options: {
             'query.teamId': {
-              required: 'team',
+              inferFrom: 'team',
             },
           },
         },
@@ -1753,7 +1757,7 @@ describe('inferCommands', () => {
           },
           options: {
             'query.teamId': {
-              required: 'team',
+              inferFrom: 'team',
             },
           },
         },
@@ -1916,7 +1920,8 @@ describe('inferCommands', () => {
           value: 'inspect',
           arguments: {
             'path.idOrName': {
-              required: 'project',
+              required: true,
+              inferFrom: 'project',
               value: 'name',
             },
           },
