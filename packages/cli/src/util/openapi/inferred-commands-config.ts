@@ -126,11 +126,6 @@ export const inferredOpenApiCommands = inferCommands({
               }),
             };
           },
-          // displayProperty: 'projects',
-          // fields: project => ({
-          //   id: project.id,
-          //   productionUrl: project.targets.production.alias[0],
-          // }),
         },
         '400': {
           errorFields: ['error.code', 'error.message'],

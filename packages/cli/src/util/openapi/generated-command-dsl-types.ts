@@ -2567,6 +2567,7 @@ export interface OpenApiDisplayPropertiesByTagOperation {
       | 'dataCache'
       | 'defaultResourceConfig'
       | 'deploymentExpiration'
+      | 'deploymentPolicy'
       | 'dismissedToasts'
       | 'env'
       | 'expiration'
@@ -2613,6 +2614,7 @@ export interface OpenApiDisplayPropertiesByTagOperation {
       | 'dataCache'
       | 'defaultResourceConfig'
       | 'deploymentExpiration'
+      | 'deploymentPolicy'
       | 'dismissedToasts'
       | 'env'
       | 'expiration'
@@ -2663,6 +2665,7 @@ export interface OpenApiDisplayPropertiesByTagOperation {
       | 'dataCache'
       | 'defaultResourceConfig'
       | 'deploymentExpiration'
+      | 'deploymentPolicy'
       | 'dismissedToasts'
       | 'env'
       | 'expiration'
@@ -2700,6 +2703,7 @@ export interface OpenApiDisplayPropertiesByTagOperation {
       | 'dataCache'
       | 'defaultResourceConfig'
       | 'deploymentExpiration'
+      | 'deploymentPolicy'
       | 'dismissedToasts'
       | 'env'
       | 'expiration'
@@ -2811,6 +2815,7 @@ export interface OpenApiDisplayPropertiesByTagOperation {
       | 'defaultExpirationSettings'
       | 'defaultProjectJobs'
       | 'defaultRoles'
+      | 'deploymentPolicy'
       | 'ipBuckets'
       | 'membership'
       | 'nsnbConfig'
@@ -2830,6 +2835,7 @@ export interface OpenApiDisplayPropertiesByTagOperation {
       | 'defaultExpirationSettings'
       | 'defaultProjectJobs'
       | 'defaultRoles'
+      | 'deploymentPolicy'
       | 'ipBuckets'
       | 'membership'
       | 'nsnbConfig'
@@ -4513,6 +4519,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'defaultResourceConfig'
       | 'delegatedProtection'
       | 'deploymentExpiration'
+      | 'deploymentPolicy'
       | 'devCommand'
       | 'directoryListing'
       | 'dismissedToasts'
@@ -4818,6 +4825,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'deploymentProductionGit'
       | 'deploymentPromote'
       | 'deploymentRollback'
+      | 'deploymentSources'
       | 'deploymentType'
       | 'deploymentV0'
       | 'deploymentsToKeep'
@@ -4878,6 +4886,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'gitCommitStatus'
       | 'gitCredentialId'
       | 'gitRepository'
+      | 'gitSources'
       | 'groupIds'
       | 'has'
       | 'hasData'
@@ -5034,6 +5043,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'projectUsage'
       | 'projects'
       | 'protectionMode'
+      | 'publicDeployments'
       | 'rateLimit'
       | 'readyState'
       | 'redis'
@@ -5301,6 +5311,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'deploymentProductionGit'
       | 'deploymentPromote'
       | 'deploymentRollback'
+      | 'deploymentSources'
       | 'deploymentType'
       | 'deploymentV0'
       | 'deploymentsToKeep'
@@ -5361,6 +5372,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'gitCommitStatus'
       | 'gitCredentialId'
       | 'gitRepository'
+      | 'gitSources'
       | 'groupIds'
       | 'has'
       | 'hasData'
@@ -5518,6 +5530,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'projectUsage'
       | 'projects'
       | 'protectionMode'
+      | 'publicDeployments'
       | 'rateLimit'
       | 'readyState'
       | 'redis'
@@ -5664,6 +5677,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'defaultResourceConfig'
       | 'delegatedProtection'
       | 'deploymentExpiration'
+      | 'deploymentPolicy'
       | 'devCommand'
       | 'directoryListing'
       | 'dismissedToasts'
@@ -5856,6 +5870,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'deploymentProductionGit'
       | 'deploymentPromote'
       | 'deploymentRollback'
+      | 'deploymentSources'
       | 'deploymentType'
       | 'deploymentV0'
       | 'deploymentsToKeep'
@@ -5916,6 +5931,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'gitCommitStatus'
       | 'gitCredentialId'
       | 'gitRepository'
+      | 'gitSources'
       | 'groupIds'
       | 'has'
       | 'hasData'
@@ -6072,6 +6088,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'projectUsage'
       | 'projects'
       | 'protectionMode'
+      | 'publicDeployments'
       | 'rateLimit'
       | 'readyState'
       | 'redis'
@@ -6273,6 +6290,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'deploymentProductionGit'
       | 'deploymentPromote'
       | 'deploymentRollback'
+      | 'deploymentSources'
       | 'deploymentType'
       | 'deploymentV0'
       | 'deploymentsToKeep'
@@ -6333,6 +6351,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'gitCommitStatus'
       | 'gitCredentialId'
       | 'gitRepository'
+      | 'gitSources'
       | 'groupIds'
       | 'has'
       | 'hasData'
@@ -6489,6 +6508,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'projectUsage'
       | 'projects'
       | 'protectionMode'
+      | 'publicDeployments'
       | 'rateLimit'
       | 'readyState'
       | 'redis'
@@ -7423,6 +7443,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'createdAt'
       | 'default'
       | 'defaultRedirectUri'
+      | 'deploymentSources'
       | 'deploymentsToKeep'
       | 'directory'
       | 'edgeConfigSize'
@@ -7435,12 +7456,14 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'expirationDaysCanceled'
       | 'expirationDaysErrored'
       | 'expirationDaysProduction'
+      | 'gitSources'
       | 'joinedFrom'
       | 'kvDatabases'
       | 'lint'
       | 'passwordProtection'
       | 'postgresDatabases'
       | 'preference'
+      | 'publicDeployments'
       | 'role'
       | 'roles'
       | 'ssoProtection'
@@ -7503,6 +7526,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'defaultExpirationSettings'
       | 'defaultProjectJobs'
       | 'defaultRoles'
+      | 'deploymentPolicy'
       | 'description'
       | 'disableHardAutoBlocks'
       | 'disableRepositoryDispatchEvents'
@@ -7550,6 +7574,7 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'createdAt'
       | 'default'
       | 'defaultRedirectUri'
+      | 'deploymentSources'
       | 'deploymentsToKeep'
       | 'directory'
       | 'edgeConfigSize'
@@ -7562,12 +7587,14 @@ export interface OpenApiDisplayFieldsByTagOperation {
       | 'expirationDaysCanceled'
       | 'expirationDaysErrored'
       | 'expirationDaysProduction'
+      | 'gitSources'
       | 'joinedFrom'
       | 'kvDatabases'
       | 'lint'
       | 'passwordProtection'
       | 'postgresDatabases'
       | 'preference'
+      | 'publicDeployments'
       | 'role'
       | 'roles'
       | 'ssoProtection'
@@ -9465,6 +9492,7 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'defaultResourceConfig'
         | 'delegatedProtection'
         | 'deploymentExpiration'
+        | 'deploymentPolicy'
         | 'devCommand'
         | 'directoryListing'
         | 'dismissedToasts'
@@ -9764,6 +9792,10 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'expirationDaysCanceled'
         | 'expirationDaysErrored'
         | 'expirationDaysProduction';
+      deploymentPolicy:
+        | 'deploymentSources'
+        | 'gitSources'
+        | 'publicDeployments';
       dismissedToasts: 'action' | 'dismissedAt' | 'key' | 'value';
       env:
         | 'comment'
@@ -10305,6 +10337,10 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'expirationDaysCanceled'
         | 'expirationDaysErrored'
         | 'expirationDaysProduction';
+      deploymentPolicy:
+        | 'deploymentSources'
+        | 'gitSources'
+        | 'publicDeployments';
       dismissedToasts: 'action' | 'dismissedAt' | 'key' | 'value';
       env:
         | 'comment'
@@ -10767,6 +10803,7 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'defaultResourceConfig'
         | 'delegatedProtection'
         | 'deploymentExpiration'
+        | 'deploymentPolicy'
         | 'devCommand'
         | 'directoryListing'
         | 'dismissedToasts'
@@ -10922,6 +10959,10 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'expirationDaysCanceled'
         | 'expirationDaysErrored'
         | 'expirationDaysProduction';
+      deploymentPolicy:
+        | 'deploymentSources'
+        | 'gitSources'
+        | 'publicDeployments';
       dismissedToasts: 'action' | 'dismissedAt' | 'key' | 'value';
       env:
         | 'comment'
@@ -11391,6 +11432,10 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'expirationDaysCanceled'
         | 'expirationDaysErrored'
         | 'expirationDaysProduction';
+      deploymentPolicy:
+        | 'deploymentSources'
+        | 'gitSources'
+        | 'publicDeployments';
       dismissedToasts: 'action' | 'dismissedAt' | 'key' | 'value';
       env:
         | 'comment'
@@ -12754,6 +12799,10 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'expirationDaysProduction';
       defaultProjectJobs: 'lint' | 'typecheck';
       defaultRoles: 'teamPermissions' | 'teamRoles';
+      deploymentPolicy:
+        | 'deploymentSources'
+        | 'gitSources'
+        | 'publicDeployments';
       ipBuckets: 'bucket' | 'default' | 'supportUntil';
       membership:
         | 'accessRequestedAt'
@@ -12849,6 +12898,7 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'defaultExpirationSettings'
         | 'defaultProjectJobs'
         | 'defaultRoles'
+        | 'deploymentPolicy'
         | 'description'
         | 'disableHardAutoBlocks'
         | 'disableRepositoryDispatchEvents'
@@ -12893,6 +12943,10 @@ export interface OpenApiDisplayFieldsByTagOperationProperty {
         | 'expirationDaysProduction';
       defaultProjectJobs: 'lint' | 'typecheck';
       defaultRoles: 'teamPermissions' | 'teamRoles';
+      deploymentPolicy:
+        | 'deploymentSources'
+        | 'gitSources'
+        | 'publicDeployments';
       ipBuckets: 'bucket' | 'default' | 'supportUntil';
       membership:
         | 'accessRequestedAt'
@@ -14637,6 +14691,7 @@ export interface OpenApiDisplayPropertiesByTagOperationStatus {
         | 'defaultResourceConfig'
         | 'delegatedProtection'
         | 'deploymentExpiration'
+        | 'deploymentPolicy'
         | 'devCommand'
         | 'directoryListing'
         | 'dismissedToasts'
@@ -14789,6 +14844,7 @@ export interface OpenApiDisplayPropertiesByTagOperationStatus {
         | 'defaultResourceConfig'
         | 'delegatedProtection'
         | 'deploymentExpiration'
+        | 'deploymentPolicy'
         | 'devCommand'
         | 'directoryListing'
         | 'dismissedToasts'
@@ -14975,6 +15031,7 @@ export interface OpenApiDisplayPropertiesByTagOperationStatus {
         | 'defaultResourceConfig'
         | 'delegatedProtection'
         | 'deploymentExpiration'
+        | 'deploymentPolicy'
         | 'devCommand'
         | 'directoryListing'
         | 'dismissedToasts'
@@ -15069,6 +15126,7 @@ export interface OpenApiDisplayPropertiesByTagOperationStatus {
         | 'defaultResourceConfig'
         | 'delegatedProtection'
         | 'deploymentExpiration'
+        | 'deploymentPolicy'
         | 'devCommand'
         | 'directoryListing'
         | 'dismissedToasts'
@@ -15383,6 +15441,7 @@ export interface OpenApiDisplayPropertiesByTagOperationStatus {
         | 'defaultExpirationSettings'
         | 'defaultProjectJobs'
         | 'defaultRoles'
+        | 'deploymentPolicy'
         | 'description'
         | 'disableHardAutoBlocks'
         | 'disableRepositoryDispatchEvents'
@@ -15453,6 +15512,7 @@ export interface OpenApiDisplayPropertiesByTagOperationStatus {
         | 'defaultExpirationSettings'
         | 'defaultProjectJobs'
         | 'defaultRoles'
+        | 'deploymentPolicy'
         | 'description'
         | 'disableHardAutoBlocks'
         | 'disableRepositoryDispatchEvents'
@@ -24627,6 +24687,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
             readonly expirationDaysErrored: number;
             readonly expirationDaysProduction: number;
           };
+          readonly deploymentPolicy: {
+            readonly deploymentSources: {
+              readonly enabled: boolean;
+              readonly sources: readonly string[];
+            };
+            readonly gitSources: {
+              readonly enabled: boolean;
+              readonly sources: readonly (
+                | {
+                    readonly org: string;
+                    readonly provider: string;
+                  }
+                | {
+                    readonly org: string;
+                    readonly provider: string;
+                    readonly repo: string;
+                  }
+              )[];
+            };
+            readonly publicDeployments: {
+              readonly allowPublicDeployments: boolean;
+              readonly enabled: boolean;
+            };
+          };
           readonly devCommand: string | null;
           readonly directoryListing: boolean;
           readonly dismissedToasts: readonly {
@@ -26441,6 +26525,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
           readonly expirationDaysErrored: number;
           readonly expirationDaysProduction: number;
         };
+        deploymentPolicy: {
+          readonly deploymentSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly string[];
+          };
+          readonly gitSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly (
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                }
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                  readonly repo: string;
+                }
+            )[];
+          };
+          readonly publicDeployments: {
+            readonly allowPublicDeployments: boolean;
+            readonly enabled: boolean;
+          };
+        };
         devCommand: string | null;
         directoryListing: boolean;
         dismissedToasts: readonly {
@@ -27703,6 +27811,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
           readonly expirationDaysCanceled: number;
           readonly expirationDaysErrored: number;
           readonly expirationDaysProduction: number;
+        };
+        deploymentPolicy: {
+          readonly deploymentSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly string[];
+          };
+          readonly gitSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly (
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                }
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                  readonly repo: string;
+                }
+            )[];
+          };
+          readonly publicDeployments: {
+            readonly allowPublicDeployments: boolean;
+            readonly enabled: boolean;
+          };
         };
         devCommand: string | null;
         directoryListing: boolean;
@@ -29492,6 +29624,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
                 readonly expirationDaysErrored: number;
                 readonly expirationDaysProduction: number;
               };
+              readonly deploymentPolicy: {
+                readonly deploymentSources: {
+                  readonly enabled: boolean;
+                  readonly sources: readonly string[];
+                };
+                readonly gitSources: {
+                  readonly enabled: boolean;
+                  readonly sources: readonly (
+                    | {
+                        readonly org: string;
+                        readonly provider: string;
+                      }
+                    | {
+                        readonly org: string;
+                        readonly provider: string;
+                        readonly repo: string;
+                      }
+                  )[];
+                };
+                readonly publicDeployments: {
+                  readonly allowPublicDeployments: boolean;
+                  readonly enabled: boolean;
+                };
+              };
               readonly devCommand: string | null;
               readonly directoryListing: boolean;
               readonly dismissedToasts: readonly {
@@ -30598,6 +30754,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
           readonly expirationDaysErrored: number;
           readonly expirationDaysProduction: number;
         };
+        deploymentPolicy: {
+          readonly deploymentSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly string[];
+          };
+          readonly gitSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly (
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                }
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                  readonly repo: string;
+                }
+            )[];
+          };
+          readonly publicDeployments: {
+            readonly allowPublicDeployments: boolean;
+            readonly enabled: boolean;
+          };
+        };
         devCommand: string | null;
         directoryListing: boolean;
         dismissedToasts: readonly {
@@ -31616,6 +31796,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
           readonly expirationDaysCanceled: number;
           readonly expirationDaysErrored: number;
           readonly expirationDaysProduction: number;
+        };
+        deploymentPolicy: {
+          readonly deploymentSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly string[];
+          };
+          readonly gitSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly (
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                }
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                  readonly repo: string;
+                }
+            )[];
+          };
+          readonly publicDeployments: {
+            readonly allowPublicDeployments: boolean;
+            readonly enabled: boolean;
+          };
         };
         devCommand: string | null;
         directoryListing: boolean;
@@ -34422,6 +34626,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
           readonly teamPermissions: readonly string[];
           readonly teamRoles: readonly string[];
         };
+        deploymentPolicy: {
+          readonly deploymentSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly string[];
+          };
+          readonly gitSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly (
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                }
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                  readonly repo: string;
+                }
+            )[];
+          };
+          readonly publicDeployments: {
+            readonly allowPublicDeployments: boolean;
+            readonly enabled: boolean;
+          };
+        };
         description: string | null;
         disableHardAutoBlocks: number | boolean;
         disableRepositoryDispatchEvents: boolean;
@@ -34671,6 +34899,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
                 readonly teamPermissions: readonly string[];
                 readonly teamRoles: readonly string[];
               };
+              readonly deploymentPolicy: {
+                readonly deploymentSources: {
+                  readonly enabled: boolean;
+                  readonly sources: readonly string[];
+                };
+                readonly gitSources: {
+                  readonly enabled: boolean;
+                  readonly sources: readonly (
+                    | {
+                        readonly org: string;
+                        readonly provider: string;
+                      }
+                    | {
+                        readonly org: string;
+                        readonly provider: string;
+                        readonly repo: string;
+                      }
+                  )[];
+                };
+                readonly publicDeployments: {
+                  readonly allowPublicDeployments: boolean;
+                  readonly enabled: boolean;
+                };
+              };
               readonly description: string | null;
               readonly disableHardAutoBlocks: number | boolean;
               readonly disableRepositoryDispatchEvents: boolean;
@@ -34895,6 +35147,30 @@ export interface OpenApiDisplayResponseShapeByTagOperationStatusProperty {
         defaultRoles: {
           readonly teamPermissions: readonly string[];
           readonly teamRoles: readonly string[];
+        };
+        deploymentPolicy: {
+          readonly deploymentSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly string[];
+          };
+          readonly gitSources: {
+            readonly enabled: boolean;
+            readonly sources: readonly (
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                }
+              | {
+                  readonly org: string;
+                  readonly provider: string;
+                  readonly repo: string;
+                }
+            )[];
+          };
+          readonly publicDeployments: {
+            readonly allowPublicDeployments: boolean;
+            readonly enabled: boolean;
+          };
         };
         description: string | null;
         disableHardAutoBlocks: number | boolean;
