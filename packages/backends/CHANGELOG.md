@@ -1,5 +1,18 @@
 # @vercel/backends
 
+## 0.7.0
+
+### Minor Changes
+
+- 0a691bf: Change getServiceCrons to async.
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+### Patch Changes
+
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/build-utils@13.25.0
+
 ## 0.6.0
 
 ### Minor Changes

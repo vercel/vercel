@@ -1,5 +1,19 @@
 # @vercel/fs-detectors
 
+## 6.4.0
+
+### Minor Changes
+
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+### Patch Changes
+
+- Updated dependencies [0dbb8e5]
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/frameworks@3.26.1
+  - @vercel/build-utils@13.25.0
+
 ## 6.3.0
 
 ### Minor Changes
