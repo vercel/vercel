@@ -9,12 +9,7 @@ import { formatOutput } from '../../commands/api/request-builder';
 import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
-import { homedir } from 'os';
-import {
-  isAbsolute,
-  resolve as resolvePath,
-  relative as relativePath,
-} from 'path';
+import { relative as relativePath } from 'path';
 import {
   createPrompt,
   isDownKey,
@@ -388,10 +383,8 @@ type RunInferredCommandOptions = {
   help?: boolean;
   columns?: number;
   dryRun?: boolean;
-  cwd?: string;
   scope?: string;
   team?: string;
-  api?: string;
   projectPromptMode?: ProjectPromptMode;
 };
 
@@ -671,34 +664,12 @@ function parseProvidedCliInput(tokens: string[]): ParsedCliInput {
   return { positionals, options };
 }
 
-function expandHomeDirectory(pathValue: string): string {
-  if (pathValue === '~') {
-    return homedir();
-  }
-  if (pathValue.startsWith('~/')) {
-    return `${homedir()}${pathValue.slice(1)}`;
-  }
-  return pathValue;
-}
-
-function resolveCommandCwd(cwdOverride: string | undefined): string {
-  if (!cwdOverride) {
-    return process.cwd();
-  }
-
-  const expandedPath = expandHomeDirectory(cwdOverride);
-  return isAbsolute(expandedPath)
-    ? expandedPath
-    : resolvePath(process.cwd(), expandedPath);
-}
-
 async function resolveInferredContext(
-  cwdOverride: string | undefined,
   scopeOverride: string | undefined,
   teamOverride: string | undefined,
   client?: Client
 ): Promise<InferredCommandContext> {
-  const cwd = resolveCommandCwd(cwdOverride);
+  const cwd = client?.cwd ?? process.cwd();
 
   let linkedProject: { projectId: string; orgId?: string } | null = null;
   try {
@@ -786,19 +757,6 @@ async function resolveInferredContext(
       : null,
     team: resolvedTeam,
   };
-}
-
-function normalizeApiBaseUrl(apiOverride: string | undefined): string {
-  const fallback = 'https://api.vercel.com';
-  if (!apiOverride) {
-    return fallback;
-  }
-
-  try {
-    return new URL(apiOverride).toString().replace(/\/$/, '');
-  } catch {
-    return fallback;
-  }
 }
 
 function stringifyProvidedValue(value: string | boolean): string {
@@ -2585,7 +2543,8 @@ function buildRequestPreview(
     }, {});
 
   const queryString = new URLSearchParams(query).toString();
-  const url = `${normalizeApiBaseUrl(apiOverride)}${path}${queryString ? `?${queryString}` : ''}`;
+  const baseUrl = (apiOverride ?? 'https://api.vercel.com').replace(/\/$/, '');
+  const url = `${baseUrl}${path}${queryString ? `?${queryString}` : ''}`;
 
   return {
     method: metadata.method,
@@ -4052,12 +4011,6 @@ export async function runInferredCommand(
   if (options.team && !options.scope) {
     parsedOptions.scope = options.team;
   }
-  if (options.cwd) {
-    parsedOptions.cwd = options.cwd;
-  }
-  if (options.api) {
-    parsedOptions.api = options.api;
-  }
   if (options.dryRun === true) {
     parsedOptions['dry-run'] = true;
   }
@@ -4099,7 +4052,6 @@ export async function runInferredCommand(
   }, {});
 
   let context = await resolveInferredContext(
-    typeof parsedOptions.cwd === 'string' ? parsedOptions.cwd : undefined,
     typeof parsedOptions.scope === 'string' ? parsedOptions.scope : undefined,
     typeof parsedOptions.team === 'string' ? parsedOptions.team : undefined,
     options.client
@@ -4139,7 +4091,6 @@ export async function runInferredCommand(
         parsedOptions.scope = providedOptions.scope;
       }
       context = await resolveInferredContext(
-        typeof parsedOptions.cwd === 'string' ? parsedOptions.cwd : undefined,
         typeof parsedOptions.scope === 'string'
           ? parsedOptions.scope
           : undefined,
@@ -4214,10 +4165,6 @@ export async function runInferredCommand(
     }
   }
 
-  const apiBaseUrl =
-    typeof parsedOptions.api === 'string'
-      ? parsedOptions.api
-      : options.client?.apiUrl;
   const request = buildRequestPreview(
     metadata,
     argumentDefinitions,
@@ -4225,7 +4172,7 @@ export async function runInferredCommand(
     providedArguments,
     providedOptions,
     context,
-    apiBaseUrl
+    options.client?.apiUrl
   );
 
   if (isDryRun) {

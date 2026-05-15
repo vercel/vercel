@@ -330,7 +330,6 @@ describe('inferCommands', () => {
 
     const exitCode = await runInferredCommand(commands, ['projects', 'ls'], {
       client,
-      api: client.apiUrl,
     });
     expect(exitCode).toBe(0);
     expect(client.stdout.getFullOutput()).toContain('id');
@@ -358,7 +357,6 @@ describe('inferCommands', () => {
 
     const exitCode = await runInferredCommand(commands, ['projects', 'ls'], {
       client,
-      api: client.apiUrl,
     });
     expect(exitCode).toBe(0);
     const stdout = client.stdout.getFullOutput();
@@ -390,7 +388,6 @@ describe('inferCommands', () => {
       ['projects', 'ls', '--raw'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -423,7 +420,6 @@ describe('inferCommands', () => {
       ['projects', 'ls', '--json'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -471,7 +467,6 @@ describe('inferCommands', () => {
       ['projects', 'ls', '--json'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -527,7 +522,6 @@ describe('inferCommands', () => {
       ['projects', 'ls', '--json'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -588,7 +582,6 @@ describe('inferCommands', () => {
       ['projects', 'ls', '--json'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -640,7 +633,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -692,7 +684,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -743,7 +734,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -799,7 +789,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -850,7 +839,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -906,7 +894,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -957,7 +944,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -1014,7 +1000,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -1068,7 +1053,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -1124,7 +1108,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -1180,7 +1163,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -1228,7 +1210,6 @@ describe('inferCommands', () => {
       ['projects', 'ls'],
       {
         client,
-        api: client.apiUrl,
         scope: 'jsee',
       }
     );
@@ -1297,7 +1278,6 @@ describe('inferCommands', () => {
       ['projects', 'ls', '--dry-run'],
       {
         client,
-        api: client.apiUrl,
       }
     );
     expect(exitCode).toBe(0);
@@ -1515,7 +1495,6 @@ describe('inferCommands', () => {
       ['projects', 'add'],
       {
         client,
-        api: client.apiUrl,
       }
     );
 
@@ -1561,7 +1540,6 @@ describe('inferCommands', () => {
       ['projects', 'add', '--dry-run'],
       {
         client,
-        api: client.apiUrl,
       }
     );
 
@@ -1606,7 +1584,6 @@ describe('inferCommands', () => {
       ['projects', 'inspect', '--dry-run'],
       {
         client,
-        api: client.apiUrl,
         projectPromptMode: 'legacy-search',
         scope: 'jsee',
       }
@@ -1675,7 +1652,6 @@ describe('inferCommands', () => {
       ['projects', 'inspect', 'prj_other_team'],
       {
         client,
-        api: client.apiUrl,
       }
     );
 
@@ -1726,7 +1702,6 @@ describe('inferCommands', () => {
         ['projects', 'inspect', 'prj_missing'],
         {
           client,
-          api: client.apiUrl,
         }
       );
 
@@ -1797,7 +1772,6 @@ describe('inferCommands', () => {
       ['deployments', 'inspect', '--dry-run'],
       {
         client,
-        api: client.apiUrl,
         scope: 'jsee',
         projectPromptMode: 'legacy-search',
       }
@@ -1875,7 +1849,6 @@ describe('inferCommands', () => {
       ['deployments', 'inspect', '--dry-run'],
       {
         client,
-        api: client.apiUrl,
         scope: 'jsee',
         projectPromptMode: 'legacy-search',
       }
@@ -1942,7 +1915,6 @@ describe('inferCommands', () => {
       ['projects', 'inspect'],
       {
         client,
-        api: client.apiUrl,
       }
     );
 
