@@ -1,46 +1,44 @@
 import type { Config, PackageJson } from '@vercel/build-utils';
-import type { Framework } from '@vercel/frameworks';
 
-export const TANSTACK_NITRO_FALLBACK_BUILD_COMMAND =
-  'npx nitro build --builder vite';
+export const TANSTACK_NITRO_BUILD_COMMAND = 'nitro build --builder vite';
 
 function isExperimentalInjectNitroEnabled() {
   const value = process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
   return value === '1' || value?.toLowerCase() === 'true';
 }
 
-interface TanStackNitroFallbackBuildCommandOptions {
-  framework?: Framework;
+interface TanStackNitroFallbackOptions {
+  framework?: { slug: string | null };
   pkg?: PackageJson | null;
   config: Config;
   buildCommand: string | null;
 }
 
-export function getTanStackNitroFallbackBuildCommand({
+export function shouldUseTanStackNitroFallback({
   framework,
   pkg,
   config,
   buildCommand,
-}: TanStackNitroFallbackBuildCommandOptions): string | null {
+}: TanStackNitroFallbackOptions): boolean {
   if (!isExperimentalInjectNitroEnabled()) {
-    return null;
+    return false;
   }
 
   if (framework?.slug !== 'tanstack-start') {
-    return null;
+    return false;
   }
 
   if (config.projectSettings?.buildCommand != null) {
-    return null;
+    return false;
   }
 
   if (typeof buildCommand === 'string') {
-    return null;
+    return false;
   }
 
   const buildScript = pkg?.scripts?.build;
   if (typeof buildScript !== 'string' || buildScript.trim() !== 'vite build') {
-    return null;
+    return false;
   }
 
   const dependencies = {
@@ -48,8 +46,20 @@ export function getTanStackNitroFallbackBuildCommand({
     ...pkg?.devDependencies,
   };
   if (dependencies.nitro) {
-    return null;
+    return false;
   }
 
-  return TANSTACK_NITRO_FALLBACK_BUILD_COMMAND;
+  return true;
+}
+
+export function getTanStackNitroInstallCommand(pkg: PackageJson): string {
+  const dependencies = {
+    ...pkg.dependencies,
+    ...pkg.devDependencies,
+  };
+  const packages = dependencies.vite ? 'nitro' : 'nitro vite';
+
+  // Install into the project so Nitro can resolve `vite` from node_modules
+  // instead of an isolated `npx` cache.
+  return `npm install --no-save ${packages}`;
 }

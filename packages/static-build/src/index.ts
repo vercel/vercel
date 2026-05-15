@@ -52,7 +52,11 @@ import {
 } from '@vercel/fs-detectors';
 import { getHugoUrl } from './utils/hugo';
 import { once } from 'events';
-import { getTanStackNitroFallbackBuildCommand } from './tanstack';
+import {
+  getTanStackNitroInstallCommand,
+  shouldUseTanStackNitroFallback,
+  TANSTACK_NITRO_BUILD_COMMAND,
+} from './tanstack';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -384,18 +388,27 @@ export const build: BuildV2 = async ({
   let buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
 
-  const tanstackNitroFallbackBuildCommand =
-    getTanStackNitroFallbackBuildCommand({
+  const useTanStackNitroFallback =
+    !meta.isDev &&
+    pkg &&
+    shouldUseTanStackNitroFallback({
       framework,
       pkg,
       config,
       buildCommand,
     });
-  if (!meta.isDev && tanstackNitroFallbackBuildCommand) {
+  if (useTanStackNitroFallback) {
+    const dependencies = {
+      ...pkg.dependencies,
+      ...pkg.devDependencies,
+    };
+    const viteNote = dependencies.vite
+      ? ''
+      : ' Installing `vite` alongside `nitro` because it is not declared as a dependency.';
     console.warn(
-      'Detected TanStack Start with SSR enabled but no `nitro` dependency. Running `npx nitro build --builder vite` instead of the `vite build` script.'
+      `Detected TanStack Start with SSR enabled but no \`nitro\` dependency. Installing Nitro and running \`nitro build --builder vite\` instead of the \`vite build\` script.${viteNote}`
     );
-    buildCommand = tanstackNitroFallbackBuildCommand;
+    buildCommand = null;
   }
 
   if (pkg || buildCommand) {
@@ -761,8 +774,22 @@ export const build: BuildV2 = async ({
       }
 
       try {
-        const found =
-          typeof buildCommand === 'string'
+        const found = useTanStackNitroFallback
+          ? (await execCommand(getTanStackNitroInstallCommand(pkg), {
+              env: {
+                YARN_NODE_LINKER: 'node-modules',
+                ...cliEnv,
+              },
+              cwd: entrypointDir,
+            })) &&
+            (await execCommand(TANSTACK_NITRO_BUILD_COMMAND, {
+              env: {
+                YARN_NODE_LINKER: 'node-modules',
+                ...cliEnv,
+              },
+              cwd: entrypointDir,
+            }))
+          : typeof buildCommand === 'string'
             ? await execCommand(buildCommand, {
                 // Yarn v2 PnP mode may be activated, so force
                 // "node-modules" linker style

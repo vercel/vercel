@@ -2,14 +2,15 @@ import path from 'path';
 import { remove } from 'fs-extra';
 import { build } from '../src';
 import {
-  getTanStackNitroFallbackBuildCommand,
-  TANSTACK_NITRO_FALLBACK_BUILD_COMMAND,
+  getTanStackNitroInstallCommand,
+  shouldUseTanStackNitroFallback,
+  TANSTACK_NITRO_BUILD_COMMAND,
 } from '../src/tanstack';
 
 vi.setConfig({ testTimeout: 2 * 60 * 1000, hookTimeout: 2 * 60 * 1000 });
 
 describe('build()', () => {
-  describe('getTanStackNitroFallbackBuildCommand()', () => {
+  describe('TanStack Nitro fallback', () => {
     const tanstackFramework = { slug: 'tanstack-start' } as any;
     const basePkg = {
       scripts: {
@@ -26,30 +27,44 @@ describe('build()', () => {
       vi.unstubAllEnvs();
     });
 
-    it('returns fallback command for TanStack Start with vite build and no nitro dependency', () => {
+    it('enables fallback for TanStack Start with vite build and no nitro dependency', () => {
       vi.stubEnv('VERCEL_EXPERIMENTAL_INJECT_NITRO', '1');
-      const command = getTanStackNitroFallbackBuildCommand({
+      const enabled = shouldUseTanStackNitroFallback({
         framework: tanstackFramework,
         pkg: basePkg,
         config: { zeroConfig: true, projectSettings: {} },
         buildCommand: null,
       });
-      expect(command).toBe(TANSTACK_NITRO_FALLBACK_BUILD_COMMAND);
+      expect(enabled).toBe(true);
+      expect(getTanStackNitroInstallCommand(basePkg)).toBe(
+        'npm install --no-save nitro vite'
+      );
+      expect(TANSTACK_NITRO_BUILD_COMMAND).toBe('nitro build --builder vite');
     });
 
-    it('does not return fallback command when VERCEL_EXPERIMENTAL_INJECT_NITRO is not enabled', () => {
-      const command = getTanStackNitroFallbackBuildCommand({
+    it('installs only nitro when vite is already declared', () => {
+      const pkg = {
+        ...basePkg,
+        devDependencies: { vite: 'latest' },
+      };
+      expect(getTanStackNitroInstallCommand(pkg)).toBe(
+        'npm install --no-save nitro'
+      );
+    });
+
+    it('does not enable fallback when VERCEL_EXPERIMENTAL_INJECT_NITRO is not enabled', () => {
+      const enabled = shouldUseTanStackNitroFallback({
         framework: tanstackFramework,
         pkg: basePkg,
         config: { zeroConfig: true, projectSettings: {} },
         buildCommand: null,
       });
-      expect(command).toBe(null);
+      expect(enabled).toBe(false);
     });
 
-    it('does not return fallback command when nitro dependency exists', () => {
+    it('does not enable fallback when nitro dependency exists', () => {
       vi.stubEnv('VERCEL_EXPERIMENTAL_INJECT_NITRO', '1');
-      const command = getTanStackNitroFallbackBuildCommand({
+      const enabled = shouldUseTanStackNitroFallback({
         framework: tanstackFramework,
         pkg: {
           ...basePkg,
@@ -58,12 +73,12 @@ describe('build()', () => {
         config: { zeroConfig: true, projectSettings: {} },
         buildCommand: null,
       });
-      expect(command).toBe(null);
+      expect(enabled).toBe(false);
     });
 
-    it('does not return fallback command when project settings build command is set', () => {
+    it('does not enable fallback when project settings build command is set', () => {
       vi.stubEnv('VERCEL_EXPERIMENTAL_INJECT_NITRO', '1');
-      const command = getTanStackNitroFallbackBuildCommand({
+      const enabled = shouldUseTanStackNitroFallback({
         framework: tanstackFramework,
         pkg: basePkg,
         config: {
@@ -72,7 +87,7 @@ describe('build()', () => {
         },
         buildCommand: null,
       });
-      expect(command).toBe(null);
+      expect(enabled).toBe(false);
     });
   });
 
