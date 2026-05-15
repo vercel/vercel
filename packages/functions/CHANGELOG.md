@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.6.0
+
+### Minor Changes
+
+- 102f82b: `getCache().set()` now defaults `options.name` to the provided `key` when omitted, so cache entries get a human-readable label in o11y by default. Pass `name: ''` to suppress this behavior and use the hashed key.
+
 ## 3.5.1
 
 ### Patch Changes
