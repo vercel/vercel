@@ -37,7 +37,7 @@ describe('build()', () => {
       });
       expect(enabled).toBe(true);
       expect(getTanStackNitroBuildCommand()).toBe(
-        `npm install --no-save ${TANSTACK_NITRO_NIGHTLY_PACKAGE} && ./node_modules/.bin/nitro build --builder vite`
+        `npx --yes -p '${TANSTACK_NITRO_NIGHTLY_PACKAGE}' nitro build --builder vite`
       );
     });
 
