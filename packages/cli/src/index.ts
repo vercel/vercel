@@ -61,6 +61,11 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
+import {
+  canAutoUpdate,
+  hasAutoUpdatePreference,
+  setAutoUpdate,
+} from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
@@ -1282,6 +1287,18 @@ main()
       });
       if (latest) {
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
+        const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
+
+        if (await canAutoUpdate(client, originalExitCode)) {
+          const upgradeExitCode = await executeUpgrade();
+          process.exitCode = originalExitCode;
+          if (upgradeExitCode !== 0) {
+            output.log(
+              `Automatic update failed. Continuing with original exit code ${originalExitCode}.`
+            );
+          }
+          return;
+        }
 
         if (isTTY) {
           // Interactive mode: prompt user to update now
@@ -1311,6 +1328,16 @@ main()
 
             if (shouldUpgrade) {
               const upgradeExitCode = await executeUpgrade();
+              if (
+                upgradeExitCode === 0 &&
+                !hasAutoUpdatePreference(client.config)
+              ) {
+                const enableAutoUpdates = await client.input.confirm(
+                  'Enable automatic CLI updates for future releases?',
+                  false
+                );
+                setAutoUpdate(client, enableAutoUpdates);
+              }
               process.exitCode = upgradeExitCode;
               return;
             }

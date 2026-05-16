@@ -23,6 +23,9 @@ describe('cli-config schema', () => {
         enabled: true,
         sampleRate: 1,
       },
+      updates: {
+        auto: true,
+      },
       authTokenStorage: {
         nested: 'data',
       },
@@ -34,6 +37,9 @@ describe('cli-config schema', () => {
       telemetry: {
         enabled: true,
         sampleRate: 1,
+      },
+      updates: {
+        auto: true,
       },
       authTokenStorage: {
         nested: 'data',
