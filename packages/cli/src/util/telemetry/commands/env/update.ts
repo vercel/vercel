@@ -51,6 +51,15 @@ export class EnvUpdateTelemetryClient
     }
   }
 
+  trackCliOptionScope(scope: string | undefined) {
+    if (scope) {
+      this.trackCliOption({
+        option: 'scope',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionValue(value: string | undefined) {
     if (value) {
       this.trackCliOption({

@@ -26,7 +26,6 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { addSubcommand } from './command';
-import { getLinkedProject } from '../../util/projects/link';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import getTeamById from '../../util/teams/get-team-by-id';
@@ -37,6 +36,7 @@ import {
   buildEnvAddCommandWithPreservedArgs,
   getPreservedArgsForEnvAdd,
 } from '../../util/agent-output';
+import { getEnvLinkedProject } from './project';
 
 type EnvType = 'encrypted' | 'sensitive';
 
@@ -137,6 +137,7 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliFlagForce(opts['--force']);
   telemetryClient.trackCliFlagGuidance(opts['--guidance']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+  telemetryClient.trackCliOptionScope(opts['--scope']);
 
   if (args.length > 3) {
     output.error(
@@ -163,7 +164,11 @@ export default async function add(client: Client, argv: string[]) {
 
   // Non-interactive: resolve link and choices once, then report all missing requirements in a single JSON (no iteration)
   if (client.nonInteractive) {
-    const link = await getLinkedProject(client);
+    const link = await getEnvLinkedProject(
+      client,
+      opts['--project'],
+      opts['--scope']
+    );
     if (link.status === 'error') {
       return link.exitCode;
     }
@@ -433,7 +438,11 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  const link = await getLinkedProject(client);
+  const link = await getEnvLinkedProject(
+    client,
+    opts['--project'],
+    opts['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

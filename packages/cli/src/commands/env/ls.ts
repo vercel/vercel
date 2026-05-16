@@ -22,10 +22,10 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { getEnvLinkedProject } from './project';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({
@@ -69,8 +69,13 @@ export default async function ls(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagGuidance(flags['--guidance']);
   telemetryClient.trackCliOptionFormat(flags['--format']);
+  telemetryClient.trackCliOptionScope(flags['--scope']);
 
-  const link = await getLinkedProject(client);
+  const link = await getEnvLinkedProject(
+    client,
+    flags['--project'],
+    flags['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

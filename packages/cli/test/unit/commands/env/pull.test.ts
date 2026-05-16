@@ -6,7 +6,7 @@ import env from '../../../../src/commands/env';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('env pull', () => {
@@ -65,6 +65,48 @@ describe('env pull', () => {
         value: 'TRUE',
       },
     ]);
+  });
+
+  it('should pull with -s scope and --project without a local link', async () => {
+    useUser();
+    const teams = useTeams('team_env_scope') as Team[];
+    const team = teams[0];
+    team.slug = 'foo';
+    useProject(
+      {
+        ...defaultProject,
+        id: 'explicit-env-pull',
+        name: 'bar',
+        accountId: team.id,
+      },
+      [
+        {
+          type: 'encrypted',
+          id: 'explicit-env-pull-var',
+          key: 'SCOPED_PROJECT_VAR',
+          value: 'from-scoped-project',
+          target: ['development'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const cwd = setupUnitFixture('vercel-pull-unlinked');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', '-s', 'foo', '--project', 'bar', '--yes');
+
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    await expect(client.stderr).toOutput('Created .env.local file');
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env pull"').toEqual(0);
+
+    const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(rawDevEnv).toContain('SCOPED_PROJECT_VAR="from-scoped-project"');
   });
 
   it('should handle pulling from Preview env vars', async () => {

@@ -35,4 +35,13 @@ export class EnvLsTelemetryClient
       this.trackCliFlag('guidance');
     }
   }
+
+  trackCliOptionScope(scope: string | undefined) {
+    if (scope) {
+      this.trackCliOption({
+        option: 'scope',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

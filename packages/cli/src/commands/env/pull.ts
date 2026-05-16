@@ -27,13 +27,13 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
-import { getLinkedProject } from '../../util/projects/link';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import { getEnvLinkedProject } from './project';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -110,8 +110,13 @@ export default async function pull(
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionId(opts['--id']);
+  telemetryClient.trackCliOptionScope(opts['--scope']);
 
-  const link = await getLinkedProject(client);
+  const link = await getEnvLinkedProject(
+    client,
+    opts['--project'],
+    opts['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

@@ -6,10 +6,10 @@ import { printError } from '../../util/error';
 import { runSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-import { getLinkedProject } from '../../util/projects/link';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
+import { getEnvLinkedProject } from './project';
 
 /**
  * Parses argv for the run subcommand, splitting on `--` to separate
@@ -65,7 +65,11 @@ export default async function run(client: Client): Promise<number> {
   }
 
   // Get the linked project
-  const link = await getLinkedProject(client);
+  const link = await getEnvLinkedProject(
+    client,
+    parsedArgs.flags['--project'],
+    parsedArgs.flags['--scope']
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

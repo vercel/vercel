@@ -72,6 +72,14 @@ export const globalCommandOptions = [
     deprecated: false,
   },
   {
+    name: 'project',
+    shorthand: null,
+    type: String,
+    argument: 'PROJECT',
+    description: 'Set a custom project',
+    deprecated: false,
+  },
+  {
     name: 'token',
     shorthand: 't',
     type: String,
