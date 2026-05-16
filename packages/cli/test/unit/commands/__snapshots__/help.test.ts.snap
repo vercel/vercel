@@ -918,6 +918,7 @@ exports[`help command > connex help output snapshots > connex help column width 
   Commands:
 
   create  type    Create a new connector                                
+  update  id      Update connector branding (icon and colors)           
   list            List connectors linked to the current project (falls  
                   back to every connector in the team when no project is
                   linked or when --all-projects is set)                 

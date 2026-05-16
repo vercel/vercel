@@ -9,6 +9,7 @@ import { ConnexTelemetryClient } from '../../util/telemetry/commands/connex';
 import { type Command, help } from '../help';
 import {
   createSubcommand,
+  updateSubcommand,
   listSubcommand,
   tokenSubcommand,
   attachSubcommand,
@@ -18,6 +19,7 @@ import {
   connexCommand,
 } from './command';
 import { create } from './create';
+import { update } from './update';
 import { list } from './list';
 import { token } from './token';
 import { attach } from './attach';
@@ -33,6 +35,7 @@ import { packageName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
+  update: getCommandAliases(updateSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
   attach: getCommandAliases(attachSubcommand),
@@ -97,6 +100,31 @@ export default async function connex(client: Client): Promise<number> {
           client,
           createParsedArgs.args,
           createParsedArgs.flags
+        );
+      }
+      case 'update': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connex', subcommandOriginal);
+          printHelp(updateSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+
+        const updateFlagsSpec = getFlagsSpecification(updateSubcommand.options);
+        const updateParsedArgs = parseArguments(subArgs, updateFlagsSpec);
+        telemetry.trackCliArgumentId(updateParsedArgs.args[0]);
+        telemetry.trackCliOptionIcon(updateParsedArgs.flags['--icon']);
+        telemetry.trackCliOptionBackgroundColor(
+          updateParsedArgs.flags['--background-color']
+        );
+        telemetry.trackCliOptionAccentColor(
+          updateParsedArgs.flags['--accent-color']
+        );
+        telemetry.trackCliOptionFormat(updateParsedArgs.flags['--format']);
+        return await update(
+          client,
+          updateParsedArgs.args,
+          updateParsedArgs.flags
         );
       }
       case 'list': {
