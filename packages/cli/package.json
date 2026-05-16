@@ -28,7 +28,8 @@
     "type-check": "tsc --noEmit",
     "test:evals": "tsx evals/run.ts",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
-    "test:evals:dry": "tsx evals/run.ts --dry"
+    "test:evals:dry": "tsx evals/run.ts --dry",
+    "test:evals:local-fixture": "tsx evals/run.ts --local-fixture"
   },
   "bin": {
     "vc": "./dist/vc.js",

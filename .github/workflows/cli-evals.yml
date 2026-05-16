@@ -1,11 +1,8 @@
 name: CLI Evals
 
-# Runs on PRs only when evals change (to limit AI gateway cost). Also runnable manually via "Run workflow".
+# Runs weekly and can also be started manually via "Run workflow".
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'packages/cli/evals/**'
   schedule:
     # Run weekly on Tuesday at 9:00 AM UTC.
     - cron: '0 9 * * 2'
@@ -13,9 +10,20 @@ on:
 jobs:
   evals:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     # TODO: Remove continue-on-error when evals should block PR merge.
     continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        experiment:
+          - cli-claude-opus-4.7
+          - cli-gpt-5.4-medium
+          - cli-gpt-5.5-pro
+          - cli-claude-opus-4.6
+        skills_mode:
+          - with-skills
+          - without-skills
     # Evals use separate secrets (EVAL_*) so you can point to a dedicated evals team.
     # Same pattern as test.yml / test-e2e.yml: VERCEL_TOKEN + team/project IDs; add EVAL_AI_GATEWAY_API_KEY for the agent.
     steps:
@@ -51,8 +59,11 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
           CLI_EVAL_TEAM_ID: ${{ secrets.EVAL_TEAM_ID }}
           CLI_EVAL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
-          # Run each eval with and without the CLI skills directory
-          CLI_EVAL_SKILLS_MODES: with-skills,without-skills
+          # Run one skills mode per matrix job so slower models do not block the full matrix.
+          CLI_EVAL_SKILLS_MODES: ${{ matrix.skills_mode }}
+          # Run comparable agent/model experiments. Matches the next-evals-oss
+          # pattern where each model has its own experiment file.
+          CLI_EVAL_EXPERIMENTS: ${{ matrix.experiment }}
           # Limit memory pressure from concurrent Docker + Node (reduce OOM exit 137)
           NODE_OPTIONS: --max-old-space-size=4096
 
