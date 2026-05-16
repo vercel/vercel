@@ -753,7 +753,7 @@ export default async function add(client: Client, argv: string[]) {
     !skipConfirm;
   if (canPromptForType) {
     output.log(
-      `Sensitive values cannot be retrieved later from the dashboard or CLI.`
+      `Sensitive values cannot be retrieved later from the dashboard or CLI, including via ${getCommandName('env pull')}.`
     );
     const keepSensitive = await client.input.confirm(
       `Make it sensitive?`,
@@ -778,6 +778,20 @@ export default async function add(client: Client, argv: string[]) {
         `Your team requires sensitive Environment Variables for Production and Preview.`
       );
     }
+  }
+
+  // When --sensitive is explicitly set (not via interactive prompt), remind the
+  // user that sensitive values cannot be pulled. The interactive prompt already
+  // surfaces this note, but non-interactive / --yes invocations skip that flow.
+  if (
+    finalType === 'sensitive' &&
+    hasSensitiveCapable &&
+    !canPromptForType &&
+    forceSensitive
+  ) {
+    output.log(
+      `Sensitive values cannot be retrieved later from the dashboard or CLI, including via ${getCommandName('env pull')}.`
+    );
   }
 
   const upsert = opts['--force'] ? 'true' : '';
