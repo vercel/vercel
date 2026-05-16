@@ -12,6 +12,7 @@ describe('@vercel/functions', () => {
     'ipAddress',
     'next',
     'rewrite',
+    'upgradeWebSocket',
     'waitUntil',
   ];
 

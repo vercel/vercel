@@ -18,3 +18,5 @@ export {
 export type { PurgeApi, DangerouslyDeleteOptions } from './purge/types';
 export { addCacheTag } from './addcachetag';
 export type { AddCacheTagApi } from './addcachetag/types';
+export { upgradeWebSocket } from './websocket';
+export type { WebSocket, RawData as WebSocketData } from 'ws';

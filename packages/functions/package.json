@@ -44,6 +44,7 @@
     "@aws-sdk/credential-provider-web-identity": "3.609.0",
     "@smithy/types": "3.3.0",
     "@types/pg": "8.15.5",
+    "@types/ws": "8.18.1",
     "cassandra-driver": "4.8.0",
     "ioredis": "5.6.1",
     "mariadb": "3.4.5",
@@ -79,6 +80,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@vercel/oidc": "workspace:*"
+    "@vercel/oidc": "workspace:*",
+    "ws": "8.20.0"
   }
 }
