@@ -116,6 +116,7 @@ function hasProxyConfig(): boolean {
 epipebomb();
 
 let client: Client;
+let resolvedCommandForUpdate: string | undefined;
 
 // Register global error handlers early to catch errors during initialization.
 // Sentry is lazily initialized only when an error actually occurs.
@@ -1183,6 +1184,7 @@ const main = async () => {
         earlyGetUserPromise = getUser(client).catch(() => undefined);
       }
 
+      resolvedCommandForUpdate = targetCommand;
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));
@@ -1289,7 +1291,13 @@ main()
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
         const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
-        if (await canAutoUpdate(client, originalExitCode)) {
+        if (
+          await canAutoUpdate(
+            client,
+            originalExitCode,
+            resolvedCommandForUpdate
+          )
+        ) {
           const upgradeExitCode = await executeUpgrade();
           process.exitCode = originalExitCode;
           if (upgradeExitCode !== 0) {

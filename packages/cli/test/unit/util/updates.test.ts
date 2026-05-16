@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import ciInfo from 'ci-info';
 import { client } from '../../mocks/client';
 import * as updateCommand from '../../../src/util/get-update-command';
 import * as configFilesUtil from '../../../src/util/config/files';
@@ -9,14 +10,28 @@ import {
   setAutoUpdate,
 } from '../../../src/util/updates';
 
+vi.mock('ci-info', () => ({
+  default: {
+    isCI: false,
+  },
+}));
+
 const isGlobalSpy = vi.spyOn(updateCommand, 'isGlobal');
 const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
+
+function setIsCI(value: boolean) {
+  Object.defineProperty(ciInfo, 'isCI', {
+    configurable: true,
+    value,
+  });
+}
 
 describe('updates', () => {
   afterEach(() => {
     client.reset();
     isGlobalSpy.mockReset();
     writeConfigSpy.mockClear();
+    setIsCI(false);
   });
 
   it('reads auto-update state from global config', () => {
@@ -63,6 +78,15 @@ describe('updates', () => {
     expect(isGlobalSpy).not.toHaveBeenCalled();
   });
 
+  it('does not auto-update in CI', async () => {
+    client.config = { updates: { auto: true } };
+    setIsCI(true);
+    isGlobalSpy.mockResolvedValue(true);
+
+    await expect(canAutoUpdate(client, 0)).resolves.toBe(false);
+    expect(isGlobalSpy).not.toHaveBeenCalled();
+  });
+
   it('does not auto-update local installs', async () => {
     client.config = { updates: { auto: true } };
     isGlobalSpy.mockResolvedValue(false);
@@ -76,6 +100,14 @@ describe('updates', () => {
     isGlobalSpy.mockResolvedValue(true);
 
     await expect(canAutoUpdate(client, 0)).resolves.toBe(false);
+    expect(isGlobalSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not auto-update after the resolved upgrade command', async () => {
+    client.config = { updates: { auto: true } };
+    isGlobalSpy.mockResolvedValue(true);
+
+    await expect(canAutoUpdate(client, 0, 'upgrade')).resolves.toBe(false);
     expect(isGlobalSpy).not.toHaveBeenCalled();
   });
 });

@@ -24,7 +24,11 @@ export function setAutoUpdate(client: Client, enabled: boolean): void {
   writeToConfigFile(client.config);
 }
 
-export async function canAutoUpdate(client: Client, exitCode: number) {
+export async function canAutoUpdate(
+  client: Client,
+  exitCode: number,
+  command?: string
+) {
   if (!isAutoUpdateEnabled(client.config)) {
     return false;
   }
@@ -41,7 +45,7 @@ export async function canAutoUpdate(client: Client, exitCode: number) {
     return false;
   }
 
-  if (process.argv[2] === 'upgrade') {
+  if (command === 'upgrade') {
     return false;
   }
 
