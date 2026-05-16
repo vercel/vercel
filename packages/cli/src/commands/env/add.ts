@@ -753,7 +753,7 @@ export default async function add(client: Client, argv: string[]) {
     !skipConfirm;
   if (canPromptForType) {
     output.log(
-      `Sensitive values cannot be retrieved later from the dashboard or CLI.`
+      `Sensitive values cannot be retrieved later from the dashboard or CLI, including via ${getCommandName('env pull')}.`
     );
     const keepSensitive = await client.input.confirm(
       `Make it sensitive?`,
@@ -778,6 +778,20 @@ export default async function add(client: Client, argv: string[]) {
         `Your team requires sensitive Environment Variables for Production and Preview.`
       );
     }
+  }
+
+  // When finalType defaults to sensitive (53.x: Production/Preview default) or is
+  // forced sensitive and the interactive prompt was not shown, warn the user that
+  // the value cannot be retrieved later via env pull. This covers:
+  //   • --value V --yes  (skipConfirm=true, canPromptForType=false, sensitive by default)
+  //   • --sensitive --yes  (userWasExplicit=true → canPromptForType=false)
+  //   • client.nonInteractive=true  (canPromptForType=false)
+  // The policy-on branch above shows its own message but does not mention env pull,
+  // so we supplement it here too when applicable.
+  if (finalType === 'sensitive' && hasSensitiveCapable && !canPromptForType) {
+    output.log(
+      `Sensitive values cannot be retrieved later from the dashboard or CLI, including via ${getCommandName('env pull')}.`
+    );
   }
 
   const upsert = opts['--force'] ? 'true' : '';
