@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import upgrade from '../../../../src/commands/upgrade';
+import * as configFilesUtil from '../../../../src/util/config/files';
+
+const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
 describe('upgrade', () => {
+  afterEach(() => {
+    writeConfigSpy.mockClear();
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'upgrade';
@@ -42,6 +49,7 @@ describe('upgrade', () => {
       await expect(client.stderr).toOutput('Current version:');
       await expect(client.stderr).toOutput('Installation type:');
       await expect(client.stderr).toOutput('Upgrade command:');
+      await expect(client.stderr).toOutput('Automatic updates: Disabled');
     });
   });
 
@@ -70,6 +78,7 @@ describe('upgrade', () => {
       expect(json).toHaveProperty('currentVersion');
       expect(json).toHaveProperty('installationType');
       expect(json).toHaveProperty('upgradeCommand');
+      expect(json).toHaveProperty('autoUpdatesEnabled', false);
       expect(['global', 'local']).toContain(json.installationType);
     });
   });
@@ -100,7 +109,59 @@ describe('upgrade', () => {
       expect(json).toHaveProperty('currentVersion');
       expect(json).toHaveProperty('installationType');
       expect(json).toHaveProperty('upgradeCommand');
+      expect(json).toHaveProperty('autoUpdatesEnabled', false);
     });
+  });
+
+  describe('--enable-auto', () => {
+    it('enables automatic updates in the global config', async () => {
+      client.setArgv('upgrade', '--enable-auto');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.updates?.auto).toBe(true);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        updates: { auto: true },
+      });
+      await expect(client.stderr).toOutput('Automatic CLI updates enabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:enable-auto',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('--disable-auto', () => {
+    it('disables automatic updates in the global config', async () => {
+      client.config = { updates: { auto: true } };
+      client.setArgv('upgrade', '--disable-auto');
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.config.updates?.auto).toBe(false);
+      expect(writeConfigSpy).toHaveBeenCalledWith({
+        updates: { auto: false },
+      });
+      await expect(client.stderr).toOutput('Automatic CLI updates disabled.');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:disable-auto',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  it('rejects mutually exclusive auto-update flags', async () => {
+    client.setArgv('upgrade', '--enable-auto', '--disable-auto');
+    const result = await upgrade(client);
+
+    expect(result).toBe(1);
+    await expect(client.stderr).toOutput(
+      'Cannot use --enable-auto and --disable-auto together'
+    );
   });
 
   it('should reject invalid arguments', async () => {
