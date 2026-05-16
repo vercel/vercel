@@ -5,15 +5,18 @@ import {
   normalizeRoutePrefix,
   scopeRouteSourceToOwnership,
 } from '@vercel/routing-utils';
-import {
-  type DetectServicesOptions,
-  type DetectServicesResult,
-  type EnvVars,
-  type InferredServicesResult,
-  type ResolvedServicesResult,
-  type Service,
-  type InferredServicesConfig,
-  type ServicesRoutes,
+import type {
+  DetectServicesOptions,
+  DetectServicesResult,
+  EnvVars,
+  ExperimentalServices,
+  InferredServicesConfig,
+  InferredServicesResult,
+  ResolvedServicesResult,
+  Service,
+  ServiceDetectionError,
+  ServiceDetectionWarning,
+  ServicesRoutes,
 } from './types';
 import {
   getInternalServiceCronPathPrefix,
@@ -23,9 +26,11 @@ import {
   isStaticBuild,
   readVercelConfig,
 } from './utils';
+import type { DetectorFilesystem } from '../detectors/filesystem';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 import { detectRailwayServices } from './detect-railway';
+import { detectRenderServices } from './detect-render';
 
 // don't apply subdomain rewrites on preview urls
 const PREVIEW_DOMAIN_MISSING: HasField = [
@@ -80,6 +85,10 @@ function toInferredLayoutConfig(
   for (const [name, service] of Object.entries(services)) {
     const serviceConfig: InferredServicesConfig[string] = {};
 
+    if (service.type) {
+      serviceConfig.type = service.type;
+    }
+
     if (typeof service.entrypoint === 'string') {
       serviceConfig.entrypoint = service.entrypoint;
     }
@@ -101,6 +110,12 @@ function toInferredLayoutConfig(
   }
 
   return inferredConfig;
+}
+
+interface PlatformDetectResult {
+  services: ExperimentalServices | null;
+  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
 /**
@@ -140,96 +155,27 @@ export async function detectServices(
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
-  // Try auto-detection
+  // Try auto-detection of services.
+  // Priority: Railway > Render > blessed layouts.
+  // Any hard error (.errors) from detection will result into
+  // exit from detection and return of the error
+  // back to the user
   if (!hasConfiguredServices) {
-    // Try Railway config detection first
-    const railwayResult = await detectRailwayServices({ fs: scopedFs });
-    if (railwayResult.errors.length > 0) {
-      return withResolvedResult({
-        services: [],
-        source: 'auto-detected',
-        useImplicitEnvInjection: true,
-        routes: emptyRoutes(),
-        errors: railwayResult.errors,
-        warnings: railwayResult.warnings,
-      });
-    }
-    if (railwayResult.services) {
-      const result = await resolveAllConfiguredServices(
-        railwayResult.services,
-        scopedFs,
-        'generated'
-      );
-      const inferred =
-        result.errors.length === 0 && result.services.length > 0
-          ? {
-              source: 'railway' as const,
-              config: toInferredLayoutConfig(railwayResult.services),
-              services: result.services,
-              warnings: railwayResult.warnings,
-            }
-          : null;
+    const detectors: Array<{
+      detect: (options: {
+        fs: DetectorFilesystem;
+      }) => Promise<PlatformDetectResult>;
+      source: InferredServicesResult['source'];
+    }> = [
+      { detect: detectRailwayServices, source: 'railway' },
+      { detect: detectRenderServices, source: 'render' },
+      { detect: autoDetectServices, source: 'layout' },
+    ];
 
-      // Railway detection is used only for a suggestion to generate vercel.json,
-      // so the .resolved field in the result would be useless, we care only
-      // about the source + inferred config.
-      return withResolvedResult(
-        {
-          services: [],
-          source: 'auto-detected',
-          useImplicitEnvInjection: true,
-          routes: emptyRoutes(),
-          errors: result.errors,
-          warnings: railwayResult.warnings,
-        },
-        inferred
-      );
-    }
-
-    // Fall back to layout-based auto-detection
-    const autoResult = await autoDetectServices({ fs: scopedFs });
-    if (autoResult.services && autoResult.errors.length === 0) {
-      const result = await resolveAllConfiguredServices(
-        autoResult.services,
-        scopedFs,
-        'generated'
-      );
-      const routes = generateServicesRoutes(result.services);
-      const resolved: ResolvedServicesResult = {
-        services: result.services,
-        source: 'auto-detected',
-        useImplicitEnvInjection: true,
-        routes,
-        errors: result.errors,
-        warnings: [],
-      };
-      const rootWebFrameworkServices = result.services.filter(
-        service =>
-          service.type === 'web' &&
-          service.routePrefix === '/' &&
-          typeof service.framework === 'string'
-      );
-      const inferred =
-        result.errors.length === 0 &&
-        rootWebFrameworkServices.length === 1 &&
-        result.services.length > 1
-          ? {
-              source: 'layout' as const,
-              config: toInferredLayoutConfig(autoResult.services),
-              services: result.services,
-              warnings: [],
-            }
-          : null;
-      return withResolvedResult(resolved, inferred);
-    } else if (autoResult.errors.length > 0) {
-      return withResolvedResult({
-        services: [],
-        source: 'auto-detected',
-        useImplicitEnvInjection: true,
-        routes: emptyRoutes(),
-        errors: autoResult.errors,
-        warnings: [],
-      });
+    for (const { detect, source } of detectors) {
+      const detectResult = await detect({ fs: scopedFs });
+      const match = await tryResolveInferred(detectResult, source, scopedFs);
+      if (match) return match;
     }
 
     return withResolvedResult({
@@ -273,6 +219,106 @@ export async function detectServices(
     errors: result.errors,
     warnings: [],
   });
+}
+
+/**
+ * Try to resolve a platform detect result into a DetectServicesResult.
+ *
+ * Returns a result if the detector matched (found services or had errors),
+ * or null to signal the caller should try the next detector.
+ *
+ * Railway and Render are suggestion-only:
+ * they populate `inferred` for the CLI/UI to propose writing to vercel.json.
+ *
+ * Layout-based detection produces a real resolved output as well instead, because
+ * it's based on our convention that we support. This is gated under a flag (env/feature)
+ * but it's in use.
+ */
+async function tryResolveInferred(
+  detectResult: PlatformDetectResult,
+  source: InferredServicesResult['source'],
+  scopedFs: DetectorFilesystem
+): Promise<DetectServicesResult | null> {
+  if (detectResult.errors.length > 0) {
+    return withResolvedResult({
+      services: [],
+      source: 'auto-detected',
+      useImplicitEnvInjection: true,
+      routes: emptyRoutes(),
+      errors: detectResult.errors,
+      warnings: detectResult.warnings,
+    });
+  }
+
+  if (!detectResult.services) {
+    return null;
+  }
+
+  const result = await resolveAllConfiguredServices(
+    detectResult.services,
+    scopedFs,
+    'generated'
+  );
+
+  let shouldInfer: boolean;
+
+  // For layout-based detection we need to take care about a specific edgecase,
+  // where we ensure that only 1 framework is mounted at the root and at the same
+  // time we really have multi services layout. This will prevent triggering the
+  // setup for of (root + backend) layout, when it's only really (root) with frontend.
+  if (source === 'layout') {
+    const rootWebFrameworkServices = result.services.filter(
+      service =>
+        service.type === 'web' &&
+        service.routePrefix === '/' &&
+        typeof service.framework === 'string'
+    );
+    shouldInfer =
+      result.errors.length === 0 &&
+      rootWebFrameworkServices.length === 1 &&
+      result.services.length > 1;
+  } else {
+    shouldInfer = result.errors.length === 0 && result.services.length > 0;
+  }
+
+  const inferred: InferredServicesResult | null = shouldInfer
+    ? {
+        source,
+        config: toInferredLayoutConfig(detectResult.services),
+        services: result.services,
+        warnings: detectResult.warnings,
+      }
+    : null;
+
+  // Layout-based detection result can actually be used as is,
+  // because the convention is controlled by us. So we produce "resolved"
+  // result as well in addition to inferred
+  if (source === 'layout' && shouldInfer) {
+    const routes = generateServicesRoutes(result.services);
+    return withResolvedResult(
+      {
+        services: result.services,
+        source: 'auto-detected',
+        useImplicitEnvInjection: true,
+        routes,
+        errors: result.errors,
+        warnings: detectResult.warnings,
+      },
+      inferred
+    );
+  }
+
+  return withResolvedResult(
+    {
+      services: [],
+      source: 'auto-detected',
+      useImplicitEnvInjection: true,
+      routes: emptyRoutes(),
+      errors: result.errors,
+      warnings: detectResult.warnings,
+    },
+    inferred
+  );
 }
 
 /**

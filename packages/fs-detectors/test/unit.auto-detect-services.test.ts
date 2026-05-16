@@ -510,10 +510,11 @@ describe('detectServices with auto-detection', () => {
       const result = await detectServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
       expect(result.source).toBe('auto-detected');
       expect(result.services).toHaveLength(2);
-      const backend = result.services.find(
+      expect(result.inferred).not.toBeNull();
+      expect(result.inferred!.services).toHaveLength(2);
+      const backend = result.inferred!.services.find(
         service => service.name === 'backend'
       );
       expect(backend).toBeDefined();
