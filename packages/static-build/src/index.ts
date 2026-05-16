@@ -52,6 +52,10 @@ import {
 } from '@vercel/fs-detectors';
 import { getHugoUrl } from './utils/hugo';
 import { once } from 'events';
+import {
+  getTanStackNitroBuildCommand,
+  shouldUseTanStackNitroFallback,
+} from './tanstack';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -380,8 +384,27 @@ export const build: BuildV2 = async ({
       frameworkList: frameworks,
     })) ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
-  const buildCommand = getCommand('build', pkg, config, framework);
+  let buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
+
+  const useTanStackNitroFallback =
+    !meta.isDev &&
+    pkg &&
+    shouldUseTanStackNitroFallback({
+      framework,
+      pkg,
+      config,
+      buildCommand,
+    });
+  if (useTanStackNitroFallback) {
+    debug(
+      `TanStack Nitro fallback running in ${entrypointDir} (entrypoint: ${entrypoint})`
+    );
+    console.warn(
+      'Detected TanStack Start with SSR enabled but no `nitro` dependency. Installing nitro-nightly in the project and running `./node_modules/.bin/nitro build --builder vite` instead of the `vite build` script.'
+    );
+    buildCommand = getTanStackNitroBuildCommand();
+  }
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');

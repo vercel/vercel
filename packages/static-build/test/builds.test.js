@@ -1,4 +1,5 @@
 const path = require('path');
+const os = require('os');
 const fs = require('fs-extra');
 const builder = require('../');
 const { createRunBuildLambda } = require('../../../test/lib/run-build-lambda');
@@ -409,6 +410,81 @@ it(
     expect(warnSpy).toHaveBeenCalledWith(
       'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
     );
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should use Nitro fallback build command for TanStack Start when experimental env is enabled',
+  async () => {
+    const fixture = path.join(
+      __dirname,
+      'build-fixtures/17-tanstack-start-nitro-fallback'
+    );
+    const workFixture = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'vercel-static-build-tanstack-fixture-')
+    );
+    const shimDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'vercel-static-build-bin-shim-')
+    );
+    const npmPath = path.join(shimDir, 'npm');
+    const previousPath = process.env.PATH;
+    const previousInjectNitro = process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
+
+    await fs.copy(fixture, workFixture);
+    const nitroBinDir = path.join(workFixture, 'node_modules', '.bin');
+    await fs.mkdirp(nitroBinDir);
+    await fs.writeFile(
+      path.join(nitroBinDir, 'nitro'),
+      [
+        '#!/bin/sh',
+        'if [ "$1" = "build" ] && [ "$2" = "--builder" ] && [ "$3" = "vite" ]; then',
+        '  mkdir -p dist',
+        '  echo "<html>nitro-fallback</html>" > dist/index.html',
+        '  exit 0',
+        'fi',
+        'echo "unexpected nitro args: $@" >&2',
+        'exit 1',
+        '',
+      ].join('\n')
+    );
+    await fs.writeFile(
+      npmPath,
+      [
+        '#!/bin/sh',
+        'if [ "$1" = "install" ] && [ "$2" = "--no-save" ] && [ "$3" = "nitro@npm:nitro-nightly@latest" ]; then',
+        '  exit 0',
+        'fi',
+        'echo "unexpected npm args: $@" >&2',
+        'exit 1',
+        '',
+      ].join('\n')
+    );
+    await fs.chmod(path.join(nitroBinDir, 'nitro'), 0o755);
+    await fs.chmod(npmPath, 0o755);
+
+    process.env.PATH = `${shimDir}${path.delimiter}${previousPath || ''}`;
+    process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO = '1';
+
+    try {
+      const { buildResult } = await runBuildLambda(workFixture);
+
+      expect(buildResult.output['index.html']).toBeTruthy();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          './node_modules/.bin/nitro build --builder vite'
+        )
+      );
+    } finally {
+      process.env.PATH = previousPath;
+      if (previousInjectNitro === undefined) {
+        delete process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO;
+      } else {
+        process.env.VERCEL_EXPERIMENTAL_INJECT_NITRO = previousInjectNitro;
+      }
+      await fs.remove(shimDir);
+      await fs.remove(workFixture);
+    }
   },
   FOUR_MINUTES
 );
