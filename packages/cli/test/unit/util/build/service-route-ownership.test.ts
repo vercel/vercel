@@ -94,4 +94,23 @@ describe('scopeRoutesToServiceOwnership()', () => {
     expect(match).toBeTruthy();
     expect(match?.[1]).toBe('about/team');
   });
+
+  test('preserves middleware routes without modifying their src', () => {
+    const owner = createWebService('web', '/');
+    const middlewareRoute: Route = {
+      src: '^/(.*)$',
+      middlewarePath: 'middleware',
+      continue: true,
+    };
+    const routes: Route[] = [middlewareRoute];
+    const scoped = scopeRoutesToServiceOwnership({
+      routes,
+      owner,
+      allServices: [owner, createWebService('dashboard', '/dashboard')],
+    });
+
+    // Middleware routes must be returned unchanged — scoping their src
+    // corrupts the ownership lookaheads and breaks deployments.
+    expect(scoped[0]).toBe(middlewareRoute);
+  });
 });
