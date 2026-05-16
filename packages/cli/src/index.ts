@@ -69,6 +69,7 @@ import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
+import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plugin';
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
@@ -365,6 +366,11 @@ const main = async () => {
   const { isAgent, agent: detectedAgent } = await determineAgent();
   telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
   telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
+  const vercelPluginMarker = readVercelPluginActiveSessionMarker();
+  if (vercelPluginMarker) {
+    telemetry.trackVercelPluginActiveSession();
+    telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
+  }
   telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
