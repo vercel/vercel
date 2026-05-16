@@ -38,6 +38,7 @@ describe('@vercel/functions/oidc', () => {
   const EXPECTED_METHODS = [
     'awsCredentialsProvider',
     'getVercelOidcToken',
+    'getVercelOidcTokenFromContext',
     'getVercelOidcTokenSync',
   ];
 
