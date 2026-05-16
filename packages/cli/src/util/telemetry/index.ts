@@ -145,6 +145,13 @@ export class TelemetryClient {
     });
   }
 
+  protected trackOidcTokenExchange(value: string) {
+    this.track({
+      key: 'oidc-token-exchange',
+      value,
+    });
+  }
+
   protected trackCPUs() {
     this.track({
       key: 'cpu_count',

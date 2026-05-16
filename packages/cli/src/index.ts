@@ -51,6 +51,7 @@ import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
+import { isOidcJwtLike } from './util/auth/credential';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
@@ -75,6 +76,11 @@ import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
 import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
+import {
+  isOAuthError,
+  processTokenResponse,
+  tokenExchangeRequest,
+} from './util/oauth';
 import {
   getPlatformEnv,
   Span,
@@ -724,22 +730,74 @@ const main = async () => {
       return finishWithExitCode(1);
     }
 
-    const invalid = token.match(/(\W)/g);
-    if (invalid) {
-      const notContain = Array.from(new Set(invalid)).sort();
-      output.prettyError({
-        message: `You defined ${param(
-          '--token'
-        )}, but its contents are invalid. Must not contain: ${notContain
-          .map(c => JSON.stringify(c))
-          .join(', ')}`,
-        link: 'https://err.sh/vercel/invalid-token-value',
-      });
+    if (isOidcJwtLike(token)) {
+      const teamId = await resolveOidcTokenExchangeTeamId(
+        parsedArgs.flags,
+        client.config,
+        client.cwd
+      );
 
-      return finishWithExitCode(1);
+      if (!teamId) {
+        telemetry.trackOidcTokenExchangeFailure('missing_team_id');
+        output.prettyError({
+          message:
+            `You defined ${param('--token')} with an OIDC token, but OIDC token exchange requires a team id. ` +
+            `Provide ${param('--scope')} with a team id, link the project, or set VERCEL_ORG_ID.`,
+        });
+
+        return finishWithExitCode(1);
+      }
+
+      try {
+        telemetry.trackOidcTokenExchangeAttempt();
+        const exchangeResponse = await tokenExchangeRequest({
+          subject_token: token,
+          team_id: teamId,
+        });
+        const [exchangeError, exchangedToken] =
+          await processTokenResponse(exchangeResponse);
+
+        if (exchangeError) {
+          telemetry.trackOidcTokenExchangeFailure(
+            getOidcTokenExchangeFailureReason(exchangeError)
+          );
+          output.prettyError(exchangeError);
+          return finishWithExitCode(1);
+        }
+
+        telemetry.trackOidcTokenExchangeSuccess();
+
+        client.authConfig = {
+          token: exchangedToken.access_token,
+          expiresAt: Math.floor(Date.now() / 1000) + exchangedToken.expires_in,
+          skipWrite: true,
+          tokenSource,
+        };
+      } catch (err: unknown) {
+        telemetry.trackOidcTokenExchangeFailure('request_error');
+        printError(err);
+        trackAgenticErrorTelemetry(err);
+        return finishWithExitCode(1);
+      }
+    } else {
+      const invalid = token.match(/(\W)/g);
+      if (invalid) {
+        const notContain = Array.from(new Set(invalid)).sort();
+
+        output.prettyError({
+          message: `You defined ${param(
+            '--token'
+          )}, but its contents are invalid. Must not contain: ${notContain
+            .map(c => JSON.stringify(c))
+            .join(', ')}`,
+          link: 'https://err.sh/vercel/invalid-token-value',
+        });
+
+        return finishWithExitCode(1);
+      }
+
+      client.authConfig = { token, skipWrite: true, tokenSource };
     }
-
-    client.authConfig = { token, skipWrite: true, tokenSource };
 
     // Don't use team from config if `--token` was set
     if (client.config && client.config.currentTeam) {
@@ -1273,6 +1331,43 @@ const main = async () => {
 
   return exitCode;
 };
+
+async function resolveOidcTokenExchangeTeamId(
+  flags: Record<string, unknown>,
+  config: GlobalConfig,
+  cwd: string
+): Promise<string | undefined> {
+  const scope = flags['--scope'] || flags['--team'];
+  if (typeof scope === 'string' && scope.startsWith('team_')) {
+    return scope;
+  }
+
+  if (config.currentTeam?.startsWith('team_')) {
+    return config.currentTeam;
+  }
+
+  const link = await getLinkFromDir<{ orgId: string }>(getVercelDirectory(cwd));
+  if (link?.orgId?.startsWith('team_')) {
+    return link.orgId;
+  }
+
+  const orgId = getPlatformEnv('ORG_ID');
+  if (orgId?.startsWith('team_')) {
+    return orgId;
+  }
+}
+
+function getOidcTokenExchangeFailureReason(error: unknown): string {
+  if (isOAuthError(error)) {
+    return `oauth_${error.code}`;
+  }
+
+  if (error instanceof TypeError) {
+    return 'invalid_response';
+  }
+
+  return 'unknown';
+}
 
 main()
   .then(async exitCode => {
