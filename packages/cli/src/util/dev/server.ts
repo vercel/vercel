@@ -1079,6 +1079,15 @@ export default class DevServer {
     this.server.on('upgrade', async (req, socket, head) => {
       await this.startPromise;
 
+      // DNS-rebinding protection for WebSocket upgrades.
+      if (!this.isValidHostHeader(req.headers.host)) {
+        socket.write(
+          'HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nInvalid Host header.'
+        );
+        socket.destroy();
+        return;
+      }
+
       if (this.orchestrator) {
         const pathname = url.parse(req.url || '/').pathname || '/';
         const service = this.orchestrator.getServiceForRoute(pathname);
@@ -1422,6 +1431,55 @@ export default class DevServer {
   };
 
   /**
+   * Returns true when the request Host header is a safe local address.
+   *
+   * Rejects requests whose Host header points to a foreign domain while the
+   * socket is bound to localhost — the classic DNS-rebinding attack vector.
+   * Pattern matches webpack-dev-server `allowedHosts` and Vite host-check logic.
+   */
+  private isValidHostHeader(host: string | undefined): boolean {
+    if (!host) {
+      // Absence of Host is technically invalid HTTP/1.1, but be lenient;
+      // curl and programmatic clients often omit it on loopback connections.
+      return true;
+    }
+
+    // Strip port suffix so we compare only the hostname part.
+    // IPv6 addresses are wrapped in brackets: [::1]:3000 → ::1
+    const hostname = host
+      .replace(/:\d+$/, '') // strip :PORT
+      .replace(/^\[(.+)\]$/, '$1'); // unwrap [IPv6]
+
+    // Always allow loopback addresses.
+    const loopback = new Set([
+      'localhost',
+      '127.0.0.1',
+      '::1',
+      '::ffff:127.0.0.1',
+    ]);
+    if (loopback.has(hostname.toLowerCase())) {
+      return true;
+    }
+
+    // Allow the explicit listen address when the server is already running.
+    if (this._address) {
+      const listenHostname = this._address.hostname.toLowerCase();
+      // When the server is bound to a wildcard interface (0.0.0.0 or ::),
+      // the operator has explicitly chosen to expose it to all network
+      // interfaces. Any Host header is therefore reachable and legitimate;
+      // blocking LAN requests would break intentional LAN development.
+      if (listenHostname === '0.0.0.0' || listenHostname === '::') {
+        return true;
+      }
+      if (hostname.toLowerCase() === listenHostname) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * DevServer HTTP handler
    */
   devServerHandler: HttpHandler = async (
@@ -1431,6 +1489,17 @@ export default class DevServer {
     await this.startPromise;
 
     const requestId = generateRequestId(this.podId);
+
+    // DNS-rebinding protection: reject requests whose Host header does not
+    // resolve to this server's listen address or a loopback address.
+    if (!this.isValidHostHeader(req.headers.host)) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'text/plain');
+      res.end(
+        'Invalid Host header. vercel dev only accepts requests from localhost.'
+      );
+      return;
+    }
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
