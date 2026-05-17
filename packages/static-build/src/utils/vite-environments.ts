@@ -1,34 +1,34 @@
 /**
- * Temporary integration point for the Vite "environments" API.
+ * Integration point for Vite's "environments" API.
  *
- * The framework detector currently routes TanStack Start (and other Vite-
- * powered meta-frameworks) through `@vercel/static-build`. That works for the
- * client output, but the per-environment `dist/server/server.js` web-fetch
- * handler produced by frameworks built on Vite's Environments API is ignored
- * — the SSR / server-fn surface effectively breaks.
+ * When a project's vite config declares one or more `environments` with
+ * `consumer: 'server'` (TanStack Start, React Router v7, future Hydrogen,
+ * custom SSR setups), the per-environment server bundle would otherwise be
+ * shipped as a static `.js` and the SSR / server-fn surface would silently
+ * break. This module fills that gap from inside `static-build`:
  *
- * This module fills the gap from inside `static-build`:
+ *   1. After the user's build, call the project's own `vite.resolveConfig`
+ *      to learn each declared environment's `consumer` and `outDir`.
+ *   2. If at least one server environment has produced output, map every
+ *      client `outDir` into static assets and every server `outDir` into
+ *      a `NodejsLambda` with `useWebApi: true` — the runtime invokes
+ *      `default.fetch`, matching the Web-standard handler these bundles
+ *      emit.
+ *   3. Otherwise (vite missing, plain SPA, build failed), return `null`
+ *      and let `static-build` fall through to its normal path.
  *
- *   1. Detect projects that opt into the path (today: TanStack Start without
- *      a Nitro adapter).
- *   2. Use the project's own `vite` to call `resolveConfig` and learn each
- *      declared environment's `consumer` ('client' | 'server') and `outDir`.
- *   3. Map client envs → static assets; map server envs → a `NodejsLambda`
- *      with `useWebApi: true` (the runtime invokes `default.fetch`, matching
- *      the Web-standard handler shape these bundles emit).
- *
- * Once `@vercel/vite` (or the framework detector) is wired up properly this
- * file can move out unchanged.
+ * Lives in `static-build` as a stopgap; once `@vercel/vite` (or the
+ * framework detector) is wired up, the module can move out unchanged.
  */
 import { existsSync, promises as fs } from 'fs';
 import { basename, isAbsolute, join, relative, resolve } from 'path';
 import { createRequire } from 'module';
 import { nodeFileTrace } from '@vercel/nft';
+import { errorToString } from '@vercel/error-utils';
 import {
   type BuildResultV2Typical,
   type Files,
   type NodeVersion,
-  type PackageJson,
   debug,
   FileFsRef,
   glob,
@@ -58,7 +58,7 @@ interface ResolvedViteConfig {
   };
 }
 
-interface ResolvedEnvironment {
+export interface ResolvedEnvironment {
   name: string;
   consumer: 'client' | 'server';
   outDir: string;
@@ -66,33 +66,95 @@ interface ResolvedEnvironment {
   conditions: string[];
 }
 
+export interface ViteEnvironmentsDetection {
+  environments: ResolvedEnvironment[];
+}
+
 /**
- * Returns true when this project should be handled by the vite-environments
- * path. Today: TanStack Start present and no Nitro opt-in. Keep the trigger
- * narrow until the detector is updated.
+ * Cheaply attempts to discover vite environments with server output on disk.
+ * Returns `null` when there's nothing to do — caller should fall through to
+ * the normal static-build path. Never throws on the "not a vite project"
+ * cases; only throws if vite *is* present and resolveConfig blows up in a
+ * way we can't recover from.
  */
-export function shouldUseViteEnvironments(
-  pkg: PackageJson | null | undefined
-): boolean {
-  if (!pkg) return false;
-  if (!hasTanstackStart(pkg)) return false;
-  if (hasNitro(pkg)) return false;
-  return true;
+export async function detectViteServerEnvironments(
+  workPath: string
+): Promise<ViteEnvironmentsDetection | null> {
+  // Pre-check: is vite resolvable from this project at all? If not, this
+  // isn't a vite build and we shouldn't pay the cost of resolveConfig.
+  const projectRequire = createRequire(join(workPath, 'index.js'));
+  let vite: typeof import('vite');
+  try {
+    vite = projectRequire('vite');
+  } catch {
+    return null;
+  }
+
+  if (typeof vite.resolveConfig !== 'function') {
+    debug('Detected vite, but `resolveConfig` is missing — skipping');
+    return null;
+  }
+
+  // `resolveConfig` runs each plugin's `config`/`configResolved` hook, so
+  // plugin-contributed environments (e.g. tanstackStart()) become visible.
+  let resolved: ResolvedViteConfig;
+  try {
+    resolved = (await vite.resolveConfig(
+      { root: workPath },
+      'build'
+    )) as ResolvedViteConfig;
+  } catch (err) {
+    debug(`vite.resolveConfig failed: ${errorToString(err)}`);
+    return null;
+  }
+
+  const environments: ResolvedEnvironment[] = [];
+  for (const [name, env] of Object.entries(resolved.environments ?? {})) {
+    const consumer = env.consumer;
+    if (consumer !== 'client' && consumer !== 'server') continue;
+
+    const outDirRel = env.build?.outDir ?? resolved.build?.outDir ?? 'dist';
+    const outDir = isAbsolute(outDirRel)
+      ? outDirRel
+      : resolve(resolved.root || workPath, outDirRel);
+
+    environments.push({
+      name,
+      consumer,
+      outDir,
+      inputNames: collectInputNames(env.build?.rollupOptions?.input),
+      conditions: env.resolve?.conditions ?? [],
+    });
+  }
+
+  // Only take over if at least one server environment actually produced
+  // output on disk. Vanilla Vite SPAs, vitepress, etc. either have no
+  // server env or have one that wasn't built — those should fall through.
+  const hasBuiltServer = environments.some(
+    e => e.consumer === 'server' && existsSync(e.outDir)
+  );
+  if (!hasBuiltServer) return null;
+
+  return { environments };
 }
 
 export async function buildViteEnvironments({
   workPath,
   repoRootPath,
   nodeVersion,
+  detection,
 }: {
   workPath: string;
   repoRootPath: string;
   nodeVersion: NodeVersion;
+  detection: ViteEnvironmentsDetection;
 }): Promise<BuildResultV2Typical> {
-  const environments = await resolveViteEnvironments(workPath);
-
-  const clientEnvironments = environments.filter(e => e.consumer === 'client');
-  const serverEnvironments = environments.filter(e => e.consumer === 'server');
+  const clientEnvironments = detection.environments.filter(
+    e => e.consumer === 'client'
+  );
+  const serverEnvironments = detection.environments.filter(
+    e => e.consumer === 'server'
+  );
 
   let staticFiles: Files = {};
   for (const env of clientEnvironments) {
@@ -111,9 +173,13 @@ export async function buildViteEnvironments({
 
   for (const env of serverEnvironments) {
     if (!existsSync(env.outDir)) {
-      throw new Error(
-        `Server environment "${env.name}" declared outDir "${env.outDir}" but it does not exist after build`
+      // Server env declared but not built — skip rather than fail, since
+      // `detectViteServerEnvironments` already confirmed at least one
+      // server env did produce output.
+      debug(
+        `Skipping server environment "${env.name}": outDir ${env.outDir} does not exist`
       );
+      continue;
     }
 
     const entryFile = await findServerEntry(env);
@@ -154,58 +220,6 @@ export async function buildViteEnvironments({
   });
 
   return { routes, output };
-}
-
-async function resolveViteEnvironments(
-  workPath: string
-): Promise<ResolvedEnvironment[]> {
-  const projectRequire = createRequire(join(workPath, 'index.js'));
-  let vite: typeof import('vite');
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    vite = projectRequire('vite');
-  } catch (err) {
-    throw new Error(
-      `The vite-environments path requires "vite" to be installed in the project. ` +
-        `(${(err as Error).message})`
-    );
-  }
-
-  // `resolveConfig` runs each plugin's `config`/`configResolved` hook, so
-  // plugin-contributed environments (e.g. tanstackStart()) are visible.
-  const resolved = (await vite.resolveConfig(
-    { root: workPath },
-    'build'
-  )) as ResolvedViteConfig;
-
-  const envs: ResolvedEnvironment[] = [];
-  const envMap = resolved.environments ?? {};
-  for (const [name, env] of Object.entries(envMap)) {
-    const consumer = env.consumer;
-    if (consumer !== 'client' && consumer !== 'server') continue;
-
-    const outDirRel = env.build?.outDir ?? resolved.build?.outDir ?? 'dist';
-    const outDir = isAbsolute(outDirRel)
-      ? outDirRel
-      : resolve(resolved.root || workPath, outDirRel);
-
-    envs.push({
-      name,
-      consumer,
-      outDir,
-      inputNames: collectInputNames(env.build?.rollupOptions?.input),
-      conditions: env.resolve?.conditions ?? [],
-    });
-  }
-
-  if (envs.length === 0) {
-    throw new Error(
-      'No vite environments with a "client" or "server" consumer were resolved. ' +
-        'Ensure the project uses Vite 6+ and a framework plugin that declares environments.'
-    );
-  }
-
-  return envs;
 }
 
 function collectInputNames(
@@ -289,27 +303,4 @@ async function createServerFunction({
     supportsResponseStreaming: true,
     useWebApi: true,
   });
-}
-
-function hasTanstackStart(pkg: PackageJson): boolean {
-  return (
-    hasDependency(pkg, '@tanstack/react-start') ||
-    hasDependency(pkg, '@tanstack/solid-start')
-  );
-}
-
-function hasNitro(pkg: PackageJson): boolean {
-  return (
-    hasDependency(pkg, 'nitropack') ||
-    hasDependency(pkg, 'nitro') ||
-    hasDependency(pkg, '@tanstack/start-server-nitro')
-  );
-}
-
-function hasDependency(pkg: PackageJson, name: string): boolean {
-  return Boolean(
-    pkg.dependencies?.[name] ||
-      pkg.devDependencies?.[name] ||
-      pkg.peerDependencies?.[name]
-  );
 }

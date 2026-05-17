@@ -46,7 +46,7 @@ import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
 import {
   buildViteEnvironments,
-  shouldUseViteEnvironments,
+  detectViteServerEnvironments,
 } from './utils/vite-environments';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
@@ -813,20 +813,23 @@ export const build: BuildV2 = async ({
         return await BuildOutputV2.createBuildOutput(workPath);
       }
 
-      // Temporary: when a Vite-powered meta-framework (currently scoped to
-      // TanStack Start without Nitro) declares server "environments" in its
-      // vite config, take over the post-build mapping so the server entry
-      // becomes a Vercel Function instead of being shipped as a static .js.
-      // Move this out of `static-build` once `@vercel/vite` (or the
-      // framework detector) is wired up properly.
-      if (shouldUseViteEnvironments(pkg)) {
+      // If this is a vite project whose vite config declares a server
+      // environment that actually produced output on disk, take over the
+      // post-build mapping so the server bundle becomes a Vercel Function
+      // instead of being shipped as a static .js. Falls through silently
+      // for plain vite SPAs, vitepress, non-vite projects, etc.
+      const viteDetection = await detectViteServerEnvironments(entrypointDir);
+      if (viteDetection) {
         debug(
-          'Vite environments path triggered (TanStack Start without Nitro)'
+          `Vite environments path triggered (${viteDetection.environments
+            .map(e => `${e.name}:${e.consumer}`)
+            .join(', ')})`
         );
         return await buildViteEnvironments({
           workPath: entrypointDir,
           repoRootPath,
           nodeVersion,
+          detection: viteDetection,
         });
       }
 
