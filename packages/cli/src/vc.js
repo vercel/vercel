@@ -1,5 +1,26 @@
 #!/usr/bin/env node
 /* biome-ignore-all lint/suspicious/noConsole: CLI entry point */
+{
+  // Install this before importing `index.js`; ESM dependencies can emit this
+  // warning during bootstrap, before the CLI module body runs.
+  const PUNYCODE_DEPRECATION_WARNING =
+    'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.';
+  const originalError = console.error;
+
+  console.error = (...args) => {
+    const isPunycodeDeprecation = args.some(
+      arg =>
+        typeof arg === 'string' && arg.includes(PUNYCODE_DEPRECATION_WARNING)
+    );
+
+    if (isPunycodeDeprecation) {
+      return;
+    }
+
+    originalError(...args);
+  };
+}
+
 // This shim defers loading the real module until the compile cache is enabled.
 // https://nodejs.org/api/module.html#moduleenablecompilecachecachedir
 // enableCompileCache was added in Node.js 22.8.0, so we need to handle older versions.
