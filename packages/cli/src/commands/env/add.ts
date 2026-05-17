@@ -662,39 +662,12 @@ export default async function add(client: Client, argv: string[]) {
   if (
     envGitBranch === undefined &&
     envTargets.length === 1 &&
-    envTargets[0] === 'preview'
+    envTargets[0] === 'preview' &&
+    !(client.nonInteractive || opts['--yes'] || opts['--force'])
   ) {
-    if (client.nonInteractive) {
-      outputActionRequired(
-        client,
-        {
-          status: 'action_required',
-          reason: 'git_branch_required',
-          message: `Add ${envName} to which Git branch for Preview? Pass branch as third argument, or omit for all Preview branches.`,
-          next: [
-            {
-              command: buildEnvAddCommandWithPreservedArgs(
-                client.argv,
-                `env add ${envName} preview <gitbranch> --value <value> --yes`
-              ),
-              when: 'Add to a specific Git branch',
-            },
-            {
-              command: buildEnvAddCommandWithPreservedArgs(
-                client.argv,
-                `env add ${envName} preview --value <value> --yes`
-              ),
-              when: 'Add to all Preview branches',
-            },
-          ],
-        },
-        1
-      );
-    } else {
-      envGitBranch = await client.input.text({
-        message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
-      });
-    }
+    envGitBranch = await client.input.text({
+      message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
+    });
   }
 
   const hasDevelopment = envTargets.includes('development');
