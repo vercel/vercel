@@ -10,6 +10,12 @@ import {
   generateRequestCode,
   awaitConnexResult,
 } from '../../util/connex/request-code';
+import { validateHexColor } from '../../util/connex/validate-hex';
+import {
+  prepareConnexIcon,
+  uploadConnexIcon,
+  type PreparedIcon,
+} from '../../util/connex/upload-icon';
 import type { ConnexClient } from './types';
 
 export async function create(
@@ -20,6 +26,9 @@ export async function create(
     '--format'?: string;
     '--json'?: boolean;
     '--triggers'?: boolean;
+    '--icon'?: string;
+    '--background-color'?: string;
+    '--accent-color'?: string;
   }
 ): Promise<number> {
   const formatResult = validateJsonOutput(flags);
@@ -33,6 +42,35 @@ export async function create(
   if (!serviceType) {
     output.error('Missing service type. Usage: vercel connect create <type>');
     return 1;
+  }
+
+  // Preflight branding validation BEFORE team selection / network / upload.
+  // This includes hex format, icon path readability, AND magic-byte check —
+  // we don't want to mutate team config or prompt the user just to fail on
+  // an unreadable or non-image icon afterwards.
+  const iconFlag = flags['--icon'];
+  const backgroundColor = flags['--background-color'];
+  const accentColor = flags['--accent-color'];
+
+  if (iconFlag !== undefined && iconFlag.length === 0) {
+    output.error('Icon path cannot be empty.');
+    return 1;
+  }
+  try {
+    validateHexColor(backgroundColor, 'background color');
+    validateHexColor(accentColor, 'accent color');
+  } catch (err) {
+    output.error((err as Error).message);
+    return 1;
+  }
+  let preparedIcon: PreparedIcon | undefined;
+  if (iconFlag) {
+    try {
+      preparedIcon = await prepareConnexIcon(iconFlag, client.cwd);
+    } catch (err) {
+      output.error((err as Error).message);
+      return 1;
+    }
   }
 
   // Resolve team
@@ -57,6 +95,21 @@ export async function create(
     });
   }
 
+  // Upload the prepared icon (if any) before creating the connector. The
+  // file was already validated above; this only does the /v2/files POST.
+  let iconSha: string | undefined;
+  if (preparedIcon) {
+    try {
+      output.spinner('Uploading icon...');
+      iconSha = await uploadConnexIcon(client, preparedIcon);
+    } catch (err) {
+      output.stopSpinner();
+      output.error((err as Error).message);
+      return 1;
+    }
+    output.stopSpinner();
+  }
+
   // Generate request code and attempt to create the managed client directly
   const { verifier, requestCode } = generateRequestCode();
   const link = await getProjectLink(client, client.cwd);
@@ -70,6 +123,15 @@ export async function create(
     body.projectId = link.projectId;
   }
   body.triggers = { enabled: flags['--triggers'] === true };
+  if (iconSha) {
+    body.icon = iconSha;
+  }
+  if (backgroundColor) {
+    body.backgroundColor = backgroundColor;
+  }
+  if (accentColor) {
+    body.accentColor = accentColor;
+  }
 
   output.spinner('Setting up...');
   let createdClient: ConnexClient | null = null;
@@ -98,11 +160,28 @@ export async function create(
   output.stopSpinner();
 
   let hasBeenInstalled = false;
+  let brandingPatchFailed = false;
   if (browserUrl) {
-    // Registration required — open browser and wait for user to complete setup
+    // Registration required — open browser and wait for user to complete setup.
+    // Append branding (icon SHA + colors) as query params so the dashboard
+    // registration form can prefill itself and create the upstream Slack/GitHub
+    // app with branding from the start. The follow-up PATCH below stays in
+    // place as a safety net for the dashboard rollout window.
+    const urlWithBranding = new URL(browserUrl);
+    if (iconSha) {
+      urlWithBranding.searchParams.set('icon', iconSha);
+    }
+    if (backgroundColor) {
+      urlWithBranding.searchParams.set('backgroundColor', backgroundColor);
+    }
+    if (accentColor) {
+      urlWithBranding.searchParams.set('accentColor', accentColor);
+    }
+    const finalBrowserUrl = urlWithBranding.toString();
+
     output.log(`Opening browser for ${serviceType} app setup...`);
-    output.log(`If the browser doesn't open, visit:\n${browserUrl}`);
-    open(browserUrl).catch((err: unknown) =>
+    output.log(`If the browser doesn't open, visit:\n${finalBrowserUrl}`);
+    open(finalBrowserUrl).catch((err: unknown) =>
       output.debug(`Failed to open browser: ${err}`)
     );
 
@@ -117,8 +196,40 @@ export async function create(
     ) {
       const clientId = resultFromBrowser.clientId;
       createdClient = await client.fetch<ConnexClient>(
-        `/v1/connect/connectors/${clientId}`
+        `/v1/connect/connectors/${encodeURIComponent(clientId)}`
       );
+
+      // The dashboard registration form does not consume icon/colors from the
+      // URL, so branding never reaches the create call when the browser flow
+      // is taken. Apply branding via a follow-up PATCH so `vc connect create
+      // <type> --icon ... --background-color ...` works for all flows.
+      const hasBranding = !!(iconSha || backgroundColor || accentColor);
+      if (hasBranding) {
+        const brandingBody: JSONObject = {};
+        if (iconSha) {
+          brandingBody.icon = iconSha;
+        }
+        if (backgroundColor) {
+          brandingBody.backgroundColor = backgroundColor;
+        }
+        if (accentColor) {
+          brandingBody.accentColor = accentColor;
+        }
+        try {
+          output.spinner('Applying branding...');
+          createdClient = await client.fetch<ConnexClient>(
+            `/v1/connect/connectors/${encodeURIComponent(clientId)}`,
+            { method: 'PATCH', body: brandingBody }
+          );
+        } catch (err) {
+          output.stopSpinner();
+          output.warn(
+            `Failed to apply branding: ${(err as Error).message}. The connector was created but branding was not applied.`
+          );
+          brandingPatchFailed = true;
+        }
+        output.stopSpinner();
+      }
     }
     if (
       resultFromBrowser &&
@@ -142,6 +253,9 @@ export async function create(
           type: createdClient.type,
           name: createdClient.name,
           supportedSubjectTypes: createdClient.supportedSubjectTypes,
+          icon: createdClient.icon ?? null,
+          backgroundColor: createdClient.backgroundColor ?? null,
+          accentColor: createdClient.accentColor ?? null,
         },
         null,
         2
@@ -156,5 +270,5 @@ export async function create(
       `${serviceType} connector created: ${createdClient.id} (UID ${createdClient.uid})`
     );
   }
-  return 0;
+  return brandingPatchFailed ? 1 : 0;
 }
