@@ -44,6 +44,10 @@ import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
+import {
+  buildViteEnvironments,
+  shouldUseViteEnvironments,
+} from './utils/vite-environments';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
 import {
@@ -807,6 +811,23 @@ export const build: BuildV2 = async ({
         await BuildOutputV2.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV2) {
         return await BuildOutputV2.createBuildOutput(workPath);
+      }
+
+      // Temporary: when a Vite-powered meta-framework (currently scoped to
+      // TanStack Start without Nitro) declares server "environments" in its
+      // vite config, take over the post-build mapping so the server entry
+      // becomes a Vercel Function instead of being shipped as a static .js.
+      // Move this out of `static-build` once `@vercel/vite` (or the
+      // framework detector) is wired up properly.
+      if (shouldUseViteEnvironments(pkg)) {
+        debug(
+          'Vite environments path triggered (TanStack Start without Nitro)'
+        );
+        return await buildViteEnvironments({
+          workPath: entrypointDir,
+          repoRootPath,
+          nodeVersion,
+        });
       }
 
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({

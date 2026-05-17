@@ -25,6 +25,7 @@
   "dependencies": {
     "@vercel/gatsby-plugin-vercel-analytics": "workspace:*",
     "@vercel/gatsby-plugin-vercel-builder": "workspace:*",
+    "@vercel/nft": "1.5.0",
     "@vercel/static-config": "workspace:*",
     "ts-morph": "12.0.0"
   },
