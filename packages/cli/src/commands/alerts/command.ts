@@ -54,13 +54,53 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+export const groupsSubcommand = {
+  name: 'groups',
+  aliases: [],
+  description: 'Manage alert groups',
+  arguments: [
+    {
+      name: 'action',
+      required: false,
+    },
+    {
+      name: 'groupId',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List alert groups',
+      value: `${packageName} alerts groups ls`,
+    },
+    {
+      name: 'Inspect an alert group',
+      value: `${packageName} alerts groups inspect grp_abc123`,
+    },
+    {
+      name: 'Disable an alert group',
+      value: `${packageName} alerts groups disable grp_abc123`,
+    },
+    {
+      name: 'Enable an alert group',
+      value: `${packageName} alerts groups enable grp_abc123`,
+    },
+  ],
+} as const;
+
 export const alertsCommand = {
   name: 'alerts',
   aliases: [],
   description:
     'List alert groups, inspect a group, or manage alert rules (see `alerts rules`).',
   arguments: [],
-  subcommands: [listSubcommand, inspectSubcommand, rulesAggregateCommand],
+  subcommands: [
+    listSubcommand,
+    inspectSubcommand,
+    groupsSubcommand,
+    rulesAggregateCommand,
+  ],
   options: [
     {
       name: 'type',
