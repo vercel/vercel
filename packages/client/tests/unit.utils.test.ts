@@ -146,6 +146,33 @@ describe('buildFileTree()', () => {
     );
   });
 
+  it('should ignore prebuilt filePathMap references outside the project root', async () => {
+    const cwd = fixture('prebuilt-filepathmap-boundary');
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
+      noop
+    );
+
+    const expectedFileList = toAbsolutePaths(cwd, [
+      '.vercel/output/functions/api/index.func/.vc-config.json',
+      '.vercel/output/static/index.txt',
+      'server.js',
+    ]);
+    expect(normalizeWindowsPaths(fileList).sort()).toEqual(
+      normalizeWindowsPaths(expectedFileList).sort()
+    );
+    expect(normalizeWindowsPaths(fileList)).not.toContain(
+      normalizeWindowsPaths([
+        join(cwd, '..', 'prebuilt-filepathmap-secret.txt'),
+      ])[0]
+    );
+  });
+
   it('monorepo - should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
     const cwd = fixture('monorepo-boa');
     const { fileList, ignoreList } = await buildFileTree(
