@@ -48,6 +48,10 @@ import {
   buildViteEnvironments,
   detectViteServerEnvironments,
 } from './utils/vite-environments';
+import {
+  getNitroInjectionBuildCommand,
+  shouldInjectNitro,
+} from './utils/inject-nitro';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
 import {
@@ -384,8 +388,19 @@ export const build: BuildV2 = async ({
       frameworkList: frameworks,
     })) ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
-  const buildCommand = getCommand('build', pkg, config, framework);
+  let buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
+
+  // For Vite projects on the default `vite build` script with no `nitro`
+  // dep declared, hand the build off to Nitro (`nitro build --builder vite`).
+  // Nitro emits BOA v3 to `.vercel/output/` and the v3 check below
+  // short-circuits the rest of this builder. See `utils/inject-nitro.ts`.
+  if (!meta.isDev && shouldInjectNitro({ pkg, config, buildCommand })) {
+    buildCommand = getNitroInjectionBuildCommand();
+    console.log(
+      `Detected \`vite build\` without a \`nitro\` dependency. Replacing the build command with \`nitro build --builder vite\` for SSR support.`
+    );
+  }
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
