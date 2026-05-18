@@ -31,6 +31,8 @@ const DEPLOYMENT_ID = 'dpl_test_abc123';
 const TRACE_TOKEN = 'jwt-trace-token-deadbeef';
 const REFRESHED_TOKEN = 'jwt-refreshed-token-cafef00d';
 const X_VERCEL_ID = 'sfo1::abc-1234567890-deadbeef';
+// The trace command parses everything after the last `::` out of `x-vercel-id`.
+const REQUEST_ID = 'abc-1234567890-deadbeef';
 const USER_ID = 'u_test_user_abc';
 
 function tracesCachePath() {
@@ -231,11 +233,10 @@ describe('curl --trace', () => {
     );
     expect(args).toContain('--dump-header');
 
-    // Default mode: stderr carries the two lines
+    // Default mode: stderr carries the follow-up command line
     const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain(`Trace request id: ${X_VERCEL_ID}`);
     expect(stderr).toContain(
-      `Run \`vercel traces get ${X_VERCEL_ID}\` to fetch the trace.`
+      `Run \`vercel traces get ${REQUEST_ID}\` to fetch the trace.`
     );
 
     // --trace was tracked
@@ -279,7 +280,7 @@ describe('curl --trace', () => {
     expect(exitCode).toEqual(0);
 
     const parsed = JSON.parse(stdoutBuf);
-    expect(parsed.requestId).toBe(X_VERCEL_ID);
+    expect(parsed.requestId).toBe(REQUEST_ID);
     expect(parsed.response).toBe('{"hello":"world"}');
 
     const stderr = client.stderr.getFullOutput();

@@ -73,15 +73,19 @@ function resolveTeamId(
 }
 
 /**
- * Parse the `x-vercel-id` value out of the curl-dumped header file.
+ * Parse the request id out of the curl-dumped header file.
  *
  * curl writes raw HTTP/1.1 response headers to the file (one header per line,
  * `name: value`, terminated by a blank line). We match case-insensitively
  * because curl preserves casing from the wire (often `x-vercel-id`).
  *
  * For requests that traverse multiple responses (redirects), curl writes
- * each response block sequentially; we return the LAST `x-vercel-id` so the
+ * each response block sequentially; we use the LAST `x-vercel-id` so the
  * id reflects the final response the user actually consumed.
+ *
+ * The header value is region-prefixed (e.g. `iad1::abc-…`) and may be
+ * prefixed multiple times for proxied requests (`iad1::hnd1::abc-…`).
+ * The actual request id is everything after the LAST `::`.
  */
 function extractVercelId(headerDump: string): string | undefined {
   const lines = headerDump.split(/\r?\n/);
@@ -94,7 +98,9 @@ function extractVercelId(headerDump: string): string | undefined {
       lastValue = line.slice(idx + 1).trim();
     }
   }
-  return lastValue;
+  if (!lastValue) return undefined;
+  const sepIdx = lastValue.lastIndexOf('::');
+  return sepIdx === -1 ? lastValue : lastValue.slice(sepIdx + 2);
 }
 
 /**
@@ -338,7 +344,7 @@ export async function trace(
     return exitCode === 0 ? 1 : exitCode;
   }
 
-  client.stderr.write(`Trace request id: ${requestId}\n`);
+  client.stderr.write('\n');
   client.stderr.write(
     `Run \`vercel traces get ${requestId}\` to fetch the trace.\n`
   );
