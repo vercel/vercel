@@ -96,7 +96,7 @@ describe('env pull', () => {
           });
           return;
         }
-        next();
+        next?.();
       }
     );
     useProject(project);
