@@ -65,7 +65,7 @@ describe('vercel traces get', () => {
     client.reset();
   });
 
-  it('prints the summary block to stdout for a 200 response', async () => {
+  it('prints the markdown summary to stdout for a 200 response', async () => {
     mockLinkedProject();
     let receivedQuery: Record<string, unknown> | undefined;
     client.scenario.get('/v1/projects/traces', (req, res) => {
@@ -84,13 +84,13 @@ describe('vercel traces get', () => {
     });
 
     const stdout = client.stdout.getFullOutput();
-    expect(stdout).toContain('Trace id:     trace_001');
-    expect(stdout).toContain('Request id:   req_abc');
-    expect(stdout).toContain('Status:       200');
-    expect(stdout).toContain('Method/path:  GET /api/hello');
-    expect(stdout).toContain('Cold start:   yes');
-    expect(stdout).toContain('Spans:        2');
-    expect(stdout).toContain('Errors:       0');
+    expect(stdout).toContain('# Trace trace_001');
+    expect(stdout).toContain('**Trace id:** trace_001');
+    expect(stdout).toContain('**Request id:** req_abc');
+    expect(stdout).toContain('**Endpoint:** `GET /api/hello` → 200');
+    expect(stdout).toContain('(cold start)');
+    expect(stdout).toContain('**Spans:** 2');
+    expect(stdout).toContain('## Span tree');
 
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('Run with --json for full trace data.');
@@ -107,7 +107,7 @@ describe('vercel traces get', () => {
 
     expect(exitCode).toBe(0);
     expect(client.stdout.getFullOutput()).toContain(
-      'Request id:   req_shortcut'
+      '**Request id:** req_shortcut'
     );
   });
 
