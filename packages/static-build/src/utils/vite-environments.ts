@@ -168,6 +168,12 @@ export async function buildViteEnvironments({
     e => e.consumer === 'server'
   );
 
+  console.log(
+    `Detected Vite environments: ${detection.environments
+      .map(e => `${e.name} (${e.consumer}) → ${relative(workPath, e.outDir)}`)
+      .join(', ')}`
+  );
+
   let staticFiles: Files = {};
   for (const env of clientEnvironments) {
     if (!existsSync(env.outDir)) {
@@ -177,6 +183,11 @@ export async function buildViteEnvironments({
       continue;
     }
     const found = await glob('**', env.outDir);
+    console.log(
+      `Collected ${Object.keys(found).length} static asset(s) from "${
+        env.name
+      }" (${relative(workPath, env.outDir)})`
+    );
     staticFiles = { ...staticFiles, ...found };
   }
 
@@ -200,6 +211,13 @@ export async function buildViteEnvironments({
         `Could not locate the server entry file inside "${env.outDir}" for environment "${env.name}". Expected a top-level .js entry (e.g. server.js, index.js).`
       );
     }
+
+    console.log(
+      `Creating server function from "${env.name}" → ${relative(
+        workPath,
+        entryFile
+      )}`
+    );
 
     const fn = await createServerFunction({
       entryAbsolutePath: entryFile,
