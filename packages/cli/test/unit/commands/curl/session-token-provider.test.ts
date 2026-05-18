@@ -235,25 +235,30 @@ describe('getSessionToken', () => {
     expect(written.token).toBe('fresh-after-evict');
   });
 
-  it('perms-on-write: cache file is created with mode 0600', async () => {
-    mockSessionEndpoint({
-      token: 'fresh',
-      expiresAt: Date.now() + 5 * 60 * 1000,
-    });
+  // NTFS doesn't enforce Unix mode bits, so chmod's narrowing to 0o600
+  // is a no-op on Windows and `stat.mode` reports the default 0o666.
+  it.skipIf(process.platform === 'win32')(
+    'perms-on-write: cache file is created with mode 0600',
+    async () => {
+      mockSessionEndpoint({
+        token: 'fresh',
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      });
 
-    await getSessionToken({
-      client,
-      teamId: TEAM_ID,
-      projectId: PROJECT_ID,
-      deploymentId: DEPLOYMENT_ID,
-      host: HOST_URL,
-      cacheDir,
-    });
+      await getSessionToken({
+        client,
+        teamId: TEAM_ID,
+        projectId: PROJECT_ID,
+        deploymentId: DEPLOYMENT_ID,
+        host: HOST_URL,
+        cacheDir,
+      });
 
-    const path = cachePathFor(cacheDir, TEAM_ID, HOST);
-    const mode = statSync(path).mode & 0o777;
-    expect(mode).toBe(0o600);
-  });
+      const path = cachePathFor(cacheDir, TEAM_ID, HOST);
+      const mode = statSync(path).mode & 0o777;
+      expect(mode).toBe(0o600);
+    }
+  );
 
   it('uses now + 5 min when API response omits expiresAt', async () => {
     mockSessionEndpoint({ token: 'no-expiry-from-api' });

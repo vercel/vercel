@@ -406,8 +406,12 @@ describe('curl --trace', () => {
     expect(written.deploymentId).toBe(DEPLOYMENT_ID);
     expect(written.schemaVersion).toBe(1);
 
-    const mode = statSync(cachePath).mode & 0o777;
-    expect(mode).toBe(0o600);
+    // NTFS doesn't enforce Unix mode bits, so chmod's narrowing to 0o600
+    // is a no-op on Windows and `stat.mode` reports the default 0o666.
+    if (process.platform !== 'win32') {
+      const mode = statSync(cachePath).mode & 0o777;
+      expect(mode).toBe(0o600);
+    }
   });
 
   it('cache hit: pre-populated cache short-circuits session API call', async () => {
