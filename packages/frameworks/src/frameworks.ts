@@ -1920,9 +1920,10 @@ export const frameworks = [
     website: 'https://tanstack.com/start',
     supersedes: ['ionic-react', 'vite'],
     detectors: {
-      every: [
-        { matchPackage: '@tanstack/router-plugin' },
-        { matchPackage: 'nitro' },
+      every: [{ matchPackage: '@tanstack/router-plugin' }],
+      some: [
+        { matchPackage: '@tanstack/react-start' },
+        { matchPackage: '@tanstack/solid-start' },
       ],
     },
     settings: {
@@ -2272,6 +2273,44 @@ export const frameworks = [
         dest: '/',
       },
     ],
+  },
+  {
+    name: 'Ash',
+    slug: 'ash',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/ash.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/ash-dark.svg',
+    tagline:
+      'A filesystem-first framework for durable backend agents on Vercel.',
+    description:
+      'An Ash app: agents authored as a directory of files, compiled and served on Vercel.',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"experimental-ash":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pnpm install`, `yarn install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'ash build',
+        placeholder: '`npm run build` or `ash build`',
+      },
+      devCommand: {
+        value: 'ash dev',
+        placeholder: 'ash dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+    experimental: true,
   },
   {
     name: 'Sanity (v3)',

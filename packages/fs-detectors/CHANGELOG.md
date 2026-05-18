@@ -1,5 +1,41 @@
 # @vercel/fs-detectors
 
+## 6.4.0
+
+### Minor Changes
+
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+### Patch Changes
+
+- Updated dependencies [0dbb8e5]
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/frameworks@3.26.1
+  - @vercel/build-utils@13.25.0
+
+## 6.3.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
+## 6.2.2
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+- Updated dependencies [51785a6]
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/frameworks@3.26.0
+  - @vercel/build-utils@13.23.0
+
 ## 6.2.1
 
 ### Patch Changes

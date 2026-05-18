@@ -120,7 +120,7 @@ describe('redeploy', () => {
     await expect(client.stderr).toOutput(
       `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Production');
+    await expect(client.stderr).toOutput('Production  https');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -155,7 +155,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Production');
+      await expect(client.stderr).toOutput('Production  https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -172,7 +172,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview');
+      await expect(client.stderr).toOutput('Preview     https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -189,7 +189,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview');
+      await expect(client.stderr).toOutput('Preview     https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -206,7 +206,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview');
+      await expect(client.stderr).toOutput('Preview     https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);

@@ -13,6 +13,7 @@ import {
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
@@ -147,6 +148,7 @@ interface BuildOutputConfig {
   routes?: BuildResultV2Typical['routes'];
   overrides?: Record<string, PathOverride>;
   framework?: {
+    slug: string;
     version: string;
   };
   crons?: Cron[];
@@ -732,18 +734,20 @@ async function doBuild(
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
 
-    // Inject service URL environment variables so they're available during builds.
-    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
-    // these env vars are baked into the client bundle so they can be accessed in the client code.
-    // User-defined env vars take precedence and won't be overwritten.
-    if (detectedServices && detectedServices.length > 0) {
-      const serviceUrlEnvVars = getServiceUrlEnvVars({
+    // Legacy URL injection for `experimentalServices`. The `services` field
+    // opts out of this and uses explicit per-service
+    // `env` declarations (handled inside the builder loop below).
+    if (
+      detectedBuilders.useImplicitEnvInjection &&
+      detectedServices &&
+      detectedServices.length > 0
+    ) {
+      const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
         services: detectedServices,
         frameworkList,
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
       });
-
       for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
         process.env[key] = value;
         output.debug(`Injected service URL env var: ${key}=${value}`);
@@ -860,6 +864,11 @@ async function doBuild(
     }
   }
 
+  const preDeployEntries: {
+    service: string;
+    callback?: () => Promise<void>;
+  }[] = [];
+
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -970,6 +979,7 @@ async function doBuild(
             },
             installCommand: service.installCommand ?? undefined,
             buildCommand: service.buildCommand ?? undefined,
+            preDeployCommand: service.preDeployCommand ?? undefined,
             framework: builderFramework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
@@ -1004,6 +1014,16 @@ async function doBuild(
 
       const serviceRoutePrefix = build.config?.routePrefix;
       const serviceWorkspace = build.config?.workspace;
+      const preDeployCmd = service?.preDeployCommand?.trim();
+
+      const preDeployEntry =
+        preDeployCmd && service
+          ? ({ service: service.name } as (typeof preDeployEntries)[number])
+          : undefined;
+      if (preDeployEntry) {
+        preDeployEntries.push(preDeployEntry);
+      }
+
       const buildOptions: BuildOptions = {
         files: buildFiles,
         entrypoint: buildEntrypoint,
@@ -1012,6 +1032,13 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
+        ...(preDeployCmd
+          ? {
+              registerPreDeploy: (callback: () => Promise<void>) => {
+                preDeployEntry!.callback = callback;
+              },
+            }
+          : undefined),
         ...(service
           ? {
               service: {
@@ -1034,6 +1061,29 @@ async function doBuild(
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
+
+      // Inject per-service URL environment variables so they're available during builds.
+      // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+      // these env vars are baked into the client bundle so they can be accessed in the client code.
+      // User-defined env takes precedence and won't be overwritten. The env will be cleared
+      // after the build is complete
+      const restoreEnv = new Map<string, string | undefined>();
+      if (detectedServices && service?.env) {
+        const perServiceEnv = getServiceUrlEnvVars({
+          requestedEnv: service.env,
+          consumerService: service,
+          services: detectedServices,
+          frameworkList,
+          currentEnv: process.env,
+          deploymentUrl: process.env.VERCEL_URL,
+        });
+        for (const [key, value] of Object.entries(perServiceEnv)) {
+          if (key in process.env) continue;
+          restoreEnv.set(key, process.env[key]);
+          process.env[key] = value;
+          output.debug(`Injected service URL env var: ${key}=${value}`);
+        }
+      }
       let buildResult: BuildResultV2 | BuildResultV3;
       let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
@@ -1068,6 +1118,15 @@ async function doBuild(
           }
         }
       } finally {
+        // Restore any process.env keys we set from service envVars so the
+        // next builder iteration starts from a clean slate.
+        for (const [key, prior] of restoreEnv) {
+          if (prior === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = prior;
+          }
+        }
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan
@@ -1344,6 +1403,21 @@ async function doBuild(
           () => undefined,
           err => err
         )
+      );
+    }
+  }
+
+  // Run pre-deploy commands after all builders succeeded.
+  // A builder is responsible for handling preDeployCommand, so
+  // it will actually own its env, tracing, etc.
+  // We do not fire them during the build itself, because not all builds
+  // might succeed and be actually deployed.
+  for (const entry of preDeployEntries) {
+    if (entry.callback) {
+      await entry.callback();
+    } else {
+      output.warn(
+        `Service "${entry.service}" has a preDeployCommand but its builder does not support it. The command was not executed.`
       );
     }
   }
@@ -1809,7 +1883,7 @@ function getDirectorySizeInMB(dir: string): {
 async function getFramework(
   cwd: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>
-): Promise<{ version: string } | undefined> {
+): Promise<{ slug: string; version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList,
@@ -1826,27 +1900,37 @@ async function getFramework(
         'framework' in buildResult &&
         build.use === detectedFramework.useRuntime.use
       ) {
-        return buildResult.framework;
+        return buildResult.framework
+          ? {
+              slug: buildResult.framework.slug,
+              version: buildResult.framework.version,
+            }
+          : undefined;
       }
     }
   }
 
   // determine framework version from listed package.json version
-  if (detectedFramework.detectedVersion) {
+  if (detectedFramework.slug) {
     // check for a valid, explicit version, not a range
-    if (semver.valid(detectedFramework.detectedVersion)) {
+    if (
+      detectedFramework.detectedVersion &&
+      semver.valid(detectedFramework.detectedVersion)
+    ) {
       return {
+        slug: detectedFramework.slug,
         version: detectedFramework.detectedVersion,
       };
     }
-  }
 
-  // determine framework version with runtime lookup
-  const frameworkVersion = detectFrameworkVersion(detectedFramework);
-  if (frameworkVersion) {
-    return {
-      version: frameworkVersion,
-    };
+    // determine framework version with runtime lookup
+    const frameworkVersion = detectFrameworkVersion(detectedFramework);
+    if (frameworkVersion) {
+      return {
+        slug: detectedFramework.slug,
+        version: frameworkVersion,
+      };
+    }
   }
 }
 

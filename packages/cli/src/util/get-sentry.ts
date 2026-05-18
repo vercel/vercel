@@ -8,12 +8,19 @@ let sentry: typeof SentryType | undefined;
  * which improves CLI startup performance for the common case
  * where no errors occur.
  */
-export function getSentry(): typeof SentryType {
+export async function getSentry(): Promise<typeof SentryType> {
   if (!sentry) {
-    // Dynamic require to avoid loading Sentry at startup
-    const Sentry = require('@sentry/node') as typeof SentryType;
-    const { SENTRY_DSN } = require('./constants');
-    const pkg = require('./pkg').default;
+    // Dynamic import to keep Sentry out of the startup bundle.
+    const [SentryModule, { SENTRY_DSN }, { default: pkg }] = await Promise.all([
+      import('@sentry/node'),
+      import('./constants'),
+      import('./pkg'),
+    ]);
+    const Sentry = (
+      'init' in SentryModule
+        ? SentryModule
+        : (SentryModule as unknown as { default: typeof SentryType }).default
+    ) as typeof SentryType;
 
     Sentry.init({
       dsn: SENTRY_DSN,

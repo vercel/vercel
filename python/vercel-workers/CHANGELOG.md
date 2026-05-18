@@ -1,5 +1,11 @@
 # vercel-workers
 
+## 0.0.23
+
+### Patch Changes
+
+- cd8f705: [vercel-workers] Fall back to `receive_message_by_id` for v2beta metadata-only callbacks
+
 ## 0.0.22
 
 ### Patch Changes

@@ -7,7 +7,13 @@ import getScope from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
 import { getDeploymentUrlById } from './deployment-url';
-import type { ProjectLinked } from '@vercel-internals/types';
+import toHost from '../../util/to-host';
+import getTeams from '../../util/teams/get-teams';
+import type {
+  Deployment,
+  Project,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -30,6 +36,7 @@ export interface DeploymentUrlResult {
 
 export interface CommandSetupResult {
   path: string;
+  isFullUrl: boolean;
   deploymentFlag?: string;
   protectionBypassFlag?: string;
   toolFlags: string[];
@@ -42,6 +49,106 @@ export interface CommandTelemetryClient {
   trackCliOptionProtectionBypass(secret: string | undefined): void;
 }
 
+function looksLikeHostname(path: string): boolean {
+  const firstSegment = path.split('/')[0];
+  return firstSegment.includes('.') && !firstSegment.startsWith('.');
+}
+
+function orgFromOwner(id: string, slug = id): ProjectLinked['org'] {
+  return { type: id.startsWith('team_') ? 'team' : 'user', id, slug };
+}
+
+const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
+const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help']);
+
+function flagName(arg: string): string {
+  const eqIdx = arg.indexOf('=');
+  return eqIdx === -1 ? arg : arg.slice(0, eqIdx);
+}
+
+function flagValue(args: string[], index: number): string | undefined {
+  const arg = args[index];
+  const eqIdx = arg.indexOf('=');
+  if (eqIdx !== -1) {
+    return arg.slice(eqIdx + 1);
+  }
+
+  const next = args[index + 1];
+  return next && !next.startsWith('-') ? next : undefined;
+}
+
+export function parseCurlLikeArgs(
+  rawArgs: string[],
+  commandName: string
+): {
+  target?: string;
+  deployment?: string;
+  protectionBypass?: string;
+  yes: boolean;
+  help: boolean;
+  toolFlags: string[];
+} {
+  const result = {
+    target: undefined as string | undefined,
+    deployment: undefined as string | undefined,
+    protectionBypass: undefined as string | undefined,
+    yes: false,
+    help: false,
+    toolFlags: [] as string[],
+  };
+  const args = rawArgs[0] === commandName ? rawArgs.slice(1) : [...rawArgs];
+  const separatorIndex = args.indexOf('--');
+  const beforeSeparator =
+    separatorIndex === -1 ? args : args.slice(0, separatorIndex);
+  const afterSeparator =
+    separatorIndex === -1 ? [] : args.slice(separatorIndex + 1);
+
+  for (let i = 0; i < beforeSeparator.length; i++) {
+    const arg = beforeSeparator[i];
+    const name = flagName(arg);
+
+    if (VC_STRING_FLAGS.has(name)) {
+      const value = flagValue(beforeSeparator, i);
+      if (!arg.includes('=') && value !== undefined) {
+        i++;
+      }
+      if (name === '--deployment') {
+        result.deployment = value;
+      } else {
+        result.protectionBypass = value;
+      }
+      continue;
+    }
+
+    if (VC_BOOLEAN_FLAGS.has(name)) {
+      if (name === '--yes') {
+        result.yes = true;
+      } else {
+        result.help = true;
+      }
+      continue;
+    }
+
+    if (!result.target && name === '--url') {
+      const value = flagValue(beforeSeparator, i);
+      if (!arg.includes('=') && value !== undefined) {
+        i++;
+      }
+      result.target = value;
+      continue;
+    }
+
+    if (!result.target && !arg.startsWith('-')) {
+      result.target = arg;
+    } else {
+      result.toolFlags.push(arg);
+    }
+  }
+
+  result.toolFlags.push(...afterSeparator);
+  return result;
+}
+
 /**
  * Shared setup logic for curl-like commands
  * Handles argument parsing, validation, help, and telemetry
@@ -49,9 +156,57 @@ export interface CommandTelemetryClient {
 export function setupCurlLikeCommand(
   client: Client,
   command: Command,
-  telemetryClient: CommandTelemetryClient
+  telemetryClient: CommandTelemetryClient,
+  options: { allowFullUrl?: boolean } = {}
 ): CommandSetupResult | number {
   const { print } = output;
+
+  if (options.allowFullUrl) {
+    const parsed = parseCurlLikeArgs(client.argv.slice(2), command.name);
+
+    if (parsed.help) {
+      print(help(command, { columns: client.stderr.columns }));
+      return 2;
+    }
+
+    const path = parsed.target;
+
+    telemetryClient.trackCliArgumentPath(path);
+
+    if (parsed.deployment) {
+      telemetryClient.trackCliOptionDeployment(parsed.deployment);
+    }
+
+    if (parsed.protectionBypass) {
+      telemetryClient.trackCliOptionProtectionBypass(parsed.protectionBypass);
+    }
+
+    if (!path) {
+      output.error(
+        `${getCommandName(`${command.name} <url|path>`)} requires a URL or API path (e.g., 'https://example.vercel.app/api/hello' or '/api/hello')`
+      );
+      print(help(command, { columns: client.stderr.columns }));
+      return 1;
+    }
+
+    let isFullUrl = path.startsWith('http://') || path.startsWith('https://');
+    if (!isFullUrl && looksLikeHostname(path)) {
+      isFullUrl = true;
+    }
+
+    output.debug(
+      `${command.name} flags (${parsed.toolFlags.length} args): ${JSON.stringify(parsed.toolFlags)}`
+    );
+
+    return {
+      path: isFullUrl && !path.startsWith('http') ? `https://${path}` : path,
+      isFullUrl,
+      deploymentFlag: parsed.deployment,
+      protectionBypassFlag: parsed.protectionBypass,
+      toolFlags: parsed.toolFlags,
+      yes: parsed.yes,
+    };
+  }
 
   let parsedArgs = null;
 
@@ -92,15 +247,25 @@ export function setupCurlLikeCommand(
   }
 
   if (!path || path === '--' || path.startsWith('-')) {
-    output.error(
-      `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
-    );
+    if (options.allowFullUrl) {
+      output.error(
+        `${getCommandName(`${command.name} <url|path>`)} requires a URL or API path (e.g., 'https://example.vercel.app/api/hello' or '/api/hello')`
+      );
+    } else {
+      output.error(
+        `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
+      );
+    }
     print(help(command, { columns: client.stderr.columns }));
     return 1;
   }
 
-  // Disallow passing a full URL as the path arg to avoid duplicating the base URL
-  if (path.startsWith('http://') || path.startsWith('https://')) {
+  let isFullUrl = path.startsWith('http://') || path.startsWith('https://');
+  if (!isFullUrl && looksLikeHostname(path)) {
+    isFullUrl = true;
+  }
+
+  if (isFullUrl && !options.allowFullUrl) {
     output.error(
       `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
     );
@@ -118,11 +283,130 @@ export function setupCurlLikeCommand(
   );
 
   return {
-    path,
+    path: isFullUrl && !path.startsWith('http') ? `https://${path}` : path,
+    isFullUrl,
     deploymentFlag,
     protectionBypassFlag,
     toolFlags,
     yes: !!flags['--yes'],
+  };
+}
+
+async function resolveProjectFromUrl(
+  client: Client,
+  url: string
+): Promise<ProjectLinked | null> {
+  const host = toHost(url);
+
+  for (const useCurrentTeam of [undefined, false] as const) {
+    try {
+      const deployment = await client.fetch<Deployment>(
+        `/v13/deployments/${encodeURIComponent(host)}`,
+        { useCurrentTeam }
+      );
+      if (deployment.projectId && deployment.ownerId) {
+        const project = await client.fetch<Project>(
+          `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
+          { accountId: deployment.ownerId }
+        );
+        return {
+          status: 'linked',
+          project,
+          org: orgFromOwner(deployment.ownerId),
+        };
+      }
+    } catch (err) {
+      output.debug(`Deployment lookup failed for ${host}: ${err}`);
+    }
+  }
+
+  try {
+    const aliasUrl = `/now/aliases/${encodeURIComponent(host)}`;
+    try {
+      const alias = await client.fetch<{
+        projectId?: string;
+        ownerId?: string;
+      }>(aliasUrl, { useCurrentTeam: false });
+      if (alias.projectId && alias.ownerId) {
+        const project = await client.fetch<Project>(
+          `/v9/projects/${encodeURIComponent(alias.projectId)}`,
+          { accountId: alias.ownerId }
+        );
+        return {
+          status: 'linked',
+          project,
+          org: orgFromOwner(alias.ownerId),
+        };
+      }
+    } catch (err) {
+      output.debug(`User alias lookup failed for ${host}: ${err}`);
+    }
+
+    const teams = (await getTeams(client)).filter(team => !team.limited);
+    for (const team of teams) {
+      try {
+        const alias = await client.fetch<{
+          projectId?: string;
+          ownerId?: string;
+        }>(aliasUrl, { accountId: team.id });
+        const projectId = alias.projectId;
+        const ownerId = alias.ownerId || team.id;
+        if (projectId) {
+          const project = await client.fetch<Project>(
+            `/v9/projects/${encodeURIComponent(projectId)}`,
+            { accountId: ownerId }
+          );
+          return {
+            status: 'linked',
+            project,
+            org: orgFromOwner(ownerId, team.slug),
+          };
+        }
+      } catch (err) {
+        output.debug(`Alias lookup failed for ${host} in ${team.slug}: ${err}`);
+      }
+    }
+  } catch (err) {
+    output.debug(`Team lookup failed for ${host}: ${err}`);
+  }
+
+  return null;
+}
+
+export async function getFullUrlAndToken(
+  client: Client,
+  fullUrl: string,
+  protectionBypassFlag?: string
+): Promise<Pick<DeploymentUrlResult, 'fullUrl' | 'deploymentProtectionToken'>> {
+  if (protectionBypassFlag) {
+    return { fullUrl, deploymentProtectionToken: protectionBypassFlag };
+  }
+
+  if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
+    output.debug('Using protection bypass secret from environment variable');
+    return {
+      fullUrl,
+      deploymentProtectionToken: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+    };
+  }
+
+  const link = await resolveProjectFromUrl(client, fullUrl);
+  let deploymentProtectionToken: string | null = null;
+
+  if (link) {
+    try {
+      deploymentProtectionToken = await getOrCreateDeploymentProtectionToken(
+        client,
+        link
+      );
+    } catch (err) {
+      output.debug(`Failed to get deployment protection bypass token: ${err}`);
+    }
+  }
+
+  return {
+    fullUrl,
+    deploymentProtectionToken,
   };
 }
 

@@ -28,6 +28,7 @@ export interface ServicesBuildersResult {
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: ResolvedService[];
+  useImplicitEnvInjection?: boolean;
 }
 
 function isExperimentalServicesAutoDetectionEnabled(): boolean {
@@ -163,5 +164,6 @@ export async function getServicesBuilders(
         : null,
     errorRoutes: [],
     services: result.services,
+    useImplicitEnvInjection: result.useImplicitEnvInjection,
   };
 }

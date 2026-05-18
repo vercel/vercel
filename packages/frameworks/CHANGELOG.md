@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.26.1
+
+### Patch Changes
+
+- 0dbb8e5: Detect TanStack Start projects without requiring a top-level `nitro` dependency by matching Start packages directly.
+
+## 3.26.0
+
+### Minor Changes
+
+- 51785a6: Add Ash framework preset
+
 ## 3.25.1
 
 ### Patch Changes

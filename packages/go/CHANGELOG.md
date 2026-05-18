@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.7.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
 ## 3.6.0
 
 ### Minor Changes

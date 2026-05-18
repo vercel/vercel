@@ -10,6 +10,7 @@ import {
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
+  EnvVars,
   ServiceRuntime,
   ExperimentalServices,
   Services,
@@ -219,6 +220,7 @@ export interface ReadVercelConfigResult {
   config: {
     services?: Services;
     experimentalServices?: ExperimentalServices;
+    env?: Record<string, string> | EnvVars;
   } | null;
   error: ServiceDetectionError | null;
 }

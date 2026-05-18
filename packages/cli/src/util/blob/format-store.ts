@@ -1,6 +1,6 @@
 import bytes from 'bytes';
 import chalk from 'chalk';
-import { format } from 'date-fns';
+import format from 'date-fns/format';
 import output from '../../output-manager';
 
 export interface StoreDetails {
