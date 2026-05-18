@@ -715,6 +715,7 @@ export interface BuildResultV2Typical {
     value: string;
   }>;
   framework?: {
+    slug?: string;
     version: string;
   };
   flags?: { definitions: FlagDefinitions };

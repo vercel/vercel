@@ -148,6 +148,7 @@ interface BuildOutputConfig {
   routes?: BuildResultV2Typical['routes'];
   overrides?: Record<string, PathOverride>;
   framework?: {
+    slug?: string;
     version: string;
   };
   crons?: Cron[];
@@ -1882,7 +1883,7 @@ function getDirectorySizeInMB(dir: string): {
 async function getFramework(
   cwd: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>
-): Promise<{ version: string } | undefined> {
+): Promise<{ slug: string | undefined; version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList,
@@ -1899,7 +1900,12 @@ async function getFramework(
         'framework' in buildResult &&
         build.use === detectedFramework.useRuntime.use
       ) {
-        return buildResult.framework;
+        return buildResult.framework
+          ? {
+              slug: buildResult.framework.slug,
+              version: buildResult.framework.version,
+            }
+          : undefined;
       }
     }
   }
@@ -1909,6 +1915,7 @@ async function getFramework(
     // check for a valid, explicit version, not a range
     if (semver.valid(detectedFramework.detectedVersion)) {
       return {
+        slug: detectedFramework.slug ?? undefined,
         version: detectedFramework.detectedVersion,
       };
     }
@@ -1918,6 +1925,7 @@ async function getFramework(
   const frameworkVersion = detectFrameworkVersion(detectedFramework);
   if (frameworkVersion) {
     return {
+      slug: detectedFramework.slug ?? undefined,
       version: frameworkVersion,
     };
   }
