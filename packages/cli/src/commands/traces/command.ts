@@ -12,7 +12,8 @@ export const getSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Print the raw trace JSON to stdout instead of a summary.',
+      description:
+        'Print the raw trace JSON to stdout instead of the markdown summary.',
     },
     {
       name: 'project',
