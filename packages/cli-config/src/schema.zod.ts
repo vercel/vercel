@@ -9,6 +9,10 @@ export const guidanceConfigSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
+export const updatesConfigSchema = z.object({
+  auto: z.boolean().optional(),
+});
+
 export const authConfigSchema = z.object({
   '// Note': z.string().optional(),
   '// Docs': z.string().optional(),
@@ -27,4 +31,5 @@ export const globalConfigSchema = z.object({
   api: z.string().optional(),
   telemetry: telemetryConfigSchema.optional(),
   guidance: guidanceConfigSchema.optional(),
+  updates: updatesConfigSchema.optional(),
 });

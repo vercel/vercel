@@ -12,12 +12,14 @@ import {
   globalConfigSchema as generatedGlobalConfigSchema,
   guidanceConfigSchema as generatedGuidanceConfigSchema,
   telemetryConfigSchema as generatedTelemetryConfigSchema,
+  updatesConfigSchema as generatedUpdatesConfigSchema,
 } from './schema.zod';
 import type {
   AuthConfig,
   GlobalConfig,
   GuidanceConfig,
   TelemetryConfig,
+  UpdatesConfig,
 } from './types';
 
 export const telemetryConfigSchema =
@@ -26,10 +28,14 @@ export const telemetryConfigSchema =
 export const guidanceConfigSchema =
   generatedGuidanceConfigSchema.passthrough() as z.ZodType<GuidanceConfig>;
 
+export const updatesConfigSchema =
+  generatedUpdatesConfigSchema.passthrough() as z.ZodType<UpdatesConfig>;
+
 export const globalConfigSchema = generatedGlobalConfigSchema
   .extend({
     telemetry: telemetryConfigSchema.optional(),
     guidance: guidanceConfigSchema.optional(),
+    updates: updatesConfigSchema.optional(),
   })
   .passthrough() as z.ZodType<GlobalConfig>;
 
