@@ -127,15 +127,27 @@ export async function detectViteServerEnvironments(
     });
   }
 
-  // Only take over if at least one server environment actually produced
-  // output on disk. Vanilla Vite SPAs, vitepress, etc. either have no
-  // server env or have one that wasn't built — those should fall through.
-  const hasBuiltServer = environments.some(
-    e => e.consumer === 'server' && existsSync(e.outDir)
+  // Prune phantom server environments before deciding whether to take over.
+  // Some Vite plugins (e.g. @sveltejs/vite-plugin-svelte) register a default
+  // `ssr` environment even when the user is shipping a plain client SPA.
+  // Its outDir defaults to `dist`, which is also where the client built,
+  // so a naive existsSync check would fire for every Vite project. Real
+  // SSR frameworks (TanStack Start, RR v7, Hydrogen) always use a distinct
+  // outDir for the server bundle, and even if they didn't, we couldn't pick
+  // apart a server entry from client SPA files in a shared directory.
+  const clientOutDirs = new Set(
+    environments.filter(e => e.consumer === 'client').map(e => e.outDir)
   );
+  const filtered = environments.filter(env => {
+    if (env.consumer !== 'server') return true;
+    if (clientOutDirs.has(env.outDir)) return false;
+    return existsSync(env.outDir);
+  });
+
+  const hasBuiltServer = filtered.some(e => e.consumer === 'server');
   if (!hasBuiltServer) return null;
 
-  return { environments };
+  return { environments: filtered };
 }
 
 export async function buildViteEnvironments({
