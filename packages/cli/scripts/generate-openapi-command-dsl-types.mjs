@@ -148,15 +148,17 @@ function collectDisplayFieldsByProperty(operation, componentsSchemas) {
   const successResponseSchemas = Object.entries(responses)
     .filter(([statusCode]) => /^2\d\d$/.test(statusCode))
     .map(
-      ([, response]) =>
-        response?.content?.['application/json']?.schema ?? null
+      ([, response]) => response?.content?.['application/json']?.schema ?? null
     )
     .filter(Boolean);
 
   const fieldsByProperty = new Map();
 
   for (const responseSchema of successResponseSchemas) {
-    const resolvedResponseSchema = resolveSchemaRef(responseSchema, componentsSchemas);
+    const resolvedResponseSchema = resolveSchemaRef(
+      responseSchema,
+      componentsSchemas
+    );
     if (!resolvedResponseSchema) {
       continue;
     }
@@ -212,7 +214,10 @@ function collectDisplayFieldsByProperty(operation, componentsSchemas) {
   }
 
   return Array.from(fieldsByProperty.entries())
-    .map(([propertyName, fieldSet]) => [propertyName, Array.from(fieldSet).sort()])
+    .map(([propertyName, fieldSet]) => [
+      propertyName,
+      Array.from(fieldSet).sort(),
+    ])
     .sort(([a], [b]) => a.localeCompare(b));
 }
 
@@ -273,11 +278,7 @@ function schemaToTsType(schema, componentsSchemas, visited = new WeakSet()) {
     normalizedTypes.includes('array') ||
     (!normalizedTypes.length && Boolean(resolved.items))
   ) {
-    const itemType = schemaToTsType(
-      resolved.items,
-      componentsSchemas,
-      visited
-    );
+    const itemType = schemaToTsType(resolved.items, componentsSchemas, visited);
     visited.delete(resolved);
     return `readonly (${itemType})[]`;
   }
@@ -297,7 +298,9 @@ function schemaToTsType(schema, componentsSchemas, visited = new WeakSet()) {
           componentsSchemas,
           visited
         );
-        propertyLines.push(`readonly ${toTsPropertyKey(propertyName)}: ${propertyType};`);
+        propertyLines.push(
+          `readonly ${toTsPropertyKey(propertyName)}: ${propertyType};`
+        );
       }
     }
 
@@ -312,7 +315,9 @@ function schemaToTsType(schema, componentsSchemas, visited = new WeakSet()) {
             )
           : null;
     if (additionalPropertiesType) {
-      propertyLines.push(`readonly [key: string]: ${additionalPropertiesType};`);
+      propertyLines.push(
+        `readonly [key: string]: ${additionalPropertiesType};`
+      );
     }
 
     visited.delete(resolved);
@@ -352,12 +357,16 @@ function collectDisplayShapesByStatusProperty(operation, componentsSchemas) {
       continue;
     }
 
-    const responseSchema = response?.content?.['application/json']?.schema ?? null;
+    const responseSchema =
+      response?.content?.['application/json']?.schema ?? null;
     if (!responseSchema) {
       continue;
     }
 
-    const resolvedResponseSchema = resolveSchemaRef(responseSchema, componentsSchemas);
+    const resolvedResponseSchema = resolveSchemaRef(
+      responseSchema,
+      componentsSchemas
+    );
     if (!resolvedResponseSchema) {
       continue;
     }
@@ -421,7 +430,10 @@ function collectDisplayShapesByStatusProperty(operation, componentsSchemas) {
 
 function collectOperationEntries(spec) {
   const paths =
-    spec && typeof spec === 'object' && spec.paths && typeof spec.paths === 'object'
+    spec &&
+    typeof spec === 'object' &&
+    spec.paths &&
+    typeof spec.paths === 'object'
       ? spec.paths
       : {};
   const componentsSchemas =
@@ -636,7 +648,10 @@ function collectDisplayShapeEntries(operationEntries) {
         operationsById.set(entry.operationId, statusesByCode);
       }
 
-      for (const [statusCode, properties] of entry.displayShapesByStatusProperty) {
+      for (const [
+        statusCode,
+        properties,
+      ] of entry.displayShapesByStatusProperty) {
         let propertiesByName = statusesByCode.get(statusCode);
         if (!propertiesByName) {
           propertiesByName = new Map();
@@ -747,20 +762,22 @@ function buildGeneratedTypesSource(
   });
 
   const displayEntriesByTag = new Map(displayEntries);
-  const displayPropertyInterfaceLines = tagEntries.map(([tag, operationIds]) => {
-    const operationsById = new Map(displayEntriesByTag.get(tag) ?? []);
-    const operationLines = operationIds.map(operationId => {
-      const properties = operationsById.get(operationId) ?? [];
-      const propertyType =
-        properties.length > 0
-          ? properties
-              .map(([propertyName]) => toTsStringLiteral(propertyName))
-              .join(' | ')
-          : 'never';
-      return `    ${toTsStringLiteral(operationId)}: ${propertyType};`;
-    });
-    return `  ${toTsStringLiteral(tag)}: {\n${operationLines.join('\n')}\n  };`;
-  });
+  const displayPropertyInterfaceLines = tagEntries.map(
+    ([tag, operationIds]) => {
+      const operationsById = new Map(displayEntriesByTag.get(tag) ?? []);
+      const operationLines = operationIds.map(operationId => {
+        const properties = operationsById.get(operationId) ?? [];
+        const propertyType =
+          properties.length > 0
+            ? properties
+                .map(([propertyName]) => toTsStringLiteral(propertyName))
+                .join(' | ')
+            : 'never';
+        return `    ${toTsStringLiteral(operationId)}: ${propertyType};`;
+      });
+      return `  ${toTsStringLiteral(tag)}: {\n${operationLines.join('\n')}\n  };`;
+    }
+  );
 
   const displayShapeEntriesByTag = new Map(displayShapeEntries);
   const displayPropertyByStatusInterfaceLines = tagEntries.map(
@@ -852,7 +869,9 @@ function buildGeneratedTypesSource(
       const statusCodes = operationsById.get(operationId) ?? [];
       const statusUnion =
         statusCodes.length > 0
-          ? statusCodes.map(statusCode => toTsStringLiteral(statusCode)).join(' | ')
+          ? statusCodes
+              .map(statusCode => toTsStringLiteral(statusCode))
+              .join(' | ')
           : 'never';
       return `    ${toTsStringLiteral(operationId)}: ${statusUnion};`;
     });
