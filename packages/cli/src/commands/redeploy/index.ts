@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { checkDeploymentStatus } from '@vercel/client';
 import type Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
 import getScope from '../../util/get-scope';
@@ -150,20 +150,12 @@ export default async function redeploy(client: Client): Promise<number> {
       isProdDeployment = customEnvironment.type === 'production';
     }
 
-    output.print(
-      `${prependEmoji(
-        `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
-        emoji('inspect')
-      )}\n`
-    );
+    printAlignedLabel('Inspect', chalk.cyan(deployment.inspectorUrl));
 
-    output.print(
-      prependEmoji(
-        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-          previewUrl
-        )} ${deployStamp()}`,
-        emoji('success')
-      ) + `\n`
+    printAlignedLabel(
+      isProdDeployment ? 'Production' : 'Preview',
+      chalk.cyan(previewUrl),
+      isProdDeployment ? { gutter: '▲' } : {}
     );
 
     if (!client.stdout.isTTY) {
@@ -172,7 +164,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
     if (!noWait) {
       output.spinner(
-        deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
+        deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…',
         0
       );
       let project: Project | ProjectNotFound | undefined;
@@ -187,7 +179,7 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.aliasAssigned &&
         !rollingRelease
       ) {
-        output.spinner('Completing', 0);
+        output.spinner('Completing…', 0);
       } else {
         try {
           const clientOptions: VercelClientOptions = {
@@ -205,9 +197,9 @@ export default async function redeploy(client: Client): Promise<number> {
             clientOptions
           )) {
             if (event.type === 'building') {
-              output.spinner('Building', 0);
+              output.spinner('Building…', 0);
             } else if (event.type === 'ready' && rollingRelease) {
-              output.spinner('Releasing', 0);
+              output.spinner('Releasing…', 0);
               output.stopSpinner();
               deployment = event.payload;
               break;
@@ -217,9 +209,9 @@ export default async function redeploy(client: Client): Promise<number> {
                 ? (event.payload as any).checksState === 'completed'
                 : true)
             ) {
-              output.spinner('Completing', 0);
+              output.spinner('Completing…', 0);
             } else if (event.type === 'checks-running') {
-              output.spinner('Running Checks', 0);
+              output.spinner('Running Checks…', 0);
             } else if (
               event.type === 'alias-assigned' ||
               event.type === 'checks-conclusion-failed'
@@ -235,12 +227,9 @@ export default async function redeploy(client: Client): Promise<number> {
               ) {
                 const primaryDomain = event.payload.alias[0];
                 const prodUrl = `https://${primaryDomain}`;
-                output.print(
-                  prependEmoji(
-                    `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-                    emoji('link')
-                  ) + '\n'
-                );
+                printAlignedLabel('Aliased', chalk.cyan(prodUrl), {
+                  gutter: '▲',
+                });
               }
 
               deployment = event.payload;

@@ -253,6 +253,79 @@ export const setSubcommand = {
   ],
 } as const;
 
+export const splitSubcommand = {
+  name: 'split',
+  aliases: [],
+  description:
+    'Configure a weighted split for a feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to configure (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Entity attribute used for bucketing, in the form entity.attribute',
+      argument: 'ENTITY.ATTRIBUTE',
+    },
+    {
+      name: 'weight',
+      shorthand: 'w',
+      type: [String],
+      deprecated: false,
+      description:
+        'Variant weight ratio as VARIANT=WEIGHT. Repeat for each variant; values are normalized and 0 receives no traffic.',
+      argument: 'VARIANT=WEIGHT',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The fallback variant to serve when the split attribute is unavailable',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Split a boolean flag in production',
+      value: `${packageName} flags split redesigned-checkout --environment production --by user.userId --weight off=95 --weight on=5`,
+    },
+    {
+      name: 'Split a string flag with a fallback variant',
+      value: `${packageName} flags split welcome-message -e production --by user.userId --default-variant control --weight control=90 --weight treatment=10`,
+    },
+    {
+      name: 'Exclude a variant from the split',
+      value: `${packageName} flags split checkout-copy -e preview --by user.userId --default-variant control --weight control=50 --weight treatment=50 --weight legacy=0`,
+    },
+  ],
+} as const;
+
 export const rolloutSubcommand = {
   name: 'rollout',
   aliases: [],
@@ -688,6 +761,7 @@ export const flagsCommand = {
     openSubcommand,
     updateSubcommand,
     setSubcommand,
+    splitSubcommand,
     rolloutSubcommand,
     removeSubcommand,
     archiveSubcommand,

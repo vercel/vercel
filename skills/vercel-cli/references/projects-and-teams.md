@@ -52,7 +52,7 @@ Do not conclude that no projects or deployments exist after checking only one re
 
 ## Scoping
 
-Use `--scope` or `--team` on any command to target a specific team:
+Use `--scope` on any command to target a specific team. `--team` exists for compatibility but is deprecated.
 
 ```bash
 vercel deploy --scope my-team

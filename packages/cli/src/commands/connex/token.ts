@@ -44,7 +44,7 @@ export async function token(
   const clientId = args[0];
   if (!clientId) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connex token <id>'
+      'Missing connector ID or UID. Usage: vercel connect token <id>'
     );
     return 1;
   }
@@ -84,7 +84,9 @@ export async function token(
   const errorMessage = result.errorMessage ?? 'Failed to get token';
 
   if (errorCode === 'not_found') {
-    output.error('Connector not found or Connex is not enabled for this team.');
+    output.error(
+      'Connector not found or Connect is not enabled for this team.'
+    );
     return 1;
   }
 
@@ -115,7 +117,7 @@ export async function token(
 
   // Attempt recovery when explicitly opted in (--yes) or when we're in a
   // fully interactive TTY. In any other context (pipe, script, agent)
-  // we fail fast so `TOKEN=$(vc connex token ...)` stays safe.
+  // we fail fast so `TOKEN=$(vc connect token ...)` stays safe.
   const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
   const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
 
@@ -125,7 +127,7 @@ export async function token(
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
-      `Or re-run with --yes to open the browser automatically: vercel connex token ${clientId} --yes`
+      `Or re-run with --yes to open the browser automatically: vercel connect token ${clientId} --yes`
     );
     return 1;
   }
@@ -207,7 +209,7 @@ function buildActionUrl(
     teamId,
     request_code: requestCode,
   });
-  return `https://vercel.com/api/v1/connex/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
+  return `https://vercel.com/api/v1/connect/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }
 
 function printTokenResult(
@@ -234,7 +236,7 @@ async function fetchToken(
 ): Promise<TokenResult> {
   try {
     const data = await client.fetch<ConnexTokenResponse>(
-      `/v1/connex/token/${encodeURIComponent(clientId)}`,
+      `/v1/connect/token/${encodeURIComponent(clientId)}`,
       {
         method: 'POST',
         body: JSON.stringify(body),

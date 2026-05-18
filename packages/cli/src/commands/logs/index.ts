@@ -1,7 +1,7 @@
 import { isErrnoException } from '@vercel/error-utils';
 import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
-import { format } from 'date-fns';
+import format from 'date-fns/format';
 import type Client from '../../util/client';
 import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
