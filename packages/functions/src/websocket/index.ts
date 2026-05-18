@@ -1,22 +1,7 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
-type AsyncContextRunner = ReturnType<typeof AsyncLocalStorage.snapshot>;
-
-function bindAsyncContext(
-  ws: WebSocket,
-  runInContext: AsyncContextRunner
-): WebSocket {
-  const emit = ws.emit.bind(ws);
-
-  ws.emit = ((...args) => runInContext(() => emit(...args))) as typeof ws.emit;
-
-  return ws;
-}
-
 export async function upgradeWebSocket(): Promise<WebSocket> {
-  const runInContext = AsyncLocalStorage.snapshot();
   const ctx = getContext();
 
   if (typeof ctx.upgradeWebSocket !== 'function') {
@@ -51,7 +36,7 @@ export async function upgradeWebSocket(): Promise<WebSocket> {
 
     const resolveUpgrade = (ws: WebSocket) => {
       cleanup();
-      resolve(bindAsyncContext(ws, runInContext));
+      resolve(ws);
     };
 
     const onError = (err: Error) => rejectUpgrade(err);
