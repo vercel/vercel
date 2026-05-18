@@ -70,19 +70,48 @@ export interface ViteEnvironmentsDetection {
   environments: ResolvedEnvironment[];
 }
 
+// Resolved environments are cached per workPath. `resolveConfig` runs every
+// plugin's `config`/`configResolved` hook, which for some frameworks is
+// non-trivial (route-tree codegen, content-collections scans). Pre-build
+// and post-build paths both want the same answer; memoize so we don't pay
+// twice.
+const envCache = new Map<string, Promise<ResolvedEnvironment[] | null>>();
+
 /**
- * Cheaply attempts to discover vite environments with server output on disk.
- * Returns `null` when there's nothing to do — caller should fall through to
- * the normal static-build path. Never throws on the "not a vite project"
- * cases; only throws if vite *is* present and resolveConfig blows up in a
- * way we can't recover from.
+ * Test helper. The cache lives at module scope so it survives across
+ * vitest cases in the same worker; call this in `beforeEach` to keep
+ * tests independent.
  */
-export async function detectViteServerEnvironments(
+export function _resetViteEnvironmentsCacheForTests(): void {
+  envCache.clear();
+}
+
+/**
+ * Resolve the vite environments declared by the project (after pruning
+ * phantom server envs that share their outDir with a client env). Returns
+ * `null` when this isn't a vite project or resolveConfig fails. Does NOT
+ * check that the outDirs exist on disk — that's the caller's job for the
+ * post-build path. Memoized.
+ */
+export async function getViteEnvironments(
   workPath: string
-): Promise<ViteEnvironmentsDetection | null> {
+): Promise<ResolvedEnvironment[] | null> {
+  const cached = envCache.get(workPath);
+  if (cached) return cached;
+  const promise = loadViteEnvironments(workPath);
+  envCache.set(workPath, promise);
+  return promise;
+}
+
+async function loadViteEnvironments(
+  workPath: string
+): Promise<ResolvedEnvironment[] | null> {
   // Pre-check: is vite resolvable from this project at all? If not, this
   // isn't a vite build and we shouldn't pay the cost of resolveConfig.
-  const projectRequire = createRequire(join(workPath, 'index.js'));
+  // `createRequire` uses the path only as a resolution anchor — Node walks
+  // up its dirname looking for `node_modules`. The file is never opened,
+  // so the basename here is arbitrary.
+  const projectRequire = createRequire(join(workPath, '__vite_detect__'));
   let vite: typeof import('vite');
   try {
     vite = projectRequire('vite');
@@ -127,20 +156,49 @@ export async function detectViteServerEnvironments(
     });
   }
 
-  // Prune phantom server environments before deciding whether to take over.
-  // Some Vite plugins (e.g. @sveltejs/vite-plugin-svelte) register a default
-  // `ssr` environment even when the user is shipping a plain client SPA.
-  // Its outDir defaults to `dist`, which is also where the client built,
-  // so a naive existsSync check would fire for every Vite project. Real
-  // SSR frameworks (TanStack Start, RR v7, Hydrogen) always use a distinct
-  // outDir for the server bundle, and even if they didn't, we couldn't pick
-  // apart a server entry from client SPA files in a shared directory.
+  // Prune phantom server environments. Some Vite plugins (e.g.
+  // @sveltejs/vite-plugin-svelte, and Vite itself) register a default `ssr`
+  // environment even when the user is shipping a plain client SPA. Its
+  // outDir defaults to `dist`, which is also where the client built — so
+  // anything that shares an outDir with a client env isn't a real SSR
+  // setup we should be wrapping or handing to Nitro.
   const clientOutDirs = new Set(
     environments.filter(e => e.consumer === 'client').map(e => e.outDir)
   );
-  const filtered = environments.filter(env => {
+  return environments.filter(env => {
     if (env.consumer !== 'server') return true;
-    if (clientOutDirs.has(env.outDir)) return false;
+    return !clientOutDirs.has(env.outDir);
+  });
+}
+
+/**
+ * Pre-build check: does this vite project declare at least one real
+ * (non-phantom) server environment? Used by the Nitro-injection path to
+ * decide whether replacing `vite build` with `nitro build --builder vite`
+ * is safe — plain Vite/Svelte SPAs return `false` because their only
+ * server-shaped env is the phantom one that shares the client outDir.
+ */
+export async function projectDeclaresViteServerEnvironment(
+  workPath: string
+): Promise<boolean> {
+  const envs = await getViteEnvironments(workPath);
+  if (!envs) return false;
+  return envs.some(e => e.consumer === 'server');
+}
+
+/**
+ * Post-build check: cheaply discovers vite environments with built server
+ * output on disk. Returns `null` when there's nothing to do — caller
+ * should fall through to the normal static-build path.
+ */
+export async function detectViteServerEnvironments(
+  workPath: string
+): Promise<ViteEnvironmentsDetection | null> {
+  const envs = await getViteEnvironments(workPath);
+  if (!envs) return null;
+
+  const filtered = envs.filter(env => {
+    if (env.consumer !== 'server') return true;
     return existsSync(env.outDir);
   });
 

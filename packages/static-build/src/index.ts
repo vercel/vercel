@@ -47,6 +47,7 @@ import * as NuxtUtils from './utils/nuxt';
 import {
   buildViteEnvironments,
   detectViteServerEnvironments,
+  projectDeclaresViteServerEnvironment,
 } from './utils/vite-environments';
 import {
   getNitroInjectionBuildCommand,
@@ -391,16 +392,13 @@ export const build: BuildV2 = async ({
   let buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
 
-  // For Vite projects on the default `vite build` script with no `nitro`
-  // dep declared, hand the build off to Nitro (`nitro build --builder vite`).
-  // Nitro emits BOA v3 to `.vercel/output/` and the v3 check below
-  // short-circuits the rest of this builder. See `utils/inject-nitro.ts`.
-  if (!meta.isDev && shouldInjectNitro({ pkg, config, buildCommand })) {
-    buildCommand = getNitroInjectionBuildCommand();
-    console.log(
-      `Detected \`vite build\` without a \`nitro\` dependency. Replacing the build command with \`nitro build --builder vite\` for SSR support.`
-    );
-  }
+  // Cheap pre-install gate. We still need to confirm the project actually
+  // declares an SSR-shaped vite environment before swapping the command,
+  // which requires running `vite.resolveConfig` and therefore depends on
+  // `vite` being installed — that check happens after the install step
+  // below (see the `nitroInjectionEligible` block).
+  const nitroInjectionEligible =
+    !meta.isDev && shouldInjectNitro({ pkg, config, buildCommand });
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
@@ -758,6 +756,28 @@ export const build: BuildV2 = async ({
     } else {
       if (meta.isDev) {
         debug(`WARN: A dev script is missing`);
+      }
+
+      // Confirm Nitro injection is actually wanted now that `vite` is on
+      // disk. `projectDeclaresViteServerEnvironment` runs vite.resolveConfig
+      // and asks "does this project actually declare a server environment
+      // with output distinct from its client?". Plain Vite SPAs, plain
+      // Svelte SPAs, and SvelteKit (which has its own Vercel adapter) all
+      // return `false` here — the broad package-level gate would otherwise
+      // misfire and hand them to Nitro, which can't build them.
+      if (nitroInjectionEligible) {
+        const hasServerEnv =
+          await projectDeclaresViteServerEnvironment(entrypointDir);
+        if (hasServerEnv) {
+          buildCommand = getNitroInjectionBuildCommand();
+          console.log(
+            `Detected \`vite build\` with a server environment but no \`nitro\` dependency. Replacing the build command with \`nitro build --builder vite\` for SSR support.`
+          );
+        } else {
+          debug(
+            'Skipping nitro injection: no SSR-shaped vite environment declared'
+          );
+        }
       }
 
       if (buildCommand) {

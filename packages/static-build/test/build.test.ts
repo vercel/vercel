@@ -1,6 +1,7 @@
 import path from 'path';
 import { remove, outputFile } from 'fs-extra';
 import { build } from '../src';
+import { _resetViteEnvironmentsCacheForTests } from '../src/utils/vite-environments';
 
 vi.setConfig({ testTimeout: 2 * 60 * 1000, hookTimeout: 2 * 60 * 1000 });
 
@@ -230,7 +231,10 @@ exports.resolveConfig = async function resolveConfig(inlineConfig) {
       ]);
     }
 
-    beforeEach(writeViteStub);
+    beforeEach(async () => {
+      _resetViteEnvironmentsCacheForTests();
+      await writeViteStub();
+    });
     afterEach(cleanup);
 
     it('wraps the server env entry as a function and ships the client env as static', async () => {
