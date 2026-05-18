@@ -3785,7 +3785,6 @@ function printInferredCommandHelp(
     arguments: Object.entries(normalizedArguments).map(([name, config]) => ({
       name,
       required: config.required === true && !config.inferFrom,
-      description: getArgumentHelpDescription(config),
     })),
     options: buildHelpOptions(normalizedOptions),
     examples: resolved.config.examples ?? [],
@@ -3800,13 +3799,36 @@ function printInferredCommandHelp(
     examples: [],
   };
 
+  const renderedHelp = renderHelp(command, { parent, columns });
+  const argumentDescriptions = renderInferredArgumentDescriptions(
+    Object.entries(normalizedArguments)
+  );
   output.print(
-    renderHelp(command, {
-      parent,
-      columns,
-    })
+    argumentDescriptions
+      ? `${renderedHelp}\n${argumentDescriptions}\n`
+      : renderedHelp
   );
   return 0;
+}
+
+function renderInferredArgumentDescriptions(
+  entries: Array<[string, InferredCommandArgumentConfig]>
+): string | null {
+  if (entries.length === 0) {
+    return null;
+  }
+  const rows = entries.map(([name, config]) => [
+    `  ${config.required && !config.inferFrom ? name : `[${name}]`}`,
+    chalk.gray(getArgumentHelpDescription(config)),
+  ]);
+  const width = rows.reduce(
+    (max, [label]) => Math.max(max, stripAnsi(label).length),
+    0
+  );
+  const lines = rows.map(
+    ([label, description]) => `${label.padEnd(width)}   ${description}`
+  );
+  return [`  ${chalk.dim('Arguments:')}`, '', ...lines].join('\n');
 }
 
 export function resolveInferredCommand(

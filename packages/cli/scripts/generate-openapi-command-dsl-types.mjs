@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 const repoRoot = new URL('../', import.meta.url);
 const openApiConstantsPath = new URL('src/util/openapi/constants.ts', repoRoot);
 const generatedTypesPath = new URL(
-  'src/util/openapi/generated-command-dsl-types.ts',
+  'src/util/openapi/generated-command-dsl-types.d.ts',
   repoRoot
 );
 const OPENAPI_METHODS = ['get', 'post', 'put', 'patch', 'delete'];

@@ -1,3 +1,9 @@
+// `generated-command-dsl-types.d.ts` is produced by
+// `scripts/generate-openapi-command-dsl-types.mjs` during the CLI build
+// and is gitignored. On a fresh checkout (no build yet) the import
+// resolves to `any`, which widens the inferred-commands DSL types but
+// keeps the rest of the CLI compiling.
+// @ts-ignore - generated at build time; falls back to `any` if missing.
 import type {
   OpenApiCommandTag,
   OpenApiDisplayPropertiesByTagOperationStatus,

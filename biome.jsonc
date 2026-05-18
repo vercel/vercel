@@ -172,7 +172,6 @@
         "packages/**/test/build-fixtures/**",
         "packages/**/test/cache-fixtures/**",
         "packages/cli/src/util/dev/templates/*.ts",
-        "packages/cli/src/util/openapi/generated-command-dsl-types.ts",
         "packages/cli/@types/**",
         "packages/cli/download/**",
         "packages/cli/bin/**",
