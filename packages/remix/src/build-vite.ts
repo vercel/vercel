@@ -585,7 +585,11 @@ export const build: BuildV2 = async ({
     continue: true,
   });
 
-  return { routes, output, framework: { version: frameworkVersion } };
+  return {
+    routes,
+    output,
+    framework: { slug: 'remix', version: frameworkVersion },
+  };
 };
 
 async function traceEdgeFiles({

@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.42.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
 ## 6.41.0
 
 ### Minor Changes

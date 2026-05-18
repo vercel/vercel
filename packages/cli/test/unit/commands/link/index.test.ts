@@ -91,9 +91,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -106,7 +104,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
+        `Linked      1 Project under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -166,9 +164,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -180,7 +176,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
+        `Linked      1 Project under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -259,9 +255,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -273,7 +267,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to 2 Projects under ${user.username} (created .vercel and added it to .gitignore)`
+        `Linked      2 Projects under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -355,9 +349,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Link Git repository at ');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -480,9 +472,7 @@ describe('link', () => {
       );
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
@@ -494,7 +484,7 @@ describe('link', () => {
       );
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Added 1 Project under');
+      await expect(client.stderr).toOutput('Added       1 Project under');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -677,7 +667,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       const exitCode = await exitCodePromise;
@@ -743,7 +733,7 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Searching for existing projects');
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       const exitCode = await exitCodePromise;
@@ -861,13 +851,11 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
     await expect(client.stderr).toOutput('Link to it?');
     client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
-      `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+      `Linked      ${team.slug}/${project.name}`
     );
 
     await expect(client.stderr).toOutput(
@@ -895,17 +883,13 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('awesome-app\n');
 
     await expect(client.stderr).toOutput(
@@ -913,10 +897,8 @@ describe('link', () => {
     );
     client.stdin.write('apps/nextjs\n');
 
-    await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for Next.js'
-    );
-    await expect(client.stderr).toOutput('Want to modify these settings?');
+    await expect(client.stderr).toOutput('Detected Next.js');
+    await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -925,11 +907,26 @@ describe('link', () => {
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/awesome-app (created .vercel and added it to .gitignore)`
+      `Linked      ${user.username}/awesome-app`
     );
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    // Anti-regression: old "Set up and deploy <path>?" confirm prompt is gone.
+    // Status line is "Set up <path>" with no trailing "?" question mark.
+    const fullOutput = client.stderr.getFullOutput();
+    // Old: `Set up and deploy "${path}"?`
+    expect(fullOutput).not.toMatch(/Set up and deploy "[^"]+"\?/);
+    // Old inquirer prefix: `? Set up and deploy ...`
+    expect(fullOutput).not.toMatch(/\? Set up and deploy/);
+    // Anti-regression: "Which scope" was renamed to "Which team".
+    expect(fullOutput).not.toContain(
+      'Which scope should contain your project?'
+    );
+    // Anti-regression: "What's your project's name?" was renamed to "Name?".
+    // Use regex to match both straight ' and curly ’ apostrophes (source on main uses curly).
+    expect(fullOutput).not.toMatch(/What.s your project.s name\?/);
   });
 
   it('should write vercel.json for inferred multi-service layouts', async () => {
@@ -954,17 +951,13 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1032,17 +1025,13 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('declined-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1053,10 +1042,8 @@ describe('link', () => {
     );
     client.stdin.write('\x1B[B\n');
 
-    await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for Next.js'
-    );
-    await expect(client.stderr).toOutput('Want to modify these settings?');
+    await expect(client.stderr).toOutput('Detected Next.js');
+    await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -1102,17 +1089,13 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('single-fastapi-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1123,10 +1106,8 @@ describe('link', () => {
     );
     client.stdin.write('\x1B[B\x1B[B\n');
 
-    await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for FastAPI'
-    );
-    await expect(client.stderr).toOutput('Want to modify these settings?');
+    await expect(client.stderr).toOutput('Detected FastAPI');
+    await expect(client.stderr).toOutput('Customize settings?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
@@ -1191,17 +1172,13 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('selected-directory-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1260,6 +1237,13 @@ describe('link', () => {
     useUnknownProject();
 
     await mkdirp(join(cwd, 'apps/web/services/api'));
+    // `pnpm-workspace.yaml` marks the repo root as a workspace, which is what
+    // triggers the "In which directory is your code located?" prompt under
+    // the standard (no-inferred-services) flow.
+    await writeFile(
+      join(cwd, 'pnpm-workspace.yaml'),
+      "packages:\n  - 'apps/*'\n"
+    );
     await writeJSON(join(cwd, 'apps/web/package.json'), {
       dependencies: {
         next: 'latest',
@@ -1278,17 +1262,13 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('nested-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1339,23 +1319,26 @@ describe('link', () => {
     useUnknownProject();
 
     await mkdirp(join(cwd, 'apps/web'));
+    // `pnpm-workspace.yaml` marks the repo root as a workspace, which is what
+    // triggers the "In which directory is your code located?" prompt under
+    // the standard (no-inferred-services) flow.
+    await writeFile(
+      join(cwd, 'pnpm-workspace.yaml'),
+      "packages:\n  - 'apps/*'\n"
+    );
     await writeFile(join(cwd, 'apps/web/vercel.json'), '{\n');
 
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('invalid-selected-root-config-app\n');
 
     await expect(client.stderr).toOutput(
@@ -1405,28 +1388,18 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
+    await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to existing project?');
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput('What’s your project’s name?');
+    await expect(client.stderr).toOutput('Name?');
     client.stdin.write('services-with-builds\n');
 
     await expect(client.stderr).toOutput(
       'Multiple services were detected, but your existing project config uses `builds`. To deploy multiple services in one project, see Services (https://vercel.com/docs/services).'
     );
-
-    await expect(client.stderr).toOutput(
-      'In which directory is your code located? ./'
-    );
-    client.stdin.write('\n');
-
     await expect(client.stderr).toOutput(
       'Do you want to change additional project settings?'
     );
@@ -1573,13 +1546,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1615,13 +1586,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1655,13 +1624,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1695,13 +1662,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1742,13 +1707,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1786,13 +1749,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1828,13 +1789,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1870,13 +1829,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1935,13 +1892,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name} (created .vercel and added it to .gitignore)`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1974,16 +1929,12 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       // Decline cross-team match
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('n\n');
 
       // Should fall through to selectOrg
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       // inputProject runs with skipAutoDetect, so no duplicate search
@@ -1991,13 +1942,11 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       // Mock pagination returns {}, so hasMoreProjects is true → text input
-      await expect(client.stderr).toOutput(
-        'the name of your existing project?'
-      );
+      await expect(client.stderr).toOutput('Existing project name?');
       client.stdin.write(`${basename(cwd)}\n`);
 
       await expect(client.stderr).toOutput(
-        `Linked to ${team.slug}/${project.name}`
+        `Linked      ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -2019,27 +1968,23 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       // No match found during cross-team search, should go to selectOrg
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
 
       // inputProject runs auto-detect (skipAutoDetect=false), finds nothing
       await expect(client.stderr).toOutput('Link to existing project?');
       client.stdin.write('n\n');
 
-      await expect(client.stderr).toOutput('your project');
+      await expect(client.stderr).toOutput('Name?');
       client.stdin.write(`${basename(cwd)}\n`);
-
+      // Tmp dir has no detectable framework at the root, so the
+      // root-directory prompt now fires (nested-monolith guard).
       await expect(client.stderr).toOutput(
         'In which directory is your code located?'
       );
       client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Want to modify these settings?');
+      await expect(client.stderr).toOutput('Customize settings?');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
@@ -2047,7 +1992,7 @@ describe('link', () => {
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Linked to');
+      await expect(client.stderr).toOutput('Linked      ');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2254,15 +2199,13 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Searched teams:');
       await expect(client.stderr).toOutput('Skipped 1 SSO-protected team');
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${projectA.name}`
+        `Linked      ${teamA.slug}/${projectA.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2394,13 +2337,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${expectedProject.name}`
+        `Linked      ${teamA.slug}/${expectedProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2466,13 +2407,11 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput('Not one of these projects');
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${teamA.slug}/${repoProject.name}`
+        `Linked      ${teamA.slug}/${repoProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2513,8 +2452,6 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput(
         'Which SSO-protected teams should be searched?'
       );
@@ -2524,7 +2461,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked to ${limitedTeam.slug}/${limitedProject.name}`
+        `Linked      ${limitedTeam.slug}/${limitedProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2665,15 +2602,13 @@ describe('link', () => {
         const exitCodePromise = link(client);
 
         await expect(client.stderr).toOutput('Set up');
-        client.stdin.write('y\n');
-
         await expect(client.stderr).toOutput(
           'Found matching projects across teams'
         );
         // Select first option
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked to');
+        await expect(client.stderr).toOutput('Linked      ');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'
@@ -2722,14 +2657,12 @@ describe('link', () => {
         const exitCodePromise = link(client);
 
         await expect(client.stderr).toOutput('Set up');
-        client.stdin.write('y\n');
-
         await expect(client.stderr).toOutput(
           'Found matching projects across teams'
         );
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked to');
+        await expect(client.stderr).toOutput('Linked      ');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'

@@ -616,7 +616,11 @@ module.exports = config;`;
     continue: true,
   });
 
-  return { routes, output, framework: { version: remixVersion } };
+  return {
+    routes,
+    output,
+    framework: { slug: 'remix', version: remixVersion },
+  };
 };
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {
