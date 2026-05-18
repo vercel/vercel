@@ -486,6 +486,14 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackDeviceId(deviceId);
   }
 
+  trackVercelPluginActiveSession() {
+    super.trackVercelPluginActiveSession();
+  }
+
+  trackVercelPluginVersion(version: string | undefined) {
+    super.trackVercelPluginVersion(version);
+  }
+
   trackErrorStatus(status: number | string | undefined) {
     super.trackErrorStatus(status);
   }
