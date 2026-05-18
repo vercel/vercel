@@ -148,6 +148,7 @@ interface BuildOutputConfig {
   routes?: BuildResultV2Typical['routes'];
   overrides?: Record<string, PathOverride>;
   framework?: {
+    slug: string;
     version: string;
   };
   crons?: Cron[];
@@ -1882,7 +1883,7 @@ function getDirectorySizeInMB(dir: string): {
 async function getFramework(
   cwd: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>
-): Promise<{ version: string } | undefined> {
+): Promise<{ slug: string; version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList,
@@ -1899,27 +1900,37 @@ async function getFramework(
         'framework' in buildResult &&
         build.use === detectedFramework.useRuntime.use
       ) {
-        return buildResult.framework;
+        return buildResult.framework
+          ? {
+              slug: buildResult.framework.slug,
+              version: buildResult.framework.version,
+            }
+          : undefined;
       }
     }
   }
 
   // determine framework version from listed package.json version
-  if (detectedFramework.detectedVersion) {
+  if (detectedFramework.slug) {
     // check for a valid, explicit version, not a range
-    if (semver.valid(detectedFramework.detectedVersion)) {
+    if (
+      detectedFramework.detectedVersion &&
+      semver.valid(detectedFramework.detectedVersion)
+    ) {
       return {
+        slug: detectedFramework.slug,
         version: detectedFramework.detectedVersion,
       };
     }
-  }
 
-  // determine framework version with runtime lookup
-  const frameworkVersion = detectFrameworkVersion(detectedFramework);
-  if (frameworkVersion) {
-    return {
-      version: frameworkVersion,
-    };
+    // determine framework version with runtime lookup
+    const frameworkVersion = detectFrameworkVersion(detectedFramework);
+    if (frameworkVersion) {
+      return {
+        slug: detectedFramework.slug,
+        version: frameworkVersion,
+      };
+    }
   }
 }
 

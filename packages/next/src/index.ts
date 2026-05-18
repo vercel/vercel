@@ -1155,7 +1155,7 @@ export const build: BuildV2 = async buildOptions => {
             ]
           : []),
       ],
-      framework: { version: nextVersion },
+      framework: { slug: 'nextjs', version: nextVersion },
       ...(deploymentId && { deploymentId }),
     };
   }
@@ -2977,7 +2977,7 @@ export const build: BuildV2 = async buildOptions => {
                   ]),
           ]),
     ],
-    framework: { version: nextVersion },
+    framework: { slug: 'nextjs', version: nextVersion },
     ...(deploymentId && { deploymentId }),
   };
 };
