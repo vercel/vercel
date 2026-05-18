@@ -38,9 +38,11 @@ export interface DeviceCodeTokens {
  */
 export async function performDeviceCodeFlow(
   client: Client,
-  options?: { teamId?: string }
+  options?: { teamId?: string; refreshToken?: string }
 ): Promise<DeviceCodeTokens | null> {
-  const deviceAuthorizationResponse = await deviceAuthorizationRequest();
+  const deviceAuthorizationResponse = await deviceAuthorizationRequest({
+    refresh_token: options?.refreshToken,
+  });
 
   o.debug(
     `'Device Authorization response:', ${await deviceAuthorizationResponse.clone().text()}`

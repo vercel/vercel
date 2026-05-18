@@ -8,6 +8,14 @@ import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
+
+vi.mock('../../../../src/commands/login/future', async importOriginal => ({
+  ...(await importOriginal<
+    typeof import('../../../../src/commands/login/future')
+  >()),
+  performDeviceCodeFlow: vi.fn(),
+}));
 
 describe('env pull', () => {
   describe('--help', () => {
@@ -65,6 +73,59 @@ describe('env pull', () => {
         value: 'TRUE',
       },
     ]);
+  });
+
+  it('should retry after fresh authentication when sensitive env vars require a challenge', async () => {
+    const project = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+    let pullRequests = 0;
+
+    useUser();
+    useTeams('team_dummy');
+    client.scenario.get(
+      `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
+      (_req, res, next) => {
+        pullRequests += 1;
+        if (pullRequests === 1) {
+          res.status(403).json({
+            code: 'challenge_required',
+            message: 'Challenge required',
+          });
+          return;
+        }
+        next();
+      }
+    );
+    useProject(project);
+
+    vi.mocked(performDeviceCodeFlow).mockResolvedValueOnce({
+      access_token: 'vca_new',
+      expires_in: 3600,
+      refresh_token: 'vcr_new',
+    });
+
+    client.authConfig.refreshToken = 'vcr_old';
+    client.cwd = setupUnitFixture('vercel-env-pull');
+    client.setArgv('env', 'pull', '--yes');
+
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Sensitive Environment Variables require fresh authentication.'
+    );
+    await expect(client.stderr).toOutput(
+      'Created .env.local file and added it to .gitignore'
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(performDeviceCodeFlow).toHaveBeenCalledWith(client, {
+      refreshToken: 'vcr_old',
+    });
+    expect(pullRequests).toBe(2);
+    expect(client.authConfig.token).toBe('vca_new');
+    expect(client.authConfig.refreshToken).toBe('vcr_new');
   });
 
   it('should handle pulling from Preview env vars', async () => {
