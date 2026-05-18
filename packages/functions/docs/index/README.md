@@ -11,10 +11,13 @@
 - [PurgeApi](interfaces/PurgeApi.md)
 - [Request](interfaces/Request.md)
 - [RuntimeCache](interfaces/RuntimeCache.md)
+- [WebSocket](interfaces/WebSocket.md)
 
 ## Type Aliases
 
 - [AddCacheTagApi](type-aliases/AddCacheTagApi.md)
+- [WebSocket](type-aliases/WebSocket.md)
+- [WebSocketData](type-aliases/WebSocketData.md)
 
 ## Variables
 
@@ -34,4 +37,5 @@
 - [ipAddress](functions/ipAddress.md)
 - [next](functions/next.md)
 - [rewrite](functions/rewrite.md)
+- [upgradeWebSocket](functions/upgradeWebSocket.md)
 - [waitUntil](functions/waitUntil.md)
