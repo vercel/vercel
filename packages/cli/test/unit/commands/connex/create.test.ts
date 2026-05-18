@@ -257,7 +257,7 @@ describe('connex create', () => {
         error: {
           code: 'registration_required',
           message: 'Registration required',
-          registerUrl: 'https://vercel.com/test/~/connex/register?type=slack',
+          registerUrl: 'https://vercel.com/test/~/connect/register?type=slack',
         },
       });
     });
@@ -297,7 +297,7 @@ describe('connex create', () => {
       res.json({
         error: {
           message: 'Registration required',
-          registerUrl: 'https://vercel.com/test/~/connex/register',
+          registerUrl: 'https://vercel.com/test/~/connect/register',
         },
       });
     });
@@ -349,7 +349,7 @@ describe('connex create', () => {
       res.json({
         error: {
           message: 'Registration required',
-          registerUrl: 'https://vercel.com/test/~/connex/register',
+          registerUrl: 'https://vercel.com/test/~/connect/register',
         },
       });
     });
@@ -1055,7 +1055,7 @@ describe('connex create', () => {
       res.json({
         error: {
           message: 'Registration required',
-          registerUrl: 'https://vercel.com/test/~/connex/register',
+          registerUrl: 'https://vercel.com/test/~/connect/register',
         },
       });
     });
