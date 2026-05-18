@@ -1,17 +1,16 @@
 import type { BuildOptions, Files } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { existsSync } from 'node:fs';
-import { readFile, lstat, stat } from 'node:fs/promises';
+import { readFile, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNativeError } from 'node:util/types';
-import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
+import { FileFsRef, type Span } from '@vercel/build-utils';
 import { transform } from 'oxc-transform';
 
 export const nft = async (
   args: Pick<BuildOptions, 'workPath' | 'repoRootPath'> & {
-    ignoreNodeModules: boolean;
     ignore?: string | string[] | undefined;
-    localBuildFiles: Set<string>;
+    traceRoots: Set<string>;
     files: Files;
     span: Span;
     conditions?: string[];
@@ -20,17 +19,12 @@ export const nft = async (
   const nftSpan = args.span.child('vc.builder.backends.nft');
 
   const runNft = async () => {
-    const ignorePatterns = [
-      ...(args.ignoreNodeModules ? ['**/node_modules/**'] : []),
-      ...(args.ignore
-        ? Array.isArray(args.ignore)
-          ? args.ignore
-          : [args.ignore]
-        : []),
-    ];
-    const traceRoots = Array.from(args.localBuildFiles).filter(p =>
-      existsSync(p)
-    );
+    const ignorePatterns = args.ignore
+      ? Array.isArray(args.ignore)
+        ? args.ignore
+        : [args.ignore]
+      : [];
+    const traceRoots = Array.from(args.traceRoots).filter(p => existsSync(p));
     const nftResult = await nodeFileTrace(traceRoots, {
       base: args.repoRootPath,
       processCwd: args.workPath,
@@ -76,38 +70,23 @@ export const nft = async (
         }
         throw error;
       }
-      const outputPath = file;
 
-      if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
+      if (args.traceRoots.has(absolutePath)) {
         continue;
       }
 
       if (stats.isSymbolicLink() || stats.isFile()) {
-        if (args.ignoreNodeModules) {
-          // Symlinks may point to directories — only read actual files
-          const targetStats = stats.isSymbolicLink()
-            ? await stat(absolutePath)
-            : stats;
-          if (targetStats.isFile()) {
-            // Use FileBlob so introspection can include these files
-            const content = await readFile(absolutePath, 'utf-8');
-            args.files[outputPath] = new FileBlob({
-              data: content,
-              mode: stats.mode,
-            });
-          }
-        } else {
-          args.files[outputPath] = new FileFsRef({
-            fsPath: absolutePath,
-            mode: stats.mode,
-          });
-        }
+        args.files[file] = new FileFsRef({
+          fsPath: absolutePath,
+          mode: stats.mode,
+        });
       }
     }
   };
 
   await nftSpan.trace(runNft);
 };
+
 const isTypeScriptFile = (fsPath: string) => {
   if (
     fsPath.endsWith('.d.ts') ||

@@ -56,13 +56,9 @@ export const maybeDoBuildCommand = async (
       }
     }
   }
-  const localBuildFiles = new Set<string>();
   let files: Files | undefined;
   if (outputDir && entrypoint) {
     files = await glob('**', outputDir);
-    for (const file of Object.keys(files)) {
-      localBuildFiles.add(join(outputDir, file));
-    }
   }
-  return { localBuildFiles, files, handler: entrypoint, outputDir };
+  return { files, handler: entrypoint, outputDir };
 };

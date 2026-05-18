@@ -234,9 +234,8 @@ export const build: BuildV2 = async args => {
       await nft({
         ...args,
         workPath: nftWorkPath,
-        localBuildFiles: traceRoots,
+        traceRoots,
         files,
-        ignoreNodeModules: false,
         ignore: args.config.excludeFiles,
         conditions: isBun ? ['bun'] : undefined,
         span: buildSpan,
