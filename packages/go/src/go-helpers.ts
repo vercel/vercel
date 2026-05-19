@@ -226,6 +226,7 @@ export class GoWrapper {
     const subprocess = execa('go', args, {
       ...opts,
       env,
+      extendEnv: false,
       stdio: captureAndForwardOutput ? 'pipe' : opts.stdio,
     });
 
@@ -414,7 +415,10 @@ export async function createGo({
       env.GOROOT = goDir || undefined;
       env.PATH = goBinDir || PATH;
 
-      const { stdout } = await execa('go', ['version'], { env });
+      const { stdout } = await execa('go', ['version'], {
+        env,
+        extendEnv: false,
+      });
       const { major, minor, short, version } = parseGoVersionString(stdout);
 
       if (
