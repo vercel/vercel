@@ -76,6 +76,7 @@ import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob, Span, download } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
+import { entrypointToModule, detectPythonEntrypoint } from '../src/entrypoint';
 import execa from 'execa';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
@@ -1906,6 +1907,90 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 });
 
+describe('entrypointToModule', () => {
+  it('converts file paths to Python module notation', () => {
+    expect(entrypointToModule('app.py')).toBe('app');
+    expect(entrypointToModule('backend/api/server.py')).toBe(
+      'backend.api.server'
+    );
+    expect(entrypointToModule('src/main.py')).toBe('src.main');
+  });
+
+  it('handles backslashes on Windows-style paths', () => {
+    expect(entrypointToModule('backend\\server.py')).toBe('backend.server');
+  });
+});
+
+describe('entrypoint detection error messages', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(tmpdir(), `python-error-msg-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+  it('suggests tool.vercel.entrypoint when app is found outside default locations', async () => {
+    fs.mkdirSync(path.join(workPath, 'mypackage', 'core'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'mypackage', 'core', 'web.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).toContain('but found potential entrypoints');
+    expect(msg).toContain('mypackage/core/web.py');
+    expect(msg).toContain('[tool.vercel]');
+    expect(msg).toContain('entrypoint = "mypackage.core.web:app"');
+  });
+
+  it('falls back to generic message when no app is found anywhere', async () => {
+    fs.writeFileSync(path.join(workPath, 'utils.py'), 'def helper(): pass\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).toContain('FastAPI entrypoint');
+    expect(msg).toContain('tool.vercel.entrypoint');
+    expect(msg).not.toContain('but found potential entrypoints');
+  });
+  it('skips hidden directories and __pycache__ during broad scan', async () => {
+    fs.mkdirSync(path.join(workPath, '.venv', 'lib'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, '.venv', 'lib', 'app.py'),
+      'from flask import Flask\napp = Flask(__name__)\n'
+    );
+    fs.mkdirSync(path.join(workPath, '__pycache__'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, '__pycache__', 'app.cpython-39.py'),
+      'app = None\n'
+    );
+
+    const result = await detectPythonEntrypoint('flask', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).not.toContain('.venv');
+    expect(msg).not.toContain('__pycache__');
+  });
+
+  it('Django error references WSGI_APPLICATION and ASGI_APPLICATION', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'manage.py'),
+      'import os\nos.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")\n'
+    );
+    const result = await detectPythonEntrypoint('django', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).toContain('manage.py');
+    expect(msg).toContain('WSGI_APPLICATION');
+    expect(msg).toContain('ASGI_APPLICATION');
+  });
+});
+
 describe('vercel.json entrypoint configuration', () => {
   let workPath: string;
 
@@ -3690,6 +3775,18 @@ describe('worker services dependency installation', () => {
     expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
   });
 
+  it('uses copy link mode for injected pip installs', async () => {
+    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
+    expect(pipCalls).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining(['install', '--link-mode', 'copy']),
+      ])
+    );
+    for (const args of pipCalls) {
+      expect(args.slice(0, 3)).toEqual(['install', '--link-mode', 'copy']);
+    }
+  });
+
   it('does not install vercel-workers when worker services are not enabled', async () => {
     const { pipCalls } = await buildWithPipSpy();
     expect(
@@ -3932,22 +4029,6 @@ describe('entrypoint diagnostic error messages', () => {
     fs.removeSync(workPath);
   });
 
-  it('reports nearby .py files with non-standard names', async () => {
-    const workPath = path.join(tmpdir(), `python-diag-nearby-${Date.now()}`);
-    fs.mkdirSync(workPath, { recursive: true });
-    fs.writeFileSync(
-      path.join(workPath, 'myapi.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    const result = await detectPythonEntrypoint('fastapi', workPath);
-    expect(result?.error).toBeDefined();
-    expect(result!.error!.message).toMatch(/Found Python files:.*myapi\.py/i);
-    expect(result!.error!.link).toBe(fastapiEntrypointDocsUrl);
-
-    fs.removeSync(workPath);
-  });
-
   it('reports pyproject.toml scripts.app pointing to missing module', async () => {
     const workPath = path.join(tmpdir(), `python-diag-scripts-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -3978,6 +4059,55 @@ describe('entrypoint diagnostic error messages', () => {
       /Found app\.py but it does not define/i
     );
     expect(result!.error!.message).not.toMatch(/Found Python files/i);
+
+    fs.removeSync(workPath);
+  });
+});
+
+describe('detectEntrypoint (normalized)', () => {
+  let detectEntrypoint: typeof import('../src/entrypoint').detectEntrypoint;
+
+  beforeEach(async () => {
+    ({ detectEntrypoint } = await import('../src/entrypoint'));
+  });
+
+  it('encodes nested src/main.py with dot-notation module path', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-nested-${Date.now()}`);
+    fs.mkdirSync(path.join(workPath, 'src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'src', 'main.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectEntrypoint({ workPath, framework: 'fastapi' });
+    expect(result).toEqual({
+      kind: 'py-module:attr',
+      entrypoint: 'src.main:app',
+    });
+
+    fs.removeSync(workPath);
+  });
+
+  it('returns null when no entrypoint is discoverable', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-empty-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectEntrypoint({ workPath, framework: 'fastapi' });
+    expect(result).toBeNull();
+
+    fs.removeSync(workPath);
+  });
+
+  it('returns null for non-Python frameworks', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-nonpy-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'main.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectEntrypoint({ workPath, framework: 'express' });
+    expect(result).toBeNull();
 
     fs.removeSync(workPath);
   });

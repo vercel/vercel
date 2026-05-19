@@ -51,7 +51,7 @@ vercel curl /api/health --deployment $PREVIEW_URL
 - `vercel redeploy <url>` — rebuild an existing deployment
 - `vercel promote <url>` — move a deployment to production without rebuilding
 - `vercel rollback <url>` — revert to a previous deployment
-- `vercel rolling-release` — gradual traffic shifting
+- `vercel rolling-release` / `vercel rr` — gradual traffic shifting
 
 ## Workflows
 
@@ -66,7 +66,9 @@ vercel promote $URL                  # promote to production
 ### Rolling Release
 
 ```bash
-vercel rr configure --enable --stage=10,5m --stage=50,10m --stage=100,0
-vercel rr start --dpl=<deployment-url>
-vercel rr status
+vercel rr configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m
+vercel rr start --dpl=<deployment-url> --yes
+vercel rr fetch
 ```
+
+See `references/project-infra.md` for approve, abort, and complete commands.

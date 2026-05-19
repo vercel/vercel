@@ -711,7 +711,7 @@ describe('logs', () => {
       useProject(logsProject);
     });
 
-    it('should filter by deployment ID with --no-follow', async () => {
+    it('should filter by deployment ID by default', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
@@ -725,7 +725,7 @@ describe('logs', () => {
       });
 
       client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--deployment', deployment.id, '--no-follow');
+      client.setArgv('logs', '--deployment', deployment.id);
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
@@ -736,27 +736,16 @@ describe('logs', () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
+      useRequestLogs([createMockLog({ deploymentId: deployment.id })]);
 
       client.cwd = fixture('linked-project');
       client.setArgv('logs', '--deployment', deployment.id);
       await logs(client);
 
-      // Implicit --follow is enabled when deployment is specified
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:deployment',
           value: '[REDACTED]',
-        },
-        {
-          key: 'flag:follow',
-          value: 'TRUE',
         },
       ]);
     });
@@ -818,7 +807,7 @@ describe('logs', () => {
     });
   });
 
-  describe('positional deployment argument (implicit --follow)', () => {
+  describe('positional deployment argument', () => {
     let logsTeam: ReturnType<typeof useTeam>;
 
     beforeEach(() => {
@@ -827,7 +816,28 @@ describe('logs', () => {
       useProject(logsProject);
     });
 
-    it('should enable --follow implicitly when deployment ID is specified', async () => {
+    it('should filter by deployment ID by default', async () => {
+      const user = useUser();
+      const deployment = useLogsDeployment(user);
+
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id);
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+    });
+
+    it('should stream logs when --follow is specified for a deployment ID', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
@@ -840,7 +850,7 @@ describe('logs', () => {
       );
 
       client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id);
+      client.setArgv('logs', deployment.id, '--follow');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
@@ -955,7 +965,7 @@ describe('logs', () => {
       });
     });
 
-    it('should allow --no-follow to disable implicit follow', async () => {
+    it('should accept --no-follow while filtering deployment logs', async () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
@@ -984,19 +994,21 @@ describe('logs', () => {
         res.json(deployment);
       });
 
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logs', `https://${deployment.url}/some/path`);
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
     });
 
     it('should stream logs for a deployment URL without a linked project', async () => {
@@ -1015,7 +1027,7 @@ describe('logs', () => {
 
       client.config.currentTeam = logsTeam.id;
       client.cwd = logsFixturesDir;
-      client.setArgv('logs', `https://${deployment.url}`);
+      client.setArgv('logs', `https://${deployment.url}`, '--follow');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
@@ -1049,7 +1061,7 @@ describe('logs', () => {
 
       client.config.currentTeam = logsTeam.id;
       client.cwd = logsFixturesDir;
-      client.setArgv('logs', `https://${deployment.url}`, '--no-follow');
+      client.setArgv('logs', `https://${deployment.url}`);
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
@@ -1110,19 +1122,21 @@ describe('logs', () => {
       const user = useUser();
       const deployment = useLogsDeployment(user);
 
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
 
       client.cwd = fixture('linked-project');
       client.setArgv('logs', deployment.id, '--deployment', 'other_dpl_id');
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
     });
   });
 

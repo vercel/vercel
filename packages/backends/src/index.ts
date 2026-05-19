@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
   defaultCachePathGlob,
+  execCommand,
+  getNodeBinPaths,
   getReportedServiceType,
   glob,
   NodejsLambda,
@@ -31,6 +33,7 @@ export {
   getBuildSummary,
   srvxOptions,
 } from './cervel/index.js';
+export { detectEntrypoint } from './find-entrypoint.js';
 export type {
   CervelBuildOptions,
   CervelServeOptions,
@@ -107,13 +110,35 @@ export const build: BuildV2 = async args => {
     debug('Entrypoint', entrypoint);
     args.entrypoint = entrypoint;
 
-    const cronEntries = getServiceCrons({
+    const cronEntries = await getServiceCrons({
       service: args.service,
       entrypoint,
     });
     const isCronService = cronEntries !== undefined;
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
+
+    const preDeployCommand = args.config.preDeployCommand;
+    if (args.registerPreDeploy && typeof preDeployCommand === 'string') {
+      const repoRoot = args.repoRootPath || args.workPath;
+      const nodeBinPaths = getNodeBinPaths({
+        base: repoRoot,
+        start: args.workPath,
+      });
+      const nodeBinPath = nodeBinPaths.join(delimiter);
+      const capturedEnv = {
+        ...downloadResult.spawnEnv,
+        PATH: `${nodeBinPath}${delimiter}${downloadResult.spawnEnv?.PATH || process.env.PATH}`,
+      };
+      const capturedCwd = args.workPath;
+      args.registerPreDeploy(async () => {
+        debug(`Running pre-deploy command: \`${preDeployCommand}\``);
+        await execCommand(preDeployCommand, {
+          env: capturedEnv,
+          cwd: capturedCwd,
+        });
+      });
+    }
 
     const functionConfig = args.config.functions?.[entrypoint];
     if (functionConfig) {
@@ -345,7 +370,17 @@ export const build: BuildV2 = async args => {
     return {
       routes,
       output,
-      ...(cronEntries ? { crons: cronEntries } : {}),
+      // Emit only the public {path, schedule} shape; `exportName` is an
+      // internal plumbing field consumed by `buildCronRouteTable` and
+      // doesn't belong in the build artifact.
+      ...(cronEntries
+        ? {
+            crons: cronEntries.map(({ path, schedule }) => ({
+              path,
+              schedule,
+            })),
+          }
+        : {}),
     };
   });
 };

@@ -1,6 +1,5 @@
 import fs from 'fs';
 import AJV from 'ajv';
-import chalk from 'chalk';
 import { join, relative } from 'path';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
@@ -25,6 +24,7 @@ import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
 import pull from '../../commands/env/pull';
 import { resolveProjectCwd } from './find-project-root';
 
@@ -453,19 +453,10 @@ export async function linkFolderToProject(
 
   await writeReadme(path);
 
-  // update .gitignore
-  const isGitIgnoreUpdated = await addToGitIgnore(path);
+  // update .gitignore (silent — git status surfaces the change on demand)
+  await addToGitIgnore(path);
 
-  output.print(
-    prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${projectName}`
-      )} (created ${VERCEL_DIR}${
-        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-      })`,
-      emoji(successEmoji)
-    ) + '\n'
-  );
+  printAlignedLabel('Linked', `${orgSlug}/${projectName}`);
 
   if (!pullEnv) {
     return;

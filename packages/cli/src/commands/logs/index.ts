@@ -1,7 +1,7 @@
 import { isErrnoException } from '@vercel/error-utils';
 import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
-import { format } from 'date-fns';
+import format from 'date-fns/format';
 import type Client from '../../util/client';
 import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
@@ -428,12 +428,8 @@ export default async function logs(client: Client) {
   const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
 
-  // Implicit --follow when deployment is specified (for backwards compatibility)
-  // unless --no-follow is explicitly set
-  const followFlagValue = parsedArguments.flags['--follow'];
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
-  const followOption =
-    deploymentOption && !noFollowFlagValue ? true : followFlagValue;
+  const followOption = parsedArguments.flags['--follow'];
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);
@@ -447,6 +443,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliOptionLimit(limitOption);
   telemetry.trackCliFlagJson(jsonOption);
   telemetry.trackCliFlagFollow(followOption);
+  telemetry.trackCliFlagNoFollow(noFollowFlagValue);
   telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionSearch(searchOption);
   telemetry.trackCliOptionRequestId(requestIdOption);

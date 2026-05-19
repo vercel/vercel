@@ -13,6 +13,10 @@ export interface GuidanceConfig {
   enabled?: boolean;
 }
 
+export interface UpdatesConfig {
+  auto?: boolean;
+}
+
 export interface AuthConfig {
   '// Note'?: string;
   '// Docs'?: string;
@@ -31,4 +35,5 @@ export interface GlobalConfig {
   api?: string;
   telemetry?: TelemetryConfig;
   guidance?: GuidanceConfig;
+  updates?: UpdatesConfig;
 }
