@@ -430,4 +430,52 @@ describe('connex list', () => {
     expect(first).not.toHaveProperty('projects');
     expect(first).not.toHaveProperty('hasMoreProjects');
   });
+
+  it('should include branding fields in --format=json output', async () => {
+    const project = { ...defaultProject, id: 'proj_brand', name: 'brand-app' };
+    useProject(project);
+    await linkProjectInCwd(team, project);
+
+    client.scenario.get('/v1/connect/connectors', (_req, res) => {
+      res.json({
+        clients: [
+          {
+            id: 'scl_branded',
+            uid: 'uid_branded',
+            name: 'Branded',
+            type: 'slack',
+            typeName: 'Slack',
+            createdAt: 1_700_000_000_000,
+            icon: 'sha1abcdef',
+            backgroundColor: '#1a2b3c',
+            accentColor: '#ff0066',
+          },
+          {
+            id: 'scl_plain',
+            uid: 'uid_plain',
+            name: 'Plain',
+            type: 'slack',
+            typeName: 'Slack',
+            createdAt: 1_700_000_000_000,
+          },
+        ],
+      });
+    });
+
+    client.setArgv('connect', 'list', '--format=json');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    const parsed = JSON.parse(stdout.trim());
+    expect(parsed.clients).toHaveLength(2);
+    const [branded, plain] = parsed.clients;
+    expect(branded.icon).toBe('sha1abcdef');
+    expect(branded.backgroundColor).toBe('#1a2b3c');
+    expect(branded.accentColor).toBe('#ff0066');
+    expect(plain.icon).toBeNull();
+    expect(plain.backgroundColor).toBeNull();
+    expect(plain.accentColor).toBeNull();
+  });
 });
