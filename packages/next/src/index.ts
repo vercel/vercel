@@ -30,6 +30,8 @@ import {
   detectPackageManager,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  createDiagnostics,
+  generateProjectManifest,
   type TriggerEvent,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
@@ -275,6 +277,7 @@ export const build: BuildV2 = async buildOptions => {
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -576,6 +579,22 @@ export const build: BuildV2 = async buildOptions => {
 
   if (buildCallback) {
     await buildCallback(buildOptions);
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: 'nextjs',
+      serviceType: buildOptions.service?.type,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write next manifest: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 
   let buildOutputVersion: undefined | number;
@@ -2983,11 +3002,14 @@ export const build: BuildV2 = async buildOptions => {
   };
 };
 
+const packageManifestDiagnostics = createDiagnostics('node');
+
 export const diagnostics: Diagnostics = async ({
   config,
   entrypoint,
   workPath,
   repoRootPath,
+  ...rest
 }) => {
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
@@ -3000,6 +3022,13 @@ export const diagnostics: Diagnostics = async ({
   );
 
   return {
+    ...(await packageManifestDiagnostics({
+      config,
+      entrypoint,
+      workPath,
+      repoRootPath,
+      ...rest,
+    })),
     // Collect output in `.next/diagnostics`
     ...(await glob(
       '*',
