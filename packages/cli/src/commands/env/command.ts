@@ -287,6 +287,50 @@ export const runSubcommand = {
   ],
 } as const;
 
+export const proxySubcommand = {
+  name: 'proxy',
+  aliases: [],
+  description:
+    'Run a command with brokered Environment Variables — secrets are not exposed to the subprocess; outbound HTTP/HTTPS is routed through a local broker that substitutes real values at the network boundary.',
+  arguments: [
+    {
+      name: 'command',
+      required: true,
+      multiple: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      description:
+        'Specify the environment to pull variables from (default: development)',
+      shorthand: 'e',
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+    },
+    {
+      name: 'git-branch',
+      description:
+        'Specify the Git branch to pull specific Environment Variables for',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Run a dev server with brokered Environment Variables',
+      value: `${packageName} env proxy -- npm run dev`,
+    },
+    {
+      name: 'Run tests with preview Environment Variables for a specific branch',
+      value: `${packageName} env proxy -e preview --git-branch feature-x -- npm test`,
+    },
+  ],
+} as const;
+
 export const updateSubcommand = {
   name: 'update',
   aliases: [],
@@ -366,6 +410,7 @@ export const envCommand = {
   subcommands: [
     addSubcommand,
     listSubcommand,
+    proxySubcommand,
     pullSubcommand,
     removeSubcommand,
     runSubcommand,

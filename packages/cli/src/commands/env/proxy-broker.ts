@@ -1,0 +1,376 @@
+// Local stand-in for the future api.vercel.com brokering service. The real
+// implementation will live server-side; this is the on-laptop scaffolding
+// used by `vc env proxy` while we iterate on the design.
+//
+// What it does:
+//   - Listens on a random local port.
+//   - Accepts POST /proxy envelopes from the subprocess shim.
+//   - Substitutes dummy values -> real values in the request (url/headers/body).
+//   - Makes the real outbound call (http or https).
+//   - Substitutes real values -> dummy values in the response (defense in
+//     depth: keeps real values from ever reaching the subprocess).
+//   - Returns the response as a JSON envelope.
+//
+// Real secrets live only in this process for the duration of the session.
+
+import http from 'node:http';
+import https from 'node:https';
+import net from 'node:net';
+import { URL } from 'node:url';
+import output from '../../output-manager';
+
+export interface Substitutions {
+  dummyToReal: Map<string, string>;
+  realToDummy: Map<string, string>;
+}
+
+export interface Broker {
+  port: number;
+  tcpPort: number;
+  url: string;
+  sessionId: string;
+  close(): Promise<void>;
+}
+
+function substituteString(s: string, table: Map<string, string>): string {
+  if (!s) return s;
+  let out = s;
+  for (const [from, to] of table) {
+    if (out.includes(from)) out = out.split(from).join(to);
+  }
+  return out;
+}
+
+function substituteBuffer(buf: Buffer, table: Map<string, string>): Buffer {
+  // ASCII dummies are safe to byte-replace even in binary bodies because the
+  // dummy alphabet (`vproxy_..._xx` or `<scheme>://vproxy-...-.xx`) is pure
+  // ASCII and can't collide with non-ASCII bytes.
+  let out = buf;
+  for (const [from, to] of table) {
+    const fromBuf = Buffer.from(from, 'utf-8');
+    const toBuf = Buffer.from(to, 'utf-8');
+    if (out.indexOf(fromBuf) === -1) continue;
+    const parts: Buffer[] = [];
+    let cursor = 0;
+    let idx: number;
+    while ((idx = out.indexOf(fromBuf, cursor)) !== -1) {
+      parts.push(out.subarray(cursor, idx));
+      parts.push(toBuf);
+      cursor = idx + fromBuf.length;
+    }
+    parts.push(out.subarray(cursor));
+    out = Buffer.concat(parts);
+  }
+  return out;
+}
+
+function substituteHeaders(
+  headers: Record<string, string>,
+  table: Map<string, string>
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers)) {
+    out[k] = substituteString(v, table);
+  }
+  return out;
+}
+
+interface Envelope {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  bodyBase64: string;
+}
+
+interface ReplyEnvelope {
+  status: number;
+  statusMessage: string;
+  headers: Record<string, string>;
+  bodyBase64: string;
+}
+
+function readJson(req: http.IncomingMessage): Promise<Envelope> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf-8')));
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function doUpstreamRequest(
+  env: Envelope,
+  body: Buffer
+): Promise<{ res: http.IncomingMessage; bodyChunks: Buffer[] }> {
+  return new Promise((resolve, reject) => {
+    let target: URL;
+    try {
+      target = new URL(env.url);
+    } catch {
+      reject(new Error(`bad upstream url: ${env.url}`));
+      return;
+    }
+    const isHttps = target.protocol === 'https:';
+    const mod = isHttps ? https : http;
+    const headers = { ...env.headers };
+    if (body.length || headers['content-length'] != null) {
+      headers['content-length'] = String(body.length);
+    }
+    headers.host = target.host;
+    const upstream = mod.request(
+      {
+        method: env.method,
+        hostname: target.hostname,
+        port: target.port ? Number(target.port) : isHttps ? 443 : 80,
+        path: target.pathname + target.search,
+        headers,
+      },
+      res => {
+        const chunks: Buffer[] = [];
+        res.on('data', c => chunks.push(c));
+        res.on('end', () => resolve({ res, bodyChunks: chunks }));
+        res.on('error', reject);
+      }
+    );
+    upstream.on('error', reject);
+    if (body.length) upstream.write(body);
+    upstream.end();
+  });
+}
+
+function parseTcpConnectTarget(url: string): { host: string; port: number } {
+  const target = new URL(url, 'http://vproxy.local');
+  const host = target.searchParams.get('host');
+  const port = Number(target.searchParams.get('port'));
+  if (!host || !Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('bad tcp connect target');
+  }
+  return { host, port };
+}
+
+function handleTcpTunnel(
+  socket: net.Socket,
+  head: Buffer,
+  host: string,
+  port: number,
+  subs: Substitutions
+) {
+  const realHost = substituteString(host, subs.dummyToReal);
+  output.debug(`[env proxy] TCP ${host}:${port} -> ${realHost}:${port}`);
+
+  const upstream = net.connect({ host: realHost, port }, () => {
+    if (head.length) upstream.write(head);
+    socket.pipe(upstream);
+    upstream.pipe(socket);
+  });
+
+  upstream.on('error', e => {
+    output.debug(`[env proxy] tcp upstream error: ${e.message}`);
+    socket.destroy();
+  });
+  socket.on('error', () => upstream.destroy());
+}
+
+export async function startBroker(opts: {
+  subs: Substitutions;
+  sessionId: string;
+}): Promise<Broker> {
+  const { subs, sessionId } = opts;
+
+  const server = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/proxy') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not found' }));
+      return;
+    }
+    if (req.headers['x-vproxy-session'] !== sessionId) {
+      res.writeHead(403, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'bad session' }));
+      return;
+    }
+
+    let env: Envelope;
+    try {
+      env = await readJson(req);
+    } catch {
+      res.writeHead(400, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'bad envelope' }));
+      return;
+    }
+
+    const reqBodyDummy = env.bodyBase64
+      ? Buffer.from(env.bodyBase64, 'base64')
+      : Buffer.alloc(0);
+
+    // dummy -> real on request
+    const realUrl = substituteString(env.url, subs.dummyToReal);
+    const realHeaders = substituteHeaders(env.headers, subs.dummyToReal);
+    const realBody = substituteBuffer(reqBodyDummy, subs.dummyToReal);
+
+    const subsForLog: string[] = [];
+    for (const [dummy, real] of subs.dummyToReal) {
+      const where: string[] = [];
+      if (env.url.includes(dummy)) where.push('url');
+      if (reqBodyDummy.indexOf(Buffer.from(dummy, 'utf-8')) !== -1) {
+        where.push('body');
+      }
+      for (const [k, v] of Object.entries(env.headers)) {
+        if (v.includes(dummy)) where.push(`header:${k}`);
+      }
+      if (where.length) {
+        subsForLog.push(`  ${dummy} -> ${real} (in: ${where.join(', ')})`);
+      }
+    }
+    output.debug(
+      `[env proxy] ${env.method} ${env.url}` +
+        (subsForLog.length ? `\n${subsForLog.join('\n')}` : '')
+    );
+
+    let upstream: {
+      res: http.IncomingMessage;
+      bodyChunks: Buffer[];
+    };
+    try {
+      upstream = await doUpstreamRequest(
+        { ...env, url: realUrl, headers: realHeaders },
+        realBody
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      output.debug(`[env proxy] upstream error: ${msg}`);
+      res.writeHead(502, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'upstream', detail: msg }));
+      return;
+    }
+
+    // real -> dummy on response (so the subprocess never sees real values)
+    const upBody = Buffer.concat(upstream.bodyChunks);
+    const safeBody = substituteBuffer(upBody, subs.realToDummy);
+    const upHeaders: Record<string, string> = {};
+    for (const [k, v] of Object.entries(upstream.res.headers)) {
+      if (v == null) continue;
+      const joined = Array.isArray(v) ? v.join(', ') : String(v);
+      // Skip hop-by-hop and length headers; we'll recompute length.
+      const kl = k.toLowerCase();
+      if (
+        kl === 'content-length' ||
+        kl === 'transfer-encoding' ||
+        kl === 'connection'
+      ) {
+        continue;
+      }
+      upHeaders[kl] = substituteString(joined, subs.realToDummy);
+    }
+    upHeaders['content-length'] = String(safeBody.length);
+
+    const reply: ReplyEnvelope = {
+      status: upstream.res.statusCode ?? 200,
+      statusMessage: upstream.res.statusMessage ?? '',
+      headers: upHeaders,
+      bodyBase64: safeBody.toString('base64'),
+    };
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(reply));
+  });
+
+  server.on('connect', (req, socket, head) => {
+    if (req.headers['x-vproxy-session'] !== sessionId) {
+      socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      socket.end();
+      return;
+    }
+
+    let host: string;
+    let port: number;
+    try {
+      ({ host, port } = parseTcpConnectTarget(req.url ?? ''));
+    } catch {
+      socket.write('HTTP/1.1 400 Bad Request\r\n\r\n');
+      socket.end();
+      return;
+    }
+
+    const realHost = substituteString(host, subs.dummyToReal);
+    output.debug(`[env proxy] TCP ${host}:${port} -> ${realHost}:${port}`);
+    const upstream = net.connect({ host: realHost, port }, () => {
+      socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+      if (head.length) upstream.write(head);
+      socket.pipe(upstream);
+      upstream.pipe(socket);
+    });
+
+    upstream.on('error', e => {
+      output.debug(`[env proxy] tcp upstream error: ${e.message}`);
+      if (socket.writable) {
+        socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
+      }
+      socket.destroy();
+    });
+    socket.on('error', () => upstream.destroy());
+  });
+
+  const tcpServer = net.createServer(socket => {
+    const chunks: Buffer[] = [];
+    socket.on('data', function onData(chunk) {
+      chunks.push(chunk);
+      const pending = Buffer.concat(chunks);
+      const headerEnd = pending.indexOf('\n');
+      if (headerEnd === -1) return;
+
+      socket.off('data', onData);
+      const line = pending.subarray(0, headerEnd).toString('utf-8').trimEnd();
+      const head = pending.subarray(headerEnd + 1);
+      const [gotSessionId, host, portText] = line.split('\t');
+      const port = Number(portText);
+      if (
+        gotSessionId !== sessionId ||
+        !host ||
+        !Number.isInteger(port) ||
+        port <= 0 ||
+        port > 65535
+      ) {
+        socket.destroy();
+        return;
+      }
+
+      handleTcpTunnel(socket, head, host, port, subs);
+    });
+  });
+
+  await new Promise<void>(resolve =>
+    server.listen(0, '127.0.0.1', () => resolve())
+  );
+  await new Promise<void>(resolve =>
+    tcpServer.listen(0, '127.0.0.1', () => resolve())
+  );
+  const address = server.address();
+  const tcpAddress = tcpServer.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('broker failed to bind');
+  }
+  if (!tcpAddress || typeof tcpAddress === 'string') {
+    throw new Error('tcp broker failed to bind');
+  }
+  const port = address.port;
+  const tcpPort = tcpAddress.port;
+  const url = `http://127.0.0.1:${port}`;
+
+  return {
+    port,
+    tcpPort,
+    url,
+    sessionId,
+    close: () =>
+      new Promise(resolve => {
+        server.close(() => {
+          tcpServer.close(() => resolve());
+        });
+      }),
+  };
+}

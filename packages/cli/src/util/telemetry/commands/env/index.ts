@@ -40,6 +40,13 @@ export class EnvTelemetryClient
     });
   }
 
+  trackCliSubcommandProxy(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'proxy',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandUpdate(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'update',

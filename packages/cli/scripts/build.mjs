@@ -165,6 +165,13 @@ copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)
 );
+// proxy-shim.cjs is loaded into the user's subprocess by `vc env proxy` via
+// NODE_OPTIONS=--require, so it must live next to the compiled env command.
+mkdirSync(new URL('commands/env/', distRoot), { recursive: true });
+copyFileSync(
+  new URL('src/commands/env/proxy-shim.cjs', repoRoot),
+  new URL('commands/env/proxy-shim.cjs', distRoot)
+);
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
 
 // Generate version.mjs for fast --version lookup

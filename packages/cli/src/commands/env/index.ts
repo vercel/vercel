@@ -6,6 +6,7 @@ import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
 import ls from './ls';
+import proxy, { needsHelpForProxy } from './proxy';
 import pull from './pull';
 import rm from './rm';
 import run, { needsHelpForRun } from './run';
@@ -14,6 +15,7 @@ import {
   envCommand,
   addSubcommand,
   listSubcommand,
+  proxySubcommand,
   pullSubcommand,
   removeSubcommand,
   runSubcommand,
@@ -30,6 +32,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
   pull: getCommandAliases(pullSubcommand),
+  proxy: getCommandAliases(proxySubcommand),
   run: getCommandAliases(runSubcommand),
   update: getCommandAliases(updateSubcommand),
 };
@@ -126,6 +129,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRun(subcommandOriginal);
       exitCode = await run(client);
+      break;
+    case 'proxy':
+      if (needsHelpForProxy(client)) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(proxySubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandProxy(subcommandOriginal);
+      exitCode = await proxy(client);
       break;
     case 'update':
       if (needHelp) {
