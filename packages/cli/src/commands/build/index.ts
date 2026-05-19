@@ -116,6 +116,7 @@ import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
+import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -660,17 +661,7 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  const vercelFlagsVersion =
-    await getInstalledPackageVersion('@flags-sdk/vercel');
-  const vercelFlagsCoreVersion =
-    await getInstalledPackageVersion('@vercel/flags-core');
-  const hasFlagsPackage = vercelFlagsVersion || vercelFlagsCoreVersion;
-  const optOutFlagsEmbedding =
-    process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING === '1';
-  const forceFlagsEmbedding =
-    process.env.VERCEL_FLAGS_FORCE_DEFINITION_EMBEDDING === '1';
-
-  if (forceFlagsEmbedding || (hasFlagsPackage && !optOutFlagsEmbedding)) {
+  if (await shouldEmbedFlagsDefinitions()) {
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
