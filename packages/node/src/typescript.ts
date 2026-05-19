@@ -264,6 +264,7 @@ export function register(opts: Options = {}): Register {
       directoryExists: cachedLookup(
         debugFn('directoryExists', ts.sys.directoryExists)
       ),
+      realpath: cachedLookup(debugFn('realpath', ts.sys.realpath)),
       getNewLine: () => ts.sys.newLine,
       useCaseSensitiveFileNames: () => ts.sys.useCaseSensitiveFileNames,
       getCurrentDirectory: () => cwd,
