@@ -660,7 +660,17 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING !== '1') {
+  const vercelFlagsVersion =
+    await getInstalledPackageVersion('@flags-sdk/vercel');
+  const vercelFlagsCoreVersion =
+    await getInstalledPackageVersion('@vercel/flags-core');
+  const hasFlagsPackage = vercelFlagsVersion || vercelFlagsCoreVersion;
+  const optOutFlagsEmbedding =
+    process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING === '1';
+  const forceFlagsEmbedding =
+    process.env.VERCEL_FLAGS_FORCE_DEFINITION_EMBEDDING === '1';
+
+  if (forceFlagsEmbedding || (hasFlagsPackage && !optOutFlagsEmbedding)) {
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
