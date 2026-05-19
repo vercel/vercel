@@ -43,8 +43,6 @@ import { commands, commandNames } from './commands';
 import { handleCommandTypo } from './util/handle-command-typo';
 import { matchesCliApiTag } from './util/openapi/matches-cli-api-tag';
 import { tryOpenApiFallback } from './util/openapi';
-import { runInferredCommand } from './util/openapi/infer-commands';
-import { inferredOpenApiCommands } from './util/openapi/inferred-commands-config';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -178,6 +176,42 @@ class InMemoryReporter implements Reporter {
   }
 }
 
+type InferCommandsBundle = typeof import('./infer-commands-bundle.js');
+
+let inferCommandsBundlePromise: Promise<InferCommandsBundle> | undefined;
+
+function loadInferCommandsBundle(): Promise<InferCommandsBundle> {
+  if (!inferCommandsBundlePromise) {
+    inferCommandsBundlePromise = import('./infer-commands-bundle.js');
+  }
+  return inferCommandsBundlePromise;
+}
+
+async function runInferredCommandWhenEnabled(
+  inferEnabled: boolean,
+  inferHelpRequested: boolean,
+  rawCliArgs: string[],
+  options: {
+    execute: boolean;
+    client?: Client;
+    columns: number;
+  }
+): Promise<number | null> {
+  if (!inferEnabled) {
+    return null;
+  }
+
+  const { runInferredCommand, inferredOpenApiCommands } =
+    await loadInferCommandsBundle();
+
+  return runInferredCommand(inferredOpenApiCommands, rawCliArgs, {
+    execute: options.execute,
+    client: options.client,
+    help: inferHelpRequested,
+    columns: options.columns,
+  });
+}
+
 const main = async () => {
   const traceReporter = new InMemoryReporter();
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
@@ -278,12 +312,12 @@ const main = async () => {
   }
 
   if (inferEnabled) {
-    const inferredCommandExitCode = await runInferredCommand(
-      inferredOpenApiCommands,
+    const inferredCommandExitCode = await runInferredCommandWhenEnabled(
+      inferEnabled,
+      inferHelpRequested,
       rawCliArgs,
       {
         execute: false,
-        help: inferHelpRequested,
         columns: process.stderr.columns ?? 80,
       }
     );
@@ -888,15 +922,17 @@ const main = async () => {
   }
 
   if (inferEnabled) {
-    const inferredCommandExecutionExitCode = await runInferredCommand(
-      inferredOpenApiCommands,
-      rawCliArgs,
-      {
-        client,
-        help: inferHelpRequested,
-        columns: process.stderr.columns ?? 80,
-      }
-    );
+    const inferredCommandExecutionExitCode =
+      await runInferredCommandWhenEnabled(
+        inferEnabled,
+        inferHelpRequested,
+        rawCliArgs,
+        {
+          execute: true,
+          client,
+          columns: process.stderr.columns ?? 80,
+        }
+      );
     if (inferredCommandExecutionExitCode !== null) {
       return finishWithExitCode(inferredCommandExecutionExitCode);
     }

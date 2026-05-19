@@ -58,6 +58,18 @@ await generateOpenApiCommandDslTypes();
     );
     process.exit(1);
   }
+
+  const staticInferImports = indexSrc.match(
+    /from ['"]\.\/util\/openapi\/(?:infer-commands|inferred-commands-config)['"]/g
+  );
+  if (staticInferImports) {
+    console.error(
+      `\nError: src/index.ts statically imports inferred OpenAPI command modules (${staticInferImports.length} occurrence(s)).` +
+        `\nLoad them via: await import('./infer-commands-bundle.js')` +
+        `\nwhen --infer is provided.\n`
+    );
+    process.exit(1);
+  }
 }
 
 // Compile the `doT.js` template files for `vercel dev`
@@ -97,11 +109,13 @@ const jsoncParserPlugin = {
 // - src/index.ts (main entry)
 // - src/help.ts (standalone help for fast --help)
 // - src/commands-bulk.ts (non-priority commands bundle)
+// - src/infer-commands-bundle.ts (--infer OpenAPI DSL commands)
 // - src/commands/[priority]/index.ts (priority command entry points)
 const entryPoints = [
   join(cwd, 'src/index.ts'),
   join(cwd, 'src/help.ts'),
   join(cwd, 'src/commands-bulk.ts'),
+  join(cwd, 'src/infer-commands-bundle.ts'),
   ...PRIORITY_COMMANDS.map(cmd => join(cwd, `src/commands/${cmd}/index.ts`)),
 ];
 
