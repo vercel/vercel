@@ -248,6 +248,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
     },
     'zero-config-next-js-nested': {
+      // `pnpm-workspace.yaml` makes this fixture a workspace, which is what
+      // triggers the "In which directory is your code located?" prompt under
+      // the new input-root-directory behavior (prompt fires only when
+      // `getWorkspaces()` returns non-empty).
+      'pnpm-workspace.yaml': "packages:\n  - 'app'\n",
       'app/pages/index.js':
         'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
       'app/package.json': JSON.stringify({

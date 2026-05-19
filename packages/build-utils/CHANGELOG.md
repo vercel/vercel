@@ -1,5 +1,28 @@
 # @vercel/build-utils
 
+## 13.26.0
+
+### Minor Changes
+
+- 137e5d1: Allow builder V2 to expose startDevServer.
+
+### Patch Changes
+
+- bb61428: Include framework slug in output/config.json
+
+## 13.25.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+## 13.24.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
 ## 13.23.0
 
 ### Minor Changes

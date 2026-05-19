@@ -32,6 +32,7 @@ from vercel.workers._queue.receive import (
     parse_retry_after,
     receive_message_by_id,
     receive_messages,
+    resolve_v2beta_message,
 )
 from vercel.workers._queue.send import (
     Duration,
@@ -120,6 +121,7 @@ __all__ = [
     "parse_v2beta_callback",
     "receive_message_by_id",
     "receive_messages",
+    "resolve_v2beta_message",
     "select_subscriptions",
     "subscribe",
     "subscriptions",

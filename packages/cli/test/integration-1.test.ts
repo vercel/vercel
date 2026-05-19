@@ -373,23 +373,21 @@ test('deploy from a nested directory', async () => {
     },
   });
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -411,23 +409,21 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
     }
   );
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });

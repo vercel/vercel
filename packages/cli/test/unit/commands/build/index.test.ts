@@ -2534,6 +2534,22 @@ fs.writeFileSync(
     }
   });
 
+  it('should run preDeployCommand after build succeeds', async () => {
+    const cwd = fixture('with-services-pre-deploy-command');
+    const sideEffectFile = join(cwd, 'pre-deploy-ran.txt');
+
+    await fs.remove(sideEffectFile);
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    expect(await fs.pathExists(sideEffectFile)).toBe(true);
+    expect(await fs.readFile(sideEffectFile, 'utf8')).toBe('ok');
+
+    await fs.remove(sideEffectFile);
+  });
+
   it('should not write trace spans for non-build commands', async () => {
     const cwd = fixture('static');
     const tracePath = join(cwd, '.vercel/output/diagnostics/cli_traces.json');

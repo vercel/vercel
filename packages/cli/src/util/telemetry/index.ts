@@ -234,6 +234,22 @@ export class TelemetryClient {
     }
   }
 
+  protected trackVercelPluginActiveSession() {
+    this.track({
+      key: 'vercel_plugin_active_session',
+      value: 'TRUE',
+    });
+  }
+
+  protected trackVercelPluginVersion(version: string | undefined) {
+    if (version) {
+      this.track({
+        key: 'vercel_plugin_version',
+        value: version,
+      });
+    }
+  }
+
   protected trackErrorStatus(status: number | string | undefined) {
     if (typeof status !== 'undefined') {
       this.track({
