@@ -43,7 +43,6 @@ Review the diff and confirm it only contains expected release-generated changes,
 
 - `package.json` version updates
 - package changelog updates
-- lockfile/version sync updates (for example `pnpm-lock.yaml`, `uv.lock`, Python package versions)
 
 If the PR includes unexpected file changes, stop and investigate before merging.
 
