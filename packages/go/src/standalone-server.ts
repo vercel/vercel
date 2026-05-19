@@ -131,12 +131,20 @@ export async function buildStandaloneServer({
     // Copy the bootstrap go.mod
     await copy(bootstrapGoModSrc, join(bootstrapBuildDir, 'go.mod'));
 
-    // Separate the bootstrap env from the user env
-    const bootstrapEnv = cloneEnv(process.env, {
+    // Build an isolated env for the bootstrap — only system essentials
+    // plus cross-compile settings. User-provided Go env vars (e.g.
+    // GOEXPERIMENT) must not leak in as they may be incompatible with
+    // the Go version used to compile the bootstrap wrapper.
+    // createGo() will add GOROOT, GO111MODULE, GOMODCACHE, GOCACHE,
+    // and update PATH internally.
+    const bootstrapEnv: Record<string, string> = {
+      PATH: process.env.PATH || '',
+      HOME: process.env.HOME || '',
+      TMPDIR: process.env.TMPDIR || '',
       GOARCH: architecture === 'arm64' ? 'arm64' : 'amd64',
       GOOS: 'linux',
       CGO_ENABLED: '0',
-    });
+    };
 
     const bootstrapGo = await createGo({
       modulePath: bootstrapBuildDir,

@@ -324,7 +324,7 @@ export async function createGo({
     ? goPreferredVersion.toolchain || goPreferredVersion.go
     : Array.from(versionMap.values())[0];
 
-  const env = cloneEnv(process.env, opts.env);
+  const env = opts.env ? cloneEnv(opts.env) : cloneEnv(process.env);
   const { PATH } = env;
   const { platform } = process;
   const goGlobalCacheDir = join(
