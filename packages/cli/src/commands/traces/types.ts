@@ -21,3 +21,35 @@ export type Trace = {
   rootSpanId?: string;
   spans: Span[];
 };
+
+export type AnalyzedSpan = {
+  span: Span;
+  durationUs: number | null;
+  selfTimeUs: number | null;
+  startOffsetUs: number | null;
+};
+
+export type RepeatedOp = {
+  name: string;
+  count: number;
+  totalUs: number;
+  perCallUs: number;
+};
+
+export type TreeNode = {
+  span: Span;
+  depth: number;
+};
+
+export type AnalyzedTrace = {
+  trace: Trace;
+  root: Span | undefined;
+  rootDurationUs: number | null;
+  rootStartUs: number | null;
+  spanInfo: Map<string, AnalyzedSpan>;
+  treeOrder: TreeNode[];
+  orphanOrder: TreeNode[];
+  errorSpans: Span[];
+  repeatedOps: RepeatedOp[];
+  truncatedAtDepth: boolean;
+};

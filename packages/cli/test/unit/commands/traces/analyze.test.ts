@@ -203,16 +203,14 @@ describe('analyze', () => {
     expect(a.repeatedOps.find(op => op.name === 'one-off')).toBeUndefined();
   });
 
-  it('counts errors and detects cold start', () => {
+  it('collects error spans by status code', () => {
     const t = trace([
       span({ spanId: 'r', status: { code: 0 } }),
       span({ spanId: 'e1', status: { code: 1, message: 'boom' } }),
       span({ spanId: 'e2', status: { code: 1 } }),
-      span({ spanId: 'cold', attributes: { 'func.cold': true } }),
     ]);
     const a = analyze(t);
     expect(a.errorSpans.map(s => s.spanId)).toEqual(['e1', 'e2']);
-    expect(a.hasColdStart).toBe(true);
   });
 
   it('groups orphan spans (parent missing from set) under orphanOrder', () => {
@@ -269,6 +267,5 @@ describe('analyze', () => {
     expect(a.orphanOrder).toEqual([]);
     expect(a.errorSpans).toEqual([]);
     expect(a.repeatedOps).toEqual([]);
-    expect(a.hasColdStart).toBe(false);
   });
 });

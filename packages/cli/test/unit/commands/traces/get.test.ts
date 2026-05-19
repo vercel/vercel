@@ -53,7 +53,6 @@ const sampleTrace: Trace = {
       spanId: 'span_invoke',
       name: 'invoke',
       duration: [0, 18_000_000],
-      attributes: { 'func.cold': true },
       status: { code: 0 },
     },
   ],
@@ -88,7 +87,6 @@ describe('vercel traces get', () => {
     expect(stdout).toContain('**Trace id:** trace_001');
     expect(stdout).toContain('**Request id:** req_abc');
     expect(stdout).toContain('**Endpoint:** `GET /api/hello` → 200');
-    expect(stdout).toContain('(cold start)');
     expect(stdout).toContain('**Spans:** 2');
     expect(stdout).toContain('## Span tree');
 

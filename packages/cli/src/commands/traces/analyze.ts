@@ -1,11 +1,16 @@
-import type { Span, Trace } from './types';
+import type {
+  AnalyzedSpan,
+  AnalyzedTrace,
+  RepeatedOp,
+  Span,
+  Trace,
+  TreeNode,
+} from './types';
 
 export const MAX_TREE_DEPTH = 256;
 
 // OpenTelemetry status: 0 = unset/OK, 1 = error.
 export const SPAN_STATUS_ERROR = 1;
-
-export const FUNC_COLD_ATTR = 'func.cold';
 
 // Attribute keys promoted into row-level hints, in priority order. Tree rows
 // show only the first match; error entries show every match.
@@ -54,39 +59,6 @@ export function readAttrString(
   }
   return undefined;
 }
-
-export type AnalyzedSpan = {
-  span: Span;
-  durationUs: number | null;
-  selfTimeUs: number | null;
-  startOffsetUs: number | null;
-};
-
-export type RepeatedOp = {
-  name: string;
-  count: number;
-  totalUs: number;
-  perCallUs: number;
-};
-
-export type TreeNode = {
-  span: Span;
-  depth: number;
-};
-
-export type AnalyzedTrace = {
-  trace: Trace;
-  root: Span | undefined;
-  rootDurationUs: number | null;
-  rootStartUs: number | null;
-  spanInfo: Map<string, AnalyzedSpan>;
-  treeOrder: TreeNode[];
-  orphanOrder: TreeNode[];
-  errorSpans: Span[];
-  repeatedOps: RepeatedOp[];
-  hasColdStart: boolean;
-  truncatedAtDepth: boolean;
-};
 
 export function resolveRootSpan(trace: Trace): Span | undefined {
   if (trace.spans.length === 0) {
@@ -206,9 +178,6 @@ export function analyze(trace: Trace): AnalyzedTrace {
   const errorSpans = trace.spans.filter(
     span => span.status?.code === SPAN_STATUS_ERROR
   );
-  const hasColdStart = trace.spans.some(
-    span => span.attributes?.[FUNC_COLD_ATTR] === true
-  );
 
   const byName = new Map<string, { count: number; totalUs: number }>();
   for (const span of trace.spans) {
@@ -245,7 +214,6 @@ export function analyze(trace: Trace): AnalyzedTrace {
     orphanOrder,
     errorSpans,
     repeatedOps,
-    hasColdStart,
     truncatedAtDepth,
   };
 }

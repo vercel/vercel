@@ -1,6 +1,4 @@
 import {
-  type AnalyzedTrace,
-  type TreeNode,
   ATTR_HINT_KEYS,
   MAX_TREE_DEPTH,
   SPAN_STATUS_ERROR,
@@ -8,7 +6,7 @@ import {
   readAttrString,
 } from './analyze';
 import ellipsis from '../../util/output/ellipsis';
-import type { Span, Trace } from './types';
+import type { AnalyzedTrace, Span, Trace, TreeNode } from './types';
 
 const UNKNOWN = '<unknown>';
 const UNNAMED = '<unnamed>';
@@ -36,13 +34,13 @@ function renderHeader(
   analysis: AnalyzedTrace,
   options: { requestId: string }
 ): string {
-  const { trace, root, rootDurationUs, errorSpans, hasColdStart } = analysis;
+  const { trace, root, rootDurationUs, errorSpans } = analysis;
   const attributes = root?.attributes;
   const method = readAttrString(attributes, 'http.method');
   const target = readAttrString(attributes, 'http.target');
   const status = readAttrString(attributes, 'http.status_code');
   const endpoint = formatEndpoint(method, target, status);
-  const duration = formatDurationWithColdStart(rootDurationUs, hasColdStart);
+  const duration = formatDurationUs(rootDurationUs);
   const spans = formatSpansLine(trace.spans.length, errorSpans.length);
 
   const lines = [
@@ -168,14 +166,6 @@ function formatEndpoint(
     return `${path} → ${status}`;
   }
   return path;
-}
-
-function formatDurationWithColdStart(
-  durationUs: number | null,
-  hasColdStart: boolean
-): string {
-  const base = formatDurationUs(durationUs);
-  return hasColdStart ? `${base} (cold start)` : base;
 }
 
 function formatSpansLine(count: number, errors: number): string {
