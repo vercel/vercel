@@ -82,4 +82,20 @@ export class BlobTelemetryClient
       value: this.redactedValue,
     });
   }
+
+  trackCliOptionOidcToken() {
+    this.trackCliOption({
+      option: '--oidc-token',
+      value: this.redactedValue,
+    });
+  }
+
+  trackCliOptionStoreId(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--store-id',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

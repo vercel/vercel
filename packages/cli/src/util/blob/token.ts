@@ -10,16 +10,19 @@ import listItem from '../output/list-item';
  * Linear scan for a specific named flag's value. Supports both
  * `--flag value` and `--flag=value` forms. Used to read the few auth
  * flags here without re-running the full arg parser over an argv that
- * also contains the subcommand and its own flags.
+ * also contains the subcommand and its own flags. If the flag is
+ * repeated, the last occurrence wins — matching standard CLI parser
+ * semantics.
  */
 function findFlagValue(argv: string[], flag: string): string | undefined {
   const eqPrefix = `${flag}=`;
+  let result: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === flag) return argv[i + 1];
-    if (arg.startsWith(eqPrefix)) return arg.slice(eqPrefix.length);
+    if (arg === flag) result = argv[i + 1];
+    else if (arg.startsWith(eqPrefix)) result = arg.slice(eqPrefix.length);
   }
-  return undefined;
+  return result;
 }
 
 const ErrorMessage = `No Vercel Blob credentials found. To fix this issue, choose one of the following options:
@@ -35,7 +38,7 @@ const PartialOidcEnvErrorMessage = `VERCEL_OIDC_TOKEN and BLOB_STORE_ID must bot
 
 export type BlobRWToken =
   | { success: true; kind: 'rw'; token: string }
-  | { success: true; kind: 'oidc'; storeId: string }
+  | { success: true; kind: 'oidc'; oidcToken: string; storeId: string }
   | { error: string; success: false };
 
 export async function getBlobRWToken(
@@ -56,20 +59,31 @@ export async function getBlobRWToken(
     if (!oidcTokenFlag || !storeIdFlag) {
       return { success: false, error: PartialOidcFlagsErrorMessage };
     }
-    // Hoist onto process.env so the SDK's getVercelOidcToken() picks it up.
-    process.env.VERCEL_OIDC_TOKEN = oidcTokenFlag;
-    return { success: true, kind: 'oidc', storeId: storeIdFlag };
+    return {
+      success: true,
+      kind: 'oidc',
+      oidcToken: oidcTokenFlag,
+      storeId: storeIdFlag,
+    };
   }
 
-  // 2. Env-derived auth: combine process.env with .env.local (process.env
-  //    wins; .env.local fills gaps). Then resolve in this order:
+  // 2. Env-derived auth. Resolve from `process.env` first; only consult
+  //    `.env.local` if `process.env` doesn't already provide a complete
+  //    credential set. Within each source the priority is:
   //      a. Hard-fail if OIDC config is partial — VERCEL_OIDC_TOKEN xor
   //         BLOB_STORE_ID. We never silently downgrade to RW when the user
   //         partially configured OIDC, mirroring the explicit-flags policy
   //         and AWS's credential-provider behavior.
   //      b. Both OIDC vars present → OIDC.
   //      c. BLOB_READ_WRITE_TOKEN present → RW.
-  //      d. Otherwise → no-creds error.
+  //      d. Otherwise → fall through to the next source.
+  const fromProcess = resolveFromEnv({
+    VERCEL_OIDC_TOKEN: process.env.VERCEL_OIDC_TOKEN,
+    BLOB_STORE_ID: process.env.BLOB_STORE_ID,
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
+  });
+  if (fromProcess) return fromProcess;
+
   let envFile: Record<string, string | undefined> = {};
   try {
     envFile = (await createEnvObject(resolve(client.cwd, '.env.local'))) ?? {};
@@ -77,27 +91,46 @@ export async function getBlobRWToken(
     // .env.local missing or unreadable — fine, treat as empty.
   }
 
-  const oidcToken = process.env.VERCEL_OIDC_TOKEN ?? envFile.VERCEL_OIDC_TOKEN;
-  const storeId = process.env.BLOB_STORE_ID ?? envFile.BLOB_STORE_ID;
-  const rwTokenEnv =
-    process.env.BLOB_READ_WRITE_TOKEN ?? envFile.BLOB_READ_WRITE_TOKEN;
+  const fromFile = resolveFromEnv({
+    VERCEL_OIDC_TOKEN: envFile.VERCEL_OIDC_TOKEN,
+    BLOB_STORE_ID: envFile.BLOB_STORE_ID,
+    BLOB_READ_WRITE_TOKEN: envFile.BLOB_READ_WRITE_TOKEN,
+  });
+  if (fromFile) return fromFile;
 
-  if (Boolean(oidcToken) !== Boolean(storeId)) {
+  return { success: false, error: ErrorMessage };
+}
+
+/**
+ * Resolve a `BlobRWToken` from a single env source. Returns `null` when
+ * the source has no relevant variables (caller should fall through to
+ * the next source) and an error result when only one OIDC half is set.
+ */
+function resolveFromEnv(env: {
+  VERCEL_OIDC_TOKEN: string | undefined;
+  BLOB_STORE_ID: string | undefined;
+  BLOB_READ_WRITE_TOKEN: string | undefined;
+}): BlobRWToken | null {
+  const { VERCEL_OIDC_TOKEN, BLOB_STORE_ID, BLOB_READ_WRITE_TOKEN } = env;
+
+  if (Boolean(VERCEL_OIDC_TOKEN) !== Boolean(BLOB_STORE_ID)) {
     return { success: false, error: PartialOidcEnvErrorMessage };
   }
 
-  if (oidcToken && storeId) {
-    // Hoist onto process.env so the SDK's getVercelOidcToken() picks it up.
-    process.env.VERCEL_OIDC_TOKEN ??= oidcToken;
-    process.env.BLOB_STORE_ID ??= storeId;
-    return { success: true, kind: 'oidc', storeId };
+  if (VERCEL_OIDC_TOKEN && BLOB_STORE_ID) {
+    return {
+      success: true,
+      kind: 'oidc',
+      oidcToken: VERCEL_OIDC_TOKEN,
+      storeId: BLOB_STORE_ID,
+    };
   }
 
-  if (rwTokenEnv) {
-    return { success: true, kind: 'rw', token: rwTokenEnv };
+  if (BLOB_READ_WRITE_TOKEN) {
+    return { success: true, kind: 'rw', token: BLOB_READ_WRITE_TOKEN };
   }
 
-  return { success: false, error: ErrorMessage };
+  return null;
 }
 
 /**
@@ -106,23 +139,22 @@ export async function getBlobRWToken(
  * For `rw` mode, returns `{ token }` — the SDK parses the store ID out of
  * the token and the server decodes it from the bearer.
  *
- * For `oidc` mode, returns `{ storeId }` and intentionally omits `token`.
- * The SDK's `options.token` is read-write only — if we passed the OIDC JWT
- * through it, the SDK would call `parseStoreIdFromReadWriteToken` (an
- * underscore split) on the JWT and produce a malformed store ID. Instead,
- * the SDK reads the OIDC token from `process.env.VERCEL_OIDC_TOKEN` via
- * `getVercelOidcToken()`. Our resolver hoists `.env.local` vars onto
- * `process.env` so that env-read works in local CLI runs too.
+ * For `oidc` mode, returns `{ oidcToken, storeId }`. The SDK (>=2.4.0)
+ * accepts the OIDC JWT directly via `options.oidcToken` and uses `storeId`
+ * to scope the call. We intentionally omit `token` — passing the OIDC JWT
+ * there would route through `parseStoreIdFromReadWriteToken` and produce
+ * a malformed store ID.
  */
 export function blobOpts(auth: BlobRWToken): {
   token?: string;
+  oidcToken?: string;
   storeId?: string;
 } {
   if (auth.success && auth.kind === 'rw') {
     return { token: auth.token };
   }
   if (auth.success && auth.kind === 'oidc') {
-    return { storeId: auth.storeId };
+    return { oidcToken: auth.oidcToken, storeId: auth.storeId };
   }
   return {};
 }
