@@ -48,7 +48,7 @@ If the PR includes unexpected file changes, stop and investigate before merging.
 
 ### 3) Merge with admin bypass (force merge)
 
-An admin should merge the `Version Packages` PR using bypass/force-merge permissions.
+An admin should merge the `Version Packages` PR using bypass/force-merge permissions. The list of users who can bypass is [here](https://github.com/vercel/vercel/settings/rules/4173946).
 
 - Do not wait for required checks that are not running.
 - This is the intended path for release PRs in this repository.
