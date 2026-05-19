@@ -67,7 +67,7 @@ export default async function inputProject(
     if (
       await client.input.confirm(
         `Found project ${chalk.cyan(
-          `“${org.slug}/${detectedProject.name}”`
+          `"${org.slug}/${detectedProject.name}"`
         )}. Link to it?`,
         true
       )
@@ -97,7 +97,7 @@ export default async function inputProject(
     } else if (hasMoreProjects) {
       let toLink: Project;
       await client.input.text({
-        message: "What's the name of your existing project?",
+        message: 'Existing project name?',
         validate: async val => {
           if (!val) {
             return 'Project name cannot be empty';
@@ -130,7 +130,7 @@ export default async function inputProject(
 
   // user wants to create a new project
   return await client.input.text({
-    message: `What’s your project’s name?`,
+    message: `Name?`,
     default: !detectedProject ? slugifiedName : undefined,
     validate: async val => {
       if (!val) {

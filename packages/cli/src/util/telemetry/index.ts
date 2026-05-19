@@ -115,6 +115,15 @@ export class TelemetryClient {
     });
   }
 
+  protected trackTargetEnvironment(
+    targetEnvironment: 'production' | 'preview'
+  ) {
+    this.track({
+      key: 'target_environment',
+      value: targetEnvironment,
+    });
+  }
+
   protected trackCommandOutput(eventData: { key: string; value: string }) {
     this.track({
       key: `output:${eventData.key}`,
@@ -221,6 +230,22 @@ export class TelemetryClient {
       this.track({
         key: 'device_id',
         value: deviceId,
+      });
+    }
+  }
+
+  protected trackVercelPluginActiveSession() {
+    this.track({
+      key: 'vercel_plugin_active_session',
+      value: 'TRUE',
+    });
+  }
+
+  protected trackVercelPluginVersion(version: string | undefined) {
+    if (version) {
+      this.track({
+        key: 'vercel_plugin_version',
+        value: version,
       });
     }
   }

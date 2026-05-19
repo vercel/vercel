@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 4.17.2
+
+### Patch Changes
+
+- bb61428: Include framework slug in output/config.json
+
+## 4.17.1
+
+### Patch Changes
+
+- 34e7b09: Update to latest Next.js adapter
+
+## 4.17.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 4.16.8
 
 ### Patch Changes

@@ -5,7 +5,7 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(12 * 60 * 1000);
+vi.setConfig({ testTimeout: 12 * 60 * 1000, hookTimeout: 12 * 60 * 1000 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 

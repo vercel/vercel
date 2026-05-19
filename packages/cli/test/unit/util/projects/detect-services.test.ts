@@ -12,11 +12,13 @@ import {
 
 describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+  const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
   const originalTomlEnv = process.env.VERCEL_TOML_CONFIG_ENABLED;
   let tempDir: string;
 
   beforeEach(async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+    process.env.VERCEL_USE_SERVICES = '1';
     process.env.VERCEL_TOML_CONFIG_ENABLED = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
@@ -27,6 +29,11 @@ describe('tryDetectServices()', () => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     } else {
       process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
+    }
+    if (originalServicesEnv === undefined) {
+      delete process.env.VERCEL_USE_SERVICES;
+    } else {
+      process.env.VERCEL_USE_SERVICES = originalServicesEnv;
     }
     if (originalTomlEnv === undefined) {
       delete process.env.VERCEL_TOML_CONFIG_ENABLED;
@@ -51,7 +58,7 @@ describe('tryDetectServices()', () => {
     expect(result).toBeNull();
   });
 
-  it('should return null when vercel.json has no experimentalServices and no service found', async () => {
+  it('should return null when vercel.json has no services and no service found', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({ buildCommand: 'npm run build' })
@@ -66,9 +73,9 @@ describe('tryDetectServices()', () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
-        experimentalServices: {
-          frontend: { framework: 'nextjs', routePrefix: '/' },
-          backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
+        services: {
+          frontend: { framework: 'nextjs', mount: '/' },
+          backend: { entrypoint: 'api/index.py', mount: '/api' },
         },
       })
     );
@@ -96,13 +103,13 @@ describe('tryDetectServices()', () => {
     await mkdir(join(tempDir, 'api'), { recursive: true });
     await writeFile(
       join(tempDir, 'vercel.toml'),
-      `[experimentalServices.frontend]
+      `[services.frontend]
 framework = "nextjs"
-routePrefix = "/"
+mount = "/"
 
-[experimentalServices.backend]
+[services.backend]
 entrypoint = "api/index.py"
-routePrefix = "/api"`
+mount = "/api"`
     );
     await writeFile(
       join(tempDir, 'api/index.py'),
@@ -128,8 +135,8 @@ routePrefix = "/api"`
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
-        experimentalServices: {
-          // Missing routePrefix for web service
+        services: {
+          // Missing mount for web service
           'invalid-service': { entrypoint: 'index.ts' },
         },
       })
@@ -202,19 +209,171 @@ routePrefix = "/api"`
     });
   });
 
+  it('should write inferred services config into vercel.toml', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n'
+    );
+
+    const { configFileName } = await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+      api: {
+        entrypoint: 'services/api',
+        routePrefix: '/_/api',
+      },
+    });
+
+    expect(configFileName).toBe('vercel.toml');
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toContain('buildCommand = "npm run build"');
+    expect(content).toContain('[experimentalServices.frontend]');
+    expect(content).toContain('framework = "nextjs"');
+    expect(content).toContain('[experimentalServices.api]');
+    expect(content).toContain('entrypoint = "services/api"');
+  });
+
+  it('should write services config into empty vercel.toml', async () => {
+    await writeFile(join(tempDir, 'vercel.toml'), '');
+
+    const { configFileName } = await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    expect(configFileName).toBe('vercel.toml');
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toContain('[experimentalServices.frontend]');
+    expect(content).toContain('framework = "nextjs"');
+    // Should not start with a blank line
+    expect(content).not.toMatch(/^\n/);
+  });
+
+  it('should throw when vercel.toml already has experimentalServices', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      `[experimentalServices.existing]\nframework = "nextjs"\nroutePrefix = "/"\n`
+    );
+
+    await expect(
+      writeServicesConfig(tempDir, {
+        frontend: { framework: 'nextjs', routePrefix: '/' },
+      })
+    ).rejects.toThrow(
+      'Cannot automatically update vercel.toml: key "experimentalServices" already exists.'
+    );
+  });
+
+  it('should preserve comments in vercel.toml when writing services config', async () => {
+    const existingContent = [
+      '# This is my project config',
+      'buildCommand = "npm run build" # custom build',
+      '',
+      '# Output settings',
+      'outputDirectory = "dist"',
+      '',
+    ].join('\n');
+    await writeFile(join(tempDir, 'vercel.toml'), existingContent);
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toContain('# This is my project config');
+    expect(content).toContain('buildCommand = "npm run build" # custom build');
+    expect(content).toContain('# Output settings');
+    expect(content).toContain('outputDirectory = "dist"');
+    expect(content).toContain('[experimentalServices.frontend]');
+  });
+
+  it('should separate existing and new content with a double newline in vercel.toml', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n'
+    );
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    expect(content).toMatch(
+      /buildCommand = "npm run build"\n\n\[experimentalServices/
+    );
+  });
+
+  it('should trim trailing newlines from existing vercel.toml before appending', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n\n\n'
+    );
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    // Should have exactly one blank line between old and new, not multiple
+    expect(content).not.toMatch(/buildCommand = "npm run build"\n\n\n/);
+    expect(content).toMatch(
+      /buildCommand = "npm run build"\n\n\[experimentalServices/
+    );
+  });
+
+  it('should treat whitespace-only vercel.toml as empty', async () => {
+    await writeFile(join(tempDir, 'vercel.toml'), '   \n\n  \n');
+
+    await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+
+    const content = await readFile(join(tempDir, 'vercel.toml'), 'utf8');
+    // Should not start with whitespace from the original file
+    expect(content).toMatch(/^\[experimentalServices/);
+  });
+
+  it('should not report vercel.toml key overlap as a services config write blocker', async () => {
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      `[experimentalServices.existing]\nframework = "nextjs"\nroutePrefix = "/"\n`
+    );
+
+    const blocker = await getServicesConfigWriteBlocker(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+    // Overlap errors are not mapped to 'builds' or 'functions' blockers
+    expect(blocker).toBeNull();
+  });
+
+  it('should reject vercel.toml when VERCEL_TOML_CONFIG_ENABLED is not set', async () => {
+    delete process.env.VERCEL_TOML_CONFIG_ENABLED;
+
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      'buildCommand = "npm run build"\n'
+    );
+
+    // With TOML disabled, the toml file is ignored entirely.
+    // writeServicesConfig falls through to the vercel.json path and
+    // creates a new vercel.json (no error, since there's nothing to compile).
+    const { configFileName } = await writeServicesConfig(tempDir, {
+      frontend: { framework: 'nextjs', routePrefix: '/' },
+    });
+    expect(configFileName).toBe('vercel.json');
+  });
+
   describe('without VERCEL_USE_EXPERIMENTAL_SERVICES env var', () => {
     beforeEach(() => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     });
 
-    it('should return services when vercel.json has experimentalServices', async () => {
+    it('should return services when vercel.json has services', async () => {
       await mkdir(join(tempDir, 'api'), { recursive: true });
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          experimentalServices: {
-            frontend: { framework: 'nextjs', routePrefix: '/' },
-            backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
+          services: {
+            frontend: { framework: 'nextjs', mount: '/' },
+            backend: { entrypoint: 'api/index.py', mount: '/api' },
           },
         })
       );
@@ -228,7 +387,7 @@ routePrefix = "/api"`
       expect(result?.services).toHaveLength(2);
     });
 
-    it('should return null when vercel.json has no experimentalServices', async () => {
+    it('should return null when vercel.json has no services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({ buildCommand: 'npm run build' })
@@ -249,12 +408,12 @@ routePrefix = "/api"`
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     });
 
-    it('should return true when vercel.json has experimentalServices', async () => {
+    it('should return true when vercel.json has services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          experimentalServices: {
-            frontend: { framework: 'nextjs', routePrefix: '/' },
+          services: {
+            frontend: { framework: 'nextjs', mount: '/' },
           },
         })
       );
@@ -267,7 +426,7 @@ routePrefix = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return false when vercel.json has no experimentalServices', async () => {
+    it('should return false when vercel.json has no services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({ buildCommand: 'npm run build' })
@@ -280,12 +439,12 @@ routePrefix = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
     });
 
-    it('should return true when vercel.ts has experimentalServices', async () => {
+    it('should return true when vercel.ts has services', async () => {
       await writeFile(
         join(tempDir, 'vercel.ts'),
         `export default {
-          experimentalServices: {
-            frontend: { framework: 'nextjs', routePrefix: '/' },
+          services: {
+            frontend: { framework: 'nextjs', mount: '/' },
           },
         };`
       );
@@ -293,18 +452,18 @@ routePrefix = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return true when vercel.toml has experimentalServices', async () => {
+    it('should return true when vercel.toml has services', async () => {
       await writeFile(
         join(tempDir, 'vercel.toml'),
-        `[experimentalServices.frontend]
+        `[services.frontend]
 framework = "nextjs"
-routePrefix = "/"`
+mount = "/"`
       );
 
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return false when vercel.toml has no experimentalServices', async () => {
+    it('should return false when vercel.toml has no services', async () => {
       await writeFile(
         join(tempDir, 'vercel.toml'),
         `buildCommand = "npm run build"`

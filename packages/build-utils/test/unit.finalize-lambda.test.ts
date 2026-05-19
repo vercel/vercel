@@ -121,8 +121,7 @@ describe('finalizeLambda()', () => {
     expect(lambda.supportsResponseStreaming).toEqual(true);
   });
 
-  it('returns streamingError instead of logging', async () => {
-    // Lambda with a handler file that will cause a parse error
+  it('enables streaming for Nodejs lambdas regardless of handler', async () => {
     const lambda = new Lambda({
       files: {
         'index.js': new FileBlob({ data: 'exports.handler = () => {};' }),
@@ -130,7 +129,6 @@ describe('finalizeLambda()', () => {
       handler: 'missing-handler.js',
       runtime: 'nodejs20.x',
     });
-    // Force NodejsLambda-like shape to trigger handler parsing path
     (lambda as any).launcherType = 'Nodejs';
 
     const result = await finalizeLambda({
@@ -139,9 +137,54 @@ describe('finalizeLambda()', () => {
       forceStreamingRuntime: false,
     });
 
-    // Should not have logged anything
     expect(result.streamingError).toBeUndefined();
-    expect(lambda.supportsResponseStreaming).toBeUndefined();
+    expect(lambda.supportsResponseStreaming).toEqual(true);
+  });
+
+  it('disables streaming for Nodejs lambdas with awsLambdaHandler set', async () => {
+    // Mirrors how non-Node builders (e.g. Redwood) construct lambdas:
+    // awsLambdaHandler is set but supportsResponseStreaming is left
+    // undefined. finalizeLambda must not silently flip it to true.
+    const lambda = new NodejsLambda({
+      files: {
+        'index.js': new FileBlob({ data: 'exports.handler = () => {};' }),
+      },
+      handler: 'index.js',
+      runtime: 'nodejs20.x',
+      shouldAddHelpers: false,
+      shouldAddSourcemapSupport: false,
+      awsLambdaHandler: 'index.handler',
+    });
+
+    const result = await finalizeLambda({
+      lambda,
+      bytecodeCachingOptions: NO_BYTECODE,
+      forceStreamingRuntime: false,
+    });
+
+    expect(result.streamingError).toBeUndefined();
+    expect(lambda.supportsResponseStreaming).toEqual(false);
+  });
+
+  it('disables streaming for awsLambdaHandler even when forceStreamingRuntime is true', async () => {
+    const lambda = new NodejsLambda({
+      files: {
+        'index.js': new FileBlob({ data: 'exports.handler = () => {};' }),
+      },
+      handler: 'index.js',
+      runtime: 'nodejs20.x',
+      shouldAddHelpers: false,
+      shouldAddSourcemapSupport: false,
+      awsLambdaHandler: 'index.handler',
+    });
+
+    await finalizeLambda({
+      lambda,
+      bytecodeCachingOptions: NO_BYTECODE,
+      forceStreamingRuntime: true,
+    });
+
+    expect(lambda.supportsResponseStreaming).toEqual(false);
   });
 
   it('collects uncompressed size when flag is enabled', async () => {

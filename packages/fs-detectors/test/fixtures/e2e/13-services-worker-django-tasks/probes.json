@@ -18,11 +18,11 @@
       "mustContain": "ok"
     },
     {
-      "path": "/_svc/worker/workers/worker/run/worker",
+      "path": "/_svc/worker/index",
       "method": "POST",
       "body": {},
-      "status": 400,
-      "mustContain": "error"
+      "status": 404,
+      "mustContain": "404 from Django web service"
     },
     {
       "path": "/does-not-exist",

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hydrogen",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -12,8 +12,10 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test-e2e": "pnpm test test/test.js",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
-    "type-check": "tsc --noEmit"
+    "test": "vitest run --config ../../vitest.config.mts",
+    "type-check": "tsc --noEmit",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-e2e": "glob --absolute 'test/test.js'"
   },
   "files": [
     "dist",
@@ -24,11 +26,10 @@
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
-    "@types/jest": "27.5.1",
     "@types/node": "20.11.0",
     "@vercel/build-utils": "workspace:*",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
-    "jest-junit": "16.0.0"
+    "vitest": "2.0.3"
   }
 }

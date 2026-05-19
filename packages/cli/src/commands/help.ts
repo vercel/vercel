@@ -39,6 +39,7 @@ export interface Command {
   readonly subcommands?: ReadonlyArray<Command>;
   readonly options: ReadonlyArray<CommandOption>;
   readonly examples: ReadonlyArray<CommandExample>;
+  readonly disabledGlobalOptions?: ReadonlyArray<string>;
 }
 
 // https://github.com/cli-table/cli-table3/pull/303 adds
@@ -331,13 +332,19 @@ export function buildHelpOutput(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
+  const filteredGlobalOptions = command.disabledGlobalOptions
+    ? globalCommandOptions.filter(
+        opt => !command.disabledGlobalOptions?.includes(opt.name)
+      )
+    : globalCommandOptions;
+
   const outputArray: (string | null)[] = [
     '',
     buildCommandSynopsisLine(command, options.parent),
     buildDescriptionLine(command, options),
     buildSubcommandLines(command.subcommands, options),
     buildCommandOptionLines(command.options, options, 'Options'),
-    buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
+    buildCommandOptionLines(filteredGlobalOptions, options, 'Global Options'),
     buildCommandExampleLines(command),
     '',
   ];

@@ -1,5 +1,11 @@
 # @vercel/detect-agent
 
+## 1.2.3
+
+### Patch Changes
+
+- Add v0 to detect-agent supported agents ([#16016](https://github.com/vercel/vercel/pull/16016))
+
 ## 1.2.2
 
 ### Patch Changes

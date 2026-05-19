@@ -1,5 +1,17 @@
 # vercel-runtime
 
+## 0.13.2
+
+### Patch Changes
+
+- 2767cb8: Expose `VERCEL_OIDC_TOKEN` as the `x-vercel-oidc-token` request header when no request-scoped OIDC header is present.
+
+## 0.13.1
+
+### Patch Changes
+
+- 894e7d4: [python/vercel-workers] refactor framework-specific logic into vercel-workers
+
 ## 0.13.0
 
 ### Minor Changes

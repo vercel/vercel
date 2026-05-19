@@ -132,6 +132,15 @@ export interface SdkKey {
   updatedAt: number;
   label?: string;
   deletedAt?: number;
+  // Server-masked preview of the key value, e.g. `vf_server_abc********`.
+  // Safe to display; never contains the full secret.
+  partialKeyValue?: string;
+}
+
+// Returned only from the create endpoint, where the API reveals the
+// plaintext key once. The list endpoint never returns these fields, and the
+// CLI must never emit them in `flags sdk-keys ls` output (table or JSON).
+export interface CreatedSdkKey extends SdkKey {
   keyValue?: string;
   tokenValue?: string;
   connectionString?: string;

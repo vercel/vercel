@@ -153,15 +153,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     ],
   },
   {
-    type: 'ssl',
-    displayName: 'SSL',
-    description: 'Whether the connection uses SSL/TLS',
-    category: 'request',
-    requiresKey: false,
-    operators: ['ex'],
-  },
-
-  {
     type: 'rate_limit_api_id',
     displayName: 'Rate Limit API ID',
     description: 'Identifier for rate-limit API grouping',

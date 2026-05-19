@@ -52,7 +52,16 @@ export const addSubcommand = {
   options: [
     {
       name: 'sensitive',
-      description: 'Add a sensitive Environment Variable',
+      description:
+        'Force the Environment Variable to be sensitive, even when adding to Development (will fail server-side)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'no-sensitive',
+      description:
+        'Opt out of the sensitive default on Production and Preview; value remains readable later',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -104,8 +113,8 @@ export const addSubcommand = {
       value: `${packageName} env add API_TOKEN --force`,
     },
     {
-      name: 'Add a sensitive Environment Variable',
-      value: `${packageName} env add API_TOKEN --sensitive`,
+      name: 'Add a regular (non-sensitive) Environment Variable that remains readable later',
+      value: `${packageName} env add API_TOKEN --no-sensitive`,
     },
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
@@ -363,5 +372,10 @@ export const envCommand = {
     updateSubcommand,
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Run a command with Environment Variables from the linked Project',
+      value: `${packageName} env run -- <command>`,
+    },
+  ],
 } as const;

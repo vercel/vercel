@@ -23,6 +23,7 @@ import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { EdgeConfigTelemetryClient } from '../../util/telemetry/commands/edge-config';
 import output from '../../output-manager';
+import { applyLinkedProjectTeam } from './apply-linked-project-team';
 
 const COMMAND_CONFIG = {
   list: ['list', 'ls'],
@@ -73,6 +74,17 @@ export default async function main(client: Client): Promise<number> {
       })
     );
     return 2;
+  }
+
+  // Edge Configs live at the team level. When the current directory is
+  // linked to a Vercel project, prefer that project's team over the
+  // globally-configured `currentTeam` so commands target the team the
+  // user is "in" — same convention as `vc env`, `vc crons`, etc.
+  if (!needHelp) {
+    const linkExitCode = await applyLinkedProjectTeam(client);
+    if (linkExitCode !== undefined) {
+      return linkExitCode;
+    }
   }
 
   switch (subcommand) {

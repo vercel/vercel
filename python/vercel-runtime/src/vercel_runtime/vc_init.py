@@ -23,8 +23,12 @@ from vercel_runtime.crons import (
     is_cron_service,
 )
 from vercel_runtime.headers import (
+    INTERNAL_OIDC_HEADER_NAME,
+    OIDC_HEADER_NAME,
+    append_oidc_header_if_missing,
     clear_vercel_headers_context,
     decode_header_bytes,
+    get_oidc_token_for_request,
     normalize_event_header_pairs,
     normalize_event_headers,
     set_vercel_headers_from_asgi_pairs,
@@ -41,10 +45,9 @@ from vercel_runtime.routing import (
     split_request_target,
 )
 from vercel_runtime.workers import (
-    bootstrap_worker_service_app,
-    is_celery_app,
     is_worker_service,
-    prepare_celery_environment,
+    maybe_bootstrap_worker_service_app,
+    prepare_worker_environment,
 )
 
 if TYPE_CHECKING:
@@ -467,31 +470,22 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
-    prepare_celery_environment()
+    prepare_worker_environment()
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
     _fatal_exc(f'could not import "{_entrypoint_rel}"')
 
 if is_worker_service():
-    if "handler" not in __vc_variables and "Handler" not in __vc_variables:
-        should_bootstrap_worker_app = (
-            "app" not in __vc_variables
-            or is_celery_app(getattr(__vc_module, "app", None))
-        )
-    else:
-        should_bootstrap_worker_app = False
-
-    if should_bootstrap_worker_app:
-        try:
-            __vc_module.__dict__["app"] = bootstrap_worker_service_app(
-                __vc_module
-            )
+    try:
+        worker_app = maybe_bootstrap_worker_service_app(__vc_module)
+        if worker_app is not None:
+            __vc_module.__dict__["app"] = worker_app
             __vc_variables = dir(__vc_module)
-        except Exception:
-            _stderr("Error bootstrapping worker service app:")
-            _stderr(traceback.format_exc())
-            exit(1)
+    except Exception:
+        _stderr("Error bootstrapping worker service app:")
+        _stderr(traceback.format_exc())
+        exit(1)
 
 if is_cron_service():
     try:
@@ -568,7 +562,7 @@ class ASGIMiddleware:
         new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
-        internal_oidc_token = ""
+        internal_oidc_token: str | None = None
 
         for raw_k, raw_v in headers_list:
             key_bytes = raw_k if isinstance(raw_k, bytes) else raw_k.encode()
@@ -586,20 +580,15 @@ class ASGIMiddleware:
                 "x-vercel-internal-trace-id",
             ):
                 continue
-            if key == "x-vercel-internal-oidc-token":
+            if key == INTERNAL_OIDC_HEADER_NAME:
                 internal_oidc_token = val
                 continue
             new_headers.append((key_bytes, val_bytes))
 
-        if internal_oidc_token:
-            has_oidc_header = any(
-                decode_header_bytes(k).lower() == "x-vercel-oidc-token"
-                for k, _ in new_headers
-            )
-            if not has_oidc_header:
-                new_headers.append(
-                    (b"x-vercel-oidc-token", internal_oidc_token.encode())
-                )
+        append_oidc_header_if_missing(
+            new_headers,
+            internal_oidc_token=internal_oidc_token,
+        )
 
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
@@ -748,17 +737,22 @@ if "VERCEL_IPC_PATH" in os.environ:
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
             del self.headers["x-vercel-internal-trace-id"]
-            internal_oidc_token = self.headers.get(
-                "x-vercel-internal-oidc-token"
+            raw_internal_oidc_token = self.headers.get(
+                INTERNAL_OIDC_HEADER_NAME
             )
-            if (
-                isinstance(internal_oidc_token, str)
-                and internal_oidc_token
-                and not self.headers.get("x-vercel-oidc-token")
-            ):
-                self.headers["x-vercel-oidc-token"] = internal_oidc_token
+            internal_oidc_token = (
+                raw_internal_oidc_token
+                if isinstance(raw_internal_oidc_token, str)
+                else None
+            )
+            oidc_token = get_oidc_token_for_request(
+                has_public_oidc=bool(self.headers.get(OIDC_HEADER_NAME)),
+                internal_oidc_token=internal_oidc_token,
+            )
+            if oidc_token:
+                self.headers[OIDC_HEADER_NAME] = oidc_token
             with contextlib.suppress(Exception):
-                del self.headers["x-vercel-internal-oidc-token"]
+                del self.headers[INTERNAL_OIDC_HEADER_NAME]
 
             send_message(
                 {

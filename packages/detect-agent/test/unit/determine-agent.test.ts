@@ -55,6 +55,18 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('v0 detection', () => {
+    it('detects v0 from AI_AGENT=v0', async () => {
+      vi.stubEnv('AI_AGENT', 'v0');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.V0 },
+      });
+    });
+  });
+
   describe('github copilot detection', () => {
     it('detects github copilot from AI_AGENT=github-copilot', async () => {
       vi.stubEnv('AI_AGENT', 'github-copilot');

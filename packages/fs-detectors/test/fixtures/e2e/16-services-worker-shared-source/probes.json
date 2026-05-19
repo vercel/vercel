@@ -25,18 +25,18 @@
       "mustContain": "reports"
     },
     {
-      "path": "/_svc/worker-emails/workers/worker/run/worker",
+      "path": "/_svc/worker-emails/index",
       "method": "POST",
       "body": {},
-      "status": 400,
-      "mustContain": "error"
+      "status": 404,
+      "mustContain": "404 from Flask web service"
     },
     {
-      "path": "/_svc/worker-reports/workers/worker/run/worker",
+      "path": "/_svc/worker-reports/index",
       "method": "POST",
       "body": {},
-      "status": 400,
-      "mustContain": "error"
+      "status": 404,
+      "mustContain": "404 from Flask web service"
     },
     {
       "path": "/does-not-exist",

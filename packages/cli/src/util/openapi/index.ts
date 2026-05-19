@@ -7,6 +7,10 @@ export {
   humanReadableColumnLabel,
 } from './column-label';
 export { inferCliSubcommandAliases } from './infer-cli-aliases';
+export {
+  formatAsCard,
+  formatAsDataTable,
+} from './vercel-cli-table';
 export * from './resolve-by-tag-operation';
 export {
   matchesCliApiTag,

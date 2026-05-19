@@ -207,13 +207,11 @@ export async function convertRequirementsToPyprojectToml(
     }
   }
 
-  if (deps.length > 0) {
-    pyproject.project = {
-      name: 'app',
-      version: '0.1.0',
-      dependencies: deps,
-    };
-  }
+  pyproject.project = {
+    name: 'app',
+    version: '0.1.0',
+    dependencies: deps,
+  };
 
   // Build tool.uv section
   const uv: Record<string, unknown> = {};

@@ -6,7 +6,7 @@
     "lib": ["esnext"],
     "moduleResolution": "Node16",
     "outDir": "./",
-    "types": ["node", "jest"],
+    "types": ["node", "vitest/globals"],
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,

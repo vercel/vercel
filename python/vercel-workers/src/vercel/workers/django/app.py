@@ -96,13 +96,17 @@ def get_wsgi_app(*, backend_alias: str = "default") -> WSGI:
     Usage: configure a Vercel Queue trigger to POST CloudEvents to this route.
     """
     backend = _resolve_backend(backend_alias)
-    return build_wsgi_app(lambda raw_body: handle_queue_callback(backend, raw_body))
+    return build_wsgi_app(
+        lambda raw_body, environ: handle_queue_callback(backend, raw_body, environ)
+    )
 
 
 def get_asgi_app(*, backend_alias: str = "default") -> ASGI:
     """ASGI variant of get_wsgi_app()."""
     backend = _resolve_backend(backend_alias)
-    return build_asgi_app(lambda raw_body: handle_queue_callback(backend, raw_body))
+    return build_asgi_app(
+        lambda raw_body, environ: handle_queue_callback(backend, raw_body, environ)
+    )
 
 
 def _resolve_backend(alias: str) -> VercelQueuesBackend:
@@ -146,6 +150,7 @@ def _parse_envelope(payload: Any) -> DjangoTaskEnvelope:
 def handle_queue_callback(
     backend: VercelQueuesBackend,
     raw_body: bytes,
+    environ: dict[str, Any] | None = None,
 ) -> tuple[int, list[tuple[str, str]], bytes]:
     """
     Core callback handler shared by WSGI/ASGI wrappers.
@@ -158,7 +163,16 @@ def handle_queue_callback(
     )
 
     try:
-        queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
+        is_v2beta = queue_callback.is_v2beta_callback(environ or {})
+
+        v2: queue_callback.ParsedV2BetaCallback | None = None
+        if is_v2beta:
+            v2 = queue_callback.parse_v2beta_callback(raw_body, environ or {})
+            queue_name = v2["queueName"]
+            consumer_group = v2["consumerGroup"]
+            message_id = v2["messageId"]
+        else:
+            queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
 
         # Fail fast on unexpected queues to avoid executing arbitrary payloads.
         if backend.queues and queue_name not in backend.queues:
@@ -171,13 +185,31 @@ def handle_queue_callback(
                 body,
             )
 
-        payload, delivery_count, created_at, receipt_handle = queue_callback.receive_message_by_id(
-            queue_name,
-            consumer_group,
-            message_id,
-            visibility_timeout_seconds=cfg.visibility_timeout_seconds,
-            timeout=cfg.timeout,
-        )
+        if is_v2beta:
+            assert v2 is not None
+            # fetch the whole message if callback is metadata-only
+            v2 = queue_callback.resolve_v2beta_message(
+                v2,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
+            receipt_handle = v2["receiptHandle"]
+            delivery_count = v2["deliveryCount"]
+            created_at = v2["createdAt"]
+            payload: Any = v2["payload"]
+        else:
+            (
+                payload,
+                delivery_count,
+                created_at,
+                receipt_handle,
+            ) = queue_callback.receive_message_by_id(
+                queue_name,
+                consumer_group,
+                message_id,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
 
         # Keep the message locked while executing.
         if receipt_handle:

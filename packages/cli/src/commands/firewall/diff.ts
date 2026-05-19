@@ -26,7 +26,7 @@ export default async function diff(client: Client, argv: string[]) {
   output.spinner(`Fetching draft changes for ${chalk.bold(project.name)}`);
 
   try {
-    const { draft } = await listFirewallConfigs(client, project.id, {
+    const { active, draft } = await listFirewallConfigs(client, project.id, {
       teamId,
     });
 
@@ -44,10 +44,13 @@ export default async function diff(client: Client, argv: string[]) {
       return 0;
     }
 
+    // Build a lookup map of active rules for smarter change descriptions
+    const activeRulesMap = new Map((active?.rules || []).map(r => [r.id, r]));
+
     output.print(
       `\n${chalk.bold(`Pending changes (${draft.changes.length}):`)}\n\n`
     );
-    output.print(formatDiffOutput(draft.changes));
+    output.print(formatDiffOutput(draft.changes, activeRulesMap));
     output.print('\n\n');
     output.print(
       `  Run ${chalk.cyan(getCommandName('firewall publish'))} to publish, or ${chalk.cyan(getCommandName('firewall discard'))} to discard.\n\n`

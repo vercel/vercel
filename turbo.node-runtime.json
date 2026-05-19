@@ -1,0 +1,19 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "envMode": "loose",
+  "tasks": {
+    "//#build-binary-node": {
+      "inputs": [
+        ".github/workflows/release-binary.yml",
+        "turbo.node-runtime.json",
+        "packages/cli/scripts/build-binary-node.mjs"
+      ],
+      "outputs": ["packages/cli/.node-runtime/**"],
+      "env": [
+        "VERCEL_CLI_NODE_ARCH",
+        "VERCEL_CLI_NODE_PLATFORM",
+        "VERCEL_CLI_NODE_VERSION"
+      ]
+    }
+  }
+}

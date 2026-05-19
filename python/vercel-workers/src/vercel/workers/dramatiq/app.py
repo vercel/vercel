@@ -95,7 +95,9 @@ def get_wsgi_app(broker: VercelQueuesBroker) -> WSGI:
     # WSGI has no lifespan protocol, so emit worker_boot eagerly.
     broker.emit_before("worker_boot", None)
     broker.emit_after("worker_boot", None)
-    return build_wsgi_app(lambda raw_body: handle_queue_callback(broker, raw_body))
+    return build_wsgi_app(
+        lambda raw_body, environ: handle_queue_callback(broker, raw_body, environ)
+    )
 
 
 def get_asgi_app(broker: VercelQueuesBroker) -> ASGI:
@@ -110,7 +112,7 @@ def get_asgi_app(broker: VercelQueuesBroker) -> ASGI:
         broker.emit_after("worker_shutdown", None)
 
     return build_asgi_app(
-        lambda raw_body: handle_queue_callback(broker, raw_body),
+        lambda raw_body, environ: handle_queue_callback(broker, raw_body, environ),
         on_startup=_on_startup,
         on_shutdown=_on_shutdown,
     )
@@ -137,6 +139,7 @@ def _retry_delay_ms(cfg: DramatiqWorkerConfig, attempt: int) -> int:
 def handle_queue_callback(
     broker: VercelQueuesBroker,
     raw_body: bytes,
+    environ: dict[str, Any] | None = None,
 ) -> tuple[int, list[tuple[str, str]], bytes]:
     """
     Core callback handler shared by WSGI/ASGI wrappers.
@@ -147,15 +150,37 @@ def handle_queue_callback(
     cfg = DramatiqWorkerConfig.from_broker_options(broker)
 
     try:
-        queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
+        is_v2beta = queue_callback.is_v2beta_callback(environ or {})
 
-        payload, delivery_count, created_at, receipt_handle = queue_callback.receive_message_by_id(
-            queue_name,
-            consumer_group,
-            message_id,
-            visibility_timeout_seconds=cfg.visibility_timeout_seconds,
-            timeout=cfg.timeout,
-        )
+        if is_v2beta:
+            v2 = queue_callback.parse_v2beta_callback(raw_body, environ or {})
+            # fetch the whole message if callback is metadata-only
+            v2 = queue_callback.resolve_v2beta_message(
+                v2,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
+            queue_name = v2["queueName"]
+            consumer_group = v2["consumerGroup"]
+            message_id = v2["messageId"]
+            receipt_handle = v2["receiptHandle"]
+            delivery_count = v2["deliveryCount"]
+            created_at = v2["createdAt"]
+            payload: Any = v2["payload"]
+        else:
+            queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
+            (
+                payload,
+                delivery_count,
+                created_at,
+                receipt_handle,
+            ) = queue_callback.receive_message_by_id(
+                queue_name,
+                consumer_group,
+                message_id,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
 
         # Keep the message locked while executing.
         if receipt_handle:

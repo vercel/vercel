@@ -12,8 +12,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   // Flaky test - skip until fixed.
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should revalidate content correctly for middleware rewrite', async () => {
+    it.skip('should revalidate content correctly for middleware rewrite', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(`${ctx.deploymentUrl}/rewrite-to-another-site`);
       let $ = cheerio.load(await res.text());
@@ -70,8 +69,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   // Flaky test - skip until fixed.
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should revalidate content correctly for optional catch-all route', async () => {
+    it.skip('should revalidate content correctly for optional catch-all route', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(`${ctx.deploymentUrl}/financial`);
       let $ = cheerio.load(await res.text());

@@ -2,7 +2,12 @@ import type { Framework } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
-import type { ExperimentalServices, ServiceDetectionError } from './types';
+import type {
+  ExperimentalServices,
+  ServiceDetectionError,
+  ServiceDetectionWarning,
+} from './types';
+import { DETECTION_FRAMEWORKS } from './utils';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
@@ -11,6 +16,7 @@ export interface AutoDetectOptions {
 export interface AutoDetectResult {
   services: ExperimentalServices | null;
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
 const FRONTEND_DIR = 'frontend';
@@ -19,15 +25,9 @@ const BACKEND_DIR = 'backend';
 const SERVICES_DIR = 'services';
 
 const FRONTEND_LOCATIONS = [FRONTEND_DIR, APPS_WEB_DIR];
-// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
-// but service auto-detection should still consider them.
-const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
 
 /**
- * Auto-detect services when experimentalServices is not configured.
+ * Auto-detect services when services are not configured.
  *
  * Scans the project for frameworks, supporting multiple layouts:
  *
@@ -69,10 +69,11 @@ export async function autoDetectServices(
     const frameworkNames = rootFrameworks.map(f => f.name).join(', ');
     return {
       services: null,
+      warnings: [],
       errors: [
         {
           code: 'MULTIPLE_FRAMEWORKS_ROOT',
-          message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit experimentalServices config.`,
+          message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit services config.`,
         },
       ],
     };
@@ -98,10 +99,11 @@ export async function autoDetectServices(
       const frameworkNames = frontendFrameworks.map(f => f.name).join(', ');
       return {
         services: null,
+        warnings: [],
         errors: [
           {
             code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-            message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit experimentalServices config.`,
+            message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit services config.`,
           },
         ],
       };
@@ -118,11 +120,12 @@ export async function autoDetectServices(
 
   return {
     services: null,
+    warnings: [],
     errors: [
       {
         code: 'NO_SERVICES_CONFIGURED',
         message:
-          'No services detected. Configure experimentalServices in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
+          'No services detected. Configure services in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
       },
     ],
   };
@@ -143,12 +146,14 @@ async function detectServicesAtRoot(
   if (backendResult.error) {
     return {
       services: null,
+      warnings: [],
       errors: [backendResult.error],
     };
   }
   if (Object.keys(backendResult.services).length === 0) {
     return {
       services: null,
+      warnings: [],
       errors: [],
     };
   }
@@ -156,6 +161,7 @@ async function detectServicesAtRoot(
 
   return {
     services,
+    warnings: [],
     errors: [],
   };
 }
@@ -180,6 +186,7 @@ async function detectServicesFrontendSubdir(
   if (backendResult.error) {
     return {
       services: null,
+      warnings: [],
       errors: [backendResult.error],
     };
   }
@@ -188,6 +195,7 @@ async function detectServicesFrontendSubdir(
   if (Object.keys(backendResult.services).length === 0) {
     return {
       services: null,
+      warnings: [],
       errors: [
         {
           code: 'NO_BACKEND_SERVICES',
@@ -201,6 +209,7 @@ async function detectServicesFrontendSubdir(
 
   return {
     services,
+    warnings: [],
     errors: [],
   };
 }
@@ -230,7 +239,7 @@ async function detectBackendServices(fs: DetectorFilesystem): Promise<{
         services: {},
         error: {
           code: 'SERVICE_NAME_CONFLICT',
-          message: `Service name conflict: "${serviceName}" exists in both ${BACKEND_DIR}/ and ${SERVICES_DIR}/${serviceName}/. Rename one of the directories or use explicit experimentalServices config.`,
+          message: `Service name conflict: "${serviceName}" exists in both ${BACKEND_DIR}/ and ${SERVICES_DIR}/${serviceName}/. Rename one of the directories or use explicit services config.`,
           serviceName,
         },
       };
@@ -301,7 +310,7 @@ async function detectServiceInDir(
     return {
       error: {
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-        message: `Multiple frameworks detected in ${dirPath}/: ${frameworkNames}. Use explicit experimentalServices config.`,
+        message: `Multiple frameworks detected in ${dirPath}/: ${frameworkNames}. Use explicit services config.`,
         serviceName,
       },
     };

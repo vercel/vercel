@@ -66,7 +66,7 @@ export const frameworks = [
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/next-dark.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1701461207/front/import/nextjs.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/nextjs.png',
     tagline:
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
     description: 'A Next.js app and a Serverless Function API.',
@@ -1093,7 +1093,7 @@ export const frameworks = [
     demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit legacy app optimized Edge-first.',
@@ -1135,7 +1135,7 @@ export const frameworks = [
     demo: 'https://sveltekit-1-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit app optimized Edge-first.',
@@ -1525,7 +1525,7 @@ export const frameworks = [
     demo: 'https://nuxtjs-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/nuxt.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/nuxtjs.png',
     tagline:
       'Nuxt is the open source framework that makes full-stack development with Vue.js intuitive.',
     description: 'A Nuxt app, bootstrapped with create-nuxt-app.',
@@ -1920,9 +1920,10 @@ export const frameworks = [
     website: 'https://tanstack.com/start',
     supersedes: ['ionic-react', 'vite'],
     detectors: {
-      every: [
-        { matchPackage: '@tanstack/router-plugin' },
-        { matchPackage: 'nitro' },
+      every: [{ matchPackage: '@tanstack/router-plugin' }],
+      some: [
+        { matchPackage: '@tanstack/react-start' },
+        { matchPackage: '@tanstack/solid-start' },
       ],
     },
     settings: {
@@ -2272,6 +2273,44 @@ export const frameworks = [
         dest: '/',
       },
     ],
+  },
+  {
+    name: 'Ash',
+    slug: 'ash',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/ash.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/ash-dark.svg',
+    tagline:
+      'A filesystem-first framework for durable backend agents on Vercel.',
+    description:
+      'An Ash app: agents authored as a directory of files, compiled and served on Vercel.',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"experimental-ash":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pnpm install`, `yarn install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'ash build',
+        placeholder: '`npm run build` or `ash build`',
+      },
+      devCommand: {
+        value: 'ash dev',
+        placeholder: 'ash dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+    experimental: true,
   },
   {
     name: 'Sanity (v3)',
