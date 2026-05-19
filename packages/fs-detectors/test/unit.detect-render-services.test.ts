@@ -1,5 +1,6 @@
 import { detectServices } from '../src';
 import { detectRenderServices } from '../src/services/detect-render';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 import VirtualFilesystem from './virtual-file-system';
 import yaml from 'js-yaml';
 
@@ -62,7 +63,7 @@ describe('detectRenderServices', () => {
       expect(result.services!.frontend).toMatchObject({
         type: 'web',
         framework: 'nextjs',
-        entrypoint: './web',
+        root: './web',
         routePrefix: '/',
         buildCommand: 'npm run build',
       });
@@ -101,12 +102,12 @@ describe('detectRenderServices', () => {
       expect(Object.keys(result.services!)).toHaveLength(2);
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        entrypoint: './frontend',
+        root: './frontend',
         routePrefix: '/',
       });
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
-        entrypoint: './api',
+        root: './api',
         routePrefix: '/_/api',
         buildCommand: "echo 'test'",
       });
@@ -464,7 +465,7 @@ describe('detectRenderServices', () => {
       expect(result.services!.docs).toMatchObject({
         type: 'web',
         framework: 'vite',
-        entrypoint: './docs',
+        root: './docs',
         routePrefix: '/',
         buildCommand: 'npm run build',
       });
@@ -601,6 +602,76 @@ describe('detectRenderServices', () => {
       );
       expect(skipWarning).toBeDefined();
       expect(skipWarning!.message).toContain('empty');
+    });
+  });
+
+  describe('with detectEntrypoint callback', () => {
+    it('emits root + entrypoint for runtime services', async () => {
+      const fs = new VirtualFilesystem({
+        'render.yaml': renderYaml([
+          {
+            type: 'web',
+            name: 'api',
+            runtime: 'python',
+            rootDir: './api',
+          },
+        ]),
+        'api/requirements.txt': 'fastapi',
+        'api/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+      });
+
+      const detectEntrypoint: DetectEntrypointFn = async ({
+        workPath,
+        framework,
+      }) => {
+        expect(workPath).toBe('./api');
+        expect(framework).toBe('fastapi');
+        return { kind: 'py-module:attr', entrypoint: 'main:app' };
+      };
+
+      const result = await detectRenderServices({ fs, detectEntrypoint });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).not.toBeNull();
+      expect(result.services!.api).toMatchObject({
+        type: 'web',
+        framework: 'fastapi',
+        root: './api',
+        entrypoint: 'main:app',
+        routePrefix: '/',
+      });
+    });
+
+    it('omits entrypoint for frontend frameworks even with the callback', async () => {
+      const fs = new VirtualFilesystem({
+        'render.yaml': renderYaml([
+          {
+            type: 'web',
+            name: 'web',
+            runtime: 'node',
+            rootDir: './web',
+          },
+        ]),
+        'web/package.json': JSON.stringify({
+          dependencies: { next: '14.0.0' },
+        }),
+      });
+
+      let invoked = false;
+      const detectEntrypoint: DetectEntrypointFn = async () => {
+        invoked = true;
+        return { kind: 'file', entrypoint: 'should-not-be-emitted.ts' };
+      };
+
+      const result = await detectRenderServices({ fs, detectEntrypoint });
+
+      expect(invoked).toBe(false);
+      expect(result.services!.web).toMatchObject({
+        type: 'web',
+        framework: 'nextjs',
+        root: './web',
+      });
+      expect(result.services!.web.entrypoint).toBeUndefined();
     });
   });
 });

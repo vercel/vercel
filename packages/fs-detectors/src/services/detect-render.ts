@@ -2,6 +2,7 @@ import yaml from 'js-yaml';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
+  DetectEntrypointFn,
   ExperimentalServiceConfig,
   ExperimentalServices,
   ServiceDetectionError,
@@ -11,6 +12,7 @@ import { RUNTIME_BUILDERS } from './types';
 import {
   assignRoutePrefixes,
   combineBuildCommand,
+  isFrontendFramework,
   DETECTION_FRAMEWORKS,
 } from './utils';
 
@@ -52,8 +54,9 @@ const SERVICE_TYPE_MAP: Record<
  */
 export async function detectRenderServices(options: {
   fs: DetectorFilesystem;
+  detectEntrypoint?: DetectEntrypointFn;
 }): Promise<RenderDetectResult> {
-  const { fs } = options;
+  const { fs, detectEntrypoint } = options;
 
   const raw = await readRenderYaml(fs);
   if (raw.warning) {
@@ -222,7 +225,16 @@ export async function detectRenderServices(options: {
     serviceConfig.framework = framework.slug ?? undefined;
 
     if (rootDir !== '.') {
-      serviceConfig.entrypoint = rootDir;
+      serviceConfig.root = rootDir;
+      if (detectEntrypoint && !isFrontendFramework(serviceConfig.framework)) {
+        const detected = await detectEntrypoint({
+          workPath: rootDir,
+          framework: serviceConfig.framework,
+        });
+        if (detected) {
+          serviceConfig.entrypoint = detected.entrypoint;
+        }
+      }
     }
 
     const buildCommand = combineBuildCommand(
