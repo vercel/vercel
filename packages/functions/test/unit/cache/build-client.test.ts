@@ -40,6 +40,46 @@ describe('BuildCache', () => {
     expect(result).toEqual(value);
   });
 
+  it('should send x-vercel-cache-item-name header on get when name is provided', async () => {
+    fetchMock.mockResolvedValueOnce({
+      status: 200,
+      headers: { get: () => 'fresh' },
+      json: async () => value,
+    });
+    await cache.get(key, { name: 'human-name' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(key),
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          'x-vercel-cache-item-name': 'human-name',
+        }),
+      })
+    );
+  });
+
+  it('should not send x-vercel-cache-item-name header on get when name is omitted', async () => {
+    fetchMock.mockResolvedValueOnce({
+      status: 200,
+      headers: { get: () => 'fresh' },
+      json: async () => value,
+    });
+    await cache.get(key);
+    const callHeaders = fetchMock.mock.calls[0][1].headers;
+    expect(callHeaders).not.toHaveProperty('x-vercel-cache-item-name');
+  });
+
+  it('should not send x-vercel-cache-item-name header on get when name is an empty string', async () => {
+    fetchMock.mockResolvedValueOnce({
+      status: 200,
+      headers: { get: () => 'fresh' },
+      json: async () => value,
+    });
+    await cache.get(key, { name: '' });
+    const callHeaders = fetchMock.mock.calls[0][1].headers;
+    expect(callHeaders).not.toHaveProperty('x-vercel-cache-item-name');
+  });
+
   it('should return null when status is 404', async () => {
     fetchMock.mockResolvedValueOnce({ status: 404 });
     const result = await cache.get(key);

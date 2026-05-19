@@ -29,12 +29,19 @@ export class BuildCache {
     this.timeout = timeout;
   }
 
-  public get = async (key: string) => {
+  public get = async (key: string, options?: { name?: string }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
+      const optionalHeaders: Record<string, string> = {};
+      if (options?.name) {
+        optionalHeaders[HEADERS_VERCEL_CACHE_ITEM_NAME] = options.name;
+      }
       const res = await fetch(`${this.endpoint}${key}`, {
-        headers: this.headers,
+        headers: {
+          ...this.headers,
+          ...optionalHeaders,
+        },
         method: 'GET',
         signal: controller.signal,
       });

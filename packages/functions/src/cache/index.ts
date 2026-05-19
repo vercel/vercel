@@ -67,8 +67,11 @@ function wrapWithKeyTransformation(
   makeKey: (key: string) => string
 ): RuntimeCache {
   return {
-    get: (key: string) => {
-      return resolveCache().get(makeKey(key));
+    get: (key: string, options?: { name?: string }) => {
+      return resolveCache().get(makeKey(key), {
+        ...options,
+        name: options?.name ?? key,
+      });
     },
     set: (
       key: string,
