@@ -45,6 +45,20 @@ function cachePathFor(teamId: string | undefined, host: string) {
   return join(tracesCachePath(), filename);
 }
 
+function makeCaptured() {
+  return {
+    value: undefined as unknown,
+    query: undefined as Record<string, unknown> | undefined,
+    calls: 0,
+  };
+}
+
+function expectInjectedCookie(args: string[], token: string) {
+  expect(args).toContain(
+    `Cookie: _vercel_tracing=${token}; _vercel_session=${USER_ID}`
+  );
+}
+
 let spawnMock: ReturnType<typeof vi.fn>;
 
 interface SpawnResponse {
@@ -195,11 +209,7 @@ describe('curl --trace', () => {
   it('preview happy path: body to stdout, two stderr lines, request id from x-vercel-id', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -228,9 +238,7 @@ describe('curl --trace', () => {
     expect(spawnMock).toHaveBeenCalledTimes(1);
     const [, args] = spawnMock.mock.calls[0];
     expect(args).toContain('--header');
-    expect(args).toContain(
-      `Cookie: _vercel_tracing=${TRACE_TOKEN}; _vercel_session=${USER_ID}`
-    );
+    expectInjectedCookie(args, TRACE_TOKEN);
     expect(args).toContain('--dump-header');
 
     // Default mode: stderr carries the follow-up command line
@@ -250,11 +258,7 @@ describe('curl --trace', () => {
   it('--json: JSON envelope to stdout, no trace lines on stderr', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured);
     installSpawnMock({ bodyText: '{"hello":"world"}' });
 
@@ -293,11 +297,7 @@ describe('curl --trace', () => {
   it('production deployment: non-TTY without --yes exits 1 with actionable message', async () => {
     await setupLinkedProject({ productionAlias: PROD_ALIAS });
     mockDeploymentLookup({ target: 'production' });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -326,11 +326,7 @@ describe('curl --trace', () => {
   it('production deployment: --yes skips prompt and proceeds', async () => {
     await setupLinkedProject({ productionAlias: PROD_ALIAS });
     mockDeploymentLookup({ target: 'production' });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -382,9 +378,7 @@ describe('curl --trace', () => {
 
     const [, args] = spawnMock.mock.calls[0];
     // Our injected cookie header (trace + session, on one Cookie line)
-    expect(args).toContain(
-      `Cookie: _vercel_tracing=${TRACE_TOKEN}; _vercel_session=${USER_ID}`
-    );
+    expectInjectedCookie(args, TRACE_TOKEN);
     // User's cookie header still in place (curl natively merges multi-Cookie headers)
     expect(args).toContain('Cookie: session=user-supplied');
   });
@@ -392,11 +386,7 @@ describe('curl --trace', () => {
   it('cache miss: calls session API once and writes cache file with 0600 perms', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -428,11 +418,7 @@ describe('curl --trace', () => {
   it('cache hit: pre-populated cache short-circuits session API call', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured, ['should-not-be-called']);
     installSpawnMock();
 
@@ -466,19 +452,13 @@ describe('curl --trace', () => {
 
     // Curl was invoked with the cached token
     const [, args] = spawnMock.mock.calls[0];
-    expect(args).toContain(
-      `Cookie: _vercel_tracing=pre-cached-token; _vercel_session=${USER_ID}`
-    );
+    expectInjectedCookie(args, 'pre-cached-token');
   });
 
   it('cache expired: re-issues when expiresAt is within 30s buffer', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured);
     installSpawnMock();
 
@@ -512,9 +492,7 @@ describe('curl --trace', () => {
 
     // Curl got the fresh token
     const [, args] = spawnMock.mock.calls[0];
-    expect(args).toContain(
-      `Cookie: _vercel_tracing=${TRACE_TOKEN}; _vercel_session=${USER_ID}`
-    );
+    expectInjectedCookie(args, TRACE_TOKEN);
 
     // Cache was overwritten with the fresh token
     const written = JSON.parse(readFileSync(cachePath, 'utf8'));
@@ -524,11 +502,7 @@ describe('curl --trace', () => {
   it('401 with cached cookie: evicts cache, re-issues, and retries curl once', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured, [REFRESHED_TOKEN]);
 
     // First curl returns 401, second returns 200
@@ -564,12 +538,8 @@ describe('curl --trace', () => {
 
     // Curl was invoked twice: first with stale, then with refreshed token
     expect(spawnMock).toHaveBeenCalledTimes(2);
-    expect(spawnMock.mock.calls[0][1]).toContain(
-      `Cookie: _vercel_tracing=stale-cached-token; _vercel_session=${USER_ID}`
-    );
-    expect(spawnMock.mock.calls[1][1]).toContain(
-      `Cookie: _vercel_tracing=${REFRESHED_TOKEN}; _vercel_session=${USER_ID}`
-    );
+    expectInjectedCookie(spawnMock.mock.calls[0][1], 'stale-cached-token');
+    expectInjectedCookie(spawnMock.mock.calls[1][1], REFRESHED_TOKEN);
 
     // Cache now holds the refreshed token
     const written = JSON.parse(readFileSync(cachePath, 'utf8'));
@@ -579,11 +549,7 @@ describe('curl --trace', () => {
   it('401 with freshly-issued token: surfaces without retry', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
-    const captured = {
-      value: undefined as unknown,
-      query: undefined as Record<string, unknown> | undefined,
-      calls: 0,
-    };
+    const captured = makeCaptured();
     mockSessionEndpoint(captured);
 
     // Cache miss → fresh token → still 401 (real auth failure, not a stale
@@ -625,8 +591,6 @@ describe('curl --trace', () => {
     expect(exitCode).toEqual(0);
 
     const [, args] = spawnMock.mock.calls[0];
-    expect(args).toContain(
-      `Cookie: _vercel_tracing=${TRACE_TOKEN}; _vercel_session=${USER_ID}`
-    );
+    expectInjectedCookie(args, TRACE_TOKEN);
   });
 });

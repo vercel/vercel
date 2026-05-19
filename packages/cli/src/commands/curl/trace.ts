@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { mkdtemp, readFile, rm } from 'fs/promises';
+import { errorToString } from '@vercel/error-utils';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
@@ -232,6 +233,16 @@ export async function trace(
 
   const teamId = resolveTeamId(link, deployment);
 
+  let userId: string;
+  try {
+    userId = client.authConfig.userId ?? (await getUser(client)).id;
+  } catch (err) {
+    output.error(
+      `Failed to resolve user for trace session: ${errorToString(err)}`
+    );
+    return 1;
+  }
+
   const deploymentTarget: DeploymentTarget =
     deployment.target === 'production' ? 'production' : 'preview';
 
@@ -252,18 +263,6 @@ export async function trace(
 
   if (deploymentTarget === 'production' && yes) {
     telemetry.trackCliFlagYesOnProduction(true);
-  }
-
-  let userId: string;
-  try {
-    userId = client.authConfig.userId ?? (await getUser(client)).id;
-  } catch (err) {
-    output.error(
-      `Failed to resolve user for trace session: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-    return 1;
   }
 
   let session;
@@ -344,9 +343,8 @@ export async function trace(
     return exitCode === 0 ? 1 : exitCode;
   }
 
-  client.stderr.write('\n');
   client.stderr.write(
-    `Run \`vercel traces get ${requestId}\` to fetch the trace.\n`
+    `\nRun \`vercel traces get ${requestId}\` to fetch the trace.\n`
   );
 
   return exitCode;
