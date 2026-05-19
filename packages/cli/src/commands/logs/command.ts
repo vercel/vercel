@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { projectOption } from '../../util/arg-common';
 
 // has to be ms compliant
 // https://github.com/vercel/ms/blob/fe5338229cfdac6822891dcb9c24660b4d2e612b/src/index.ts#L95
@@ -17,13 +18,7 @@ export const logsCommand = {
     },
   ],
   options: [
-    {
-      name: 'project',
-      shorthand: 'p',
-      type: String,
-      deprecated: false,
-      description: 'Project ID or name (defaults to linked project)',
-    },
+    { ...projectOption, shorthand: 'p' },
     {
       name: 'deployment',
       shorthand: 'd',

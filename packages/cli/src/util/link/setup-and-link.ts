@@ -72,6 +72,12 @@ export interface SetupAndLinkOptions {
   v0?: boolean;
   /** When true, search matching projects across teams before standard linking flow */
   searchAcrossTeams?: boolean;
+  /**
+   * When true with an explicit `projectName`, bail out instead of running
+   * `setupAndLink`. Use for user-supplied `--project <NAME_OR_ID>` so typos
+   * fail fast rather than creating a new project.
+   */
+  failIfNotFound?: boolean;
 }
 
 function formatMatchReason(match: CrossTeamMatch): string {

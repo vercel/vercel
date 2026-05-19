@@ -183,6 +183,7 @@ async function handleInitDeployment(
 
   telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetryClient.trackCliOptionProject(parsedArguments.flags['--project']);
   telemetryClient.trackCliFlagFunctionsBeta(
     parsedArguments.flags['--functions-beta']
   );
@@ -190,6 +191,7 @@ async function handleInitDeployment(
     parsedArguments.flags['--no-functions-beta']
   );
 
+  const projectNameOrId = parsedArguments.flags['--project'];
   const functionsBeta = parsedArguments.flags['--functions-beta'];
   const noFunctionsBeta = parsedArguments.flags['--no-functions-beta'];
 
@@ -295,11 +297,14 @@ async function handleInitDeployment(
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up',
-    projectName: getProjectName({
-      nameParam: undefined,
-      nowConfig: localConfig,
-      paths,
-    }),
+    projectName:
+      projectNameOrId ??
+      getProjectName({
+        nameParam: undefined,
+        nowConfig: localConfig,
+        paths,
+      }),
+    failIfNotFound: !!projectNameOrId,
     v0: isV0,
   });
   if (typeof link === 'number') {
@@ -1007,6 +1012,7 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagWithCache(parsedArguments.flags['--with-cache']);
   telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
   telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+  telemetryClient.trackCliOptionProject(parsedArguments.flags['--project']);
   telemetryClient.trackCliFlagFunctionsBeta(
     parsedArguments.flags['--functions-beta']
   );
@@ -1014,6 +1020,7 @@ async function handleDefaultDeploy(
     parsedArguments.flags['--no-functions-beta']
   );
 
+  const projectNameOrId = parsedArguments.flags['--project'];
   const functionsBeta = parsedArguments.flags['--functions-beta'];
   const noFunctionsBeta = parsedArguments.flags['--no-functions-beta'];
 
@@ -1183,11 +1190,14 @@ async function handleDefaultDeploy(
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up',
-    projectName: getProjectName({
-      nameParam: parsedArguments.flags['--name'],
-      nowConfig: localConfig,
-      paths,
-    }),
+    projectName:
+      projectNameOrId ??
+      getProjectName({
+        nameParam: parsedArguments.flags['--name'],
+        nowConfig: localConfig,
+        paths,
+      }),
+    failIfNotFound: !!projectNameOrId,
     v0: isV0,
   });
   if (typeof link === 'number') {

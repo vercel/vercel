@@ -45,7 +45,15 @@ export async function ensureLink(
       // and the repo-linked project is ambiguous).
       link = { status: 'not_linked', org: null, project: null };
     } else {
-      link = await getLinkedProject(client, cwd, opts.projectName);
+      // `failIfNotFound` doubles as the opt-in for API-based name/ID
+      // resolution: both behaviors only apply when `projectName` came from
+      // an explicit user flag.
+      link = await getLinkedProject(
+        client,
+        cwd,
+        opts.projectName,
+        opts.failIfNotFound
+      );
     }
     opts.link = link;
   }
@@ -54,6 +62,19 @@ export async function ensureLink(
     (link.status === 'linked' && opts.forceDelete) ||
     link.status === 'not_linked'
   ) {
+    // Explicit `--project` was provided but could not be resolved; bail out
+    // before `setupAndLink` would offer to create a new project for a typo.
+    if (
+      link.status === 'not_linked' &&
+      opts.failIfNotFound &&
+      opts.projectName
+    ) {
+      output.error(
+        `Project "${opts.projectName}" was not found. Verify the name or ID and your team scope.`
+      );
+      return 1;
+    }
+
     link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {
