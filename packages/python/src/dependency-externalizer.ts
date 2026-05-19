@@ -28,7 +28,7 @@ import {
   getUvBinaryForBundling,
   UV_BUNDLE_DIR,
 } from './uv';
-import { detectTargetPlatform } from './utils';
+import { detectTargetPlatform } from './platform-info';
 
 const readFile = promisify(fs.readFile);
 
@@ -685,6 +685,8 @@ export class PythonDependencyExternalizer {
     if (process.env.VERCEL_BUILD_IMAGE) {
       return getUvBinaryForBundling(this.pythonPath);
     }
+    // Builds targeting arm64 run inside the build container where
+    // uv is preinstalled.
     return downloadUvBinaryForTarget(
       join(this.workPath, '.vercel', 'python', 'cache')
     );

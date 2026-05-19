@@ -3,7 +3,8 @@ import { isAbsolute, join, relative } from 'path';
 import execa from 'execa';
 import { NowBuildError, debug } from '@vercel/build-utils';
 import { extendDistRecord } from '@vercel/python-analysis';
-import { getVenvPythonBin, detectTargetPlatform } from '../utils';
+import { getVenvPythonBin } from '../utils';
+import { detectTargetPlatform } from '../platform-info';
 import { getVenvSitePackagesDirs, resolveVendorDir } from '../install';
 import type { Quirk, QuirkContext, QuirkResult } from './index';
 

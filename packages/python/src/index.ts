@@ -41,6 +41,7 @@ import {
 import { PythonDependencyExternalizer } from './dependency-externalizer';
 import {
   UvRunner,
+  UV_LINUX_TARGET,
   getUvBinaryOrInstall,
   getUvCacheDir,
   findUvInPath,
@@ -219,6 +220,32 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
+interface TargetPlatform {
+  /** uv-compatible platform triple, or undefined to use the host. */
+  uvPlatform: string | undefined;
+  /** Lambda architecture, or undefined to use the Lambda constructor default. */
+  architecture: 'x86_64' | 'arm64' | undefined;
+}
+
+/** Resolve the target platform for wheel resolution and Lambda architecture. */
+function getTargetPlatform(isDev: boolean): TargetPlatform {
+  const envPlatform = process.env.VERCEL_PYTHON_PLATFORM;
+  if (envPlatform) {
+    const isArm =
+      envPlatform.startsWith('aarch64') || envPlatform.startsWith('arm64');
+    return {
+      uvPlatform: envPlatform,
+      architecture: isArm ? 'arm64' : 'x86_64',
+    };
+  }
+
+  if (isDev || process.env.VERCEL_BUILD_IMAGE) {
+    return { uvPlatform: undefined, architecture: undefined };
+  }
+
+  return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
+}
+
 export const build: BuildVX = async ({
   workPath,
   repoRootPath,
@@ -243,12 +270,7 @@ export const build: BuildVX = async ({
   // custom commands may install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
 
-  // Local prebuilt/deploy builds still target Lambda, but `vercel dev`
-  // installs into a host virtualenv that must keep host-compatible wheels.
-  const uvPythonPlatform =
-    !meta.isDev && !process.env.VERCEL_BUILD_IMAGE
-      ? 'x86_64-unknown-linux-gnu'
-      : undefined;
+  const target = getTargetPlatform(meta.isDev ?? false);
 
   debug(`workPath: ${workPath}`);
 
@@ -521,7 +543,7 @@ export const build: BuildVX = async ({
           projectDir,
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
-          pythonPlatform: uvPythonPlatform,
+          pythonPlatform: target.uvPlatform,
         });
 
         // Stash the lock file into the cache dir so prepareCache
@@ -602,8 +624,8 @@ export const build: BuildVX = async ({
     baseEnv.VERCEL_RUNTIME_PYTHON ||
     `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
   debug(`Installing ${runtimeDep}`);
-  const pipPlatformArgs = uvPythonPlatform
-    ? ['--python-platform', uvPythonPlatform]
+  const pipPlatformArgs = target.uvPlatform
+    ? ['--python-platform', target.uvPlatform]
     : [];
   await uv.pip({
     venvPath,
@@ -828,7 +850,7 @@ from vercel_runtime.vc_init import vc_handler
     files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
-    architecture: 'x86_64',
+    architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
   });

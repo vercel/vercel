@@ -443,7 +443,7 @@ export async function getUvBinaryForBundling(
   return resolvedPath;
 }
 
-const UV_LINUX_TARGET = 'x86_64-unknown-linux-gnu';
+export const UV_LINUX_TARGET = 'x86_64-unknown-linux-gnu';
 
 /**
  * Download the Linux x86_64 uv binary for bundling into the Lambda.
