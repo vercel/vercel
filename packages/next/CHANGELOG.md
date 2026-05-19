@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.17.2
+
+### Patch Changes
+
+- bb61428: Include framework slug in output/config.json
+
 ## 4.17.1
 
 ### Patch Changes
