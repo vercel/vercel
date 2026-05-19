@@ -1,5 +1,11 @@
 # @vercel/nestjs
 
+## 0.2.83
+
+### Patch Changes
+
+- @vercel/node@5.8.3
+
 ## 0.2.82
 
 ### Patch Changes
