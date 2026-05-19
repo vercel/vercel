@@ -5,7 +5,7 @@ import { mkdir, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { client } from '../../../mocks/client';
-import { getSessionToken } from '../../../../src/commands/curl/session-token-provider';
+import { getTraceSessionToken } from '../../../../src/commands/curl/trace-session-token-provider';
 
 const TEAM_ID = 'team_dummy';
 const PROJECT_ID = 'prj_static';
@@ -37,7 +37,7 @@ function mockSessionEndpoint({
   });
 }
 
-describe('getSessionToken', () => {
+describe('getTraceSessionToken', () => {
   let cacheDir: string;
 
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe('getSessionToken', () => {
       { mode: 0o600 }
     );
 
-    const result = await getSessionToken({
+    const result = await getTraceSessionToken({
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
@@ -103,7 +103,7 @@ describe('getSessionToken', () => {
       { mode: 0o600 }
     );
 
-    const result = await getSessionToken({
+    const result = await getTraceSessionToken({
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
@@ -129,7 +129,7 @@ describe('getSessionToken', () => {
       },
     });
 
-    const result = await getSessionToken({
+    const result = await getTraceSessionToken({
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
@@ -169,7 +169,7 @@ describe('getSessionToken', () => {
     await mkdir(cacheDir, { recursive: true });
     await writeFile(path, '{not valid json', { mode: 0o600 });
 
-    const result = await getSessionToken({
+    const result = await getTraceSessionToken({
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
@@ -207,7 +207,7 @@ describe('getSessionToken', () => {
       { mode: 0o600 }
     );
 
-    const result = await getSessionToken({
+    const result = await getTraceSessionToken({
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
@@ -235,7 +235,7 @@ describe('getSessionToken', () => {
         expiresAt: Date.now() + 5 * 60 * 1000,
       });
 
-      await getSessionToken({
+      await getTraceSessionToken({
         client,
         teamId: TEAM_ID,
         projectId: PROJECT_ID,
@@ -253,7 +253,7 @@ describe('getSessionToken', () => {
     mockSessionEndpoint({ token: 'no-expiry-from-api' });
 
     const before = Date.now();
-    const result = await getSessionToken({
+    const result = await getTraceSessionToken({
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,
@@ -286,7 +286,7 @@ describe('getSessionToken', () => {
       })
     );
 
-    const result = await getSessionToken({
+    const result = await getTraceSessionToken({
       client,
       teamId: TEAM_ID,
       projectId: PROJECT_ID,

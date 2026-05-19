@@ -15,7 +15,7 @@ vi.mock('child_process', () => ({
   spawn: vi.fn(),
 }));
 
-// Route the session-token-provider's cache writes into a tmpdir per test.
+// Route the trace-session-token-provider's cache writes into a tmpdir per test.
 // `getGlobalPathConfig` normally returns `~/.vercel`; we redirect it so
 // the integration tests don't pollute the user's home dir. `vi.hoisted`
 // runs before `vi.mock` so the ref is initialized when the mock factory

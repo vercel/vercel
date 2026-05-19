@@ -172,7 +172,7 @@ async function issueToken(
  * To retry after a 401, call again with `evictedToken` set to the failed
  * token's value.
  */
-export async function getSessionToken({
+export async function getTraceSessionToken({
   client,
   teamId,
   projectId,

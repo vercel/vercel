@@ -7,7 +7,7 @@ import type Client from '../../util/client';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { confirmProduction, type DeploymentTarget } from './confirm-production';
-import { getSessionToken } from './session-token-provider';
+import { getTraceSessionToken } from './trace-session-token-provider';
 import type { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
 import type { Deployment, ProjectLinked } from '@vercel-internals/types';
 import toHost from '../../util/to-host';
@@ -267,7 +267,7 @@ export async function trace(
 
   let session;
   try {
-    session = await getSessionToken({
+    session = await getTraceSessionToken({
       client,
       teamId,
       projectId,
@@ -300,7 +300,7 @@ export async function trace(
     output.debug('Trace cookie returned 401; evicting cache and retrying.');
     let refreshed;
     try {
-      refreshed = await getSessionToken({
+      refreshed = await getTraceSessionToken({
         client,
         teamId,
         projectId,
