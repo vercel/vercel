@@ -3,20 +3,18 @@ import {
   type TreeNode,
   ATTR_HINT_KEYS,
   MAX_TREE_DEPTH,
+  SPAN_STATUS_ERROR,
   analyze,
   readAttrString,
-  truncateAttrValue,
 } from './analyze';
+import ellipsis from '../../util/output/ellipsis';
 import type { Span, Trace } from './types';
 
 const UNKNOWN = '<unknown>';
 const UNNAMED = '<unnamed>';
-const TRACE_ID_PREFIX_LEN = 12;
+const ATTR_VALUE_MAX_LEN = 80;
+const TRACE_ID_MAX_LEN = 13;
 
-/**
- * Format a `Trace` as a markdown document suitable for terminal display or
- * LLM consumption. Pure function — no I/O.
- */
 export function renderMarkdown(
   trace: Trace,
   options: { requestId: string }
@@ -24,7 +22,7 @@ export function renderMarkdown(
   const analysis = analyze(trace);
   const sections: string[] = [];
   sections.push(renderHeader(analysis, options));
-  if (analysis.errorCount > 0) {
+  if (analysis.errorSpans.length > 0) {
     sections.push(renderErrors(analysis));
   }
   if (analysis.repeatedOps.length > 0) {
@@ -38,17 +36,17 @@ function renderHeader(
   analysis: AnalyzedTrace,
   options: { requestId: string }
 ): string {
-  const { trace, root, rootDurationUs, errorCount, hasColdStart } = analysis;
+  const { trace, root, rootDurationUs, errorSpans, hasColdStart } = analysis;
   const attributes = root?.attributes;
   const method = readAttrString(attributes, 'http.method');
   const target = readAttrString(attributes, 'http.target');
   const status = readAttrString(attributes, 'http.status_code');
   const endpoint = formatEndpoint(method, target, status);
   const duration = formatDurationWithColdStart(rootDurationUs, hasColdStart);
-  const spans = formatSpansLine(trace.spans.length, errorCount);
+  const spans = formatSpansLine(trace.spans.length, errorSpans.length);
 
   const lines = [
-    `# Trace ${truncateTraceId(trace.traceId)}`,
+    `# Trace ${ellipsis(trace.traceId, TRACE_ID_MAX_LEN)}`,
     '',
     `- **Trace id:** ${trace.traceId}`,
     `- **Request id:** ${options.requestId}`,
@@ -60,13 +58,13 @@ function renderHeader(
 }
 
 function renderErrors(analysis: AnalyzedTrace): string {
-  const lines = [`## Errors (${analysis.errorCount})`, ''];
+  const lines = [`## Errors (${analysis.errorSpans.length})`, ''];
   for (const span of analysis.errorSpans) {
     const name = `\`${span.name || UNNAMED}\``;
     const message = span.status?.message;
     const header = message ? `${name} — \`${message}\`` : name;
     lines.push(`- ${header}`);
-    for (const hint of collectAllAttrHints(span.attributes)) {
+    for (const hint of collectAttrHints(span.attributes)) {
       lines.push(`  - \`${hint.key}\`: ${hint.value}`);
     }
   }
@@ -146,12 +144,12 @@ function formatTreeRow(node: TreeNode, analysis: AnalyzedTrace): string {
 
   parts.push(`\`${span.name || UNNAMED}\``);
 
-  if (span.status?.code === 1) {
+  if (span.status?.code === SPAN_STATUS_ERROR) {
     const message = span.status.message;
     parts.push(message ? `[error: ${message}]` : '[error]');
   }
 
-  const hint = pickAttrHint(span.attributes);
+  const [hint] = collectAttrHints(span.attributes);
   if (hint) {
     parts.push(`— \`${hint.key}\`: ${hint.value}`);
   }
@@ -222,29 +220,7 @@ function formatPct(us: number | null, rootUs: number): string {
   return `${Math.round(pct)}%`;
 }
 
-function truncateTraceId(id: string): string {
-  if (id.length <= TRACE_ID_PREFIX_LEN) {
-    return id;
-  }
-  return `${id.slice(0, TRACE_ID_PREFIX_LEN)}…`;
-}
-
-function pickAttrHint(
-  attributes: Span['attributes']
-): { key: string; value: string } | null {
-  if (!attributes) {
-    return null;
-  }
-  for (const key of ATTR_HINT_KEYS) {
-    const value = readAttrString(attributes, key);
-    if (value !== undefined) {
-      return { key, value: truncateAttrValue(value) };
-    }
-  }
-  return null;
-}
-
-function collectAllAttrHints(
+function collectAttrHints(
   attributes: Span['attributes']
 ): Array<{ key: string; value: string }> {
   if (!attributes) {
@@ -254,7 +230,7 @@ function collectAllAttrHints(
   for (const key of ATTR_HINT_KEYS) {
     const value = readAttrString(attributes, key);
     if (value !== undefined) {
-      out.push({ key, value: truncateAttrValue(value) });
+      out.push({ key, value: ellipsis(value, ATTR_VALUE_MAX_LEN) });
     }
   }
   return out;

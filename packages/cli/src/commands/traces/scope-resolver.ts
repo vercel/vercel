@@ -17,20 +17,8 @@ export type ScopeResolverFlags = {
 const MISSING_BOTH_MESSAGE =
   'No linked project found. Run `vercel link`, pass --cwd to a linked dir, or use --scope <team> and --project <name>.';
 
-/**
- * Resolve the team + project scope for `vercel traces`. The trace API accepts
- * a team slug or id under `teamId` and a project name or id under `projectId`
- * (see `?teamId=${team.slug}` precedent elsewhere in the CLI), so flag values
- * are forwarded verbatim and the linked project provides stable ids.
- *
- * Resolution order:
- *
- *   1. Both `--scope` and `--project` flags present → use flags.
- *   2. Linked project present → use linked. Flags override individual fields
- *      when provided (e.g. `--scope` alone overrides team but keeps the linked
- *      projectId).
- *   3. Neither linked nor full flag pair → return an actionable error.
- */
+// Flag values forward to the trace API verbatim — it accepts slug or id for
+// both `teamId` and `projectId`.
 export function resolveScope({
   flags = {},
   linkedProject,

@@ -11,6 +11,7 @@ import {
   getSubcommand as getSubcommandMetadata,
   tracesCommand,
 } from './command';
+import get from './get';
 
 const COMMAND_CONFIG = {
   get: getCommandAliases(getSubcommandMetadata),
@@ -41,19 +42,15 @@ export default async function traces(client: Client): Promise<number> {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('traces', subcommandOriginal);
-    const helpTarget =
-      subcommand === 'get' ? getSubcommandMetadata : tracesCommand;
+    const isGet = subcommand === getSubcommandMetadata.name;
     output.print(
-      help(helpTarget, {
-        parent: subcommand === 'get' ? tracesCommand : undefined,
+      help(isGet ? getSubcommandMetadata : tracesCommand, {
+        parent: isGet ? tracesCommand : undefined,
         columns: client.stderr.columns,
       })
     );
     return 2;
   }
 
-  // `get` is the only — and default — subcommand. Delegate to the handler so
-  // it can parse the positional `requestId` itself.
-  const getFn = (await import('./get')).default;
-  return getFn(client, telemetry);
+  return get(client, telemetry);
 }

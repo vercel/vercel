@@ -24,18 +24,15 @@ export default async function get(
     return 1;
   }
 
-  // `parsedArgs.args[0]` is the command name (`traces`). The next slot may be
-  // the subcommand keyword (`get`) or the positional `requestId` (since `get`
-  // is the default subcommand). Skip the keyword when present.
   const positional = parsedArgs.args.slice(1);
-  const requestId = positional[0] === 'get' ? positional[1] : positional[0];
+  const requestId =
+    positional[0] === getSubcommand.name ? positional[1] : positional[0];
   const json = parsedArgs.flags['--json'];
   const scopeFlag = parsedArgs.flags['--scope'];
   const projectFlag = parsedArgs.flags['--project'];
 
   telemetry.trackCliArgumentRequestId(requestId);
   telemetry.trackCliFlagJson(json);
-  // `--scope` is tracked globally in `src/index.ts`; only project is local.
   telemetry.trackCliOptionProject(projectFlag);
 
   if (!requestId) {
@@ -48,18 +45,26 @@ export default async function get(
     return 2;
   }
 
-  const linkedProject = await getLinkedProject(client);
-  if (linkedProject.status === 'error') {
-    return linkedProject.exitCode;
-  }
-
-  const scope = resolveScope({
-    flags: { scope: scopeFlag, project: projectFlag },
-    linkedProject,
-  });
-  if ('message' in scope) {
-    output.error(scope.message);
-    return 1;
+  let teamId: string;
+  let projectId: string;
+  if (scopeFlag && projectFlag) {
+    teamId = scopeFlag;
+    projectId = projectFlag;
+  } else {
+    const linkedProject = await getLinkedProject(client);
+    if (linkedProject.status === 'error') {
+      return linkedProject.exitCode;
+    }
+    const scope = resolveScope({
+      flags: { scope: scopeFlag, project: projectFlag },
+      linkedProject,
+    });
+    if ('message' in scope) {
+      output.error(scope.message);
+      return 1;
+    }
+    teamId = scope.teamId;
+    projectId = scope.projectId;
   }
 
   output.spinner('Fetching trace…');
@@ -67,8 +72,8 @@ export default async function get(
   try {
     ({ trace } = await fetchTrace({
       client,
-      teamId: scope.teamId,
-      projectId: scope.projectId,
+      teamId,
+      projectId,
       requestId,
     }));
   } catch (err) {
@@ -76,8 +81,6 @@ export default async function get(
     printError(err);
     return 1;
   }
-  // The spinner must be stopped manually before writing to stdout — only the
-  // `output.*` helpers (which go through `print()`) clear it implicitly.
   output.stopSpinner();
 
   if (json) {

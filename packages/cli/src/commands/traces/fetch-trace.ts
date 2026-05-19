@@ -16,12 +16,6 @@ type GetTraceResponse = {
   trace: Trace;
 };
 
-/**
- * Fetch a captured trace by request id. Relies on `client.fetch`'s built-in
- * retry (5xx and network errors are retried; 4xx — including the 404 the
- * platform returns while the trace is still propagating to storage —
- * propagates to the caller).
- */
 export async function fetchTrace({
   client,
   teamId,

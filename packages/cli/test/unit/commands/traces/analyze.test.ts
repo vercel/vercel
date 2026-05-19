@@ -3,7 +3,6 @@ import {
   analyze,
   getDurationUs,
   resolveRootSpan,
-  truncateAttrValue,
 } from '../../../../src/commands/traces/analyze';
 import type { Span, Trace } from '../../../../src/commands/traces/types';
 
@@ -44,19 +43,6 @@ describe('getDurationUs', () => {
     expect(getDurationUs({ spanId: 's', name: 's', duration: [-1, 0] })).toBe(
       0
     );
-  });
-});
-
-describe('truncateAttrValue', () => {
-  it('returns short values unchanged', () => {
-    expect(truncateAttrValue('hello')).toBe('hello');
-  });
-
-  it('truncates long values with an ellipsis', () => {
-    const long = 'a'.repeat(120);
-    const out = truncateAttrValue(long);
-    expect(out).toHaveLength(80);
-    expect(out.endsWith('…')).toBe(true);
   });
 });
 
@@ -225,7 +211,6 @@ describe('analyze', () => {
       span({ spanId: 'cold', attributes: { 'func.cold': true } }),
     ]);
     const a = analyze(t);
-    expect(a.errorCount).toBe(2);
     expect(a.errorSpans.map(s => s.spanId)).toEqual(['e1', 'e2']);
     expect(a.hasColdStart).toBe(true);
   });
@@ -282,7 +267,7 @@ describe('analyze', () => {
     expect(a.rootDurationUs).toBeNull();
     expect(a.treeOrder).toEqual([]);
     expect(a.orphanOrder).toEqual([]);
-    expect(a.errorCount).toBe(0);
+    expect(a.errorSpans).toEqual([]);
     expect(a.repeatedOps).toEqual([]);
     expect(a.hasColdStart).toBe(false);
   });

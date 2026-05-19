@@ -1,13 +1,14 @@
 import type { Span, Trace } from './types';
 
 export const MAX_TREE_DEPTH = 256;
-export const ATTR_VALUE_MAX_LEN = 80;
 
-/**
- * Attribute keys promoted into row-level hints, in priority order. The first
- * matching key wins when only one hint is shown (tree rows); errors include
- * every matching key.
- */
+// OpenTelemetry status: 0 = unset/OK, 1 = error.
+export const SPAN_STATUS_ERROR = 1;
+
+export const FUNC_COLD_ATTR = 'func.cold';
+
+// Attribute keys promoted into row-level hints, in priority order. Tree rows
+// show only the first match; error entries show every match.
 export const ATTR_HINT_KEYS = [
   'http.url',
   'http.target',
@@ -54,13 +55,6 @@ export function readAttrString(
   return undefined;
 }
 
-export function truncateAttrValue(value: string): string {
-  if (value.length <= ATTR_VALUE_MAX_LEN) {
-    return value;
-  }
-  return `${value.slice(0, ATTR_VALUE_MAX_LEN - 1)}…`;
-}
-
 export type AnalyzedSpan = {
   span: Span;
   durationUs: number | null;
@@ -89,16 +83,11 @@ export type AnalyzedTrace = {
   treeOrder: TreeNode[];
   orphanOrder: TreeNode[];
   errorSpans: Span[];
-  errorCount: number;
   repeatedOps: RepeatedOp[];
   hasColdStart: boolean;
   truncatedAtDepth: boolean;
 };
 
-/**
- * Resolve the root span using `trace.rootSpanId`, falling back to the first
- * span when the id is missing or doesn't match any span.
- */
 export function resolveRootSpan(trace: Trace): Span | undefined {
   if (trace.spans.length === 0) {
     return undefined;
@@ -193,20 +182,20 @@ export function analyze(trace: Trace): AnalyzedTrace {
       truncatedAtDepth;
   }
 
-  // Spans not reached from the main root: either roots-of-other-trees (parent
-  // missing from set or parentless and not the chosen root) or cycle members.
-  // Walk each unvisited span as an orphan root, building further subtrees.
   const orphanOrder: TreeNode[] = [];
   const orphanRoots = trace.spans
-    .filter(span => !visited.has(span.spanId))
-    .filter(span => !span.parentSpanId || !spansById.has(span.parentSpanId))
+    .filter(
+      span =>
+        !visited.has(span.spanId) &&
+        (!span.parentSpanId || !spansById.has(span.parentSpanId))
+    )
     .sort(compareByStart);
   for (const orphan of orphanRoots) {
     truncatedAtDepth =
       walkTree(orphan, 0, childrenByParent, visited, orphanOrder) ||
       truncatedAtDepth;
   }
-  // Anything still unvisited must be in a cycle; surface as a flat orphan row.
+  // Remaining unvisited spans are cycle members; surface as flat orphan rows.
   for (const span of trace.spans) {
     if (!visited.has(span.spanId)) {
       orphanOrder.push({ span, depth: 0 });
@@ -214,10 +203,11 @@ export function analyze(trace: Trace): AnalyzedTrace {
     }
   }
 
-  const errorSpans = trace.spans.filter(span => span.status?.code === 1);
-  const errorCount = errorSpans.length;
+  const errorSpans = trace.spans.filter(
+    span => span.status?.code === SPAN_STATUS_ERROR
+  );
   const hasColdStart = trace.spans.some(
-    span => span.attributes?.['func.cold'] === true
+    span => span.attributes?.[FUNC_COLD_ATTR] === true
   );
 
   const byName = new Map<string, { count: number; totalUs: number }>();
@@ -254,7 +244,6 @@ export function analyze(trace: Trace): AnalyzedTrace {
     treeOrder,
     orphanOrder,
     errorSpans,
-    errorCount,
     repeatedOps,
     hasColdStart,
     truncatedAtDepth,
