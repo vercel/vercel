@@ -57,6 +57,7 @@ import {
   createVenvEnv,
   getVenvPythonBin,
 } from './utils';
+import { validateBuildArch } from './platform-info';
 import { runQuirks } from './quirks';
 import {
   getDjangoSettings,
@@ -231,15 +232,23 @@ interface TargetPlatform {
   architecture: 'x86_64' | 'arm64' | undefined;
 }
 
+/** Map an architecture name to a uv-compatible platform triple. */
+function archToUvPlatform(arch: string): string {
+  return `${validateBuildArch(arch)}-unknown-linux-gnu`;
+}
+
+/** Map an architecture name to a Lambda architecture value. */
+function archToLambdaArch(arch: string): 'x86_64' | 'arm64' {
+  return validateBuildArch(arch) === 'aarch64' ? 'arm64' : 'x86_64';
+}
+
 /** Resolve the target platform for wheel resolution and Lambda architecture. */
 function getTargetPlatform(isDev: boolean): TargetPlatform {
-  const envPlatform = process.env.VERCEL_PYTHON_PLATFORM;
-  if (envPlatform) {
-    const isArm =
-      envPlatform.startsWith('aarch64') || envPlatform.startsWith('arm64');
+  const arch = process.env.VERCEL_BUILD_ARCH;
+  if (arch) {
     return {
-      uvPlatform: envPlatform,
-      architecture: isArm ? 'arm64' : 'x86_64',
+      uvPlatform: archToUvPlatform(arch),
+      architecture: archToLambdaArch(arch),
     };
   }
 

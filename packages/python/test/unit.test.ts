@@ -3569,13 +3569,13 @@ describe('custom install hooks', () => {
     ).toBe(true);
   });
 
-  it('respects VERCEL_PYTHON_PLATFORM env var override', async () => {
+  it('respects VERCEL_BUILD_ARCH env var override', async () => {
     const mockUvSync = vi.fn(async () => {});
     const mockUvPip = vi.fn(async () => {});
     const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
-    const originalPythonPlatform = process.env.VERCEL_PYTHON_PLATFORM;
+    const originalPythonPlatform = process.env.VERCEL_BUILD_ARCH;
     delete process.env.VERCEL_BUILD_IMAGE;
-    process.env.VERCEL_PYTHON_PLATFORM = 'aarch64-unknown-linux-gnu';
+    process.env.VERCEL_BUILD_ARCH = 'aarch64';
 
     const realBuildUtils = await vi.importActual<
       typeof import('@vercel/build-utils')
@@ -3646,9 +3646,9 @@ describe('custom install hooks', () => {
         process.env.VERCEL_BUILD_IMAGE = originalBuildImage;
       }
       if (originalPythonPlatform === undefined) {
-        delete process.env.VERCEL_PYTHON_PLATFORM;
+        delete process.env.VERCEL_BUILD_ARCH;
       } else {
-        process.env.VERCEL_PYTHON_PLATFORM = originalPythonPlatform;
+        process.env.VERCEL_BUILD_ARCH = originalPythonPlatform;
       }
       if (fs.existsSync(workPath)) fs.removeSync(workPath);
     }

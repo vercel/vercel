@@ -1042,65 +1042,72 @@ version = "8.1.7"
 });
 
 describe('detectTargetPlatform', () => {
-  const originalEnv = process.env.VERCEL_PYTHON_PLATFORM;
+  const originalEnv = process.env.VERCEL_BUILD_ARCH;
 
   afterEach(() => {
     if (originalEnv === undefined) {
-      delete process.env.VERCEL_PYTHON_PLATFORM;
+      delete process.env.VERCEL_BUILD_ARCH;
     } else {
-      process.env.VERCEL_PYTHON_PLATFORM = originalEnv;
+      process.env.VERCEL_BUILD_ARCH = originalEnv;
     }
   });
 
   it('returns linux sysPlatform regardless of host', () => {
-    delete process.env.VERCEL_PYTHON_PLATFORM;
+    delete process.env.VERCEL_BUILD_ARCH;
     const platform = detectTargetPlatform();
     expect(platform.sysPlatform).toBe('linux');
     expect(platform.os).toBe('linux');
   });
 
   it('returns manylinux osName', () => {
-    delete process.env.VERCEL_PYTHON_PLATFORM;
+    delete process.env.VERCEL_BUILD_ARCH;
     const platform = detectTargetPlatform();
     expect(platform.osName).toBe('manylinux');
   });
 
   it('returns gnu libc', () => {
-    delete process.env.VERCEL_PYTHON_PLATFORM;
+    delete process.env.VERCEL_BUILD_ARCH;
     const platform = detectTargetPlatform();
     expect(platform.libc).toBe('gnu');
   });
 
   it('defaults to x86_64 archName', () => {
-    delete process.env.VERCEL_PYTHON_PLATFORM;
+    delete process.env.VERCEL_BUILD_ARCH;
     const platform = detectTargetPlatform();
     expect(platform.archName).toBe('x86_64');
   });
 
   it('returns valid glibc version numbers', () => {
-    delete process.env.VERCEL_PYTHON_PLATFORM;
+    delete process.env.VERCEL_BUILD_ARCH;
     const platform = detectTargetPlatform();
     expect(platform.osMajor).toBeGreaterThanOrEqual(2);
     expect(platform.osMinor).toBeGreaterThanOrEqual(0);
   });
 
-  it('returns aarch64 when VERCEL_PYTHON_PLATFORM starts with aarch64', () => {
-    process.env.VERCEL_PYTHON_PLATFORM = 'aarch64-unknown-linux-gnu';
+  it('returns aarch64 when VERCEL_BUILD_ARCH is aarch64', () => {
+    process.env.VERCEL_BUILD_ARCH = 'aarch64';
     const platform = detectTargetPlatform();
     expect(platform.archName).toBe('aarch64');
     expect(platform.sysPlatform).toBe('linux');
   });
 
-  it('returns aarch64 when VERCEL_PYTHON_PLATFORM starts with arm64', () => {
-    process.env.VERCEL_PYTHON_PLATFORM = 'arm64-unknown-linux-gnu';
+  it('returns x86_64 when VERCEL_BUILD_ARCH is x86_64', () => {
+    process.env.VERCEL_BUILD_ARCH = 'x86_64';
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('x86_64');
+  });
+
+  it('is case-insensitive', () => {
+    process.env.VERCEL_BUILD_ARCH = 'AARCH64';
     const platform = detectTargetPlatform();
     expect(platform.archName).toBe('aarch64');
   });
 
-  it('returns x86_64 when VERCEL_PYTHON_PLATFORM is x86_64 triple', () => {
-    process.env.VERCEL_PYTHON_PLATFORM = 'x86_64-unknown-linux-gnu';
-    const platform = detectTargetPlatform();
-    expect(platform.archName).toBe('x86_64');
+  it('throws on unrecognized VERCEL_BUILD_ARCH', () => {
+    process.env.VERCEL_BUILD_ARCH = 'mips';
+    expect(() => detectTargetPlatform()).toThrow(
+      'Unrecognized VERCEL_BUILD_ARCH'
+    );
   });
 });
 

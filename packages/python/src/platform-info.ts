@@ -1,5 +1,6 @@
 import os from 'os';
 import * as detectLibc from 'detect-libc';
+import { NowBuildError } from '@vercel/build-utils';
 
 export interface PlatformInfo {
   /** Wheel tag OS name: "manylinux" or "musllinux" */
@@ -76,21 +77,34 @@ export function detectPlatform(): PlatformInfo {
   return platform;
 }
 
+/** Validate and normalize a VERCEL_BUILD_ARCH value. */
+export function validateBuildArch(arch: string): 'x86_64' | 'aarch64' {
+  switch (arch.toLowerCase()) {
+    case 'x86_64':
+      return 'x86_64';
+    case 'aarch64':
+      return 'aarch64';
+    default:
+      throw new NowBuildError({
+        code: 'INVALID_BUILD_ARCH',
+        message: `Unrecognized VERCEL_BUILD_ARCH "${arch}". Expected "x86_64" or "aarch64".`,
+      });
+  }
+}
+
 /**
  * Return platform info for the Lambda runtime target.
  *
  * Unlike {@link detectPlatform} (which reflects the build host), this
  * returns Linux platform details suitable for the deployment target.
- * Respects `VERCEL_PYTHON_PLATFORM` for architecture overrides.
+ * Respects `VERCEL_BUILD_ARCH` for architecture overrides.
  */
 export function detectTargetPlatform(): PlatformInfo {
   if (process.env.VERCEL_BUILD_IMAGE && process.platform === 'linux') {
     return detectPlatform();
   }
 
-  const envPlatform = process.env.VERCEL_PYTHON_PLATFORM;
-  const isArm =
-    envPlatform?.startsWith('aarch64') || envPlatform?.startsWith('arm64');
+  const arch = process.env.VERCEL_BUILD_ARCH;
 
   const platform: PlatformInfo = {
     osName: 'manylinux',
@@ -102,8 +116,8 @@ export function detectTargetPlatform(): PlatformInfo {
     libc: 'gnu',
   };
 
-  if (isArm) {
-    platform.archName = 'aarch64';
+  if (arch) {
+    platform.archName = validateBuildArch(arch);
   }
 
   return platform;
