@@ -1,26 +1,38 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 vi.mock('execa', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('@vercel/build-utils', () => ({
+vi.mock('@vercel/build-utils', async importOriginal => ({
+  ...(await importOriginal<typeof import('@vercel/build-utils')>()),
   debug: vi.fn(),
 }));
 
 import execa from 'execa';
+import { FileFsRef } from '@vercel/build-utils';
 import {
+  collectAppBytecodeFiles,
   derivePycPath,
+  getCompileAllAppExcludeRegex,
   isCompileAllEnabled,
   runCompileAll,
+  shouldUseCompileAll,
 } from '../src/compileall';
 
 const mockedExeca = vi.mocked(execa);
 const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
 const originalHiveEnv = process.env.VERCEL_PYTHON_ON_HIVE;
+const tmpDirs: string[] = [];
 
 afterEach(() => {
   vi.clearAllMocks();
+  for (const dir of tmpDirs.splice(0)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
   if (originalCompileAllEnv === undefined) {
     delete process.env.VERCEL_PYTHON_COMPILEALL;
   } else {
@@ -97,6 +109,40 @@ describe('isCompileAllEnabled', () => {
   });
 });
 
+describe('shouldUseCompileAll', () => {
+  it('does not enable automatic compileall for custom commands', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldUseCompileAll({
+        isDev: false,
+        hasCustomCommand: true,
+      })
+    ).toBe(false);
+
+    delete process.env.VERCEL_PYTHON_COMPILEALL;
+    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+
+    expect(
+      shouldUseCompileAll({
+        isDev: false,
+        hasCustomCommand: true,
+      })
+    ).toBe(false);
+  });
+
+  it('does not enable automatic compileall in dev', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldUseCompileAll({
+        isDev: true,
+        hasCustomCommand: false,
+      })
+    ).toBe(false);
+  });
+});
+
 describe('runCompileAll', () => {
   it('passes -j 0 and exclude regex to compileall when provided', async () => {
     mockedExeca.mockResolvedValue({} as any);
@@ -137,5 +183,70 @@ describe('derivePycPath', () => {
 
   it('returns null for non-Python files', () => {
     expect(derivePycPath('pkg/data.txt', 3, 12)).toBeNull();
+  });
+});
+
+describe('getCompileAllAppExcludeRegex', () => {
+  it('produces a regex that matches excluded directories under workPath', () => {
+    const regex = new RegExp(getCompileAllAppExcludeRegex('/work'));
+    expect(regex.test('/work/.venv/lib/python3.12/foo.py')).toBe(true);
+    expect(regex.test('/work/node_modules/pkg/index.py')).toBe(true);
+    expect(regex.test('/work/__pycache__/app.cpython-312.pyc')).toBe(true);
+    expect(regex.test('/work/.git/hooks/pre-commit')).toBe(true);
+  });
+
+  it('does not match regular application paths', () => {
+    const regex = new RegExp(getCompileAllAppExcludeRegex('/work'));
+    expect(regex.test('/work/app.py')).toBe(false);
+    expect(regex.test('/work/src/main.py')).toBe(false);
+    expect(regex.test('/work/pkg/utils.py')).toBe(false);
+  });
+});
+
+describe('app bytecode collection', () => {
+  function makeTempWorkPath() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-py-compileall-'));
+    tmpDirs.push(dir);
+    return dir;
+  }
+
+  it('collects bytecode only for included app sources', async () => {
+    const workPath = makeTempWorkPath();
+    const includedPyc = path.join(
+      workPath,
+      'pkg',
+      '__pycache__',
+      'app.cpython-312.pyc'
+    );
+    const excludedPyc = path.join(
+      workPath,
+      'tests',
+      '__pycache__',
+      'test_app.cpython-312.pyc'
+    );
+    fs.mkdirSync(path.dirname(includedPyc), { recursive: true });
+    fs.mkdirSync(path.dirname(excludedPyc), { recursive: true });
+    fs.writeFileSync(path.join(workPath, 'pkg', 'app.py'), 'print("ok")');
+    fs.writeFileSync(includedPyc, Buffer.alloc(10));
+    fs.writeFileSync(excludedPyc, Buffer.alloc(20));
+
+    const result = await collectAppBytecodeFiles({
+      workPath,
+      files: {
+        'pkg/app.py': new FileFsRef({
+          fsPath: path.join(workPath, 'pkg', 'app.py'),
+        }),
+      },
+      pythonMajor: 3,
+      pythonMinor: 12,
+    });
+
+    expect(Object.keys(result.files)).toEqual([
+      'pkg/__pycache__/app.cpython-312.pyc',
+    ]);
+    expect(result.totalSize).toBe(10);
+    expect(result.perFileSizes.get('pkg/__pycache__/app.cpython-312.pyc')).toBe(
+      10
+    );
   });
 });

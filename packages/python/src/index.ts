@@ -45,6 +45,7 @@ import {
   LAMBDA_SIZE_THRESHOLD_BYTES,
   HIVE_LAMBDA_SIZE_BYTES,
   lambdaKnapsack,
+  calculateBundleSize,
   type BytecodeCollectionResult,
 } from './dependency-externalizer';
 import {
@@ -70,25 +71,17 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
-import { isCompileAllEnabled, runCompileAll } from './compileall';
+import {
+  collectAppBytecodeFiles,
+  getCompileAllAppExcludeRegex,
+  runCompileAll,
+  shouldUseCompileAll,
+  type AppBytecodeCollectionResult,
+} from './compileall';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
   'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
-const COMPILEALL_APP_EXCLUDED_DIRS = [
-  '.git',
-  '.vercel',
-  '.pnpm-store',
-  'node_modules',
-  '.next',
-  '.nuxt',
-  '.venv',
-  'venv',
-  '__pycache__',
-  '.mypy_cache',
-  '.ruff_cache',
-  'public',
-];
 
 import {
   detectPythonEntrypoint,
@@ -101,14 +94,69 @@ export { detectEntrypoint } from './entrypoint';
 
 export const version = -1;
 
-function escapePythonRegex(value: string): string {
-  return value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+function addFiles(target: Files, source: Files) {
+  for (const [p, f] of Object.entries(source)) {
+    target[p] = f;
+  }
 }
 
-function getCompileAllAppExcludeRegex(workPath: string): string {
-  const excludedDirs =
-    COMPILEALL_APP_EXCLUDED_DIRS.map(escapePythonRegex).join('|');
-  return `${escapePythonRegex(workPath)}[/\\\\](?:${excludedDirs})(?:[/\\\\]|$)`;
+function addAppBytecodeWithinCapacity(
+  files: Files,
+  appBytecodeInfo: AppBytecodeCollectionResult | undefined,
+  capacity: number
+): number {
+  if (!appBytecodeInfo || appBytecodeInfo.totalSize <= 0 || capacity <= 0) {
+    return capacity;
+  }
+
+  if (appBytecodeInfo.totalSize <= capacity) {
+    addFiles(files, appBytecodeInfo.files);
+    return capacity - appBytecodeInfo.totalSize;
+  }
+
+  const selectedFiles = lambdaKnapsack(appBytecodeInfo.perFileSizes, capacity);
+  let remainingCapacity = capacity;
+  for (const p of selectedFiles) {
+    const file = appBytecodeInfo.files[p];
+    if (!file) continue;
+    files[p] = file;
+    remainingCapacity -= appBytecodeInfo.perFileSizes.get(p) ?? 0;
+  }
+
+  return remainingCapacity;
+}
+
+async function addVendorBytecodeWithinCapacity({
+  files,
+  depExternalizer,
+  vendorDir,
+  bytecodeInfo,
+  capacity,
+}: {
+  files: Files;
+  depExternalizer: PythonDependencyExternalizer;
+  vendorDir: string;
+  bytecodeInfo: BytecodeCollectionResult | undefined;
+  capacity: number;
+}): Promise<number> {
+  if (!bytecodeInfo || bytecodeInfo.totalSize <= 0 || capacity <= 0) {
+    return capacity;
+  }
+
+  if (bytecodeInfo.totalSize <= capacity) {
+    addFiles(files, bytecodeInfo.files);
+    return capacity - bytecodeInfo.totalSize;
+  }
+
+  const selectedPkgs = lambdaKnapsack(bytecodeInfo.perPackageSizes, capacity);
+  if (selectedPkgs.length === 0) return capacity;
+
+  const selectedBytecode = await depExternalizer.collectBytecodeFiles({
+    vendorDirName: vendorDir,
+    includePackages: selectedPkgs,
+  });
+  addFiles(files, selectedBytecode.files);
+  return capacity - selectedBytecode.totalSize;
 }
 
 interface FrameworkHookContext {
@@ -275,7 +323,6 @@ export const build: BuildVX = async ({
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
-  const compileAllEnabled = isCompileAllEnabled() && !meta.isDev;
   // Track whether a custom build or install command was used.
   // When true, runtime dependency installation is disabled because
   // custom commands may install dependencies not tracked in uv.lock.
@@ -772,6 +819,11 @@ if os.path.isdir(_vendor):
 from vercel_runtime.vc_init import vc_handler
 `;
 
+  const automaticCompileAllEnabled = shouldUseCompileAll({
+    isDev: meta.isDev,
+    hasCustomCommand,
+  });
+
   const predefinedExcludes = [
     '.git/**',
     '.gitignore',
@@ -782,7 +834,7 @@ from vercel_runtime.vc_init import vc_handler
     '**/.nuxt/**',
     '**/.venv/**',
     '**/venv/**',
-    ...(compileAllEnabled ? [] : ['**/__pycache__/**']),
+    '**/__pycache__/**',
     '**/.mypy_cache/**',
     '**/.ruff_cache/**',
     '**/public/**',
@@ -793,9 +845,6 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
-  // Lambda's /var/task is read-only.  Without this flag Python wastes time
-  // attempting (and failing) to write .pyc files on every import.
-  lambdaEnv.PYTHONDONTWRITEBYTECODE = '1';
   Object.assign(lambdaEnv, quirksResult.env);
   if (shouldInstallVercelWorkers) {
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
@@ -809,10 +858,39 @@ from vercel_runtime.vc_init import vc_handler
         : predefinedExcludes,
   };
 
-  // Precompile Python bytecode for faster cold starts.  Must run before the
-  // application glob and dependency externalizer so the generated .pyc files
-  // are picked up and included in the bundle/size calculation.
-  if (compileAllEnabled) {
+  const files: Files = await glob('**', globOptions);
+
+  // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
+  // backend is in use. The CDN serves static assets; only the manifest is
+  // needed at runtime so Django can resolve hashed filenames for {% static %}.
+  if (djangoStatic?.manifestRelPath) {
+    files[djangoStatic.manifestRelPath] = new FileFsRef({
+      fsPath: join(workPath, djangoStatic.manifestRelPath),
+    });
+  }
+
+  // in order to allow the user to have `server.py`, we
+  // need our `server.py` to be called something else
+  const handlerPyFilename = 'vc__handler__python';
+
+  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
+
+  // "fasthtml" framework requires a `.sesskey` file to exist,
+  // otherwise it tries to create one at runtime, which fails
+  // due Lambda's read-only filesystem
+  if (config.framework === 'fasthtml') {
+    const { SESSKEY = '' } = process.env;
+    files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
+  }
+
+  let appBytecodeInfo: AppBytecodeCollectionResult | undefined;
+
+  // Precompile Python bytecode for faster cold starts.  compileall runs
+  // on the full workPath (with an exclude regex mirroring the glob excludes)
+  // and on site-packages.  collectAppBytecodeFiles then collects .pyc files
+  // only for .py files present in the bundle, so excluded source files
+  // cannot re-enter the Lambda as generated .pyc files.
+  if (automaticCompileAllEnabled) {
     await builderSpan
       .child('vc.builder.python.compileall')
       .trace(async compileSpan => {
@@ -836,25 +914,25 @@ from vercel_runtime.vc_init import vc_handler
           env: pythonEnv,
         });
 
+        if (pythonVersion.major != null && pythonVersion.minor != null) {
+          appBytecodeInfo = await collectAppBytecodeFiles({
+            workPath,
+            files,
+            pythonMajor: pythonVersion.major,
+            pythonMinor: pythonVersion.minor,
+          });
+        }
+
         compileSpan.setAttributes({
           'python.compileall.enabled': 'true',
-          'python.compileall.appDirectoryCount': '1',
+          'python.compileall.appBytecodeFileCount': String(
+            appBytecodeInfo ? Object.keys(appBytecodeInfo.files).length : 0
+          ),
           'python.compileall.sitePackageDirectoryCount': String(
             sitePackageDirs.length
           ),
         });
       });
-  }
-
-  const files: Files = await glob('**', globOptions);
-
-  // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
-  // backend is in use. The CDN serves static assets; only the manifest is
-  // needed at runtime so Django can resolve hashed filenames for {% static %}.
-  if (djangoStatic?.manifestRelPath) {
-    files[djangoStatic.manifestRelPath] = new FileFsRef({
-      fsPath: join(workPath, djangoStatic.manifestRelPath),
-    });
   }
 
   // Bundle dependencies, using runtime installation for oversized bundles
@@ -886,7 +964,7 @@ from vercel_runtime.vc_init import vc_handler
 
       // Collect vendor bytecode if compileall ran.
       let bytecodeInfo: BytecodeCollectionResult | undefined;
-      if (compileAllEnabled) {
+      if (automaticCompileAllEnabled) {
         bytecodeInfo = await depExternalizer.collectBytecodeFiles({
           vendorDirName: vendorDir,
         });
@@ -897,6 +975,13 @@ from vercel_runtime.vc_init import vc_handler
         'python.bundle.runtimeInstallEnabled': String(
           depAnalysis.runtimeInstallEnabled
         ),
+        ...(appBytecodeInfo
+          ? {
+              'python.bundle.appBytecodeSizeBytes': String(
+                appBytecodeInfo.totalSize
+              ),
+            }
+          : {}),
         ...(bytecodeInfo
           ? {
               'python.bundle.bytecodeSizeBytes': String(bytecodeInfo.totalSize),
@@ -907,64 +992,38 @@ from vercel_runtime.vc_init import vc_handler
       if (depAnalysis.runtimeInstallEnabled) {
         // >245 MB source-only: knapsack packing with optional bytecode.
         await depExternalizer.generateBundle(files, bytecodeInfo);
+
+        const currentSize = await calculateBundleSize(files);
+        const remainingCapacity = LAMBDA_SIZE_THRESHOLD_BYTES - currentSize;
+        addAppBytecodeWithinCapacity(files, appBytecodeInfo, remainingCapacity);
       } else {
         // ≤245 MB source-only: bundle all dependencies.
-        for (const [p, f] of Object.entries(depAnalysis.allVendorFiles)) {
-          files[p] = f;
-        }
+        addFiles(files, depAnalysis.allVendorFiles);
 
         // Add bytecode, filling available capacity.
-        if (bytecodeInfo && bytecodeInfo.totalSize > 0) {
-          const pythonOnHiveEnabled =
-            process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-            process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-          const activeThreshold = pythonOnHiveEnabled
-            ? HIVE_LAMBDA_SIZE_BYTES
-            : LAMBDA_SIZE_THRESHOLD_BYTES;
-          const remainingCapacity =
-            activeThreshold - depAnalysis.totalBundleSize;
+        const pythonOnHiveEnabled =
+          process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+          process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+        const activeThreshold = pythonOnHiveEnabled
+          ? HIVE_LAMBDA_SIZE_BYTES
+          : LAMBDA_SIZE_THRESHOLD_BYTES;
+        const currentSize = await calculateBundleSize(files);
+        let remainingCapacity = activeThreshold - currentSize;
 
-          if (bytecodeInfo.totalSize <= remainingCapacity) {
-            // All vendor bytecode fits — include everything.
-            for (const [p, f] of Object.entries(bytecodeInfo.files)) {
-              files[p] = f;
-            }
-          } else if (remainingCapacity > 0) {
-            // Selective inclusion: use the knapsack to pick which
-            // packages get bytecode within the remaining capacity.
-            const selectedPkgs = lambdaKnapsack(
-              bytecodeInfo.perPackageSizes,
-              remainingCapacity
-            );
-            if (selectedPkgs.length > 0) {
-              const selectedBytecode =
-                await depExternalizer.collectBytecodeFiles({
-                  vendorDirName: vendorDir,
-                  includePackages: selectedPkgs,
-                });
-              for (const [p, f] of Object.entries(selectedBytecode.files)) {
-                files[p] = f;
-              }
-            }
-          }
-          // else: no capacity left, skip vendor bytecode entirely.
-        }
+        remainingCapacity = addAppBytecodeWithinCapacity(
+          files,
+          appBytecodeInfo,
+          remainingCapacity
+        );
+        await addVendorBytecodeWithinCapacity({
+          files,
+          depExternalizer,
+          vendorDir,
+          bytecodeInfo,
+          capacity: remainingCapacity,
+        });
       }
     });
-
-  // in order to allow the user to have `server.py`, we
-  // need our `server.py` to be called something else
-  const handlerPyFilename = 'vc__handler__python';
-
-  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
-
-  // "fasthtml" framework requires a `.sesskey` file to exist,
-  // otherwise it tries to create one at runtime, which fails
-  // due Lambda's read-only filesystem
-  if (config.framework === 'fasthtml') {
-    const { SESSKEY = '' } = process.env;
-    files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
-  }
 
   const output = new Lambda({
     files,

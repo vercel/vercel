@@ -1,5 +1,7 @@
 import execa from 'execa';
-import { debug } from '@vercel/build-utils';
+import { debug, FileFsRef, type Files } from '@vercel/build-utils';
+import fs from 'fs';
+import { join, sep } from 'path';
 
 /**
  * Check whether Python bytecode precompilation is enabled.
@@ -26,10 +28,20 @@ export function isCompileAllEnabled(): boolean {
   return false;
 }
 
+export function shouldUseCompileAll({
+  isDev,
+  hasCustomCommand,
+}: {
+  isDev?: boolean;
+  hasCustomCommand: boolean;
+}): boolean {
+  return !isDev && !hasCustomCommand && isCompileAllEnabled();
+}
+
 interface CompileAllOptions {
   /** Path to the venv Python binary (e.g. from getVenvPythonBin). */
   pythonBin: string;
-  /** Directories to compile. */
+  /** Files or directories to compile. */
   directories: string[];
   /** Environment to pass to the subprocess. */
   env?: NodeJS.ProcessEnv;
@@ -97,4 +109,99 @@ export function derivePycPath(
   const baseName = pyRelPath.slice(lastSlash + 1, -3); // strip ".py"
 
   return `${dir}__pycache__/${baseName}.cpython-${pythonMajor}${pythonMinor}.pyc`;
+}
+
+export interface AppBytecodeCollectionResult {
+  /** FileFsRef entries for app .pyc files, keyed by bundle-relative path. */
+  files: Files;
+  /** Total uncompressed size of all collected .pyc files. */
+  totalSize: number;
+  /** Per-file bytecode sizes, keyed by bundle-relative path. */
+  perFileSizes: Map<string, number>;
+}
+
+/**
+ * Directories excluded from application bytecode compilation.
+ * Mirrors the predefined excludes used by the source-file glob in the
+ * builder so that compileall does not waste time on files that will
+ * never enter the Lambda bundle.
+ */
+const COMPILEALL_APP_EXCLUDED_DIRS = [
+  '.git',
+  '.vercel',
+  '.pnpm-store',
+  'node_modules',
+  '.next',
+  '.nuxt',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.mypy_cache',
+  '.ruff_cache',
+  'public',
+];
+
+function escapePythonRegex(value: string): string {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+}
+
+/**
+ * Build a Python regex for the `-x` flag of `compileall` that skips the
+ * same directories the source-file glob excludes.
+ */
+export function getCompileAllAppExcludeRegex(workPath: string): string {
+  const excludedDirs =
+    COMPILEALL_APP_EXCLUDED_DIRS.map(escapePythonRegex).join('|');
+  return `${escapePythonRegex(workPath)}[/\\\\](?:${excludedDirs})(?:[/\\\\]|$)`;
+}
+
+export async function collectAppBytecodeFiles({
+  workPath,
+  files: appFiles,
+  pythonMajor,
+  pythonMinor,
+}: {
+  workPath: string;
+  files: Files;
+  pythonMajor: number;
+  pythonMinor: number;
+}): Promise<AppBytecodeCollectionResult> {
+  const pending: { bundlePath: string; srcFsPath: string }[] = [];
+
+  for (const bundlePath of Object.keys(appFiles)) {
+    const pycRel = derivePycPath(bundlePath, pythonMajor, pythonMinor);
+    if (!pycRel) continue;
+
+    pending.push({
+      bundlePath: pycRel,
+      srcFsPath: join(workPath, pycRel.replaceAll('/', sep)),
+    });
+  }
+
+  const results = await Promise.all(
+    pending.map(async ({ bundlePath, srcFsPath }) => {
+      try {
+        const stats = await fs.promises.stat(srcFsPath);
+        return { bundlePath, srcFsPath, size: stats.size };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const files: Files = {};
+  const perFileSizes = new Map<string, number>();
+  let totalSize = 0;
+
+  for (const result of results) {
+    if (!result) continue;
+    files[result.bundlePath] = new FileFsRef({
+      fsPath: result.srcFsPath,
+      size: result.size,
+    });
+    perFileSizes.set(result.bundlePath, result.size);
+    totalSize += result.size;
+  }
+
+  return { files, totalSize, perFileSizes };
 }
