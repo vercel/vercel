@@ -8,6 +8,7 @@ import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { outputActionRequired, buildCommandWithYes } from '../agent-output';
+import { printProjectNotFoundError } from '../projects/project-not-found-error';
 
 /**
  * Checks if a project is already linked and if not, links the project and
@@ -69,9 +70,7 @@ export async function ensureLink(
       opts.failIfNotFound &&
       opts.projectName
     ) {
-      output.error(
-        `Project "${opts.projectName}" was not found. Verify the name or ID and your team scope.`
-      );
+      await printProjectNotFoundError(client, opts.projectName, commandName);
       return 1;
     }
 

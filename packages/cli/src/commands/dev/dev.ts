@@ -8,6 +8,7 @@ import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { findRepoRoot } from '../../util/link/repo';
@@ -67,9 +68,7 @@ export default async function dev(
           `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
     } else if (projectNameOrId) {
-      output.error(
-        `Project "${projectNameOrId}" was not found. Verify the name or ID and your team scope.`
-      );
+      await printProjectNotFoundError(client, projectNameOrId, 'dev');
       return 1;
     } else {
       link = await setupAndLink(client, cwd, {

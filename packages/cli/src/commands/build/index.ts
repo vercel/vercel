@@ -98,6 +98,7 @@ import {
   getProjectLink,
   VERCEL_DIR,
 } from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -286,9 +287,7 @@ export default async function main(client: Client): Promise<number> {
     } else if (linkedFromApi.status === 'error') {
       return linkedFromApi.exitCode;
     } else {
-      output.error(
-        `Project "${projectNameOrId}" was not found. Verify the name or ID and your team scope.`
-      );
+      await printProjectNotFoundError(client, projectNameOrId, 'build');
       return 1;
     }
   }

@@ -2636,7 +2636,7 @@ fs.writeFileSync(
       const exitCodePromise = build(client);
 
       await expect(client.stderr).toOutput(
-        'Project "does-not-exist" was not found.'
+        'Project "does-not-exist" was not found'
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "build"').toEqual(1);
