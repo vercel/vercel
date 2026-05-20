@@ -458,6 +458,7 @@ export class ServicesOrchestrator {
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
           serviceName: service.name,
+          projectRoot: this.cwd,
         },
         service: {
           name: service.name,

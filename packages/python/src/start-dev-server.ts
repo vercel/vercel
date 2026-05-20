@@ -684,10 +684,18 @@ async function getMultiServicePythonRunner(
   workPath: string,
   env: NodeJS.ProcessEnv,
   systemPython: string,
-  uvPath: string | null
+  uvPath: string | null,
+  projectRoot?: string
 ): Promise<PythonRunner> {
-  // Use an existing .venv/venv if present and allowed (single Python service in a project).
-  const { pythonCmd, venvRoot } = useVirtualEnv(workPath, env, systemPython);
+  // Use an existing .venv/venv if present. Walk up to the project root so that
+  // a project-level venv (e.g. created by `uv sync` at the vercel.json root)
+  // is found even when the service workspace is a subdirectory.
+  const { pythonCmd, venvRoot } = useVirtualEnv(
+    workPath,
+    env,
+    systemPython,
+    projectRoot
+  );
   if (venvRoot) {
     debug(`Using existing virtualenv at ${venvRoot} for multi-service dev`);
     return { command: pythonCmd, args: [] };
@@ -721,6 +729,9 @@ export const startDevServer: StartDevServer = async opts => {
     onStdout,
     onStderr,
   } = opts;
+
+  const projectRoot =
+    typeof meta.projectRoot === 'string' ? meta.projectRoot : undefined;
 
   const framework = config?.framework;
 
@@ -869,7 +880,8 @@ export const startDevServer: StartDevServer = async opts => {
         workPath,
         env,
         systemPython,
-        uvPath
+        uvPath,
+        projectRoot
       );
       spawnCommand = runner.command;
       spawnArgsPrefix = runner.args;
@@ -882,7 +894,8 @@ export const startDevServer: StartDevServer = async opts => {
       const { pythonCmd: venvPythonCmd, venvRoot } = useVirtualEnv(
         workPath,
         env,
-        systemPython
+        systemPython,
+        projectRoot
       );
       spawnCommand = venvPythonCmd;
       if (venvRoot) {
