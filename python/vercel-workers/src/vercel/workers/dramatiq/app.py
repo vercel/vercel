@@ -154,6 +154,12 @@ def handle_queue_callback(
 
         if is_v2beta:
             v2 = queue_callback.parse_v2beta_callback(raw_body, environ or {})
+            # fetch the whole message if callback is metadata-only
+            v2 = queue_callback.resolve_v2beta_message(
+                v2,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
             queue_name = v2["queueName"]
             consumer_group = v2["consumerGroup"]
             message_id = v2["messageId"]

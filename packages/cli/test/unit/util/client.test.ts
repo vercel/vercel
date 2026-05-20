@@ -1,9 +1,26 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { listen } from 'async-listen';
 import { createProxy } from 'proxy';
 import { ProxyAgent } from 'proxy-agent';
 import { createServer } from 'http';
 import { client } from '../../mocks/client';
+import * as getArgs from '../../../src/util/get-args';
+
+const testConfigSchema = z.object({
+  enabled: z.boolean(),
+  name: z.string().optional(),
+});
+
+const dateConfigSchema = z.object({
+  lastPromptedAt: z.codec(z.union([z.iso.date(), z.iso.datetime()]), z.date(), {
+    decode: value => new Date(value),
+    encode: value => value.toISOString(),
+  }),
+});
 
 describe('Client', () => {
   describe('fetch()', () => {
@@ -105,6 +122,173 @@ describe('Client', () => {
         followed: boolean;
       };
       expect(data.followed).toEqual(true);
+    });
+  });
+
+  describe('config helpers', () => {
+    it('reads schema-backed config files', async () => {
+      const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        client.setArgv('--global-config', configDir);
+        await writeFile(
+          join(configDir, 'test.json'),
+          JSON.stringify({ enabled: true, name: 'demo' }),
+          'utf8'
+        );
+
+        await expect(
+          client.readConfig('test.json', testConfigSchema)
+        ).resolves.toEqual({ enabled: true, name: 'demo' });
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    });
+
+    it('maybeReadConfig() returns null for missing files', async () => {
+      const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        client.setArgv('--global-config', configDir);
+
+        await expect(
+          client.maybeReadConfig('missing.json', testConfigSchema)
+        ).resolves.toBeNull();
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    });
+
+    it('maybeReadConfig() returns null for invalid JSON', async () => {
+      const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        client.setArgv('--global-config', configDir);
+        await writeFile(join(configDir, 'test.json'), '{', 'utf8');
+
+        await expect(
+          client.maybeReadConfig('test.json', testConfigSchema)
+        ).resolves.toBeNull();
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    });
+
+    it('maybeReadConfig() returns null for schema mismatches', async () => {
+      const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        client.setArgv('--global-config', configDir);
+        await writeFile(
+          join(configDir, 'test.json'),
+          JSON.stringify({ enabled: 'true' }),
+          'utf8'
+        );
+
+        await expect(
+          client.maybeReadConfig('test.json', testConfigSchema)
+        ).resolves.toBeNull();
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    });
+
+    it('reads YYYY-MM-DD strings with DateFromString', async () => {
+      const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        client.setArgv('--global-config', configDir);
+        await writeFile(
+          join(configDir, 'date.json'),
+          JSON.stringify({ lastPromptedAt: '2026-05-01' }),
+          'utf8'
+        );
+
+        const config = await client.readConfig('date.json', dateConfigSchema);
+        expect(config.lastPromptedAt).toBeInstanceOf(Date);
+        expect(config.lastPromptedAt.toISOString()).toContain('2026-05-01');
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    });
+
+    it('writes schema-backed config files to the global config dir', async () => {
+      const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        client.setArgv('--global-config', configDir);
+
+        await client.writeConfig('test.json', testConfigSchema, {
+          enabled: true,
+          name: 'demo',
+        });
+
+        const content = await readFile(join(configDir, 'test.json'), 'utf8');
+        expect(JSON.parse(content)).toEqual({ enabled: true, name: 'demo' });
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    });
+
+    it('encodes transformed values when writing config files', async () => {
+      const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        client.setArgv('--global-config', configDir);
+
+        await client.writeConfig('date.json', dateConfigSchema, {
+          lastPromptedAt: new Date('2026-05-01T12:34:56.000Z'),
+        });
+
+        const content = await readFile(join(configDir, 'date.json'), 'utf8');
+        expect(JSON.parse(content)).toEqual({
+          lastPromptedAt: '2026-05-01T12:34:56.000Z',
+        });
+      } finally {
+        await rm(configDir, { recursive: true, force: true });
+      }
+    });
+
+    it('resolves relative --global-config from the current cwd', async () => {
+      const invocationDir = await mkdtemp(join(tmpdir(), 'vercel-cli-client-'));
+
+      try {
+        const targetDir = join(invocationDir, 'nested');
+        const configDir = join(targetDir, 'global-config');
+        const originalCwd = process.cwd();
+
+        await mkdir(targetDir);
+        process.chdir(invocationDir);
+        client.setArgv('--global-config', './global-config');
+        try {
+          client.cwd = targetDir;
+
+          await client.writeConfig('test.json', testConfigSchema, {
+            enabled: true,
+            name: 'demo',
+          });
+
+          const content = await readFile(join(configDir, 'test.json'), 'utf8');
+          expect(JSON.parse(content)).toEqual({ enabled: true, name: 'demo' });
+        } finally {
+          process.chdir(originalCwd);
+        }
+      } finally {
+        await rm(invocationDir, { recursive: true, force: true });
+      }
+    });
+
+    it('caches parsed args until setArgv() is called', () => {
+      const parseArgumentsSpy = vi.spyOn(getArgs, 'parseArguments');
+
+      client.setArgv('--global-config', './one');
+      expect(client.getGlobalPathConfig()).toContain('one');
+      expect(client.getGlobalPathConfig()).toContain('one');
+      expect(parseArgumentsSpy).toHaveBeenCalledTimes(1);
+
+      client.setArgv('--global-config', './two');
+      expect(client.getGlobalPathConfig()).toContain('two');
+      expect(parseArgumentsSpy).toHaveBeenCalledTimes(2);
     });
   });
 });

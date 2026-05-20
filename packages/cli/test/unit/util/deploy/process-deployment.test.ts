@@ -89,7 +89,7 @@ describe('processDeployment()', () => {
       });
       expect(result).toBeInstanceOf(FunctionsSizeLimitError);
       expect(result?.link).toBe(
-        'https://vercel.com/docs/errors/FUNCTIONS_BETA'
+        'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta'
       );
     });
   });

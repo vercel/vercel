@@ -165,15 +165,12 @@ def handle_queue_callback(
     try:
         is_v2beta = queue_callback.is_v2beta_callback(environ or {})
 
+        v2: queue_callback.ParsedV2BetaCallback | None = None
         if is_v2beta:
             v2 = queue_callback.parse_v2beta_callback(raw_body, environ or {})
             queue_name = v2["queueName"]
             consumer_group = v2["consumerGroup"]
             message_id = v2["messageId"]
-            receipt_handle = v2["receiptHandle"]
-            delivery_count = v2["deliveryCount"]
-            created_at = v2["createdAt"]
-            payload: Any = v2["payload"]
         else:
             queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
 
@@ -188,7 +185,19 @@ def handle_queue_callback(
                 body,
             )
 
-        if not is_v2beta:
+        if is_v2beta:
+            assert v2 is not None
+            # fetch the whole message if callback is metadata-only
+            v2 = queue_callback.resolve_v2beta_message(
+                v2,
+                visibility_timeout_seconds=cfg.visibility_timeout_seconds,
+                timeout=cfg.timeout,
+            )
+            receipt_handle = v2["receiptHandle"]
+            delivery_count = v2["deliveryCount"]
+            created_at = v2["createdAt"]
+            payload: Any = v2["payload"]
+        else:
             (
                 payload,
                 delivery_count,

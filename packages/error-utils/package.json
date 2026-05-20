@@ -14,16 +14,15 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
+    "test": "vitest run --config ../../vitest.config.mts --coverage",
     "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "glob --absolute 'test/*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@types/jest": "29.2.1",
     "@types/node": "20.11.0",
-    "jest-junit": "16.0.0",
+    "@vitest/coverage-v8": "2.1.4",
     "vitest": "2.1.4"
   }
 }

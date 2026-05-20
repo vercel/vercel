@@ -1,15 +1,16 @@
-jest.mock('execa', () => {
-  const execa = Object.assign(jest.fn(), {
-    stdout: jest.fn(),
+vi.mock('execa', () => {
+  const execa = Object.assign(vi.fn(), {
+    stdout: vi.fn(),
   });
   return { __esModule: true, default: execa };
 });
 
 import execa from 'execa';
+import type { Mock, MockedFunction } from 'vitest';
 import { GoWrapper } from '../src/go-helpers';
 
-const mockedExeca = execa as unknown as jest.MockedFunction<typeof execa> & {
-  stdout: jest.Mock;
+const mockedExeca = execa as unknown as MockedFunction<typeof execa> & {
+  stdout: Mock;
 };
 
 function createRejectedSubprocess(error: Error) {

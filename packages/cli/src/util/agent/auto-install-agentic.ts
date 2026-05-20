@@ -5,9 +5,9 @@ import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
 import chalk from 'chalk';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
+import { z } from 'zod';
 import type Client from '../client';
 import output from '../../output-manager';
-import getGlobalPathConfig from '../config/global-path';
 
 const PREFS_FILE = 'agent-preferences.json';
 const CLAUDE_LEGACY_PLUGIN_ID = 'vercel-plugin@vercel';
@@ -38,11 +38,21 @@ export function getPluginTargetForAgent(
   return AGENT_TO_TARGET[agentName];
 }
 
-interface AgentPreferences {
-  pluginDeclined?: boolean;
-  lastPromptedAt?: string;
-  pluginDismissed?: boolean;
-}
+const promptedAtSchema = z.codec(
+  z.union([z.iso.date(), z.iso.datetime()]),
+  z.date(),
+  {
+    decode: value => new Date(value),
+    encode: value => value.toISOString(),
+  }
+);
+
+const agentPreferencesSchema = z.object({
+  pluginDeclined: z.boolean().optional(),
+  lastPromptedAt: promptedAtSchema.optional(),
+});
+
+type AgentPreferences = z.output<typeof agentPreferencesSchema>;
 
 interface ClaudeListedPlugin {
   id: string;
@@ -90,34 +100,18 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-async function readPrefs(): Promise<AgentPreferences> {
-  try {
-    const raw = await readFile(
-      join(getGlobalPathConfig(), PREFS_FILE),
-      'utf-8'
-    );
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
+async function readPrefs(client: Client): Promise<AgentPreferences> {
+  return (
+    (await client.maybeReadConfig(PREFS_FILE, agentPreferencesSchema)) ?? {}
+  );
 }
 
-async function writePrefs(prefs: AgentPreferences): Promise<void> {
+async function writePrefs(
+  client: Client,
+  prefs: AgentPreferences
+): Promise<void> {
   try {
-    const normalizedPrefs: AgentPreferences = {};
-
-    if (prefs.pluginDeclined) {
-      normalizedPrefs.pluginDeclined = true;
-    }
-    if (prefs.lastPromptedAt) {
-      normalizedPrefs.lastPromptedAt = prefs.lastPromptedAt;
-    }
-
-    await writeFile(
-      join(getGlobalPathConfig(), PREFS_FILE),
-      JSON.stringify(normalizedPrefs, null, 2),
-      'utf-8'
-    );
+    await client.writeConfig(PREFS_FILE, agentPreferencesSchema, prefs);
   } catch {
     // ignore
   }
@@ -226,17 +220,26 @@ async function confirm(client: Client, message: string): Promise<boolean> {
   return client.input.confirm(message, true);
 }
 
-function getTodayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+function isSameDay(left: Date, right: Date): boolean {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
 }
 
 function wasPromptedToday(prefs: AgentPreferences): boolean {
-  return prefs.lastPromptedAt === getTodayKey();
+  return prefs.lastPromptedAt
+    ? isSameDay(prefs.lastPromptedAt, new Date())
+    : false;
 }
 
-async function markPromptedToday(prefs: AgentPreferences): Promise<void> {
-  prefs.lastPromptedAt = getTodayKey();
-  await writePrefs(prefs);
+async function markPromptedToday(
+  client: Client,
+  prefs: AgentPreferences
+): Promise<void> {
+  prefs.lastPromptedAt = new Date();
+  await writePrefs(client, prefs);
 }
 
 async function runCommand(
@@ -598,7 +601,7 @@ export async function autoInstallVercelPlugin(
   options?: { autoConfirm?: boolean; mode?: 'prompt' | 'apply' }
 ): Promise<void> {
   try {
-    const prefs = await readPrefs();
+    const prefs = await readPrefs(client);
     const applyMode = options?.mode === 'apply';
 
     if (!prefs.pluginDeclined || applyMode) {
@@ -631,7 +634,7 @@ export async function autoInstallVercelPlugin(
 
         if (applyMode) {
           prefs.pluginDeclined = false;
-          await writePrefs(prefs);
+          await writePrefs(client, prefs);
           await applyPluginActions(uninstalledTargets, claudePlan);
           return;
         }
@@ -648,26 +651,19 @@ export async function autoInstallVercelPlugin(
           confirmMessage = claudePrompt.confirm;
         }
 
-        // Agent command output is often interpreted as tool data. Keep plugin
-        // install prompts to TTY flows so non-TTY agent output stays clean.
-        if (client.isAgent && !client.stdin.isTTY) {
-          await markPromptedToday(prefs);
-          return;
-        }
-
         const promptMessage = promptMessages.join(' ').trim();
         if (promptMessage) {
           output.log(promptMessage);
         }
         const accepted = await confirm(client, confirmMessage);
-        await markPromptedToday(prefs);
+        await markPromptedToday(client, prefs);
         if (accepted) {
           prefs.pluginDeclined = false;
-          await writePrefs(prefs);
+          await writePrefs(client, prefs);
           await applyPluginActions(uninstalledTargets, claudePlan);
         } else {
           prefs.pluginDeclined = true;
-          await writePrefs(prefs);
+          await writePrefs(client, prefs);
         }
       }
     }
@@ -676,9 +672,9 @@ export async function autoInstallVercelPlugin(
   }
 }
 
-export async function showPluginTipIfNeeded(): Promise<void> {
+export async function showPluginTipIfNeeded(client: Client): Promise<void> {
   try {
-    const prefs = await readPrefs();
+    const prefs = await readPrefs(client);
     if (prefs.pluginDeclined) return;
 
     const targets = await getPluginTargets();

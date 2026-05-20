@@ -16,7 +16,7 @@ const {
  */
 const runBuildLambda = createRunBuildLambda(builder);
 
-jest.setTimeout(360000);
+vi.setConfig({ testTimeout: 360000, hookTimeout: 360000 });
 
 it('Should build the serverless-config-promise example', async () => {
   let error = null;

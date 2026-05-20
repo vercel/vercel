@@ -8,7 +8,7 @@ import { URL } from 'url';
 import frameworkList from '../src/frameworks';
 
 // bump timeout for Windows as network can be slower
-jest.setTimeout(15 * 1000);
+vi.setConfig({ testTimeout: 15 * 1000, hookTimeout: 15 * 1000 });
 
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
 

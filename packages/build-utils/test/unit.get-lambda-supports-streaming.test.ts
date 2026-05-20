@@ -65,4 +65,61 @@ describe('getLambdaSupportsStreaming()', () => {
     expect(result.supportsStreaming).toEqual(true);
     expect(result.error).toBeUndefined();
   });
+
+  it('returns false when awsLambdaHandler is set on a Nodejs lambda', async () => {
+    const result = await getLambdaSupportsStreaming(
+      {
+        awsLambdaHandler: 'index.handler',
+        launcherType: 'Nodejs',
+        handler: 'index.js',
+        runtime: 'nodejs20.x',
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(false);
+    expect(result.error).toBeUndefined();
+  });
+
+  it('returns false for awsLambdaHandler even when forceStreamingRuntime is true', async () => {
+    const result = await getLambdaSupportsStreaming(
+      {
+        awsLambdaHandler: 'index.handler',
+        launcherType: 'Nodejs',
+        handler: 'index.js',
+        runtime: 'nodejs20.x',
+      },
+      true
+    );
+    expect(result.supportsStreaming).toEqual(false);
+    expect(result.error).toBeUndefined();
+  });
+
+  it('returns false for awsLambdaHandler even when supportsResponseStreaming is true', async () => {
+    const result = await getLambdaSupportsStreaming(
+      {
+        awsLambdaHandler: 'index.handler',
+        supportsResponseStreaming: true,
+        launcherType: 'Nodejs',
+        handler: 'index.js',
+        runtime: 'nodejs20.x',
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(false);
+    expect(result.error).toBeUndefined();
+  });
+
+  it('treats empty awsLambdaHandler as not-an-AWS-handler', async () => {
+    const result = await getLambdaSupportsStreaming(
+      {
+        awsLambdaHandler: '',
+        launcherType: 'Nodejs',
+        handler: 'handler.js',
+        runtime: 'nodejs20.x',
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(true);
+    expect(result.error).toBeUndefined();
+  });
 });

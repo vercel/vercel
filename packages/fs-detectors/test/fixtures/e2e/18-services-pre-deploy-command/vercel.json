@@ -1,0 +1,11 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": { "framework": "services" },
+  "experimentalServices": {
+    "api": {
+      "entrypoint": "src/app.py",
+      "routePrefix": "/",
+      "preDeployCommand": "python -c \"import pathlib; pathlib.Path('src/version.py').write_text(\\\"VERSION = 'v0.0.0'\\\\n\\\")\""
+    }
+  }
+}

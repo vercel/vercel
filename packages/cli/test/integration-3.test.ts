@@ -25,7 +25,7 @@ import { teamPromise, userPromise } from './helpers/get-account';
 import { apiFetch } from './helpers/api-fetch';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
@@ -398,7 +398,7 @@ test('ensure the `scope` property works with username', async () => {
   expect(contentType).toBe('text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong now.json', async () => {
+test('reject deprecated now.json during deploy', async () => {
   const directory = await setupE2EFixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
@@ -410,10 +410,10 @@ test('try to create a builds deployments with wrong now.json', async () => {
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
-    'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
+    'Error: The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.'
   );
   expect(stderr).toContain(
-    'https://vercel.com/docs/concepts/projects/project-configuration'
+    'https://vercel.com/docs/projects/project-configuration'
   );
 });
 
@@ -510,7 +510,7 @@ test('create a production deployment', async () => {
 
   expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
   expect(targetCall.stderr).toMatch(/Setting target to production/gm);
-  expect(targetCall.stderr).toMatch(/Inspect: https:\/\/vercel.com\//gm);
+  expect(targetCall.stderr).toMatch(/Inspect[ ]+https:\/\/vercel\.com\//gm);
   expect(targetCall.stdout).toMatch(/https:\/\//gm);
 
   const { host: targetHost } = new URL(targetCall.stdout);
@@ -722,6 +722,101 @@ test('invalid deployment, projects and alias names', async () => {
     check('rm', '/'),
     check('ls', '/'),
   ]);
+});
+
+test('alias set accepts an alias URL as the first argument', async () => {
+  const directory = await setupE2EFixture('static-deployment');
+  const projectName = `alias-url-${session}`;
+  const firstAlias = `${projectName}-first.vercel.app`;
+  const secondAlias = `${projectName}-second.vercel.app`;
+  const thirdAlias = `${projectName}-third.vercel.app`;
+  const aliasesToRemove: string[] = [];
+
+  try {
+    const deployment = await execCli(binaryPath, [
+      directory,
+      '--public',
+      '--name',
+      projectName,
+      '--force',
+      '--yes',
+    ]);
+
+    expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
+
+    const deploymentUrl = deployment.stdout.match(/https:\/\/[^\s",]+/)?.[0];
+    if (!deploymentUrl) {
+      throw new Error(formatOutput(deployment));
+    }
+
+    const firstAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      deploymentUrl,
+      firstAlias,
+    ]);
+    expect(firstAliasOutput.exitCode, formatOutput(firstAliasOutput)).toBe(0);
+    aliasesToRemove.push(firstAlias);
+
+    const secondAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      firstAlias,
+      secondAlias,
+    ]);
+    expect(secondAliasOutput.exitCode, formatOutput(secondAliasOutput)).toBe(0);
+    aliasesToRemove.push(secondAlias);
+
+    const thirdAliasOutput = await execCli(binaryPath, [
+      'alias',
+      'set',
+      `https://${firstAlias}`,
+      thirdAlias,
+    ]);
+    expect(thirdAliasOutput.exitCode, formatOutput(thirdAliasOutput)).toBe(0);
+    aliasesToRemove.push(thirdAlias);
+  } finally {
+    await Promise.all(
+      aliasesToRemove.map(alias =>
+        execCli(binaryPath, ['alias', 'rm', alias, '--yes'])
+      )
+    );
+  }
+});
+
+test.each([
+  {
+    name: 'malformed URL',
+    idOrUrl: 'https://%',
+    expectedIdOrUrl: 'https://%',
+    target: `malformed-source-url-${session}.vercel.app`,
+  },
+  {
+    name: 'unknown ID',
+    idOrUrl: `unknown-source-id-${session}`,
+    expectedIdOrUrl: `unknown-source-id-${session}`,
+    target: `unknown-source-id-${session}.vercel.app`,
+  },
+  {
+    name: 'unknown URL',
+    idOrUrl: `https://unknown-source-url-${session}.vercel.app`,
+    expectedIdOrUrl: `unknown-source-url-${session}.vercel.app`,
+    target: `unknown-source-url-target-${session}.vercel.app`,
+  },
+])('alias set rejects $name as the first argument', async ({
+  idOrUrl,
+  expectedIdOrUrl,
+  target,
+}: {
+  idOrUrl: string;
+  expectedIdOrUrl: string;
+  target: string;
+}) => {
+  const output = await execCli(binaryPath, ['alias', 'set', idOrUrl, target]);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toContain(`Failed to find ID or URL`);
+  expect(output.stderr).toContain(expectedIdOrUrl);
 });
 
 test('vercel certs ls', async () => {

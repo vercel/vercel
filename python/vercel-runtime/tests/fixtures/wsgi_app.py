@@ -9,6 +9,8 @@ def app(environ, start_response):
     body = f"{method} {path}"
     if query:
         body += f"?{query}"
+    if path == "/oidc":
+        body = environ.get("HTTP_X_VERCEL_OIDC_TOKEN", "")
 
     start_response("200 OK", [("Content-Type", "text/plain")])
     return [body.encode()]

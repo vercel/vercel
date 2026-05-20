@@ -115,9 +115,12 @@ export default async function list(
 function processFlags(
   opts: Record<string, any>,
   telemetryClient: ProjectListTelemetryClient
-): { deprecated: boolean; next?: number; json: boolean } | { error: string } {
+):
+  | { deprecated: boolean; next?: number; json: boolean; filter?: string }
+  | { error: string } {
   const deprecated = opts['--update-required'] || false;
   const next = opts['--next'];
+  const filter = opts['--filter'];
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     return { error: formatResult.error };
@@ -128,12 +131,17 @@ function processFlags(
   telemetryClient.trackCliOptionNext(next);
   telemetryClient.trackCliOptionFormat(opts['--format']);
   telemetryClient.trackCliFlagJson(opts['--json']);
+  telemetryClient.trackCliOptionFilter(filter);
 
-  return { deprecated, next, json };
+  return { deprecated, next, json, filter };
 }
 
 // Helper function to build projects URL
-function buildProjectsUrl(flags: { deprecated: boolean; next?: number }) {
+function buildProjectsUrl(flags: {
+  deprecated: boolean;
+  next?: number;
+  filter?: string;
+}) {
   let url = BASE_PROJECTS_URL;
 
   if (flags.deprecated) {
@@ -141,6 +149,9 @@ function buildProjectsUrl(flags: { deprecated: boolean; next?: number }) {
   }
   if (flags.next) {
     url += `&until=${flags.next}`;
+  }
+  if (flags.filter) {
+    url += `&search=${encodeURIComponent(flags.filter)}`;
   }
 
   return url;

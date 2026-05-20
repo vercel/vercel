@@ -31,6 +31,12 @@ describe('selectOrg', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
       await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
+
+      // Anti-regression: spinner copy was renamed from "Loading scopes…" to
+      // "Loading teams…". A regression to the old copy would break the rename.
+      const fullOutput = client.stderr.getFullOutput();
+      expect(fullOutput).not.toContain('Loading scopes');
+      expect(fullOutput).toContain('Loading teams');
     });
 
     it('automatically selects the correct scope when autoconfirm flag is passed', async () => {

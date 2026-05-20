@@ -20,6 +20,7 @@ export const rolldown = async (
     'entrypoint' | 'workPath' | 'repoRootPath' | 'config'
   > & {
     span?: Span;
+    defaultFormat?: 'esm' | 'cjs';
   }
 ) => {
   const files: Files = {};

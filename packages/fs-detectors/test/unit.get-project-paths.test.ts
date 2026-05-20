@@ -56,8 +56,8 @@ describe.each<{
   it(testName, async () => {
     const fixture = path.join(__dirname, 'fixtures', fixturePath);
     const fs = new LocalFileSystemDetector(fixture);
-    const mockReaddir = jest.fn().mockImplementation(fs.readdir);
-    const mockHasPath = jest.fn().mockImplementation(fs.hasPath);
+    const mockReaddir = vi.fn().mockImplementation(fs.readdir);
+    const mockHasPath = vi.fn().mockImplementation(fs.hasPath);
     fs.readdir = mockReaddir;
     fs.hasPath = mockHasPath;
     const actualPaths = await getProjectPaths({ fs, skipPaths });

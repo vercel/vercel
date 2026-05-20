@@ -16,7 +16,7 @@ import type { CLIProcess } from './helpers/types';
 import { randomBytes } from 'crypto';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 
@@ -184,10 +184,11 @@ test('default command should work with --cwd option', async () => {
 
   const url = stdout;
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
+  // Root README.md is intentionally excluded from zero-config static deployments.
+  const deploymentResult = await nodeFetch(`${url}/content.txt`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
-    'readme contents for deploy-default-with-conflicting-sub-directory'
+    'root contents for deploy-default-with-conflicting-sub-directory'
   );
 });
 
@@ -291,7 +292,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
   expect(json.buildCommand).toBe('mkdir public && echo "1" > public/index.txt');
 });
 
-test('deploy using only now.json with `redirects` defined', async () => {
+test('deploy using only vercel.json with `redirects` defined', async () => {
   const target = await setupE2EFixture('redirects-v2');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
@@ -372,23 +373,21 @@ test('deploy from a nested directory', async () => {
     },
   });
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -410,23 +409,21 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
     }
   );
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });

@@ -108,20 +108,49 @@ const E2E_TEST_SCRIPTS = [
 ];
 
 const packageOptionsOverrides = {
-  // The vercel CLI package has enough test files that passing them all as
-  // command-line arguments exceeds the Windows cmd.exe ~8191 character limit.
-  vercel: { max: 2 },
+  // The vercel CLI has many test files. Passing them as CLI args hits the Windows
+  // cmd.exe ~8191 char arg limit, so we route them through the VITEST_TEST_FILES
+  // env var instead. useEnvPaths signals the workflow to set that var and omit
+  // the -- args from the turbo command.
+  //
+  // Why max: 7?
+  // Per-job overhead on the slowest runner (Windows) is ~450s (checkout, node
+  // setup, Rust toolchain, pnpm install, build). At max=7, each chunk has ~48
+  // test files taking ~130s to run. Going beyond 7 adds more jobs and runner cost
+  // but saves <30s of wall clock, since overhead already dominates test time.
+  // Benchmark (wall clock of the unit-test phase):
+  //   max=2 (old): ~22 min    max=4: ~10 min    max=7: ~9 min    max=14: ~8.5 min
+  vercel: { max: 7, useEnvPaths: true },
 };
 
 const DEFAULT_TEST_FILE_EXTENSIONS = ['js', 'ts', 'mjs', 'mts'];
 const DEFAULT_TEST_NAME_PATTERNS = ['test', 'spec'];
 
+// Packages whose build requires the Rust toolchain (cargo + wasm32-wasip2).
+// @vercel/python-analysis compiles a wasm binary; @vercel/build-utils depends on
+// it and is in turn a dependency of almost every other builder package.
+// Rather than walking the full dep graph at chunk time, we enumerate the roots:
+// any package that directly depends on one of these will get needsRust=true via
+// the dep-check below.
+const RUST_BUILD_ROOTS = new Set([
+  '@vercel/python-analysis',
+  '@vercel/build-utils',
+]);
+
 function readPackageManifest(rootPath, packageJsonPath) {
   const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const allDeps = {
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+  };
+  const needsRust =
+    RUST_BUILD_ROOTS.has(manifest.name) ||
+    Object.keys(allDeps).some(dep => RUST_BUILD_ROOTS.has(dep));
   return {
     packagePath: path.relative(rootPath, path.dirname(packageJsonPath)),
     packageJson: manifest,
     packageName: manifest.name,
+    needsRust,
   };
 }
 
@@ -146,11 +175,6 @@ function getScriptTestPatterns(packageJson, scriptName) {
   const pnpmTestPatterns = getPatternsAfterCommand(script, 'pnpm test');
   if (pnpmTestPatterns.length > 0) {
     return pnpmTestPatterns;
-  }
-
-  const jestPatterns = getPatternsAfterCommand(script, 'jest');
-  if (jestPatterns.length > 0) {
-    return jestPatterns;
   }
 
   if (script === 'pnpm test') {
@@ -262,6 +286,28 @@ function getRunnerOptions(scriptName, packageName) {
   return runnerOptions;
 }
 
+function getRunnerShort(runner) {
+  switch (runner) {
+    case 'ubuntu-latest':
+      return 'linux';
+    case 'macos-14':
+      return 'mac';
+    case 'windows-latest':
+      return 'win';
+    default:
+      return runner;
+  }
+}
+
+function getPackageDisplayName(packageName) {
+  switch (packageName) {
+    case 'vercel':
+      return 'CLI';
+    default:
+      return packageName;
+  }
+}
+
 async function getChunkedTests() {
   let scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
@@ -315,7 +361,7 @@ async function getChunkedTests() {
         affectedPackageSet.size === 0 || affectedPackageSet.has(packageName)
       );
     })
-    .forEach(({ packageJson, packageName, packagePath }) => {
+    .forEach(({ packageJson, packageName, packagePath, needsRust }) => {
       for (const scriptName of scripts) {
         const patterns = getScriptTestPatterns(packageJson, scriptName);
         if (patterns.length === 0) {
@@ -332,7 +378,9 @@ async function getChunkedTests() {
         }
 
         const packagePathAndName = `${packagePath},${packageName}`;
-        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {};
+        testsToRun[packagePathAndName] = testsToRun[packagePathAndName] || {
+          needsRust,
+        };
         testsToRun[packagePathAndName][scriptName] = testPaths;
       }
     });
@@ -340,7 +388,9 @@ async function getChunkedTests() {
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
+      const { needsRust } = scriptNames;
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
+        if (scriptName === 'needsRust') return [];
         const runnerOptions = getRunnerOptions(scriptName, packageName);
         const {
           runners,
@@ -348,6 +398,7 @@ async function getChunkedTests() {
           max,
           testScript,
           nodeVersions = ['22'],
+          useEnvPaths = false,
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
@@ -355,6 +406,13 @@ async function getChunkedTests() {
           (chunk, chunkNumber, allChunks) => {
             return nodeVersions.flatMap(nodeVersion => {
               return runners.map(runner => {
+                const runnerShort = getRunnerShort(runner);
+                const packageDisplayName = getPackageDisplayName(packageName);
+                const chunkSuffix =
+                  allChunks.length > 1
+                    ? ` [${chunkNumber + 1}/${allChunks.length}]`
+                    : '';
+                const label = `${packageDisplayName} (${runnerShort}/node${nodeVersion})${chunkSuffix}`;
                 return {
                   runner,
                   packagePath,
@@ -370,6 +428,9 @@ async function getChunkedTests() {
                   ),
                   chunkNumber: chunkNumber + 1,
                   allChunksLength: allChunks.length,
+                  useEnvPaths,
+                  needsRust,
+                  label,
                 };
               });
             });

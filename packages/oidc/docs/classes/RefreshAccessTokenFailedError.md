@@ -1,157 +1,139 @@
+[**@vercel/oidc**](../README.md)
+
+---
+
 # Class: RefreshAccessTokenFailedError
+
+Defined in: [packages/oidc/src/auth-errors.ts:18](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L18)
 
 Error thrown when attempting to refresh the authentication token fails.
 This includes cases where no refresh token is available.
 
-## Hierarchy
+## Extends
 
-- [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)
-
-  ↳ **`RefreshAccessTokenFailedError`**
-
-## Table of contents
-
-### Constructors
-
-- [constructor](RefreshAccessTokenFailedError.md#constructor)
-
-### Properties
-
-- [message](RefreshAccessTokenFailedError.md#message)
-- [name](RefreshAccessTokenFailedError.md#name)
-- [stack](RefreshAccessTokenFailedError.md#stack)
-- [prepareStackTrace](RefreshAccessTokenFailedError.md#preparestacktrace)
-- [stackTraceLimit](RefreshAccessTokenFailedError.md#stacktracelimit)
-
-### Methods
-
-- [captureStackTrace](RefreshAccessTokenFailedError.md#capturestacktrace)
+- [`Error`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error)
 
 ## Constructors
 
-### constructor
+### Constructor
 
-• **new RefreshAccessTokenFailedError**(`cause?`)
+> **new RefreshAccessTokenFailedError**(`cause?`): `RefreshAccessTokenFailedError`
+
+Defined in: [packages/oidc/src/auth-errors.ts:20](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L20)
 
 #### Parameters
 
-| Name     | Type      |
-| :------- | :-------- |
-| `cause?` | `unknown` |
+##### cause?
+
+`unknown`
+
+#### Returns
+
+`RefreshAccessTokenFailedError`
 
 #### Overrides
 
-Error.constructor
-
-#### Defined in
-
-[packages/oidc/src/auth-errors.ts:20](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L20)
+`Error.constructor`
 
 ## Properties
 
 ### message
 
-• **message**: `string`
+> **message**: `string`
+
+Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.es5.d.ts:1077
 
 #### Inherited from
 
-Error.message
-
-#### Defined in
-
-node_modules/.pnpm/typescript@4.9.4/node_modules/typescript/lib/lib.es5.d.ts:1054
+`Error.message`
 
 ---
 
 ### name
 
-• **name**: `string` = `'RefreshAccessTokenFailedError'`
+> **name**: `string` = `'RefreshAccessTokenFailedError'`
+
+Defined in: [packages/oidc/src/auth-errors.ts:19](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L19)
 
 #### Overrides
 
-Error.name
-
-#### Defined in
-
-[packages/oidc/src/auth-errors.ts:19](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L19)
+`Error.name`
 
 ---
 
-### stack
+### stack?
 
-• `Optional` **stack**: `string`
+> `optional` **stack?**: `string`
+
+Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.es5.d.ts:1078
 
 #### Inherited from
 
-Error.stack
-
-#### Defined in
-
-node_modules/.pnpm/typescript@4.9.4/node_modules/typescript/lib/lib.es5.d.ts:1055
+`Error.stack`
 
 ---
 
-### prepareStackTrace
+### prepareStackTrace?
 
-▪ `Static` `Optional` **prepareStackTrace**: (`err`: [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), `stackTraces`: `CallSite`[]) => `any`
+> `static` `optional` **prepareStackTrace?**: (`err`, `stackTraces`) => `any`
 
-#### Type declaration
-
-▸ (`err`, `stackTraces`): `any`
+Defined in: node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:28
 
 Optional override for formatting stack traces
 
-**`See`**
+#### Parameters
 
-https://v8.dev/docs/stack-trace-api#customizing-stack-traces
+##### err
 
-##### Parameters
+[`Error`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error)
 
-| Name          | Type                                                                                              |
-| :------------ | :------------------------------------------------------------------------------------------------ |
-| `err`         | [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) |
-| `stackTraces` | `CallSite`[]                                                                                      |
+##### stackTraces
 
-##### Returns
+`CallSite`[]
+
+#### Returns
 
 `any`
 
+#### See
+
+https://v8.dev/docs/stack-trace-api#customizing-stack-traces
+
 #### Inherited from
 
-Error.prepareStackTrace
-
-#### Defined in
-
-node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:28
+`Error.prepareStackTrace`
 
 ---
 
 ### stackTraceLimit
 
-▪ `Static` **stackTraceLimit**: `number`
+> `static` **stackTraceLimit**: `number`
+
+Defined in: node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:30
 
 #### Inherited from
 
-Error.stackTraceLimit
-
-#### Defined in
-
-node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:30
+`Error.stackTraceLimit`
 
 ## Methods
 
-### captureStackTrace
+### captureStackTrace()
 
-▸ `Static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
+> `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
+
+Defined in: node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:21
 
 Create .stack property on a target object
 
 #### Parameters
 
-| Name              | Type                                                                                                    |
-| :---------------- | :------------------------------------------------------------------------------------------------------ |
-| `targetObject`    | `object`                                                                                                |
-| `constructorOpt?` | [`Function`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) |
+##### targetObject
+
+`object`
+
+##### constructorOpt?
+
+[`Function`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Function)
 
 #### Returns
 
@@ -159,8 +141,4 @@ Create .stack property on a target object
 
 #### Inherited from
 
-Error.captureStackTrace
-
-#### Defined in
-
-node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:21
+`Error.captureStackTrace`
