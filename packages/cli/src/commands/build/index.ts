@@ -267,7 +267,7 @@ export default async function main(client: Client): Promise<number> {
   // If repo linked, update `cwd` to the repo root
   let link = await rootSpan
     .child('vc.getProjectLink')
-    .trace(() => getProjectLink(client, cwd, projectNameOrId));
+    .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
 
   // No local link matched `--project`; resolve via API before the
   // settings-pull prompt would silently re-link to the wrong project.

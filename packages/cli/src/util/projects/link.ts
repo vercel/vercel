@@ -78,23 +78,41 @@ export function getVercelDirectory(cwd: string): string {
 export async function getProjectLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string,
+  projectNameIsExplicit?: boolean
 ): Promise<ProjectLink | null> {
   // Prefer an explicit per-directory link (`.vercel/project.json`) over a
   // repository-level link (`.vercel/repo.json`). This prevents scenarios where
   // a freshly-created local link (e.g. after `vc link`) is ignored and the
   // user is re-prompted to select a repo-linked project again.
+  // When `projectNameIsExplicit` is true, the caller is resolving a user-
+  // supplied `--project` value, so mismatched local links must not win.
   const dirLink = await getLinkFromDir(getVercelDirectory(path));
   if (dirLink) {
-    return dirLink;
+    if (!projectNameIsExplicit || !projectName) {
+      return dirLink;
+    }
+
+    if (
+      dirLink.projectId === projectName ||
+      dirLink.projectName === projectName
+    ) {
+      return dirLink;
+    }
   }
-  return await getProjectLinkFromRepoLink(client, path, projectName);
+  return await getProjectLinkFromRepoLink(
+    client,
+    path,
+    projectName,
+    projectNameIsExplicit
+  );
 }
 
 async function getProjectLinkFromRepoLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string,
+  projectNameIsExplicit?: boolean
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
@@ -105,7 +123,12 @@ async function getProjectLinkFromRepoLink(
     relative(repoLink.rootPath, path)
   );
   let project: RepoProjectConfig | undefined;
-  if (projects.length === 1) {
+
+  if (projectName && projectNameIsExplicit) {
+    project = repoLink.repoConfig.projects.find(
+      p => p.id === projectName || p.name === projectName
+    );
+  } else if (projects.length === 1) {
     project = projects[0];
   } else {
     const selectableProjects =
@@ -293,7 +316,7 @@ export async function getLinkedProject(
   let link =
     VERCEL_ORG_ID && VERCEL_PROJECT_ID
       ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path, projectName);
+      : await getProjectLink(client, path, projectName, apiFallback);
 
   // Resolve `projectName` via the API when no local link matches. Enables
   // non-interactive CI use (e.g. `vercel deploy --project my-app`).

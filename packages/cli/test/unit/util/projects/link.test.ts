@@ -294,6 +294,57 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toBeUndefined();
   });
 
+  it('should let explicit projectName override `project.json`', async () => {
+    const cwd = setupTmpDir('project-name-over-project-json');
+    const vercelDir = join(cwd, '.vercel');
+    await mkdirp(vercelDir);
+    await writeJSON(join(vercelDir, 'project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'linked-project',
+      projectName: 'linked-project',
+    });
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'explicit-project',
+      name: 'explicit-project',
+      accountId: 'team_dummy',
+    });
+
+    const link = await getLinkedProject(client, cwd, 'explicit-project', true);
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('explicit-project');
+    expect(link.repoRoot).toBeUndefined();
+  });
+
+  it('should let explicit projectName override repo path auto-selection', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmX6P93ChNDoZP',
+      name: 'monorepo-marketing',
+    });
+
+    const link = await getLinkedProject(
+      client,
+      join(cwd, 'dashboard'),
+      'monorepo-marketing',
+      true
+    );
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('QmX6P93ChNDoZP');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
   it('should return link with legacy `repo.json` (top-level orgId)', async () => {
     const cwd = fixture('monorepo-link-legacy');
 
