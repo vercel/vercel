@@ -101,11 +101,13 @@ export async function deviceAuthorizationRequest(options?: {
 }): Promise<Response> {
   const body = new URLSearchParams({
     client_id: VERCEL_CLI_CLIENT_ID,
-    scope: 'openid offline_access',
   });
 
   if (options?.refresh_token) {
     body.set('refresh_token', options.refresh_token);
+    body.set('acr_values', 'urn:vercel:loa:sudo');
+  } else {
+    body.set('scope', 'openid offline_access');
   }
 
   return await nodeFetch((await as()).device_authorization_endpoint, {
