@@ -6,13 +6,15 @@ import { printProjectNotFoundError } from '../../../../src/util/projects/project
 import * as getScopeModule from '../../../../src/util/get-scope';
 
 describe('printProjectNotFoundError', () => {
-  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let exitSpy: { mockRestore: () => void };
 
   beforeEach(() => {
     client.reset();
     exitSpy = vi
       .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as () => never);
+      .mockImplementation((() => {}) as () => never) as unknown as {
+      mockRestore: () => void;
+    };
   });
 
   afterEach(() => {
