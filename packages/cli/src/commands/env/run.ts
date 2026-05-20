@@ -167,6 +167,9 @@ export default async function run(client: Client): Promise<number> {
         return 1;
       }
 
+      // Local stand-in for the broker service boundary. In the service-backed
+      // version this should become a session creation call, not in-process
+      // brokering with real values.
       brokeredEnv = await startBrokeredEnvService(records.env);
       output.log(
         `Brokering ${brokeredEnv.substitutableCount} ${environment} Environment Variable${brokeredEnv.substitutableCount === 1 ? '' : 's'} via local broker on ${brokeredEnv.broker.url}` +
@@ -179,6 +182,8 @@ export default async function run(client: Client): Promise<number> {
       }
 
       const existingNodeOpts = process.env.NODE_OPTIONS ?? '';
+      // Preload the shim in the child process so it can patch network APIs
+      // before user code opens outbound connections.
       const requireFlag = `--require ${JSON.stringify(shimPath)}`;
       const nodeOptions = existingNodeOpts
         ? `${requireFlag} ${existingNodeOpts}`
