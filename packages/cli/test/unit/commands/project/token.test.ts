@@ -103,4 +103,67 @@ describe('project token', () => {
 
     fetchSpy.mockRestore();
   });
+
+  it('uses fast path when linked and skips project validation', async () => {
+    const team = useTeam('team_fast');
+
+    // Set up the link file
+    const cwd = setupTmpDir();
+    await outputFile(
+      join(cwd, '.vercel', 'project.json'),
+      JSON.stringify({ orgId: team.id, projectId: 'prj_fast' })
+    );
+    client.cwd = cwd;
+
+    // Only mock the token endpoint - no useUser/useProject needed
+    let requestBody: unknown;
+    client.scenario.post('/projects/:projectId/token', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'fast-token' });
+    });
+
+    client.setArgv('project', 'token');
+
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stdout.getFullOutput()).toBe('fast-token\n');
+    expect(requestBody).toEqual({ source: 'vercel-cli' });
+  });
+
+  it('falls back to validation when fast path fails', async () => {
+    const team = useTeam('team_fallback');
+    useUser();
+    useProject({
+      ...defaultProject,
+      id: 'prj_fallback',
+      name: 'fallback-project',
+      accountId: team.id,
+    });
+
+    const cwd = setupTmpDir();
+    await outputFile(
+      join(cwd, '.vercel', 'project.json'),
+      JSON.stringify({ orgId: team.id, projectId: 'prj_fallback' })
+    );
+    client.cwd = cwd;
+
+    let attempts = 0;
+    client.scenario.post('/projects/:projectId/token', (_req, res) => {
+      attempts++;
+      if (attempts === 1) {
+        res.status(404).json({ error: { message: 'Not found' } });
+      } else {
+        res.json({ token: 'fallback-token' });
+      }
+    });
+
+    client.setArgv('project', 'token');
+
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stdout.getFullOutput()).toBe('fallback-token\n');
+    expect(attempts).toBe(2);
+  });
 });
