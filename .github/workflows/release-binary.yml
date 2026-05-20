@@ -266,10 +266,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
+          set -euo pipefail
+          release_url="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$TAG"
           for i in $(seq 1 30); do
-            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            response="$(mktemp)"
+            status="$(curl -sS -L -o "$response" -w "%{http_code}" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$release_url")"
+
+            if [[ "$status" == "200" ]]; then
               echo "Release $TAG ready"
               exit 0
+            fi
+            if [[ "$status" != "404" ]]; then
+              cat "$response"
             fi
             echo "Waiting for release $TAG to be created ($i/30)..."
             sleep 10
@@ -285,11 +297,61 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          gh release upload "$TAG" \
-            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}" \
-            "dist-bin/${{ matrix.asset }}${{ matrix.ext }}.sha256" \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber
+          set -euo pipefail
+
+          auth_headers=(
+            -H "Authorization: Bearer $GH_TOKEN"
+            -H "Accept: application/vnd.github+json"
+            -H "X-GitHub-Api-Version: 2022-11-28"
+          )
+          release_json="$(mktemp)"
+          status="$(curl -sS -L -o "$release_json" -w "%{http_code}" \
+            "${auth_headers[@]}" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
+
+          if [[ "$status" != "200" ]]; then
+            cat "$release_json"
+            echo "::error::Could not fetch GitHub Release $TAG"
+            exit 1
+          fi
+
+          release_id="$(node -e "const fs = require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).id)" "$release_json")"
+          upload_url="$(node -e "const fs = require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).upload_url.split('{')[0])" "$release_json")"
+
+          upload_asset() {
+            local file="$1"
+            local name
+            name="$(basename "$file")"
+            local encoded_name
+            encoded_name="$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$name")"
+
+            local assets_json
+            assets_json="$(mktemp)"
+            curl -sS -L \
+              "${auth_headers[@]}" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" \
+              > "$assets_json"
+
+            local existing_asset_id
+            existing_asset_id="$(node -e "const fs = require('fs'); const assets = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); const asset = assets.find(asset => asset.name === process.argv[2]); console.log(asset?.id ?? '')" "$assets_json" "$name")"
+
+            if [[ -n "$existing_asset_id" ]]; then
+              curl -sS -L -X DELETE \
+                "${auth_headers[@]}" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/assets/$existing_asset_id" \
+                -o /dev/null
+            fi
+
+            curl -sS -L -X POST \
+              "${auth_headers[@]}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$file" \
+              "$upload_url?name=$encoded_name" \
+              -o /dev/null
+          }
+
+          upload_asset "dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
+          upload_asset "dist-bin/${{ matrix.asset }}${{ matrix.ext }}.sha256"
 
   publish-npm:
     name: Publish native npm packages
