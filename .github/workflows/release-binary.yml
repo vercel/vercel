@@ -341,7 +341,7 @@ jobs:
             assets_json="$(mktemp)"
             request "$assets_json" \
               "${auth_headers[@]}" \
-              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100"
 
             local existing_asset_id
             existing_asset_id="$(node -e "const fs = require('fs'); const assets = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); const asset = assets.find(asset => asset.name === process.argv[2]); console.log(asset?.id ?? '')" "$assets_json" "$name")"
@@ -402,7 +402,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: 'true'
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             version="$(node -p "require('./packages/cli/package.json').version")"
