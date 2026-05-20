@@ -168,8 +168,8 @@ export default async function run(client: Client): Promise<number> {
       }
 
       // Local stand-in for the broker service boundary. In the service-backed
-      // version this should become a session creation call, not in-process
-      // brokering with real values.
+      // version, requests should go to the broker service with CLI auth instead
+      // of brokering with real values in this process.
       brokeredEnv = await startBrokeredEnvService(records.env);
       output.log(
         `Brokering ${brokeredEnv.substitutableCount} ${environment} Environment Variable${brokeredEnv.substitutableCount === 1 ? '' : 's'} via local broker on ${brokeredEnv.broker.url}` +
