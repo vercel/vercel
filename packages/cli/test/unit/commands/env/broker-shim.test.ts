@@ -12,7 +12,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-const shimPath = resolve(process.cwd(), 'dist/commands/env/proxy-shim.cjs');
+const shimPath = resolve(process.cwd(), 'dist/commands/env/broker-shim.cjs');
 
 const servers: http.Server[] = [];
 const brokers: Broker[] = [];
@@ -20,7 +20,7 @@ const brokers: Broker[] = [];
 beforeAll(() => {
   mkdirSync(dirname(shimPath), { recursive: true });
   buildSync({
-    entryPoints: [resolve(process.cwd(), 'src/commands/env/proxy-shim.ts')],
+    entryPoints: [resolve(process.cwd(), 'src/commands/env/broker-shim.ts')],
     outfile: shimPath,
     bundle: false,
     format: 'cjs',
@@ -57,7 +57,7 @@ describe('env broker shim', () => {
   });
 
   it('preserves Request stream bodies when patching fetch', async () => {
-    const dummy = 'vproxy_turso_auth_token_0123456789abcdefabcd_xx';
+    const dummy = 'vbroker_turso_auth_token_0123456789abcdefabcd_xx';
     const real = 'real-turso-token-0123456789abcdef';
 
     const upstream = http.createServer((req, res) => {
@@ -107,8 +107,8 @@ describe('env broker shim', () => {
       env: {
         ...process.env,
         NODE_OPTIONS: `--require ${JSON.stringify(shimPath)}`,
-        VC_ENV_PROXY_URL: broker.url,
-        VC_ENV_PROXY_SESSION: 'test-session',
+        VC_ENV_BROKER_URL: broker.url,
+        VC_ENV_BROKER_LOCAL_TOKEN: 'test-session',
       },
     });
 

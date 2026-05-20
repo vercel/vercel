@@ -14,11 +14,11 @@ vi.mock('execa', () => ({
 import execa from 'execa';
 
 // Plain dummy used for non-URL secrets.
-const DUMMY_RE = /^vproxy_[a-z0-9_]+_[0-9a-f]{20}_xx$/;
+const DUMMY_RE = /^vbroker_[a-z0-9_]+_[0-9a-f]{20}_xx$/;
 // URL-shaped dummy used when the real secret starts with a `scheme://` so
 // client-side URL validators (libsql, pg, redis, ...) don't reject it.
 const URL_DUMMY_RE =
-  /^[a-z][a-z0-9+.-]*:\/\/vproxy-[a-z0-9-]+-[0-9a-f]{20}\.xx$/;
+  /^[a-z][a-z0-9+.-]*:\/\/vbroker-[a-z0-9-]+-[0-9a-f]{20}\.xx$/;
 
 describe('env run --experimental', () => {
   beforeEach(() => {
@@ -98,7 +98,7 @@ describe('env run --experimental', () => {
       expect(args).toEqual(['dev']);
       expect(opts.env.REDIS_CONNECTION_STRING).toMatch(URL_DUMMY_RE);
       expect(opts.env.SQL_CONNECTION_STRING).toMatch(DUMMY_RE);
-      expect(opts.env.NODE_OPTIONS).toMatch(/--require .*proxy-shim\.cjs/);
+      expect(opts.env.NODE_OPTIONS).toMatch(/--require .*broker-shim\.cjs/);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:run', value: 'run' },
@@ -152,9 +152,11 @@ describe('env run --experimental', () => {
       expect(passedEnv.SQL_CONNECTION_STRING).not.toContain('P455W0RD');
 
       // The shim coordinates: broker URL, session ID, and --require shim.
-      expect(passedEnv.VC_ENV_PROXY_URL).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
-      expect(passedEnv.VC_ENV_PROXY_SESSION).toMatch(/^[0-9a-f]{32}$/);
-      expect(passedEnv.NODE_OPTIONS).toMatch(/--require .*proxy-shim\.cjs/);
+      expect(passedEnv.VC_ENV_BROKER_URL).toMatch(
+        /^http:\/\/127\.0\.0\.1:\d+$/
+      );
+      expect(passedEnv.VC_ENV_BROKER_LOCAL_TOKEN).toMatch(/^[0-9a-f]{32}$/);
+      expect(passedEnv.NODE_OPTIONS).toMatch(/--require .*broker-shim\.cjs/);
     });
 
     it('defaults to development environment', async () => {

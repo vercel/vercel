@@ -1,5 +1,5 @@
 // Local broker for `vc env run --experimental`. Listens on a random port and:
-//   - Accepts POST /proxy envelopes from the subprocess shim.
+//   - Accepts POST /broker envelopes from the subprocess shim.
 //   - Substitutes dummy values -> real values in the request (url/headers/body).
 //   - Makes the real outbound call (http or https).
 //   - Substitutes real values -> dummy values in the response (defense in
@@ -104,9 +104,9 @@ function makeDummy(key: string, real: string): string {
   const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const m = real.match(URL_LIKE_RE);
   if (m) {
-    return `${m[1]}://vproxy-${slug}-${nonce}.xx`;
+    return `${m[1]}://vbroker-${slug}-${nonce}.xx`;
   }
-  return `vproxy_${slug.replace(/-/g, '_')}_${nonce}_xx`;
+  return `vbroker_${slug.replace(/-/g, '_')}_${nonce}_xx`;
 }
 
 function addSubstitution(
@@ -204,7 +204,7 @@ function substituteString(s: string, table: Map<string, string>): string {
 
 function substituteBuffer(buf: Buffer, table: Map<string, string>): Buffer {
   // ASCII dummies are safe to byte-replace even in binary bodies because the
-  // dummy alphabet (`vproxy_..._xx` or `<scheme>://vproxy-...-.xx`) is pure
+  // dummy alphabet (`vbroker_..._xx` or `<scheme>://vbroker-...-.xx`) is pure
   // ASCII and can't collide with non-ASCII bytes.
   let out = buf;
   for (const [from, to] of table) {
@@ -314,7 +314,7 @@ function doUpstreamRequest(
 }
 
 function parseTcpConnectTarget(url: string): { host: string; port: number } {
-  const target = new URL(url, 'http://vproxy.local');
+  const target = new URL(url, 'http://vbroker.local');
   const host = target.searchParams.get('host');
   const port = Number(target.searchParams.get('port'));
   if (!host || !Number.isInteger(port) || port <= 0 || port > 65535) {
@@ -353,12 +353,12 @@ export async function startBroker(opts: {
   const { subs, sessionId } = opts;
 
   const server = http.createServer(async (req, res) => {
-    if (req.method !== 'POST' || req.url !== '/proxy') {
+    if (req.method !== 'POST' || req.url !== '/broker') {
       res.writeHead(404, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'not found' }));
       return;
     }
-    if (req.headers['x-vproxy-session'] !== sessionId) {
+    if (req.headers['x-vc-env-broker-token'] !== sessionId) {
       res.writeHead(403, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'bad session' }));
       return;
@@ -455,7 +455,7 @@ export async function startBroker(opts: {
   });
 
   server.on('connect', (req, socket, head) => {
-    if (req.headers['x-vproxy-session'] !== sessionId) {
+    if (req.headers['x-vc-env-broker-token'] !== sessionId) {
       socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
       socket.end();
       return;

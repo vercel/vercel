@@ -12,14 +12,14 @@ import { URL } from 'node:url';
 import type { Socket } from 'node:net';
 import type { ClientRequest } from 'node:http';
 
-interface ProxyEnvelopeRequest {
+interface BrokerEnvelopeRequest {
   method: string;
   url: string;
   headers: Record<string, string>;
   bodyBase64: string;
 }
 
-interface ProxyEnvelopeReply {
+interface BrokerEnvelopeReply {
   status: number;
   statusMessage?: string;
   headers?: Record<string, string>;
@@ -38,18 +38,18 @@ interface NetConnectParsed {
   callback?: () => void;
 }
 
-const brokerUrlStr = process.env.VC_ENV_PROXY_URL;
+const brokerUrlStr = process.env.VC_ENV_BROKER_URL;
 if (!brokerUrlStr) {
   // Subprocess was not started via brokered env run (or env was cleared).
 } else {
   const broker = new URL(brokerUrlStr);
-  const sessionId = process.env.VC_ENV_PROXY_SESSION || '';
+  const localToken = process.env.VC_ENV_BROKER_LOCAL_TOKEN || '';
   const tcpBrokerPort =
-    process.env.VC_ENV_PROXY_TCP_PORT || broker.port || '80';
+    process.env.VC_ENV_BROKER_TCP_RELAY_PORT || broker.port || '80';
   const hostAliases: Record<string, string> = (() => {
     try {
       return JSON.parse(
-        process.env.VC_ENV_PROXY_HOST_ALIASES || '{}'
+        process.env.VC_ENV_BROKER_HOST_ALIASES || '{}'
       ) as Record<string, string>;
     } catch {
       return {};
@@ -65,11 +65,11 @@ if (!brokerUrlStr) {
       ? globalThis.fetch.bind(globalThis)
       : null;
 
-  const DUMMY_HOST_RE = /^vproxy-[a-z0-9-]+-[0-9a-f]{20}\.xx$/;
+  const DUMMY_HOST_RE = /^vbroker-[a-z0-9-]+-[0-9a-f]{20}\.xx$/;
 
   function postEnvelope(
-    envelope: ProxyEnvelopeRequest,
-    callback: (err: Error | null, reply?: ProxyEnvelopeReply) => void
+    envelope: BrokerEnvelopeRequest,
+    callback: (err: Error | null, reply?: BrokerEnvelopeReply) => void
   ) {
     const json = Buffer.from(JSON.stringify(envelope), 'utf-8');
     const req = origHttpRequest(
@@ -77,11 +77,11 @@ if (!brokerUrlStr) {
         method: 'POST',
         hostname: broker.hostname,
         port: broker.port || 80,
-        path: '/proxy',
+        path: '/broker',
         headers: {
           'content-type': 'application/json',
           'content-length': json.length,
-          'x-vproxy-session': sessionId,
+          'x-vc-env-broker-token': localToken,
         },
       },
       res => {
@@ -93,7 +93,7 @@ if (!brokerUrlStr) {
               Buffer.concat(
                 chunks as unknown as readonly Uint8Array[]
               ).toString('utf-8')
-            ) as ProxyEnvelopeReply;
+            ) as BrokerEnvelopeReply;
             if (res.statusCode && res.statusCode >= 400) {
               callback(
                 new Error(
@@ -175,7 +175,7 @@ if (!brokerUrlStr) {
     callback?: () => void
   ) {
     socket.once('connect', () => {
-      socket.write(`${sessionId}\t${host}\t${port}\n`);
+      socket.write(`${localToken}\t${host}\t${port}\n`);
     });
 
     if (callback) {

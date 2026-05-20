@@ -165,12 +165,12 @@ copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)
 );
-// proxy-shim.cjs is loaded into the user's subprocess by brokered env run via
+// broker-shim.cjs is loaded into the user's subprocess by brokered env run via
 // NODE_OPTIONS=--require, so it must live next to the compiled env command.
 mkdirSync(join(distDir, 'commands', 'env'), { recursive: true });
 await esbuild({
-  entryPoints: [join(cwd, 'src/commands/env/proxy-shim.ts')],
-  outfile: join(distDir, 'commands/env/proxy-shim.cjs'),
+  entryPoints: [join(cwd, 'src/commands/env/broker-shim.ts')],
+  outfile: join(distDir, 'commands/env/broker-shim.cjs'),
   bundle: false,
   format: 'cjs',
   platform: 'node',

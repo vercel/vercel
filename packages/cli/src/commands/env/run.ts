@@ -41,7 +41,7 @@ function parseRunArgs(argv: string[]) {
 
 function findShimPath(): string | null {
   const candidates = [
-    join(__dirname, 'proxy-shim.cjs'),
+    join(__dirname, 'broker-shim.cjs'),
     join(
       __dirname,
       '..',
@@ -50,7 +50,7 @@ function findShimPath(): string | null {
       'dist',
       'commands',
       'env',
-      'proxy-shim.cjs'
+      'broker-shim.cjs'
     ),
   ];
   for (const c of candidates) {
@@ -59,7 +59,7 @@ function findShimPath(): string | null {
   let dir = __dirname;
   const { root } = parsePath(dir);
   while (dir !== root) {
-    const p = resolvePath(dir, 'dist', 'commands', 'env', 'proxy-shim.cjs');
+    const p = resolvePath(dir, 'dist', 'commands', 'env', 'broker-shim.cjs');
     if (existsSync(p)) return p;
     dir = dirname(dir);
   }
@@ -162,7 +162,7 @@ export default async function run(client: Client): Promise<number> {
       const shimPath = findShimPath();
       if (!shimPath) {
         output.error(
-          'Could not locate proxy shim. Did the CLI build complete? Expected proxy-shim.cjs next to the compiled env command.'
+          'Could not locate broker shim. Did the CLI build complete? Expected broker-shim.cjs next to the compiled env command.'
         );
         return 1;
       }
@@ -195,13 +195,13 @@ export default async function run(client: Client): Promise<number> {
         ...localEnv,
         // Shim routing metadata:
         // - URL: HTTP envelope broker endpoint.
-        // - TCP_PORT: raw TCP relay listener for dummy hostnames.
+        // - TCP_RELAY_PORT: raw TCP relay listener for dummy hostnames.
         // - HOST_ALIASES: dummy host -> real host map for URL-rewriting clients.
-        // - SESSION: local per-run bearer token for shim-to-broker requests.
-        VC_ENV_PROXY_URL: brokeredEnv.broker.url,
-        VC_ENV_PROXY_TCP_PORT: String(brokeredEnv.broker.tcpPort),
-        VC_ENV_PROXY_HOST_ALIASES: JSON.stringify(brokeredEnv.hostAliases),
-        VC_ENV_PROXY_SESSION: brokeredEnv.sessionId,
+        // - LOCAL_TOKEN: local per-run bearer token for shim-to-broker requests.
+        VC_ENV_BROKER_URL: brokeredEnv.broker.url,
+        VC_ENV_BROKER_TCP_RELAY_PORT: String(brokeredEnv.broker.tcpPort),
+        VC_ENV_BROKER_HOST_ALIASES: JSON.stringify(brokeredEnv.hostAliases),
+        VC_ENV_BROKER_LOCAL_TOKEN: brokeredEnv.sessionId,
         NODE_OPTIONS: nodeOptions,
       };
     }
