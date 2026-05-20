@@ -165,7 +165,7 @@ copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.cjs', repoRoot),
   new URL('get-latest-worker.cjs', distRoot)
 );
-// proxy-shim.cjs is loaded into the user's subprocess by `vc env proxy` via
+// proxy-shim.cjs is loaded into the user's subprocess by brokered env run via
 // NODE_OPTIONS=--require, so it must live next to the compiled env command.
 mkdirSync(join(distDir, 'commands', 'env'), { recursive: true });
 await esbuild({

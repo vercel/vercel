@@ -41,7 +41,7 @@ async function listen(server: http.Server): Promise<number> {
   return address.port;
 }
 
-describe('env proxy shim', () => {
+describe('env broker shim', () => {
   afterEach(async () => {
     await Promise.all(brokers.splice(0).map(broker => broker.close()));
     await Promise.all(

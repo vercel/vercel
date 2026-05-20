@@ -1,4 +1,4 @@
-// Loaded into the user's subprocess by `vc env proxy` via NODE_OPTIONS=--require.
+// Loaded into the user's subprocess by `vc env run --experimental` via NODE_OPTIONS=--require.
 // Monkey-patches http.request, https.request, and globalThis.fetch so every
 // outbound HTTP/HTTPS call is routed through the local broker, which performs
 // dummy <-> real env-var substitution in the broker. Uses only Node built-ins.
@@ -40,7 +40,7 @@ interface NetConnectParsed {
 
 const brokerUrlStr = process.env.VC_ENV_PROXY_URL;
 if (!brokerUrlStr) {
-  // Subprocess was not started via `vc env proxy` (or env was cleared).
+  // Subprocess was not started via brokered env run (or env was cleared).
 } else {
   const broker = new URL(brokerUrlStr);
   const sessionId = process.env.VC_ENV_PROXY_SESSION || '';

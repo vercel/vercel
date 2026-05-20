@@ -1,4 +1,4 @@
-// Local broker for `vc env proxy`. Listens on a random port and:
+// Local broker for `vc env run --experimental`. Listens on a random port and:
 //   - Accepts POST /proxy envelopes from the subprocess shim.
 //   - Substitutes dummy values -> real values in the request (url/headers/body).
 //   - Makes the real outbound call (http or https).
@@ -166,7 +166,7 @@ function handleTcpTunnel(
   subs: Substitutions
 ) {
   const realHost = substituteString(host, subs.dummyToReal);
-  output.debug(`[env proxy] TCP ${host}:${port} -> ${realHost}:${port}`);
+  output.debug(`[env broker] TCP ${host}:${port} -> ${realHost}:${port}`);
 
   const upstream = net.connect({ host: realHost, port }, () => {
     if (head.length) upstream.write(Uint8Array.from(head));
@@ -175,7 +175,7 @@ function handleTcpTunnel(
   });
 
   upstream.on('error', e => {
-    output.debug(`[env proxy] tcp upstream error: ${e.message}`);
+    output.debug(`[env broker] tcp upstream error: ${e.message}`);
     socket.destroy();
   });
   socket.on('error', () => upstream.destroy());
@@ -236,7 +236,7 @@ export async function startBroker(opts: {
       }
     }
     output.debug(
-      `[env proxy] ${env.method} ${env.url}` +
+      `[env broker] ${env.method} ${env.url}` +
         (subsForLog.length ? `\n${subsForLog.join('\n')}` : '')
     );
 
@@ -251,7 +251,7 @@ export async function startBroker(opts: {
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      output.debug(`[env proxy] upstream error: ${msg}`);
+      output.debug(`[env broker] upstream error: ${msg}`);
       res.writeHead(502, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'upstream', detail: msg }));
       return;
@@ -307,7 +307,7 @@ export async function startBroker(opts: {
     }
 
     const realHost = substituteString(host, subs.dummyToReal);
-    output.debug(`[env proxy] TCP ${host}:${port} -> ${realHost}:${port}`);
+    output.debug(`[env broker] TCP ${host}:${port} -> ${realHost}:${port}`);
     const upstream = net.connect({ host: realHost, port }, () => {
       socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       if (head.length) upstream.write(Uint8Array.from(head));
@@ -316,7 +316,7 @@ export async function startBroker(opts: {
     });
 
     upstream.on('error', e => {
-      output.debug(`[env proxy] tcp upstream error: ${e.message}`);
+      output.debug(`[env broker] tcp upstream error: ${e.message}`);
       if (socket.writable) {
         socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
       }

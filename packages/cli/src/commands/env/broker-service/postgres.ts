@@ -50,7 +50,7 @@ async function loadPg(): Promise<PgModuleLike> {
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);
     throw new Error(
-      `Postgres env proxy requires the optional "pg" package for local upstream auth: ${reason}`
+      `Postgres broker requires the optional "pg" package for local upstream auth: ${reason}`
     );
   }
 }
@@ -257,11 +257,11 @@ async function handleClient(
       upstream?.close().catch(() => undefined);
     });
     output.debug(
-      `[env proxy] postgres session ready for ${mapped.user}@${mapped.host}`
+      `[env broker] postgres session ready for ${mapped.user}@${mapped.host}`
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    output.error(`Postgres proxy error: ${msg}`);
+    output.error(`Postgres broker error: ${msg}`);
     if (e instanceof Error && e.stack) output.debug(e.stack);
     client.destroy();
     if (upstream) await upstream.close().catch(() => undefined);
@@ -282,11 +282,11 @@ export async function startPostgresProxy(opts: {
   );
   const address = server.address();
   if (!address || typeof address === 'string') {
-    throw new Error('postgres proxy failed to bind');
+    throw new Error('postgres broker failed to bind');
   }
 
   output.debug(
-    `[env proxy] postgres proxy on 127.0.0.1:${address.port} -> ${upstream.host}:${upstream.port}`
+    `[env broker] postgres listener on 127.0.0.1:${address.port} -> ${upstream.host}:${upstream.port}`
   );
 
   return {

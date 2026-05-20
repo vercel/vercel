@@ -1,6 +1,6 @@
 # Env Proxy Broker Service
 
-This folder contains the broker-side pieces for `vc env proxy`.
+This folder contains the broker-side pieces for `vc env run --experimental`.
 
 Today these modules run locally inside the CLI process. The code is organized
 as a service boundary because this logic is the part that owns real environment
