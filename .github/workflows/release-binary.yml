@@ -329,8 +329,30 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: 'true'
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
           else
             node packages/vc-native/scripts/publish-packages.mjs --dry-run
           fi
+
+      - name: Smoke test published native npm package
+        if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./packages/cli/package.json').version")"
+          for i in $(seq 1 12); do
+            prefix="$(mktemp -d)"
+            cache="$(mktemp -d)"
+            if npm --cache "$cache" install -g --prefix "$prefix" @vercel/vc-native --force && [[ -x "$prefix/bin/vercel" ]]; then
+              out="$($prefix/bin/vercel --version)"
+              echo "$out"
+              if [[ "$out" == "$version" ]]; then
+                exit 0
+              fi
+            fi
+            echo "Waiting for @vercel/vc-native to become installable ($i/12)..."
+            sleep 10
+          done
+          echo "::error::@vercel/vc-native did not install a working vercel binary for $version"
+          exit 1
