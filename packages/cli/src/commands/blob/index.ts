@@ -31,7 +31,7 @@ import getStore from './store-get';
 import listStores from './store-list';
 import emptyStore from './store-empty';
 import { printError } from '../../util/error';
-import { getBlobRWToken } from '../../util/blob/token';
+import { findFlagValue, getBlobRWToken } from '../../util/blob/token';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
@@ -85,7 +85,9 @@ export default async function main(client: Client) {
   }
 
   const token = await getBlobRWToken(client, client.argv);
-  telemetry.trackCliOptionRwToken();
+  telemetry.trackCliOptionRwToken(findFlagValue(client.argv, '--rw-token'));
+  telemetry.trackCliOptionOidcToken(findFlagValue(client.argv, '--oidc-token'));
+  telemetry.trackCliOptionStoreId(findFlagValue(client.argv, '--store-id'));
 
   switch (subcommand) {
     case 'list':

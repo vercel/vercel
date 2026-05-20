@@ -76,18 +76,22 @@ export class BlobTelemetryClient
     });
   }
 
-  trackCliOptionRwToken() {
-    this.trackCliOption({
-      option: '--rw-token',
-      value: this.redactedValue,
-    });
+  trackCliOptionRwToken(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--rw-token',
+        value: this.redactedValue,
+      });
+    }
   }
 
-  trackCliOptionOidcToken() {
-    this.trackCliOption({
-      option: '--oidc-token',
-      value: this.redactedValue,
-    });
+  trackCliOptionOidcToken(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--oidc-token',
+        value: this.redactedValue,
+      });
+    }
   }
 
   trackCliOptionStoreId(value: string | undefined) {

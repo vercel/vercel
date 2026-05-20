@@ -14,7 +14,10 @@ import listItem from '../output/list-item';
  * repeated, the last occurrence wins — matching standard CLI parser
  * semantics.
  */
-function findFlagValue(argv: string[], flag: string): string | undefined {
+export function findFlagValue(
+  argv: string[],
+  flag: string
+): string | undefined {
   const eqPrefix = `${flag}=`;
   let result: string | undefined;
   for (let i = 0; i < argv.length; i++) {
