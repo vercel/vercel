@@ -282,11 +282,11 @@ export async function envPullCommandLogic(
   if (filename === '.env.local') {
     // When the file is `.env.local`, we also add it to `.gitignore`
     // to avoid accidentally committing it to git.
-    // We use '.env*.local' to match the default .gitignore from
+    // We use '.env*' to match the default .gitignore from
     // create-next-app template. See:
-    // https://github.com/vercel/next.js/blob/06abd634899095b6cc28e6e8315b1e8b9c8df939/packages/create-next-app/templates/app/js/gitignore#L28
+    // https://github.com/vercel/next.js/commit/09a385669b3757ef59065138901eb3084d35d418
     const rootPath = link.repoRoot ?? cwd;
-    isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
+    isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*');
   }
 
   output.print(
