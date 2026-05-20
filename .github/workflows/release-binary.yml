@@ -318,6 +318,18 @@ jobs:
           release_id="$(node -e "const fs = require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).id)" "$release_json")"
           upload_url="$(node -e "const fs = require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).upload_url.split('{')[0])" "$release_json")"
 
+          request() {
+            local output="$1"
+            shift
+            local status
+            status="$(curl -sS -L -o "$output" -w "%{http_code}" "$@")"
+            if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+              cat "$output"
+              echo "::error::GitHub API request failed with HTTP $status"
+              exit 1
+            fi
+          }
+
           upload_asset() {
             local file="$1"
             local name
@@ -327,27 +339,26 @@ jobs:
 
             local assets_json
             assets_json="$(mktemp)"
-            curl -sS -L \
+            request "$assets_json" \
               "${auth_headers[@]}" \
               "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" \
-              > "$assets_json"
 
             local existing_asset_id
             existing_asset_id="$(node -e "const fs = require('fs'); const assets = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); const asset = assets.find(asset => asset.name === process.argv[2]); console.log(asset?.id ?? '')" "$assets_json" "$name")"
 
             if [[ -n "$existing_asset_id" ]]; then
-              curl -sS -L -X DELETE \
+              request /dev/null \
+                -X DELETE \
                 "${auth_headers[@]}" \
-                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/assets/$existing_asset_id" \
-                -o /dev/null
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/assets/$existing_asset_id"
             fi
 
-            curl -sS -L -X POST \
+            request /dev/null \
+              -X POST \
               "${auth_headers[@]}" \
               -H "Content-Type: application/octet-stream" \
               --data-binary "@$file" \
-              "$upload_url?name=$encoded_name" \
-              -o /dev/null
+              "$upload_url?name=$encoded_name"
           }
 
           upload_asset "dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
