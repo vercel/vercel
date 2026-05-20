@@ -335,7 +335,7 @@ jobs:
             node packages/vc-native/scripts/publish-packages.mjs --dry-run
           fi
 
-      - name: Smoke test published native npm package
+      - name: Verify @vercel/vc-native global install
         if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
