@@ -2,18 +2,28 @@ import execa from 'execa';
 import { debug } from '@vercel/build-utils';
 
 /**
- * Check whether Python bytecode precompilation is enabled via the
- * `VERCEL_PYTHON_COMPILEALL` environment variable.
+ * Check whether Python bytecode precompilation is enabled.
  *
- * Defaults to OFF (opt-in during initial rollout).
+ * Resolution order:
+ *  1. `VERCEL_PYTHON_COMPILEALL` explicitly set → honour the value.
+ *  2. `VERCEL_PYTHON_ON_HIVE` enabled → default to ON (more headroom).
+ *  3. Otherwise → OFF (opt-in during initial rollout).
  */
 export function isCompileAllEnabled(): boolean {
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
-  if (val === undefined || val === '') {
-    return false;
+  if (val !== undefined && val !== '') {
+    const lower = val.toLowerCase();
+    return lower === '1' || lower === 'true';
   }
-  const lower = val.toLowerCase();
-  return lower === '1' || lower === 'true';
+
+  // When running on Hive (Functions Beta) with up to 1 GB of headroom,
+  // enable bytecode compilation by default for faster cold starts.
+  const hive = process.env.VERCEL_PYTHON_ON_HIVE;
+  if (hive === '1' || hive === 'true') {
+    return true;
+  }
+
+  return false;
 }
 
 interface CompileAllOptions {
@@ -49,6 +59,8 @@ export async function runCompileAll({
     '-m',
     'compileall',
     '-q',
+    '-j',
+    '0',
     '--invalidation-mode',
     'unchecked-hash',
     ...(excludeRegex ? ['-x', excludeRegex] : []),

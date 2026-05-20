@@ -40,7 +40,13 @@ import {
   installRequirementsFile,
   installRequirement,
 } from './install';
-import { PythonDependencyExternalizer } from './dependency-externalizer';
+import {
+  PythonDependencyExternalizer,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+  HIVE_LAMBDA_SIZE_BYTES,
+  lambdaKnapsack,
+  type BytecodeCollectionResult,
+} from './dependency-externalizer';
 import {
   UvRunner,
   getUvBinaryOrInstall,
@@ -787,6 +793,9 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  // Lambda's /var/task is read-only.  Without this flag Python wastes time
+  // attempting (and failing) to write .pyc files on every import.
+  lambdaEnv.PYTHONDONTWRITEBYTECODE = '1';
   Object.assign(lambdaEnv, quirksResult.env);
   if (shouldInstallVercelWorkers) {
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
@@ -860,7 +869,6 @@ from vercel_runtime.vc_init import vc_handler
     pythonMinor: pythonVersion.minor,
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
-    includeBytecode: compileAllEnabled,
     alwaysBundlePackages: [
       ...(quirksResult.alwaysBundlePackages ?? []),
       ...(shouldInstallVercelWorkers
@@ -872,21 +880,74 @@ from vercel_runtime.vc_init import vc_handler
   await builderSpan
     .child('vc.builder.python.bundle')
     .trace(async bundleSpan => {
+      // analyze() always computes source-only sizes so threshold
+      // decisions are not inflated by bytecode overhead.
       const depAnalysis = await depExternalizer.analyze(files);
+
+      // Collect vendor bytecode if compileall ran.
+      let bytecodeInfo: BytecodeCollectionResult | undefined;
+      if (compileAllEnabled) {
+        bytecodeInfo = await depExternalizer.collectBytecodeFiles({
+          vendorDirName: vendorDir,
+        });
+      }
 
       bundleSpan.setAttributes({
         'python.bundle.totalSizeBytes': String(depAnalysis.totalBundleSize),
         'python.bundle.runtimeInstallEnabled': String(
           depAnalysis.runtimeInstallEnabled
         ),
+        ...(bytecodeInfo
+          ? {
+              'python.bundle.bytecodeSizeBytes': String(bytecodeInfo.totalSize),
+            }
+          : {}),
       });
 
       if (depAnalysis.runtimeInstallEnabled) {
-        await depExternalizer.generateBundle(files);
+        // >245 MB source-only: knapsack packing with optional bytecode.
+        await depExternalizer.generateBundle(files, bytecodeInfo);
       } else {
-        // Bundle all dependencies since we're not doing runtime installation
+        // ≤245 MB source-only: bundle all dependencies.
         for (const [p, f] of Object.entries(depAnalysis.allVendorFiles)) {
           files[p] = f;
+        }
+
+        // Add bytecode, filling available capacity.
+        if (bytecodeInfo && bytecodeInfo.totalSize > 0) {
+          const pythonOnHiveEnabled =
+            process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+            process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+          const activeThreshold = pythonOnHiveEnabled
+            ? HIVE_LAMBDA_SIZE_BYTES
+            : LAMBDA_SIZE_THRESHOLD_BYTES;
+          const remainingCapacity =
+            activeThreshold - depAnalysis.totalBundleSize;
+
+          if (bytecodeInfo.totalSize <= remainingCapacity) {
+            // All vendor bytecode fits — include everything.
+            for (const [p, f] of Object.entries(bytecodeInfo.files)) {
+              files[p] = f;
+            }
+          } else if (remainingCapacity > 0) {
+            // Selective inclusion: use the knapsack to pick which
+            // packages get bytecode within the remaining capacity.
+            const selectedPkgs = lambdaKnapsack(
+              bytecodeInfo.perPackageSizes,
+              remainingCapacity
+            );
+            if (selectedPkgs.length > 0) {
+              const selectedBytecode =
+                await depExternalizer.collectBytecodeFiles({
+                  vendorDirName: vendorDir,
+                  includePackages: selectedPkgs,
+                });
+              for (const [p, f] of Object.entries(selectedBytecode.files)) {
+                files[p] = f;
+              }
+            }
+          }
+          // else: no capacity left, skip vendor bytecode entirely.
         }
       }
     });

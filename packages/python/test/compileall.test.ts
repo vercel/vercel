@@ -17,6 +17,7 @@ import {
 
 const mockedExeca = vi.mocked(execa);
 const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+const originalHiveEnv = process.env.VERCEL_PYTHON_ON_HIVE;
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -25,11 +26,17 @@ afterEach(() => {
   } else {
     process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
   }
+  if (originalHiveEnv === undefined) {
+    delete process.env.VERCEL_PYTHON_ON_HIVE;
+  } else {
+    process.env.VERCEL_PYTHON_ON_HIVE = originalHiveEnv;
+  }
 });
 
 describe('isCompileAllEnabled', () => {
   it('defaults to disabled', () => {
     delete process.env.VERCEL_PYTHON_COMPILEALL;
+    delete process.env.VERCEL_PYTHON_ON_HIVE;
 
     expect(isCompileAllEnabled()).toBe(false);
   });
@@ -55,10 +62,43 @@ describe('isCompileAllEnabled', () => {
     process.env.VERCEL_PYTHON_COMPILEALL = 'false';
     expect(isCompileAllEnabled()).toBe(false);
   });
+
+  it('enables compileall by default when VERCEL_PYTHON_ON_HIVE is set', () => {
+    delete process.env.VERCEL_PYTHON_COMPILEALL;
+
+    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+    expect(isCompileAllEnabled()).toBe(true);
+
+    process.env.VERCEL_PYTHON_ON_HIVE = 'true';
+    expect(isCompileAllEnabled()).toBe(true);
+  });
+
+  it('respects explicit disable even when VERCEL_PYTHON_ON_HIVE is set', () => {
+    process.env.VERCEL_PYTHON_ON_HIVE = '1';
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '0';
+    expect(isCompileAllEnabled()).toBe(false);
+
+    process.env.VERCEL_PYTHON_COMPILEALL = 'false';
+    expect(isCompileAllEnabled()).toBe(false);
+  });
+
+  it('does not enable compileall for non-truthy VERCEL_PYTHON_ON_HIVE', () => {
+    delete process.env.VERCEL_PYTHON_COMPILEALL;
+
+    process.env.VERCEL_PYTHON_ON_HIVE = '0';
+    expect(isCompileAllEnabled()).toBe(false);
+
+    process.env.VERCEL_PYTHON_ON_HIVE = 'false';
+    expect(isCompileAllEnabled()).toBe(false);
+
+    process.env.VERCEL_PYTHON_ON_HIVE = '';
+    expect(isCompileAllEnabled()).toBe(false);
+  });
 });
 
 describe('runCompileAll', () => {
-  it('passes an exclude regex to compileall when provided', async () => {
+  it('passes -j 0 and exclude regex to compileall when provided', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
 
@@ -75,6 +115,8 @@ describe('runCompileAll', () => {
         '-m',
         'compileall',
         '-q',
+        '-j',
+        '0',
         '--invalidation-mode',
         'unchecked-hash',
         '-x',

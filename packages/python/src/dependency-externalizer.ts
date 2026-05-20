@@ -84,13 +84,21 @@ interface PythonDependencyExternalizerOptions {
   pythonPath: string;
   hasCustomCommand: boolean;
   alwaysBundlePackages?: string[];
-  includeBytecode?: boolean;
 }
 
 interface DependencyAnalysis {
   runtimeInstallEnabled: boolean;
   allVendorFiles: Files;
   totalBundleSize: number;
+}
+
+export interface BytecodeCollectionResult {
+  /** FileFsRef entries for .pyc files, keyed by vendor-relative path. */
+  files: Files;
+  /** Total uncompressed size of all collected .pyc files. */
+  totalSize: number;
+  /** Per-package bytecode sizes (normalized package name → total bytes). */
+  perPackageSizes: Map<string, number>;
 }
 
 export class PythonDependencyExternalizer {
@@ -105,7 +113,6 @@ export class PythonDependencyExternalizer {
   private pythonPath: string;
   private hasCustomCommand: boolean;
   private alwaysBundlePackages: string[];
-  private includeBytecode: boolean;
 
   // Populated by analyze()
   private allVendorFiles: Files = {};
@@ -130,7 +137,6 @@ export class PythonDependencyExternalizer {
     this.pythonPath = options.pythonPath;
     this.hasCustomCommand = options.hasCustomCommand;
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
-    this.includeBytecode = options.includeBytecode ?? false;
   }
 
   shouldEnableRuntimeInstall(): boolean {
@@ -245,9 +251,17 @@ export class PythonDependencyExternalizer {
    * Generate the optimally-packed Lambda bundle.
    * Mutates `files` in place: adds vendor files (private + knapsack-selected
    * public), runtime config, and uv binary.
+   *
+   * When `bytecodeInfo` is provided (from `collectBytecodeFiles()`),
+   * bytecode sizes are combined with source sizes for the knapsack so that
+   * selected packages include pre-compiled `.pyc` files.
+   *
    * Must be called after analyze().
    */
-  async generateBundle(files: Files): Promise<void> {
+  async generateBundle(
+    files: Files,
+    bytecodeInfo?: BytecodeCollectionResult
+  ): Promise<void> {
     if (!this.analyzed) {
       throw new Error(
         'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
@@ -412,6 +426,19 @@ export class PythonDependencyExternalizer {
     for (const [p, f] of Object.entries(alwaysBundledFiles)) {
       baseFiles[p] = f;
     }
+
+    // When bytecode is enabled, include it for always-bundled packages
+    // so that fixedOverhead accounts for their .pyc files.
+    if (bytecodeInfo) {
+      const alwaysBundledBytecode = await this.collectBytecodeFiles({
+        vendorDirName: this.vendorDir,
+        includePackages: alwaysBundled,
+      });
+      for (const [p, f] of Object.entries(alwaysBundledBytecode.files)) {
+        baseFiles[p] = f;
+      }
+    }
+
     const fixedOverhead = await calculateBundleSize(baseFiles);
 
     // Account for the uv binary that will be added to the bundle.
@@ -466,7 +493,9 @@ export class PythonDependencyExternalizer {
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
     );
 
-    // Build size map for externalizable public packages and run the knapsack algorithm
+    // Build size map for externalizable public packages and run the knapsack algorithm.
+    // When bytecode is enabled, combine source + bytecode sizes so the
+    // knapsack packs fewer but bytecode-compiled packages.
     const externalizableSet = new Set(
       externalizablePublic.map(normalizePackageName)
     );
@@ -475,6 +504,18 @@ export class PythonDependencyExternalizer {
         externalizableSet.has(normalizePackageName(name))
       )
     );
+
+    if (bytecodeInfo) {
+      for (const [name, bcSize] of bytecodeInfo.perPackageSizes) {
+        const norm = normalizePackageName(name);
+        if (externalizableSet.has(norm)) {
+          const current = publicPackageSizes.get(name);
+          if (current !== undefined) {
+            publicPackageSizes.set(name, current + bcSize);
+          }
+        }
+      }
+    }
 
     const bundledPublic = lambdaKnapsack(publicPackageSizes, remainingCapacity);
 
@@ -487,6 +528,17 @@ export class PythonDependencyExternalizer {
 
     for (const [p, f] of Object.entries(selectedVendorFiles)) {
       files[p] = f;
+    }
+
+    // Add bytecode files for the selected packages.
+    if (bytecodeInfo) {
+      const selectedBytecode = await this.collectBytecodeFiles({
+        vendorDirName: this.vendorDir,
+        includePackages: allBundledPackages,
+      });
+      for (const [p, f] of Object.entries(selectedBytecode.files)) {
+        files[p] = f;
+      }
     }
 
     // The bundledPackages list for runtime config includes private packages
@@ -758,37 +810,6 @@ export class PythonDependencyExternalizer {
                 ? Number(recordSize)
                 : undefined,
           });
-
-          // When bytecode compilation is enabled, derive the expected .pyc
-          // path for each .py file and add it to the pending list.  The
-          // parallel access/stat batch below will check if it exists on disk.
-          if (
-            this.includeBytecode &&
-            this.pythonMajor != null &&
-            this.pythonMinor != null
-          ) {
-            // Use forward-slash path for derivePycPath (it operates on
-            // platform-independent paths) then convert back.
-            const pycRel = derivePycPath(
-              rawPath,
-              this.pythonMajor,
-              this.pythonMinor
-            );
-            if (pycRel) {
-              const pycFilePath = pycRel.replaceAll('/', sep);
-              const pycSrcFsPath = join(dir, pycFilePath);
-              const pycBundlePath = join(vendorDirName, pycFilePath).replace(
-                /\\/g,
-                '/'
-              );
-              pending.push({
-                bundlePath: pycBundlePath,
-                srcFsPath: pycSrcFsPath,
-                // No RECORD size for generated .pyc — stat will be used.
-                recordSize: undefined,
-              });
-            }
-          }
         }
       }
     }
@@ -877,28 +898,6 @@ export class PythonDependencyExternalizer {
                 .catch(() => 0)
             );
           }
-
-          // Include bytecode size when compilation is enabled.
-          if (
-            this.includeBytecode &&
-            this.pythonMajor != null &&
-            this.pythonMinor != null
-          ) {
-            const pycRel = derivePycPath(
-              rawPath,
-              this.pythonMajor,
-              this.pythonMinor
-            );
-            if (pycRel) {
-              const pycFilePath = pycRel.replaceAll('/', sep);
-              statPromises.push(
-                fs.promises
-                  .stat(join(dir, pycFilePath))
-                  .then(stats => stats.size)
-                  .catch(() => 0)
-              );
-            }
-          }
         }
 
         const statSizes = await Promise.all(statPromises);
@@ -912,6 +911,106 @@ export class PythonDependencyExternalizer {
     }
 
     return sizes;
+  }
+
+  /**
+   * Collect pre-compiled `.pyc` bytecode files for vendor packages.
+   *
+   * For each `.py` file listed in a package's RECORD, derives the expected
+   * `__pycache__/*.cpython-XY.pyc` path and checks whether it exists on
+   * disk (i.e. whether `compileall` produced it).  Files that do not exist
+   * are silently skipped.
+   *
+   * Must be called after `analyze()` which populates `sitePackageDirs` and
+   * `distributions`.
+   */
+  async collectBytecodeFiles({
+    vendorDirName,
+    includePackages,
+  }: {
+    vendorDirName: string;
+    includePackages?: string[];
+  }): Promise<BytecodeCollectionResult> {
+    if (!this.sitePackageDirs || !this.distributions) {
+      throw new Error('collectBytecodeFiles() must be called after analyze()');
+    }
+    if (this.pythonMajor == null || this.pythonMinor == null) {
+      return { files: {}, totalSize: 0, perPackageSizes: new Map() };
+    }
+
+    const includeSet = includePackages
+      ? new Set(includePackages.map(normalizePackageName))
+      : null;
+
+    interface PycPending {
+      bundlePath: string;
+      srcFsPath: string;
+      packageName: string;
+    }
+    const pending: PycPending[] = [];
+
+    for (const dir of this.sitePackageDirs) {
+      const dirDistributions = this.distributions.get(dir);
+      if (!dirDistributions) continue;
+
+      for (const [name, dist] of dirDistributions) {
+        if (includeSet && !includeSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          const pycRel = derivePycPath(
+            rawPath,
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          if (!pycRel) continue;
+
+          const pycFilePath = pycRel.replaceAll('/', sep);
+          const srcFsPath = join(dir, pycFilePath);
+          const bundlePath = join(vendorDirName, pycFilePath).replace(
+            /\\/g,
+            '/'
+          );
+          pending.push({ bundlePath, srcFsPath, packageName: name });
+        }
+      }
+    }
+
+    // Stat all .pyc files in parallel.  Missing files (compileall
+    // may have skipped them) are silently dropped.
+    const results = await Promise.all(
+      pending.map(async ({ bundlePath, srcFsPath, packageName }) => {
+        try {
+          const stats = await fs.promises.stat(srcFsPath);
+          return { bundlePath, srcFsPath, size: stats.size, packageName };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const files: Files = {};
+    let totalSize = 0;
+    const perPackageSizes = new Map<string, number>();
+
+    for (const result of results) {
+      if (!result) continue;
+      files[result.bundlePath] = new FileFsRef({
+        fsPath: result.srcFsPath,
+        size: result.size,
+      });
+      totalSize += result.size;
+      perPackageSizes.set(
+        result.packageName,
+        (perPackageSizes.get(result.packageName) ?? 0) + result.size
+      );
+    }
+
+    debug(
+      `Collected ${Object.keys(files).length} bytecode files` +
+        ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return { files, totalSize, perPackageSizes };
   }
 }
 
