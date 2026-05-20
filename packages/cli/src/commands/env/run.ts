@@ -4,6 +4,7 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { runSubcommand } from './command';
+import proxy from './proxy';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getLinkedProject } from '../../util/projects/link';
@@ -62,6 +63,14 @@ export default async function run(client: Client): Promise<number> {
       `No command provided. Use \`--\` to separate vercel flags from your command.`
     );
     return 1;
+  }
+
+  if (parsedArgs.flags['--experimental']) {
+    return proxy(client, {
+      subcommand: runSubcommand,
+      source: 'vercel-cli:env:run',
+      missingCommandExample: 'vercel env run --experimental -- npm run dev',
+    });
   }
 
   // Get the linked project

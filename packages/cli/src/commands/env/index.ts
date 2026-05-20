@@ -37,6 +37,20 @@ const COMMAND_CONFIG = {
   update: getCommandAliases(updateSubcommand),
 };
 
+const HIDDEN_SUBCOMMANDS = new Set<string>(
+  envCommand.subcommands
+    .filter(sub => 'hidden' in sub && sub.hidden)
+    .map(sub => sub.name)
+);
+
+function visibleCommandConfig(): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(COMMAND_CONFIG).filter(
+      ([name]) => !HIDDEN_SUBCOMMANDS.has(name)
+    )
+  );
+}
+
 export default async function main(client: Client) {
   const telemetry = new EnvTelemetryClient({
     opts: {
@@ -149,7 +163,7 @@ export default async function main(client: Client) {
       exitCode = await update(client, args);
       break;
     default:
-      output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      output.error(getInvalidSubcommand(visibleCommandConfig()));
       output.print(help(envCommand, { columns: client.stderr.columns }));
       return 2;
   }

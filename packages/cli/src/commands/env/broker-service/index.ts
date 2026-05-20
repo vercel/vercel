@@ -1,15 +1,11 @@
-// Local stand-in for the future api.vercel.com brokering service. The real
-// implementation will live server-side; this is the on-laptop scaffolding
-// used by `vc env proxy` while we iterate on the design.
-//
-// What it does:
-//   - Listens on a random local port.
+// Local broker for `vc env proxy`. Listens on a random port and:
 //   - Accepts POST /proxy envelopes from the subprocess shim.
 //   - Substitutes dummy values -> real values in the request (url/headers/body).
 //   - Makes the real outbound call (http or https).
 //   - Substitutes real values -> dummy values in the response (defense in
 //     depth: keeps real values from ever reaching the subprocess).
 //   - Returns the response as a JSON envelope.
+//   - Relays raw TCP for dummy hostnames (session-scoped tunnel).
 //
 // Real secrets live only in this process for the duration of the session.
 
@@ -17,7 +13,7 @@ import http from 'node:http';
 import https from 'node:https';
 import net from 'node:net';
 import { URL } from 'node:url';
-import output from '../../output-manager';
+import output from '../../../output-manager';
 
 export interface Substitutions {
   dummyToReal: Map<string, string>;
@@ -49,17 +45,19 @@ function substituteBuffer(buf: Buffer, table: Map<string, string>): Buffer {
   for (const [from, to] of table) {
     const fromBuf = Buffer.from(from, 'utf-8');
     const toBuf = Buffer.from(to, 'utf-8');
-    if (out.indexOf(fromBuf) === -1) continue;
+    if (out.indexOf(fromBuf as unknown as Uint8Array) === -1) continue;
     const parts: Buffer[] = [];
     let cursor = 0;
     let idx: number;
-    while ((idx = out.indexOf(fromBuf, cursor)) !== -1) {
+    while (
+      (idx = out.indexOf(fromBuf as unknown as Uint8Array, cursor)) !== -1
+    ) {
       parts.push(out.subarray(cursor, idx));
       parts.push(toBuf);
       cursor = idx + fromBuf.length;
     }
     parts.push(out.subarray(cursor));
-    out = Buffer.concat(parts);
+    out = Buffer.concat(parts as unknown as readonly Uint8Array[]);
   }
   return out;
 }
@@ -95,7 +93,13 @@ function readJson(req: http.IncomingMessage): Promise<Envelope> {
     req.on('data', c => chunks.push(c));
     req.on('end', () => {
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf-8')));
+        resolve(
+          JSON.parse(
+            Buffer.concat(chunks as unknown as readonly Uint8Array[]).toString(
+              'utf-8'
+            )
+          )
+        );
       } catch (e) {
         reject(e);
       }
@@ -139,7 +143,7 @@ function doUpstreamRequest(
       }
     );
     upstream.on('error', reject);
-    if (body.length) upstream.write(body);
+    if (body.length) upstream.write(Uint8Array.from(body));
     upstream.end();
   });
 }
@@ -165,7 +169,7 @@ function handleTcpTunnel(
   output.debug(`[env proxy] TCP ${host}:${port} -> ${realHost}:${port}`);
 
   const upstream = net.connect({ host: realHost, port }, () => {
-    if (head.length) upstream.write(head);
+    if (head.length) upstream.write(Uint8Array.from(head));
     socket.pipe(upstream);
     upstream.pipe(socket);
   });
@@ -217,7 +221,11 @@ export async function startBroker(opts: {
     for (const [dummy, real] of subs.dummyToReal) {
       const where: string[] = [];
       if (env.url.includes(dummy)) where.push('url');
-      if (reqBodyDummy.indexOf(Buffer.from(dummy, 'utf-8')) !== -1) {
+      if (
+        reqBodyDummy.indexOf(
+          Buffer.from(dummy, 'utf-8') as unknown as Uint8Array
+        ) !== -1
+      ) {
         where.push('body');
       }
       for (const [k, v] of Object.entries(env.headers)) {
@@ -250,7 +258,9 @@ export async function startBroker(opts: {
     }
 
     // real -> dummy on response (so the subprocess never sees real values)
-    const upBody = Buffer.concat(upstream.bodyChunks);
+    const upBody = Buffer.concat(
+      upstream.bodyChunks as unknown as readonly Uint8Array[]
+    );
     const safeBody = substituteBuffer(upBody, subs.realToDummy);
     const upHeaders: Record<string, string> = {};
     for (const [k, v] of Object.entries(upstream.res.headers)) {
@@ -300,7 +310,7 @@ export async function startBroker(opts: {
     output.debug(`[env proxy] TCP ${host}:${port} -> ${realHost}:${port}`);
     const upstream = net.connect({ host: realHost, port }, () => {
       socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
-      if (head.length) upstream.write(head);
+      if (head.length) upstream.write(Uint8Array.from(head));
       socket.pipe(upstream);
       upstream.pipe(socket);
     });
@@ -319,7 +329,7 @@ export async function startBroker(opts: {
     const chunks: Buffer[] = [];
     socket.on('data', function onData(chunk) {
       chunks.push(chunk);
-      const pending = Buffer.concat(chunks);
+      const pending = Buffer.concat(chunks as unknown as readonly Uint8Array[]);
       const headerEnd = pending.indexOf('\n');
       if (headerEnd === -1) return;
 

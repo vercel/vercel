@@ -99,6 +99,47 @@ describe('env proxy', () => {
   });
 
   describe('running commands', () => {
+    it('uses brokered env vars for env run --experimental', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+
+      client.setArgv(
+        'env',
+        'run',
+        '--experimental',
+        '-e',
+        'production',
+        '--',
+        'next',
+        'dev'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(client.stderr).toOutput(
+        'Downloading `production` Environment Variables'
+      );
+      expect(await exitCodePromise).toEqual(0);
+
+      expect(execa).toHaveBeenCalledTimes(1);
+      const [cmd, args, opts] = (execa as any).mock.calls[0];
+      expect(cmd).toBe('next');
+      expect(args).toEqual(['dev']);
+      expect(opts.env.REDIS_CONNECTION_STRING).toMatch(URL_DUMMY_RE);
+      expect(opts.env.SQL_CONNECTION_STRING).toMatch(DUMMY_RE);
+      expect(opts.env.NODE_OPTIONS).toMatch(/--require .*proxy-shim\.cjs/);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:run', value: 'run' },
+      ]);
+    });
+
     it('passes dummy values, not real values, to the subprocess', async () => {
       useUser();
       useTeams('team_dummy');

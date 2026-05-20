@@ -1,7 +1,6 @@
 import net from 'node:net';
-import pg from 'pg';
-import output from '../../output-manager';
-import type { Substitutions } from './proxy-broker';
+import output from '../../../output-manager';
+import type { Substitutions } from '.';
 
 export interface PostgresProxy {
   port: number;
@@ -20,6 +19,41 @@ export interface PostgresUpstream {
 const POSTGRES_URL_RE = /^postgres(ql)?:\/\//i;
 
 type ProxySocket = net.Socket;
+
+interface PgClientLike {
+  connection: {
+    stream: ProxySocket;
+    removeAllListeners(): void;
+  };
+  connect(): Promise<void>;
+  end(): Promise<void>;
+  removeAllListeners(): void;
+}
+
+interface PgModuleLike {
+  Client: new (opts: {
+    connectionString: string;
+    ssl: { rejectUnauthorized: boolean };
+    connectionTimeoutMillis: number;
+  }) => PgClientLike;
+}
+
+async function loadPg(): Promise<PgModuleLike> {
+  // Keep `pg` out of the static CLI graph. The local Postgres broker is a
+  // development stand-in for service-side behavior, so only load it if this
+  // path is actually exercised.
+  const importPg = new Function('specifier', 'return import(specifier)') as (
+    specifier: string
+  ) => Promise<PgModuleLike>;
+  try {
+    return await importPg('pg');
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    throw new Error(
+      `Postgres env proxy requires the optional "pg" package for local upstream auth: ${reason}`
+    );
+  }
+}
 
 export function isPostgresUrl(value: string): boolean {
   return POSTGRES_URL_RE.test(value);
@@ -99,7 +133,7 @@ function readExactly(socket: ProxySocket, length: number): Promise<Buffer> {
         return;
       }
       cleanup();
-      const buf = Buffer.concat(chunks as readonly Uint8Array[]);
+      const buf = Buffer.concat(chunks as unknown as readonly Uint8Array[]);
       resolve(buf.subarray(0, length));
       const extra = buf.subarray(length);
       if (extra.length) socket.unshift(extra);
@@ -115,7 +149,7 @@ async function readStartupMessage(socket: ProxySocket): Promise<Buffer> {
   const length = lenBuf.readInt32BE(0);
   if (length < 4) throw new Error('invalid startup message length');
   const rest = await readExactly(socket, length - 4);
-  return Buffer.concat([lenBuf, rest] as readonly Uint8Array[]);
+  return Buffer.concat([lenBuf, rest] as unknown as readonly Uint8Array[]);
 }
 
 function parseStartupParams(startup: Buffer): Record<string, string> {
@@ -178,6 +212,7 @@ function connectionStringFromUpstream(upstream: PostgresUpstream): string {
 async function openUpstreamWithPg(
   upstream: PostgresUpstream
 ): Promise<{ socket: ProxySocket; close: () => Promise<void> }> {
+  const pg = await loadPg();
   const client = new pg.Client({
     connectionString: connectionStringFromUpstream(upstream),
     ssl: { rejectUnauthorized: true },

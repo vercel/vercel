@@ -1,17 +1,33 @@
 import { execFile } from 'node:child_process';
 import http from 'node:http';
-import { resolve } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { afterEach, describe, expect, it } from 'vitest';
+import { buildSync } from 'esbuild';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   startBroker,
   type Broker,
-} from '../../../../src/commands/env/proxy-broker';
+} from '../../../../src/commands/env/broker-service';
 
 const execFileAsync = promisify(execFile);
 
+const shimPath = resolve(process.cwd(), 'dist/commands/env/proxy-shim.cjs');
+
 const servers: http.Server[] = [];
 const brokers: Broker[] = [];
+
+beforeAll(() => {
+  mkdirSync(dirname(shimPath), { recursive: true });
+  buildSync({
+    entryPoints: [resolve(process.cwd(), 'src/commands/env/proxy-shim.ts')],
+    outfile: shimPath,
+    bundle: false,
+    format: 'cjs',
+    platform: 'node',
+    target: 'node20',
+  });
+});
 
 async function listen(server: http.Server): Promise<number> {
   servers.push(server);
@@ -48,7 +64,9 @@ describe('env proxy shim', () => {
       const chunks: Buffer[] = [];
       req.on('data', chunk => chunks.push(chunk));
       req.on('end', () => {
-        const body = Buffer.concat(chunks).toString('utf-8');
+        const body = Buffer.concat(
+          chunks as unknown as readonly Uint8Array[]
+        ).toString('utf-8');
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(
           JSON.stringify({
@@ -69,7 +87,6 @@ describe('env proxy shim', () => {
     });
     brokers.push(broker);
 
-    const shimPath = resolve(process.cwd(), 'src/commands/env/proxy-shim.cjs');
     const script = `
       const body = new ReadableStream({
         start(controller) {

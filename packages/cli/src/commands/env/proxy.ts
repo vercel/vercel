@@ -11,18 +11,21 @@ import { existsSync } from 'node:fs';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
-import { proxySubcommand } from './command';
+import { proxySubcommand, type runSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-import { startBroker } from './proxy-broker';
+import { startBroker } from './broker-service';
 import {
   buildLocalPostgresUrl,
   isPostgresUrl,
   startPostgresProxy,
   type PostgresProxy,
-} from './proxy-postgres';
+} from './broker-service/postgres';
 import { getLinkedProject } from '../../util/projects/link';
-import { pullEnvRecords } from '../../util/env/get-env-records';
+import {
+  pullEnvRecords,
+  type EnvRecordsSource,
+} from '../../util/env/get-env-records';
 import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -44,9 +47,9 @@ export function needsHelpForProxy(client: Client): boolean {
   }
 }
 
-// Walk up from __dirname looking for the shim file. Handles both:
-// - production: dist/commands/env/proxy-shim.cjs (sits next to compiled proxy.js)
-// - tests / tsx: src/commands/env/proxy-shim.cjs
+// Walk up from __dirname looking for the compiled shim (built from proxy-shim.ts).
+// - production: dist/commands/env/proxy-shim.cjs (next to compiled env command)
+// - tests: packages/cli/dist/commands/env/proxy-shim.cjs after build
 function findShimPath(): string | null {
   const candidates = [
     join(__dirname, 'proxy-shim.cjs'),
@@ -55,7 +58,7 @@ function findShimPath(): string | null {
       '..',
       '..',
       '..',
-      'src',
+      'dist',
       'commands',
       'env',
       'proxy-shim.cjs'
@@ -140,14 +143,23 @@ function addUrlHostSubstitution(
   hostAliases[dummyUrl.host] = realUrl.host;
 }
 
-export default async function proxy(client: Client): Promise<number> {
+export default async function proxy(
+  client: Client,
+  opts: {
+    subcommand?: typeof proxySubcommand | typeof runSubcommand;
+    source?: EnvRecordsSource;
+    missingCommandExample?: string;
+  } = {}
+): Promise<number> {
   const { vercelArgs, userCommand } = parseProxyArgs(client.argv);
+  const subcommand = opts.subcommand ?? proxySubcommand;
+  const source = opts.source ?? 'vercel-cli:env:proxy';
 
   let parsedArgs;
   try {
     parsedArgs = parseArguments(
       vercelArgs,
-      getFlagsSpecification(proxySubcommand.options)
+      getFlagsSpecification(subcommand.options)
     );
   } catch (e) {
     printError(e);
@@ -157,7 +169,7 @@ export default async function proxy(client: Client): Promise<number> {
   if (userCommand.length === 0) {
     output.error(
       'No command provided. Use `--` to separate vercel flags from your command. ' +
-        'Example: `vercel env proxy -- npm run dev`'
+        `Example: \`${opts.missingCommandExample ?? 'vercel env proxy -- npm run dev'}\``
     );
     return 1;
   }
@@ -192,17 +204,15 @@ export default async function proxy(client: Client): Promise<number> {
   const gitBranch = parsedArgs.flags['--git-branch'];
 
   output.spinner(`Downloading \`${environment}\` Environment Variables`);
-  const records = await pullEnvRecords(
-    client,
-    link.project.id,
-    'vercel-cli:env:proxy',
-    { target: environment, gitBranch }
-  );
+  const records = await pullEnvRecords(client, link.project.id, source, {
+    target: environment,
+    gitBranch,
+  });
   output.stopSpinner();
 
-  // Each pulled secret becomes a dummy on the laptop; the real value lives in
-  // the broker (and eventually in api.vercel.com) so the subprocess never sees
-  // it. Empty values get a dummy of '' so they pass through unchanged.
+  // Each pulled secret becomes a dummy in the child; the real value stays in
+  // the broker so the subprocess never sees it. Empty values get a dummy of ''
+  // so they pass through unchanged.
   const dummyEnv: Record<string, string> = {};
   const dummyToReal = new Map<string, string>();
   const realToDummy = new Map<string, string>();

@@ -274,6 +274,12 @@ export const runSubcommand = {
       argument: 'NAME',
       deprecated: false,
     },
+    {
+      name: 'experimental',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -290,6 +296,7 @@ export const runSubcommand = {
 export const proxySubcommand = {
   name: 'proxy',
   aliases: [],
+  hidden: true as const,
   description:
     'Run a command with brokered Environment Variables — secrets are not exposed to the subprocess; outbound HTTP/HTTPS is routed through a local broker that substitutes real values at the network boundary.',
   arguments: [

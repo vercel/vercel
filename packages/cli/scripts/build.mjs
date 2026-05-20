@@ -167,11 +167,15 @@ copyFileSync(
 );
 // proxy-shim.cjs is loaded into the user's subprocess by `vc env proxy` via
 // NODE_OPTIONS=--require, so it must live next to the compiled env command.
-mkdirSync(new URL('commands/env/', distRoot), { recursive: true });
-copyFileSync(
-  new URL('src/commands/env/proxy-shim.cjs', repoRoot),
-  new URL('commands/env/proxy-shim.cjs', distRoot)
-);
+mkdirSync(join(distDir, 'commands', 'env'), { recursive: true });
+await esbuild({
+  entryPoints: [join(cwd, 'src/commands/env/proxy-shim.ts')],
+  outfile: join(distDir, 'commands/env/proxy-shim.cjs'),
+  bundle: false,
+  format: 'cjs',
+  platform: 'node',
+  target: 'node20',
+});
 copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));
 
 // Generate version.mjs for fast --version lookup
