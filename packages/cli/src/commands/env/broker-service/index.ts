@@ -12,12 +12,68 @@
 import http from 'node:http';
 import https from 'node:https';
 import net from 'node:net';
+import { randomBytes } from 'node:crypto';
 import { URL } from 'node:url';
 import output from '../../../output-manager';
+import {
+  buildLocalPostgresUrl,
+  isPostgresUrl,
+  startPostgresProxy,
+  type PostgresProxy,
+} from './postgres';
 
 export interface Substitutions {
   dummyToReal: Map<string, string>;
   realToDummy: Map<string, string>;
+}
+
+export async function startBrokerService(opts: {
+  env: Record<string, string>;
+  subs: Substitutions;
+  sessionId: string;
+}): Promise<BrokerService> {
+  const broker = await startBroker({
+    subs: opts.subs,
+    sessionId: opts.sessionId,
+  });
+
+  const env = { ...opts.env };
+  const postgresProxies: PostgresProxy[] = [];
+  const postgresRealUrls = new Set<string>();
+
+  try {
+    for (const real of opts.subs.dummyToReal.values()) {
+      if (isPostgresUrl(real)) postgresRealUrls.add(real);
+    }
+
+    for (const realUrl of postgresRealUrls) {
+      const pgProxy = await startPostgresProxy({
+        upstreamUrl: realUrl,
+        subs: opts.subs,
+      });
+      postgresProxies.push(pgProxy);
+
+      for (const [key, dummy] of Object.entries(env)) {
+        if (opts.subs.dummyToReal.get(dummy) === realUrl) {
+          env[key] = buildLocalPostgresUrl(pgProxy.port, dummy);
+        }
+      }
+    }
+  } catch (e) {
+    await Promise.all(postgresProxies.map(proxy => proxy.close()));
+    await broker.close();
+    throw e;
+  }
+
+  return {
+    env,
+    broker,
+    postgresListenerCount: postgresProxies.length,
+    close: async () => {
+      await Promise.all(postgresProxies.map(proxy => proxy.close()));
+      await broker.close();
+    },
+  };
 }
 
 export interface Broker {
@@ -26,6 +82,115 @@ export interface Broker {
   url: string;
   sessionId: string;
   close(): Promise<void>;
+}
+
+export interface BrokerService {
+  env: Record<string, string>;
+  broker: Broker;
+  postgresListenerCount: number;
+  close(): Promise<void>;
+}
+
+export interface BrokeredEnvService extends BrokerService {
+  hostAliases: Record<string, string>;
+  sessionId: string;
+  substitutableCount: number;
+}
+
+const URL_LIKE_RE = /^([a-zA-Z][a-zA-Z0-9+.-]*):\/\//;
+
+function makeDummy(key: string, real: string): string {
+  const nonce = randomBytes(10).toString('hex');
+  const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const m = real.match(URL_LIKE_RE);
+  if (m) {
+    return `${m[1]}://vproxy-${slug}-${nonce}.xx`;
+  }
+  return `vproxy_${slug.replace(/-/g, '_')}_${nonce}_xx`;
+}
+
+function addSubstitution(
+  dummyToReal: Map<string, string>,
+  realToDummy: Map<string, string>,
+  dummy: string,
+  real: string,
+  reverseSubMinLen: number
+) {
+  dummyToReal.set(dummy, real);
+  if (real.length >= reverseSubMinLen) {
+    realToDummy.set(real, dummy);
+  }
+}
+
+function addUrlHostSubstitution(
+  dummyToReal: Map<string, string>,
+  realToDummy: Map<string, string>,
+  hostAliases: Record<string, string>,
+  dummy: string,
+  real: string,
+  reverseSubMinLen: number
+) {
+  let dummyUrl: URL;
+  let realUrl: URL;
+  try {
+    dummyUrl = new URL(dummy);
+    realUrl = new URL(real);
+  } catch {
+    return;
+  }
+
+  addSubstitution(
+    dummyToReal,
+    realToDummy,
+    dummyUrl.host,
+    realUrl.host,
+    reverseSubMinLen
+  );
+  hostAliases[dummyUrl.host] = realUrl.host;
+}
+
+export async function startBrokeredEnvService(
+  realEnv: Record<string, string>
+): Promise<BrokeredEnvService> {
+  const env: Record<string, string> = {};
+  const dummyToReal = new Map<string, string>();
+  const realToDummy = new Map<string, string>();
+  const hostAliases: Record<string, string> = {};
+  const reverseSubMinLen = 8;
+  let substitutableCount = 0;
+
+  for (const [key, real] of Object.entries(realEnv)) {
+    if (!real) {
+      env[key] = real;
+      continue;
+    }
+    const dummy = makeDummy(key, real);
+    env[key] = dummy;
+    addSubstitution(dummyToReal, realToDummy, dummy, real, reverseSubMinLen);
+    addUrlHostSubstitution(
+      dummyToReal,
+      realToDummy,
+      hostAliases,
+      dummy,
+      real,
+      reverseSubMinLen
+    );
+    substitutableCount++;
+  }
+
+  const sessionId = randomBytes(16).toString('hex');
+  const service = await startBrokerService({
+    env,
+    subs: { dummyToReal, realToDummy },
+    sessionId,
+  });
+
+  return {
+    ...service,
+    hostAliases,
+    sessionId,
+    substitutableCount,
+  };
 }
 
 function substituteString(s: string, table: Map<string, string>): string {
