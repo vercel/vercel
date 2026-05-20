@@ -193,6 +193,11 @@ export default async function run(client: Client): Promise<number> {
         ...process.env,
         ...brokeredEnv.env,
         ...localEnv,
+        // Shim routing metadata:
+        // - URL: HTTP envelope broker endpoint.
+        // - TCP_PORT: raw TCP relay listener for dummy hostnames.
+        // - HOST_ALIASES: dummy host -> real host map for URL-rewriting clients.
+        // - SESSION: local per-run bearer token for shim-to-broker requests.
         VC_ENV_PROXY_URL: brokeredEnv.broker.url,
         VC_ENV_PROXY_TCP_PORT: String(brokeredEnv.broker.tcpPort),
         VC_ENV_PROXY_HOST_ALIASES: JSON.stringify(brokeredEnv.hostAliases),
