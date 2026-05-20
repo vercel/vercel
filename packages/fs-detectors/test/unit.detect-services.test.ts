@@ -55,8 +55,12 @@ describe('detectServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(2);
+      expect(result.source).toBe('auto-detected');
+      expect(result.inferred).not.toBeNull();
+      expect(result.inferred!.source).toBe('layout');
+      expect(result.inferred!.services).toHaveLength(2);
 
-      const backend = result.services.find(s => s.name === 'backend');
+      const backend = result.inferred!.services.find(s => s.name === 'backend');
       expect(backend).toMatchObject({
         name: 'backend',
         workspace: 'backend',
@@ -66,15 +70,6 @@ describe('detectServices', () => {
         routePrefixSource: 'generated',
       });
 
-      const backendRoute = findMatchingRoute(
-        result.routes.rewrites,
-        '/_/backend/ping'
-      );
-      expect(backendRoute).toMatchObject({
-        dest: '/_svc/backend/index',
-      });
-      expect(result.resolved).not.toBeNull();
-      expect(result.resolved?.services).toHaveLength(2);
       expect(result.inferred).toMatchObject({
         source: 'layout',
         config: {

@@ -1,5 +1,11 @@
 # @vercel/cli-config
 
+## 0.1.2
+
+### Patch Changes
+
+- f45e466: Add opt-in automatic CLI updates via `vercel upgrade --enable-auto` and prompt users to enable them after a successful manual upgrade.
+
 ## 0.1.1
 
 ### Patch Changes
