@@ -50,6 +50,7 @@ import {
 } from './dependency-externalizer';
 import {
   UvRunner,
+  UV_LINUX_TARGET,
   getUvBinaryOrInstall,
   getUvCacheDir,
   findUvInPath,
@@ -64,6 +65,7 @@ import {
   createVenvEnv,
   getVenvPythonBin,
 } from './utils';
+import { validateBuildArch } from './platform-info';
 import { runQuirks } from './quirks';
 import {
   getDjangoSettings,
@@ -303,6 +305,40 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
+interface TargetPlatform {
+  /** uv-compatible platform triple, or undefined to use the host. */
+  uvPlatform: string | undefined;
+  /** Lambda architecture, or undefined to use the Lambda constructor default. */
+  architecture: 'x86_64' | 'arm64' | undefined;
+}
+
+/** Map an architecture name to a uv-compatible platform triple. */
+function archToUvPlatform(arch: string): string {
+  return `${validateBuildArch(arch)}-unknown-linux-gnu`;
+}
+
+/** Map an architecture name to a Lambda architecture value. */
+function archToLambdaArch(arch: string): 'x86_64' | 'arm64' {
+  return validateBuildArch(arch) === 'aarch64' ? 'arm64' : 'x86_64';
+}
+
+/** Resolve the target platform for wheel resolution and Lambda architecture. */
+function getTargetPlatform(isDev: boolean): TargetPlatform {
+  const arch = process.env.VERCEL_BUILD_ARCH;
+  if (arch) {
+    return {
+      uvPlatform: archToUvPlatform(arch),
+      architecture: archToLambdaArch(arch),
+    };
+  }
+
+  if (isDev || process.env.VERCEL_BUILD_IMAGE) {
+    return { uvPlatform: undefined, architecture: undefined };
+  }
+
+  return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
+}
+
 export const build: BuildVX = async ({
   workPath,
   repoRootPath,
@@ -327,6 +363,8 @@ export const build: BuildVX = async ({
   // When true, runtime dependency installation is disabled because
   // custom commands may install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
+
+  const target = getTargetPlatform(meta.isDev ?? false);
 
   debug(`workPath: ${workPath}`);
 
@@ -599,6 +637,7 @@ export const build: BuildVX = async ({
           projectDir,
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
+          pythonPlatform: target.uvPlatform,
         });
 
         // Stash the lock file into the cache dir so prepareCache
@@ -679,10 +718,13 @@ export const build: BuildVX = async ({
     baseEnv.VERCEL_RUNTIME_PYTHON ||
     `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
   debug(`Installing ${runtimeDep}`);
+  const pipPlatformArgs = target.uvPlatform
+    ? ['--python-platform', target.uvPlatform]
+    : [];
   await uv.pip({
     venvPath,
     projectDir: join(workPath, entryDirectory),
-    args: ['install', '--link-mode', 'copy', runtimeDep],
+    args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, runtimeDep],
   });
 
   if (shouldInstallVercelWorkers) {
@@ -694,7 +736,7 @@ export const build: BuildVX = async ({
     await uv.pip({
       venvPath,
       projectDir: join(workPath, entryDirectory),
-      args: ['install', '--link-mode', 'copy', workersDep],
+      args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, workersDep],
     });
   }
 
@@ -1029,6 +1071,7 @@ from vercel_runtime.vc_init import vc_handler
     files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
+    architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
   });
