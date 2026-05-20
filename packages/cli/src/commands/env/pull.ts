@@ -331,7 +331,7 @@ async function pullEnvRecordsForEnvPull(
       token: tokens.access_token,
       userId: undefined,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
-      refreshToken: tokens.refresh_token ?? refreshToken,
+      refreshToken: tokens.refresh_token,
     });
     client.writeToAuthConfigFile();
 
