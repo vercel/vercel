@@ -87,6 +87,54 @@ describe('list', () => {
     });
   });
 
+  describe('--filter', () => {
+    it('should track flag', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+      });
+
+      client.setArgv('project', 'ls', '--filter', 'my-app');
+      await projects(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: `subcommand:list`,
+          value: 'ls',
+        },
+        {
+          key: `option:filter`,
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('should pass filter to the API as the search query param', async () => {
+      useUser();
+      useTeams('team_dummy');
+
+      let receivedSearch: string | undefined;
+      client.scenario.get(`/v9/projects`, (req, res) => {
+        receivedSearch = req.query.search as string | undefined;
+        res.json({
+          projects: [defaultProject],
+          pagination: {},
+        });
+      });
+
+      useProject({
+        ...defaultProject,
+      });
+
+      client.setArgv('project', 'ls', '--filter', 'my-app');
+      const exitCode = await projects(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedSearch).toEqual('my-app');
+    });
+  });
+
   describe('--json', () => {
     it('should track flag', async () => {
       useUser();

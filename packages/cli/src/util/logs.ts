@@ -1,6 +1,6 @@
 import type { Deployment } from '@vercel-internals/types';
 import chalk from 'chalk';
-import { format } from 'date-fns';
+import format from 'date-fns/format';
 import ms from 'ms';
 import jsonlines from 'jsonlines';
 import split from 'split2';

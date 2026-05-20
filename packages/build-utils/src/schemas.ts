@@ -177,6 +177,11 @@ export const packageManifestSchema = {
       type: 'string',
       description: 'Detected framework slug, e.g. "fastapi", "flask", "hono".',
     },
+    serviceType: {
+      type: 'string',
+      description:
+        'Service type: one of "web", "schedule", "queue", "workflow".',
+    },
     runtimeVersion: {
       type: 'object',
       additionalProperties: false,

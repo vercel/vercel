@@ -1,5 +1,80 @@
 # @vercel/backends
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [bb61428]
+- Updated dependencies [137e5d1]
+  - @vercel/build-utils@13.26.0
+
+## 0.7.0
+
+### Minor Changes
+
+- 0a691bf: Change getServiceCrons to async.
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+### Patch Changes
+
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/build-utils@13.25.0
+
+## 0.6.0
+
+### Minor Changes
+
+- 9615277: Add exportName to js crons.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
+## 0.5.0
+
+### Minor Changes
+
+- 22f77b9: Add project manifest to node builder.
+
+### Patch Changes
+
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/build-utils@13.23.0
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
+## 0.4.0
+
+### Minor Changes
+
+- e53dd86: Add service type to project manifest.
+- b4ada64: Implement scheduled jobs for JS/TS.
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [e53dd86]
+  - @vercel/build-utils@13.22.0
+
+## 0.3.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/build-utils@13.21.0
+
 ## 0.2.0
 
 ### Minor Changes

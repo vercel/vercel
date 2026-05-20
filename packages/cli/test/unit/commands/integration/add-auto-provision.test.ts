@@ -594,9 +594,7 @@ describe('integration add (auto-provision)', () => {
       expect(payload.next?.[0]?.command).toBe(
         'vercel --non-interactive --cwd /tmp/proj integration add acme'
       );
-      expect(payload.next?.[1]?.command).toBe(
-        'vercel --non-interactive --cwd /tmp/proj integration accept-terms acme --yes'
-      );
+      expect(payload.next).toHaveLength(1);
 
       expect(client.stderr.getFullOutput()).not.toContain(
         'Terms accepted in browser.'

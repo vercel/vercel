@@ -2982,7 +2982,7 @@ export async function serverBuild({
             },
           ]),
     ],
-    framework: { version: nextVersion },
+    framework: { slug: 'nextjs', version: nextVersion },
     flags: variantsManifest || undefined,
   };
 }

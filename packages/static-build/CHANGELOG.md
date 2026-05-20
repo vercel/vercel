@@ -1,5 +1,50 @@
 # @vercel/static-build
 
+## 2.9.28
+
+### Patch Changes
+
+- 7923d34: [static-build] Add vite-environments path for TanStack Start
+  - @vercel/gatsby-plugin-vercel-builder@2.2.6
+
+## 2.9.27
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.5
+
+## 2.9.26
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.4
+
+## 2.9.25
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.3
+
+## 2.9.24
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.2
+
+## 2.9.23
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.1
+
+## 2.9.22
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/gatsby-plugin-vercel-builder@2.2.0
+  - @vercel/static-config@3.3.0
+
 ## 2.9.21
 
 ### Patch Changes

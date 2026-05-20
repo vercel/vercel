@@ -4,7 +4,7 @@ const path = require('path');
 const { build } = require('../../../../dist');
 const { FileFsRef } = require('@vercel/build-utils');
 
-jest.setTimeout(ms('6m'));
+vi.setConfig({ testTimeout: ms('6m'), hookTimeout: ms('6m') });
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should normalize routes in build results output', async () => {

@@ -5,8 +5,8 @@ import {
   detectServices,
   LocalFileSystemDetector,
   type DetectServicesResult,
-  type ServicesConfig,
 } from '@vercel/fs-detectors';
+import type { InferredServicesConfig } from '@vercel/fs-detectors';
 import type { VercelConfig } from '../dev/types';
 import { compileVercelConfig } from '../compile-vercel-config';
 import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
@@ -17,7 +17,7 @@ import { validateConfig } from '../validate-config';
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
 /**
- * Check if vercel.json in the given directory has experimentalServices configured
+ * Check if vercel.json in the given directory has services configured
  * or VERCEL_USE_EXPERIMENTAL_SERVICES environment variable is set.
  */
 export async function isExperimentalServicesEnabled(
@@ -40,8 +40,9 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
     );
     if (!config || config instanceof Error) return false;
     return (
-      config.experimentalServices != null &&
-      typeof config.experimentalServices === 'object'
+      (config.services != null && typeof config.services === 'object') ||
+      (config.experimentalServices != null &&
+        typeof config.experimentalServices === 'object')
     );
   } catch {
     return false;
@@ -52,7 +53,7 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
  * Detect services if experimental services are enabled.
  *
  * Returns the detection result if any of the following is true:
- * - vercel.json contains experimentalServices with valid services
+ * - vercel.json contains services or experimentalServices with valid services
  * - VERCEL_USE_EXPERIMENTAL_SERVICES env var is set (enables auto-detection of services)
  *
  * Returns null otherwise.
@@ -81,7 +82,7 @@ export async function tryDetectServices(
 
 export async function writeServicesConfig(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<{ configFileName: string }> {
   const prepared = await prepareServicesConfigWrite(cwd, config);
   await writeFile(prepared.configPath, prepared.content, 'utf8');
@@ -90,7 +91,7 @@ export async function writeServicesConfig(
 
 export async function getServicesConfigWriteBlocker(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<ServicesConfigWriteBlocker | null> {
   try {
     await prepareServicesConfigWrite(cwd, config);
@@ -101,7 +102,7 @@ export async function getServicesConfigWriteBlocker(
 }
 
 function toProjectServicesConfigPatch(
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Pick<VercelConfig, 'experimentalServices'> {
   return {
     experimentalServices: config,
@@ -110,7 +111,7 @@ function toProjectServicesConfigPatch(
 
 async function prepareServicesConfigWrite(
   cwd: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<{
   configPath: string;
   content: string;
@@ -126,13 +127,6 @@ async function prepareServicesConfigWrite(
     throw new Error(
       `Cannot automatically update ${compileResult.sourceFile ?? 'the current Vercel config'}.`
     );
-  }
-
-  if (
-    compileResult.configPath &&
-    basename(compileResult.configPath) === 'now.json'
-  ) {
-    throw new Error('Cannot automatically update now.json.');
   }
 
   let existingConfig: VercelConfig = {};
@@ -164,7 +158,7 @@ async function prepareServicesConfigWrite(
 
 async function prepareTomlServicesConfigWrite(
   configPath: string,
-  config: ServicesConfig
+  config: InferredServicesConfig
 ): Promise<{ configPath: string; content: string }> {
   // Generate a toml file with our new config settings.
   // Append the new settings to the old file contents *textually*,

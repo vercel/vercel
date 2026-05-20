@@ -165,21 +165,14 @@ export const acceptTermsSubcommand = {
   name: 'accept-terms',
   aliases: [],
   description:
-    'Accept marketplace legal terms for an integration and install it on the current team (installation only; no product resource). Does not replace integrations that require a browser or device attestation.',
+    'Accept marketplace legal terms for an integration and install it on the current team (installation only; no product resource). Requires an interactive terminal and human confirmation. Does not replace integrations that require a browser or device attestation.',
   arguments: [
     {
       name: 'integration',
       required: true,
     },
   ],
-  options: [
-    {
-      ...yesOption,
-      description:
-        "Non-interactive only: confirm acceptance of the Vercel Marketplace End User Addendum and this integration's privacy policy / EULA when applicable",
-    },
-    formatOption,
-  ],
+  options: [formatOption],
   examples: [
     {
       name: 'Accept terms interactively, then install on the team',
@@ -189,12 +182,8 @@ export const acceptTermsSubcommand = {
       ],
     },
     {
-      name: 'Accept terms in CI (you must have read the linked policies)',
-      value: `${packageName} integration accept-terms neon --yes --non-interactive`,
-    },
-    {
       name: 'Output result as JSON',
-      value: `${packageName} integration accept-terms neon --yes --format=json`,
+      value: `${packageName} integration accept-terms neon --format=json`,
     },
   ],
 } as const;

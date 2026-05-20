@@ -5,6 +5,14 @@ from http.server import BaseHTTPRequestHandler
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/oidc":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            token = self.headers.get("x-vercel-oidc-token", "")
+            self.wfile.write(token.encode())
+            return
+
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()

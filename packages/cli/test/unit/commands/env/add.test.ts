@@ -268,14 +268,20 @@ describe('env add', () => {
     });
 
     describe('Development with team policy on', () => {
-      it('errors when the target is Development and the team enforces sensitive', async () => {
+      it('stores Development as encrypted when the team enforces sensitive', async () => {
         const teamModule = await import(
           '../../../../src/util/teams/get-team-by-id'
         );
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+
         const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
           sensitiveEnvironmentVariablePolicy: 'on',
-          // biome-ignore lint/suspicious/noExplicitAny: partial team shape
         } as any);
+        const addSpy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
 
         client.setArgv(
           'env',
@@ -287,12 +293,23 @@ describe('env add', () => {
           '--yes'
         );
         const exitCodePromise = env(client);
-        await expect(client.stderr).toOutput(
-          'Your team has enabled the Sensitive Environment Variables Policy and the Development Environment does not support sensitive values.'
-        );
-        await expect(exitCodePromise).resolves.toBe(1);
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(addSpy).toHaveBeenCalled();
+        const [, , , type, , , targets] = addSpy.mock.calls[0] as unknown as [
+          unknown,
+          unknown,
+          unknown,
+          string,
+          unknown,
+          unknown,
+          string[],
+        ];
+        expect(type).toBe('encrypted');
+        expect(targets).toEqual(['development']);
 
         teamSpy.mockRestore();
+        addSpy.mockRestore();
       });
     });
 
@@ -307,7 +324,6 @@ describe('env add', () => {
 
         const teamSpy = vi.spyOn(teamModule, 'default').mockResolvedValue({
           sensitiveEnvironmentVariablePolicy: 'on',
-          // biome-ignore lint/suspicious/noExplicitAny: partial team shape
         } as any);
         const addSpy = vi
           .spyOn(addEnvRecordModule, 'default')

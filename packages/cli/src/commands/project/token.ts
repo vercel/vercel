@@ -7,6 +7,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { validateJsonOutput } from '../../util/output-format';
 import { tokenSubcommand } from './command';
 
 export default async function getOidcToken(client: Client, argv: string[]) {
@@ -19,6 +20,13 @@ export default async function getOidcToken(client: Client, argv: string[]) {
     return 1;
   }
   const { args, flags } = parsedArgs;
+
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   client.nonInteractive = true;
 
@@ -44,6 +52,7 @@ export default async function getOidcToken(client: Client, argv: string[]) {
       `/projects/${project.id}/token`,
       {
         method: 'POST',
+        accountId: project.accountId,
         body: JSON.stringify({
           source: 'vercel-cli',
         }),
@@ -52,8 +61,13 @@ export default async function getOidcToken(client: Client, argv: string[]) {
         },
       }
     );
-    output.print(res.token);
-    output.print('\n');
+
+    if (asJson) {
+      client.stdout.write(`${JSON.stringify({ token: res.token }, null, 2)}\n`);
+    } else {
+      client.stdout.write(`${res.token}\n`);
+    }
+
     return 0;
   } catch (err: unknown) {
     if (isAPIError(err) && err.status === 404) {

@@ -156,6 +156,11 @@ function injectServiceEnvVars(
   service?: Service,
   stripServiceRoutePrefix: boolean = false
 ): void {
+  if (service?.name) {
+    // Exposes the owning service so the API can resolve per-service envVars
+    // at deploy time.
+    lambda.environment.VERCEL_SERVICE_NAME = service.name;
+  }
   if (service?.type) {
     lambda.environment.VERCEL_SERVICE_TYPE = service.type;
   }

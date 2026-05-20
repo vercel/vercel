@@ -1,5 +1,10 @@
 import { client } from './client';
-import type { Flag, SdkKey, FlagSettings } from '../../src/util/flags/types';
+import type {
+  Flag,
+  SdkKey,
+  CreatedSdkKey,
+  FlagSettings,
+} from '../../src/util/flags/types';
 
 export const defaultFlagSettings: FlagSettings = {
   typeName: 'settings',
@@ -296,7 +301,7 @@ export function useFlags(
   client.scenario.put(
     '/v1/projects/:projectId/feature-flags/sdk-keys',
     (req, res) => {
-      const newKey: SdkKey = {
+      const newKey: CreatedSdkKey = {
         hashKey: `sdk_key_${Date.now()}`,
         projectId: req.params.projectId,
         type: req.body.sdkKeyType,
@@ -308,7 +313,21 @@ export function useFlags(
         keyValue: `vercel_flags_${Date.now()}_secret`,
         connectionString: `https://flags.vercel.com/v1/flags/${req.params.projectId}`,
       };
-      sdkKeysList.push(newKey);
+      // Only the non-secret subset is persisted in the in-memory list, so
+      // subsequent LIST calls never replay the cleartext fields the API
+      // returned on creation.
+      const listRow: SdkKey = {
+        hashKey: newKey.hashKey,
+        projectId: newKey.projectId,
+        type: newKey.type,
+        environment: newKey.environment,
+        createdBy: newKey.createdBy,
+        createdAt: newKey.createdAt,
+        updatedAt: newKey.updatedAt,
+        label: newKey.label,
+        partialKeyValue: newKey.partialKeyValue,
+      };
+      sdkKeysList.push(listRow);
       res.json(newKey);
     }
   );

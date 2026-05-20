@@ -4,7 +4,7 @@ import getStore from '../../../../src/commands/blob/store-get';
 import * as linkModule from '../../../../src/util/projects/link';
 import getScopeModule from '../../../../src/util/get-scope';
 import output from '../../../../src/output-manager';
-import dfns from 'date-fns';
+import format from 'date-fns/format';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
 
 // Mock the external dependencies
@@ -17,7 +17,8 @@ vi.mock('../../../../src/util/blob/token', async () => {
   return { ...actual, getBlobRWToken: vi.fn() };
 });
 vi.mock('../../../../src/output-manager');
-const formatSpy = vi.spyOn(dfns, 'format');
+vi.mock('date-fns/format');
+const formatSpy = vi.mocked(format);
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedGetScope = vi.mocked(getScopeModule);

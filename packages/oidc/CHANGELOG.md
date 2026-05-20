@@ -1,5 +1,17 @@
 # @vercel/oidc
 
+## 3.4.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+
+## 3.4.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 3.3.1
 
 ### Patch Changes

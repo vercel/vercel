@@ -41,7 +41,13 @@ function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);
   const fd = openSync(path, 'r');
   try {
-    readSync(fd, buffer, 0, buffer.length, null);
+    readSync(
+      fd,
+      buffer as unknown as NodeJS.ArrayBufferView,
+      0,
+      buffer.length,
+      null
+    );
   } finally {
     closeSync(fd);
   }

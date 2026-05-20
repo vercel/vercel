@@ -1,13 +1,17 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
-  buildClaudeActionRequiredMessage,
+  autoInstallVercelPlugin,
   buildClaudePromptCopy,
   buildClaudePluginMigrationPlan,
   buildClaudePluginStatus,
   comparePluginVersions,
   getPluginTargetForAgent,
 } from '../../../src/util/agent/auto-install-agentic';
+import { client } from '../../mocks/client';
 
 describe('comparePluginVersions', () => {
   it('compares dot-separated versions', () => {
@@ -22,6 +26,9 @@ describe('getPluginTargetForAgent', () => {
   it('maps Claude Code agents to the Claude plugin target', () => {
     expect(getPluginTargetForAgent(KNOWN_AGENTS.CLAUDE)).toBe('claude-code');
     expect(getPluginTargetForAgent(KNOWN_AGENTS.COWORK)).toBe('claude-code');
+    expect(getPluginTargetForAgent('claude-code/2.1.126/agent')).toBe(
+      'claude-code'
+    );
   });
 
   it('does not map Codex to a Claude plugin target', () => {
@@ -61,6 +68,23 @@ describe('buildClaudePluginStatus', () => {
     expect(status.state).toBe('both');
     expect(status.legacy?.version).toBe('0.32.6');
     expect(status.official?.version).toBe('0.32.7');
+  });
+
+  it('preserves stale legacy install metadata', () => {
+    const status = buildClaudePluginStatus(
+      [
+        {
+          id: 'vercel-plugin@vercel',
+          version: '0.22.0',
+          installPath: '/missing/vercel-plugin',
+          stale: true,
+        },
+      ],
+      '0.32.7'
+    );
+
+    expect(status.state).toBe('legacy-only');
+    expect(status.legacy?.stale).toBe(true);
   });
 });
 
@@ -213,28 +237,18 @@ describe('buildClaudePromptCopy', () => {
   });
 });
 
-describe('buildClaudeActionRequiredMessage', () => {
-  it('uses marketplace upgrade wording for legacy Claude installs', () => {
-    const message = buildClaudeActionRequiredMessage(
-      {
-        state: 'legacy-only',
-        legacy: { id: 'vercel-plugin@vercel', version: '0.22.0' },
-        latestVersion: '0.32.7',
-      },
-      {
-        installOfficial: true,
-        updateOfficial: false,
-        removeLegacy: true,
-        removeLegacyMarketplace: true,
-      }
-    );
+describe('autoInstallVercelPlugin', () => {
+  it('swallows unreadable prefs files', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
 
-    expect(message).toContain(
-      'Working with Vercel is easier with the latest Vercel Plugin for Claude Code'
-    );
-    expect(message).toContain(
-      'claude plugins install vercel@claude-plugins-official'
-    );
-    expect(message).toContain('claude plugins uninstall vercel-plugin@vercel');
+    try {
+      client.setArgv('--global-config', configDir);
+      client.agentName = KNOWN_AGENTS.CODEX;
+      await writeFile(join(configDir, 'agent-preferences.json'), '{', 'utf8');
+
+      await expect(autoInstallVercelPlugin(client)).resolves.toBeUndefined();
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
   });
 });

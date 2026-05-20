@@ -3,6 +3,7 @@ import flags from '../../../../src/commands/flags';
 import * as ls from '../../../../src/commands/flags/ls';
 import * as openFlag from '../../../../src/commands/flags/open';
 import * as rolloutFlag from '../../../../src/commands/flags/rollout';
+import * as splitFlag from '../../../../src/commands/flags/split';
 import * as updateFlag from '../../../../src/commands/flags/update';
 import { client } from '../../../mocks/client';
 
@@ -10,12 +11,14 @@ describe('flags', () => {
   const lsSpy = vi.spyOn(ls, 'default').mockResolvedValue(0);
   const openSpy = vi.spyOn(openFlag, 'default').mockResolvedValue(0);
   const rolloutSpy = vi.spyOn(rolloutFlag, 'default').mockResolvedValue(0);
+  const splitSpy = vi.spyOn(splitFlag, 'default').mockResolvedValue(0);
   const updateSpy = vi.spyOn(updateFlag, 'default').mockResolvedValue(0);
 
   afterEach(() => {
     lsSpy.mockClear();
     openSpy.mockClear();
     rolloutSpy.mockClear();
+    splitSpy.mockClear();
     updateSpy.mockClear();
   });
 
@@ -90,5 +93,23 @@ describe('flags', () => {
     client.setArgv('flags', 'rollout', ...args);
     await flags(client);
     expect(rolloutSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to split subcommand', async () => {
+    const args: string[] = [
+      'my-feature',
+      '--environment',
+      'production',
+      '--by',
+      'user.userId',
+      '--weight',
+      'off=95',
+      '--weight',
+      'on=5',
+    ];
+
+    client.setArgv('flags', 'split', ...args);
+    await flags(client);
+    expect(splitSpy).toHaveBeenCalledWith(client, args);
   });
 });
