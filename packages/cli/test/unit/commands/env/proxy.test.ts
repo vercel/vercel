@@ -20,48 +20,13 @@ const DUMMY_RE = /^vproxy_[a-z0-9_]+_[0-9a-f]{20}_xx$/;
 const URL_DUMMY_RE =
   /^[a-z][a-z0-9+.-]*:\/\/vproxy-[a-z0-9-]+-[0-9a-f]{20}\.xx$/;
 
-describe('env proxy', () => {
+describe('env run --experimental', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('--help', () => {
-    it('tracks telemetry', async () => {
-      client.setArgv('env', 'proxy', '--help');
-      const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:help', value: 'env:proxy' },
-      ]);
-    });
-
-    it('does not show help when --help is after --', async () => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'vercel-env-pull',
-        name: 'vercel-env-pull',
-      });
-      const cwd = setupUnitFixture('vercel-env-pull');
-      client.cwd = cwd;
-
-      client.setArgv('env', 'proxy', '--', 'node', '--help');
-      const exitCodePromise = env(client);
-
-      await expect(client.stderr).toOutput('Downloading');
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:proxy', value: 'proxy' },
-      ]);
-    });
   });
 
   describe('errors', () => {
@@ -76,7 +41,7 @@ describe('env proxy', () => {
       const cwd = setupUnitFixture('vercel-env-pull');
       client.cwd = cwd;
 
-      client.setArgv('env', 'proxy');
+      client.setArgv('env', 'run', '--experimental');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
         'No command provided. Use `--` to separate vercel flags from your command.'
@@ -89,7 +54,7 @@ describe('env proxy', () => {
       const cwd = setupUnitFixture('vercel-pull-unlinked');
       client.cwd = cwd;
 
-      client.setArgv('env', 'proxy', '--', 'echo', 'hi');
+      client.setArgv('env', 'run', '--experimental', '--', 'echo', 'hi');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
         "Your codebase isn't linked to a project on Vercel"
@@ -153,7 +118,8 @@ describe('env proxy', () => {
 
       client.setArgv(
         'env',
-        'proxy',
+        'run',
+        '--experimental',
         '-e',
         'production',
         '--',
@@ -202,7 +168,7 @@ describe('env proxy', () => {
       const cwd = setupUnitFixture('vercel-env-pull');
       client.cwd = cwd;
 
-      client.setArgv('env', 'proxy', '--', 'node', 'script.js');
+      client.setArgv('env', 'run', '--experimental', '--', 'node', 'script.js');
       const exitCodePromise = env(client);
 
       await expect(client.stderr).toOutput(
@@ -224,7 +190,7 @@ describe('env proxy', () => {
 
       vi.mocked(execa).mockResolvedValueOnce({ exitCode: 42 } as any);
 
-      client.setArgv('env', 'proxy', '--', 'failing');
+      client.setArgv('env', 'run', '--experimental', '--', 'failing');
       const exitCode = await env(client);
       expect(exitCode).toEqual(42);
     });

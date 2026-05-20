@@ -6,7 +6,6 @@ import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
 import ls from './ls';
-import proxy, { needsHelpForProxy } from './proxy';
 import pull from './pull';
 import rm from './rm';
 import run, { needsHelpForRun } from './run';
@@ -15,7 +14,6 @@ import {
   envCommand,
   addSubcommand,
   listSubcommand,
-  proxySubcommand,
   pullSubcommand,
   removeSubcommand,
   runSubcommand,
@@ -32,24 +30,9 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
   pull: getCommandAliases(pullSubcommand),
-  proxy: getCommandAliases(proxySubcommand),
   run: getCommandAliases(runSubcommand),
   update: getCommandAliases(updateSubcommand),
 };
-
-const HIDDEN_SUBCOMMANDS = new Set<string>(
-  envCommand.subcommands
-    .filter(sub => 'hidden' in sub && sub.hidden)
-    .map(sub => sub.name)
-);
-
-function visibleCommandConfig(): Record<string, string[]> {
-  return Object.fromEntries(
-    Object.entries(COMMAND_CONFIG).filter(
-      ([name]) => !HIDDEN_SUBCOMMANDS.has(name)
-    )
-  );
-}
 
 export default async function main(client: Client) {
   const telemetry = new EnvTelemetryClient({
@@ -144,15 +127,6 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandRun(subcommandOriginal);
       exitCode = await run(client);
       break;
-    case 'proxy':
-      if (needsHelpForProxy(client)) {
-        telemetry.trackCliFlagHelp('env', subcommandOriginal);
-        printHelp(proxySubcommand);
-        return 2;
-      }
-      telemetry.trackCliSubcommandProxy(subcommandOriginal);
-      exitCode = await proxy(client);
-      break;
     case 'update':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
@@ -163,7 +137,7 @@ export default async function main(client: Client) {
       exitCode = await update(client, args);
       break;
     default:
-      output.error(getInvalidSubcommand(visibleCommandConfig()));
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(envCommand, { columns: client.stderr.columns }));
       return 2;
   }

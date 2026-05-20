@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
-import { proxySubcommand, type runSubcommand } from './command';
+import type { runSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { startBroker } from './broker-service';
@@ -35,16 +35,6 @@ function parseProxyArgs(argv: string[]) {
   const vercelArgs = hasDoubleDash ? argv.slice(2, i) : argv.slice(2);
   const userCommand = hasDoubleDash ? argv.slice(i + 1) : [];
   return { vercelArgs, userCommand };
-}
-
-export function needsHelpForProxy(client: Client): boolean {
-  const { vercelArgs } = parseProxyArgs(client.argv);
-  const flags = getFlagsSpecification(proxySubcommand.options);
-  try {
-    return Boolean(parseArguments(vercelArgs, flags).flags['--help']);
-  } catch {
-    return false;
-  }
 }
 
 // Walk up from __dirname looking for the compiled shim (built from proxy-shim.ts).
@@ -146,20 +136,18 @@ function addUrlHostSubstitution(
 export default async function proxy(
   client: Client,
   opts: {
-    subcommand?: typeof proxySubcommand | typeof runSubcommand;
-    source?: EnvRecordsSource;
+    subcommand: typeof runSubcommand;
+    source: EnvRecordsSource;
     missingCommandExample?: string;
-  } = {}
+  }
 ): Promise<number> {
   const { vercelArgs, userCommand } = parseProxyArgs(client.argv);
-  const subcommand = opts.subcommand ?? proxySubcommand;
-  const source = opts.source ?? 'vercel-cli:env:proxy';
 
   let parsedArgs;
   try {
     parsedArgs = parseArguments(
       vercelArgs,
-      getFlagsSpecification(subcommand.options)
+      getFlagsSpecification(opts.subcommand.options)
     );
   } catch (e) {
     printError(e);
@@ -169,7 +157,7 @@ export default async function proxy(
   if (userCommand.length === 0) {
     output.error(
       'No command provided. Use `--` to separate vercel flags from your command. ' +
-        `Example: \`${opts.missingCommandExample ?? 'vercel env proxy -- npm run dev'}\``
+        `Example: \`${opts.missingCommandExample ?? 'vercel env run --experimental -- npm run dev'}\``
     );
     return 1;
   }
@@ -204,7 +192,7 @@ export default async function proxy(
   const gitBranch = parsedArgs.flags['--git-branch'];
 
   output.spinner(`Downloading \`${environment}\` Environment Variables`);
-  const records = await pullEnvRecords(client, link.project.id, source, {
+  const records = await pullEnvRecords(client, link.project.id, opts.source, {
     target: environment,
     gitBranch,
   });
