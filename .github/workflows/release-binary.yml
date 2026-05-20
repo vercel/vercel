@@ -402,8 +402,16 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: 'true'
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            version="$(node -p "require('./packages/cli/package.json').version")"
+            latest="$(npm view vercel version)"
+            if [[ "$version" == "$latest" ]]; then
+              node packages/vc-native/scripts/publish-packages.mjs
+            else
+              node packages/vc-native/scripts/publish-packages.mjs --tag "rebuild-$version"
+            fi
           else
             node packages/vc-native/scripts/publish-packages.mjs --dry-run
           fi
@@ -417,7 +425,7 @@ jobs:
           for i in $(seq 1 12); do
             prefix="$(mktemp -d)"
             cache="$(mktemp -d)"
-            if npm --cache "$cache" install -g --prefix "$prefix" @vercel/vc-native --force && [[ -x "$prefix/bin/vercel" ]]; then
+            if npm --cache "$cache" install -g --prefix "$prefix" "@vercel/vc-native@$version" --force && [[ -x "$prefix/bin/vercel" ]]; then
               out="$($prefix/bin/vercel --version)"
               echo "$out"
               if [[ "$out" == "$version" ]]; then
