@@ -437,7 +437,7 @@ describe('dev', () => {
     it('tracks --project telemetry as [REDACTED]', async () => {
       vi.spyOn(process, 'cwd').mockReturnValue(projectPath);
 
-      client.setArgv('dev', '--project=my-app');
+      client.setArgv('dev', `--project=${projectId}`);
       const exitCodePromise = dev(client);
 
       // dev normally only exits on SIGTERM; here it boots the mocked server.
