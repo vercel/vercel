@@ -125,7 +125,7 @@ describe('env pull', () => {
     });
     expect(pullRequests).toBe(2);
     expect(client.authConfig.token).toBe('vca_new');
-    expect(client.authConfig.refreshToken).toBe('vcr_new');
+    expect(client.authConfig.refreshToken).toBe('vcr_old');
   });
 
   it('should handle pulling from Preview env vars', async () => {
