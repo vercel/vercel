@@ -823,9 +823,12 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -n,  --name <NAME>      Name of the connector                                                                         
-       --triggers         Enable webhook triggers for this connector                                                    
+       --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
+       --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
+  -F,  --format <FORMAT>         Specify the output format (json)                                                            
+       --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
+  -n,  --name <NAME>             Name of the connector                                                                       
+       --triggers                Enable webhook triggers for this connector                                                  
 
 
   Global Options:
@@ -855,6 +858,10 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with webhook triggers enabled
 
     $ vercel connect create slack --name my-bot --triggers
+
+  - Create with branding (icon and colors)
+
+    $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
 
   - Output as JSON
 
@@ -3340,13 +3347,12 @@ exports[`help command > integration help output snapshots > integration accept-t
   ▲ vercel integration accept-terms integration [options]
 
   Accept marketplace legal terms for an integration and install it on the current team (installation only; no product   
-  resource). Does not replace integrations that require a browser or device attestation.                                
+  resource). Requires an interactive terminal and human confirmation. Does not replace integrations that require a      
+  browser or device attestation.                                                                                        
 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -y,  --yes              Non-interactive only: confirm acceptance of the Vercel Marketplace End User Addendum and this 
-                          integration's privacy policy / EULA when applicable                                           
 
 
   Global Options:
@@ -3370,13 +3376,9 @@ exports[`help command > integration help output snapshots > integration accept-t
     $ vercel integration accept-terms <integration>
     $ vercel integration accept-terms neon
 
-  - Accept terms in CI (you must have read the linked policies)
-
-    $ vercel integration accept-terms neon --yes --non-interactive
-
   - Output result as JSON
 
-    $ vercel integration accept-terms neon --yes --format=json
+    $ vercel integration accept-terms neon --format=json
 
 "
 `;
@@ -3546,6 +3548,13 @@ exports[`help command > integration help output snapshots > integration help col
                                   no 
                                   pr…
                                   re…
+                                  Re…
+                                  an 
+                                  in…
+                                  te…
+                                  and
+                                  hu…
+                                  co…
                                   Do…
                                   not
                                   re…
@@ -3787,9 +3796,10 @@ exports[`help command > integration help output snapshots > integration help col
   accept-terms   integration      Accept marketplace legal terms for an      
                                   integration and install it on the current  
                                   team (installation only; no product        
-                                  resource). Does not replace integrations   
-                                  that require a browser or device           
-                                  attestation.                               
+                                  resource). Requires an interactive terminal
+                                  and human confirmation. Does not replace   
+                                  integrations that require a browser or     
+                                  device attestation.                        
   balance        integration      Shows the balances and thresholds of a     
                                   specified marketplace integration          
   discover       [query]          Discover available marketplace integrations
@@ -3857,8 +3867,9 @@ exports[`help command > integration help output snapshots > integration help col
 
   add            integration      Installs a marketplace integration                                                 
   accept-terms   integration      Accept marketplace legal terms for an integration and install it on the current    
-                                  team (installation only; no product resource). Does not replace integrations that  
-                                  require a browser or device attestation.                                           
+                                  team (installation only; no product resource). Requires an interactive terminal and
+                                  human confirmation. Does not replace integrations that require a browser or device 
+                                  attestation.                                                                       
   balance        integration      Shows the balances and thresholds of a specified marketplace integration           
   discover       [query]          Discover available marketplace integrations                                        
   guide          integration      Show getting started guides and code snippets for a marketplace integration        

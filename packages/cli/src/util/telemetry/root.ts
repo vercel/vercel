@@ -418,6 +418,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandTraces(actual: string) {
+    this.trackCliCommand({
+      command: 'traces',
+      value: actual,
+    });
+  }
+
   trackCliCommandWhoami(actual: string) {
     this.trackCliCommand({
       command: 'whoami',
@@ -484,6 +491,14 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackDeviceId(deviceId: string | undefined) {
     super.trackDeviceId(deviceId);
+  }
+
+  trackVercelPluginActiveSession() {
+    super.trackVercelPluginActiveSession();
+  }
+
+  trackVercelPluginVersion(version: string | undefined) {
+    super.trackVercelPluginVersion(version);
   }
 
   trackErrorStatus(status: number | string | undefined) {
