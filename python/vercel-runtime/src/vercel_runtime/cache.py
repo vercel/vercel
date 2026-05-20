@@ -143,6 +143,19 @@ def _apply_cache_context(
         context.set_context(cache=sync_cache)
 
 
+def clear_runtime_cache_context() -> None:
+    modules = _load_vercel_cache_modules()
+    if modules is None:
+        return
+
+    _, context = modules
+    try:
+        context.set_context(cache=None, async_cache=None)
+    except TypeError:
+        # Older `vercel` SDK without the async_cache kwarg.
+        context.set_context(cache=None)
+
+
 # We don't depend on `vercel` package directly, so
 # use an optional import here. If we can import the modules -
 # we'll configure caches, otherwise we skip the behaviour

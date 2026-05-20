@@ -22,6 +22,7 @@ from vercel_runtime.cache import (
     SC_HEADERS_ALWAYS_STRIP,
     SC_HEADERS_STRIP_ON_NO_LEAK,
     SC_NO_HEADER_LEAK_HEADER,
+    clear_runtime_cache_context,
     set_runtime_cache_from_asgi_pairs,
     set_runtime_cache_from_http_headers,
 )
@@ -641,6 +642,7 @@ class ASGIMiddleware:
         try:
             await self.app(new_scope, receive, send)
         finally:
+            clear_runtime_cache_context()
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -812,6 +814,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()
                 storage.reset(token)
                 send_message(
@@ -1037,6 +1040,7 @@ if (
             captured_ctx.run,
             (server.handle_request,),  # type: ignore[attr-defined]
         )
+        clear_runtime_cache_context()
 
         if (body is not None and len(body) > 0) and (
             encoding is not None and encoding == "base64"
@@ -1174,6 +1178,7 @@ else:
             try:
                 response = Response.from_app(wsgi_user_app, environ)
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()
 
             return_dict: dict[str, Any] = {
@@ -1472,4 +1477,5 @@ else:
                 response = asgi_cycle(asgi_user_app, body)
                 return response
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()

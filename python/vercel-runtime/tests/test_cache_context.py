@@ -238,5 +238,51 @@ class TestSetRuntimeCacheFromHTTP(unittest.TestCase):
         cache_ns.context.set_context.assert_called_once()
 
 
+class TestClearRuntimeCacheContext(unittest.TestCase):
+    def test_calls_set_context_with_none_for_both_slots(self) -> None:
+        cache_ns = _mock_cache_namespace()
+        with patch.object(
+            vrc,
+            "_load_vercel_cache_modules",
+            return_value=(cache_ns.cache_build, cache_ns.context),
+        ):
+            vrc.clear_runtime_cache_context()
+
+        cache_ns.context.set_context.assert_called_once_with(
+            cache=None,
+            async_cache=None,
+        )
+
+    def test_falls_back_when_async_cache_kwarg_unsupported(self) -> None:
+        def reject_async_cache(**kwargs: object) -> None:
+            if "async_cache" in kwargs:
+                raise TypeError("unexpected keyword 'async_cache'")
+
+        cache_ns = _mock_cache_namespace(
+            set_context_side_effect=reject_async_cache,
+        )
+
+        with patch.object(
+            vrc,
+            "_load_vercel_cache_modules",
+            return_value=(cache_ns.cache_build, cache_ns.context),
+        ):
+            vrc.clear_runtime_cache_context()
+
+        calls = cache_ns.context.set_context.call_args_list
+        self.assertEqual(len(calls), 2)
+        self.assertIn("async_cache", calls[0].kwargs)
+        self.assertNotIn("async_cache", calls[1].kwargs)
+        self.assertIsNone(calls[1].kwargs["cache"])
+
+    def test_noop_when_vercel_cache_unavailable(self) -> None:
+        with patch.object(
+            vrc,
+            "_load_vercel_cache_modules",
+            return_value=None,
+        ):
+            vrc.clear_runtime_cache_context()  # should not raise
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
