@@ -27,7 +27,7 @@
     "@vercel/gatsby-plugin-vercel-builder": "workspace:*",
     "@vercel/nft": "1.5.0",
     "@vercel/static-config": "workspace:*",
-    "nitro": "npm:nitro-nightly@3.0.1-20260108-220050-08740398",
+    "nitro": "npm:nitro-nightly@latest",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
