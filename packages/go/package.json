@@ -19,7 +19,8 @@
   },
   "files": [
     "dist",
-    "*.go"
+    "*.go",
+    "bootstrap"
   ],
   "devDependencies": {
     "@tootallnate/once": "1.1.2",

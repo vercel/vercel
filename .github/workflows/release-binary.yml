@@ -402,7 +402,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: 'true'
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             node packages/vc-native/scripts/publish-packages.mjs
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             version="$(node -p "require('./packages/cli/package.json').version")"
