@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, projectOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const createSubcommand = {
@@ -359,11 +359,8 @@ export const attachSubcommand = {
         'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description: 'Project name or ID (default: current linked project)',
     },
     {
@@ -438,11 +435,8 @@ export const detachSubcommand = {
   ],
   options: [
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description: 'Project name or ID (default: current linked project)',
     },
     {

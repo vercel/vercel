@@ -344,6 +344,21 @@ export class TelemetryClient {
       });
     }
   }
+
+  /**
+   * Tracks the --project option. Value is redacted because project names/IDs
+   * may be sensitive. Accepts `string | string[]` so commands with a repeatable
+   * `--project` can override. Not all commands support repeated `--project` flags
+   */
+  trackCliOptionProject(value: string | string[] | undefined) {
+    if (!value) return;
+    if (Array.isArray(value) && value.length === 0) return;
+
+    this.trackCliOption({
+      option: 'project',
+      value: this.redactedValue,
+    });
+  }
 }
 
 export class TelemetryEventStore {

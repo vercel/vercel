@@ -23,13 +23,4 @@ export class DeployHooksCreateTelemetryClient
       });
     }
   }
-
-  trackCliOptionProject(project: string | undefined) {
-    if (project) {
-      this.trackCliOption({
-        option: 'project',
-        value: project,
-      });
-    }
-  }
 }
