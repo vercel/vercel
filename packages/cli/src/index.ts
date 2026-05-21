@@ -1422,7 +1422,17 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
     client.stdout.write('[build-diag] post-main: setting process.exitCode\n');
 
     // Destroy the keep-alive HTTP agent so its sockets don't block exit
+    const agentType = client.agent?.constructor?.name ?? 'undefined';
+    client.stdout.write(`[build-diag] destroying agent: ${agentType}\n`);
     client.agent?.destroy();
+
+    // Unref any remaining handles so they don't block exit
+    const activeHandles = (process as any)._getActiveHandles?.() ?? [];
+    for (const h of activeHandles) {
+      if (typeof h.unref === 'function') {
+        h.unref();
+      }
+    }
 
     process.exitCode = exitCode;
     client.stdout.write('[build-diag] post-main: done, process should exit\n');
