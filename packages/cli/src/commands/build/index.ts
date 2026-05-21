@@ -495,8 +495,11 @@ export default async function main(client: Client): Promise<number> {
         .trace(span =>
           doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
         );
+      output.debug('[build-diag] build main: doBuild trace resolved');
     } finally {
+      output.debug('[build-diag] build main: stopping rootSpan');
       await rootSpan.stop();
+      output.debug('[build-diag] build main: rootSpan stopped');
     }
 
     if (client.nonInteractive) {
@@ -523,6 +526,7 @@ export default async function main(client: Client): Promise<number> {
         )}\n`
       );
     }
+    output.debug('[build-diag] build main: returning 0');
     return 0;
   } catch (err: any) {
     if (client.nonInteractive) {
@@ -1679,10 +1683,16 @@ async function doBuild(
     );
   }
 
+  output.debug('[build-diag] doBuild: after "Build Completed in"');
+
   // Analyze .vc-config.json files if environment variable is set
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
+    output.debug('[build-diag] doBuild: starting analyzeVcConfigFiles');
     await analyzeVcConfigFiles(cwd, outputDir);
+    output.debug('[build-diag] doBuild: finished analyzeVcConfigFiles');
   }
+
+  output.debug('[build-diag] doBuild: returning');
 }
 
 function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {

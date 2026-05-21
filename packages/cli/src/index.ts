@@ -446,6 +446,8 @@ const main = async () => {
       return;
     }
 
+    output.debug('[build-diag] saveTelemetry: start');
+
     const postCommandSpan = rootSpan.child('vc.postCommand');
 
     telemetryEventStore.updateTeamId(
@@ -455,6 +457,7 @@ const main = async () => {
       client?.authConfig.userId ?? authConfig.userId
     );
     if (!telemetryEventStore.hasUserId) {
+      output.debug('[build-diag] saveTelemetry: awaiting earlyGetUserPromise');
       const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
       try {
         const user = await earlyGetUserPromise;
@@ -466,8 +469,10 @@ const main = async () => {
       } finally {
         getUserSpan.stop();
       }
+      output.debug('[build-diag] saveTelemetry: earlyGetUserPromise resolved');
     }
 
+    output.debug('[build-diag] saveTelemetry: resolving projectId');
     try {
       const envProjectId = getPlatformEnv('PROJECT_ID');
       if (envProjectId) {
@@ -488,7 +493,9 @@ const main = async () => {
     }
     telemetry.trackProjectId(telemetryEventStore.currentProjectId);
 
+    output.debug('[build-diag] saveTelemetry: saving telemetry events');
     await telemetryEventStore.save();
+    output.debug('[build-diag] saveTelemetry: done');
     postCommandSpan.stop();
     telemetrySaved = true;
   };
@@ -1269,13 +1276,17 @@ const main = async () => {
     return finishWithExitCode(1);
   }
 
+  output.debug('[build-diag] cli main: starting saveTelemetry');
   await saveTelemetry();
+  output.debug('[build-diag] cli main: saveTelemetry done');
 
   rootSpan.stop();
+  output.debug('[build-diag] cli main: rootSpan stopped');
 
   // Flush trace events to disk. Only `vc build` sets traceDiagnosticsPath,
   // so traces are not written for other commands (deploy, env, etc.).
   if (client.traceDiagnosticsPath) {
+    output.debug('[build-diag] cli main: writing trace diagnostics');
     try {
       await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
       await writeFile(
@@ -1286,21 +1297,29 @@ const main = async () => {
       output.error('Failed to write diagnostics trace file');
       output.prettyError(err);
     }
+    output.debug('[build-diag] cli main: trace diagnostics written');
   }
 
+  output.debug('[build-diag] cli main: returning exitCode');
   return exitCode;
 };
 
 main()
   .then(async exitCode => {
+    output.debug('[build-diag] post-main .then(): entered');
     if (SHOULD_CHECK_FOR_UPDATES) {
+      output.debug('[build-diag] post-main: checking for updates');
       const latest = getLatestVersion({
         pkg,
       });
+      output.debug(
+        `[build-diag] post-main: getLatestVersion returned ${latest ?? 'undefined'}`
+      );
       if (latest) {
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
         const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
+        output.debug('[build-diag] post-main: checking canAutoUpdate');
         if (
           await canAutoUpdate(
             client,
@@ -1308,6 +1327,7 @@ main()
             resolvedCommandForUpdate
           )
         ) {
+          output.debug('[build-diag] post-main: running auto-update');
           const upgradeExitCode = await executeUpgrade();
           process.exitCode = originalExitCode;
           if (upgradeExitCode !== 0) {
@@ -1318,6 +1338,7 @@ main()
           return;
         }
 
+        output.debug(`[build-diag] post-main: isTTY=${isTTY}`);
         if (isTTY) {
           // Interactive mode: prompt user to update now
           const errorMsg =
@@ -1392,6 +1413,8 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
       }
     }
 
+    output.debug('[build-diag] post-main: setting process.exitCode');
     process.exitCode = exitCode;
+    output.debug('[build-diag] post-main: done, process should exit');
   })
   .catch(handleUnexpected);
