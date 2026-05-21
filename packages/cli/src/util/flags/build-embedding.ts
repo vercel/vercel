@@ -1,4 +1,4 @@
-import { getInstalledPackageVersion } from '@vercel/build-utils/dist';
+import { getInstalledPackageVersion } from '@vercel/build-utils';
 
 function isFlagsEmbedOption(
   input: string | undefined
