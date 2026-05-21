@@ -397,6 +397,7 @@ export const build: BuildV2 = async ({
   // `nitroInjectionEligible` below).
   const nitroInjectionEligible =
     !meta.isDev && shouldInjectNitro({ pkg, config, buildCommand });
+  let usedNitroInjection = false;
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
@@ -766,6 +767,7 @@ export const build: BuildV2 = async ({
         );
         if (hasServerEnv) {
           buildCommand = getNitroInjectionBuildCommand();
+          usedNitroInjection = true;
           console.log(
             `Detected \`vite build\` with a server environment but no \`nitro\` dependency. Replacing the build command with \`nitro build --builder vite\` for SSR support.`
           );
@@ -844,15 +846,17 @@ export const build: BuildV2 = async ({
         return await BuildOutputV2.createBuildOutput(workPath);
       }
 
-      // If this is a vite project whose vite config declares a server
-      // environment that actually produced output on disk, take over the
-      // post-build mapping so the server bundle becomes a Vercel Function
-      // instead of being shipped as a static .js. Falls through silently
-      // for plain vite SPAs, vitepress, non-vite projects, etc.
-      const viteDetection = await detectViteServerEnvironments(
-        entrypointDir,
-        pkg
-      );
+      // Post-build vite-environments mapping (Flow 2). Skipped when we already
+      // ran injected Nitro — that path should emit BOA v3 above; calling
+      // vite.resolveConfig here after a Nitro build can hang the container.
+      const viteDetection = usedNitroInjection
+        ? null
+        : await detectViteServerEnvironments(entrypointDir, pkg);
+      if (usedNitroInjection) {
+        debug(
+          'Skipping post-build vite-environments mapping after Nitro injection (expected BOA v3 or normal static fallthrough)'
+        );
+      }
       if (viteDetection) {
         debug(
           `Vite environments path triggered (${viteDetection.environments

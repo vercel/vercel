@@ -35,11 +35,7 @@ import {
   glob,
   NodejsLambda,
 } from '@vercel/build-utils';
-import {
-  packageDeclaresLikelyViteSsr,
-  shouldInjectNitroForProject,
-  viteConfigSourceDeclaresServerEnvironment,
-} from './vite-ssr-heuristics';
+import { shouldInjectNitroForProject } from './vite-ssr-heuristics';
 
 const SERVER_ENTRY_CANDIDATES = ['server.js', 'index.js', 'entry-server.js'];
 
@@ -217,19 +213,17 @@ export function projectDeclaresViteServerEnvironment(
  */
 export async function detectViteServerEnvironments(
   workPath: string,
-  pkg?: PackageJson | null
+  _pkg?: PackageJson | null
 ): Promise<ViteEnvironmentsDetection | null> {
-  if (
-    packageDeclaresLikelyViteSsr(pkg) ||
-    viteConfigSourceDeclaresServerEnvironment(workPath)
-  ) {
-    const onDisk = await detectBuiltViteEnvironmentsOnDisk(workPath);
-    if (onDisk) {
-      debug(
-        'Using disk-based vite environment detection (skipping resolveConfig)'
-      );
-      return onDisk;
-    }
+  // Post-build path: never call resolveConfig when the standard SSR layout is
+  // already on disk (TanStack Start / RR v7). Plain Vite SPAs don't emit
+  // dist/server, so this returns null without touching vite.
+  const onDisk = await detectBuiltViteEnvironmentsOnDisk(workPath);
+  if (onDisk) {
+    debug(
+      'Using disk-based vite environment detection (skipping resolveConfig)'
+    );
+    return onDisk;
   }
 
   const envs = await getViteEnvironments(workPath);
