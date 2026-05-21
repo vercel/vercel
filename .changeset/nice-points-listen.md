@@ -2,4 +2,4 @@
 '@vercel/functions': minor
 ---
 
-Add `upgradeWebSocket()` API
+Add `experimental_upgradeWebSocket()` API

@@ -2,7 +2,7 @@ import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { Socket } from 'net';
 import { IncomingMessage } from 'http';
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../src/get-context';
-import { upgradeWebSocket } from '../../src/websocket';
+import { experimental_upgradeWebSocket } from '../../src/websocket';
 
 const g = globalThis as typeof globalThis & {
   [SYMBOL_FOR_REQ_CONTEXT]?: unknown;
@@ -12,19 +12,19 @@ beforeEach(() => {
   delete g[SYMBOL_FOR_REQ_CONTEXT];
 });
 
-describe('upgradeWebSocket', () => {
+describe('experimental_upgradeWebSocket', () => {
   describe('runtime support', () => {
     test('throws when runtime does not provide upgradeWebSocket', async () => {
       g[SYMBOL_FOR_REQ_CONTEXT] = { get: () => ({}) };
 
-      await expect(upgradeWebSocket()).rejects.toThrow(
-        'upgradeWebSocket is not available in the current runtime environment'
+      await expect(experimental_upgradeWebSocket()).rejects.toThrow(
+        'experimental_upgradeWebSocket is not available in the current runtime environment'
       );
     });
 
     test('throws when context is empty', async () => {
-      await expect(upgradeWebSocket()).rejects.toThrow(
-        'upgradeWebSocket is not available in the current runtime environment'
+      await expect(experimental_upgradeWebSocket()).rejects.toThrow(
+        'experimental_upgradeWebSocket is not available in the current runtime environment'
       );
     });
   });
@@ -49,7 +49,7 @@ describe('upgradeWebSocket', () => {
         get: () => ({ upgradeWebSocket: mockUpgrade }),
       };
 
-      const ws = await upgradeWebSocket();
+      const ws = await experimental_upgradeWebSocket();
 
       expect(mockUpgrade).toHaveBeenCalled();
       expect(ws).toBeDefined();

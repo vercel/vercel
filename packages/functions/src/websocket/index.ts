@@ -1,12 +1,12 @@
 import { WebSocketServer, type WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
-export async function upgradeWebSocket(): Promise<WebSocket> {
+export async function experimental_upgradeWebSocket(): Promise<WebSocket> {
   const ctx = getContext();
 
   if (typeof ctx.upgradeWebSocket !== 'function') {
     throw new Error(
-      'upgradeWebSocket is not available in the current runtime environment. ' +
+      'experimental_upgradeWebSocket is not available in the current runtime environment. ' +
         'This feature requires a Vercel runtime that supports WebSocket upgrades.'
     );
   }
