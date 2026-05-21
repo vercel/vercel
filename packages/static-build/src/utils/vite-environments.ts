@@ -29,13 +29,37 @@ import {
   type BuildResultV2Typical,
   type Files,
   type NodeVersion,
+  type PackageJson,
   debug,
   FileFsRef,
   glob,
   NodejsLambda,
 } from '@vercel/build-utils';
+import {
+  packageDeclaresLikelyViteSsr,
+  shouldInjectNitroForProject,
+  viteConfigSourceDeclaresServerEnvironment,
+} from './vite-ssr-heuristics';
 
 const SERVER_ENTRY_CANDIDATES = ['server.js', 'index.js', 'entry-server.js'];
+
+// TanStack Start / RR v7 often hang inside plugin hooks during resolveConfig.
+const RESOLVE_CONFIG_TIMEOUT_MS = 120_000;
+
+const BUILT_ENV_LAYOUTS = [
+  {
+    clientName: 'client',
+    serverName: 'server',
+    client: 'dist/client',
+    server: 'dist/server',
+  },
+  {
+    clientName: 'client',
+    serverName: 'server',
+    client: 'build/client',
+    server: 'build/server',
+  },
+] as const;
 
 interface ViteEnvironmentConfig {
   consumer?: 'client' | 'server';
@@ -128,9 +152,13 @@ async function loadViteEnvironments(
   // plugin-contributed environments (e.g. tanstackStart()) become visible.
   let resolved: ResolvedViteConfig;
   try {
-    resolved = (await vite.resolveConfig(
-      { root: workPath },
-      'build'
+    resolved = (await promiseWithTimeout(
+      vite.resolveConfig(
+        { root: workPath },
+        'build'
+      ) as Promise<ResolvedViteConfig>,
+      RESOLVE_CONFIG_TIMEOUT_MS,
+      'vite.resolveConfig timed out'
     )) as ResolvedViteConfig;
   } catch (err) {
     debug(`vite.resolveConfig failed: ${errorToString(err)}`);
@@ -172,28 +200,38 @@ async function loadViteEnvironments(
 }
 
 /**
- * Pre-build check: does this vite project declare at least one real
- * (non-phantom) server environment? Used by the Nitro-injection path to
- * decide whether replacing `vite build` with `nitro build --builder vite`
- * is safe — plain Vite/Svelte SPAs return `false` because their only
- * server-shaped env is the phantom one that shares the client outDir.
+ * Pre-build check for Nitro injection. Does not call `vite.resolveConfig`
+ * (TanStack Start plugins can hang the build container there).
  */
-export async function projectDeclaresViteServerEnvironment(
-  workPath: string
-): Promise<boolean> {
-  const envs = await getViteEnvironments(workPath);
-  if (!envs) return false;
-  return envs.some(e => e.consumer === 'server');
+export function projectDeclaresViteServerEnvironment(
+  workPath: string,
+  pkg?: PackageJson | null
+): boolean {
+  return shouldInjectNitroForProject(workPath, pkg);
 }
 
 /**
- * Post-build check: cheaply discovers vite environments with built server
- * output on disk. Returns `null` when there's nothing to do — caller
- * should fall through to the normal static-build path.
+ * Post-build check: discovers vite environments with built server output.
+ * Prefers disk layout + SSR heuristics so we skip `resolveConfig` for known
+ * meta-frameworks; falls back to resolveConfig (with timeout) otherwise.
  */
 export async function detectViteServerEnvironments(
-  workPath: string
+  workPath: string,
+  pkg?: PackageJson | null
 ): Promise<ViteEnvironmentsDetection | null> {
+  if (
+    packageDeclaresLikelyViteSsr(pkg) ||
+    viteConfigSourceDeclaresServerEnvironment(workPath)
+  ) {
+    const onDisk = await detectBuiltViteEnvironmentsOnDisk(workPath);
+    if (onDisk) {
+      debug(
+        'Using disk-based vite environment detection (skipping resolveConfig)'
+      );
+      return onDisk;
+    }
+  }
+
   const envs = await getViteEnvironments(workPath);
   if (!envs) return null;
 
@@ -206,6 +244,63 @@ export async function detectViteServerEnvironments(
   if (!hasBuiltServer) return null;
 
   return { environments: filtered };
+}
+
+async function detectBuiltViteEnvironmentsOnDisk(
+  workPath: string
+): Promise<ViteEnvironmentsDetection | null> {
+  for (const layout of BUILT_ENV_LAYOUTS) {
+    const clientOut = join(workPath, layout.client);
+    const serverOut = join(workPath, layout.server);
+    if (clientOut === serverOut) continue;
+    if (!existsSync(clientOut) || !existsSync(serverOut)) continue;
+    if (!(await serverOutDirHasJsEntry(serverOut))) continue;
+
+    return {
+      environments: [
+        {
+          name: layout.clientName,
+          consumer: 'client',
+          outDir: clientOut,
+          inputNames: [],
+          conditions: ['browser', 'import'],
+        },
+        {
+          name: layout.serverName,
+          consumer: 'server',
+          outDir: serverOut,
+          inputNames: ['server'],
+          conditions: ['node', 'import', 'require'],
+        },
+      ],
+    };
+  }
+  return null;
+}
+
+async function serverOutDirHasJsEntry(serverOut: string): Promise<boolean> {
+  const entries = await fs.readdir(serverOut, { withFileTypes: true });
+  return entries.some(e => e.isFile() && e.name.endsWith('.js'));
+}
+
+function promiseWithTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      err => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
 }
 
 export async function buildViteEnvironments({

@@ -392,11 +392,9 @@ export const build: BuildV2 = async ({
   let buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
 
-  // Cheap pre-install gate. We still need to confirm the project actually
-  // declares an SSR-shaped vite environment before swapping the command,
-  // which requires running `vite.resolveConfig` and therefore depends on
-  // `vite` being installed — that check happens after the install step
-  // below (see the `nitroInjectionEligible` block).
+  // Cheap pre-install gate. After install we confirm SSR intent via package
+  // and vite.config heuristics (no `vite.resolveConfig` — see
+  // `nitroInjectionEligible` below).
   const nitroInjectionEligible =
     !meta.isDev && shouldInjectNitro({ pkg, config, buildCommand });
 
@@ -758,16 +756,14 @@ export const build: BuildV2 = async ({
         debug(`WARN: A dev script is missing`);
       }
 
-      // Confirm Nitro injection is actually wanted now that `vite` is on
-      // disk. `projectDeclaresViteServerEnvironment` runs vite.resolveConfig
-      // and asks "does this project actually declare a server environment
-      // with output distinct from its client?". Plain Vite SPAs, plain
-      // Svelte SPAs, and SvelteKit (which has its own Vercel adapter) all
-      // return `false` here — the broad package-level gate would otherwise
-      // misfire and hand them to Nitro, which can't build them.
+      // Confirm Nitro injection without `vite.resolveConfig` (TanStack Start
+      // plugins can hang there). Package + vite.config source heuristics
+      // exclude plain Vite/Svelte SPAs and SvelteKit.
       if (nitroInjectionEligible) {
-        const hasServerEnv =
-          await projectDeclaresViteServerEnvironment(entrypointDir);
+        const hasServerEnv = projectDeclaresViteServerEnvironment(
+          entrypointDir,
+          pkg
+        );
         if (hasServerEnv) {
           buildCommand = getNitroInjectionBuildCommand();
           console.log(
@@ -853,7 +849,10 @@ export const build: BuildV2 = async ({
       // post-build mapping so the server bundle becomes a Vercel Function
       // instead of being shipped as a static .js. Falls through silently
       // for plain vite SPAs, vitepress, non-vite projects, etc.
-      const viteDetection = await detectViteServerEnvironments(entrypointDir);
+      const viteDetection = await detectViteServerEnvironments(
+        entrypointDir,
+        pkg
+      );
       if (viteDetection) {
         debug(
           `Vite environments path triggered (${viteDetection.environments
