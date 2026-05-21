@@ -1228,6 +1228,13 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 (shorth…
                                 for     
                                 \`--targ…
+       --project <NAME_OR_ID>   Project 
+                                name or 
+                                ID      
+                                (defaul…
+                                to the  
+                                linked  
+                                project)
   -p,  --public                 Deploym…
                                 is      
                                 public  
@@ -1384,6 +1391,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 existing build                                  
        --prod                   Create a production deployment (shorthand for   
                                 \`--target=production\`)                          
+       --project <NAME_OR_ID>   Project name or ID (defaults to the linked      
+                                project)                                        
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)      
        --regions <REGION>       Set default regions to enable the deployment on 
        --skip-domain            Disable the automatic promotion (aliasing) of   
@@ -1457,6 +1466,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --no-wait                Don't wait for the deployment to finish                                                 
        --prebuilt               Use in combination with \`vc build\`. Deploy an existing build                            
        --prod                   Create a production deployment (shorthand for \`--target=production\`)                    
+       --project <NAME_OR_ID>   Project name or ID (defaults to the linked project)                                     
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)                                              
        --regions <REGION>       Set default regions to enable the deployment on                                         
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
@@ -1514,9 +1524,12 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
 
   Options:
 
-  -l,  --listen <URI>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
-  -L,  --local         Start the dev server without linking to a Vercel project 
-  -y,  --yes           Accept default value for all prompts                     
+  -l,  --listen <URI>          Specify a URI endpoint on which to listen             
+                               [0.0.0.0:3000]                                        
+  -L,  --local                 Start the dev server without linking to a Vercel      
+                               project                                               
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)   
+  -y,  --yes                   Accept default value for all prompts                  
 
 
   Global Options:
@@ -3347,13 +3360,12 @@ exports[`help command > integration help output snapshots > integration accept-t
   ▲ vercel integration accept-terms integration [options]
 
   Accept marketplace legal terms for an integration and install it on the current team (installation only; no product   
-  resource). Does not replace integrations that require a browser or device attestation.                                
+  resource). Requires an interactive terminal and human confirmation. Does not replace integrations that require a      
+  browser or device attestation.                                                                                        
 
   Options:
 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-  -y,  --yes              Non-interactive only: confirm acceptance of the Vercel Marketplace End User Addendum and this 
-                          integration's privacy policy / EULA when applicable                                           
 
 
   Global Options:
@@ -3377,13 +3389,9 @@ exports[`help command > integration help output snapshots > integration accept-t
     $ vercel integration accept-terms <integration>
     $ vercel integration accept-terms neon
 
-  - Accept terms in CI (you must have read the linked policies)
-
-    $ vercel integration accept-terms neon --yes --non-interactive
-
   - Output result as JSON
 
-    $ vercel integration accept-terms neon --yes --format=json
+    $ vercel integration accept-terms neon --format=json
 
 "
 `;
@@ -3553,6 +3561,13 @@ exports[`help command > integration help output snapshots > integration help col
                                   no 
                                   pr…
                                   re…
+                                  Re…
+                                  an 
+                                  in…
+                                  te…
+                                  and
+                                  hu…
+                                  co…
                                   Do…
                                   not
                                   re…
@@ -3794,9 +3809,10 @@ exports[`help command > integration help output snapshots > integration help col
   accept-terms   integration      Accept marketplace legal terms for an      
                                   integration and install it on the current  
                                   team (installation only; no product        
-                                  resource). Does not replace integrations   
-                                  that require a browser or device           
-                                  attestation.                               
+                                  resource). Requires an interactive terminal
+                                  and human confirmation. Does not replace   
+                                  integrations that require a browser or     
+                                  device attestation.                        
   balance        integration      Shows the balances and thresholds of a     
                                   specified marketplace integration          
   discover       [query]          Discover available marketplace integrations
@@ -3864,8 +3880,9 @@ exports[`help command > integration help output snapshots > integration help col
 
   add            integration      Installs a marketplace integration                                                 
   accept-terms   integration      Accept marketplace legal terms for an integration and install it on the current    
-                                  team (installation only; no product resource). Does not replace integrations that  
-                                  require a browser or device attestation.                                           
+                                  team (installation only; no product resource). Requires an interactive terminal and
+                                  human confirmation. Does not replace integrations that require a browser or device 
+                                  attestation.                                                                       
   balance        integration      Shows the balances and thresholds of a specified marketplace integration           
   discover       [query]          Discover available marketplace integrations                                        
   guide          integration      Show getting started guides and code snippets for a marketplace integration        
@@ -5685,6 +5702,11 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
                                pull specific 
                                Environment   
                                Variables for 
+       --project <NAME_OR_ID>  Project name  
+                               or ID         
+                               (defaults to  
+                               the linked    
+                               project)      
   -y,  --yes                   Skip questions
                                when setting  
                                up new project
@@ -5777,6 +5799,7 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
        --environment <TARGET>  Deployment environment [development]                  
        --git-branch <NAME>     Specify the Git branch to pull specific Environment   
                                Variables for                                         
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)   
   -y,  --yes                   Skip questions when setting up new project using      
                                default scope and settings                            
 
@@ -5832,6 +5855,7 @@ exports[`help command > pull help output snapshots > pull help column width 120 
 
        --environment <TARGET>  Deployment environment [development]                                                          
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
+       --project <NAME_OR_ID>  Project name or ID (defaults to the linked project)                                           
   -y,  --yes                   Skip questions when setting up new project using default scope and settings                   
 
 

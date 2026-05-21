@@ -3,7 +3,7 @@
     {
       "path": "/",
       "status": 200,
-      "mustContain": "framework:net-http version:go1.26.1 randomness:RANDOMNESS_PLACEHOLDER",
+      "mustContain": "framework:net-http version:go1.26.1-X:jsonv2 randomness:RANDOMNESS_PLACEHOLDER",
       "responseHeaders": {
         "content-type": "/text\\/html/"
       }
@@ -16,7 +16,7 @@
     {
       "path": "/api/data",
       "status": 200,
-      "mustContain": "\"framework\":\"net-http\",\"version\":\"go1.26.1\"",
+      "mustContain": "\"framework\":\"net-http\",\"version\":\"go1.26.1-X:jsonv2\"",
       "responseHeaders": {
         "content-type": "/application\\/json/"
       }

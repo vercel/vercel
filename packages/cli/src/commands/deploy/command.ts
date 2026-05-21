@@ -3,6 +3,7 @@ import {
   forceOption,
   formatOption,
   jsonOption,
+  projectOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -108,6 +109,7 @@ export const initSubcommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    projectOption,
     {
       name: 'functions-beta',
       shorthand: null,
@@ -330,6 +332,7 @@ export const deployCommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    projectOption,
     {
       name: 'functions-beta',
       shorthand: null,

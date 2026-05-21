@@ -2,5 +2,10 @@
   "version": 2,
   "projectSettings": {
     "framework": "go"
+  },
+  "build": {
+    "env": {
+      "GOEXPERIMENT": "jsonv2"
+    }
   }
 }

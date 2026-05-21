@@ -16,7 +16,11 @@ const mockedOutput = vi.mocked(output);
 
 describe('blob empty-store', () => {
   const testToken = 'vercel_blob_rw_abc123_additional_data';
-  const fullToken: BlobRWToken = { success: true, token: testToken };
+  const fullToken: BlobRWToken = {
+    success: true,
+    kind: 'rw',
+    token: testToken,
+  };
   const storeId = 'store_abc123';
 
   const confirmInputMock = vi.fn().mockResolvedValue(true);
@@ -77,7 +81,7 @@ describe('blob empty-store', () => {
 
   describe('successful empty', () => {
     it('should confirm and empty store (single page)', async () => {
-      const exitCode = await emptyStore(client, [], testToken, fullToken);
+      const exitCode = await emptyStore(client, [], fullToken);
 
       expect(exitCode).toBe(0);
 
@@ -150,7 +154,7 @@ describe('blob empty-store', () => {
           hasMore: false,
         } as any);
 
-      const exitCode = await emptyStore(client, [], testToken, fullToken);
+      const exitCode = await emptyStore(client, [], fullToken);
 
       expect(exitCode).toBe(0);
       // 1 initial check + 3 deletion loop calls
@@ -162,12 +166,7 @@ describe('blob empty-store', () => {
     });
 
     it('should skip confirmation with --yes', async () => {
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        testToken,
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(0);
       expect(confirmInputMock).not.toHaveBeenCalled();
@@ -187,7 +186,7 @@ describe('blob empty-store', () => {
           ],
         });
 
-      await emptyStore(client, [], testToken, fullToken);
+      await emptyStore(client, [], fullToken);
 
       expect(confirmInputMock).toHaveBeenCalledWith(
         `Are you sure you want to delete all files in my-store (${storeId})? This store is connected to project1, project2. This action cannot be undone.`,
@@ -211,7 +210,7 @@ describe('blob empty-store', () => {
           ],
         });
 
-      await emptyStore(client, [], testToken, fullToken);
+      await emptyStore(client, [], fullToken);
 
       expect(confirmInputMock).toHaveBeenCalledWith(
         `Are you sure you want to delete all files in my-store (${storeId})? This store is connected to project1, project2 and 3 other projects. This action cannot be undone.`,
@@ -226,7 +225,7 @@ describe('blob empty-store', () => {
         status: 'not_linked',
       });
 
-      const exitCode = await emptyStore(client, [], testToken, fullToken);
+      const exitCode = await emptyStore(client, [], fullToken);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -246,7 +245,7 @@ describe('blob empty-store', () => {
         hasMore: false,
       } as any);
 
-      const exitCode = await emptyStore(client, [], testToken, fullToken);
+      const exitCode = await emptyStore(client, [], fullToken);
 
       expect(exitCode).toBe(0);
       expect(confirmInputMock).not.toHaveBeenCalled();
@@ -265,7 +264,7 @@ describe('blob empty-store', () => {
     it('should cancel when user declines', async () => {
       confirmInputMock.mockResolvedValueOnce(false);
 
-      const exitCode = await emptyStore(client, [], testToken, fullToken);
+      const exitCode = await emptyStore(client, [], fullToken);
 
       expect(exitCode).toBe(0);
       // Initial check happened but no deletion
@@ -279,7 +278,7 @@ describe('blob empty-store', () => {
     it('should error in non-TTY without --yes', async () => {
       (client.stdin as any).isTTY = false;
 
-      const exitCode = await emptyStore(client, [], testToken, fullToken);
+      const exitCode = await emptyStore(client, [], fullToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -318,12 +317,7 @@ describe('blob empty-store', () => {
         .mockResolvedValueOnce({ store: { name: 'my-store' } })
         .mockResolvedValueOnce({ connections: [] });
 
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        testToken,
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalled();
@@ -332,12 +326,7 @@ describe('blob empty-store', () => {
 
   describe('error cases', () => {
     it('should return 1 when argument parsing fails', async () => {
-      const exitCode = await emptyStore(
-        client,
-        ['--invalid-flag'],
-        testToken,
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--invalid-flag'], fullToken);
 
       expect(exitCode).toBe(1);
     });
@@ -348,7 +337,7 @@ describe('blob empty-store', () => {
         error: 'No token',
       };
 
-      const exitCode = await emptyStore(client, [], testToken, failedToken);
+      const exitCode = await emptyStore(client, [], failedToken);
 
       expect(exitCode).toBe(1);
     });
@@ -356,7 +345,7 @@ describe('blob empty-store', () => {
     it('should handle API errors during store fetch', async () => {
       client.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      const exitCode = await emptyStore(client, [], testToken, fullToken);
+      const exitCode = await emptyStore(client, [], fullToken);
 
       expect(exitCode).toBe(1);
     });
@@ -365,12 +354,7 @@ describe('blob empty-store', () => {
       mockedBlob.list.mockReset();
       mockedBlob.list.mockRejectedValue(new Error('List failed'));
 
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        testToken,
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(1);
     });
@@ -391,12 +375,7 @@ describe('blob empty-store', () => {
       } as any);
       mockedBlob.del.mockRejectedValue(new Error('Delete failed'));
 
-      const exitCode = await emptyStore(
-        client,
-        ['--yes'],
-        testToken,
-        fullToken
-      );
+      const exitCode = await emptyStore(client, ['--yes'], fullToken);
 
       expect(exitCode).toBe(1);
     });
@@ -404,7 +383,7 @@ describe('blob empty-store', () => {
 
   describe('telemetry', () => {
     it('should track --yes flag', async () => {
-      await emptyStore(client, ['--yes'], testToken, fullToken);
+      await emptyStore(client, ['--yes'], fullToken);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

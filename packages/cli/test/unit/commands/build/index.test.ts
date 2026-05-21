@@ -1933,7 +1933,7 @@ createServer((_req, res) => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
     });
   });
 
@@ -2630,5 +2630,52 @@ fs.writeFileSync(
         { name: 'vc.postCommand', parent: 'vc.cli' },
       ])
     );
+  });
+
+  describe('--project', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('fails fast with a clean error when the project does not exist anywhere', async () => {
+      const cwd = await getWriteableDirectory();
+      useUser();
+      useTeams('team_dummy');
+      // No useProject() — every API lookup will 404.
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=does-not-exist');
+      const exitCodePromise = build(client);
+
+      await expect(client.stderr).toOutput(
+        'Project "does-not-exist" was not found'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "build"').toEqual(1);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('tracks --project telemetry as [REDACTED]', async () => {
+      const cwd = await getWriteableDirectory();
+      useUser();
+      useTeams('team_dummy');
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=my-app');
+      await build(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
   });
 });

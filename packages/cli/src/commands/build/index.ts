@@ -93,7 +93,12 @@ import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import {
+  getLinkedProject,
+  getProjectLink,
+  VERCEL_DIR,
+} from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -216,6 +221,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
+    telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
   } catch (error) {
     printError(error);
     return 1;
@@ -257,10 +263,36 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
+  const projectNameOrId = parsedArgs.flags['--project'];
+
   // If repo linked, update `cwd` to the repo root
-  const link = await rootSpan
+  let link = await rootSpan
     .child('vc.getProjectLink')
-    .trace(() => getProjectLink(client, cwd));
+    .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
+
+  // No local link matched `--project`; resolve via API before the
+  // settings-pull prompt would silently re-link to the wrong project.
+  if (projectNameOrId && !link) {
+    const linkedFromApi = await getLinkedProject(
+      client,
+      cwd,
+      projectNameOrId,
+      true
+    );
+    if (linkedFromApi.status === 'linked') {
+      link = {
+        projectId: linkedFromApi.project.id,
+        orgId: linkedFromApi.org.id,
+        repoRoot: linkedFromApi.repoRoot,
+      };
+    } else if (linkedFromApi.status === 'error') {
+      return linkedFromApi.exitCode;
+    } else {
+      await printProjectNotFoundError(client, projectNameOrId, 'build');
+      return 1;
+    }
+  }
+
   const projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
@@ -340,7 +372,8 @@ export default async function main(client: Client): Promise<number> {
       client.cwd,
       Boolean(parsedArgs.flags['--yes']),
       target,
-      parsedArgs.flags
+      parsedArgs.flags,
+      projectNameOrId
     );
     if (result !== 0) {
       return result;

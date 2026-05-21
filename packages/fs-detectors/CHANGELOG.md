@@ -1,5 +1,18 @@
 # @vercel/fs-detectors
 
+## 6.5.0
+
+### Minor Changes
+
+- 0c762a7: [services] detect services from Render
+- e1f4dd5: [services] detect services from Procfile
+
+### Patch Changes
+
+- Updated dependencies [bb61428]
+- Updated dependencies [137e5d1]
+  - @vercel/build-utils@13.26.0
+
 ## 6.4.0
 
 ### Minor Changes

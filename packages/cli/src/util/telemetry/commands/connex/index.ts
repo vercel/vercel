@@ -198,13 +198,4 @@ export class ConnexTelemetryClient
       }
     }
   }
-
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
-    }
-  }
 }

@@ -1149,6 +1149,10 @@ const main = async () => {
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).telemetry;
           break;
+        case 'traces':
+          telemetry.trackCliCommandTraces(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).traces;
+          break;
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;

@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 13.26.0
+
+### Minor Changes
+
+- 137e5d1: Allow builder V2 to expose startDevServer.
+
+### Patch Changes
+
+- bb61428: Include framework slug in output/config.json
+
 ## 13.25.0
 
 ### Minor Changes
