@@ -7,6 +7,7 @@ import {
   execCommand,
   FileBlob,
   FileFsRef,
+  generateProjectManifest,
   getEnvForPackageManager,
   getNodeVersion,
   glob,
@@ -81,6 +82,7 @@ export const build: BuildV2 = async ({
   repoRootPath,
   config,
   meta = {},
+  service,
 }) => {
   const { installCommand, buildCommand } = config;
 
@@ -142,6 +144,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointFsDirname,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: 'remix',
+      serviceType: service?.type,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write remix manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 

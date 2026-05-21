@@ -6,6 +6,7 @@ import {
   BuildResultV2Typical,
   debug,
   execCommand,
+  generateProjectManifest,
   getEnvForPackageManager,
   getNodeVersion,
   glob,
@@ -288,6 +289,7 @@ export const build: BuildV2 = async ({
   repoRootPath,
   config,
   meta = {},
+  service,
 }) => {
   const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
@@ -308,6 +310,7 @@ export const build: BuildV2 = async ({
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJson,
     packageJsonPackageManager,
@@ -340,6 +343,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointFsDirname,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: frameworkSettings.slug,
+      serviceType: service?.type,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write remix manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
