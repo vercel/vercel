@@ -1428,13 +1428,26 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
     client.stdout.write(`[build-diag] active handles (${handles.length}):\n`);
     for (const h of handles) {
       const type = h.constructor?.name ?? typeof h;
-      const extra =
-        h.address && typeof h.address === 'function'
-          ? ` addr=${JSON.stringify(h.address())}`
-          : h._host
-            ? ` host=${h._host}`
-            : '';
-      client.stdout.write(`[build-diag]   - ${type}${extra}\n`);
+      const parts: string[] = [type];
+      if (type === 'Socket') {
+        if (h.remoteAddress) {
+          parts.push(`remote=${h.remoteAddress}:${h.remotePort}`);
+        }
+        if (h.localPort) {
+          parts.push(`local=:${h.localPort}`);
+        }
+        parts.push(`readable=${h.readable} writable=${h.writable}`);
+        parts.push(
+          `ref=${!h._handle?.hasRef || h._handle?.hasRef() ? 'yes' : 'no'}`
+        );
+      } else if (type === 'FSWatcher') {
+        if (h._filename) {
+          parts.push(`file=${h._filename}`);
+        }
+      } else if (type === 'Timer' || type === 'Timeout') {
+        parts.push(`ref=${h.hasRef?.() ? 'yes' : 'no'}`);
+      }
+      client.stdout.write(`[build-diag]   - ${parts.join(' ')}\n`);
     }
     const requests = (process as any)._getActiveRequests?.() ?? [];
     if (requests.length > 0) {
