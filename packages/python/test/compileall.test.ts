@@ -150,7 +150,7 @@ describe('runCompileAll', () => {
 
     await runCompileAll({
       pythonBin: '/work/.vercel/python/.venv/bin/python',
-      directories: ['/work'],
+      filesOrDirectories: ['/work'],
       env,
       excludeRegex: '[/\\\\]\\.vercel(?:[/\\\\]|$)',
     });
@@ -245,7 +245,7 @@ describe('app bytecode collection', () => {
       'pkg/__pycache__/app.cpython-312.pyc',
     ]);
     expect(result.totalSize).toBe(10);
-    expect(result.perFileSizes.get('pkg/__pycache__/app.cpython-312.pyc')).toBe(
+    expect(result.perItemSizes.get('pkg/__pycache__/app.cpython-312.pyc')).toBe(
       10
     );
   });

@@ -29,7 +29,7 @@ import {
   UV_BUNDLE_DIR,
 } from './uv';
 import { detectTargetPlatform } from './platform-info';
-import { derivePycPath } from './compileall';
+import { derivePycPath, type BytecodeCollectionResult } from './compileall';
 
 const readFile = promisify(fs.readFile);
 
@@ -94,15 +94,6 @@ interface DependencyAnalysis {
   runtimeInstallEnabled: boolean;
   allVendorFiles: Files;
   totalBundleSize: number;
-}
-
-export interface BytecodeCollectionResult {
-  /** FileFsRef entries for .pyc files, keyed by vendor-relative path. */
-  files: Files;
-  /** Total uncompressed size of all collected .pyc files. */
-  totalSize: number;
-  /** Per-package bytecode sizes (normalized package name → total bytes). */
-  perPackageSizes: Map<string, number>;
 }
 
 export class PythonDependencyExternalizer {
@@ -896,7 +887,7 @@ export class PythonDependencyExternalizer {
       throw new Error('collectBytecodeFiles() must be called after analyze()');
     }
     if (this.pythonMajor == null || this.pythonMinor == null) {
-      return { files: {}, totalSize: 0, perPackageSizes: new Map() };
+      return { files: {}, totalSize: 0, perItemSizes: new Map() };
     }
 
     const includeSet = includePackages
@@ -951,7 +942,7 @@ export class PythonDependencyExternalizer {
 
     const files: Files = {};
     let totalSize = 0;
-    const perPackageSizes = new Map<string, number>();
+    const perItemSizes = new Map<string, number>();
 
     for (const result of results) {
       if (!result) continue;
@@ -960,9 +951,9 @@ export class PythonDependencyExternalizer {
         size: result.size,
       });
       totalSize += result.size;
-      perPackageSizes.set(
+      perItemSizes.set(
         result.packageName,
-        (perPackageSizes.get(result.packageName) ?? 0) + result.size
+        (perItemSizes.get(result.packageName) ?? 0) + result.size
       );
     }
 
@@ -971,7 +962,7 @@ export class PythonDependencyExternalizer {
         ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
         (includePackages ? ` from ${includePackages.length} packages` : '')
     );
-    return { files, totalSize, perPackageSizes };
+    return { files, totalSize, perItemSizes };
   }
 }
 

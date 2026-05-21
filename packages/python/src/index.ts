@@ -46,7 +46,6 @@ import {
   HIVE_LAMBDA_SIZE_BYTES,
   lambdaKnapsack,
   calculateBundleSize,
-  type BytecodeCollectionResult,
 } from './dependency-externalizer';
 import {
   UvRunner,
@@ -78,7 +77,7 @@ import {
   getCompileAllAppExcludeRegex,
   runCompileAll,
   shouldUseCompileAll,
-  type AppBytecodeCollectionResult,
+  type BytecodeCollectionResult,
 } from './compileall';
 
 const writeFile = fs.promises.writeFile;
@@ -102,27 +101,27 @@ function addFiles(target: Files, source: Files) {
   }
 }
 
-function addAppBytecodeWithinCapacity(
+function addBytecodeWithinCapacity(
   files: Files,
-  appBytecodeInfo: AppBytecodeCollectionResult | undefined,
+  bytecodeInfo: BytecodeCollectionResult | undefined,
   capacity: number
 ): number {
-  if (!appBytecodeInfo || appBytecodeInfo.totalSize <= 0 || capacity <= 0) {
+  if (!bytecodeInfo || bytecodeInfo.totalSize <= 0 || capacity <= 0) {
     return capacity;
   }
 
-  if (appBytecodeInfo.totalSize <= capacity) {
-    addFiles(files, appBytecodeInfo.files);
-    return capacity - appBytecodeInfo.totalSize;
+  if (bytecodeInfo.totalSize <= capacity) {
+    addFiles(files, bytecodeInfo.files);
+    return capacity - bytecodeInfo.totalSize;
   }
 
-  const selectedFiles = lambdaKnapsack(appBytecodeInfo.perFileSizes, capacity);
+  const selected = lambdaKnapsack(bytecodeInfo.perItemSizes, capacity);
   let remainingCapacity = capacity;
-  for (const p of selectedFiles) {
-    const file = appBytecodeInfo.files[p];
+  for (const p of selected) {
+    const file = bytecodeInfo.files[p];
     if (!file) continue;
     files[p] = file;
-    remainingCapacity -= appBytecodeInfo.perFileSizes.get(p) ?? 0;
+    remainingCapacity -= bytecodeInfo.perItemSizes.get(p) ?? 0;
   }
 
   return remainingCapacity;
@@ -150,7 +149,7 @@ async function addVendorBytecodeWithinCapacity({
     return capacity - bytecodeInfo.totalSize;
   }
 
-  const selectedPkgs = lambdaKnapsack(bytecodeInfo.perPackageSizes, capacity);
+  const selectedPkgs = lambdaKnapsack(bytecodeInfo.perItemSizes, capacity);
   if (selectedPkgs.length === 0) return capacity;
 
   const selectedBytecode = await depExternalizer.collectBytecodeFiles({
@@ -1022,7 +1021,7 @@ from vercel_runtime.vc_init import vc_handler
               pythonMajor: pythonVersion.major,
               pythonMinor: pythonVersion.minor,
             });
-            remainingCapacity = addAppBytecodeWithinCapacity(
+            remainingCapacity = addBytecodeWithinCapacity(
               files,
               appBytecodeInfo,
               remainingCapacity

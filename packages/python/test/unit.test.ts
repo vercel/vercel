@@ -3723,7 +3723,7 @@ describe('worker services dependency installation', () => {
           }
           async generateBundle() {}
           async collectBytecodeFiles() {
-            return { files: {}, totalSize: 0, perPackageSizes: new Map() };
+            return { files: {}, totalSize: 0, perItemSizes: new Map() };
           }
         },
       };

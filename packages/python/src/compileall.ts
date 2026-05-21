@@ -3,14 +3,7 @@ import { debug, FileFsRef, type Files } from '@vercel/build-utils';
 import fs from 'fs';
 import { join, sep } from 'path';
 
-/**
- * Check whether Python bytecode precompilation is enabled.
- *
- * Resolution order:
- *  1. `VERCEL_PYTHON_COMPILEALL` explicitly set → honour the value.
- *  2. `VERCEL_PYTHON_ON_HIVE` enabled → default to ON (more headroom).
- *  3. Otherwise → OFF (opt-in during initial rollout).
- */
+// Enabled by default for hive unless explicitly opted out
 export function isCompileAllEnabled(): boolean {
   const val = process.env.VERCEL_PYTHON_COMPILEALL;
   if (val !== undefined && val !== '') {
@@ -18,8 +11,6 @@ export function isCompileAllEnabled(): boolean {
     return lower === '1' || lower === 'true';
   }
 
-  // When running on Hive (Functions Beta) with up to 1 GB of headroom,
-  // enable bytecode compilation by default for faster cold starts.
   const hive = process.env.VERCEL_PYTHON_ON_HIVE;
   if (hive === '1' || hive === 'true') {
     return true;
@@ -42,7 +33,7 @@ interface CompileAllOptions {
   /** Path to the venv Python binary (e.g. from getVenvPythonBin). */
   pythonBin: string;
   /** Files or directories to compile. */
-  directories: string[];
+  filesOrDirectories: string[];
   /** Environment to pass to the subprocess. */
   env?: NodeJS.ProcessEnv;
   /** Optional regular expression passed to compileall's -x skip filter. */
@@ -56,16 +47,15 @@ interface CompileAllOptions {
  * bytecode is trusted without re-hashing the source on every import.  This
  * is safe because Lambda payloads are immutable after deployment.
  *
- * Failures are logged as warnings but never fail the build — Python will
- * fall back to runtime compilation.
+ * Failures are logged but not surfaced to the user
  */
 export async function runCompileAll({
   pythonBin,
-  directories,
+  filesOrDirectories,
   env,
   excludeRegex,
 }: CompileAllOptions): Promise<void> {
-  if (directories.length === 0) return;
+  if (filesOrDirectories.length === 0) return;
 
   const args = [
     '-m',
@@ -76,14 +66,12 @@ export async function runCompileAll({
     '--invalidation-mode',
     'unchecked-hash',
     ...(excludeRegex ? ['-x', excludeRegex] : []),
-    ...directories,
+    ...filesOrDirectories,
   ];
 
   try {
     await execa(pythonBin, args, { env: env || process.env });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`Warning: Python bytecode compilation failed: ${message}`);
     debug(`compileall error details: ${JSON.stringify(err)}`);
   }
 }
@@ -111,13 +99,13 @@ export function derivePycPath(
   return `${dir}__pycache__/${baseName}.cpython-${pythonMajor}${pythonMinor}.pyc`;
 }
 
-export interface AppBytecodeCollectionResult {
-  /** FileFsRef entries for app .pyc files, keyed by bundle-relative path. */
+export interface BytecodeCollectionResult {
+  /** FileFsRef entries for .pyc files, keyed by bundle-relative path. */
   files: Files;
   /** Total uncompressed size of all collected .pyc files. */
   totalSize: number;
-  /** Per-file bytecode sizes, keyed by bundle-relative path. */
-  perFileSizes: Map<string, number>;
+  /** Per-item bytecode sizes for knapsack packing (keyed by package name or bundle path). */
+  perItemSizes: Map<string, number>;
 }
 
 /**
@@ -165,7 +153,7 @@ export async function collectAppBytecodeFiles({
   files: Files;
   pythonMajor: number;
   pythonMinor: number;
-}): Promise<AppBytecodeCollectionResult> {
+}): Promise<BytecodeCollectionResult> {
   const pending: { bundlePath: string; srcFsPath: string }[] = [];
 
   for (const bundlePath of Object.keys(appFiles)) {
@@ -190,7 +178,7 @@ export async function collectAppBytecodeFiles({
   );
 
   const files: Files = {};
-  const perFileSizes = new Map<string, number>();
+  const perItemSizes = new Map<string, number>();
   let totalSize = 0;
 
   for (const result of results) {
@@ -199,9 +187,9 @@ export async function collectAppBytecodeFiles({
       fsPath: result.srcFsPath,
       size: result.size,
     });
-    perFileSizes.set(result.bundlePath, result.size);
+    perItemSizes.set(result.bundlePath, result.size);
     totalSize += result.size;
   }
 
-  return { files, totalSize, perFileSizes };
+  return { files, totalSize, perItemSizes };
 }
