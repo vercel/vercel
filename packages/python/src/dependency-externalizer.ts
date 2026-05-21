@@ -251,17 +251,9 @@ export class PythonDependencyExternalizer {
    * Generate the optimally-packed Lambda bundle.
    * Mutates `files` in place: adds vendor files (private + knapsack-selected
    * public), runtime config, and uv binary.
-   *
-   * When `bytecodeInfo` is provided (from `collectBytecodeFiles()`),
-   * bytecode sizes are combined with source sizes for the knapsack so that
-   * selected packages include pre-compiled `.pyc` files.
-   *
    * Must be called after analyze().
    */
-  async generateBundle(
-    files: Files,
-    bytecodeInfo?: BytecodeCollectionResult
-  ): Promise<void> {
+  async generateBundle(files: Files): Promise<void> {
     if (!this.analyzed) {
       throw new Error(
         'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
@@ -426,19 +418,6 @@ export class PythonDependencyExternalizer {
     for (const [p, f] of Object.entries(alwaysBundledFiles)) {
       baseFiles[p] = f;
     }
-
-    // When bytecode is enabled, include it for always-bundled packages
-    // so that fixedOverhead accounts for their .pyc files.
-    if (bytecodeInfo) {
-      const alwaysBundledBytecode = await this.collectBytecodeFiles({
-        vendorDirName: this.vendorDir,
-        includePackages: alwaysBundled,
-      });
-      for (const [p, f] of Object.entries(alwaysBundledBytecode.files)) {
-        baseFiles[p] = f;
-      }
-    }
-
     const fixedOverhead = await calculateBundleSize(baseFiles);
 
     // Account for the uv binary that will be added to the bundle.
@@ -491,9 +470,7 @@ export class PythonDependencyExternalizer {
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
     );
 
-    // Build size map for externalizable public packages and run the knapsack algorithm.
-    // When bytecode is enabled, combine source + bytecode sizes so the
-    // knapsack packs fewer but bytecode-compiled packages.
+    // Build size map for externalizable public packages and run the knapsack algorithm
     const externalizableSet = new Set(
       externalizablePublic.map(normalizePackageName)
     );
@@ -502,18 +479,6 @@ export class PythonDependencyExternalizer {
         externalizableSet.has(normalizePackageName(name))
       )
     );
-
-    if (bytecodeInfo) {
-      for (const [name, bcSize] of bytecodeInfo.perPackageSizes) {
-        const norm = normalizePackageName(name);
-        if (externalizableSet.has(norm)) {
-          const current = publicPackageSizes.get(name);
-          if (current !== undefined) {
-            publicPackageSizes.set(name, current + bcSize);
-          }
-        }
-      }
-    }
 
     const bundledPublic = lambdaKnapsack(publicPackageSizes, remainingCapacity);
 
@@ -526,17 +491,6 @@ export class PythonDependencyExternalizer {
 
     for (const [p, f] of Object.entries(selectedVendorFiles)) {
       files[p] = f;
-    }
-
-    // Add bytecode files for the selected packages.
-    if (bytecodeInfo) {
-      const selectedBytecode = await this.collectBytecodeFiles({
-        vendorDirName: this.vendorDir,
-        includePackages: allBundledPackages,
-      });
-      for (const [p, f] of Object.entries(selectedBytecode.files)) {
-        files[p] = f;
-      }
     }
 
     // The bundledPackages list for runtime config includes private packages

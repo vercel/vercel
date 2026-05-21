@@ -925,58 +925,6 @@ from vercel_runtime.vc_init import vc_handler
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
 
-  let appBytecodeInfo: AppBytecodeCollectionResult | undefined;
-
-  // Precompile Python bytecode for faster cold starts.  compileall runs
-  // on the full workPath (with an exclude regex mirroring the glob excludes)
-  // and on site-packages.  collectAppBytecodeFiles then collects .pyc files
-  // only for .py files present in the bundle, so excluded source files
-  // cannot re-enter the Lambda as generated .pyc files.
-  if (automaticCompileAllEnabled) {
-    await builderSpan
-      .child('vc.builder.python.compileall')
-      .trace(async compileSpan => {
-        const sitePackageDirs = (
-          await getVenvSitePackagesDirs(venvPath)
-        ).filter(d => fs.existsSync(d));
-        const pythonBin = getVenvPythonBin(venvPath);
-
-        console.log('Compiling Python application bytecode...');
-        await runCompileAll({
-          pythonBin,
-          directories: [workPath],
-          env: pythonEnv,
-          excludeRegex: getCompileAllAppExcludeRegex(workPath),
-        });
-
-        console.log('Compiling Python dependency bytecode...');
-        await runCompileAll({
-          pythonBin,
-          directories: sitePackageDirs,
-          env: pythonEnv,
-        });
-
-        if (pythonVersion.major != null && pythonVersion.minor != null) {
-          appBytecodeInfo = await collectAppBytecodeFiles({
-            workPath,
-            files,
-            pythonMajor: pythonVersion.major,
-            pythonMinor: pythonVersion.minor,
-          });
-        }
-
-        compileSpan.setAttributes({
-          'python.compileall.enabled': 'true',
-          'python.compileall.appBytecodeFileCount': String(
-            appBytecodeInfo ? Object.keys(appBytecodeInfo.files).length : 0
-          ),
-          'python.compileall.sitePackageDirectoryCount': String(
-            sitePackageDirs.length
-          ),
-        });
-      });
-  }
-
   // Bundle dependencies, using runtime installation for oversized bundles
   const depExternalizer = new PythonDependencyExternalizer({
     venvPath,
@@ -1004,66 +952,96 @@ from vercel_runtime.vc_init import vc_handler
       // decisions are not inflated by bytecode overhead.
       const depAnalysis = await depExternalizer.analyze(files);
 
-      // Collect vendor bytecode if compileall ran.
-      let bytecodeInfo: BytecodeCollectionResult | undefined;
-      if (automaticCompileAllEnabled) {
-        bytecodeInfo = await depExternalizer.collectBytecodeFiles({
-          vendorDirName: vendorDir,
-        });
-      }
-
       bundleSpan.setAttributes({
         'python.bundle.totalSizeBytes': String(depAnalysis.totalBundleSize),
         'python.bundle.runtimeInstallEnabled': String(
           depAnalysis.runtimeInstallEnabled
         ),
-        ...(appBytecodeInfo
-          ? {
-              'python.bundle.appBytecodeSizeBytes': String(
-                appBytecodeInfo.totalSize
-              ),
-            }
-          : {}),
-        ...(bytecodeInfo
-          ? {
-              'python.bundle.bytecodeSizeBytes': String(bytecodeInfo.totalSize),
-            }
-          : {}),
       });
 
       if (depAnalysis.runtimeInstallEnabled) {
-        // >245 MB source-only: knapsack packing with optional bytecode.
-        await depExternalizer.generateBundle(files, bytecodeInfo);
-
-        const currentSize = await calculateBundleSize(files);
-        const remainingCapacity = LAMBDA_SIZE_THRESHOLD_BYTES - currentSize;
-        addAppBytecodeWithinCapacity(files, appBytecodeInfo, remainingCapacity);
+        // >245 MB source-only: the lambda zip is packed full with source
+        // packages via knapsack.  No room for bytecode.
+        await depExternalizer.generateBundle(files);
       } else {
         // ≤245 MB source-only: bundle all dependencies.
         addFiles(files, depAnalysis.allVendorFiles);
 
-        // Add bytecode, filling available capacity.
-        const pythonOnHiveEnabled =
-          process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-          process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-        const activeThreshold = pythonOnHiveEnabled
-          ? HIVE_LAMBDA_SIZE_BYTES
-          : LAMBDA_SIZE_THRESHOLD_BYTES;
-        const currentSize = await calculateBundleSize(files);
-        let remainingCapacity = activeThreshold - currentSize;
+        // Precompile bytecode and fill remaining Lambda capacity.
+        // compileall runs on the full workPath (with an exclude regex
+        // mirroring the glob excludes) and on site-packages.
+        // collectAppBytecodeFiles only collects .pyc for .py files
+        // present in the bundle, so excluded source files cannot
+        // re-enter the Lambda as generated .pyc files.
+        if (automaticCompileAllEnabled) {
+          await builderSpan
+            .child('vc.builder.python.compileall')
+            .trace(async compileSpan => {
+              const sitePackageDirs = (
+                await getVenvSitePackagesDirs(venvPath)
+              ).filter(d => fs.existsSync(d));
+              const pythonBin = getVenvPythonBin(venvPath);
 
-        remainingCapacity = addAppBytecodeWithinCapacity(
-          files,
-          appBytecodeInfo,
-          remainingCapacity
-        );
-        await addVendorBytecodeWithinCapacity({
-          files,
-          depExternalizer,
-          vendorDir,
-          bytecodeInfo,
-          capacity: remainingCapacity,
-        });
+              console.log('Compiling Python application bytecode...');
+              await runCompileAll({
+                pythonBin,
+                directories: [workPath],
+                env: pythonEnv,
+                excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              });
+
+              console.log('Compiling Python dependency bytecode...');
+              await runCompileAll({
+                pythonBin,
+                directories: sitePackageDirs,
+                env: pythonEnv,
+              });
+
+              compileSpan.setAttributes({
+                'python.compileall.enabled': 'true',
+                'python.compileall.sitePackageDirectoryCount': String(
+                  sitePackageDirs.length
+                ),
+              });
+            });
+
+          // Collect bytecode and fill remaining capacity.
+          const pythonOnHiveEnabled =
+            process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+            process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+          const activeThreshold = pythonOnHiveEnabled
+            ? HIVE_LAMBDA_SIZE_BYTES
+            : LAMBDA_SIZE_THRESHOLD_BYTES;
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = activeThreshold - currentSize;
+
+          if (pythonVersion.major != null && pythonVersion.minor != null) {
+            const appBytecodeInfo = await collectAppBytecodeFiles({
+              workPath,
+              files,
+              pythonMajor: pythonVersion.major,
+              pythonMinor: pythonVersion.minor,
+            });
+            remainingCapacity = addAppBytecodeWithinCapacity(
+              files,
+              appBytecodeInfo,
+              remainingCapacity
+            );
+          }
+
+          const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles(
+            {
+              vendorDirName: vendorDir,
+            }
+          );
+          await addVendorBytecodeWithinCapacity({
+            files,
+            depExternalizer,
+            vendorDir,
+            bytecodeInfo: vendorBytecodeInfo,
+            capacity: remainingCapacity,
+          });
+        }
       }
     });
 

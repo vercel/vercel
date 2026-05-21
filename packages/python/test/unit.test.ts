@@ -3715,7 +3715,11 @@ describe('worker services dependency installation', () => {
         ...actual,
         PythonDependencyExternalizer: class {
           async analyze() {
-            return { overLambdaLimit: false, allVendorFiles: {} };
+            return {
+              runtimeInstallEnabled: false,
+              allVendorFiles: {},
+              totalBundleSize: 0,
+            };
           }
           async generateBundle() {}
           async collectBytecodeFiles() {
