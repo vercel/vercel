@@ -16,6 +16,8 @@ import {
   download,
   glob,
   debug,
+  createDiagnostics,
+  generateProjectManifest,
   getNodeVersion,
   getPrefixedEnvVars,
   runNpmInstall,
@@ -53,6 +55,7 @@ export const build: BuildV2 = async ({
   entrypoint,
   meta = {},
   config = {},
+  service,
 }) => {
   await download(files, workPath, meta);
 
@@ -77,6 +80,7 @@ export const build: BuildV2 = async ({
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -109,6 +113,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointFsDirname,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: 'redwood',
+      serviceType: service?.type,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write redwood manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
@@ -338,3 +358,5 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
+
+export const diagnostics = createDiagnostics('node');
