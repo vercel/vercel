@@ -495,11 +495,11 @@ export default async function main(client: Client): Promise<number> {
         .trace(span =>
           doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
         );
-      output.debug('[build-diag] build main: doBuild trace resolved');
+      client.stdout.write('[build-diag] build main: doBuild trace resolved\n');
     } finally {
-      output.debug('[build-diag] build main: stopping rootSpan');
+      client.stdout.write('[build-diag] build main: stopping rootSpan\n');
       await rootSpan.stop();
-      output.debug('[build-diag] build main: rootSpan stopped');
+      client.stdout.write('[build-diag] build main: rootSpan stopped\n');
     }
 
     if (client.nonInteractive) {
@@ -526,7 +526,7 @@ export default async function main(client: Client): Promise<number> {
         )}\n`
       );
     }
-    output.debug('[build-diag] build main: returning 0');
+    client.stdout.write('[build-diag] build main: returning 0\n');
     return 0;
   } catch (err: any) {
     if (client.nonInteractive) {
@@ -1683,16 +1683,20 @@ async function doBuild(
     );
   }
 
-  output.debug('[build-diag] doBuild: after "Build Completed in"');
+  client.stdout.write('[build-diag] doBuild: after "Build Completed in"\n');
 
   // Analyze .vc-config.json files if environment variable is set
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
-    output.debug('[build-diag] doBuild: starting analyzeVcConfigFiles');
+    client.stdout.write(
+      '[build-diag] doBuild: starting analyzeVcConfigFiles\n'
+    );
     await analyzeVcConfigFiles(cwd, outputDir);
-    output.debug('[build-diag] doBuild: finished analyzeVcConfigFiles');
+    client.stdout.write(
+      '[build-diag] doBuild: finished analyzeVcConfigFiles\n'
+    );
   }
 
-  output.debug('[build-diag] doBuild: returning');
+  client.stdout.write('[build-diag] doBuild: returning\n');
 }
 
 function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
