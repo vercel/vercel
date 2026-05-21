@@ -1422,5 +1422,30 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
     client.stdout.write('[build-diag] post-main: setting process.exitCode\n');
     process.exitCode = exitCode;
     client.stdout.write('[build-diag] post-main: done, process should exit\n');
+
+    // Dump active handles keeping the event loop alive
+    const handles = (process as any)._getActiveHandles?.() ?? [];
+    client.stdout.write(`[build-diag] active handles (${handles.length}):\n`);
+    for (const h of handles) {
+      const type = h.constructor?.name ?? typeof h;
+      const extra =
+        h.address && typeof h.address === 'function'
+          ? ` addr=${JSON.stringify(h.address())}`
+          : h._host
+            ? ` host=${h._host}`
+            : '';
+      client.stdout.write(`[build-diag]   - ${type}${extra}\n`);
+    }
+    const requests = (process as any)._getActiveRequests?.() ?? [];
+    if (requests.length > 0) {
+      client.stdout.write(
+        `[build-diag] active requests (${requests.length}):\n`
+      );
+      for (const r of requests) {
+        client.stdout.write(
+          `[build-diag]   - ${r.constructor?.name ?? typeof r}\n`
+        );
+      }
+    }
   })
   .catch(handleUnexpected);
