@@ -56,15 +56,6 @@ export class AlertsTelemetryClient
     }
   }
 
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
-    }
-  }
-
   trackCliFlagAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('all');

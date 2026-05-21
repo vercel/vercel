@@ -1,5 +1,5 @@
 import type { MockInstance } from 'vitest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import bytes from 'bytes';
 import fs from 'fs-extra';
 import { join } from 'path';
@@ -2728,6 +2728,29 @@ describe('deploy', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+    });
+  });
+
+  describe('--project', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('fails fast with a clean error when --project does not resolve', async () => {
+      const cwd = setupTmpDir();
+      useUser();
+      useTeams('team_dummy');
+      // Intentionally no useProject() — every API lookup will 404.
+
+      client.cwd = cwd;
+      client.setArgv('deploy', '--yes', '--project=does-not-exist');
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput(
+        'Project "does-not-exist" was not found'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "deploy"').toEqual(1);
     });
   });
 });

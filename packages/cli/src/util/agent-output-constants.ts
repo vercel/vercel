@@ -24,6 +24,7 @@ export const AGENT_REASON = {
   PROJECT_SETTINGS_REQUIRED: 'project_settings_required',
   NOT_LINKED: 'not_linked',
   NOT_FOUND: 'not_found',
+  PROJECT_NOT_FOUND: 'project_not_found',
   MISSING_SCOPE: 'missing_scope',
   API_ERROR: 'api_error',
   // Env

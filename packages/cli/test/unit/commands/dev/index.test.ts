@@ -432,4 +432,23 @@ describe('dev', () => {
       });
     });
   });
+
+  describe('--project', () => {
+    it('tracks --project telemetry as [REDACTED]', async () => {
+      vi.spyOn(process, 'cwd').mockReturnValue(projectPath);
+
+      client.setArgv('dev', `--project=${projectId}`);
+      const exitCodePromise = dev(client);
+
+      // dev normally only exits on SIGTERM; here it boots the mocked server.
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
 });

@@ -1,5 +1,105 @@
 # vercel
 
+## 54.3.0
+
+### Minor Changes
+
+- 8fabeba: `vercel curl --trace` now sends the `_vercel_session` cookie alongside the trace cookie, scopes the session API call via query parameters, sends `hostname` instead of `deploymentId`, and parses the request id from the `x-vercel-id` response header.
+- f2c60d6: [vercel-flags] check flags pkgs for build embedding
+- 8ac2af6: Add `--project <NAME_OR_ID>` flag to `build`, `deploy`, `pull`, and `dev` for non-interactive CI/CD and agent-driven use.
+
+  When `--project` is provided, the CLI will:
+
+  - Disambiguate monorepo `.vercel/repo.json` linked projects without prompting (matches by name **or** ID)
+  - Resolve the project via the API when no local link is present
+  - Fail fast with a clean "Project ... was not found" error if the value cannot be resolved (never silently creates a new project)
+  - In non-interactive contexts (CI, agents) the same failure also emits a structured JSON payload with a `next` array of suggested follow-up commands.
+
+  This is particularly important for agents (which run non-interactively by default): they can now target a specific project in monorepos and unlinked directories without relying on interactive setup prompts or the project picker.
+
+  The flag is also accepted on `vercel deploy init` (excluded on `vercel deploy continue` because `--id` already identifies the deployment).
+
+  The new API-based resolution is opt-in via the explicit `--project` flag, so commands like `vercel deploy` in an unlinked directory keep their existing behavior of falling back to interactive setup.
+
+- a2e79a8: Added `vercel traces get <request-id>` to fetch and render a trace summary for a request. Resolves project/team from the linked project, with `--scope` and `--project` flag fallbacks.
+
+### Patch Changes
+
+- b0d4dba: Add OIDC auth support to `vercel blob` commands and upgrade `@vercel/blob` to `2.4.0`. When `VERCEL_OIDC_TOKEN` and `BLOB_STORE_ID` are set in the environment (or `.env.local`), or when `--oidc-token` and `--store-id` are passed together, the CLI uses them as the credential source. The `--rw-token` flag remains exclusive — when provided, it always wins and never falls back to OIDC. The OIDC token is now forwarded to the SDK via the native `oidcToken` option (added in `@vercel/blob` 2.4.0) rather than by mutating `process.env`.
+- c6fa2d1: Revert non-interactive Marketplace terms acceptance for `integration accept-terms`.
+
+  This change requires human interactive confirmation for terms acceptance and removes `--yes` from `integration accept-terms` guidance.
+
+- a5b231a: Update `vercel env pull` to add `.env*` to `.gitignore` for default `.env.local` pulls.
+- Updated dependencies [e6dc048]
+- Updated dependencies [2cd64ea]
+- Updated dependencies [23eee91]
+- Updated dependencies [79d9508]
+  - @vercel/go@3.7.1
+  - @vercel/python@6.43.0
+  - @vercel/static-build@2.9.29
+  - @vercel/next@4.17.3
+
+## 54.2.0
+
+### Minor Changes
+
+- 39850ef: Add `vercel connect update <id>` subcommand to change connector branding. Accepts `--icon` (PNG or JPEG path, uploaded to Vercel and sent as SHA-1), `--background-color`, and `--accent-color` (both `#RRGGBB`). Gated behind the existing `FF_CONNEX_ENABLED` flag.
+- 63a66d4: Add `--icon`, `--background-color`, and `--accent-color` flags to `vercel connect create`. The icon is uploaded to Vercel before the connector is created. When the API requires a browser registration step, branding is appended to the dashboard URL so the create form can prefill itself; the CLI also applies a follow-up PATCH after the browser flow as a safety net for the dashboard rollout. Gated behind the existing `FF_CONNEX_ENABLED` flag.
+- 137e5d1: Allow builder V2 to expose startDevServer.
+- b1aa926: [vc dev] handle process errors in dev server
+
+### Patch Changes
+
+- a3a1a5a: Added CLI eval support for comparable agent/model experiment runs and restored transcript artifact uploads via chunked result ingestion.
+- 18e9fd6: fix(cli): point `vc connect open` and registration error URLs at the renamed `/connect` dashboard route
+- 4118600: Fix standalone CLI binary latest-version worker startup.
+- 80e8e06: Track Vercel plugin active-session markers in CLI telemetry.
+- bb61428: Include framework slug in output/config.json
+- f45e466: Add opt-in automatic CLI updates via `vercel upgrade --enable-auto` and prompt users to enable them after a successful manual upgrade.
+- a3a1a5a: Add offline-friendly local modes for CLI eval discovery and dashboard fixture generation, and expand Vercel CLI eval coverage for project, list, inspect, logs, and pull commands.
+- a3a1a5a: Relaxed the CLI env/add eval grader to accept equivalent JSON format syntax and shell-variable env names when outputs prove the variable was added.
+- a3a1a5a: Simplified the implicit curl eval grader to only require that the agent ran `vercel curl` or `vc curl`.
+- 8fb4dc8: Add `vercel flags split` to configure weighted Vercel Flags splits from the CLI.
+
+  Configure a split interactively by letting the CLI prompt for the environment, bucketing attribute, weights, fallback variant, and revision message.
+  `vercel flags split welcome-message`
+
+  Configure a boolean flag split in production with 95/5 traffic.
+  `vercel flags split redesigned-checkout --environment production --by user.userId --weight off=95 --weight on=5`
+
+  Configure a string flag split with an explicit fallback variant.
+  `vercel flags split welcome-message -e production --by user.userId --default-variant control --weight control=90 --weight treatment=10`
+
+  Exclude a variant from receiving traffic by setting its weight to 0.
+  `vercel flags split checkout-copy -e preview --by user.userId --default-variant control --weight control=50 --weight treatment=50 --weight legacy=0`
+
+- Updated dependencies [bb61428]
+- Updated dependencies [137e5d1]
+- Updated dependencies [f45e466]
+- Updated dependencies [744e96c]
+- Updated dependencies [7923d34]
+  - @vercel/build-utils@13.26.0
+  - @vercel/next@4.17.2
+  - @vercel/cli-config@0.1.2
+  - @vercel/remix-builder@5.8.2
+  - @vercel/static-build@2.9.28
+  - @vercel/backends@0.7.1
+  - @vercel/elysia@0.1.79
+  - @vercel/express@0.1.89
+  - @vercel/fastify@0.1.82
+  - @vercel/go@3.7.0
+  - @vercel/h3@0.1.88
+  - @vercel/hono@0.2.82
+  - @vercel/hydrogen@1.3.7
+  - @vercel/koa@0.1.62
+  - @vercel/nestjs@0.2.83
+  - @vercel/node@5.8.3
+  - @vercel/python@6.42.0
+  - @vercel/redwood@2.4.13
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.2.0
+
 ## 54.1.0
 
 ### Minor Changes

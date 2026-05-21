@@ -41,14 +41,6 @@ export async function acceptTermsViaBrowser(
   if (shouldEmitNonInteractiveCommandError(client)) {
     const tail = buildIntegrationCommandTailFromArgv(client.argv);
     const policyLinks = getMarketplacePolicyLinks(integration);
-    const acceptTermsCmd = buildCommandWithGlobalFlags(
-      client.argv,
-      `integration accept-terms ${integration.slug} --yes`,
-      packageName,
-      { prependGlobalFlags: true }
-    );
-    const apiAcceptSupported =
-      !integration.capabilities?.requiresBrowserInstall;
     outputActionRequired(
       client,
       {
@@ -58,9 +50,7 @@ export async function acceptTermsViaBrowser(
         verification_uri: url.href,
         policy_links: policyLinks,
         userActionRequired: true,
-        hint: apiAcceptSupported
-          ? `Read policy_links, then either complete verification_uri and retry, or run the accept-terms command in next[] (API acceptance). Confirm with ${packageName} integration installations.`
-          : `This integration is browser-gated: open verification_uri first. policy_links list the legal text. The accept-terms CLI command may not apply; after the dashboard flow completes, retry install from next[]. Confirm with ${packageName} integration installations.`,
+        hint: `Read policy_links, complete verification_uri in the browser, then retry install from next[]. Confirm with ${packageName} integration installations.`,
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -70,12 +60,6 @@ export async function acceptTermsViaBrowser(
               { prependGlobalFlags: true }
             ),
             when: 'Retry install after terms are accepted (browser or dashboard)',
-          },
-          {
-            command: acceptTermsCmd,
-            when: apiAcceptSupported
-              ? 'Accept terms via API instead of the browser (after reading policy_links)'
-              : 'Optional: only if this integration later supports API acceptance; browser-gated integrations will error — prefer verification_uri first',
           },
         ],
       },

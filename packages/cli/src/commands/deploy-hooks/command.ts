@@ -1,13 +1,13 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  projectOption as sharedProjectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 const projectOption = {
-  name: 'project',
+  ...sharedProjectOption,
   shorthand: 'p',
-  type: String,
-  argument: 'PROJECT',
-  description: 'Project name or ID (defaults to the linked project)',
-  deprecated: false,
 } as const;
 
 export const listSubcommand = {

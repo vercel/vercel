@@ -1031,9 +1031,9 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   // Ensure the message is correct pattern
   expect(stderr).toMatch(/Linked\s+/m);
 
-  // Ensure .gitignore contains .vercel and .env*.local (from env pull)
+  // Ensure .gitignore contains .vercel and .env* (from env pull)
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n.env*.local\n');
+  expect(gitignore).toBe('.vercel\n.env*\n');
 });
 
 test('[vc dev] should show prompts to set up project', async () => {
