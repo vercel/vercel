@@ -15,7 +15,9 @@ function envHasSdkKey() {
   }
 }
 
-export async function shouldEmbedFlagsDefinitions(): Promise<boolean> {
+export async function shouldEmbedFlagsDefinitions(
+  cwd?: string
+): Promise<boolean> {
   // legacy opt out
   if (process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING === '1') {
     return false;

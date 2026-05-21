@@ -694,7 +694,7 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (await shouldEmbedFlagsDefinitions()) {
+  if (await shouldEmbedFlagsDefinitions(cwd)) {
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
