@@ -1420,6 +1420,10 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
     }
 
     client.stdout.write('[build-diag] post-main: setting process.exitCode\n');
+
+    // Destroy the keep-alive HTTP agent so its sockets don't block exit
+    client.agent?.destroy();
+
     process.exitCode = exitCode;
     client.stdout.write('[build-diag] post-main: done, process should exit\n');
 
