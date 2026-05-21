@@ -4,7 +4,7 @@ import { NowBuildError } from '@vercel/build-utils';
 import { selectPythonVersion, PythonConfigKind } from '@vercel/python-analysis';
 import type { PythonBuild, PythonPackage } from '@vercel/python-analysis';
 import { UvRunner, findUvInPath, UV_PYTHON_PATH_PREFIX } from './uv';
-import { detectPlatform } from './utils';
+import { detectPlatform } from './platform-info';
 
 export interface PythonVersion {
   // Undefined in `vercel dev` where we defer to the system `python3`.

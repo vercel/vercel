@@ -36,6 +36,7 @@ test = [
 
 [tool.uv]
 default-groups = ["test"]
+exclude-newer = "2 days"
 
 [tool.mypy]
 python_version = "3.12"
