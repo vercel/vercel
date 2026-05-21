@@ -1,5 +1,45 @@
 # vercel
 
+## 54.3.0
+
+### Minor Changes
+
+- 8fabeba: `vercel curl --trace` now sends the `_vercel_session` cookie alongside the trace cookie, scopes the session API call via query parameters, sends `hostname` instead of `deploymentId`, and parses the request id from the `x-vercel-id` response header.
+- f2c60d6: [vercel-flags] check flags pkgs for build embedding
+- 8ac2af6: Add `--project <NAME_OR_ID>` flag to `build`, `deploy`, `pull`, and `dev` for non-interactive CI/CD and agent-driven use.
+
+  When `--project` is provided, the CLI will:
+
+  - Disambiguate monorepo `.vercel/repo.json` linked projects without prompting (matches by name **or** ID)
+  - Resolve the project via the API when no local link is present
+  - Fail fast with a clean "Project ... was not found" error if the value cannot be resolved (never silently creates a new project)
+  - In non-interactive contexts (CI, agents) the same failure also emits a structured JSON payload with a `next` array of suggested follow-up commands.
+
+  This is particularly important for agents (which run non-interactively by default): they can now target a specific project in monorepos and unlinked directories without relying on interactive setup prompts or the project picker.
+
+  The flag is also accepted on `vercel deploy init` (excluded on `vercel deploy continue` because `--id` already identifies the deployment).
+
+  The new API-based resolution is opt-in via the explicit `--project` flag, so commands like `vercel deploy` in an unlinked directory keep their existing behavior of falling back to interactive setup.
+
+- a2e79a8: Added `vercel traces get <request-id>` to fetch and render a trace summary for a request. Resolves project/team from the linked project, with `--scope` and `--project` flag fallbacks.
+
+### Patch Changes
+
+- b0d4dba: Add OIDC auth support to `vercel blob` commands and upgrade `@vercel/blob` to `2.4.0`. When `VERCEL_OIDC_TOKEN` and `BLOB_STORE_ID` are set in the environment (or `.env.local`), or when `--oidc-token` and `--store-id` are passed together, the CLI uses them as the credential source. The `--rw-token` flag remains exclusive — when provided, it always wins and never falls back to OIDC. The OIDC token is now forwarded to the SDK via the native `oidcToken` option (added in `@vercel/blob` 2.4.0) rather than by mutating `process.env`.
+- c6fa2d1: Revert non-interactive Marketplace terms acceptance for `integration accept-terms`.
+
+  This change requires human interactive confirmation for terms acceptance and removes `--yes` from `integration accept-terms` guidance.
+
+- a5b231a: Update `vercel env pull` to add `.env*` to `.gitignore` for default `.env.local` pulls.
+- Updated dependencies [e6dc048]
+- Updated dependencies [2cd64ea]
+- Updated dependencies [23eee91]
+- Updated dependencies [79d9508]
+  - @vercel/go@3.7.1
+  - @vercel/python@6.43.0
+  - @vercel/static-build@2.9.29
+  - @vercel/next@4.17.3
+
 ## 54.2.0
 
 ### Minor Changes

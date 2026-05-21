@@ -1,5 +1,11 @@
 # @vercel/static-build
 
+## 2.9.29
+
+### Patch Changes
+
+- 23eee91: Revert "[static-build] Support Vite Environments API for SSR projects (#16354)"
+
 ## 2.9.28
 
 ### Patch Changes
