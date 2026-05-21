@@ -984,7 +984,7 @@ from vercel_runtime.vc_init import vc_handler
               console.log('Compiling Python application bytecode...');
               await runCompileAll({
                 pythonBin,
-                directories: [workPath],
+                filesOrDirectories: [workPath],
                 env: pythonEnv,
                 excludeRegex: getCompileAllAppExcludeRegex(workPath),
               });
@@ -992,7 +992,7 @@ from vercel_runtime.vc_init import vc_handler
               console.log('Compiling Python dependency bytecode...');
               await runCompileAll({
                 pythonBin,
-                directories: sitePackageDirs,
+                filesOrDirectories: sitePackageDirs,
                 env: pythonEnv,
               });
 
