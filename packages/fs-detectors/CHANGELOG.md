@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 6.6.0
+
+### Minor Changes
+
+- 20247d6: Use builder entrypoint detection in service auto-detection.
+
 ## 6.5.0
 
 ### Minor Changes
