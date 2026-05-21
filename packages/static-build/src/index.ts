@@ -30,6 +30,8 @@ import {
   runPipInstall,
   runPackageJsonScript,
   runShellScript,
+  createDiagnostics,
+  generateProjectManifest,
   getNodeVersion,
   debug,
   NowBuildError,
@@ -352,6 +354,7 @@ export const build: BuildV2 = async ({
   repoRootPath,
   config,
   meta = {},
+  service,
 }) => {
   await download(files, workPath, meta);
 
@@ -494,6 +497,7 @@ export const build: BuildV2 = async ({
 
     const {
       cliType,
+      lockfilePath,
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
@@ -600,6 +604,24 @@ export const build: BuildV2 = async ({
           );
           isNpmInstall = true;
         }
+      }
+    }
+
+    if (framework?.slug) {
+      try {
+        await generateProjectManifest({
+          workPath: entrypointDir,
+          nodeVersion,
+          cliType,
+          lockfilePath,
+          lockfileVersion,
+          framework: framework.slug,
+          serviceType: service?.type,
+        });
+      } catch (err) {
+        debug(
+          `Failed to write static-build manifest: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
     }
 
@@ -936,3 +958,5 @@ export const prepareCache: PrepareCache = async ({
 
   return cacheFiles;
 };
+
+export const diagnostics = createDiagnostics('node');
