@@ -154,7 +154,12 @@ export default async function get(
   } else {
     linkedProject = await getLinkedProject(client);
     if (linkedProject.status === 'error') {
-      return linkedProject.exitCode;
+      if (scopeFlag && projectFlag) {
+        // Both flags were provided so we can proceed without a linked project.
+        linkedProject = { status: 'not_linked', org: null, project: null };
+      } else {
+        return linkedProject.exitCode;
+      }
     }
     const scope = resolveScope({
       flags: { scope: scopeFlag, project: projectFlag },
