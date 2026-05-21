@@ -1915,7 +1915,31 @@ createServer((_req, res) => {
     it('should not emit flags-definitions module when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
       vi.stubEnv('VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING', '1');
 
+      client.cwd = fixture('with-vercel-flags');
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
+
+    it('should emit flags-definitions module when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-on');
+
       client.cwd = fixture('static');
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+    });
+
+    it('should not emit flags-definitions module when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-off');
+
+      client.cwd = fixture('with-vercel-flags');
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
