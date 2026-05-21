@@ -77,6 +77,8 @@ export interface AgentErrorPayload {
   action?: string;
   /** ACL resource the permission applies to (e.g. "project", "deployment"). Present on 403 when the API provides it. */
   resource?: string;
+  /** Team slug or username/email that was searched. Present on `project_not_found`. */
+  scope?: string;
 }
 
 /**
