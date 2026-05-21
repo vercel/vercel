@@ -207,37 +207,31 @@ export function projectDeclaresViteServerEnvironment(
 }
 
 /**
- * Post-build check: discovers vite environments with built server output.
- * Prefers disk layout + SSR heuristics so we skip `resolveConfig` for known
- * meta-frameworks; falls back to resolveConfig (with timeout) otherwise.
+ * Post-build check: map built SSR output without calling `vite.resolveConfig`.
+ * Re-running vite's config pipeline after `vite build` can hang on TanStack
+ * Start (route-tree codegen, etc.) and leaves the build log silent until kill.
  */
 export async function detectViteServerEnvironments(
   workPath: string,
   _pkg?: PackageJson | null
 ): Promise<ViteEnvironmentsDetection | null> {
-  // Post-build path: never call resolveConfig when the standard SSR layout is
-  // already on disk (TanStack Start / RR v7). Plain Vite SPAs don't emit
-  // dist/server, so this returns null without touching vite.
   const onDisk = await detectBuiltViteEnvironmentsOnDisk(workPath);
   if (onDisk) {
-    debug(
-      'Using disk-based vite environment detection (skipping resolveConfig)'
+    console.log(
+      `Found Vite SSR output on disk (${onDisk.environments
+        .filter(e => e.consumer === 'server')
+        .map(e => relative(workPath, e.outDir))
+        .join(
+          ', '
+        )}); mapping server bundle to a Vercel Function without re-running vite.`
     );
     return onDisk;
   }
 
-  const envs = await getViteEnvironments(workPath);
-  if (!envs) return null;
-
-  const filtered = envs.filter(env => {
-    if (env.consumer !== 'server') return true;
-    return existsSync(env.outDir);
-  });
-
-  const hasBuiltServer = filtered.some(e => e.consumer === 'server');
-  if (!hasBuiltServer) return null;
-
-  return { environments: filtered };
+  debug(
+    'No dist/client + dist/server (or build/client + build/server) layout after build; skipping post-build vite-environments path'
+  );
+  return null;
 }
 
 async function detectBuiltViteEnvironmentsOnDisk(
@@ -360,10 +354,10 @@ export async function buildViteEnvironments({
     }
 
     console.log(
-      `Creating server function from "${env.name}" → ${relative(
+      `Tracing server bundle and creating Vercel Function from "${env.name}" → ${relative(
         workPath,
         entryFile
-      )}`
+      )} (this can take a minute on large apps)`
     );
 
     const fn = await createServerFunction({

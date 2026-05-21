@@ -2,6 +2,10 @@
   "name": "17-vite-environments",
   "private": true,
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "build:client-only": "BUILD_CLIENT_ONLY=1 node build.js"
+  },
+  "dependencies": {
+    "@tanstack/react-start": "1.0.0"
   }
 }

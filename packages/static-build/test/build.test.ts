@@ -292,6 +292,15 @@ exports.resolveConfig = async function resolveConfig(inlineConfig) {
     });
 
     it('falls through when no server environment is declared', async () => {
+      await outputFile(
+        path.join(workPath, 'package.json'),
+        JSON.stringify({
+          name: '17-vite-environments',
+          private: true,
+          scripts: { build: 'BUILD_CLIENT_ONLY=1 node build.js' },
+          dependencies: { '@tanstack/react-start': '1.0.0' },
+        })
+      );
       await writeStubConfig({
         build: { outDir: 'dist' },
         environments: {
@@ -321,8 +330,16 @@ exports.resolveConfig = async function resolveConfig(inlineConfig) {
     });
 
     it('falls through when the server env shares the client env outDir', async () => {
-      // @sveltejs/vite-plugin-svelte registers a phantom `ssr` env with
-      // outDir defaulting to `dist`. Make sure we don't try to take over.
+      // Plain SPAs only emit dist/client on disk — no dist/server to wrap.
+      await outputFile(
+        path.join(workPath, 'package.json'),
+        JSON.stringify({
+          name: '17-vite-environments',
+          private: true,
+          scripts: { build: 'BUILD_CLIENT_ONLY=1 node build.js' },
+          dependencies: { '@tanstack/react-start': '1.0.0' },
+        })
+      );
       await writeStubConfig({
         build: { outDir: 'dist' },
         environments: {
