@@ -385,6 +385,38 @@ describe('generateProjectManifest', () => {
     }
   });
 
+  it('writes runtimeVersion with both resolved and requested', async () => {
+    await generateProjectManifest({
+      workPath: tempDir,
+      cargoMetadata: makeMetadata({}),
+      runtimeVersion: { requested: '1.70', resolved: '1.87.0' },
+    });
+    const manifest = readManifest(tempDir);
+    expect(manifest.runtimeVersion).toEqual({
+      requested: '1.70',
+      resolved: '1.87.0',
+    });
+  });
+
+  it('writes runtimeVersion with resolved only when requested is absent', async () => {
+    await generateProjectManifest({
+      workPath: tempDir,
+      cargoMetadata: makeMetadata({}),
+      runtimeVersion: { resolved: '1.87.0' },
+    });
+    const manifest = readManifest(tempDir);
+    expect(manifest.runtimeVersion).toEqual({ resolved: '1.87.0' });
+  });
+
+  it('omits runtimeVersion when not passed', async () => {
+    await generateProjectManifest({
+      workPath: tempDir,
+      cargoMetadata: makeMetadata({}),
+    });
+    const manifest = readManifest(tempDir);
+    expect(manifest.runtimeVersion).toBeUndefined();
+  });
+
   it('writes framework and serviceType when passed', async () => {
     await generateProjectManifest({
       workPath: tempDir,
@@ -392,7 +424,6 @@ describe('generateProjectManifest', () => {
       framework: 'axum',
       serviceType: 'web',
     });
-
     const manifest = readManifest(tempDir);
     expect(manifest.framework).toBe('axum');
     expect(manifest.serviceType).toBe('web');
@@ -403,9 +434,28 @@ describe('generateProjectManifest', () => {
       workPath: tempDir,
       cargoMetadata: makeMetadata({}),
     });
-
     const manifest = readManifest(tempDir);
     expect(manifest.framework).toBeUndefined();
+    expect(manifest.serviceType).toBeUndefined();
+  });
+
+  it('omits framework from manifest when empty string provided', async () => {
+    await generateProjectManifest({
+      workPath: tempDir,
+      cargoMetadata: makeMetadata({}),
+      framework: '',
+    });
+    const manifest = readManifest(tempDir);
+    expect(manifest.framework).toBeUndefined();
+  });
+
+  it('omits serviceType from manifest when empty string provided', async () => {
+    await generateProjectManifest({
+      workPath: tempDir,
+      cargoMetadata: makeMetadata({}),
+      serviceType: '',
+    });
+    const manifest = readManifest(tempDir);
     expect(manifest.serviceType).toBeUndefined();
   });
 
