@@ -13,7 +13,10 @@ def is_worker_service() -> bool:
 
     svc_trigger = os.environ.get("VERCEL_SERVICE_TRIGGER") or ""
     normalized_trigger = svc_trigger.strip().lower()
-    return normalized_type == "job" and normalized_trigger == "queue"
+    return normalized_type == "job" and normalized_trigger in (
+        "queue",
+        "workflow",
+    )
 
 
 def has_worker_services() -> bool:

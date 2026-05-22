@@ -1,5 +1,17 @@
 # @vercel/fs-detectors
 
+## 6.7.0
+
+### Minor Changes
+
+- feb8bed: Detect entrypoint file from render yaml.
+
+### Patch Changes
+
+- Updated dependencies [fa25cb7]
+- Updated dependencies [972cc84]
+  - @vercel/build-utils@13.26.1
+
 ## 6.6.0
 
 ### Minor Changes

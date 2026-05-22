@@ -4,6 +4,7 @@ import {
   getServiceQueueTopics,
   isQueueTriggeredService,
   isScheduleTriggeredService,
+  isWorkflowTriggeredService,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
@@ -122,7 +123,7 @@ function getServiceTarget(service: Service): string {
     return `topics: ${topics.join(', ')}`;
   }
 
-  if (service.type === 'job' && service.trigger === 'workflow') {
+  if (isWorkflowTriggeredService(service)) {
     return 'workflow';
   }
 
