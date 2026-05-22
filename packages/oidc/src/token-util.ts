@@ -1,5 +1,3 @@
-import * as path from 'path';
-import * as fs from 'fs';
 import { VercelOidcTokenError } from './token-error';
 import { findRootDir, getUserDataDir } from './token-io';
 import {
@@ -14,12 +12,13 @@ import {
   RefreshAccessTokenFailedError,
 } from './auth-errors';
 
-export function getVercelDataDir(): string | null {
+export async function getVercelDataDir(): Promise<string | null> {
   const vercelFolder = 'com.vercel.cli';
-  const dataDir = getUserDataDir();
+  const dataDir = await getUserDataDir();
   if (!dataDir) {
     return null;
   }
+  const path = await import('path');
   return path.join(dataDir, vercelFolder);
 }
 
@@ -35,7 +34,7 @@ export interface GetVercelTokenOptions {
 export async function getVercelToken(
   options?: GetVercelTokenOptions
 ): Promise<string> {
-  const authConfig = readAuthConfig();
+  const authConfig = await readAuthConfig();
   if (!authConfig?.token) {
     throw new AccessTokenMissingError();
   }
@@ -46,7 +45,7 @@ export async function getVercelToken(
 
   if (!authConfig.refreshToken) {
     // No refresh token available, clear auth and throw
-    writeAuthConfig({});
+    await writeAuthConfig({});
     throw new RefreshAccessTokenFailedError('No refresh token available');
   }
 
@@ -59,7 +58,7 @@ export async function getVercelToken(
 
     if (tokensError || !tokens) {
       // Refresh failed - clear auth
-      writeAuthConfig({});
+      await writeAuthConfig({});
       throw new RefreshAccessTokenFailedError(tokensError);
     }
 
@@ -73,12 +72,12 @@ export async function getVercelToken(
       updatedConfig.refreshToken = tokens.refresh_token;
     }
 
-    writeAuthConfig(updatedConfig);
+    await writeAuthConfig(updatedConfig);
     // Token is guaranteed to be defined since we just set it from tokens.access_token
     return updatedConfig.token!;
   } catch (error) {
     // Network error or other failure - clear auth
-    writeAuthConfig({});
+    await writeAuthConfig({});
     if (
       error instanceof AccessTokenMissingError ||
       error instanceof RefreshAccessTokenFailedError
@@ -130,13 +129,17 @@ export function assertVercelOidcTokenResponse(
   }
 }
 
-export function findProjectInfo(): { projectId: string; teamId: string } {
-  const dir = findRootDir();
+export async function findProjectInfo(): Promise<{
+  projectId: string;
+  teamId: string;
+}> {
+  const dir = await findRootDir();
   if (!dir) {
     throw new VercelOidcTokenError(
       'Unable to find project root directory. Have you linked your project with `vc link?`'
     );
   }
+  const [path, fs] = await Promise.all([import('path'), import('fs')]);
   const prjPath = path.join(dir, '.vercel', 'project.json');
   if (!fs.existsSync(prjPath)) {
     throw new VercelOidcTokenError(
@@ -152,13 +155,17 @@ export function findProjectInfo(): { projectId: string; teamId: string } {
   return { projectId: prj.projectId, teamId: prj.orgId };
 }
 
-export function saveToken(token: VercelTokenResponse, projectId: string): void {
-  const dir = getUserDataDir();
+export async function saveToken(
+  token: VercelTokenResponse,
+  projectId: string
+): Promise<void> {
+  const dir = await getUserDataDir();
   if (!dir) {
     throw new VercelOidcTokenError(
       'Unable to find user data directory. Please reach out to Vercel support.'
     );
   }
+  const [path, fs] = await Promise.all([import('path'), import('fs')]);
   const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
   const tokenJson = JSON.stringify(token);
   fs.mkdirSync(path.dirname(tokenPath), { mode: 0o770, recursive: true }); // read/write/exec perms for owner/group only, x required for dir ops
@@ -167,13 +174,16 @@ export function saveToken(token: VercelTokenResponse, projectId: string): void {
   return;
 }
 
-export function loadToken(projectId: string): VercelTokenResponse | null {
-  const dir = getUserDataDir();
+export async function loadToken(
+  projectId: string
+): Promise<VercelTokenResponse | null> {
+  const dir = await getUserDataDir();
   if (!dir) {
     throw new VercelOidcTokenError(
       'Unable to find user data directory. Please reach out to Vercel support.'
     );
   }
+  const [path, fs] = await Promise.all([import('path'), import('fs')]);
   const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
   if (!fs.existsSync(tokenPath)) {
     return null;

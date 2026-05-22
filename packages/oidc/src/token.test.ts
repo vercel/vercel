@@ -1,14 +1,15 @@
-import { randomUUID } from 'crypto';
-import { describe, beforeEach, test, vi, expect } from 'vitest';
-import * as os from 'os';
-import * as path from 'path';
-import * as fs from 'fs';
+import { describe, beforeAll, beforeEach, test, vi, expect } from 'vitest';
 
 vi.mock('./token-io');
 
 import { findRootDir, getUserDataDir } from './token-io';
 import * as tokenUtil from './token-util';
 import { refreshToken } from './token';
+
+let randomUUID: typeof import('crypto')['randomUUID'];
+let os: typeof import('os');
+let path: typeof import('path');
+let fs: typeof import('fs');
 
 describe('refreshToken', () => {
   let rootDir: string;
@@ -17,6 +18,20 @@ describe('refreshToken', () => {
   let tokenDataDir: string;
 
   const projectId = 'prj_test123';
+
+  beforeAll(async () => {
+    const [crypto, osModule, pathModule, fsModule] = await Promise.all([
+      import('crypto'),
+      import('os'),
+      import('path'),
+      import('fs'),
+    ]);
+
+    randomUUID = crypto.randomUUID;
+    os = osModule;
+    path = pathModule;
+    fs = fsModule;
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,8 +63,8 @@ describe('refreshToken', () => {
     // we can optionally write the token.json file to supply the project token later
 
     vi.spyOn(process, 'cwd').mockReturnValue(rootDir);
-    vi.mocked(findRootDir).mockReturnValue(rootDir);
-    vi.mocked(getUserDataDir).mockReturnValue(userDataDir);
+    vi.mocked(findRootDir).mockResolvedValue(rootDir);
+    vi.mocked(getUserDataDir).mockReturnValue(Promise.resolve(userDataDir));
 
     vi.spyOn(tokenUtil, 'getVercelToken').mockResolvedValue('test');
     vi.spyOn(tokenUtil, 'getVercelOidcToken').mockResolvedValue({

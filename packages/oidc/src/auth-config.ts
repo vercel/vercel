@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { getVercelDataDir } from './token-util';
 
 /**
@@ -22,13 +20,14 @@ export interface AuthConfig {
 /**
  * Get the path to the auth config file
  */
-function getAuthConfigPath(): string {
-  const dataDir = getVercelDataDir();
+async function getAuthConfigPath(): Promise<string> {
+  const dataDir = await getVercelDataDir();
   if (!dataDir) {
     throw new Error(
       `Unable to find Vercel CLI data directory. Your platform: ${process.platform}. Supported: darwin, linux, win32.`
     );
   }
+  const path = await import('path');
   return path.join(dataDir, 'auth.json');
 }
 
@@ -36,9 +35,12 @@ function getAuthConfigPath(): string {
  * Read the auth config from disk
  * Returns null if the file doesn't exist or cannot be read
  */
-export function readAuthConfig(): AuthConfig | null {
+export async function readAuthConfig(): Promise<AuthConfig | null> {
   try {
-    const authPath = getAuthConfigPath();
+    const [fs, authPath] = await Promise.all([
+      import('fs'),
+      getAuthConfigPath(),
+    ]);
     if (!fs.existsSync(authPath)) {
       return null;
     }
@@ -55,8 +57,12 @@ export function readAuthConfig(): AuthConfig | null {
 /**
  * Write the auth config to disk with proper permissions
  */
-export function writeAuthConfig(config: AuthConfig): void {
-  const authPath = getAuthConfigPath();
+export async function writeAuthConfig(config: AuthConfig): Promise<void> {
+  const [fs, path, authPath] = await Promise.all([
+    import('fs'),
+    import('path'),
+    getAuthConfigPath(),
+  ]);
   const authDir = path.dirname(authPath);
 
   // Ensure directory exists with proper permissions

@@ -37,12 +37,12 @@ export async function refreshToken(
 
   // If neither is provided, read from project.json
   if (!projectId && !teamId) {
-    const projectInfo = findProjectInfo();
+    const projectInfo = await findProjectInfo();
     projectId = projectInfo.projectId;
     teamId = projectInfo.teamId;
   } else if (!projectId || !teamId) {
     // If only one is provided, read project.json for the missing value
-    const projectInfo = findProjectInfo();
+    const projectInfo = await findProjectInfo();
     projectId = projectId ?? projectInfo.projectId;
     teamId = teamId ?? projectInfo.teamId;
   }
@@ -53,7 +53,7 @@ export async function refreshToken(
     );
   }
 
-  let maybeToken = loadToken(projectId);
+  let maybeToken = await loadToken(projectId);
 
   if (
     !maybeToken ||
@@ -67,7 +67,7 @@ export async function refreshToken(
     if (!maybeToken) {
       throw new VercelOidcTokenError('Failed to refresh OIDC token');
     }
-    saveToken(maybeToken, projectId);
+    await saveToken(maybeToken, projectId);
   }
   process.env.VERCEL_OIDC_TOKEN = maybeToken.token;
   return;

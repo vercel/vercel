@@ -1,133 +1,151 @@
-[**@vercel/oidc**](../README.md)
-
----
-
 # Class: AccessTokenMissingError
-
-Defined in: [packages/oidc/src/auth-errors.ts:5](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L5)
 
 Error thrown when no authentication configuration is found.
 This typically means the user needs to log in.
 
-## Extends
+## Hierarchy
 
-- [`Error`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error)
+- [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)
+
+  ↳ **`AccessTokenMissingError`**
+
+## Table of contents
+
+### Constructors
+
+- [constructor](AccessTokenMissingError.md#constructor)
+
+### Properties
+
+- [message](AccessTokenMissingError.md#message)
+- [name](AccessTokenMissingError.md#name)
+- [stack](AccessTokenMissingError.md#stack)
+- [prepareStackTrace](AccessTokenMissingError.md#preparestacktrace)
+- [stackTraceLimit](AccessTokenMissingError.md#stacktracelimit)
+
+### Methods
+
+- [captureStackTrace](AccessTokenMissingError.md#capturestacktrace)
 
 ## Constructors
 
-### Constructor
+### constructor
 
-> **new AccessTokenMissingError**(): `AccessTokenMissingError`
-
-Defined in: [packages/oidc/src/auth-errors.ts:7](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L7)
-
-#### Returns
-
-`AccessTokenMissingError`
+• **new AccessTokenMissingError**()
 
 #### Overrides
 
-`Error.constructor`
+Error.constructor
+
+#### Defined in
+
+[packages/oidc/src/auth-errors.ts:7](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L7)
 
 ## Properties
 
 ### message
 
-> **message**: `string`
-
-Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.es5.d.ts:1077
+• **message**: `string`
 
 #### Inherited from
 
-`Error.message`
+Error.message
+
+#### Defined in
+
+node_modules/.pnpm/typescript@4.9.4/node_modules/typescript/lib/lib.es5.d.ts:1054
 
 ---
 
 ### name
 
-> **name**: `string` = `'AccessTokenMissingError'`
-
-Defined in: [packages/oidc/src/auth-errors.ts:6](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L6)
+• **name**: `string` = `'AccessTokenMissingError'`
 
 #### Overrides
 
-`Error.name`
+Error.name
+
+#### Defined in
+
+[packages/oidc/src/auth-errors.ts:6](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L6)
 
 ---
 
-### stack?
+### stack
 
-> `optional` **stack?**: `string`
-
-Defined in: node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.es5.d.ts:1078
+• `Optional` **stack**: `string`
 
 #### Inherited from
 
-`Error.stack`
+Error.stack
+
+#### Defined in
+
+node_modules/.pnpm/typescript@4.9.4/node_modules/typescript/lib/lib.es5.d.ts:1055
 
 ---
 
-### prepareStackTrace?
+### prepareStackTrace
 
-> `static` `optional` **prepareStackTrace?**: (`err`, `stackTraces`) => `any`
+▪ `Static` `Optional` **prepareStackTrace**: (`err`: [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), `stackTraces`: `CallSite`[]) => `any`
 
-Defined in: node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:28
+#### Type declaration
+
+▸ (`err`, `stackTraces`): `any`
 
 Optional override for formatting stack traces
 
-#### Parameters
-
-##### err
-
-[`Error`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error)
-
-##### stackTraces
-
-`CallSite`[]
-
-#### Returns
-
-`any`
-
-#### See
+**`See`**
 
 https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
+##### Parameters
+
+| Name          | Type                                                                                              |
+| :------------ | :------------------------------------------------------------------------------------------------ |
+| `err`         | [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) |
+| `stackTraces` | `CallSite`[]                                                                                      |
+
+##### Returns
+
+`any`
+
 #### Inherited from
 
-`Error.prepareStackTrace`
+Error.prepareStackTrace
+
+#### Defined in
+
+node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:28
 
 ---
 
 ### stackTraceLimit
 
-> `static` **stackTraceLimit**: `number`
-
-Defined in: node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:30
+▪ `Static` **stackTraceLimit**: `number`
 
 #### Inherited from
 
-`Error.stackTraceLimit`
+Error.stackTraceLimit
+
+#### Defined in
+
+node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:30
 
 ## Methods
 
-### captureStackTrace()
+### captureStackTrace
 
-> `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
-
-Defined in: node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:21
+▸ `Static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
 Create .stack property on a target object
 
 #### Parameters
 
-##### targetObject
-
-`object`
-
-##### constructorOpt?
-
-[`Function`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Function)
+| Name              | Type                                                                                                    |
+| :---------------- | :------------------------------------------------------------------------------------------------------ |
+| `targetObject`    | `object`                                                                                                |
+| `constructorOpt?` | [`Function`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) |
 
 #### Returns
 
@@ -135,4 +153,8 @@ Create .stack property on a target object
 
 #### Inherited from
 
-`Error.captureStackTrace`
+Error.captureStackTrace
+
+#### Defined in
+
+node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:21

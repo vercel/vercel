@@ -75,10 +75,7 @@ export async function getVercelOidcToken(
 
   try {
     const [{ getTokenPayload, isExpired }, { refreshToken }] =
-      await Promise.all([
-        await import('./token-util.js'),
-        await import('./token.js'),
-      ]);
+      await Promise.all([import('./token-util.js'), import('./token.js')]);
 
     if (
       !token ||

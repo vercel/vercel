@@ -1,8 +1,12 @@
-import { randomUUID } from 'crypto';
-import { describe, beforeEach, afterEach, test, vi, expect } from 'vitest';
-import * as os from 'os';
-import * as path from 'path';
-import * as fs from 'fs';
+import {
+  describe,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  test,
+  vi,
+  expect,
+} from 'vitest';
 
 vi.mock('./token-io');
 vi.mock('./get-context', () => ({
@@ -13,6 +17,11 @@ import { findRootDir, getUserDataDir } from './token-io';
 import { getVercelOidcToken } from './get-vercel-oidc-token';
 import * as tokenUtil from './token-util';
 
+let randomUUID: typeof import('crypto')['randomUUID'];
+let os: typeof import('os');
+let path: typeof import('path');
+let fs: typeof import('fs');
+
 describe('getVercelOidcToken - Error Scenarios', () => {
   let rootDir: string;
   let userDataDir: string;
@@ -21,6 +30,20 @@ describe('getVercelOidcToken - Error Scenarios', () => {
 
   const projectId = 'prj_test123';
   const teamId = 'team_test456';
+
+  beforeAll(async () => {
+    const [crypto, osModule, pathModule, fsModule] = await Promise.all([
+      import('crypto'),
+      import('os'),
+      import('path'),
+      import('fs'),
+    ]);
+
+    randomUUID = crypto.randomUUID;
+    os = osModule;
+    path = pathModule;
+    fs = fsModule;
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,8 +65,8 @@ describe('getVercelOidcToken - Error Scenarios', () => {
     });
 
     vi.spyOn(process, 'cwd').mockReturnValue(rootDir);
-    vi.mocked(findRootDir).mockReturnValue(rootDir);
-    vi.mocked(getUserDataDir).mockReturnValue(userDataDir);
+    vi.mocked(findRootDir).mockResolvedValue(rootDir);
+    vi.mocked(getUserDataDir).mockReturnValue(Promise.resolve(userDataDir));
   });
 
   afterEach(() => {
@@ -79,7 +102,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
   });
 
   test('should throw helpful error when root directory cannot be found', async () => {
-    vi.mocked(findRootDir).mockReturnValue(null);
+    vi.mocked(findRootDir).mockResolvedValue(null);
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     await expect(getVercelOidcToken()).rejects.toThrow(
@@ -93,7 +116,7 @@ describe('getVercelOidcToken - Error Scenarios', () => {
       JSON.stringify({ projectId, orgId: teamId })
     );
 
-    vi.mocked(getUserDataDir).mockReturnValue(null);
+    vi.mocked(getUserDataDir).mockReturnValue(Promise.resolve(null));
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 
     await expect(getVercelOidcToken()).rejects.toThrow(
@@ -188,9 +211,9 @@ describe('getVercelOidcToken - Error Scenarios', () => {
       name: 'test-name',
       exp: Date.now() / 1000 - 1000,
     });
-    vi.spyOn(tokenUtil, 'saveToken').mockImplementation(() => {
-      throw new Error('EACCES: permission denied');
-    });
+    vi.spyOn(tokenUtil, 'saveToken').mockRejectedValue(
+      new Error('EACCES: permission denied')
+    );
 
     process.env.VERCEL_OIDC_TOKEN = createExpiredToken();
 

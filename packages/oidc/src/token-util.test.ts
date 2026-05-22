@@ -9,8 +9,8 @@ import {
 
 vi.mock('fs');
 vi.mock('./token-io', () => ({
-  getUserDataDir: vi.fn(() => '/mock/user/data'),
-  findRootDir: vi.fn(() => '/mock/root'),
+  getUserDataDir: vi.fn(() => Promise.resolve('/mock/user/data')),
+  findRootDir: vi.fn(() => Promise.resolve('/mock/root')),
 }));
 
 describe('getVercelToken', () => {
@@ -29,8 +29,8 @@ describe('getVercelToken', () => {
       expiresAt: Math.floor(Date.now() / 1000) + 3600, // expires in 1 hour
     };
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(validToken);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(validToken);
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
 
     const token = await getVercelToken();
 
@@ -39,7 +39,7 @@ describe('getVercelToken', () => {
   });
 
   it('should throw AccessTokenMissingError if auth config does not exist', async () => {
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(null);
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(null);
 
     await expect(getVercelToken()).rejects.toThrow(AccessTokenMissingError);
   });
@@ -61,8 +61,8 @@ describe('getVercelToken', () => {
       }),
     } as Response;
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(expiredToken);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(expiredToken);
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
     vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue(mockResponse);
 
     const token = await getVercelToken();
@@ -86,10 +86,10 @@ describe('getVercelToken', () => {
       expiresAt: Math.floor(Date.now() / 1000) - 3600,
     };
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(
       expiredTokenNoRefresh
     );
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
 
     await expect(getVercelToken()).rejects.toThrow(
       RefreshAccessTokenFailedError
@@ -112,8 +112,8 @@ describe('getVercelToken', () => {
       }),
     } as Response;
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(expiredToken);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(expiredToken);
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
     vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue(mockErrorResponse);
 
     await expect(getVercelToken()).rejects.toThrow(
@@ -129,8 +129,8 @@ describe('getVercelToken', () => {
       expiresAt: Math.floor(Date.now() / 1000) - 3600,
     };
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(expiredToken);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(expiredToken);
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
     vi.spyOn(oauth, 'refreshTokenRequest').mockRejectedValue(
       new Error('Network error')
     );
@@ -146,8 +146,10 @@ describe('getVercelToken', () => {
       token: 'cli-provided-token',
     };
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(tokenWithoutExpiry);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(
+      tokenWithoutExpiry
+    );
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
 
     const token = await getVercelToken();
 
@@ -172,8 +174,8 @@ describe('getVercelToken', () => {
       }),
     } as Response;
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(expiredToken);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(expiredToken);
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
     vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue(mockResponse);
 
     await getVercelToken();
@@ -202,8 +204,8 @@ describe('getVercelToken', () => {
       }),
     } as Response;
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(expiredToken);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(expiredToken);
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
     vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue(mockResponse);
 
     await getVercelToken();
@@ -228,8 +230,8 @@ describe('getVercelToken', () => {
       }),
     } as Response;
 
-    vi.spyOn(authConfig, 'readAuthConfig').mockReturnValue(expiredToken);
-    vi.spyOn(authConfig, 'writeAuthConfig').mockImplementation(() => {});
+    vi.spyOn(authConfig, 'readAuthConfig').mockResolvedValue(expiredToken);
+    vi.spyOn(authConfig, 'writeAuthConfig').mockResolvedValue(undefined);
     vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue(mockResponse);
 
     const beforeCall = Math.floor(Date.now() / 1000);

@@ -1,10 +1,11 @@
-import { hostname, platform, arch } from 'os';
-
 const VERCEL_ISSUER = 'https://vercel.com';
 const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
 
 // Simplified user agent for OIDC package
-const userAgent = `@vercel/oidc node-${process.version} ${platform()} (${arch()}) ${hostname()}`;
+const userAgent = async () => {
+  const { hostname, platform, arch } = await import('os');
+  return `@vercel/oidc node-${process.version} ${platform()} (${arch()}) ${hostname()}`;
+};
 
 export interface TokenSet {
   access_token: string;
@@ -29,7 +30,7 @@ async function getTokenEndpoint(): Promise<string> {
 
   const discoveryUrl = `${VERCEL_ISSUER}/.well-known/openid-configuration`;
   const response = await fetch(discoveryUrl, {
-    headers: { 'user-agent': userAgent },
+    headers: { 'user-agent': await userAgent() },
   });
 
   if (!response.ok) {
@@ -58,7 +59,7 @@ export async function refreshTokenRequest(options: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': userAgent,
+      'user-agent': await userAgent(),
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
