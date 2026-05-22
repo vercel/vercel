@@ -46,6 +46,7 @@ import {
   sanitizeConsumerName,
   downloadFile,
 } from '@vercel/build-utils';
+import { getServiceUrlSigningEnvVars } from '../../../../build-utils/src/get-service-url-env-vars';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
 import { frameworkList, type Framework } from '@vercel/frameworks';
@@ -748,7 +749,15 @@ async function doBuild(
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
       });
-      for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
+      const serviceUrlSigningEnvVars = getServiceUrlSigningEnvVars({
+        serviceUrlEnvVars,
+        frameworkList,
+        currentEnv: process.env,
+      });
+      for (const [key, value] of Object.entries({
+        ...serviceUrlEnvVars,
+        ...serviceUrlSigningEnvVars,
+      })) {
         process.env[key] = value;
         output.debug(`Injected service URL env var: ${key}=${value}`);
       }
@@ -1077,7 +1086,15 @@ async function doBuild(
           currentEnv: process.env,
           deploymentUrl: process.env.VERCEL_URL,
         });
-        for (const [key, value] of Object.entries(perServiceEnv)) {
+        const perServiceSigningEnv = getServiceUrlSigningEnvVars({
+          serviceUrlEnvVars: perServiceEnv,
+          frameworkList,
+          currentEnv: process.env,
+        });
+        for (const [key, value] of Object.entries({
+          ...perServiceEnv,
+          ...perServiceSigningEnv,
+        })) {
           if (key in process.env) continue;
           restoreEnv.set(key, process.env[key]);
           process.env[key] = value;

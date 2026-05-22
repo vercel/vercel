@@ -60,6 +60,7 @@ import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 import {
   getServiceUrlEnvVars,
   getExperimentalServiceUrlEnvVars,
+  getServiceUrlSigningEnvVars,
 } from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
@@ -113,6 +114,7 @@ export {
   getPrefixedEnvVars,
   getServiceUrlEnvVars,
   getExperimentalServiceUrlEnvVars,
+  getServiceUrlSigningEnvVars,
   streamToBuffer,
   streamToBufferChunks,
   debug,
