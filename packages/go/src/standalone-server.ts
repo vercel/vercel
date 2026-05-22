@@ -18,6 +18,7 @@ import {
 } from '@vercel/build-utils';
 
 import { createGo, findGoBinary } from './go-helpers';
+import { generateProjectManifest } from './diagnostics';
 
 /**
  * Find the go.mod file starting from a directory and scanning up.
@@ -224,6 +225,8 @@ export async function buildStandaloneServer({
       });
     });
   }
+
+  await generateProjectManifest({ workPath, goModPath, goVersion: '' });
 
   return { output: lambda };
 }
