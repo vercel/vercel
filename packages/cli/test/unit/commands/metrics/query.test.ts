@@ -609,6 +609,31 @@ describe('metrics query v2', () => {
       expect(parsed.data).toHaveLength(1);
       expect(parsed.summary).toHaveLength(1);
       expect(parsed.statistics).toBeDefined();
+      expect(client.stderr.getFullOutput()).toBe('');
+    });
+
+    it('should stay quiet on stderr when JSON output adjusts granularity', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--format=json',
+        '--since',
+        '2025-01-01T00:00:00Z',
+        '--until',
+        '2025-01-10T00:00:00Z',
+        '--granularity',
+        '1m'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      const parsed = JSON.parse(output);
+      expect(parsed.query.granularity).toEqual({ hours: 4 });
+      expect(client.stderr.getFullOutput()).toBe('');
     });
   });
 
