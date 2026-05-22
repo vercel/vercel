@@ -1,5 +1,7 @@
 """A basic BaseHTTPRequestHandler for testing."""
 
+import json
+import os
 from http.server import BaseHTTPRequestHandler
 
 
@@ -11,6 +13,20 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             token = self.headers.get("x-vercel-oidc-token", "")
             self.wfile.write(token.encode())
+            return
+
+        if self.path == "/service-url":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(
+                json.dumps(
+                    {
+                        "backendUrl": os.environ.get("BACKEND_URL", ""),
+                        "unsignedUrl": os.environ.get("UNSIGNED_URL", ""),
+                    }
+                ).encode()
+            )
             return
 
         self.send_response(200)

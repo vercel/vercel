@@ -27,7 +27,8 @@ describe('getServiceUrlSigningEnvVars', () => {
 
     expect(result).toEqual({
       VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS: '1',
-      VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS: 'BACKEND_URL,OTHER_URL',
+      VERCEL_SERVICE_URL_ENVS: 'BACKEND_URL,OTHER_URL',
+      VERCEL_SERVICE_URL_PREFIXES: 'BACKEND_URL=/_/backend,OTHER_URL=/_/other',
     });
   });
 
@@ -43,7 +44,8 @@ describe('getServiceUrlSigningEnvVars', () => {
 
     expect(result).toEqual({
       VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS: '1',
-      VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS: 'BACKEND_URL',
+      VERCEL_SERVICE_URL_ENVS: 'BACKEND_URL',
+      VERCEL_SERVICE_URL_PREFIXES: 'BACKEND_URL=/_/backend',
     });
   });
 
@@ -55,7 +57,8 @@ describe('getServiceUrlSigningEnvVars', () => {
       frameworkList: [],
       currentEnv: {
         VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS: '0',
-        VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS: 'CUSTOM_URL',
+        VERCEL_SERVICE_URL_ENVS: 'CUSTOM_URL',
+        VERCEL_SERVICE_URL_PREFIXES: 'CUSTOM_URL=/custom',
       },
     });
 

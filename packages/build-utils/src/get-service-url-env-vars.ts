@@ -32,7 +32,8 @@ export interface GetServiceUrlSigningEnvVarsOptions {
 }
 
 export const SIGN_SERVICE_URLS_ENV = 'VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS';
-export const SERVICE_URL_ENVS_ENV = 'VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS';
+export const SERVICE_URL_ENVS_ENV = 'VERCEL_SERVICE_URL_ENVS';
+export const SERVICE_URL_PREFIXES_ENV = 'VERCEL_SERVICE_URL_PREFIXES';
 
 /**
  * Convert service name to env-var name: "frontend" → "FRONTEND_URL",
@@ -97,12 +98,15 @@ function isFrameworkPrefixedEnvVar(
   return false;
 }
 
-function isAbsoluteHttpUrl(value: string): boolean {
+function parseAbsoluteHttpUrl(value: string): URL | undefined {
   try {
     const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return undefined;
+    }
+    return url;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -118,16 +122,17 @@ export function getServiceUrlSigningEnvVars(
 ): Record<string, string> {
   const { serviceUrlEnvVars, frameworkList, currentEnv = {} } = options;
   const frameworkPrefixes = getFrameworkEnvPrefixes(frameworkList);
-  const signableNames = Object.entries(serviceUrlEnvVars)
-    .filter(([name, value]) => {
-      return (
-        !isFrameworkPrefixedEnvVar(name, frameworkPrefixes) &&
-        isAbsoluteHttpUrl(value)
-      );
-    })
-    .map(([name]) => name);
+  const signableEntries = Object.entries(serviceUrlEnvVars).flatMap(
+    ([name, value]) => {
+      if (isFrameworkPrefixedEnvVar(name, frameworkPrefixes)) {
+        return [];
+      }
+      const url = parseAbsoluteHttpUrl(value);
+      return url ? ([[name, url]] as const) : [];
+    }
+  );
 
-  if (signableNames.length === 0) {
+  if (signableEntries.length === 0) {
     return {};
   }
 
@@ -136,7 +141,14 @@ export function getServiceUrlSigningEnvVars(
     envVars[SIGN_SERVICE_URLS_ENV] = '1';
   }
   if (!(SERVICE_URL_ENVS_ENV in currentEnv)) {
-    envVars[SERVICE_URL_ENVS_ENV] = signableNames.join(',');
+    envVars[SERVICE_URL_ENVS_ENV] = signableEntries
+      .map(([name]) => name)
+      .join(',');
+  }
+  if (!(SERVICE_URL_PREFIXES_ENV in currentEnv)) {
+    envVars[SERVICE_URL_PREFIXES_ENV] = signableEntries
+      .map(([name, url]) => `${name}=${url.pathname || '/'}`)
+      .join(',');
   }
   return envVars;
 }

@@ -1,5 +1,8 @@
 """A basic ASGI application for testing."""
 
+import json
+import os
+
 
 async def app(scope, receive, send):
     if scope["type"] != "http":
@@ -14,6 +17,13 @@ async def app(scope, receive, send):
             for key, value in scope.get("headers", [])
         }
         body = headers.get("x-vercel-oidc-token", "").encode()
+    if path == "/service-url":
+        body = json.dumps(
+            {
+                "backendUrl": os.environ.get("BACKEND_URL", ""),
+                "unsignedUrl": os.environ.get("UNSIGNED_URL", ""),
+            }
+        ).encode()
 
     await send(
         {

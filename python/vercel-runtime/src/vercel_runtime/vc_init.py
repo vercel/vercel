@@ -17,6 +17,7 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
+from urllib.parse import quote
 
 from vercel_runtime.crons import (
     bootstrap_cron_service_app,
@@ -125,6 +126,10 @@ _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
 _entrypoint_varname = _must_getenv("__VC_HANDLER_VARIABLE_NAME")
+
+SIGN_SERVICE_URLS_ENV = "VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS"
+SERVICE_URL_ENVS_ENV = "VERCEL_SERVICE_URL_ENVS"
+SERVICE_URL_PREFIXES_ENV = "VERCEL_SERVICE_URL_PREFIXES"
 
 
 def setup_logging(
@@ -274,6 +279,56 @@ def setup_logging(
         return wrapper
 
     builtins.print = print_wrapper(builtins.print)
+
+
+def _split_csv(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _service_url_prefixes() -> dict[str, str]:
+    prefixes: dict[str, str] = {}
+    for item in _split_csv(os.environ.get(SERVICE_URL_PREFIXES_ENV)):
+        name, separator, prefix = item.partition("=")
+        if not separator:
+            continue
+        name = name.strip()
+        prefix = prefix.strip()
+        if name and prefix:
+            prefixes[name] = prefix if prefix.startswith("/") else f"/{prefix}"
+    return prefixes
+
+
+def _service_url_origin() -> str | None:
+    deployment_url = os.environ.get("VERCEL_URL")
+    if not deployment_url:
+        return None
+    if deployment_url.startswith("http"):
+        return deployment_url.rstrip("/")
+    return f"https://{deployment_url}".rstrip("/")
+
+
+def _build_signed_service_url(prefix: str, oidc_token: str) -> str | None:
+    origin = _service_url_origin()
+    if not origin:
+        return None
+    suffix = "" if prefix == "/" else prefix
+    return f"{origin}/_vercel/internal/{quote(oidc_token, safe='')}{suffix}"
+
+
+def _update_signed_service_url_env_vars(oidc_token: str | None) -> None:
+    if os.environ.get(SIGN_SERVICE_URLS_ENV) != "1" or not oidc_token:
+        return
+
+    prefixes = _service_url_prefixes()
+    for name in _split_csv(os.environ.get(SERVICE_URL_ENVS_ENV)):
+        prefix = prefixes.get(name)
+        if not prefix:
+            continue
+        signed_url = _build_signed_service_url(prefix, oidc_token)
+        if signed_url:
+            os.environ[name] = signed_url
 
 
 # If running in the platform (IPC present), logging must be
@@ -562,6 +617,7 @@ class ASGIMiddleware:
         new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
+        public_oidc_token: str | None = None
         internal_oidc_token: str | None = None
 
         for raw_k, raw_v in headers_list:
@@ -583,7 +639,15 @@ class ASGIMiddleware:
             if key == INTERNAL_OIDC_HEADER_NAME:
                 internal_oidc_token = val
                 continue
+            if key == OIDC_HEADER_NAME:
+                public_oidc_token = val
             new_headers.append((key_bytes, val_bytes))
+
+        oidc_token = public_oidc_token or get_oidc_token_for_request(
+            has_public_oidc=False,
+            internal_oidc_token=internal_oidc_token,
+        )
+        _update_signed_service_url_env_vars(oidc_token)
 
         append_oidc_header_if_missing(
             new_headers,
@@ -745,11 +809,18 @@ if "VERCEL_IPC_PATH" in os.environ:
                 if isinstance(raw_internal_oidc_token, str)
                 else None
             )
-            oidc_token = get_oidc_token_for_request(
-                has_public_oidc=bool(self.headers.get(OIDC_HEADER_NAME)),
+            raw_public_oidc_token = self.headers.get(OIDC_HEADER_NAME)
+            public_oidc_token = (
+                raw_public_oidc_token
+                if isinstance(raw_public_oidc_token, str)
+                else None
+            )
+            oidc_token = public_oidc_token or get_oidc_token_for_request(
+                has_public_oidc=False,
                 internal_oidc_token=internal_oidc_token,
             )
-            if oidc_token:
+            _update_signed_service_url_env_vars(oidc_token)
+            if oidc_token and not public_oidc_token:
                 self.headers[OIDC_HEADER_NAME] = oidc_token
             with contextlib.suppress(Exception):
                 del self.headers[INTERNAL_OIDC_HEADER_NAME]
@@ -987,6 +1058,7 @@ if (
         payload = json.loads(event["body"])
         path, _ = apply_service_route_prefix_to_target(payload["path"])
         headers = normalize_event_headers(payload.get("headers", {}))
+        _update_signed_service_url_env_vars(headers.get(OIDC_HEADER_NAME))
         method = payload["method"]
         encoding = payload.get("encoding")
         body = payload.get("body")
@@ -1066,6 +1138,7 @@ else:
             payload = json.loads(event["body"])
 
             raw_headers = normalize_event_headers(payload.get("headers", {}))
+            _update_signed_service_url_env_vars(raw_headers.get(OIDC_HEADER_NAME))
             headers = Headers(raw_headers)
 
             body: Any = payload.get("body", "")
@@ -1352,6 +1425,7 @@ else:
             for key, value in header_pairs:
                 headers[key] = value
                 headers_encoded.append((key.lower().encode(), value.encode()))
+            _update_signed_service_url_env_vars(headers.get(OIDC_HEADER_NAME))
 
             body = payload.get("body", b"")
             if payload.get("encoding") == "base64":

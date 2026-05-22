@@ -66,6 +66,17 @@ def _base_env() -> dict[str, str]:
     return {k: v for k, v in os.environ.items() if not k.startswith("__VC_")}
 
 
+def _service_url_signing_env() -> dict[str, str]:
+    return {
+        "VERCEL_URL": "my-app.vercel.app",
+        "VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS": "1",
+        "VERCEL_SERVICE_URL_ENVS": "BACKEND_URL",
+        "VERCEL_SERVICE_URL_PREFIXES": "BACKEND_URL=/backend",
+        "BACKEND_URL": "https://my-app.vercel.app/backend",
+        "UNSIGNED_URL": "https://my-app.vercel.app/unsigned",
+    }
+
+
 @contextlib.asynccontextmanager
 async def _run_runtime(
     *,
@@ -356,6 +367,57 @@ class TestHTTPHandler(_RuntimeTestCase):
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "env-token")
 
+    async def test_service_url_env_vars_are_signed_with_request_oidc_token(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+            extra_env=_service_url_signing_env(),
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/service-url",
+                headers={"x-vercel-oidc-token": "token-one"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(
+                json.loads(resp.read()),
+                {
+                    "backendUrl": (
+                        "https://my-app.vercel.app"
+                        "/_vercel/internal/token-one/backend"
+                    ),
+                    "unsignedUrl": "https://my-app.vercel.app/unsigned",
+                },
+            )
+
+            resp = await _http_get(
+                port,
+                "/service-url",
+                headers={"x-vercel-oidc-token": "token-two"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(
+                json.loads(resp.read()),
+                {
+                    "backendUrl": (
+                        "https://my-app.vercel.app"
+                        "/_vercel/internal/token-two/backend"
+                    ),
+                    "unsignedUrl": "https://my-app.vercel.app/unsigned",
+                },
+            )
+
     async def test_malformed_request_line(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
         async with _run_runtime(
@@ -532,6 +594,56 @@ class TestASGIApp(_RuntimeTestCase):
             resp = await _http_get(port, "/oidc")
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_service_url_env_vars_are_signed_with_request_oidc_token(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env=_service_url_signing_env(),
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/service-url",
+                headers={"x-vercel-oidc-token": "token-one"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(
+                json.loads(resp.read()),
+                {
+                    "backendUrl": (
+                        "https://my-app.vercel.app"
+                        "/_vercel/internal/token-one/backend"
+                    ),
+                    "unsignedUrl": "https://my-app.vercel.app/unsigned",
+                },
+            )
+
+            resp = await _http_get(
+                port,
+                "/service-url",
+                headers={"x-vercel-oidc-token": "token-two"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(
+                json.loads(resp.read()),
+                {
+                    "backendUrl": (
+                        "https://my-app.vercel.app"
+                        "/_vercel/internal/token-two/backend"
+                    ),
+                    "unsignedUrl": "https://my-app.vercel.app/unsigned",
+                },
+            )
 
 
 class TestCronService(_RuntimeTestCase):
