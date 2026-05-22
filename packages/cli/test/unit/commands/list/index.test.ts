@@ -566,7 +566,7 @@ describe('list', () => {
 
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'Invalid status values: INVALID. Valid values are: BUILDING, ERROR, INITIALIZING, QUEUED, READY, CANCELED'
+        'Invalid status values: INVALID. Valid values are: BUILDING, ERROR, INITIALIZING, QUEUED, READY, CANCELED, BLOCKED'
       );
     });
 
