@@ -149,6 +149,9 @@ export default async function connex(client: Client): Promise<number> {
         );
         telemetry.trackCliOptionLimit(listParsedArgs.flags['--limit']);
         telemetry.trackCliOptionNext(listParsedArgs.flags['--next']);
+        telemetry.trackCliOptionSearch(listParsedArgs.flags['--search']);
+        telemetry.trackCliOptionService(listParsedArgs.flags['--service']);
+        telemetry.trackCliOptionType(listParsedArgs.flags['--type']);
         telemetry.trackCliOptionFormat(listParsedArgs.flags['--format']);
         return await list(client, listParsedArgs.flags);
       }
