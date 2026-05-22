@@ -26,7 +26,21 @@ export function shouldUseCompileAll({
   isDev?: boolean;
   hasCustomCommand: boolean;
 }): boolean {
-  return !isDev && !hasCustomCommand && isCompileAllEnabled();
+  if (isDev) return false;
+
+  // Explicit VERCEL_PYTHON_COMPILEALL overrides all other guards,
+  // including the custom-command guard.  This is the only way for
+  // custom-command users to opt into bytecode compilation.
+  const val = process.env.VERCEL_PYTHON_COMPILEALL;
+  if (val !== undefined && val !== '') {
+    const lower = val.toLowerCase();
+    return lower === '1' || lower === 'true';
+  }
+
+  // Without explicit opt-in, custom commands never get compileall.
+  if (hasCustomCommand) return false;
+
+  return isCompileAllEnabled();
 }
 
 interface CompileAllOptions {

@@ -110,7 +110,7 @@ describe('isCompileAllEnabled', () => {
 });
 
 describe('shouldUseCompileAll', () => {
-  it('does not enable automatic compileall for custom commands', () => {
+  it('explicit VERCEL_PYTHON_COMPILEALL=1 overrides custom command guard', () => {
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
     expect(
@@ -118,8 +118,10 @@ describe('shouldUseCompileAll', () => {
         isDev: false,
         hasCustomCommand: true,
       })
-    ).toBe(false);
+    ).toBe(true);
+  });
 
+  it('Hive auto-enable does not override custom command guard', () => {
     delete process.env.VERCEL_PYTHON_COMPILEALL;
     process.env.VERCEL_PYTHON_ON_HIVE = '1';
 
@@ -131,12 +133,35 @@ describe('shouldUseCompileAll', () => {
     ).toBe(false);
   });
 
-  it('does not enable automatic compileall in dev', () => {
+  it('does not enable compileall in dev even when explicitly set', () => {
     process.env.VERCEL_PYTHON_COMPILEALL = '1';
 
     expect(
       shouldUseCompileAll({
         isDev: true,
+        hasCustomCommand: false,
+      })
+    ).toBe(false);
+  });
+
+  it('enables compileall for non-custom builds when explicitly set', () => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+
+    expect(
+      shouldUseCompileAll({
+        isDev: false,
+        hasCustomCommand: false,
+      })
+    ).toBe(true);
+  });
+
+  it('does not enable compileall without explicit opt-in or Hive', () => {
+    delete process.env.VERCEL_PYTHON_COMPILEALL;
+    delete process.env.VERCEL_PYTHON_ON_HIVE;
+
+    expect(
+      shouldUseCompileAll({
+        isDev: false,
         hasCustomCommand: false,
       })
     ).toBe(false);
