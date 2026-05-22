@@ -40,6 +40,7 @@ export async function deserializeLambda(
     await hydrateFilesMap(
       files,
       config.filePathMap,
+      config.fileHashes,
       repoRootPath,
       fileFsRefsCache
     );

@@ -6,6 +6,7 @@ interface FileBlobOptions {
   mode?: number;
   contentType?: string;
   data: string | Buffer;
+  contentHash?: string;
 }
 
 interface FromStreamOptions {
@@ -19,14 +20,21 @@ export default class FileBlob implements FileBase {
   public mode: number;
   public data: string | Buffer;
   public contentType: string | undefined;
+  public contentHash?: string;
 
-  constructor({ mode = 0o100644, contentType, data }: FileBlobOptions) {
+  constructor({
+    mode = 0o100644,
+    contentType,
+    data,
+    contentHash,
+  }: FileBlobOptions) {
     assert(typeof mode === 'number');
     assert(typeof data === 'string' || Buffer.isBuffer(data));
     this.type = 'FileBlob';
     this.mode = mode;
     this.contentType = contentType;
     this.data = data;
+    this.contentHash = contentHash;
   }
 
   static async fromStream({

@@ -15,6 +15,7 @@ export type Properties<T> = {
 
 type FilesMapProp = {
   filePathMap?: Record<string, string>;
+  fileHashes?: Record<string, string>;
 };
 
 /**
