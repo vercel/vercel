@@ -171,3 +171,22 @@ Provider implementations should:
 - Return only schema-approved query/session responses.
 - Record provider-side audit identifiers when available.
 
+## Slack Pitch
+
+What do you think about adding something like this to the CLI?
+
+```bash
+vercel db query \
+  "select id, status, updated_at from orders where id = 'ord_123'" \
+  --environment production
+```
+
+Read-only by default, scoped through the linked Vercel project/env/db.
+
+I can see the argument against it: maybe DB ops makes the CLI feel like it’s taking on too much, and production DB access is a risky surface area.
+
+But the user workflow already exists today in a worse form: they pull `DATABASE_URL` out of Vercel or the provider dashboard, paste it into `psql`, and run the query locally.
+
+This could make the safer path the easy path: no raw long-lived creds in the shell, read-only default, explicit escalation for writes, and audit tied to the Vercel user/project/env.
+
+It also feels especially useful for Vercel Agent. Example: customer reports “order `ord_123` is stuck”; user opens Vercel, asks the agent to investigate, and the agent can run a narrow read-only query through Vercel policy instead of needing access to env vars or provider credentials.
