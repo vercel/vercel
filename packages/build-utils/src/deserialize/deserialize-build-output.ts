@@ -340,7 +340,7 @@ export async function deserializeBuildOutput<
   );
   applyGroupedLambdas(output, groupedLambdas);
 
-  const framework = validateFrameworkVersion(config?.framework?.version);
+  const framework = validateFrameworkVersion(config?.framework);
   const meta = getMeta?.(hasServerActions);
   return {
     wildcard: config.wildcard,
