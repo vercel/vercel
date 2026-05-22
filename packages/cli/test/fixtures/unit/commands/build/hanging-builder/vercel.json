@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/*.txt": {
+      "runtime": "hanging-builder@0.0.0"
+    }
+  }
+}

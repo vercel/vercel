@@ -69,6 +69,11 @@ import output from '../../output-manager';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import {
+  assertBuildProcessIdle,
+  createBuildResourceTracker,
+  snapshotBuildProcessState,
+} from '../../util/build/assert-build-idle';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -489,6 +494,9 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
+    const buildResourceTracker = createBuildResourceTracker();
+    buildResourceTracker.start();
+    const buildProcessSnapshot = snapshotBuildProcessState();
     try {
       await rootSpan
         .child('vc.doBuild')
@@ -498,6 +506,8 @@ export default async function main(client: Client): Promise<number> {
     } finally {
       await rootSpan.stop();
     }
+
+    await assertBuildProcessIdle(buildProcessSnapshot, buildResourceTracker);
 
     if (client.nonInteractive) {
       const relOutputDir = relative(cwd, outputDir);

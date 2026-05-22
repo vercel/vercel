@@ -1198,6 +1198,10 @@ const main = async () => {
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));
+
+      if (targetCommand === 'build') {
+        process.exit(typeof exitCode === 'number' ? exitCode : 0);
+      }
     }
   } catch (err: unknown) {
     trackAgenticErrorTelemetry(err);
