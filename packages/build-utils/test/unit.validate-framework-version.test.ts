@@ -37,13 +37,13 @@ describe('validateFrameworkVersion', () => {
   it('throws if "slug" is too long', () => {
     const frameworkVersionRaw = {
       // too long
-      version: 'foofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoo',
-      slug: '123',
+      slug: 'foofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoofoo',
+      version: '123',
     };
 
     assert.throws(() => {
       validateFrameworkVersion(frameworkVersionRaw);
-    }, /Invalid config.json: "framework.version" length/);
+    }, /Invalid config.json: "framework.slug" length/);
   });
 
   it('throws error if "version" is not a string', () => {
