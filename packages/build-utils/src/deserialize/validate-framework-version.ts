@@ -17,6 +17,12 @@ export function validateFrameworkVersion(
 
   const { slug, version } = framework;
 
+  if (typeof slug !== 'string') {
+    // Ideally this would throw, but slug is a new field and there might be some users that don't
+    // emit it yet.
+    return undefined;
+  }
+
   if (typeof version !== 'string') {
     throw new NowBuildError({
       message: `Invalid config.json: "version" type "${typeof version}" should be "string"`,
