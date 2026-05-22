@@ -17,20 +17,20 @@ describe('experimental_upgradeWebSocket', () => {
     test('throws when runtime does not provide upgradeWebSocket', async () => {
       g[SYMBOL_FOR_REQ_CONTEXT] = { get: () => ({}) };
 
-      await expect(experimental_upgradeWebSocket()).rejects.toThrow(
+      await expect(experimental_upgradeWebSocket(() => {})).rejects.toThrow(
         'experimental_upgradeWebSocket is not available in the current runtime environment'
       );
     });
 
     test('throws when context is empty', async () => {
-      await expect(experimental_upgradeWebSocket()).rejects.toThrow(
+      await expect(experimental_upgradeWebSocket(() => {})).rejects.toThrow(
         'experimental_upgradeWebSocket is not available in the current runtime environment'
       );
     });
   });
 
   describe('delegation', () => {
-    test('calls context upgradeWebSocket and returns a WebSocket instance', async () => {
+    const createUpgradeContext = () => {
       const socket = new Socket();
       const req = new IncomingMessage(socket);
       req.method = 'GET';
@@ -49,15 +49,38 @@ describe('experimental_upgradeWebSocket', () => {
         get: () => ({ upgradeWebSocket: mockUpgrade }),
       };
 
-      const ws = await experimental_upgradeWebSocket();
+      return { mockUpgrade, socket };
+    };
+
+    test('calls handler with a WebSocket instance and returns a route response', async () => {
+      const { mockUpgrade, socket } = createUpgradeContext();
+      const handler = vi.fn();
+
+      const response = await experimental_upgradeWebSocket(handler);
 
       expect(mockUpgrade).toHaveBeenCalled();
-      expect(ws).toBeDefined();
-      expect(typeof ws.send).toBe('function');
-      expect(typeof ws.close).toBe('function');
-      expect(typeof ws.on).toBe('function');
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(typeof handler.mock.calls[0][0].send).toBe('function');
+      expect(response).toBeInstanceOf(Response);
+      expect(response.status).toBe(204);
 
-      // Clean up
+      socket.destroy();
+    });
+
+    test('closes the WebSocket when the handler throws', async () => {
+      const { socket } = createUpgradeContext();
+      const error = new Error('boom');
+      let close: ReturnType<typeof vi.spyOn> | undefined;
+
+      await expect(
+        experimental_upgradeWebSocket(ws => {
+          close = vi.spyOn(ws, 'close');
+          throw error;
+        })
+      ).rejects.toThrow(error);
+
+      expect(close).toHaveBeenCalledWith(1011, 'WebSocket handler failed');
+
       socket.destroy();
     });
   });

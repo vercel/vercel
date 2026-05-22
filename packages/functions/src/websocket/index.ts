@@ -1,7 +1,9 @@
 import { WebSocketServer, type WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
-export async function experimental_upgradeWebSocket(): Promise<WebSocket> {
+export async function experimental_upgradeWebSocket(
+  handler: (ws: WebSocket) => void | Promise<void>
+): Promise<Response> {
   const ctx = getContext();
 
   if (typeof ctx.upgradeWebSocket !== 'function') {
@@ -15,7 +17,7 @@ export async function experimental_upgradeWebSocket(): Promise<WebSocket> {
 
   const wss = new WebSocketServer({ noServer: true });
 
-  return new Promise<WebSocket>((resolve, reject) => {
+  const ws = await new Promise<WebSocket>((resolve, reject) => {
     const cleanup = () => {
       socket.removeListener('error', onError);
       socket.removeListener('close', onClose);
@@ -54,4 +56,16 @@ export async function experimental_upgradeWebSocket(): Promise<WebSocket> {
       rejectUpgrade(err);
     }
   });
+
+  try {
+    await handler(ws);
+  } catch (err) {
+    ws.close(1011, 'WebSocket handler failed');
+    throw err;
+  }
+
+  // we've already returned 101 by this point, but
+  // frameworks like next.js don't know that and expect a Response.
+  // this lies to these frameworks in order to suppress errors.
+  return new Response(null, { status: 204 });
 }
