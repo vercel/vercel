@@ -469,7 +469,7 @@ describe('generateProjectManifest', () => {
     await generateProjectManifest({
       workPath,
       goModPath: undefined,
-      goVersion: '',
+      resolvedGoVersion: '1.21.13',
     });
     expect(fs.existsSync(path.join(workPath, DIAGNOSTICS_PATH))).toBe(false);
   });
@@ -486,7 +486,11 @@ require (
 )
 `;
     const goModPath = writeGoMod(workPath, content);
-    await generateProjectManifest({ workPath, goModPath, goVersion: '' });
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+    });
 
     const manifestFile = path.join(workPath, DIAGNOSTICS_PATH);
     expect(fs.existsSync(manifestFile)).toBe(true);
@@ -494,7 +498,8 @@ require (
     const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf-8'));
     expect(manifest.version).toBe(MANIFEST_VERSION);
     expect(manifest.runtime).toBe('go');
-    expect(manifest.runtimeVersion.resolved).toBe('1.21');
+    expect(manifest.runtimeVersion.requested).toBe('1.21');
+    expect(manifest.runtimeVersion.resolved).toBe('1.21.13');
     expect(manifest.dependencies).toHaveLength(2);
 
     const direct = manifest.dependencies.find(
@@ -511,6 +516,10 @@ require (
         d.name === 'github.com/go-playground/validator/v10'
     );
     expect(transitive.type).toBe('transitive');
+    expect(transitive.scopes).toEqual(['prod']);
+    expect(transitive.resolved).toBe('v10.15.5');
+    expect(transitive.source).toBe('registry');
+    expect(transitive.sourceUrl).toBe('https://proxy.golang.org');
   });
 
   it('sorts direct deps before transitive, each alphabetically', async () => {
@@ -526,7 +535,11 @@ require (
 )
 `;
     const goModPath = writeGoMod(workPath, content);
-    await generateProjectManifest({ workPath, goModPath, goVersion: '' });
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+    });
 
     const manifest = JSON.parse(
       fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
@@ -539,26 +552,35 @@ require (
     ]);
   });
 
-  it('uses goVersion fallback when go.mod has no go directive', async () => {
+  it('omits requested when go.mod has no go directive', async () => {
     const workPath = makeTempDir();
     const content = `module example.com/app
 
 require github.com/pkg/errors v0.9.1
 `;
     const goModPath = writeGoMod(workPath, content);
-    await generateProjectManifest({ workPath, goModPath, goVersion: '1.20' });
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+    });
 
     const manifest = JSON.parse(
       fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
     );
-    expect(manifest.runtimeVersion.resolved).toBe('1.20');
+    expect(manifest.runtimeVersion).not.toHaveProperty('requested');
+    expect(manifest.runtimeVersion.resolved).toBe('1.21.13');
   });
 
   it('does not throw when go.mod is missing', async () => {
     const workPath = makeTempDir();
     const goModPath = path.join(workPath, 'go.mod');
     await expect(
-      generateProjectManifest({ workPath, goModPath, goVersion: '' })
+      generateProjectManifest({
+        workPath,
+        goModPath,
+        resolvedGoVersion: '1.21.13',
+      })
     ).resolves.toBeUndefined();
   });
 
@@ -568,14 +590,19 @@ require github.com/pkg/errors v0.9.1
       workPath,
       'module example.com/app\n\ngo 1.21\n'
     );
-    await generateProjectManifest({ workPath, goModPath, goVersion: '' });
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+    });
 
     const manifest = JSON.parse(
       fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
     );
     expect(manifest.version).toBe(MANIFEST_VERSION);
     expect(manifest.runtime).toBe('go');
-    expect(manifest.runtimeVersion.resolved).toBe('1.21');
+    expect(manifest.runtimeVersion.requested).toBe('1.21');
+    expect(manifest.runtimeVersion.resolved).toBe('1.21.13');
     expect(manifest.dependencies).toEqual([]);
   });
 
@@ -588,7 +615,11 @@ go 1.21
 require github.com/pkg/errors v0.9.1
 `;
     const goModPath = writeGoMod(workPath, content);
-    await generateProjectManifest({ workPath, goModPath, goVersion: '' });
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+    });
 
     const manifest = JSON.parse(
       fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
@@ -596,6 +627,137 @@ require github.com/pkg/errors v0.9.1
     const names = manifest.dependencies.map((d: { name: string }) => d.name);
     expect(names).not.toContain('example.com/myapp');
     expect(names).toContain('github.com/pkg/errors');
+  });
+
+  it('includes framework in manifest when provided', async () => {
+    const workPath = makeTempDir();
+    const goModPath = writeGoMod(
+      workPath,
+      'module example.com/app\n\ngo 1.21\n'
+    );
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+      framework: 'go',
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
+    );
+    expect(manifest.framework).toBe('go');
+  });
+
+  it('omits framework from manifest when not provided', async () => {
+    const workPath = makeTempDir();
+    const goModPath = writeGoMod(
+      workPath,
+      'module example.com/app\n\ngo 1.21\n'
+    );
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
+    );
+    expect(manifest).not.toHaveProperty('framework');
+  });
+
+  it('omits framework from manifest when empty string provided', async () => {
+    const workPath = makeTempDir();
+    const goModPath = writeGoMod(
+      workPath,
+      'module example.com/app\n\ngo 1.21\n'
+    );
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+      framework: '',
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
+    );
+    expect(manifest).not.toHaveProperty('framework');
+  });
+
+  it('includes serviceType in manifest when provided', async () => {
+    const workPath = makeTempDir();
+    const goModPath = writeGoMod(
+      workPath,
+      'module example.com/app\n\ngo 1.21\n'
+    );
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+      serviceType: 'web',
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
+    );
+    expect(manifest.serviceType).toBe('web');
+  });
+
+  it('omits serviceType from manifest when not provided', async () => {
+    const workPath = makeTempDir();
+    const goModPath = writeGoMod(
+      workPath,
+      'module example.com/app\n\ngo 1.21\n'
+    );
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
+    );
+    expect(manifest).not.toHaveProperty('serviceType');
+  });
+
+  it('omits serviceType from manifest when empty string provided', async () => {
+    const workPath = makeTempDir();
+    const goModPath = writeGoMod(
+      workPath,
+      'module example.com/app\n\ngo 1.21\n'
+    );
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+      serviceType: '',
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
+    );
+    expect(manifest).not.toHaveProperty('serviceType');
+  });
+
+  it('omits serviceType from manifest when null provided', async () => {
+    const workPath = makeTempDir();
+    const goModPath = writeGoMod(
+      workPath,
+      'module example.com/app\n\ngo 1.21\n'
+    );
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: '1.21.13',
+      serviceType: null,
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(workPath, DIAGNOSTICS_PATH), 'utf-8')
+    );
+    expect(manifest).not.toHaveProperty('serviceType');
   });
 });
 
