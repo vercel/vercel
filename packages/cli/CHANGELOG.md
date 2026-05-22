@@ -1,5 +1,13 @@
 # vercel
 
+## 54.4.1
+
+### Patch Changes
+
+- 8fed091: Suppress metrics query status output when using `--format=json`.
+- Updated dependencies [c8bce3b]
+  - @vercel/next@4.17.4
+
 ## 54.4.0
 
 ### Minor Changes
