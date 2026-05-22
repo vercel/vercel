@@ -11,21 +11,22 @@ const MAX_FRAMEWORK_VERSION_LENGTH = 50;
 export function validateFrameworkVersion(
   framework: FrameworkMeta | undefined
 ): FrameworkMeta | undefined {
-  if (!framework) {
+  if (!framework || !framework.slug || !framework.version) {
     return undefined;
   }
 
   const { slug, version } = framework;
 
   if (typeof slug !== 'string') {
-    // Ideally this would throw, but slug is a new field and there might be some users that don't
-    // emit it yet.
-    return undefined;
+    throw new NowBuildError({
+      message: `Invalid config.json: "framework.slug" type "${typeof slug}" should be "string"`,
+      code: 'VC_BUILD_INVALID_CONFIG_JSON_FRAMEWORK_SLUG_TYPE',
+    });
   }
 
   if (typeof version !== 'string') {
     throw new NowBuildError({
-      message: `Invalid config.json: "version" type "${typeof version}" should be "string"`,
+      message: `Invalid config.json: "framework.version" type "${typeof version}" should be "string"`,
       code: 'VC_BUILD_INVALID_CONFIG_JSON_FRAMEWORK_VERSION_TYPE',
     });
   }
