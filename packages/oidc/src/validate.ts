@@ -1,15 +1,20 @@
+import {
+  decodeJwt,
+  defaultFetchJwks,
+  findJwksKey,
+  verifyRs256Signature,
+  type DecodedJwt,
+  type Jwks,
+  type JwksFetcher,
+  type PublicJsonWebKey,
+} from './jwt';
+
 /**
  * The base issuer URL for Vercel OIDC tokens.
  *
  * In team issuer mode, the actual issuer is `https://oidc.vercel.com/[TEAM_SLUG]`.
  */
 const VERCEL_OIDC_ISSUER_BASE = 'https://oidc.vercel.com';
-
-/** Default time-to-live for cached JWKS responses. */
-const JWKS_DEFAULT_TTL_MS = 10 * 60 * 1000;
-
-/** Minimum delay between forced JWKS refreshes when an unknown `kid` is encountered. */
-const JWKS_MIN_REFRESH_INTERVAL_MS = 30 * 1000;
 
 /**
  * Claims emitted in a Vercel OIDC token.
@@ -106,34 +111,9 @@ export class UnacceptableVercelOidcTokenError extends Error {
 }
 
 /**
- * A JSON Web Key.
- *
- * Only the fields used during signature verification are listed here; other
- * fields described by RFC 7517 are accepted but ignored.
+ * Re-exported from `./jwt` for convenience.
  */
-interface PublicJsonWebKey {
-  kty: string;
-  kid?: string;
-  alg?: string;
-  use?: string;
-  n?: string;
-  e?: string;
-  [key: string]: unknown;
-}
-
-/** A JSON Web Key Set as returned by `${issuer}/.well-known/jwks`. */
-export interface Jwks {
-  keys: PublicJsonWebKey[];
-}
-
-/**
- * A function that fetches the JSON Web Key Set for a given issuer. Useful for
- * tests and for applications that want to provide their own caching, retry, or
- * proxying layer.
- *
- * @internal
- */
-export type JwksFetcher = (issuer: string) => Promise<Jwks>;
+export type { Jwks, JwksFetcher };
 
 /**
  * @internal
@@ -148,178 +128,7 @@ export interface ValidateVercelOidcTokenOptions {
   fetchJwks?: JwksFetcher;
 }
 
-interface JwksCacheEntry {
-  jwks: Jwks;
-  fetchedAt: number;
-  refreshedAt: number;
-}
-
-const jwksCache = new Map<string, JwksCacheEntry>();
-
-const defaultFetchJwks: JwksFetcher = async issuer => {
-  const url = `${issuer}/.well-known/jwks`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch JWKS from ${url}: HTTP ${res.status}`);
-  }
-  const json = (await res.json()) as unknown;
-  if (
-    !json ||
-    typeof json !== 'object' ||
-    !Array.isArray((json as Jwks).keys)
-  ) {
-    throw new Error(`Invalid JWKS response from ${url}`);
-  }
-  return json as Jwks;
-};
-
-async function loadJwks(
-  issuer: string,
-  fetchJwks: JwksFetcher,
-  options: { force?: boolean } = {}
-): Promise<Jwks> {
-  const cached = jwksCache.get(issuer);
-  const now = Date.now();
-  if (
-    cached &&
-    !options.force &&
-    now - cached.fetchedAt < JWKS_DEFAULT_TTL_MS
-  ) {
-    return cached.jwks;
-  }
-  if (
-    cached &&
-    options.force &&
-    now - cached.refreshedAt < JWKS_MIN_REFRESH_INTERVAL_MS
-  ) {
-    return cached.jwks;
-  }
-  const jwks = await fetchJwks(issuer);
-  const fetchedAt = Date.now();
-  jwksCache.set(issuer, { jwks, fetchedAt, refreshedAt: fetchedAt });
-  return jwks;
-}
-
-async function findKey(
-  issuer: string,
-  kid: string,
-  fetchJwks: JwksFetcher
-): Promise<PublicJsonWebKey | null> {
-  let jwks = await loadJwks(issuer, fetchJwks);
-  let key = jwks.keys.find(k => k.kid === kid);
-  if (key) return key;
-  // Key not found: assume keys may have rotated and force a refresh.
-  jwks = await loadJwks(issuer, fetchJwks, { force: true });
-  key = jwks.keys.find(k => k.kid === kid);
-  return key ?? null;
-}
-
-function getSubtle(): SubtleCrypto {
-  const subtle = (globalThis as { crypto?: { subtle?: SubtleCrypto } }).crypto
-    ?.subtle;
-  if (!subtle) {
-    throw new Error(
-      'WebCrypto SubtleCrypto API is not available in this environment'
-    );
-  }
-  return subtle;
-}
-
-function base64UrlDecode(input: string): Uint8Array {
-  const b64 = input.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=');
-  if (typeof atob === 'function') {
-    const binary = atob(padded);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  }
-  // Node fallback (Node 16+ has atob globally, but be defensive).
-  return new Uint8Array(
-    (
-      globalThis as { Buffer?: { from(s: string, e: string): Uint8Array } }
-    ).Buffer!.from(padded, 'base64')
-  );
-}
-
-function utf8Decode(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes);
-}
-
-function utf8Encode(input: string): Uint8Array {
-  return new TextEncoder().encode(input);
-}
-
-interface DecodedJwt {
-  header: { alg?: unknown; kid?: unknown; typ?: unknown };
-  payload: VercelOidcTokenClaims;
-  signature: Uint8Array;
-  signedData: Uint8Array;
-}
-
-function decodeJwt(token: string): DecodedJwt {
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    throw new Error('JWT must contain exactly three dot-separated segments');
-  }
-  const [headerB64, payloadB64, signatureB64] = parts;
-  let header: unknown;
-  let payload: unknown;
-  try {
-    header = JSON.parse(utf8Decode(base64UrlDecode(headerB64)));
-    payload = JSON.parse(utf8Decode(base64UrlDecode(payloadB64)));
-  } catch (error) {
-    const wrapped = new Error(
-      'JWT header or payload is not valid base64url JSON'
-    );
-    (wrapped as { cause?: unknown }).cause = error;
-    throw wrapped;
-  }
-  if (!header || typeof header !== 'object') {
-    throw new Error('JWT header is not an object');
-  }
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('JWT payload is not an object');
-  }
-  return {
-    header: header as DecodedJwt['header'],
-    payload: payload as VercelOidcTokenClaims,
-    signature: base64UrlDecode(signatureB64),
-    signedData: utf8Encode(`${headerB64}.${payloadB64}`),
-  };
-}
-
-async function verifyRs256Signature(
-  jwk: PublicJsonWebKey,
-  signedData: Uint8Array,
-  signature: Uint8Array
-): Promise<boolean> {
-  if (jwk.kty !== 'RSA') {
-    throw new Error(`Unsupported JWK key type "${jwk.kty}"; expected "RSA"`);
-  }
-  if (jwk.alg !== undefined && jwk.alg !== 'RS256') {
-    throw new Error(`Unsupported JWK algorithm "${jwk.alg}"; expected "RS256"`);
-  }
-  const subtle = getSubtle();
-  const algorithm = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
-  const cryptoKey = await subtle.importKey(
-    'jwk',
-    { ...jwk, alg: 'RS256', ext: true },
-    algorithm,
-    false,
-    ['verify']
-  );
-  return subtle.verify(
-    algorithm.name,
-    cryptoKey,
-    signature as BufferSource,
-    signedData as BufferSource
-  );
-}
-
-function isVercelIssuer(iss: string | undefined): iss is string {
+function isVercelIssuer(iss: unknown): iss is string {
   if (typeof iss !== 'string') return false;
   if (iss === VERCEL_OIDC_ISSUER_BASE) return true;
   if (!iss.startsWith(`${VERCEL_OIDC_ISSUER_BASE}/`)) return false;
@@ -405,6 +214,7 @@ async function verifyAndMatch(
   }
 
   const { header, payload, signature, signedData } = decoded;
+  const claims = payload as VercelOidcTokenClaims;
 
   if (header.alg !== 'RS256') {
     return {
@@ -416,18 +226,18 @@ async function verifyAndMatch(
     return { ok: false, reason: 'JWT header is missing a "kid" property' };
   }
 
-  if (!isVercelIssuer(payload.iss)) {
+  if (!isVercelIssuer(claims.iss)) {
     return {
       ok: false,
-      reason: `Token issuer "${String(payload.iss)}" is not a valid Vercel OIDC issuer`,
+      reason: `Token issuer "${String(claims.iss)}" is not a valid Vercel OIDC issuer`,
     };
   }
-  const issuer = payload.iss;
+  const issuer = claims.iss;
   const fetchJwks = options?.fetchJwks ?? defaultFetchJwks;
 
   let jwk: PublicJsonWebKey | null;
   try {
-    jwk = await findKey(issuer, header.kid, fetchJwks);
+    jwk = await findJwksKey(issuer, header.kid, fetchJwks);
   } catch (error) {
     return {
       ok: false,
@@ -463,13 +273,13 @@ async function verifyAndMatch(
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
-  if (typeof payload.exp !== 'number') {
+  if (typeof claims.exp !== 'number') {
     return { ok: false, reason: 'Token is missing an "exp" claim' };
   }
-  if (payload.exp <= nowSeconds) {
+  if (claims.exp <= nowSeconds) {
     return { ok: false, reason: 'Token is expired' };
   }
-  if (typeof payload.nbf === 'number' && payload.nbf > nowSeconds) {
+  if (typeof claims.nbf === 'number' && claims.nbf > nowSeconds) {
     return {
       ok: false,
       reason: 'Token is not yet valid (nbf is in the future)',
@@ -477,8 +287,8 @@ async function verifyAndMatch(
   }
 
   for (const matcher of normalized) {
-    if (matcherMatches(matcher, payload)) {
-      return { ok: true, claims: payload };
+    if (matcherMatches(matcher, claims)) {
+      return { ok: true, claims };
     }
   }
 
@@ -487,15 +297,15 @@ async function verifyAndMatch(
     reason:
       'Token claims did not match any of the provided matchers. ' +
       `Matched against claims: ${JSON.stringify({
-        iss: payload.iss,
-        aud: payload.aud,
-        sub: payload.sub,
-        owner: payload.owner,
-        owner_id: payload.owner_id,
-        project: payload.project,
-        project_id: payload.project_id,
-        environment: payload.environment,
-        user_id: payload.user_id,
+        iss: claims.iss,
+        aud: claims.aud,
+        sub: claims.sub,
+        owner: claims.owner,
+        owner_id: claims.owner_id,
+        project: claims.project,
+        project_id: claims.project_id,
+        environment: claims.environment,
+        user_id: claims.user_id,
       })}`,
   };
 }

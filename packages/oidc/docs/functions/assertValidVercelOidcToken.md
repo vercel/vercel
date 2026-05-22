@@ -6,7 +6,7 @@
 
 > **assertValidVercelOidcToken**(`matchers`, `token`, `options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`void`\>
 
-Defined in: [packages/oidc/src/validate.ts:553](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L553)
+Defined in: [packages/oidc/src/validate.ts:363](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L363)
 
 Verifies the signature and claims of a Vercel OIDC token and asserts that it
 matches at least one of the provided matchers. Throws

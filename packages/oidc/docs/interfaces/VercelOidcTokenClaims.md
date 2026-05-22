@@ -4,7 +4,7 @@
 
 # Interface: VercelOidcTokenClaims
 
-Defined in: [packages/oidc/src/validate.ts:19](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L19)
+Defined in: [packages/oidc/src/validate.ts:24](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L24)
 
 Claims emitted in a Vercel OIDC token.
 
@@ -24,7 +24,7 @@ Other claims that may be present.
 
 > `optional` **aud?**: `string` \| `string`[]
 
-Defined in: [packages/oidc/src/validate.ts:23](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L23)
+Defined in: [packages/oidc/src/validate.ts:28](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L28)
 
 Audience. `https://vercel.com/[TEAM_SLUG]`.
 
@@ -34,7 +34,7 @@ Audience. `https://vercel.com/[TEAM_SLUG]`.
 
 > `optional` **environment?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:41](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L41)
+Defined in: [packages/oidc/src/validate.ts:46](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L46)
 
 Environment: `production`, `preview`, or `development`.
 
@@ -44,7 +44,7 @@ Environment: `production`, `preview`, or `development`.
 
 > `optional` **exp?**: `number`
 
-Defined in: [packages/oidc/src/validate.ts:27](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L27)
+Defined in: [packages/oidc/src/validate.ts:32](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L32)
 
 Expiration time (seconds since epoch).
 
@@ -54,7 +54,7 @@ Expiration time (seconds since epoch).
 
 > `optional` **iat?**: `number`
 
-Defined in: [packages/oidc/src/validate.ts:31](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L31)
+Defined in: [packages/oidc/src/validate.ts:36](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L36)
 
 Issued-at time (seconds since epoch).
 
@@ -64,7 +64,7 @@ Issued-at time (seconds since epoch).
 
 > `optional` **iss?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:21](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L21)
+Defined in: [packages/oidc/src/validate.ts:26](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L26)
 
 Issuer. `https://oidc.vercel.com` (global) or `https://oidc.vercel.com/[TEAM_SLUG]` (team).
 
@@ -74,7 +74,7 @@ Issuer. `https://oidc.vercel.com` (global) or `https://oidc.vercel.com/[TEAM_SLU
 
 > `optional` **nbf?**: `number`
 
-Defined in: [packages/oidc/src/validate.ts:29](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L29)
+Defined in: [packages/oidc/src/validate.ts:34](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L34)
 
 Not-before time (seconds since epoch).
 
@@ -84,7 +84,7 @@ Not-before time (seconds since epoch).
 
 > `optional` **owner?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:33](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L33)
+Defined in: [packages/oidc/src/validate.ts:38](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L38)
 
 Team slug (e.g. `acme`).
 
@@ -94,7 +94,7 @@ Team slug (e.g. `acme`).
 
 > `optional` **owner_id?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:35](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L35)
+Defined in: [packages/oidc/src/validate.ts:40](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L40)
 
 Team ID (e.g. `team_7Gw5...`).
 
@@ -104,7 +104,7 @@ Team ID (e.g. `team_7Gw5...`).
 
 > `optional` **project?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:37](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L37)
+Defined in: [packages/oidc/src/validate.ts:42](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L42)
 
 Project name (e.g. `acme_website`).
 
@@ -114,7 +114,7 @@ Project name (e.g. `acme_website`).
 
 > `optional` **project_id?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:39](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L39)
+Defined in: [packages/oidc/src/validate.ts:44](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L44)
 
 Project ID (e.g. `prj_7Gw5...`).
 
@@ -124,7 +124,7 @@ Project ID (e.g. `prj_7Gw5...`).
 
 > `optional` **sub?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:25](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L25)
+Defined in: [packages/oidc/src/validate.ts:30](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L30)
 
 Subject. `owner:[TEAM_SLUG]:project:[PROJECT_NAME]:environment:[ENVIRONMENT]`.
 
@@ -134,6 +134,6 @@ Subject. `owner:[TEAM_SLUG]:project:[PROJECT_NAME]:environment:[ENVIRONMENT]`.
 
 > `optional` **user_id?**: `string`
 
-Defined in: [packages/oidc/src/validate.ts:43](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L43)
+Defined in: [packages/oidc/src/validate.ts:48](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L48)
 
 User ID. Only present when environment is `development`.
