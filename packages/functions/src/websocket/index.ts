@@ -64,9 +64,8 @@ export async function experimental_upgradeWebSocket(
     throw err;
   }
 
-  // we've already returned 101 by this point,
-  // but frameworks like next.js don't know that.
-  // so this secretly lies to next.js when you return it
-  // so that it doesn't throw an error.
+  // we've already returned 101 by this point, but
+  // frameworks like next.js don't know that and expect a Response.
+  // this lies to these frameworks in order to suppress errors.
   return new Response(null, { status: 204 });
 }
