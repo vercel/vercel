@@ -32,6 +32,7 @@ import {
   runShellScript,
   createDiagnostics,
   generateProjectManifest,
+  getReportedServiceType,
   getNodeVersion,
   debug,
   NowBuildError,
@@ -616,7 +617,7 @@ export const build: BuildV2 = async ({
           lockfilePath,
           lockfileVersion,
           framework: framework.slug,
-          serviceType: service?.type,
+          serviceType: service ? getReportedServiceType(service) : undefined,
         });
       } catch (err) {
         debug(

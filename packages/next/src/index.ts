@@ -32,6 +32,7 @@ import {
   BUILDER_COMPILE_STEP,
   createDiagnostics,
   generateProjectManifest,
+  getReportedServiceType,
   type TriggerEvent,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
@@ -588,8 +589,10 @@ export const build: BuildV2 = async buildOptions => {
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: 'nextjs',
-      serviceType: buildOptions.service?.type,
+      framework: config.framework ?? undefined,
+      serviceType: buildOptions.service
+        ? getReportedServiceType(buildOptions.service)
+        : undefined,
     });
   } catch (err) {
     debug(

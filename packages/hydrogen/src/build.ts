@@ -8,6 +8,7 @@ import {
   generateProjectManifest,
   getEnvForPackageManager,
   getNodeVersion,
+  getReportedServiceType,
   getPrefixedEnvVars,
   glob,
   readConfigFile,
@@ -94,8 +95,8 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: 'hydrogen',
-      serviceType: service?.type,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
     debug(

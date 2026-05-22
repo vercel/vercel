@@ -8,6 +8,7 @@ import {
   execCommand,
   generateProjectManifest,
   getEnvForPackageManager,
+  getReportedServiceType,
   getNodeVersion,
   glob,
   runNpmInstall,
@@ -353,8 +354,8 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: frameworkSettings.slug,
-      serviceType: service?.type,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
     debug(

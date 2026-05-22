@@ -18,6 +18,7 @@ import {
   debug,
   createDiagnostics,
   generateProjectManifest,
+  getReportedServiceType,
   getNodeVersion,
   getPrefixedEnvVars,
   runNpmInstall,
@@ -123,8 +124,8 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: 'redwood',
-      serviceType: service?.type,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
     debug(

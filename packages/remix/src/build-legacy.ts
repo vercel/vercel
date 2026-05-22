@@ -9,6 +9,7 @@ import {
   FileFsRef,
   generateProjectManifest,
   getEnvForPackageManager,
+  getReportedServiceType,
   getNodeVersion,
   glob,
   EdgeFunction,
@@ -154,8 +155,8 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: 'remix',
-      serviceType: service?.type,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
     debug(
