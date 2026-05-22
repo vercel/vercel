@@ -1,0 +1,28 @@
+{
+  "name": "@vercel/vc-native",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Native Vercel CLI npm package staging tools",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "bin": {
+    "vercel": "./bin/vercel",
+    "vc": "./bin/vercel"
+  },
+  "scripts": {
+    "build": "node scripts/stage-packages.mjs --check-sources",
+    "test": "vitest run --config ../../vitest.config.mts test/*.test.mjs",
+    "vitest-run": "vitest run --config ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/*.test.mjs'",
+    "type-check": "echo 'No type-check needed for vc-native staging package'"
+  },
+  "files": [
+    "bin",
+    "scripts"
+  ],
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "glob": "10.2.3",
+    "vitest": "2.1.4"
+  }
+}

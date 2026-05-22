@@ -93,11 +93,8 @@ describe('git connect', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput('Set up');
-        client.stdin.write('y\n');
 
-        await expect(client.stderr).toOutput(
-          'Which scope should contain your project?'
-        );
+        await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
 
         await expect(client.stderr).toOutput('Found project');
@@ -200,11 +197,8 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
       await expect(client.stderr).toOutput('Found project');
@@ -254,11 +248,8 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput('Set up');
-      client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
+      await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
       await expect(client.stderr).toOutput('Found project');

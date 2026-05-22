@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
 ## 0.4.0
 
 ### Minor Changes

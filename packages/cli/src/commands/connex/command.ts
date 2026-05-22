@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, projectOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const createSubcommand = {
@@ -27,6 +27,31 @@ export const createSubcommand = {
       deprecated: false,
       description: 'Enable webhook triggers for this connector',
     },
+    {
+      name: 'icon',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)',
+    },
+    {
+      name: 'background-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Background color for the connector icon (e.g. #1A2B3C)',
+    },
+    {
+      name: 'accent-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Accent color for the connector icon (e.g. #1A2B3C)',
+    },
     formatOption,
   ],
   examples: [
@@ -43,8 +68,66 @@ export const createSubcommand = {
       value: `${packageName} connect create slack --name my-bot --triggers`,
     },
     {
+      name: 'Create with branding (icon and colors)',
+      value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
       name: 'Output as JSON',
       value: `${packageName} connect create slack --format=json`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update connector branding (icon and colors)',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'icon',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)',
+    },
+    {
+      name: 'background-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Background color for the connector icon (e.g. #1A2B3C)',
+    },
+    {
+      name: 'accent-color',
+      shorthand: null,
+      type: String,
+      argument: 'HEX',
+      deprecated: false,
+      description: 'Accent color for the connector icon (e.g. #1A2B3C)',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Update the connector icon',
+      value: `${packageName} connect update scl_abc123 --icon ./logo.png`,
+    },
+    {
+      name: 'Update the connector colors',
+      value: `${packageName} connect update scl_abc123 --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect update scl_abc123 --icon ./logo.png --format=json`,
     },
   ],
 } as const;
@@ -276,12 +359,35 @@ export const attachSubcommand = {
         'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description: 'Project name or ID (default: current linked project)',
+    },
+    {
+      name: 'triggers',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Also register this project as a trigger destination so the connector forwards verified webhooks to it (max 3 destinations per connector)',
+    },
+    {
+      name: 'trigger-branch',
+      shorthand: null,
+      type: String,
+      argument: 'BRANCH',
+      deprecated: false,
+      description:
+        'Target a specific git branch for the trigger destination (default: production). Only valid with --triggers.',
+    },
+    {
+      name: 'trigger-path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Path on the destination project that receives the forwarded webhook (default: /{service}). Only valid with --triggers.',
     },
     {
       ...yesOption,
@@ -303,8 +409,54 @@ export const attachSubcommand = {
       value: `${packageName} connect attach slack/my-bot --project my-app`,
     },
     {
+      name: 'Attach and register the project as a trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers`,
+    },
+    {
+      name: 'Attach and register a preview-branch trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack`,
+    },
+    {
       name: 'Non-interactive output as JSON',
       value: `${packageName} connect attach scl_abc123 --yes --format=json`,
+    },
+  ],
+} as const;
+
+export const detachSubcommand = {
+  name: 'detach',
+  aliases: [],
+  description: 'Detach a Vercel project from a connector',
+  arguments: [
+    {
+      name: 'client',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...projectOption,
+      shorthand: 'p',
+      description: 'Project name or ID (default: current linked project)',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Detach the current project from a connector',
+      value: `${packageName} connect detach scl_abc123`,
+    },
+    {
+      name: 'Detach a different project by name',
+      value: `${packageName} connect detach slack/my-bot --project my-app`,
+    },
+    {
+      name: 'Non-interactive output as JSON',
+      value: `${packageName} connect detach scl_abc123 --yes --format=json`,
     },
   ],
 } as const;
@@ -312,14 +464,17 @@ export const attachSubcommand = {
 export const connexCommand = {
   name: 'connect',
   aliases: [],
-  description: 'Manage connectors',
+  description:
+    'Manage connectors (Beta).\n\nVercel Connect is currently in beta. Behavior, commands, and output may change before general availability.',
   arguments: [],
   options: [],
   subcommands: [
     createSubcommand,
+    updateSubcommand,
     listSubcommand,
     tokenSubcommand,
     attachSubcommand,
+    detachSubcommand,
     removeSubcommand,
     openSubcommand,
   ],

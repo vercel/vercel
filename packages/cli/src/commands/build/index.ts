@@ -39,7 +39,7 @@ import {
   getInternalServiceFunctionPath,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
-  isQueueTriggeredService,
+  isQueueBackedService,
   isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
@@ -93,7 +93,12 @@ import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import {
+  getLinkedProject,
+  getProjectLink,
+  VERCEL_DIR,
+} from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -116,6 +121,7 @@ import { pullCommandLogic } from '../pull';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
+import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
 function buildCommandWithGlobalFlags(
@@ -148,6 +154,7 @@ interface BuildOutputConfig {
   routes?: BuildResultV2Typical['routes'];
   overrides?: Record<string, PathOverride>;
   framework?: {
+    slug: string;
     version: string;
   };
   crons?: Cron[];
@@ -214,6 +221,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
     telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
+    telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
   } catch (error) {
     printError(error);
     return 1;
@@ -255,10 +263,36 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
+  const projectNameOrId = parsedArgs.flags['--project'];
+
   // If repo linked, update `cwd` to the repo root
-  const link = await rootSpan
+  let link = await rootSpan
     .child('vc.getProjectLink')
-    .trace(() => getProjectLink(client, cwd));
+    .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
+
+  // No local link matched `--project`; resolve via API before the
+  // settings-pull prompt would silently re-link to the wrong project.
+  if (projectNameOrId && !link) {
+    const linkedFromApi = await getLinkedProject(
+      client,
+      cwd,
+      projectNameOrId,
+      true
+    );
+    if (linkedFromApi.status === 'linked') {
+      link = {
+        projectId: linkedFromApi.project.id,
+        orgId: linkedFromApi.org.id,
+        repoRoot: linkedFromApi.repoRoot,
+      };
+    } else if (linkedFromApi.status === 'error') {
+      return linkedFromApi.exitCode;
+    } else {
+      await printProjectNotFoundError(client, projectNameOrId, 'build');
+      return 1;
+    }
+  }
+
   const projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
@@ -338,7 +372,8 @@ export default async function main(client: Client): Promise<number> {
       client.cwd,
       Boolean(parsedArgs.flags['--yes']),
       target,
-      parsedArgs.flags
+      parsedArgs.flags,
+      projectNameOrId
     );
     if (result !== 0) {
       return result;
@@ -659,7 +694,7 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING !== '1') {
+  if (await shouldEmbedFlagsDefinitions(cwd)) {
     const { prepareFlagsDefinitions } = await import(
       '@vercel/prepare-flags-definitions'
     );
@@ -854,7 +889,7 @@ async function doBuild(
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
   const hasQueueServices =
-    hasDetectedServices && detectedServices!.some(isQueueTriggeredService);
+    hasDetectedServices && detectedServices!.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
@@ -862,6 +897,11 @@ async function doBuild(
       serviceByBuilder.set(service.builder, service);
     }
   }
+
+  const preDeployEntries: {
+    service: string;
+    callback?: () => Promise<void>;
+  }[] = [];
 
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
@@ -973,6 +1013,7 @@ async function doBuild(
             },
             installCommand: service.installCommand ?? undefined,
             buildCommand: service.buildCommand ?? undefined,
+            preDeployCommand: service.preDeployCommand ?? undefined,
             framework: builderFramework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
@@ -1007,6 +1048,16 @@ async function doBuild(
 
       const serviceRoutePrefix = build.config?.routePrefix;
       const serviceWorkspace = build.config?.workspace;
+      const preDeployCmd = service?.preDeployCommand?.trim();
+
+      const preDeployEntry =
+        preDeployCmd && service
+          ? ({ service: service.name } as (typeof preDeployEntries)[number])
+          : undefined;
+      if (preDeployEntry) {
+        preDeployEntries.push(preDeployEntry);
+      }
+
       const buildOptions: BuildOptions = {
         files: buildFiles,
         entrypoint: buildEntrypoint,
@@ -1015,6 +1066,13 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
+        ...(preDeployCmd
+          ? {
+              registerPreDeploy: (callback: () => Promise<void>) => {
+                preDeployEntry!.callback = callback;
+              },
+            }
+          : undefined),
         ...(service
           ? {
               service: {
@@ -1258,11 +1316,7 @@ async function doBuild(
         });
       }
 
-      if (
-        service &&
-        isQueueTriggeredService(service) &&
-        'output' in buildResult
-      ) {
+      if (service && isQueueBackedService(service) && 'output' in buildResult) {
         attachQueueServiceTrigger(buildResult.output, service);
       }
 
@@ -1379,6 +1433,21 @@ async function doBuild(
           () => undefined,
           err => err
         )
+      );
+    }
+  }
+
+  // Run pre-deploy commands after all builders succeeded.
+  // A builder is responsible for handling preDeployCommand, so
+  // it will actually own its env, tracing, etc.
+  // We do not fire them during the build itself, because not all builds
+  // might succeed and be actually deployed.
+  for (const entry of preDeployEntries) {
+    if (entry.callback) {
+      await entry.callback();
+    } else {
+      output.warn(
+        `Service "${entry.service}" has a preDeployCommand but its builder does not support it. The command was not executed.`
       );
     }
   }
@@ -1844,7 +1913,7 @@ function getDirectorySizeInMB(dir: string): {
 async function getFramework(
   cwd: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>
-): Promise<{ version: string } | undefined> {
+): Promise<{ slug: string; version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList,
@@ -1861,27 +1930,37 @@ async function getFramework(
         'framework' in buildResult &&
         build.use === detectedFramework.useRuntime.use
       ) {
-        return buildResult.framework;
+        return buildResult.framework
+          ? {
+              slug: buildResult.framework.slug,
+              version: buildResult.framework.version,
+            }
+          : undefined;
       }
     }
   }
 
   // determine framework version from listed package.json version
-  if (detectedFramework.detectedVersion) {
+  if (detectedFramework.slug) {
     // check for a valid, explicit version, not a range
-    if (semver.valid(detectedFramework.detectedVersion)) {
+    if (
+      detectedFramework.detectedVersion &&
+      semver.valid(detectedFramework.detectedVersion)
+    ) {
       return {
+        slug: detectedFramework.slug,
         version: detectedFramework.detectedVersion,
       };
     }
-  }
 
-  // determine framework version with runtime lookup
-  const frameworkVersion = detectFrameworkVersion(detectedFramework);
-  if (frameworkVersion) {
-    return {
-      version: frameworkVersion,
-    };
+    // determine framework version with runtime lookup
+    const frameworkVersion = detectFrameworkVersion(detectedFramework);
+    if (frameworkVersion) {
+      return {
+        slug: detectedFramework.slug,
+        version: frameworkVersion,
+      };
+    }
   }
 }
 

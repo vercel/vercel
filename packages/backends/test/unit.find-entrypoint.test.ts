@@ -2,7 +2,11 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { findEntrypoint, findEntrypointOrThrow } from '../src/find-entrypoint';
+import {
+  detectEntrypoint,
+  findEntrypoint,
+  findEntrypointOrThrow,
+} from '../src/find-entrypoint';
 
 describe('findEntrypoint', () => {
   it('resolves package.json main when the file exists', async () => {
@@ -77,6 +81,39 @@ describe('findEntrypointOrThrow', () => {
       await expect(findEntrypointOrThrow(dir)).rejects.toThrow(
         /package\.json "main"/
       );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('detectEntrypoint (normalized)', () => {
+  it('emits a file-kind result wrapping the discovered entrypoint', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'be-detect-'));
+    try {
+      await writeFile(
+        join(dir, 'package.json'),
+        JSON.stringify({ name: 'x', dependencies: { hono: '^4' } }),
+        'utf-8'
+      );
+      await writeFile(
+        join(dir, 'index.ts'),
+        `import { Hono } from 'hono'\n`,
+        'utf-8'
+      );
+      await expect(detectEntrypoint({ workPath: dir })).resolves.toEqual({
+        kind: 'file',
+        entrypoint: 'index.ts',
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns null when no entrypoint is discoverable', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'be-detect-empty-'));
+    try {
+      await expect(detectEntrypoint({ workPath: dir })).resolves.toBeNull();
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

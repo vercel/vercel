@@ -1,5 +1,5 @@
 import type { MockInstance } from 'vitest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import bytes from 'bytes';
 import fs from 'fs-extra';
 import { join } from 'path';
@@ -989,7 +989,7 @@ describe('deploy', () => {
       // remove first 3 lines which contains randomized data
       const output = client.getFullOutput().split('\n').slice(3).join('\n');
       expect(output).toContain('Building');
-      expect(output).toContain('Production:');
+      expect(output).toContain('Production  https');
       expect(output).toContain('Completing');
       expect(exitCode).toEqual(0);
     });
@@ -1635,29 +1635,23 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('? Set up and deploy');
-        client.stdin.write('y\n');
-
-        await expect(client.stderr).toOutput(
-          '? Which scope should contain your project?'
-        );
+        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Link to existing project?');
         client.stdin.write('no\n');
 
         // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(`Name? (${nameOption})`);
+        client.stdin.write('\n');
+        // Fixture has no detectable framework at the root, so the
+        // root-directory prompt now fires (nested-monolith guard).
         await expect(client.stderr).toOutput(
-          `What’s your project’s name? (${nameOption})`
+          'In which directory is your code located?'
         );
         client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput(
-          '? In which directory is your code located?'
-        );
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('Want to modify these settings?');
+        await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
@@ -1675,29 +1669,23 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('? Set up and deploy');
-        client.stdin.write('y\n');
-
-        await expect(client.stderr).toOutput(
-          '? Which scope should contain your project?'
-        );
+        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Link to existing project?');
         client.stdin.write('no\n');
 
         // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(`Name? (${directoryName})`);
+        client.stdin.write('\n');
+        // Fixture has no detectable framework at the root, so the
+        // root-directory prompt now fires (nested-monolith guard).
         await expect(client.stderr).toOutput(
-          `What’s your project’s name? (${directoryName})`
+          'In which directory is your code located?'
         );
         client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput(
-          '? In which directory is your code located?'
-        );
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('Want to modify these settings?');
+        await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
@@ -1715,6 +1703,15 @@ describe('deploy', () => {
     it('should display the primary production domain when aliased', async () => {
       const user = useUser();
       useTeams('team_dummy');
+      let projectFetchCount = 0;
+      client.scenario.get(`/v9/projects/static`, (_req, res) => {
+        projectFetchCount++;
+        res.json({
+          ...defaultProject,
+          name: 'static',
+          id: 'static',
+        });
+      });
       useProject({
         ...defaultProject,
         name: 'static',
@@ -1788,13 +1785,22 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production:');
+      await expect(client.stderr).toOutput('Production ');
       await expect(client.stderr).toOutput(
-        'Aliased: https://my-app.vercel.app'
+        'Aliased     https://my-app.vercel.app'
       );
+
+      // Anti-regression: ANSI is stripped from toOutput, so assert the raw
+      // output still contains the gutter glyphs for both Production + Aliased
+      // rows. A regression that drops `gutter: '▲'` would not fail toOutput.
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('▲ Production');
+      expect(stderrOutput).toContain('▲ Aliased');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+      expect(projectFetchCount).toEqual(1);
+      expect(callCount).toEqual(2);
     });
 
     it('should not display aliased domain for preview deployments', async () => {
@@ -1862,13 +1868,13 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Preview:');
+      await expect(client.stderr).toOutput('Preview     https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
       const stderrOutput = client.stderr.read().toString();
-      expect(stderrOutput).not.toContain('Aliased:');
+      expect(stderrOutput).not.toContain('Aliased');
     });
 
     it('should not display aliased domain when no aliases are assigned', async () => {
@@ -1936,13 +1942,16 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Production:');
+      await expect(client.stderr).toOutput('Production  https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
 
       const stderrOutput = client.stderr.read().toString();
-      expect(stderrOutput).not.toContain('Aliased:');
+      expect(stderrOutput).not.toContain('Aliased');
+      // Anti-regression: production rows always render with the ▲ gutter
+      // glyph at column 0.
+      expect(stderrOutput).toContain('▲ Production');
     });
   });
 
@@ -2658,7 +2667,7 @@ describe('deploy', () => {
       ]);
     });
 
-    // v2 checks pending → shows "Running Checks..." spinner
+    // v2 checks pending → shows "Running Checks…" spinner
     it('should show Running Checks spinner when v2 checks are pending', async () => {
       const user = useUser();
       useTeams('team_dummy');
@@ -2714,11 +2723,34 @@ describe('deploy', () => {
 
       const exitCodePromise = deploy(client);
 
-      await expect(client.stderr).toOutput('Running Checks...');
-      await expect(client.stderr).toOutput('Aliased:');
+      await expect(client.stderr).toOutput('Running Checks…');
+      await expect(client.stderr).toOutput('Aliased     https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+    });
+  });
+
+  describe('--project', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('fails fast with a clean error when --project does not resolve', async () => {
+      const cwd = setupTmpDir();
+      useUser();
+      useTeams('team_dummy');
+      // Intentionally no useProject() — every API lookup will 404.
+
+      client.cwd = cwd;
+      client.setArgv('deploy', '--yes', '--project=does-not-exist');
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput(
+        'Project "does-not-exist" was not found'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "deploy"').toEqual(1);
     });
   });
 });

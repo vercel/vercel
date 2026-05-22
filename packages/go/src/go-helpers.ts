@@ -226,6 +226,7 @@ export class GoWrapper {
     const subprocess = execa('go', args, {
       ...opts,
       env,
+      extendEnv: false,
       stdio: captureAndForwardOutput ? 'pipe' : opts.stdio,
     });
 
@@ -324,7 +325,7 @@ export async function createGo({
     ? goPreferredVersion.toolchain || goPreferredVersion.go
     : Array.from(versionMap.values())[0];
 
-  const env = cloneEnv(process.env, opts.env);
+  const env = opts.env ? cloneEnv(opts.env) : cloneEnv(process.env);
   const { PATH } = env;
   const { platform } = process;
   const goGlobalCacheDir = join(
@@ -414,7 +415,10 @@ export async function createGo({
       env.GOROOT = goDir || undefined;
       env.PATH = goBinDir || PATH;
 
-      const { stdout } = await execa('go', ['version'], { env });
+      const { stdout } = await execa('go', ['version'], {
+        env,
+        extendEnv: false,
+      });
       const { major, minor, short, version } = parseGoVersionString(stdout);
 
       if (

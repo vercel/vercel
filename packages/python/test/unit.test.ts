@@ -154,22 +154,22 @@ let mockInstalledVersions: string[] = [];
 
 /** Creates a mock UvRunner class for tests */
 function createMockUvRunner(options?: {
-  onSync?: () => void;
-  onPip?: () => void;
-  onLock?: () => void;
+  onSync?: (options: any) => void;
+  onPip?: (options: any) => void;
+  onLock?: (options: any) => void;
 }) {
   return class MockUvRunner {
     getPath() {
       return '/mock/uv';
     }
-    async sync() {
-      options?.onSync?.();
+    async sync(syncOptions: any) {
+      options?.onSync?.(syncOptions);
     }
-    async pip() {
-      options?.onPip?.();
+    async pip(pipOptions: any) {
+      options?.onPip?.(pipOptions);
     }
-    async lock() {
-      options?.onLock?.();
+    async lock(lockOptions: any) {
+      options?.onLock?.(lockOptions);
     }
   };
 }
@@ -1129,6 +1129,7 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
 
     const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
+    expect(getBuildOutputV3(result).architecture).toBe('x86_64');
   });
 
   it('falls back to pyproject.toml requires-python when no uv.lock (build succeeds)', async () => {
@@ -3385,6 +3386,284 @@ describe('custom install hooks', () => {
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
   });
+
+  it('does not force the Lambda Python platform for dev installs', async () => {
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
+    const mockUvSync = vi.fn(async () => {});
+    const mockUvPip = vi.fn(async () => {});
+    const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    delete process.env.VERCEL_BUILD_IMAGE;
+
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner({
+        onSync: mockUvSync,
+        onPip: mockUvPip,
+      }),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(tmpdir(), `python-dev-platform-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: true },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (originalBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = originalBuildImage;
+      }
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockUvSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pythonPlatform: undefined,
+      })
+    );
+    for (const call of mockUvPip.mock.calls) {
+      expect(call[0].args).not.toContain('--python-platform');
+    }
+  });
+
+  it('targets the Lambda Python platform for local non-dev builds', async () => {
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
+    const mockUvSync = vi.fn(async () => {});
+    const mockUvPip = vi.fn(async () => {});
+    const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    delete process.env.VERCEL_BUILD_IMAGE;
+
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner({
+        onSync: mockUvSync,
+        onPip: mockUvPip,
+      }),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-local-build-platform-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (originalBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = originalBuildImage;
+      }
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockUvSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pythonPlatform: 'x86_64-unknown-linux-gnu',
+      })
+    );
+    expect(
+      mockUvPip.mock.calls.some(call =>
+        call[0].args.includes('--python-platform')
+      )
+    ).toBe(true);
+    expect(
+      mockUvPip.mock.calls.some(call =>
+        call[0].args.includes('x86_64-unknown-linux-gnu')
+      )
+    ).toBe(true);
+  });
+
+  it('respects VERCEL_BUILD_ARCH env var override', async () => {
+    const mockUvSync = vi.fn(async () => {});
+    const mockUvPip = vi.fn(async () => {});
+    const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    const originalPythonPlatform = process.env.VERCEL_BUILD_ARCH;
+    delete process.env.VERCEL_BUILD_IMAGE;
+    process.env.VERCEL_BUILD_ARCH = 'aarch64';
+
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: vi.fn(async () => {}),
+    }));
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: vi.fn(async () => ({
+        projectDir: '/mock/project',
+        pyprojectPath: '/mock/project/pyproject.toml',
+        lockPath: '/mock/project/uv.lock',
+      })),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner({
+        onSync: mockUvSync,
+        onPip: mockUvPip,
+      }),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-env-platform-override-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (originalBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = originalBuildImage;
+      }
+      if (originalPythonPlatform === undefined) {
+        delete process.env.VERCEL_BUILD_ARCH;
+      } else {
+        process.env.VERCEL_BUILD_ARCH = originalPythonPlatform;
+      }
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockUvSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pythonPlatform: 'aarch64-unknown-linux-gnu',
+      })
+    );
+    expect(
+      mockUvPip.mock.calls.some(call =>
+        call[0].args.includes('aarch64-unknown-linux-gnu')
+      )
+    ).toBe(true);
+  });
 });
 
 describe('worker services dependency installation', () => {
@@ -3780,6 +4059,55 @@ describe('entrypoint diagnostic error messages', () => {
       /Found app\.py but it does not define/i
     );
     expect(result!.error!.message).not.toMatch(/Found Python files/i);
+
+    fs.removeSync(workPath);
+  });
+});
+
+describe('detectEntrypoint (normalized)', () => {
+  let detectEntrypoint: typeof import('../src/entrypoint').detectEntrypoint;
+
+  beforeEach(async () => {
+    ({ detectEntrypoint } = await import('../src/entrypoint'));
+  });
+
+  it('encodes nested src/main.py with dot-notation module path', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-nested-${Date.now()}`);
+    fs.mkdirSync(path.join(workPath, 'src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'src', 'main.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectEntrypoint({ workPath, framework: 'fastapi' });
+    expect(result).toEqual({
+      kind: 'py-module:attr',
+      entrypoint: 'src.main:app',
+    });
+
+    fs.removeSync(workPath);
+  });
+
+  it('returns null when no entrypoint is discoverable', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-empty-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectEntrypoint({ workPath, framework: 'fastapi' });
+    expect(result).toBeNull();
+
+    fs.removeSync(workPath);
+  });
+
+  it('returns null for non-Python frameworks', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-nonpy-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'main.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectEntrypoint({ workPath, framework: 'express' });
+    expect(result).toBeNull();
 
     fs.removeSync(workPath);
   });

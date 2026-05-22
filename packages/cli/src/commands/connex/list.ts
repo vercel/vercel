@@ -25,6 +25,9 @@ interface ConnexClient {
   type: string;
   typeName?: string;
   createdAt: number;
+  icon?: string | null;
+  backgroundColor?: string | null;
+  accentColor?: string | null;
   includes?: {
     projects?: {
       items: ConnexClientProjectLink[];
@@ -131,6 +134,9 @@ export async function list(
         type: string;
         typeName?: string;
         createdAt: number;
+        icon: string | null;
+        backgroundColor: string | null;
+        accentColor: string | null;
         projects?: LinkedProject[];
         hasMoreProjects?: boolean;
       } = {
@@ -140,6 +146,9 @@ export async function list(
         type: c.type,
         typeName: c.typeName,
         createdAt: c.createdAt,
+        icon: c.icon ?? null,
+        backgroundColor: c.backgroundColor ?? null,
+        accentColor: c.accentColor ?? null,
       };
       if (unscoped) {
         const projectsInclude = c.includes?.projects;

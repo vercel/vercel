@@ -820,7 +820,9 @@ export async function resolveConfiguredService(
       ? getServiceQueueTopics({ type, topics: config.topics })
       : trigger === 'queue'
         ? config.topics
-        : undefined;
+        : trigger === 'workflow'
+          ? ['__wkf_*']
+          : undefined;
 
   let builderUse: string;
   let builderSrc: string;
@@ -948,6 +950,7 @@ export async function resolveConfiguredService(
     runtime,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
+    preDeployCommand: config.preDeployCommand,
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,

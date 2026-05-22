@@ -10,20 +10,20 @@ import { ProjectNotFound } from '../../util/errors-ts';
 import { envTargetChoices, isValidEnvTarget } from '../../util/env/env-target';
 import { normalizeRepeatableStringFilters } from '../../util/command-validation';
 import { packageName } from '../../util/pkg-name';
+import {
+  MAX_TRIGGER_DESTINATIONS,
+  buildTriggerDestination,
+  findMatchingDestination,
+  formatDestination,
+  patchTriggerDestinations,
+} from '../../util/connex/trigger-destinations';
+import type {
+  ConnexClientIdentity,
+  ConnexClientProject,
+  ConnexTriggerDestination,
+} from './types';
 
 const ALL_ENVS = ['production', 'preview', 'development'] as const;
-
-interface ConnexClientIdentity {
-  id: string;
-  uid: string;
-  name?: string;
-}
-
-interface ConnexClientProject {
-  clientId: string;
-  projectId: string;
-  environments: string[];
-}
 
 function envSetsEqual(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) {
@@ -39,6 +39,9 @@ export async function attach(
   flags: {
     '--environment'?: string[];
     '--project'?: string;
+    '--triggers'?: boolean;
+    '--trigger-branch'?: string;
+    '--trigger-path'?: string;
     '--yes'?: boolean;
     '--format'?: string;
     '--json'?: boolean;
@@ -51,9 +54,19 @@ export async function attach(
   }
   const asJson = formatResult.jsonOutput;
   const skipConfirmation = !!flags['--yes'];
+  const withTriggers = !!flags['--triggers'];
+  const triggerBranch = flags['--trigger-branch'];
+  const triggerPath = flags['--trigger-path'];
 
   if (asJson && !skipConfirmation) {
     output.error('--format=json requires --yes to skip confirmation prompts');
+    return 1;
+  }
+
+  if (!withTriggers && (triggerBranch || triggerPath)) {
+    output.error(
+      '--trigger-branch and --trigger-path require --triggers to also be set.'
+    );
     return 1;
   }
 
@@ -131,7 +144,9 @@ export async function attach(
     projectName = linked.project.name;
   }
 
-  // Resolve client identity → canonical id + display name.
+  // Resolve client identity → canonical id + display name. The base GET
+  // response also carries supportsTriggers / triggers / triggerDestinations,
+  // which we need for the --triggers path.
   output.spinner('Retrieving connector…');
   let target: ConnexClientIdentity;
   try {
@@ -152,6 +167,41 @@ export async function attach(
 
   const displayName = target.uid || target.name || target.id;
 
+  // Pre-flight: trigger-destination planning.
+  let desiredDestination: ConnexTriggerDestination | undefined;
+  let triggerAlreadyRegistered = false;
+  let triggersEnabledOnConnector = true;
+  if (withTriggers) {
+    if (target.supportsTriggers === false) {
+      output.error(
+        `Connector ${chalk.bold(displayName)} does not support triggers (only Slack supports incoming webhooks today).`
+      );
+      return 1;
+    }
+
+    triggersEnabledOnConnector = target.triggers?.enabled === true;
+    desiredDestination = buildTriggerDestination({
+      projectId,
+      branch: triggerBranch,
+      path: triggerPath,
+    });
+
+    const currentDestinations = target.triggerDestinations ?? [];
+    triggerAlreadyRegistered =
+      findMatchingDestination(currentDestinations, desiredDestination) !==
+      undefined;
+
+    if (
+      !triggerAlreadyRegistered &&
+      currentDestinations.length >= MAX_TRIGGER_DESTINATIONS
+    ) {
+      output.error(
+        `Connector ${chalk.bold(displayName)} already has ${MAX_TRIGGER_DESTINATIONS} trigger destinations. Remove one in the dashboard before adding a new one.`
+      );
+      return 1;
+    }
+  }
+
   // Pre-fetch existing attachment for the diff prompt and the no-op check.
   let existingAttachment: ConnexClientProject | undefined;
   try {
@@ -166,11 +216,14 @@ export async function attach(
     }
   }
 
-  // No-op: already attached with the same environments. Skip the prompt and the POST.
-  if (
-    existingAttachment &&
-    envSetsEqual(existingAttachment.environments ?? [], environments)
-  ) {
+  const attachmentMatches =
+    existingAttachment !== undefined &&
+    envSetsEqual(existingAttachment.environments ?? [], environments);
+  const shouldAttach = !attachmentMatches;
+  const shouldRegisterTrigger = withTriggers && !triggerAlreadyRegistered;
+
+  // Total no-op: nothing to do.
+  if (!shouldAttach && !shouldRegisterTrigger) {
     if (asJson) {
       client.stdout.write(
         `${JSON.stringify(
@@ -179,6 +232,7 @@ export async function attach(
             uid: target.uid,
             projectId,
             environments,
+            triggerDestination: withTriggers ? desiredDestination : undefined,
             unchanged: true,
           },
           null,
@@ -187,10 +241,13 @@ export async function attach(
       );
       return 0;
     }
+    const triggerPart = withTriggers
+      ? ` (trigger destination already registered)`
+      : '';
     output.log(
       `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
         projectName
-      )} for environments: ${environments.join(', ')}. Nothing to do.`
+      )} for environments: ${environments.join(', ')}${triggerPart}. Nothing to do.`
     );
     return 0;
   }
@@ -204,22 +261,36 @@ export async function attach(
   }
 
   if (!skipConfirmation) {
-    if (existingAttachment) {
-      const current = (existingAttachment.environments ?? []).join(', ') || '—';
-      const next = environments.join(', ');
+    if (shouldAttach) {
+      if (existingAttachment) {
+        const current =
+          (existingAttachment.environments ?? []).join(', ') || '—';
+        const next = environments.join(', ');
+        output.log(
+          `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
+            projectName
+          )}.`
+        );
+        output.log(`  Current:  ${current}`);
+        output.log(`  Will set: ${next}`);
+      } else {
+        output.log(
+          `Connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
+            projectName
+          )} for environments: ${environments.join(', ')}.`
+        );
+      }
+    }
+
+    if (shouldRegisterTrigger && desiredDestination) {
       output.log(
-        `Connector ${chalk.bold(displayName)} is already attached to ${chalk.bold(
-          projectName
-        )}.`
+        `Will register as trigger destination: ${formatDestination(desiredDestination)}.`
       );
-      output.log(`  Current:  ${current}`);
-      output.log(`  Will set: ${next}`);
-    } else {
-      output.log(
-        `Connector ${chalk.bold(displayName)} will be attached to ${chalk.bold(
-          projectName
-        )} for environments: ${environments.join(', ')}.`
-      );
+      if (!triggersEnabledOnConnector) {
+        output.warn(
+          `Triggers are not enabled on this connector. The destination will be registered, but no events will flow until the connector is recreated with triggers enabled.`
+        );
+      }
     }
 
     const confirmed = await client.input.confirm('Continue?', false);
@@ -230,34 +301,66 @@ export async function attach(
   }
 
   // Upsert the attachment.
-  output.spinner('Attaching project…');
-  try {
-    await client.fetch<unknown>(
-      `/v1/connect/connectors/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
-      {
-        method: 'POST',
-        body: { environments },
+  if (shouldAttach) {
+    output.spinner('Attaching project…');
+    try {
+      await client.fetch<unknown>(
+        `/v1/connect/connectors/${encodeURIComponent(target.id)}/projects/${encodeURIComponent(projectId)}`,
+        {
+          method: 'POST',
+          body: { environments },
+        }
+      );
+    } catch (err: unknown) {
+      output.stopSpinner();
+      const status = (err as { status?: number }).status;
+      if (status === 403) {
+        output.error(
+          `You don't have permission to attach projects on this team. Owner or Member role required.`
+        );
+        return 1;
       }
-    );
-  } catch (err: unknown) {
+      if (status === 404) {
+        output.error(
+          `No connector found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
+        );
+        return 1;
+      }
+      printError(err);
+      return 1;
+    }
     output.stopSpinner();
-    const status = (err as { status?: number }).status;
-    if (status === 403) {
-      output.error(
-        `You don't have permission to attach projects on this team. Owner or Member role required.`
-      );
-      return 1;
-    }
-    if (status === 404) {
-      output.error(
-        `No connector found for ${chalk.bold(displayName)}, or project ${chalk.bold(projectName)} is no longer accessible.`
-      );
-      return 1;
-    }
-    printError(err);
-    return 1;
   }
-  output.stopSpinner();
+
+  // Register the trigger destination (PATCH replaces the full list, so merge first).
+  if (shouldRegisterTrigger && desiredDestination) {
+    const merged: ConnexTriggerDestination[] = [
+      ...(target.triggerDestinations ?? []),
+      desiredDestination,
+    ];
+    output.spinner('Registering trigger destination…');
+    try {
+      await patchTriggerDestinations(client, target.id, merged);
+    } catch (err: unknown) {
+      output.stopSpinner();
+      const status = (err as { status?: number }).status;
+      if (status === 403) {
+        output.error(
+          `You don't have permission to update trigger destinations on this team. Owner or Member role required.`
+        );
+        return 1;
+      }
+      if (status === 404) {
+        output.error(
+          `Trigger destinations are not available for this team (the connex-triggers feature is not enabled).`
+        );
+        return 1;
+      }
+      printError(err);
+      return 1;
+    }
+    output.stopSpinner();
+  }
 
   if (asJson) {
     client.stdout.write(
@@ -267,6 +370,7 @@ export async function attach(
           uid: target.uid,
           projectId,
           environments,
+          triggerDestination: withTriggers ? desiredDestination : undefined,
         },
         null,
         2
@@ -275,8 +379,15 @@ export async function attach(
     return 0;
   }
 
-  output.success(
-    `Attached connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
-  );
+  if (shouldAttach) {
+    output.success(
+      `Attached connector ${chalk.bold(displayName)} to ${chalk.bold(projectName)} for environments: ${environments.join(', ')}.`
+    );
+  }
+  if (shouldRegisterTrigger && desiredDestination) {
+    output.success(
+      `Registered ${chalk.bold(projectName)} as a trigger destination (${formatDestination(desiredDestination)}).`
+    );
+  }
   return 0;
 }

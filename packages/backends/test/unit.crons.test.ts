@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { buildCronRouteTable, getServiceCrons } from '../src/crons';
 
 describe('getServiceCrons', () => {
-  it('returns undefined for non-schedule-triggered services', () => {
+  it('returns undefined for non-schedule-triggered services', async () => {
     expect(
-      getServiceCrons({
+      await getServiceCrons({
         service: { type: 'web', name: 'web', schedule: '0 0 * * *' },
         entrypoint: 'server.ts',
       })
     ).toBeUndefined();
     expect(
-      getServiceCrons({
+      await getServiceCrons({
         service: {
           type: 'job',
           trigger: 'queue',
@@ -20,27 +20,27 @@ describe('getServiceCrons', () => {
         entrypoint: 'worker.ts',
       })
     ).toBeUndefined();
-    expect(getServiceCrons({ entrypoint: 'cleanup.ts' })).toBeUndefined();
+    expect(await getServiceCrons({ entrypoint: 'cleanup.ts' })).toBeUndefined();
   });
 
-  it('returns undefined when name or schedule is missing', () => {
+  it('returns undefined when name or schedule is missing', async () => {
     expect(
-      getServiceCrons({
+      await getServiceCrons({
         service: { type: 'cron', schedule: '0 0 * * *' },
         entrypoint: 'cleanup.ts',
       })
     ).toBeUndefined();
     expect(
-      getServiceCrons({
+      await getServiceCrons({
         service: { type: 'cron', name: 'cleanup' },
         entrypoint: 'cleanup.ts',
       })
     ).toBeUndefined();
   });
 
-  it('produces a single entry for a static schedule on a cron service', () => {
+  it('produces a single entry for a static schedule on a cron service', async () => {
     expect(
-      getServiceCrons({
+      await getServiceCrons({
         service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
         entrypoint: 'cleanup.ts',
       })
@@ -53,9 +53,9 @@ describe('getServiceCrons', () => {
     ]);
   });
 
-  it('produces a single entry for a schedule-triggered job', () => {
+  it('produces a single entry for a schedule-triggered job', async () => {
     expect(
-      getServiceCrons({
+      await getServiceCrons({
         service: {
           type: 'job',
           trigger: 'schedule',
@@ -73,21 +73,21 @@ describe('getServiceCrons', () => {
     ]);
   });
 
-  it('throws when entrypoint is missing for a cron service', () => {
-    expect(() =>
+  it('throws when entrypoint is missing for a cron service', async () => {
+    await expect(
       getServiceCrons({
         service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
       })
-    ).toThrow(/missing an entrypoint/);
+    ).rejects.toThrow(/missing an entrypoint/);
   });
 
-  it('throws on a <dynamic> schedule (not yet supported for JS/TS)', () => {
-    expect(() =>
+  it('throws on a <dynamic> schedule (not yet supported for JS/TS)', async () => {
+    await expect(
       getServiceCrons({
         service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
         entrypoint: 'cleanup.ts',
       })
-    ).toThrow(/Dynamic cron schedules .* not yet supported/);
+    ).rejects.toThrow(/Dynamic cron schedules .* not yet supported/);
   });
 });
 

@@ -1915,7 +1915,31 @@ createServer((_req, res) => {
     it('should not emit flags-definitions module when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
       vi.stubEnv('VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING', '1');
 
+      client.cwd = fixture('with-vercel-flags');
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
+
+    it('should emit flags-definitions module when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-on');
+
       client.cwd = fixture('static');
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+    });
+
+    it('should not emit flags-definitions module when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
+      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-off');
+
+      client.cwd = fixture('with-vercel-flags');
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
@@ -2534,6 +2558,22 @@ fs.writeFileSync(
     }
   });
 
+  it('should run preDeployCommand after build succeeds', async () => {
+    const cwd = fixture('with-services-pre-deploy-command');
+    const sideEffectFile = join(cwd, 'pre-deploy-ran.txt');
+
+    await fs.remove(sideEffectFile);
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    expect(await fs.pathExists(sideEffectFile)).toBe(true);
+    expect(await fs.readFile(sideEffectFile, 'utf8')).toBe('ok');
+
+    await fs.remove(sideEffectFile);
+  });
+
   it('should not write trace spans for non-build commands', async () => {
     const cwd = fixture('static');
     const tracePath = join(cwd, '.vercel/output/diagnostics/cli_traces.json');
@@ -2602,5 +2642,52 @@ fs.writeFileSync(
         { name: 'vc.postCommand', parent: 'vc.cli' },
       ])
     );
+  });
+
+  describe('--project', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('fails fast with a clean error when the project does not exist anywhere', async () => {
+      const cwd = await getWriteableDirectory();
+      useUser();
+      useTeams('team_dummy');
+      // No useProject() — every API lookup will 404.
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=does-not-exist');
+      const exitCodePromise = build(client);
+
+      await expect(client.stderr).toOutput(
+        'Project "does-not-exist" was not found'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "build"').toEqual(1);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('tracks --project telemetry as [REDACTED]', async () => {
+      const cwd = await getWriteableDirectory();
+      useUser();
+      useTeams('team_dummy');
+
+      client.cwd = cwd;
+      client.setArgv('build', '--project=my-app');
+      await build(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
   });
 });

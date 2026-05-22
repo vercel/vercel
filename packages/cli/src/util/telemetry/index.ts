@@ -234,6 +234,22 @@ export class TelemetryClient {
     }
   }
 
+  protected trackVercelPluginActiveSession() {
+    this.track({
+      key: 'vercel_plugin_active_session',
+      value: 'TRUE',
+    });
+  }
+
+  protected trackVercelPluginVersion(version: string | undefined) {
+    if (version) {
+      this.track({
+        key: 'vercel_plugin_version',
+        value: version,
+      });
+    }
+  }
+
   protected trackErrorStatus(status: number | string | undefined) {
     if (typeof status !== 'undefined') {
       this.track({
@@ -327,6 +343,21 @@ export class TelemetryClient {
         value: allowedFormat,
       });
     }
+  }
+
+  /**
+   * Tracks the --project option. Value is redacted because project names/IDs
+   * may be sensitive. Accepts `string | string[]` so commands with a repeatable
+   * `--project` can override. Not all commands support repeated `--project` flags
+   */
+  trackCliOptionProject(value: string | string[] | undefined) {
+    if (!value) return;
+    if (Array.isArray(value) && value.length === 0) return;
+
+    this.trackCliOption({
+      option: 'project',
+      value: this.redactedValue,
+    });
   }
 }
 

@@ -4,10 +4,11 @@ import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
 
-import DevServer from '../../util/dev/server';
+import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { findRepoRoot } from '../../util/link/repo';
@@ -33,6 +34,7 @@ type Options = {
   '--listen': string;
   '--local': boolean;
   '--yes': boolean;
+  '--project': string;
 };
 
 export default async function dev(
@@ -47,8 +49,15 @@ export default async function dev(
 
   cwd = await resolveProjectCwd(cwd);
 
+  const projectNameOrId = opts['--project'];
+
   // retrieve dev command
-  let link = await getLinkedProject(client, cwd);
+  let link = await getLinkedProject(
+    client,
+    cwd,
+    projectNameOrId,
+    !!projectNameOrId
+  );
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     if (opts['--local']) {
@@ -58,12 +67,15 @@ export default async function dev(
           '  - Project settings are defined by local configuration\n\n' +
           `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
+    } else if (projectNameOrId) {
+      await printProjectNotFoundError(client, projectNameOrId, 'dev');
+      return 1;
     } else {
       link = await setupAndLink(client, cwd, {
         autoConfirm: opts['--yes'],
         link,
         successEmoji: 'link',
-        setupMsg: 'Set up and develop',
+        setupMsg: 'Set up',
         nonInteractive: client.nonInteractive,
       });
 
@@ -206,20 +218,32 @@ export default async function dev(
         telemetry.trackOidcTokenRefresh(++refreshCount);
       }
     } catch (error) {
-      // Throw any error aside from an abort error.
-      if (!(error instanceof Error && error.name === 'AbortError')) {
-        throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        output.debug('OIDC token refresh was aborted');
+        return;
       }
-      output.debug('OIDC token refresh was aborted');
+      // if on forced restart after OIDC refresh
+      // we can't restart a dev command, then we can only
+      // show the error and exit
+      if (error instanceof DevCommandExitError) {
+        output.error(error.message);
+        await cleanup(error.exitCode);
+        return;
+      }
+      throw error;
     }
   });
 
   let cleanupInProgress = false;
-  const cleanup = async (signal: string) => {
+  const cleanup = async (reason: string | number) => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
-    output.debug(`Received ${signal}, shutting down...`);
+    output.debug(
+      typeof reason === 'number'
+        ? `Exiting with code ${reason}, shutting down...`
+        : `Received ${reason}, shutting down...`
+    );
 
     clearTimeout(timeout);
     controller.abort();
@@ -230,17 +254,23 @@ export default async function dev(
 
     await devServer.stop();
 
-    let exitCode = 0;
-    switch (signal) {
-      case 'SIGINT':
-        exitCode = 130;
-        break;
-      case 'SIGTERM':
-        exitCode = 143;
-        break;
-      case 'SIGHUP':
-        exitCode = 129;
-        break;
+    let exitCode: number;
+    if (typeof reason === 'number') {
+      exitCode = reason;
+    } else {
+      switch (reason) {
+        case 'SIGINT':
+          exitCode = 130;
+          break;
+        case 'SIGTERM':
+          exitCode = 143;
+          break;
+        case 'SIGHUP':
+          exitCode = 129;
+          break;
+        default:
+          exitCode = 0;
+      }
     }
 
     process.exit(exitCode);

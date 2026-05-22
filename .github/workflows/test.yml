@@ -357,6 +357,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ needs.setup.outputs.baseSha }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           FORCE_COLOR: '1'
           VITEST_TEST_FILES: ${{ matrix.useEnvPaths == true && join(matrix.testPaths, ' ') || '' }}
           # Datadog Test Optimization: emit per-test spans correlated to the

@@ -1,5 +1,17 @@
 # @vercel/python
 
+## 6.43.0
+
+### Minor Changes
+
+- 2cd64ea: Support `vc build` + `vc deploy --prebuilt` for Python functions. When building outside the Vercel build image, `uv sync` now targets `x86_64-unknown-linux-gnu` so Linux-compatible wheels are resolved. Downloads the Linux `uv` binary (with SHA-256 verification) for runtime dependency installation, and uses the Lambda target platform for PEP 508 marker evaluation and Prisma engine binary selection.
+
+## 6.42.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
 ## 6.41.0
 
 ### Minor Changes

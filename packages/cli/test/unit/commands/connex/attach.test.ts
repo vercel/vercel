@@ -451,4 +451,383 @@ describe('connex attach', () => {
       "don't have permission to attach"
     );
   });
+
+  describe('--triggers', () => {
+    it('rejects --trigger-branch without --triggers', async () => {
+      await setupLinkedProject(team);
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--trigger-branch',
+        'main',
+        '--yes'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--trigger-branch and --trigger-path require --triggers'
+      );
+    });
+
+    it('errors when the connector does not support triggers', async () => {
+      await setupLinkedProject(team);
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'github/my-app',
+          supportsTriggers: false,
+        });
+      });
+
+      client.setArgv('connect', 'attach', 'scl_abc123', '--triggers', '--yes');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'does not support triggers'
+      );
+    });
+
+    it('attaches and registers a default trigger destination', async () => {
+      await setupLinkedProject(team);
+      let patchBody: { destinations: Array<{ projectId: string }> } | undefined;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.statusCode = 404;
+          res.json({});
+        }
+      );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.statusCode = 200;
+          res.json({});
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (req, res) => {
+          patchBody = req.body;
+          res.statusCode = 200;
+          res.json({});
+        }
+      );
+
+      client.setArgv('connect', 'attach', 'scl_abc123', '--triggers', '--yes');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody?.destinations).toEqual([{ projectId: PROJECT_ID }]);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Attached connector');
+      expect(stderr).toContain('Registered');
+      expect(stderr).toContain('trigger destination');
+    });
+
+    it('passes branch and path through to the PATCH', async () => {
+      await setupLinkedProject(team);
+      let patchBody:
+        | {
+            destinations: Array<{
+              projectId: string;
+              branch?: string;
+              path?: string;
+            }>;
+          }
+        | undefined;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.statusCode = 404;
+          res.json({});
+        }
+      );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({});
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (req, res) => {
+          patchBody = req.body;
+          res.json({});
+        }
+      );
+
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--triggers',
+        '--trigger-branch',
+        'staging',
+        '--trigger-path',
+        '/slack-events',
+        '--yes'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody?.destinations).toEqual([
+        { projectId: PROJECT_ID, branch: 'staging', path: '/slack-events' },
+      ]);
+    });
+
+    it('merges with existing trigger destinations', async () => {
+      await setupLinkedProject(team);
+      let patchBody:
+        | { destinations: Array<{ projectId: string; branch?: string }> }
+        | undefined;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [{ projectId: 'prj_existing' }],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.statusCode = 404;
+          res.json({});
+        }
+      );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({});
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (req, res) => {
+          patchBody = req.body;
+          res.json({});
+        }
+      );
+
+      client.setArgv('connect', 'attach', 'scl_abc123', '--triggers', '--yes');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(patchBody?.destinations).toEqual([
+        { projectId: 'prj_existing' },
+        { projectId: PROJECT_ID },
+      ]);
+    });
+
+    it('warns but proceeds when triggers.enabled is false on the connector', async () => {
+      await setupLinkedProject(team);
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: false },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.statusCode = 404;
+          res.json({});
+        }
+      );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({});
+        }
+      );
+      let patchCalled = false;
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (_req, res) => {
+          patchCalled = true;
+          res.json({});
+        }
+      );
+
+      // Interactive flow so we see the warning text before the prompt.
+      client.setArgv('connect', 'attach', 'scl_abc123', '--triggers');
+
+      const exitCodePromise = connect(client);
+      await expect(client.stderr).toOutput('Triggers are not enabled');
+      await expect(client.stderr).toOutput('Continue?');
+      client.stdin.write('y\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toBe(0);
+      expect(patchCalled).toBe(true);
+    });
+
+    it('errors when the connector already has 3 trigger destinations', async () => {
+      await setupLinkedProject(team);
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [
+            { projectId: 'prj_1' },
+            { projectId: 'prj_2' },
+            { projectId: 'prj_3' },
+          ],
+        });
+      });
+
+      client.setArgv('connect', 'attach', 'scl_abc123', '--triggers', '--yes');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'already has 3 trigger destinations'
+      );
+    });
+
+    it('no-ops the trigger PATCH when the destination is already registered', async () => {
+      await setupLinkedProject(team);
+      let patchCalled = false;
+      let postCalled = false;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [{ projectId: PROJECT_ID }],
+        });
+      });
+      // Attachment already exists with matching envs.
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({
+            clientId: 'scl_abc123',
+            projectId: PROJECT_ID,
+            environments: ['production', 'preview', 'development'],
+          });
+        }
+      );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          postCalled = true;
+          res.json({});
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (_req, res) => {
+          patchCalled = true;
+          res.json({});
+        }
+      );
+
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--triggers',
+        '--yes',
+        '--format=json'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(postCalled).toBe(false);
+      expect(patchCalled).toBe(false);
+      const parsed = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(parsed.unchanged).toBe(true);
+      expect(parsed.triggerDestination).toEqual({ projectId: PROJECT_ID });
+    });
+
+    it('still PATCHes the trigger destination when attachment is unchanged but destination is new', async () => {
+      await setupLinkedProject(team);
+      let patchCalled = false;
+      let postCalled = false;
+
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        res.json({
+          id: 'scl_abc123',
+          uid: 'slack/my-bot',
+          supportsTriggers: true,
+          triggers: { enabled: true },
+          triggerDestinations: [],
+        });
+      });
+      client.scenario.get(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          res.json({
+            clientId: 'scl_abc123',
+            projectId: PROJECT_ID,
+            environments: ['production', 'preview', 'development'],
+          });
+        }
+      );
+      client.scenario.post(
+        '/v1/connect/connectors/:clientId/projects/:projectId',
+        (_req, res) => {
+          postCalled = true;
+          res.json({});
+        }
+      );
+      client.scenario.patch(
+        '/v1/connect/connectors/:clientId/trigger-destinations',
+        (_req, res) => {
+          patchCalled = true;
+          res.json({});
+        }
+      );
+
+      client.setArgv('connect', 'attach', 'scl_abc123', '--triggers', '--yes');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(postCalled).toBe(false);
+      expect(patchCalled).toBe(true);
+    });
+  });
 });
