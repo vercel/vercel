@@ -15,6 +15,7 @@ import {
   cloneEnv,
   getLambdaOptionsFromFunction,
   execCommand,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 
 import { createGo, findGoBinary } from './go-helpers';
@@ -57,6 +58,7 @@ export async function buildStandaloneServer({
   workPath,
   meta = {},
   registerPreDeploy,
+  service,
 }: BuildOptions): Promise<{ output: Lambda }> {
   debug(`Building standalone Go server: ${entrypoint}`);
 
@@ -226,7 +228,13 @@ export async function buildStandaloneServer({
     });
   }
 
-  await generateProjectManifest({ workPath, goModPath, goVersion: '' });
+  await generateProjectManifest({
+    workPath,
+    goModPath,
+    resolvedGoVersion: go.resolvedVersion,
+    framework: config.framework ?? undefined,
+    serviceType: service ? getReportedServiceType(service) : undefined,
+  });
 
   return { output: lambda };
 }

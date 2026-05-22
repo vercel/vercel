@@ -34,6 +34,7 @@ import {
   cloneEnv,
   getProvidedRuntime,
   execCommand,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -122,7 +123,14 @@ type UndoActions = {
 export const version = 3;
 
 export async function build(options: BuildOptions) {
-  const { files, config, workPath, meta = {}, registerPreDeploy } = options;
+  const {
+    files,
+    config,
+    workPath,
+    meta = {},
+    service,
+    registerPreDeploy,
+  } = options;
   let { entrypoint } = options;
 
   const goPath = await getWriteableDirectory();
@@ -253,6 +261,16 @@ export async function build(options: BuildOptions) {
       workPath,
     });
 
+    // Emit the manifest after resolving the Go version but before building the handler
+    // injects the @vercel/go-bridge.
+    await generateProjectManifest({
+      workPath,
+      goModPath,
+      resolvedGoVersion: go.resolvedVersion,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+
     const outDir = await getWriteableDirectory();
     const buildOptions: BuildHandlerOptions = {
       downloadPath,
@@ -296,8 +314,6 @@ export async function build(options: BuildOptions) {
         });
       });
     }
-
-    await generateProjectManifest({ workPath, goModPath, goVersion: '' });
 
     return {
       output: lambda,

@@ -167,19 +167,21 @@ export function parseGoMod(content: string): {
 export async function generateProjectManifest({
   workPath,
   goModPath,
-  goVersion,
+  resolvedGoVersion,
+  framework,
+  serviceType,
 }: {
   workPath: string;
   goModPath: string | undefined;
-  goVersion: string;
+  resolvedGoVersion: string;
+  framework?: string | null;
+  serviceType?: string | null;
 }): Promise<void> {
   try {
     if (!goModPath) return;
 
     const content = await fs.promises.readFile(goModPath, 'utf-8');
-    const { goVersion: parsedGoVersion, modules } = parseGoMod(content);
-
-    const resolved = parsedGoVersion || goVersion;
+    const { goVersion: requested, modules } = parseGoMod(content);
 
     const directDeps: PackageManifestDependency[] = [];
     const transitiveDeps: PackageManifestDependency[] = [];
@@ -204,8 +206,11 @@ export async function generateProjectManifest({
     const manifest: PackageManifest = {
       version: MANIFEST_VERSION,
       runtime: 'go',
+      ...(framework ? { framework } : {}),
+      ...(serviceType ? { serviceType } : {}),
       runtimeVersion: {
-        resolved,
+        ...(requested ? { requested } : {}),
+        resolved: resolvedGoVersion,
       },
       dependencies: [
         ...directDeps.sort((a, b) => a.name.localeCompare(b.name)),

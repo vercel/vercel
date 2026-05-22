@@ -205,13 +205,15 @@ Learn more: https://vercel.com/docs/functions/serverless-functions/runtimes/go
 export class GoWrapper {
   private env: Env;
   private opts: execa.Options;
+  readonly resolvedVersion: string;
 
-  constructor(env: Env, opts: execa.Options = {}) {
+  constructor(env: Env, opts: execa.Options = {}, resolvedVersion: string) {
     if (!opts.cwd) {
       opts.cwd = process.cwd();
     }
     this.env = env;
     this.opts = opts;
+    this.resolvedVersion = resolvedVersion;
   }
 
   private async execute(...args: string[]) {
@@ -437,7 +439,7 @@ export async function createGo({
         debug(`Selected go ${version} (from ${label})`);
 
         await setGoEnv(goDir);
-        return new GoWrapper(env, opts);
+        return new GoWrapper(env, opts, version);
       } else {
         debug(`Found go ${version} in ${label}, but need ${goSelectedVersion}`);
       }
@@ -453,7 +455,7 @@ export async function createGo({
   });
 
   await setGoEnv(goGlobalCacheDir);
-  return new GoWrapper(env, opts);
+  return new GoWrapper(env, opts, goSelectedVersion);
 }
 
 /**
