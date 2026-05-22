@@ -1894,6 +1894,10 @@ importers:
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)
 
   packages/oidc:
+    dependencies:
+      jose:
+        specifier: 5.9.6
+        version: 5.9.6
     devDependencies:
       prettier:
         specifier: 3.8.3

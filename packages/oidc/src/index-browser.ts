@@ -3,6 +3,12 @@ export {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
 } from './auth-errors';
+export {
+  isValidVercelOidcToken,
+  assertValidVercelOidcToken,
+  UnacceptableVercelOidcTokenError,
+} from './validate';
+export type { VercelOidcTokenMatcher, VercelOidcTokenClaims } from './validate';
 
 export async function getVercelOidcToken(): Promise<string> {
   return '';

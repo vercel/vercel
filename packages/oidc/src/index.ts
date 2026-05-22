@@ -8,3 +8,9 @@ export {
   RefreshAccessTokenFailedError,
 } from './auth-errors';
 export { getVercelToken } from './token-util';
+export {
+  isValidVercelOidcToken,
+  assertValidVercelOidcToken,
+  UnacceptableVercelOidcTokenError,
+} from './validate';
+export type { VercelOidcTokenMatcher, VercelOidcTokenClaims } from './validate';
