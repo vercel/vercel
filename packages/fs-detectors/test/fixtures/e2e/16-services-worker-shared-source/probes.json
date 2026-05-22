@@ -13,16 +13,30 @@
     {
       "path": "/enqueue/email",
       "method": "POST",
-      "body": {},
+      "body": { "request_id": "probe-16-emails" },
       "status": 200,
-      "mustContain": "emails"
+      "mustContain": "probe-16-emails"
+    },
+    {
+      "path": "/status/emails/probe-16-emails",
+      "status": 200,
+      "mustContain": "probe-16-emails",
+      "retries": 5,
+      "retryDelay": 2000
     },
     {
       "path": "/enqueue/report",
       "method": "POST",
-      "body": {},
+      "body": { "request_id": "probe-16-reports" },
       "status": 200,
-      "mustContain": "reports"
+      "mustContain": "probe-16-reports"
+    },
+    {
+      "path": "/status/reports/probe-16-reports",
+      "status": 200,
+      "mustContain": "probe-16-reports",
+      "retries": 5,
+      "retryDelay": 2000
     },
     {
       "path": "/_svc/worker-emails/index",
