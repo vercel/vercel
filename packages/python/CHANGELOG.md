@@ -1,5 +1,15 @@
 # @vercel/python
 
+## 6.43.1
+
+### Patch Changes
+
+- 972cc84: Support workflow-triggered job services in queue infrastructure
+
+  Add `isWorkflowTriggeredService()` and `isQueueBackedService()` helpers so workflow services
+  are recognized by the queue broker, dev server, and build pipeline. Update Python runtime to
+  bootstrap workflow services as queue-backed workers.
+
 ## 6.43.0
 
 ### Minor Changes
