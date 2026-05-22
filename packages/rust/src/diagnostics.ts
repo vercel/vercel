@@ -39,11 +39,13 @@ export async function generateProjectManifest({
   cargoMetadata,
   framework,
   serviceType,
+  runtimeVersion,
 }: {
   workPath: string;
   cargoMetadata: CargoMetadataRoot;
   framework?: string;
   serviceType?: string;
+  runtimeVersion?: { requested?: string; resolved: string };
 }): Promise<void> {
   try {
     const { packages, resolve } = cargoMetadata;
@@ -109,6 +111,7 @@ export async function generateProjectManifest({
       runtime: 'rust',
       ...(framework ? { framework } : {}),
       ...(serviceType ? { serviceType } : {}),
+      ...(runtimeVersion ? { runtimeVersion } : {}),
       dependencies: [
         ...directEntries.sort((a, b) => a.name.localeCompare(b.name)),
         ...transitiveEntries.sort((a, b) => a.name.localeCompare(b.name)),

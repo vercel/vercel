@@ -153,11 +153,34 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   });
   lambda.zipBuffer = await lambda.createZip();
 
+  let resolvedRustVersion: string | undefined;
+  try {
+    const { stdout: rustcOut } = await execa('rustc', ['--version'], {
+      env: rustEnv,
+      cwd: workPath,
+    });
+    // "rustc 1.87.0 (17067e9ac 2025-05-09)" → "1.87.0"
+    resolvedRustVersion = rustcOut.split(' ')[1];
+  } catch {
+    debug('Failed to determine rustc version');
+  }
+
+  const rootPkg = cargoMetadata.packages.find(
+    p => p.id === cargoMetadata.resolve.root
+  );
+  const requestedRustVersion = rootPkg?.rust_version || undefined;
+
   await generateProjectManifest({
     workPath,
     cargoMetadata,
     framework: config?.framework ?? undefined,
     serviceType: service ? getReportedServiceType(service) : undefined,
+    runtimeVersion: resolvedRustVersion
+      ? {
+          ...(requestedRustVersion ? { requested: requestedRustVersion } : {}),
+          resolved: resolvedRustVersion,
+        }
+      : undefined,
   });
 
   debug(`generating function for \`${entrypoint}\``);
