@@ -4,7 +4,7 @@
 
 # Class: UnacceptableVercelOidcTokenError
 
-Defined in: packages/oidc/src/validate.ts:85
+Defined in: [packages/oidc/src/validate.ts:91](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L91)
 
 Thrown by [assertValidVercelOidcToken](../functions/assertValidVercelOidcToken.md) when a token cannot be accepted.
 
@@ -18,7 +18,7 @@ Thrown by [assertValidVercelOidcToken](../functions/assertValidVercelOidcToken.m
 
 > **new UnacceptableVercelOidcTokenError**(`message`, `cause?`): `UnacceptableVercelOidcTokenError`
 
-Defined in: packages/oidc/src/validate.ts:88
+Defined in: [packages/oidc/src/validate.ts:94](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L94)
 
 #### Parameters
 
@@ -44,7 +44,7 @@ Defined in: packages/oidc/src/validate.ts:88
 
 > `optional` **cause?**: `unknown`
 
-Defined in: packages/oidc/src/validate.ts:86
+Defined in: [packages/oidc/src/validate.ts:92](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L92)
 
 ---
 
@@ -132,7 +132,7 @@ Defined in: node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/glob
 
 > **toString**(): `string`
 
-Defined in: packages/oidc/src/validate.ts:94
+Defined in: [packages/oidc/src/validate.ts:100](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L100)
 
 Returns a string representation of an object.
 

@@ -4,7 +4,7 @@
 
 # Interface: VercelOidcTokenMatcher
 
-Defined in: packages/oidc/src/validate.ts:53
+Defined in: [packages/oidc/src/validate.ts:59](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L59)
 
 A matcher used to validate the claims of a Vercel OIDC token.
 
@@ -22,7 +22,7 @@ supported. When both are provided on the same matcher, both must match.
 
 > `optional` **aud?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:57
+Defined in: [packages/oidc/src/validate.ts:63](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L63)
 
 Matches the `aud` claim.
 
@@ -32,7 +32,7 @@ Matches the `aud` claim.
 
 > `optional` **environment?**: `string` & `object` \| `"production"` \| `"preview"` \| `"development"`
 
-Defined in: packages/oidc/src/validate.ts:75
+Defined in: [packages/oidc/src/validate.ts:81](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L81)
 
 Matches the `environment` claim.
 
@@ -42,7 +42,7 @@ Matches the `environment` claim.
 
 > `optional` **iss?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:55
+Defined in: [packages/oidc/src/validate.ts:61](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L61)
 
 Matches the `iss` claim.
 
@@ -52,7 +52,7 @@ Matches the `iss` claim.
 
 > `optional` **owner?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:63
+Defined in: [packages/oidc/src/validate.ts:69](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L69)
 
 Matches the `owner` claim (the team slug).
 
@@ -62,7 +62,7 @@ Matches the `owner` claim (the team slug).
 
 > `optional` **owner_id?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:67
+Defined in: [packages/oidc/src/validate.ts:73](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L73)
 
 Matches the `owner_id` claim (the team ID).
 
@@ -72,7 +72,7 @@ Matches the `owner_id` claim (the team ID).
 
 > `optional` **project?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:69
+Defined in: [packages/oidc/src/validate.ts:75](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L75)
 
 Matches the `project` claim (the project name).
 
@@ -82,7 +82,7 @@ Matches the `project` claim (the project name).
 
 > `optional` **project_id?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:73
+Defined in: [packages/oidc/src/validate.ts:79](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L79)
 
 Matches the `project_id` claim (the project ID).
 
@@ -92,7 +92,7 @@ Matches the `project_id` claim (the project ID).
 
 > `optional` **projectId?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:71
+Defined in: [packages/oidc/src/validate.ts:77](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L77)
 
 Matches the `project_id` claim (the project ID). Alias for `project_id`.
 
@@ -102,7 +102,7 @@ Matches the `project_id` claim (the project ID). Alias for `project_id`.
 
 > `optional` **sub?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:59
+Defined in: [packages/oidc/src/validate.ts:65](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L65)
 
 Matches the `sub` claim.
 
@@ -112,7 +112,7 @@ Matches the `sub` claim.
 
 > `optional` **team?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:61
+Defined in: [packages/oidc/src/validate.ts:67](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L67)
 
 Matches the `owner` claim (the team slug). Alias for `owner`.
 
@@ -122,7 +122,7 @@ Matches the `owner` claim (the team slug). Alias for `owner`.
 
 > `optional` **teamId?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:65
+Defined in: [packages/oidc/src/validate.ts:71](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L71)
 
 Matches the `owner_id` claim (the team ID). Alias for `owner_id`.
 
@@ -132,7 +132,7 @@ Matches the `owner_id` claim (the team ID). Alias for `owner_id`.
 
 > `optional` **user_id?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:79
+Defined in: [packages/oidc/src/validate.ts:85](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L85)
 
 Matches the `user_id` claim.
 
@@ -142,6 +142,6 @@ Matches the `user_id` claim.
 
 > `optional` **userId?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:77
+Defined in: [packages/oidc/src/validate.ts:83](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L83)
 
 Matches the `user_id` claim. Alias for `user_id`.

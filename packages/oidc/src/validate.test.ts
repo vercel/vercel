@@ -5,13 +5,13 @@ import {
   exportJWK,
   type JWK,
   type KeyLike,
-  createLocalJWKSet,
 } from 'jose';
 import {
   assertValidVercelOidcToken,
   isValidVercelOidcToken,
   UnacceptableVercelOidcTokenError,
-  type JwksResolver,
+  type Jwks,
+  type JwksFetcher,
   type VercelOidcTokenMatcher,
 } from './validate';
 
@@ -59,21 +59,21 @@ describe('validate vercel oidc token', () => {
   let privateKey: KeyLike;
   let publicJwk: JWK;
   let otherPrivateKey: KeyLike;
-  let jwksResolver: JwksResolver;
+  let fetchJwks: JwksFetcher;
 
   beforeAll(async () => {
-    const kp = await generateKeyPair('RS256');
+    const kp = await generateKeyPair('RS256', { extractable: true });
     privateKey = kp.privateKey;
     publicJwk = await exportJWK(kp.publicKey);
     publicJwk.kid = KID;
     publicJwk.alg = 'RS256';
     publicJwk.use = 'sig';
 
-    const otherKp = await generateKeyPair('RS256');
+    const otherKp = await generateKeyPair('RS256', { extractable: true });
     otherPrivateKey = otherKp.privateKey;
 
-    const localJwks = createLocalJWKSet({ keys: [publicJwk] });
-    jwksResolver = () => localJwks;
+    const jwks: Jwks = { keys: [publicJwk as Jwks['keys'][number]] };
+    fetchJwks = async () => jwks;
   });
 
   const validClaims: TokenClaims = {
@@ -91,11 +91,11 @@ describe('validate vercel oidc token', () => {
     const matchers: VercelOidcTokenMatcher[] = [
       { team: 'acme', project: 'acme_website', environment: 'production' },
     ];
-    expect(
-      await isValidVercelOidcToken(matchers, token, { jwks: jwksResolver })
-    ).toBe(true);
+    expect(await isValidVercelOidcToken(matchers, token, { fetchJwks })).toBe(
+      true
+    );
     await expect(
-      assertValidVercelOidcToken(matchers, token, { jwks: jwksResolver })
+      assertValidVercelOidcToken(matchers, token, { fetchJwks })
     ).resolves.toBeUndefined();
   });
 
@@ -105,9 +105,9 @@ describe('validate vercel oidc token', () => {
       { team: 'vercel', project: 'vercel-alerts', environment: 'production' },
       { team: 'acme', project: 'acme_website', environment: 'production' },
     ];
-    expect(
-      await isValidVercelOidcToken(matchers, token, { jwks: jwksResolver })
-    ).toBe(true);
+    expect(await isValidVercelOidcToken(matchers, token, { fetchJwks })).toBe(
+      true
+    );
   });
 
   test('accepts a single matcher object (not wrapped in an array)', async () => {
@@ -117,9 +117,9 @@ describe('validate vercel oidc token', () => {
       project: 'acme_website',
       environment: 'production',
     };
-    expect(
-      await isValidVercelOidcToken(matcher, token, { jwks: jwksResolver })
-    ).toBe(true);
+    expect(await isValidVercelOidcToken(matcher, token, { fetchJwks })).toBe(
+      true
+    );
   });
 
   test('rejects a token whose claims do not match any matcher', async () => {
@@ -127,11 +127,11 @@ describe('validate vercel oidc token', () => {
     const matchers: VercelOidcTokenMatcher[] = [
       { team: 'vercel', project: 'vercel-alerts', environment: 'production' },
     ];
-    expect(
-      await isValidVercelOidcToken(matchers, token, { jwks: jwksResolver })
-    ).toBe(false);
+    expect(await isValidVercelOidcToken(matchers, token, { fetchJwks })).toBe(
+      false
+    );
     await expect(
-      assertValidVercelOidcToken(matchers, token, { jwks: jwksResolver })
+      assertValidVercelOidcToken(matchers, token, { fetchJwks })
     ).rejects.toBeInstanceOf(UnacceptableVercelOidcTokenError);
   });
 
@@ -140,9 +140,9 @@ describe('validate vercel oidc token', () => {
     const matchers: VercelOidcTokenMatcher[] = [
       { team: 'acme', project: 'acme_website', environment: 'preview' },
     ];
-    expect(
-      await isValidVercelOidcToken(matchers, token, { jwks: jwksResolver })
-    ).toBe(false);
+    expect(await isValidVercelOidcToken(matchers, token, { fetchJwks })).toBe(
+      false
+    );
   });
 
   test('matches by team ID and project ID', async () => {
@@ -151,14 +151,14 @@ describe('validate vercel oidc token', () => {
       await isValidVercelOidcToken(
         { teamId: 'team_abc123', projectId: 'prj_abc123' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).toBe(true);
     expect(
       await isValidVercelOidcToken(
         { teamId: 'team_other', projectId: 'prj_abc123' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).toBe(false);
   });
@@ -175,7 +175,7 @@ describe('validate vercel oidc token', () => {
           user_id: 'usr_42',
         },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).toBe(true);
   });
@@ -184,12 +184,12 @@ describe('validate vercel oidc token', () => {
     const token = await signToken(validClaims, { privateKey });
     expect(
       await isValidVercelOidcToken({ aud: 'https://vercel.com/acme' }, token, {
-        jwks: jwksResolver,
+        fetchJwks,
       })
     ).toBe(true);
     expect(
       await isValidVercelOidcToken({ aud: 'https://vercel.com/other' }, token, {
-        jwks: jwksResolver,
+        fetchJwks,
       })
     ).toBe(false);
   });
@@ -206,7 +206,7 @@ describe('validate vercel oidc token', () => {
       await isValidVercelOidcToken(
         { aud: 'https://vercel.com/acme-staging' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).toBe(true);
   });
@@ -220,14 +220,14 @@ describe('validate vercel oidc token', () => {
       await isValidVercelOidcToken(
         { team: 'acme', project: 'acme_website', environment: 'production' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).toBe(false);
     await expect(
       assertValidVercelOidcToken(
         { team: 'acme', project: 'acme_website', environment: 'production' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).rejects.toBeInstanceOf(UnacceptableVercelOidcTokenError);
   });
@@ -238,16 +238,80 @@ describe('validate vercel oidc token', () => {
       await isValidVercelOidcToken(
         { team: 'acme', project: 'acme_website', environment: 'production' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
+      )
+    ).toBe(false);
+  });
+
+  test('rejects a token with a tampered payload', async () => {
+    const token = await signToken(validClaims, { privateKey });
+    const [headerB64, payloadB64, signatureB64] = token.split('.');
+    const decoded = JSON.parse(
+      Buffer.from(payloadB64, 'base64url').toString('utf8')
+    );
+    decoded.environment = 'production';
+    decoded.owner = 'attacker';
+    const tamperedPayload = Buffer.from(JSON.stringify(decoded)).toString(
+      'base64url'
+    );
+    const tampered = `${headerB64}.${tamperedPayload}.${signatureB64}`;
+    expect(
+      await isValidVercelOidcToken(
+        { team: 'attacker', environment: 'production' },
+        tampered,
+        { fetchJwks }
+      )
+    ).toBe(false);
+  });
+
+  test('rejects a token with alg=none', async () => {
+    const header = Buffer.from(
+      JSON.stringify({ alg: 'none', typ: 'JWT', kid: KID })
+    ).toString('base64url');
+    const payload = Buffer.from(
+      JSON.stringify({
+        ...validClaims,
+        iss: 'https://oidc.vercel.com',
+        exp: Math.floor(Date.now() / 1000) + 60,
+        iat: Math.floor(Date.now() / 1000),
+      })
+    ).toString('base64url');
+    const unsigned = `${header}.${payload}.`;
+    expect(
+      await isValidVercelOidcToken(
+        { team: 'acme', project: 'acme_website', environment: 'production' },
+        unsigned,
+        { fetchJwks }
+      )
+    ).toBe(false);
+  });
+
+  test('rejects a token with a non-RS256 algorithm', async () => {
+    const header = Buffer.from(
+      JSON.stringify({ alg: 'HS256', typ: 'JWT', kid: KID })
+    ).toString('base64url');
+    const payload = Buffer.from(
+      JSON.stringify({
+        ...validClaims,
+        iss: 'https://oidc.vercel.com',
+        exp: Math.floor(Date.now() / 1000) + 60,
+      })
+    ).toString('base64url');
+    const fake = `${header}.${payload}.AAAA`;
+    expect(
+      await isValidVercelOidcToken(
+        { team: 'acme', project: 'acme_website', environment: 'production' },
+        fake,
+        { fetchJwks }
       )
     ).toBe(false);
   });
 
   test('rejects a token from a non-Vercel issuer without fetching JWKS', async () => {
     let resolverCalled = false;
-    const detectingResolver: JwksResolver = issuer => {
+    const detectingFetcher: JwksFetcher = async issuer => {
       resolverCalled = true;
-      return jwksResolver(issuer);
+      return fetchJwks(issuer);
     };
     const token = await signToken(validClaims, {
       privateKey,
@@ -257,7 +321,7 @@ describe('validate vercel oidc token', () => {
       await isValidVercelOidcToken(
         { team: 'acme', project: 'acme_website', environment: 'production' },
         token,
-        { jwks: detectingResolver }
+        { fetchJwks: detectingFetcher }
       )
     ).toBe(false);
     expect(resolverCalled).toBe(false);
@@ -272,7 +336,7 @@ describe('validate vercel oidc token', () => {
       await isValidVercelOidcToken(
         { team: 'acme', project: 'acme_website', environment: 'production' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).toBe(false);
   });
@@ -286,34 +350,44 @@ describe('validate vercel oidc token', () => {
       await isValidVercelOidcToken(
         { team: 'acme', project: 'acme_website', environment: 'production' },
         token,
-        { jwks: jwksResolver }
+        { fetchJwks }
       )
     ).toBe(true);
   });
 
   test('rejects an empty token string', async () => {
     expect(
-      await isValidVercelOidcToken({ team: 'acme' }, '', {
-        jwks: jwksResolver,
-      })
+      await isValidVercelOidcToken({ team: 'acme' }, '', { fetchJwks })
     ).toBe(false);
     await expect(
-      assertValidVercelOidcToken({ team: 'acme' }, '', { jwks: jwksResolver })
+      assertValidVercelOidcToken({ team: 'acme' }, '', { fetchJwks })
     ).rejects.toBeInstanceOf(UnacceptableVercelOidcTokenError);
   });
 
   test('rejects a malformed token', async () => {
     expect(
       await isValidVercelOidcToken({ team: 'acme' }, 'not-a-jwt', {
-        jwks: jwksResolver,
+        fetchJwks,
       })
     ).toBe(false);
   });
 
   test('rejects when no matchers are provided', async () => {
     const token = await signToken(validClaims, { privateKey });
+    expect(await isValidVercelOidcToken([], token, { fetchJwks })).toBe(false);
+  });
+
+  test('rejects when the kid is not found in the JWKS', async () => {
+    const token = await signToken(validClaims, {
+      privateKey,
+      keyId: 'unknown-kid',
+    });
     expect(
-      await isValidVercelOidcToken([], token, { jwks: jwksResolver })
+      await isValidVercelOidcToken(
+        { team: 'acme', project: 'acme_website', environment: 'production' },
+        token,
+        { fetchJwks }
+      )
     ).toBe(false);
   });
 
@@ -322,7 +396,7 @@ describe('validate vercel oidc token', () => {
     let error: unknown;
     try {
       await assertValidVercelOidcToken({ team: 'vercel' }, token, {
-        jwks: jwksResolver,
+        fetchJwks,
       });
     } catch (e) {
       error = e;

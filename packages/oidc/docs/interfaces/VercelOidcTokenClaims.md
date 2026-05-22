@@ -4,7 +4,7 @@
 
 # Interface: VercelOidcTokenClaims
 
-Defined in: packages/oidc/src/validate.ts:21
+Defined in: [packages/oidc/src/validate.ts:19](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L19)
 
 Claims emitted in a Vercel OIDC token.
 
@@ -12,15 +12,11 @@ Claims emitted in a Vercel OIDC token.
 
 https://vercel.com/docs/oidc/reference#oidc-token-anatomy
 
-## Extends
-
-- `JWTPayload`
-
 ## Indexable
 
-> \[`propName`: `string`\]: `unknown`
+> \[`claim`: `string`\]: `unknown`
 
-Any other JWT Claim Set member.
+Other claims that may be present.
 
 ## Properties
 
@@ -28,13 +24,9 @@ Any other JWT Claim Set member.
 
 > `optional` **aud?**: `string` \| `string`[]
 
-Defined in: packages/oidc/src/validate.ts:25
+Defined in: [packages/oidc/src/validate.ts:23](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L23)
 
 Audience. `https://vercel.com/[TEAM_SLUG]`.
-
-#### Overrides
-
-`JWTPayload.aud`
 
 ---
 
@@ -42,7 +34,7 @@ Audience. `https://vercel.com/[TEAM_SLUG]`.
 
 > `optional` **environment?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:37
+Defined in: [packages/oidc/src/validate.ts:41](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L41)
 
 Environment: `production`, `preview`, or `development`.
 
@@ -52,17 +44,9 @@ Environment: `production`, `preview`, or `development`.
 
 > `optional` **exp?**: `number`
 
-Defined in: node_modules/.pnpm/jose@5.9.6/node_modules/jose/dist/types/types.d.ts:612
+Defined in: [packages/oidc/src/validate.ts:27](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L27)
 
-JWT Expiration Time
-
-#### See
-
-[RFC7519#section-4.1.4](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.4)
-
-#### Inherited from
-
-`JWTPayload.exp`
+Expiration time (seconds since epoch).
 
 ---
 
@@ -70,17 +54,9 @@ JWT Expiration Time
 
 > `optional` **iat?**: `number`
 
-Defined in: node_modules/.pnpm/jose@5.9.6/node_modules/jose/dist/types/types.d.ts:619
+Defined in: [packages/oidc/src/validate.ts:31](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L31)
 
-JWT Issued At
-
-#### See
-
-[RFC7519#section-4.1.6](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.6)
-
-#### Inherited from
-
-`JWTPayload.iat`
+Issued-at time (seconds since epoch).
 
 ---
 
@@ -88,31 +64,9 @@ JWT Issued At
 
 > `optional` **iss?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:23
+Defined in: [packages/oidc/src/validate.ts:21](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L21)
 
 Issuer. `https://oidc.vercel.com` (global) or `https://oidc.vercel.com/[TEAM_SLUG]` (team).
-
-#### Overrides
-
-`JWTPayload.iss`
-
----
-
-### jti?
-
-> `optional` **jti?**: `string`
-
-Defined in: node_modules/.pnpm/jose@5.9.6/node_modules/jose/dist/types/types.d.ts:598
-
-JWT ID
-
-#### See
-
-[RFC7519#section-4.1.7](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.7)
-
-#### Inherited from
-
-`JWTPayload.jti`
 
 ---
 
@@ -120,17 +74,9 @@ JWT ID
 
 > `optional` **nbf?**: `number`
 
-Defined in: node_modules/.pnpm/jose@5.9.6/node_modules/jose/dist/types/types.d.ts:605
+Defined in: [packages/oidc/src/validate.ts:29](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L29)
 
-JWT Not Before
-
-#### See
-
-[RFC7519#section-4.1.5](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.5)
-
-#### Inherited from
-
-`JWTPayload.nbf`
+Not-before time (seconds since epoch).
 
 ---
 
@@ -138,7 +84,7 @@ JWT Not Before
 
 > `optional` **owner?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:29
+Defined in: [packages/oidc/src/validate.ts:33](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L33)
 
 Team slug (e.g. `acme`).
 
@@ -148,7 +94,7 @@ Team slug (e.g. `acme`).
 
 > `optional` **owner_id?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:31
+Defined in: [packages/oidc/src/validate.ts:35](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L35)
 
 Team ID (e.g. `team_7Gw5...`).
 
@@ -158,7 +104,7 @@ Team ID (e.g. `team_7Gw5...`).
 
 > `optional` **project?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:33
+Defined in: [packages/oidc/src/validate.ts:37](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L37)
 
 Project name (e.g. `acme_website`).
 
@@ -168,7 +114,7 @@ Project name (e.g. `acme_website`).
 
 > `optional` **project_id?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:35
+Defined in: [packages/oidc/src/validate.ts:39](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L39)
 
 Project ID (e.g. `prj_7Gw5...`).
 
@@ -178,13 +124,9 @@ Project ID (e.g. `prj_7Gw5...`).
 
 > `optional` **sub?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:27
+Defined in: [packages/oidc/src/validate.ts:25](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L25)
 
 Subject. `owner:[TEAM_SLUG]:project:[PROJECT_NAME]:environment:[ENVIRONMENT]`.
-
-#### Overrides
-
-`JWTPayload.sub`
 
 ---
 
@@ -192,6 +134,6 @@ Subject. `owner:[TEAM_SLUG]:project:[PROJECT_NAME]:environment:[ENVIRONMENT]`.
 
 > `optional` **user_id?**: `string`
 
-Defined in: packages/oidc/src/validate.ts:39
+Defined in: [packages/oidc/src/validate.ts:43](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L43)
 
 User ID. Only present when environment is `development`.

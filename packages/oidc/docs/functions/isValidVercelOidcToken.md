@@ -6,7 +6,7 @@
 
 > **isValidVercelOidcToken**(`matchers`, `token`, `options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`boolean`\>
 
-Defined in: packages/oidc/src/validate.ts:299
+Defined in: [packages/oidc/src/validate.ts:524](https://github.com/vercel/vercel/blob/main/packages/oidc/src/validate.ts#L524)
 
 Returns `true` if the given Vercel OIDC token has a valid signature, has not
 expired, and matches at least one of the provided matchers; otherwise
