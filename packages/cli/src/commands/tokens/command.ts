@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption } from '../../util/arg-common';
+import { formatOption, projectOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -38,11 +38,8 @@ export const addSubcommand = {
   options: [
     formatOption,
     {
-      name: 'project',
-      shorthand: null,
-      type: String,
+      ...projectOption,
       description: 'Optional project ID to scope the token to',
-      deprecated: false,
     },
   ],
   examples: [

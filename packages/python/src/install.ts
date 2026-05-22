@@ -240,7 +240,7 @@ interface EnsureUvProjectParams {
   rootDir: string;
   venvPath: string;
   pythonPackage: PythonPackage;
-  pythonVersion: string;
+  pythonVersion: string | undefined;
   uv: UvRunner;
   /**
    * When true, generate lock files with --no-build --upgrade to ensure
@@ -325,7 +325,7 @@ export async function ensureUvProject({
       // so that `uv lock` and `uv sync` agree on the Python constraint.
       // For converted manifests the original constraint (e.g. from Pipfile.lock)
       // may specify an older version that the builder has auto-upgraded.
-      if (manifest.data.project) {
+      if (manifest.data.project && pythonVersion !== undefined) {
         manifest.data.project['requires-python'] = `~=${pythonVersion}.0`;
       }
       const content = stringifyManifest(manifest.data);
@@ -361,7 +361,10 @@ export async function ensureUvProject({
       'No Python manifest found; creating an empty pyproject.toml and uv.lock...'
     );
 
-    const requiresPython = `~=${pythonVersion}.0`;
+    const requiresPython =
+      pythonVersion !== undefined
+        ? `~=${pythonVersion}.0`
+        : `>=${DEFAULT_PYTHON_VERSION_STRING}`;
     const minimalManifest = createMinimalManifest({
       name: 'app',
       requiresPython,

@@ -644,6 +644,158 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
   });
 });
 
+describe('[vercel dev] Multi-service with services', () => {
+  test('[vercel dev] explicit config: service-to-service communication', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Service B responds independently
+      const serviceBRes = await nodeFetch(`http://localhost:${port}/api/b/`);
+      expect(serviceBRes.status).toBe(200);
+      const serviceBJson = await serviceBRes.json();
+      expect(serviceBJson).toHaveProperty('service', 'service-b');
+      expect(serviceBJson).toHaveProperty('message', 'Hello from service-b');
+
+      // Service A responds independently
+      const serviceARes = await nodeFetch(`http://localhost:${port}/api/a/`);
+      expect(serviceARes.status).toBe(200);
+      const serviceAJson = await serviceARes.json();
+      expect(serviceAJson).toHaveProperty('service', 'service-a');
+
+      // Service A calls Service B (service-to-service communication)
+      const callRes = await nodeFetch(
+        `http://localhost:${port}/api/a/call-service-b`
+      );
+      expect(callRes.status).toBe(200);
+      const callJson = await callRes.json();
+      expect(callJson).toHaveProperty('service', 'service-a');
+      expect(callJson).toHaveProperty('from_service_b');
+      expect(callJson.from_service_b).toHaveProperty('service', 'service-b');
+      expect(callJson.from_service_b).toHaveProperty(
+        'message',
+        'Hello from service-b'
+      );
+
+      // Frontend loads and received service URL env vars
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      expect(frontendRes.status).toBe(200);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain('<h1>Service Dashboard</h1>');
+      expect(frontendHtml).toContain('/api/a');
+      expect(frontendHtml).toContain('/api/b');
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] env precedence: per-service ref beats top-level ref', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const res = await nodeFetch(
+        `http://localhost:${port}/api/a/env?name=ECHO_VAR`
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json).toEqual({
+        name: 'ECHO_VAR',
+        value: `http://localhost:${port}/api/b`,
+      });
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] env precedence: shell env beats per-service and top-level refs', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          ECHO_VAR: 'http://from-shell',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const res = await nodeFetch(
+        `http://localhost:${port}/api/a/env?name=ECHO_VAR`
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json).toEqual({
+        name: 'ECHO_VAR',
+        value: 'http://from-shell',
+      });
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] env precedence: top-level ref applies when no per-service override', async () => {
+    const dir = fixture('services-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const res = await nodeFetch(
+        `http://localhost:${port}/api/a/env?name=GLOBAL_REF`
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json).toEqual({
+        name: 'GLOBAL_REF',
+        value: `http://localhost:${port}/api/b`,
+      });
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Multi-service auto-detection', () => {
   test('[vercel dev] auto-detect: frontend at root + backend/', async () => {
     const dir = fixture('services-zc-root-backend');
@@ -866,7 +1018,8 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       const serviceAJson = await serviceARes.json();
       expect(serviceAJson).toHaveProperty('service', 'service-a');
 
-      // Service A calls Service B (service-to-service communication)
+      // Service A calls Service B (service-to-service communication via
+      // legacy implicit `SERVICE_B_URL` env var)
       const callRes = await nodeFetch(
         `http://localhost:${port}/_/service-a/call-service-b`
       );
@@ -880,7 +1033,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
         'Hello from service-b'
       );
 
-      // Frontend loads and received service URL env vars
+      // Frontend loads and received legacy implicit prefixed URL env vars
       const frontendRes = await nodeFetch(`http://localhost:${port}/`);
       expect(frontendRes.status).toBe(200);
       const frontendHtml = await frontendRes.text();

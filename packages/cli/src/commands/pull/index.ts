@@ -97,13 +97,15 @@ export default async function main(client: Client) {
   telemetryClient.trackCliFlagProd(isProduction);
   telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
   telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+  telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
 
   const returnCode = await pullCommandLogic(
     client,
     cwd,
     autoConfirm,
     environment,
-    parsedArgs.flags
+    parsedArgs.flags,
+    parsedArgs.flags['--project']
   );
 
   if (returnCode === 0 && !autoConfirm) {
@@ -118,11 +120,14 @@ export async function pullCommandLogic(
   cwd: string,
   autoConfirm: boolean,
   environment: string,
-  flags: PullCommandFlags
+  flags: PullCommandFlags,
+  projectNameOrId?: string
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, {
     autoConfirm,
     pullEnv: false,
+    projectName: projectNameOrId,
+    failIfNotFound: !!projectNameOrId,
   });
   if (typeof link === 'number') {
     return link;

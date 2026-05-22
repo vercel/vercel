@@ -1,6 +1,6 @@
 const nodeFetch = require('node-fetch');
 
-const DATADOG_API_KEY = process.env.DATADOG_API_KEY;
+const DATADOG_API_KEY = process.env.DD_API_KEY || process.env.DATADOG_API_KEY;
 const DATADOG_ENDPOINT = 'https://api.datadoghq.com/api/v2/series';
 
 const pendingPoints = [];

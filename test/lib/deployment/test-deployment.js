@@ -421,7 +421,9 @@ async function testDeployment(fixturePath, opts = {}) {
     opts.projectSettings.nodeVersion = nodeVersion;
   }
 
-  const probePath = path.resolve(fixturePath, 'probe.js');
+  const cjsProbePath = path.resolve(fixturePath, 'probe.cjs');
+  const jsProbePath = path.resolve(fixturePath, 'probe.js');
+  const probePath = fs.existsSync(cjsProbePath) ? cjsProbePath : jsProbePath;
   let probes = [];
   if ('probes' in nowJson) {
     probes = nowJson.probes;
@@ -431,10 +433,11 @@ async function testDeployment(fixturePath, opts = {}) {
     // we'll run probes after we have the deployment url below
   } else {
     console.warn(
-      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
+      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.cjs, probe.js, or vercel.json`
     );
   }
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
+  delete bodies['probe.cjs'];
   delete bodies['probe.js'];
   delete bodies['probes.json'];
 
@@ -491,7 +494,7 @@ async function testDeployment(fixturePath, opts = {}) {
 async function nowDeployIndexTgz(file) {
   const bodies = {
     'index.tgz': fs.readFileSync(file),
-    'now.json': Buffer.from(JSON.stringify({ version: 2 })),
+    'vercel.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
   return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;

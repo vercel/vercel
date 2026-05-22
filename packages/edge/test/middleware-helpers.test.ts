@@ -1,7 +1,3 @@
-/**
- * @jest-environment @edge-runtime/jest-environment
- */
-
 import { next, rewrite } from '../src';
 
 describe('rewrite', () => {

@@ -18,13 +18,25 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
+from vercel_runtime.cache import (
+    SC_HEADERS_ALWAYS_STRIP,
+    SC_HEADERS_STRIP_ON_NO_LEAK,
+    SC_NO_HEADER_LEAK_HEADER,
+    clear_runtime_cache_context,
+    set_runtime_cache_from_asgi_pairs,
+    set_runtime_cache_from_http_headers,
+)
 from vercel_runtime.crons import (
     bootstrap_cron_service_app,
     is_cron_service,
 )
 from vercel_runtime.headers import (
+    INTERNAL_OIDC_HEADER_NAME,
+    OIDC_HEADER_NAME,
+    append_oidc_header_if_missing,
     clear_vercel_headers_context,
     decode_header_bytes,
+    get_oidc_token_for_request,
     normalize_event_header_pairs,
     normalize_event_headers,
     set_vercel_headers_from_asgi_pairs,
@@ -41,10 +53,9 @@ from vercel_runtime.routing import (
     split_request_target,
 )
 from vercel_runtime.workers import (
-    bootstrap_worker_service_app,
-    is_celery_app,
     is_worker_service,
-    prepare_celery_environment,
+    maybe_bootstrap_worker_service_app,
+    prepare_worker_environment,
 )
 
 if TYPE_CHECKING:
@@ -467,36 +478,29 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
-    prepare_celery_environment()
+    prepare_worker_environment()
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
     _fatal_exc(f'could not import "{_entrypoint_rel}"')
 
 if is_worker_service():
-    if "handler" not in __vc_variables and "Handler" not in __vc_variables:
-        should_bootstrap_worker_app = (
-            "app" not in __vc_variables
-            or is_celery_app(getattr(__vc_module, "app", None))
-        )
-    else:
-        should_bootstrap_worker_app = False
-
-    if should_bootstrap_worker_app:
-        try:
-            __vc_module.__dict__["app"] = bootstrap_worker_service_app(
-                __vc_module
-            )
+    try:
+        worker_app = maybe_bootstrap_worker_service_app(__vc_module)
+        if worker_app is not None:
+            __vc_module.__dict__["app"] = worker_app
             __vc_variables = dir(__vc_module)
-        except Exception:
-            _stderr("Error bootstrapping worker service app:")
-            _stderr(traceback.format_exc())
-            exit(1)
+            _entrypoint_varname = "app"
+    except Exception:
+        _stderr("Error bootstrapping worker service app:")
+        _stderr(traceback.format_exc())
+        exit(1)
 
 if is_cron_service():
     try:
         __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
         __vc_variables = dir(__vc_module)
+        _entrypoint_varname = "app"
     except Exception:
         _stderr("Error bootstrapping cron service app:")
         _stderr(traceback.format_exc())
@@ -568,7 +572,9 @@ class ASGIMiddleware:
         new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
-        internal_oidc_token = ""
+        internal_oidc_token: str | None = None
+        sc_pairs: list[tuple[bytes, bytes]] = []
+        sc_no_header_leak = False
 
         for raw_k, raw_v in headers_list:
             key_bytes = raw_k if isinstance(raw_k, bytes) else raw_k.encode()
@@ -586,20 +592,27 @@ class ASGIMiddleware:
                 "x-vercel-internal-trace-id",
             ):
                 continue
-            if key == "x-vercel-internal-oidc-token":
+            if key == INTERNAL_OIDC_HEADER_NAME:
                 internal_oidc_token = val
+                continue
+            if key in SC_HEADERS_ALWAYS_STRIP:
+                continue
+            if key in SC_HEADERS_STRIP_ON_NO_LEAK:
+                # Hold these aside until we know whether the proxy asked us to
+                # hide them from client code
+                sc_pairs.append((key_bytes, val_bytes))
+                if key == SC_NO_HEADER_LEAK_HEADER:
+                    sc_no_header_leak = bool(val)
                 continue
             new_headers.append((key_bytes, val_bytes))
 
-        if internal_oidc_token:
-            has_oidc_header = any(
-                decode_header_bytes(k).lower() == "x-vercel-oidc-token"
-                for k, _ in new_headers
-            )
-            if not has_oidc_header:
-                new_headers.append(
-                    (b"x-vercel-oidc-token", internal_oidc_token.encode())
-                )
+        append_oidc_header_if_missing(
+            new_headers,
+            internal_oidc_token=internal_oidc_token,
+        )
+        if not sc_no_header_leak:
+            # Proxy didn't ask for header hiding, so extend the normal headers
+            new_headers.extend(sc_pairs)
 
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
@@ -626,10 +639,12 @@ class ASGIMiddleware:
             }
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
+        set_runtime_cache_from_asgi_pairs(sc_pairs)
 
         try:
             await self.app(new_scope, receive, send)
         finally:
+            clear_runtime_cache_context()
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -748,17 +763,34 @@ if "VERCEL_IPC_PATH" in os.environ:
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
             del self.headers["x-vercel-internal-trace-id"]
-            internal_oidc_token = self.headers.get(
-                "x-vercel-internal-oidc-token"
+            raw_internal_oidc_token = self.headers.get(
+                INTERNAL_OIDC_HEADER_NAME
             )
-            if (
-                isinstance(internal_oidc_token, str)
-                and internal_oidc_token
-                and not self.headers.get("x-vercel-oidc-token")
-            ):
-                self.headers["x-vercel-oidc-token"] = internal_oidc_token
+            internal_oidc_token = (
+                raw_internal_oidc_token
+                if isinstance(raw_internal_oidc_token, str)
+                else None
+            )
+            oidc_token = get_oidc_token_for_request(
+                has_public_oidc=bool(self.headers.get(OIDC_HEADER_NAME)),
+                internal_oidc_token=internal_oidc_token,
+            )
+            if oidc_token:
+                self.headers[OIDC_HEADER_NAME] = oidc_token
             with contextlib.suppress(Exception):
-                del self.headers["x-vercel-internal-oidc-token"]
+                del self.headers[INTERNAL_OIDC_HEADER_NAME]
+
+            sc_no_header_leak = bool(
+                self.headers.get(SC_NO_HEADER_LEAK_HEADER),
+            )
+            set_runtime_cache_from_http_headers(self.headers)
+            for sc_header in SC_HEADERS_ALWAYS_STRIP:
+                with contextlib.suppress(Exception):
+                    del self.headers[sc_header]
+            if sc_no_header_leak:
+                for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
+                    with contextlib.suppress(Exception):
+                        del self.headers[sc_header]
 
             send_message(
                 {
@@ -784,6 +816,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()
                 storage.reset(token)
                 send_message(
@@ -988,14 +1021,28 @@ if (
     port = server.server_address[1]  # type: ignore[attr-defined]
 
     def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-        _thread.start_new_thread(server.handle_request, ())  # type: ignore[attr-defined]
-
         payload = json.loads(event["body"])
         path, _ = apply_service_route_prefix_to_target(payload["path"])
         headers = normalize_event_headers(payload.get("headers", {}))
         method = payload["method"]
         encoding = payload.get("encoding")
         body = payload.get("body")
+
+        sc_no_header_leak = bool(headers.get(SC_NO_HEADER_LEAK_HEADER))
+        set_runtime_cache_from_http_headers(headers)
+        for sc_header in SC_HEADERS_ALWAYS_STRIP:
+            headers.pop(sc_header, None)
+        if sc_no_header_leak:
+            for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
+                headers.pop(sc_header, None)
+
+        # `_thread.start_new_thread` does not propagate contextvars
+        captured_ctx = contextvars.copy_context()
+        _thread.start_new_thread(
+            captured_ctx.run,
+            (server.handle_request,),  # type: ignore[attr-defined]
+        )
+        clear_runtime_cache_context()
 
         if (body is not None and len(body) > 0) and (
             encoding is not None and encoding == "base64"
@@ -1072,6 +1119,15 @@ else:
             payload = json.loads(event["body"])
 
             raw_headers = normalize_event_headers(payload.get("headers", {}))
+
+            sc_no_header_leak = bool(raw_headers.get(SC_NO_HEADER_LEAK_HEADER))
+            set_runtime_cache_from_http_headers(raw_headers)
+            for sc_header in SC_HEADERS_ALWAYS_STRIP:
+                raw_headers.pop(sc_header, None)
+            if sc_no_header_leak:
+                for sc_header in SC_HEADERS_STRIP_ON_NO_LEAK:
+                    raw_headers.pop(sc_header, None)
+
             headers = Headers(raw_headers)
 
             body: Any = payload.get("body", "")
@@ -1124,6 +1180,7 @@ else:
             try:
                 response = Response.from_app(wsgi_user_app, environ)
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()
 
             return_dict: dict[str, Any] = {
@@ -1353,11 +1410,30 @@ else:
             header_pairs = normalize_event_header_pairs(
                 payload.get("headers", {})
             )
+
+            sc_pairs: list[tuple[str, str]] = []
+            sc_no_header_leak = False
             headers: dict[str, str] = {}
             headers_encoded: list[tuple[bytes, bytes]] = []
             for key, value in header_pairs:
+                key_lower = key.lower()
+                if key_lower in SC_HEADERS_ALWAYS_STRIP:
+                    continue
+                if key_lower in SC_HEADERS_STRIP_ON_NO_LEAK:
+                    sc_pairs.append((key_lower, value))
+                    if key_lower == SC_NO_HEADER_LEAK_HEADER:
+                        sc_no_header_leak = bool(value)
+                    continue
                 headers[key] = value
-                headers_encoded.append((key.lower().encode(), value.encode()))
+                headers_encoded.append((key_lower.encode(), value.encode()))
+
+            set_runtime_cache_from_http_headers(dict(sc_pairs))
+            if not sc_no_header_leak:
+                for sc_key, sc_value in sc_pairs:
+                    headers[sc_key] = sc_value
+                    headers_encoded.append(
+                        (sc_key.encode(), sc_value.encode()),
+                    )
 
             body = payload.get("body", b"")
             if payload.get("encoding") == "base64":
@@ -1403,4 +1479,5 @@ else:
                 response = asgi_cycle(asgi_user_app, body)
                 return response
             finally:
+                clear_runtime_cache_context()
                 clear_vercel_headers_context()

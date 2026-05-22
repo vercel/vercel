@@ -30,7 +30,7 @@
       "require": "./middleware.js"
     }
   },
-  "version": "3.4.3",
+  "version": "3.6.0",
   "repository": {
     "directory": "packages/functions",
     "type": "git",
@@ -49,11 +49,11 @@
     "mariadb": "3.4.5",
     "mongodb": "6.18.0",
     "mysql2": "3.14.2",
+    "prettier": "3.8.3",
     "tinyspawn": "1.3.1",
-    "typedoc": "0.24.6",
-    "typedoc-plugin-markdown": "4.1.2",
-    "typedoc-plugin-mdn-links": "3.2.3",
-    "typescript": "4.9.5",
+    "typedoc": "0.28.19",
+    "typedoc-plugin-markdown": "4.11.0",
+    "typedoc-plugin-mdn-links": "5.1.1",
     "vitest": "2.0.1"
   },
   "peerDependencies": {

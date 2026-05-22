@@ -1,6 +1,7 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { connexCommand } from '../../../../commands/connex/command';
+import { isValidHexColor } from '../../../connex/validate-hex';
 
 export class ConnexTelemetryClient
   extends TelemetryClient
@@ -27,6 +28,132 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandOpen(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'open',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAttach(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'attach',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDetach(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'detach',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
+  trackCliArgumentClient(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'client',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliArgumentId(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionIcon(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'icon',
+        // Path can leak username/repo location — redact.
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionBackgroundColor(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'background-color',
+        // Hex colors are not sensitive; arbitrary text might be. Only emit
+        // the raw value when it parses as #RRGGBB, otherwise redact so a
+        // rejected value isn't sent verbatim before validation runs.
+        value: isValidHexColor(v) ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionAccentColor(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'accent-color',
+        value: isValidHexColor(v) ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagYes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliFlagDisconnectAll(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('disconnect-all');
+    }
+  }
+
+  trackCliFlagTriggers(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('triggers');
+    }
+  }
+
+  trackCliOptionTriggerBranch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTriggerPath(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-path',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagAllProjects(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('all-projects');
+    }
+  }
+
   trackCliOptionLimit(v: number | undefined) {
     if (v !== undefined) {
       this.trackCliOption({
@@ -51,6 +178,24 @@ export class ConnexTelemetryClient
         option: 'format',
         value: v,
       });
+    }
+  }
+
+  trackCliOptionEnvironment(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    for (const raw of v) {
+      for (const env of raw.split(',')) {
+        const trimmed = env.trim();
+        if (!trimmed) {
+          continue;
+        }
+        this.trackCliOption({
+          option: 'environment',
+          value: this.redactedTargetName(trimmed),
+        });
+      }
     }
   }
 }

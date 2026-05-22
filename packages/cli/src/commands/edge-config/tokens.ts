@@ -20,7 +20,7 @@ import { resolveEdgeConfigId } from './resolve-edge-config-id';
 interface TokenRow {
   id?: string;
   label?: string;
-  token?: string;
+  partialToken?: string;
   createdAt?: number;
 }
 
@@ -49,12 +49,13 @@ export default async function tokensCmd(
   const { args, flags } = parsedArgs;
   const [idOrSlug] = args;
   const addLabel = flags['--add'];
-  const removeTokens = flags['--remove'];
+  const removeValues = flags['--remove'];
+  const removeCount = removeValues?.length ?? 0;
   const skipConfirmation = flags['--yes'] === true;
 
   telemetry.trackCliArgumentIdOrSlug(idOrSlug);
   telemetry.trackCliOptionAdd(addLabel);
-  telemetry.trackCliOptionRemove(removeTokens);
+  telemetry.trackCliOptionRemove(removeValues);
   telemetry.trackCliFlagYes(flags['--yes']);
   telemetry.trackCliOptionFormat(flags['--format']);
 
@@ -85,12 +86,12 @@ export default async function tokensCmd(
     return 1;
   }
 
-  if (addLabel && removeTokens?.length) {
+  if (addLabel && removeCount > 0) {
     output.error('Use either `--add` or `--remove`, not both.');
     return 1;
   }
 
-  if (removeTokens?.length && client.nonInteractive && !skipConfirmation) {
+  if (removeCount > 0 && client.nonInteractive && !skipConfirmation) {
     outputAgentError(
       client,
       {
@@ -167,11 +168,11 @@ export default async function tokensCmd(
       return 0;
     }
 
-    if (removeTokens?.length) {
+    if (removeValues?.length) {
       if (
         !skipConfirmation &&
         !(await client.input.confirm(
-          `Revoke ${removeTokens.length} token(s) on ${chalk.bold(id)}?`,
+          `Revoke ${removeValues.length} token(s) on ${chalk.bold(id)}?`,
           false
         ))
       ) {
@@ -179,24 +180,54 @@ export default async function tokensCmd(
         return 0;
       }
 
+      // Disambiguate ids from plaintext tokens by consulting the store's own
+      // list. The DELETE endpoint accepts `tokens` and `ids` independently,
+      // but both are opaque UUID-shaped strings with no reliable client-side
+      // distinguishing feature, so we let the server's source of truth
+      // classify each value.
+      const rows = await client.fetch<TokenRow[]>(`${base}/tokens`);
+      const knownIds = new Set(
+        rows.map(r => r.id).filter((v): v is string => Boolean(v))
+      );
+      const ids: string[] = [];
+      const tokens: string[] = [];
+      for (const value of removeValues) {
+        if (knownIds.has(value)) ids.push(value);
+        else tokens.push(value);
+      }
+
+      const body: { tokens?: string[]; ids?: string[] } = {};
+      if (tokens.length) body.tokens = tokens;
+      if (ids.length) body.ids = ids;
+
       await client.fetch(`${base}/tokens`, {
         method: 'DELETE',
-        body: { tokens: removeTokens },
+        body,
       });
 
       if (asJson) {
         client.stdout.write(
-          `${JSON.stringify({ status: 'ok', revoked: removeTokens.length }, null, 2)}\n`
+          `${JSON.stringify({ status: 'ok', revoked: removeValues.length }, null, 2)}\n`
         );
         return 0;
       }
-      output.success(`Revoked ${removeTokens.length} token(s).`);
+      output.success(`Revoked ${removeValues.length} token(s).`);
       return 0;
     }
 
     const rows = await client.fetch<TokenRow[]>(`${base}/tokens`);
     if (asJson) {
-      client.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      // Pick an explicit allowlist of fields so we never forward a plaintext
+      // `token` in `--format json`, even if an older API deploy still returns
+      // it during FLA-2777 rollout. `--add` output is unchanged and still
+      // reveals the token once on creation.
+      const sanitized = rows.map(row => ({
+        id: row.id,
+        label: row.label,
+        partialToken: row.partialToken,
+        createdAt: row.createdAt,
+      }));
+      client.stdout.write(`${JSON.stringify(sanitized, null, 2)}\n`);
       return 0;
     }
 
@@ -206,10 +237,11 @@ export default async function tokensCmd(
     }
 
     const tableRows = [
-      ['id', 'label', 'created'].map(h => gray(h)),
+      ['id', 'label', 'value', 'created'].map(h => gray(h)),
       ...rows.map(t => [
         t.id ?? '',
         t.label ?? '',
+        t.partialToken ?? '',
         t.createdAt != null ? new Date(t.createdAt).toISOString() : '',
       ]),
     ];

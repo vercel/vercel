@@ -17,6 +17,7 @@ export interface PackageManifest {
   version?: string;
   runtime: string;
   framework?: string;
+  serviceType?: string;
   runtimeVersion?: {
     requested?: string;
     requestedSource?: string;

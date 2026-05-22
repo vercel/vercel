@@ -5,7 +5,7 @@ describe('relatedProjects', () => {
   const mockEnv = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     process.env = { ...mockEnv };
   });
 

@@ -1,15 +1,13 @@
 import fs from 'fs';
 import AJV from 'ajv';
-import chalk from 'chalk';
 import { join, relative } from 'path';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import getOrgById from './get-org-by-id';
 import type Client from '../client';
 import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
-import getUser from '../get-user';
-import getTeamById from '../teams/get-team-by-id';
 import type {
   Project,
   ProjectLinkResult,
@@ -17,7 +15,7 @@ import type {
   ProjectLink,
 } from '@vercel-internals/types';
 import { prependEmoji, emoji, type EmojiLabel } from '../emoji';
-import { isDirectory } from '../config/global-path';
+import { isDirectory } from '../fs';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
@@ -25,6 +23,7 @@ import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
 import pull from '../../commands/env/pull';
 import { resolveProjectCwd } from './find-project-root';
 
@@ -79,23 +78,41 @@ export function getVercelDirectory(cwd: string): string {
 export async function getProjectLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string,
+  projectNameIsExplicit?: boolean
 ): Promise<ProjectLink | null> {
   // Prefer an explicit per-directory link (`.vercel/project.json`) over a
   // repository-level link (`.vercel/repo.json`). This prevents scenarios where
   // a freshly-created local link (e.g. after `vc link`) is ignored and the
   // user is re-prompted to select a repo-linked project again.
+  // When `projectNameIsExplicit` is true, the caller is resolving a user-
+  // supplied `--project` value, so mismatched local links must not win.
   const dirLink = await getLinkFromDir(getVercelDirectory(path));
   if (dirLink) {
-    return dirLink;
+    if (!projectNameIsExplicit || !projectName) {
+      return dirLink;
+    }
+
+    if (
+      dirLink.projectId === projectName ||
+      dirLink.projectName === projectName
+    ) {
+      return dirLink;
+    }
   }
-  return await getProjectLinkFromRepoLink(client, path, projectName);
+  return await getProjectLinkFromRepoLink(
+    client,
+    path,
+    projectName,
+    projectNameIsExplicit
+  );
 }
 
 async function getProjectLinkFromRepoLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string,
+  projectNameIsExplicit?: boolean
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
@@ -106,15 +123,22 @@ async function getProjectLinkFromRepoLink(
     relative(repoLink.rootPath, path)
   );
   let project: RepoProjectConfig | undefined;
-  if (projects.length === 1) {
+
+  if (projectName && projectNameIsExplicit) {
+    project = repoLink.repoConfig.projects.find(
+      p => p.id === projectName || p.name === projectName
+    );
+  } else if (projects.length === 1) {
     project = projects[0];
   } else {
     const selectableProjects =
       projects.length > 0 ? projects : repoLink.repoConfig.projects;
 
-    // If --project flag was provided, try to find a matching project by name
+    // If --project flag was provided, match by ID or name
     if (projectName) {
-      project = selectableProjects.find(p => p.name === projectName);
+      project = selectableProjects.find(
+        p => p.id === projectName || p.name === projectName
+      );
     }
 
     // Fall back to interactive selection if no project was found
@@ -212,32 +236,6 @@ export async function getLinkFromDir<T = ProjectLink>(
   }
 }
 
-async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
-  if (orgId.startsWith('team_')) {
-    try {
-      const team = await getTeamById(client, orgId);
-      if (!team) return null;
-      return { type: 'team', id: team.id, slug: team.slug };
-    } catch (err) {
-      // If the linked team no longer exists (or test mocks intentionally omit
-      // this endpoint), treat it as "not linked" instead of hard-failing.
-      if (
-        isAPIError(err) &&
-        (err.status === 404 ||
-          err.code === 'not_found' ||
-          err.code === 'mock_unimplemented')
-      ) {
-        return null;
-      }
-      throw err;
-    }
-  }
-
-  const user = await getUser(client);
-  if (user.id !== orgId) return null;
-  return { type: 'user', id: orgId, slug: user.username };
-}
-
 async function hasProjectLink(
   client: Client,
   projectLink: ProjectLink,
@@ -289,7 +287,14 @@ async function hasProjectLink(
 export async function getLinkedProject(
   client: Client,
   path = client.cwd,
-  projectName?: string
+  projectName?: string,
+  /**
+   * When `true`, resolve `projectName` via the API if no local link matches.
+   * Only enable for explicit user-supplied names (e.g. `--project`) so that
+   * implicit `projectName` defaults (like a directory basename) keep their
+   * existing `not_linked` → `setupAndLink` flow.
+   */
+  apiFallback?: boolean
 ): Promise<ProjectLinkResult> {
   path = await resolveProjectCwd(path);
 
@@ -308,10 +313,26 @@ export async function getLinkedProject(
     return { status: 'error', exitCode: 1 };
   }
 
-  const link =
+  let link =
     VERCEL_ORG_ID && VERCEL_PROJECT_ID
       ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path, projectName);
+      : await getProjectLink(client, path, projectName, apiFallback);
+
+  // Resolve `projectName` via the API when no local link matches. Enables
+  // non-interactive CI use (e.g. `vercel deploy --project my-app`).
+  if (!link && projectName && apiFallback) {
+    try {
+      const apiProject = await getProjectByIdOrName(client, projectName);
+      if (!(apiProject instanceof ProjectNotFound)) {
+        link = {
+          projectId: apiProject.id,
+          orgId: apiProject.accountId,
+        };
+      }
+    } catch {
+      // Swallow; caller handles `not_linked` below.
+    }
+  }
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null };
@@ -453,19 +474,10 @@ export async function linkFolderToProject(
 
   await writeReadme(path);
 
-  // update .gitignore
-  const isGitIgnoreUpdated = await addToGitIgnore(path);
+  // update .gitignore (silent — git status surfaces the change on demand)
+  await addToGitIgnore(path);
 
-  output.print(
-    prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${projectName}`
-      )} (created ${VERCEL_DIR}${
-        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-      })`,
-      emoji(successEmoji)
-    ) + '\n'
-  );
+  printAlignedLabel('Linked', `${orgSlug}/${projectName}`);
 
   if (!pullEnv) {
     return;

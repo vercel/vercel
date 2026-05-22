@@ -18,9 +18,11 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test": "vitest run --config ../../vitest.config.mts",
     "test-e2e": "pnpm test",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-e2e": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",
@@ -29,8 +31,8 @@
     "@vercel/build-utils": "workspace:*",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
-    "jest-junit": "16.0.0",
     "semver": "6.3.1",
+    "vitest": "2.0.3",
     "which": "3.0.0"
   }
 }

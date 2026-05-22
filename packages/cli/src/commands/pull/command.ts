@@ -1,6 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 import type { getFlagsSpecification } from '../../util/get-flags-specification';
 import type { parseArguments } from '../../util/get-args';
 
@@ -44,6 +44,7 @@ export const pullCommand = {
       description:
         'Skip questions when setting up new project using default scope and settings',
     },
+    projectOption,
   ],
   examples: [
     {

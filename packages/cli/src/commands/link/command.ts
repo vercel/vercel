@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { confirmOption, yesOption } from '../../util/arg-common';
+import { confirmOption, projectOption, yesOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -37,13 +37,10 @@ export const linkCommand = {
       deprecated: false,
     },
     {
-      name: 'project',
+      ...projectOption,
+      shorthand: 'p',
       description:
         'Project name or ID to link to (required for non-interactive)',
-      shorthand: 'p',
-      argument: 'NAME_OR_ID',
-      type: String,
-      deprecated: false,
     },
     {
       name: 'team',

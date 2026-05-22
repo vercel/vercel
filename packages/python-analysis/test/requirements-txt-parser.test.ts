@@ -644,9 +644,15 @@ mypackage @ https://example.com/package.zip
     });
   });
 
-  it('returns empty object for empty requirements', async () => {
+  it('returns valid pyproject for empty requirements', async () => {
     const result = await convertRequirementsToPyprojectToml('');
-    expect(result).toEqual({});
+    expect(result).toEqual({
+      project: {
+        name: 'app',
+        version: '0.1.0',
+        dependencies: [],
+      },
+    });
   });
 
   it('converts pip arguments when converting with readFile for -r', async () => {

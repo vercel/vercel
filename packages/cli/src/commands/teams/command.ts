@@ -97,6 +97,7 @@ export const switchSubcommand = {
       value: `${packageName} teams switch <slug>`,
     },
   ],
+  disabledGlobalOptions: ['token'],
 } as const;
 
 export const inviteSubcommand = {

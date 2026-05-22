@@ -422,4 +422,69 @@ describe('pull', () => {
       },
     ]);
   });
+
+  describe('--project', () => {
+    it('resolves the project via API in an unlinked directory', async () => {
+      const cwd = setupUnitFixture('vercel-pull-unlinked');
+      useUser();
+      const teams = useTeams('team_dummy');
+      assert(Array.isArray(teams));
+      useProject({
+        ...defaultProject,
+        id: 'prj_via_flag',
+        name: 'project-via-flag',
+        accountId: 'team_dummy',
+      });
+
+      client.setArgv(
+        'pull',
+        '--yes',
+        '--project=project-via-flag',
+        '--environment=production',
+        cwd
+      );
+      const exitCodePromise = pull(client);
+
+      await expect(client.stderr).toOutput(
+        `Downloading \`production\` Environment Variables for ${teams[0].slug}/project-via-flag`
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "pull"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:projectPath',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'flag:yes',
+          value: 'TRUE',
+        },
+        {
+          key: 'option:environment',
+          value: 'production',
+        },
+        {
+          key: 'option:project',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('fails fast with a clean error when --project does not resolve', async () => {
+      const cwd = setupUnitFixture('vercel-pull-unlinked');
+      useUser();
+      useTeams('team_dummy');
+      // No useProject() — every GET /v9/projects/* will 404.
+
+      client.setArgv('pull', '--yes', '--project=does-not-exist', cwd);
+      const exitCodePromise = pull(client);
+
+      await expect(client.stderr).toOutput(
+        'Project "does-not-exist" was not found'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "pull"').toEqual(1);
+    });
+  });
 });

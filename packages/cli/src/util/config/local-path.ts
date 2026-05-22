@@ -1,25 +1,26 @@
 import path from 'path';
 import { existsSync } from 'fs';
+import { DeprecatedNowJson } from '../errors-ts';
 import { InvalidLocalConfig } from '../errors-ts';
 import { ConflictingConfigFiles } from '../errors-ts';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import { VERCEL_DIR } from '../projects/link';
 import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 
 export default function getLocalPathConfig(prefix: string) {
-  const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
-  const customPath = argv['--local-config'];
+  const argv = parseArguments(process.argv.slice(2), {}, { permissive: true });
+  const customPath = argv.flags['--local-config'];
 
   // If `--local-config` flag was specified, then that takes priority
   if (customPath) {
     if (typeof customPath !== 'string') {
       throw new InvalidLocalConfig(customPath);
     }
-    return path.resolve(prefix, customPath);
+    return path.resolve(process.cwd(), customPath);
   }
 
-  // Otherwise check for `vercel.json`, `vercel.toml`, or `now.json`.
-  // Throw an error if more than one exists.
+  // Otherwise check for `vercel.json` or `vercel.toml`.
+  // `now.json` is no longer supported.
   const vercelConfigPath = path.join(prefix, 'vercel.json');
   const vercelTomlPath = path.join(prefix, 'vercel.toml');
   const nowConfigPath = path.join(prefix, 'now.json');
@@ -31,7 +32,10 @@ export default function getLocalPathConfig(prefix: string) {
   const foundConfigs: string[] = [];
   if (vercelConfigExists) foundConfigs.push(vercelConfigPath);
   if (vercelTomlExists) foundConfigs.push(vercelTomlPath);
-  if (nowConfigExists) foundConfigs.push(nowConfigPath);
+
+  if (nowConfigExists) {
+    throw new DeprecatedNowJson(nowConfigPath);
+  }
 
   if (foundConfigs.length > 1) {
     throw new ConflictingConfigFiles(foundConfigs);
@@ -49,10 +53,6 @@ export default function getLocalPathConfig(prefix: string) {
   // .toml path since downstream code passes it to a JSON-only parser.
   // Fall through to the default vercel.json path (which won't exist, but
   // that's handled gracefully by callers).
-
-  if (nowConfigExists) {
-    return nowConfigPath;
-  }
 
   return vercelConfigPath;
 }

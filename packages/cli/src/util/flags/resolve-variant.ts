@@ -79,6 +79,36 @@ export function resolveVariant(
   return { variant: null, error };
 }
 
+export function resolveVariantOrThrow(
+  input: string,
+  variants: FlagVariant[],
+  optionName: string
+): FlagVariant {
+  const result = resolveVariant(input, variants);
+  if (result.error || !result.variant) {
+    throw new Error(
+      `${optionName} ${chalk.bold(input)} is invalid. ${result.error || 'Variant not found.'}`
+    );
+  }
+
+  return result.variant;
+}
+
+export function resolveVariantByIdOrThrow(
+  variantId: string,
+  variants: FlagVariant[],
+  optionName: string
+): FlagVariant {
+  const variant = variants.find(candidate => candidate.id === variantId);
+  if (!variant) {
+    throw new Error(
+      `${optionName} references an unknown variant ${chalk.bold(variantId)}.`
+    );
+  }
+
+  return variant;
+}
+
 /**
  * Parses a string input into the appropriate type for comparison.
  * Handles JSON literals first, then falls back to the raw string input.

@@ -8,6 +8,18 @@
 - **Attack mode** — emergency mode that challenges unverified visitors during an active attack (verified bots and crawlers are exempt)
 - **System mitigations** — automatic DDoS protection that can be temporarily paused for debugging
 
+## Contents
+
+- [Overview](#overview)
+- [Custom Rules](#custom-rules)
+- [IP Blocks](#ip-blocks)
+- [System Bypass](#system-bypass)
+- [Attack Mode](#attack-mode)
+- [System Mitigations](#system-mitigations)
+- [Publishing](#publishing)
+- [Agent Usage](#agent-usage)
+- [Anti-Patterns](#anti-patterns)
+
 ## Overview
 
 ```bash

@@ -8,34 +8,42 @@ _Live Example: https://vercel-plus-flask.vercel.app/_
 
 Visit the [Flask documentation](https://flask.palletsprojects.com/) to learn more.
 
-## Getting Started
+## Project Structure
 
-Install the required dependencies:
+This example follows the [application factory](https://flask.palletsprojects.com/en/stable/tutorial/factory/) pattern from the Flask tutorial:
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install .
+```
+├── main.py              # Application factory and entry point
+├── items.py             # Items blueprint with API routes
+├── templates/
+│   └── index.html       # Landing page template
+├── public/
+│   └── favicon.ico
+├── pyproject.toml
+└── README.md
 ```
 
-Or, if using [uv](https://docs.astral.sh/uv/):
+## Getting Started
+
+Install the required dependencies using [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
 ```
 
-
 ## Running Locally
 
-Start the development server on http://0.0.0.0:5001
-
 ```bash
-python main.py
-# using uv:
-uv run main.py
+vercel dev
 ```
 
-When you make changes to your project, the server will automatically reload.
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Landing page |
+| `GET` | `/api/data` | List sample items |
+| `GET` | `/api/items/<item_id>` | Get item by ID |
 
 ## Deploying to Vercel
 

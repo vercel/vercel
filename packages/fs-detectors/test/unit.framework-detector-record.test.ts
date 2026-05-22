@@ -1,4 +1,4 @@
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworkRecord } from '../src';
 import VirtualFilesystem from './virtual-file-system';
 

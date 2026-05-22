@@ -51,6 +51,7 @@
 /packages/detect-agent/                  @vercel/ci-cd @vercel/vercel-cli-approvers
 /packages/python*                        @vercel/ci-cd @vercel/team-python
 /python                                  @vercel/ci-cd @vercel/team-python
+/uv.lock                                 @vercel/ci-cd @vercel/team-python
 /.github/workflows/*python*.yml          @vercel/ci-cd @vercel/team-python
 /.claude/skills/vercel-runtime-*         @vercel/ci-cd @vercel/compute
 

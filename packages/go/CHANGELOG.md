@@ -1,5 +1,23 @@
 # @vercel/go
 
+## 3.7.1
+
+### Patch Changes
+
+- e6dc048: Fix standalone Go server builds failing when user sets Go-version-specific env vars (e.g. GOEXPERIMENT). The bootstrap wrapper now builds with a clean environment, excluding user-provided env vars that may be incompatible with the Go version used for the wrapper. Also moves bootstrap source files to a `bootstrap/` subdirectory and bumps the bootstrap Go version from 1.21 to 1.23.
+
+## 3.7.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+## 3.6.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 3.5.0
 
 ### Minor Changes

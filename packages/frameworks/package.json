@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "3.24.1",
+  "version": "3.26.1",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [
@@ -14,9 +14,11 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "pnpm test",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/**/*.test.js' 'test/**/*.test.ts' 'test/**/*.test.mjs' 'test/**/*.test.mts' 'tests/**/*.test.js' 'tests/**/*.test.ts'"
   },
   "dependencies": {
     "smol-toml": "1.5.2",
@@ -24,13 +26,11 @@
     "@vercel/error-utils": "workspace:*"
   },
   "devDependencies": {
-    "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/node": "20.11.0",
     "@types/node-fetch": "2.5.8",
     "@vercel/routing-utils": "workspace:*",
     "ajv": "6.12.3",
-    "jest-junit": "16.0.0",
-    "typescript": "4.9.5"
+    "vitest": "2.0.3"
   }
 }

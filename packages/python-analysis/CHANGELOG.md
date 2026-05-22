@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.11.1
+
+### Patch Changes
+
+- 8e999cb: Render a valid pyproject.toml for empty requirements.txt files.
+
 ## 0.11.0
 
 ### Minor Changes

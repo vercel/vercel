@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 6.2.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 6.1.1
 
 ### Patch Changes

@@ -1,0 +1,45 @@
+{
+  "name": "@vercel/cli-exec",
+  "description": "Helpers for locating and executing the Vercel CLI",
+  "homepage": "https://vercel.com",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "version": "0.1.1",
+  "repository": {
+    "directory": "packages/cli-exec",
+    "type": "git",
+    "url": "git+https://github.com/vercel/vercel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vercel/vercel/issues"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "test": "vitest run -c ../../vitest.config.mts",
+    "vitest-run": "vitest run -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'tests/*.test.ts'",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "execa": "5.1.1"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "vitest": "2.1.4"
+  }
+}

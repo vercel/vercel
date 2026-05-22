@@ -26,4 +26,13 @@ export class ProjectListTelemetryClient
       this.trackCliFlag('json');
     }
   }
+
+  trackCliOptionFilter(filter: string | undefined) {
+    if (filter) {
+      this.trackCliOption({
+        option: 'filter',
+        value: this.redactedValue,
+      });
+    }
+  }
 }
