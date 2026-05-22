@@ -163,6 +163,32 @@ export const listSubcommand = {
       deprecated: false,
       description: 'Cursor for the next page of results',
     },
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Search connectors by name or UID',
+    },
+    {
+      name: 'service',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+      description:
+        'Filter by service name (e.g. slack, mcp.linear.app). Repeatable.',
+    },
+    {
+      name: 'type',
+      shorthand: null,
+      type: [String],
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Filter by connector type (slack, github, oauth, custom). Repeatable.',
+    },
     formatOption,
   ],
   examples: [
@@ -173,6 +199,26 @@ export const listSubcommand = {
     {
       name: 'List every connector in the team',
       value: `${packageName} connect list --all-projects`,
+    },
+    {
+      name: 'Filter by connector type',
+      value: `${packageName} connect list --type slack`,
+    },
+    {
+      name: 'Filter by multiple types',
+      value: `${packageName} connect list --type oauth --type github`,
+    },
+    {
+      name: 'Filter by service name',
+      value: `${packageName} connect list --service mcp.linear.app`,
+    },
+    {
+      name: 'Search by text',
+      value: `${packageName} connect list --search linear`,
+    },
+    {
+      name: 'Combine filters',
+      value: `${packageName} connect list --type oauth --search prod`,
     },
     {
       name: 'Limit the number of results',

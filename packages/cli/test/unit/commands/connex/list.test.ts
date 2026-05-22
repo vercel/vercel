@@ -397,6 +397,121 @@ describe('connex list', () => {
     });
   });
 
+  describe('filter flags (--type, --service, --search)', () => {
+    it('should forward --type as a query param', async () => {
+      let requestUrl = '';
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
+        requestUrl = req.url ?? '';
+        res.json({ clients: [] });
+      });
+
+      client.setArgv('connect', 'list', '--all-projects', '--type', 'slack');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestUrl).toContain('type=slack');
+    });
+
+    it('should join multiple --type values as comma-separated', async () => {
+      let requestUrl = '';
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
+        requestUrl = req.url ?? '';
+        res.json({ clients: [] });
+      });
+
+      client.setArgv(
+        'connect',
+        'list',
+        '--all-projects',
+        '--type',
+        'slack',
+        '--type',
+        'github'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestUrl).toContain('type=slack%2Cgithub');
+    });
+
+    it('should forward --service as a query param', async () => {
+      let requestUrl = '';
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
+        requestUrl = req.url ?? '';
+        res.json({ clients: [] });
+      });
+
+      client.setArgv(
+        'connect',
+        'list',
+        '--all-projects',
+        '--service',
+        'mcp.linear.app'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestUrl).toContain('service=mcp.linear.app');
+    });
+
+    it('should forward --search as a query param', async () => {
+      let requestUrl = '';
+      client.scenario.get('/v1/connect/connectors', (req, res) => {
+        requestUrl = req.url ?? '';
+        res.json({ clients: [] });
+      });
+
+      client.setArgv('connect', 'list', '--all-projects', '--search', 'linear');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestUrl).toContain('search=linear');
+    });
+
+    it('should include active filter flags in the next-page hint', async () => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
+        res.json({
+          clients: [
+            {
+              id: 'scl_1',
+              uid: 'slack/a',
+              name: 'A',
+              type: 'slack',
+              typeName: 'Slack',
+              createdAt: Date.now(),
+              includes: {
+                projects: { items: [], hasMore: false, cursor: null },
+              },
+            },
+          ],
+          cursor: 'cursor-xyz',
+        });
+      });
+
+      client.setArgv(
+        'connect',
+        'list',
+        '--all-projects',
+        '--type',
+        'slack',
+        '--search',
+        'linear'
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('--type slack');
+      expect(stderr).toContain('--search "linear"');
+      expect(stderr).toContain('--next cursor-xyz');
+    });
+  });
+
   it('should output JSON for project-scoped list without projects field', async () => {
     const project = { ...defaultProject, id: 'proj_json_1', name: 'json-app' };
     useProject(project);
