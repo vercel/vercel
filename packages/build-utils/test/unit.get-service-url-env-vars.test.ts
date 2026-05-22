@@ -1,4 +1,8 @@
-import { getServiceUrlEnvVars, getExperimentalServiceUrlEnvVars } from '../src';
+import {
+  getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
+  getServiceUrlSigningEnvVars,
+} from '../src';
 import type { Service } from '../src';
 import { describe, expect, it } from 'vitest';
 
@@ -9,6 +13,65 @@ const createService = (overrides: Partial<Service>): Service => ({
   routePrefix: '/',
   builder: { use: '@vercel/static-build', src: 'package.json' },
   ...overrides,
+});
+
+describe('getServiceUrlSigningEnvVars', () => {
+  it('enables signing for server-side absolute service URL env vars', () => {
+    const result = getServiceUrlSigningEnvVars({
+      serviceUrlEnvVars: {
+        BACKEND_URL: 'https://my-app.vercel.app/_/backend',
+        OTHER_URL: 'http://localhost:3000/_/other',
+      },
+      frameworkList: [NEXTJS, VITE],
+    });
+
+    expect(result).toEqual({
+      VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS: '1',
+      VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS: 'BACKEND_URL,OTHER_URL',
+    });
+  });
+
+  it('excludes framework-prefixed and relative service URL env vars', () => {
+    const result = getServiceUrlSigningEnvVars({
+      serviceUrlEnvVars: {
+        BACKEND_URL: 'https://my-app.vercel.app/_/backend',
+        NEXT_PUBLIC_BACKEND_URL: '/_/backend',
+        VITE_BACKEND_URL: '/_/backend',
+      },
+      frameworkList: [NEXTJS, VITE],
+    });
+
+    expect(result).toEqual({
+      VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS: '1',
+      VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS: 'BACKEND_URL',
+    });
+  });
+
+  it('does not overwrite user-defined signing controls', () => {
+    const result = getServiceUrlSigningEnvVars({
+      serviceUrlEnvVars: {
+        BACKEND_URL: 'https://my-app.vercel.app/_/backend',
+      },
+      frameworkList: [],
+      currentEnv: {
+        VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS: '0',
+        VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS: 'CUSTOM_URL',
+      },
+    });
+
+    expect(result).toEqual({});
+  });
+
+  it('returns empty when no signable service URLs are present', () => {
+    const result = getServiceUrlSigningEnvVars({
+      serviceUrlEnvVars: {
+        NEXT_PUBLIC_BACKEND_URL: '/_/backend',
+      },
+      frameworkList: [NEXTJS],
+    });
+
+    expect(result).toEqual({});
+  });
 });
 
 const NEXTJS = { slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' };

@@ -25,6 +25,15 @@ export interface GetExperimentalServiceUrlEnvVarsOptions {
   origin?: string;
 }
 
+export interface GetServiceUrlSigningEnvVarsOptions {
+  serviceUrlEnvVars: Record<string, string>;
+  frameworkList: readonly FrameworkInfo[];
+  currentEnv?: Envs;
+}
+
+export const SIGN_SERVICE_URLS_ENV = 'VERCEL_EXPERIMENTAL_SIGN_SERVICE_URLS';
+export const SERVICE_URL_ENVS_ENV = 'VERCEL_EXPERIMENTAL_SERVICE_URL_ENVS';
+
 /**
  * Convert service name to env-var name: "frontend" → "FRONTEND_URL",
  * "api-users" → "API_USERS_URL".
@@ -62,6 +71,74 @@ function getFrameworkEnvPrefix(
     f => f.slug !== null && f.slug === frameworkSlug
   );
   return framework?.envPrefix;
+}
+
+function getFrameworkEnvPrefixes(
+  frameworkList: readonly FrameworkInfo[]
+): Set<string> {
+  const prefixes = new Set<string>();
+  for (const framework of frameworkList) {
+    if (framework.envPrefix) {
+      prefixes.add(framework.envPrefix);
+    }
+  }
+  return prefixes;
+}
+
+function isFrameworkPrefixedEnvVar(
+  name: string,
+  frameworkPrefixes: Set<string>
+): boolean {
+  for (const prefix of frameworkPrefixes) {
+    if (name.startsWith(prefix) && name.length > prefix.length) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isAbsoluteHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generates the Node bridge opt-in variables that make server-side service URL
+ * env vars rotate into signed internal URLs at request time.
+ *
+ * Client-side framework-prefixed variables are intentionally excluded so values
+ * like `NEXT_PUBLIC_BACKEND_URL` or `VITE_BACKEND_URL` are never signed.
+ */
+export function getServiceUrlSigningEnvVars(
+  options: GetServiceUrlSigningEnvVarsOptions
+): Record<string, string> {
+  const { serviceUrlEnvVars, frameworkList, currentEnv = {} } = options;
+  const frameworkPrefixes = getFrameworkEnvPrefixes(frameworkList);
+  const signableNames = Object.entries(serviceUrlEnvVars)
+    .filter(([name, value]) => {
+      return (
+        !isFrameworkPrefixedEnvVar(name, frameworkPrefixes) &&
+        isAbsoluteHttpUrl(value)
+      );
+    })
+    .map(([name]) => name);
+
+  if (signableNames.length === 0) {
+    return {};
+  }
+
+  const envVars: Record<string, string> = {};
+  if (!(SIGN_SERVICE_URLS_ENV in currentEnv)) {
+    envVars[SIGN_SERVICE_URLS_ENV] = '1';
+  }
+  if (!(SERVICE_URL_ENVS_ENV in currentEnv)) {
+    envVars[SERVICE_URL_ENVS_ENV] = signableNames.join(',');
+  }
+  return envVars;
 }
 
 /**

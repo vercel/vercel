@@ -30,6 +30,7 @@ import {
   type BuilderVX,
   type Config,
 } from '@vercel/build-utils';
+import { getServiceUrlSigningEnvVars } from '../../../../build-utils/src/get-service-url-env-vars';
 import { checkForPort } from './port-utils';
 import { importBuilders } from '../build/import-builders';
 import { getStaticServiceSchedules } from '../service-schedules';
@@ -530,6 +531,14 @@ export class ServicesOrchestrator {
         origin: this.proxyOrigin,
         currentEnv: effectiveProcessEnv,
       });
+      perServiceEnv = {
+        ...perServiceEnv,
+        ...getServiceUrlSigningEnvVars({
+          serviceUrlEnvVars: perServiceEnv,
+          frameworkList: framework ? [framework] : [],
+          currentEnv: effectiveProcessEnv,
+        }),
+      };
     } else if (service.env) {
       perServiceEnv = getServiceUrlEnvVars({
         requestedEnv: service.env,
@@ -539,6 +548,14 @@ export class ServicesOrchestrator {
         origin: this.proxyOrigin,
         currentEnv: effectiveProcessEnv,
       });
+      perServiceEnv = {
+        ...perServiceEnv,
+        ...getServiceUrlSigningEnvVars({
+          serviceUrlEnvVars: perServiceEnv,
+          frameworkList,
+          currentEnv: effectiveProcessEnv,
+        }),
+      };
     }
 
     // Precedence: process env > env* files > per-service env > config env > defaults
