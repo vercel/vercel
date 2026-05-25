@@ -25,6 +25,7 @@ const experimentalExamples = new Set([
   'actix-web',
   'gin',
   'django',
+  'rails',
 ]);
 
 describe('examples should be detected', () => {

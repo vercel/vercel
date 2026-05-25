@@ -20,10 +20,13 @@ import {
   FileBlob,
   type GlobOptions,
   type Files,
-  type BuildV3,
+  type BuildVX,
+  type BuildResultVX,
   type ShouldServe,
+  NowBuildError,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
+import { randomBytes } from 'crypto';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,
@@ -44,6 +47,43 @@ async function matchPaths(
   );
 
   return patternPaths.reduce((a, b) => a.concat(b), []);
+}
+
+function getConfiguredOutputPath(entrypoint: string): string {
+  return entrypoint.replace(/\\/g, '/').replace(/\.(rb|ru)$/, '');
+}
+
+export function createBuildResult({
+  framework,
+  configuredEntrypoint,
+  output,
+}: {
+  framework?: string | null;
+  configuredEntrypoint: string;
+  output: Lambda;
+}): BuildResultVX {
+  if (framework === 'rails') {
+    const lambdaPath = getConfiguredOutputPath(configuredEntrypoint);
+    return {
+      resultVersion: 2,
+      result: {
+        output: {
+          [lambdaPath]: output,
+        },
+        routes: [
+          { handle: 'filesystem' },
+          { src: '/(.*)', dest: `/${lambdaPath}` },
+        ],
+      },
+    };
+  }
+
+  return {
+    resultVersion: 3,
+    result: {
+      output,
+    },
+  };
 }
 
 async function prepareGemfile(
@@ -130,7 +170,8 @@ async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
   gemfilePath: string,
-  rubyPath: string
+  rubyPath: string,
+  isDev: boolean
 ) {
   const bundleAppConfig = await getWriteableDirectory();
   const bundlerEnv = cloneEnv(process.env, {
@@ -141,6 +182,12 @@ async function bundleInstall(
     BUNDLE_DEPLOYMENT: 'true',
     BUNDLE_PATH: bundleDir,
     BUNDLE_FROZEN: 'true',
+    ...(isDev
+      ? {}
+      : {
+          // Default non-dev builds to runtime-only gems, but respect explicit user config.
+          BUNDLE_WITHOUT: process.env.BUNDLE_WITHOUT ?? 'development:test',
+        }),
   });
 
   debug('running "bundle install"');
@@ -161,16 +208,33 @@ async function bundleInstall(
   }
 }
 
-export const version = 3;
+export const version = -1;
 
-export const build: BuildV3 = async ({
+export const build: BuildVX = async ({
   workPath,
   files,
   entrypoint,
   config,
   meta = {},
 }) => {
+  const configuredEntrypoint = entrypoint;
   await download(files, workPath, meta);
+  debug(`ruby: downloaded files to workPath=${workPath}`);
+
+  // Rails zero-config expects a root-level config.ru.
+  if (
+    config?.framework === 'rails' &&
+    !(await pathExists(join(workPath, entrypoint)))
+  ) {
+    throw new NowBuildError({
+      code: 'RAILS_ENTRYPOINT_NOT_FOUND',
+      message:
+        entrypoint === 'config.ru'
+          ? 'No Rails entrypoint found at "config.ru". Rails zero-config expects a root-level "config.ru" next to your "Gemfile".'
+          : `No Rails entrypoint found at "${entrypoint}".`,
+    });
+  }
+
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
 
@@ -235,7 +299,13 @@ export const build: BuildV3 = async ({
   // If gems are pre-vendored and already included in the vendor directory, Bundler keeps them when they
   // match the lockfile and platform; otherwise it only installs/replaces what's
   // missing or mismatched (e.g. add webrick or correct platform builds).
-  await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath);
+  await bundleInstall(
+    bundlerPath,
+    bundleDir,
+    gemfilePath,
+    rubyPath,
+    Boolean(meta.isDev)
+  );
 
   // try to remove gem cache to slim bundle size
   try {
@@ -320,14 +390,36 @@ export const build: BuildV3 = async ({
     }
   }
 
+  const lambdaEnv: Record<string, string> = {};
+  if (config?.framework) {
+    lambdaEnv.VC_FRAMEWORK = String(config.framework);
+  }
+
+  // For Rails zero-config: if user did not provide SECRET_KEY_BASE,
+  // generate a per-deployment fallback and expose it via a namespaced env var.
+  // vc_init.rb will only consume it when SECRET_KEY_BASE is absent.
+  try {
+    if (config?.framework === 'rails' && !process.env.SECRET_KEY_BASE) {
+      const fallbackSecret = randomBytes(64).toString('hex');
+      lambdaEnv.VC_GENERATED_SECRET_KEY_BASE = fallbackSecret;
+      debug('ruby: generated fallback SECRET_KEY_BASE for Rails (namespaced)');
+    }
+  } catch (err) {
+    debug('ruby: failed to generate fallback SECRET_KEY_BASE (non-fatal)', err);
+  }
+
   const output = new Lambda({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
-    environment: {},
+    environment: lambdaEnv,
   });
 
-  return { output };
+  return createBuildResult({
+    framework: config?.framework,
+    configuredEntrypoint,
+    output,
+  });
 };
 
 export { startDevServer } from './start-dev-server';

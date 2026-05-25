@@ -171,19 +171,16 @@ async function run(
 }
 
 export const startDevServer: StartDevServer = async opts => {
-  const { entrypoint: rawEntrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, meta = {} } = opts;
 
-  // Ruby dev server only supports Rack (.ru) entrypoints for now
-  if (!rawEntrypoint.endsWith('.ru')) {
-    // If user configured a non-.ru entrypoint, do not start a dev server
-    // so another builder or static can handle it.
+  // Ruby dev server supports Rack (.ru) entrypoints only.
+  if (!entrypoint.endsWith('.ru') || !existsSync(join(workPath, entrypoint))) {
     return null;
   }
 
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
 
-  const entrypoint = rawEntrypoint;
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
 
   const serverKey = `${workPath}::${entrypoint}::ruby`;
