@@ -1,6 +1,7 @@
 import chalk from 'chalk';
-import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
+import * as fsPromises from 'fs/promises';
+import fs from 'fs-extra';
 import { resolve } from 'path';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -36,6 +37,7 @@ import {
 } from '../../util/agent-output';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
+const ENV_FILE_MODE = 0o600;
 
 function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);
@@ -61,6 +63,17 @@ function tryReadHeadSync(path: string, length: number) {
     if (!isErrnoException(err) || err.code !== 'ENOENT') {
       throw err;
     }
+  }
+}
+
+async function writeManagedEnvFile(path: string, contents: string) {
+  await fs.outputFile(path, contents, {
+    encoding: 'utf8',
+    mode: ENV_FILE_MODE,
+  });
+
+  if (process.platform !== 'win32') {
+    await fsPromises.chmod(path, ENV_FILE_MODE);
   }
 }
 
@@ -270,7 +283,7 @@ export async function envPullCommandLogic(
       .join('\n') +
     '\n';
 
-  await outputFile(fullPath, contents, 'utf8');
+  await writeManagedEnvFile(fullPath, contents);
 
   if (deltaString) {
     output.print('\n' + deltaString);
