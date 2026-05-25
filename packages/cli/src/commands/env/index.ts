@@ -23,6 +23,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { EnvTelemetryClient } from '../../util/telemetry/commands/env';
 import { getCommandAliases } from '..';
+import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
@@ -71,6 +72,8 @@ export default async function main(client: Client) {
     );
   }
 
+  let exitCode: number;
+
   switch (subcommand) {
     case 'ls':
       if (needHelp) {
@@ -79,7 +82,8 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return ls(client, args);
+      exitCode = await ls(client, args);
+      break;
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
@@ -87,7 +91,8 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, args);
+      exitCode = await add(client, args);
+      break;
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
@@ -95,7 +100,8 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, args);
+      exitCode = await rm(client, args);
+      break;
     case 'pull':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
@@ -103,7 +109,8 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandPull(subcommandOriginal);
-      return pull(client, args);
+      exitCode = await pull(client, args);
+      break;
     case 'run':
       /**
        * The run subcommand uses a helper to check for --help because of the
@@ -118,7 +125,8 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandRun(subcommandOriginal);
-      return run(client);
+      exitCode = await run(client);
+      break;
     case 'update':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
@@ -126,10 +134,17 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
-      return update(client, args);
+      exitCode = await update(client, args);
+      break;
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(envCommand, { columns: client.stderr.columns }));
       return 2;
   }
+
+  if (exitCode === 0) {
+    await autoInstallVercelPlugin(client);
+  }
+
+  return exitCode;
 }

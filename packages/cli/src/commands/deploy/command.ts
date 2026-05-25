@@ -1,4 +1,11 @@
-import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
+import {
+  confirmOption,
+  forceOption,
+  formatOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const deprecatedArchiveSplitTgz = 'split-tgz';
 
@@ -99,7 +106,24 @@ export const initSubcommand = {
       deprecated: false,
       description: 'Specify the target deployment environment',
     },
+    formatOption,
+    jsonOption,
     confirmOption,
+    projectOption,
+    {
+      name: 'functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
+    {
+      name: 'no-functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
   ],
   examples: [
     {
@@ -127,6 +151,23 @@ export const continueSubcommand = {
       argument: 'ID',
       deprecated: false,
       description: 'The deployment ID to continue (e.g. dpl_xxx)',
+    },
+    {
+      name: 'archive',
+      shorthand: null,
+      type: String,
+      argument: 'FORMAT',
+      deprecated: false,
+      description:
+        'Compress the deployment code into an archive before uploading it',
+    },
+    {
+      name: 'error',
+      shorthand: null,
+      type: String,
+      argument: 'MESSAGE',
+      deprecated: false,
+      description: 'Mark the deployment as errored with a message',
     },
   ],
   examples: [
@@ -288,7 +329,24 @@ export const deployCommand = {
       deprecated: false,
       description: 'Specify the target deployment environment',
     },
+    formatOption,
+    jsonOption,
     confirmOption,
+    projectOption,
+    {
+      name: 'functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
+    {
+      name: 'no-functions-beta',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      // No description — keeps it hidden from --help output
+    },
   ],
   examples: [
     {

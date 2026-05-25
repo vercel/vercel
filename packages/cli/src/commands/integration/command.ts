@@ -98,6 +98,13 @@ export const addSubcommand = {
       ],
     },
     {
+      name: 'Search by keyword (prompts to select a matching integration)',
+      value: [
+        `${packageName} integration add postgres`,
+        `${packageName} integration add redis`,
+      ],
+    },
+    {
       name: 'Install with a custom resource name',
       value: [
         `${packageName} integration add acme --name my-database`,
@@ -150,6 +157,33 @@ export const addSubcommand = {
     {
       name: 'Discover available marketplace products and their slugs',
       value: `${packageName} integration discover`,
+    },
+  ],
+} as const;
+
+export const acceptTermsSubcommand = {
+  name: 'accept-terms',
+  aliases: [],
+  description:
+    'Accept marketplace legal terms for an integration and install it on the current team (installation only; no product resource). Requires an interactive terminal and human confirmation. Does not replace integrations that require a browser or device attestation.',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Accept terms interactively, then install on the team',
+      value: [
+        `${packageName} integration accept-terms <integration>`,
+        `${packageName} integration accept-terms neon`,
+      ],
+    },
+    {
+      name: 'Output result as JSON',
+      value: `${packageName} integration accept-terms neon --format=json`,
     },
   ],
 } as const;
@@ -207,6 +241,39 @@ export const openSubcommand = {
         `${packageName} integration open acme --format=json`,
         `${packageName} integration open acme my-acme-store --format=json`,
       ],
+    },
+  ],
+} as const;
+
+export const installationsSubcommand = {
+  name: 'installations',
+  aliases: ['installation'],
+  description:
+    'List marketplace integration installations for the current team (account scope)',
+  arguments: [],
+  options: [
+    {
+      name: 'integration',
+      description: 'Limit to installations of this integration (slug or id)',
+      shorthand: 'i',
+      type: String,
+      deprecated: false,
+      argument: 'SLUG_OR_ID',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List all marketplace installations for the team',
+      value: [`${packageName} integration installations`],
+    },
+    {
+      name: 'Filter by integration slug',
+      value: [`${packageName} integration installations --integration neon`],
+    },
+    {
+      name: 'JSON output',
+      value: [`${packageName} integration installations --format json`],
     },
   ],
 } as const;
@@ -271,12 +338,24 @@ export const discoverSubcommand = {
   name: 'discover',
   aliases: [],
   description: 'Discover available marketplace integrations',
-  arguments: [],
+  arguments: [
+    {
+      name: 'query',
+      required: false,
+    },
+  ],
   options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Discover marketplace integrations',
       value: [`${packageName} integration discover`],
+    },
+    {
+      name: 'Search for integrations matching a query',
+      value: [
+        `${packageName} integration discover postgres`,
+        `${packageName} integration discover aws`,
+      ],
     },
     {
       name: 'Discover marketplace integrations as JSON',
@@ -312,10 +391,95 @@ export const balanceSubcommand = {
   ],
 } as const;
 
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description:
+    'Update a marketplace integration installation (billing plan or which projects can access it). ' +
+    'Install, remove, and connect flows are separate (integration add, integration remove, integration-resource, env pull, etc.) — not part of update. ' +
+    'UI-only flows (OAuth in a browser, consent screens, marketplace purchase) may not map one-to-one to a single CLI flag; pass --plan and --authorization-id when the product requires them for billing changes. ' +
+    'Any extra fields on the configuration resource that the API exposes but this command PATCH body does not send are not covered until the API and CLI support them.',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'plan',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      argument: 'PLAN_ID',
+      description:
+        'Billing plan ID for integrations that support installation-level billing plans',
+    },
+    {
+      name: 'authorization-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Billing authorization ID when the platform requires it for plan changes',
+    },
+    {
+      name: 'projects',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      argument: 'PROJECT',
+      description:
+        'Project ID allowed to use this installation, or "all" for all projects (repeatable)',
+    },
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Configuration ID when multiple marketplace installations exist for this integration',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Grant all team projects access to the integration',
+      value: [
+        `${packageName} integration update <integration> --projects all`,
+        `${packageName} integration update neon --projects all`,
+      ],
+    },
+    {
+      name: 'Limit access to specific projects',
+      value: `${packageName} integration update neon --projects prj_abc --projects prj_def`,
+    },
+    {
+      name: 'Change installation billing plan',
+      value: `${packageName} integration update acme --plan pro`,
+    },
+    {
+      name: 'Select installation when several exist',
+      value: `${packageName} integration update neon --installation-id icfg_xxx --projects all`,
+    },
+    {
+      name: 'Output result as JSON',
+      value: `${packageName} integration update neon --projects all --format=json`,
+    },
+    {
+      name: 'Non-interactive (JSON success and errors on stdout)',
+      value: `${packageName} integration update neon --projects all --non-interactive`,
+    },
+  ],
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: [],
-  description: 'Uninstalls a marketplace integration',
+  description:
+    'Uninstalls a marketplace integration. Resources must be removed first using `integration-resource remove`.',
   arguments: [
     {
       name: 'integration',
@@ -337,6 +501,10 @@ export const removeSubcommand = {
         `${packageName} integration remove <integration>`,
         `${packageName} integration remove acme`,
       ],
+    },
+    {
+      name: 'Remove a resource before uninstalling',
+      value: `${packageName} integration-resource remove <resource-name> --disconnect-all --yes`,
     },
     {
       name: 'Output as JSON',
@@ -386,22 +554,30 @@ export const guideSubcommand = {
       name: 'Show the Next.js guide without prompts (useful for CI/agents)',
       value: `${packageName} integration guide neon --framework nextjs`,
     },
+    {
+      name: 'Discover available integrations and product slugs',
+      value: `${packageName} integration discover`,
+    },
   ],
 } as const;
 
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
-  description: 'Manage marketplace integrations',
+  description:
+    'Manage marketplace integrations. To manage individual resources (disconnect, remove), see `integration-resource`.',
   options: [],
   arguments: [],
   subcommands: [
     addSubcommand,
+    acceptTermsSubcommand,
     balanceSubcommand,
     discoverSubcommand,
     guideSubcommand,
+    installationsSubcommand,
     listSubcommand,
     openSubcommand,
+    updateSubcommand,
     removeSubcommand,
   ],
   examples: [

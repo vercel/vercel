@@ -59,9 +59,9 @@ export const inspectSubcommand = {
   ],
 } as const;
 
-export const addSubcommand = {
-  name: 'add',
-  aliases: [],
+export const createSubcommand = {
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a new feature flag',
   arguments: [
     {
@@ -75,7 +75,8 @@ export const addSubcommand = {
       shorthand: 'k',
       type: String,
       deprecated: false,
-      description: 'The type of the flag value (boolean, string, or number)',
+      description:
+        'The type of the flag value (boolean, string, number, or json)',
       argument: 'KIND',
     },
     {
@@ -86,15 +87,341 @@ export const addSubcommand = {
       description: 'Description of the feature flag',
       argument: 'TEXT',
     },
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: [String],
+      deprecated: false,
+      description:
+        'Variant definition as VALUE[=LABEL] (can be repeated for string, number, and json flags)',
+      argument: 'VALUE[=LABEL]',
+    },
   ],
   examples: [
     {
       name: 'Create a boolean feature flag',
-      value: `${packageName} flags add my-feature`,
+      value: `${packageName} flags create my-feature`,
     },
     {
       name: 'Create a string feature flag with description',
-      value: `${packageName} flags add my-feature --kind string --description "My feature flag"`,
+      value: `${packageName} flags create my-feature --kind string --description "My feature flag"`,
+    },
+    {
+      name: 'Create a string feature flag with explicit variants',
+      value: `${packageName} flags add my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
+    },
+    {
+      name: 'Create a JSON feature flag with explicit variants',
+      value: `${packageName} flags add layout-config --kind json --variant '{"theme":"light"}'=Light --variant '{"theme":"dark","sidebar":true}'=Dark`,
+    },
+  ],
+} as const;
+
+export const openSubcommand = {
+  name: 'open',
+  aliases: [],
+  description: 'Open feature flags in the Vercel dashboard',
+  arguments: [
+    {
+      name: 'flag',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Open the project feature flags dashboard',
+      value: `${packageName} flags open`,
+    },
+    {
+      name: 'Open a specific feature flag',
+      value: `${packageName} flags open my-feature-flag`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update an existing feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: String,
+      deprecated: false,
+      description: 'Variant ID or value to update',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'value',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'New variant value',
+      argument: 'VALUE',
+    },
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'New variant label',
+      argument: 'LABEL',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Update a string variant value and label',
+      value: `${packageName} flags update my-feature --variant control --value welcome-back --label "Welcome back"`,
+    },
+    {
+      name: 'Update a variant with a revision message',
+      value: `${packageName} flags update my-feature --variant control --label "Control" --message "Rename control variant"`,
+    },
+    {
+      name: 'Rename a boolean variant label',
+      value: `${packageName} flags update my-feature --variant false --label "Disabled"`,
+    },
+  ],
+} as const;
+
+export const setSubcommand = {
+  name: 'set',
+  aliases: [],
+  description: 'Set the served variant for a feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to set the variant in (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: String,
+      deprecated: false,
+      description: 'The variant ID or value to serve',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Set a string variant in production',
+      value: `${packageName} flags set welcome-message --environment production --variant control`,
+    },
+    {
+      name: 'Set a number variant in preview',
+      value: `${packageName} flags set bucket-size -e preview --variant 20`,
+    },
+    {
+      name: 'Set a boolean flag to true in development',
+      value: `${packageName} flags set my-feature -e development --variant true`,
+    },
+  ],
+} as const;
+
+export const splitSubcommand = {
+  name: 'split',
+  aliases: [],
+  description:
+    'Configure a weighted split for a feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to configure (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Entity attribute used for bucketing, in the form entity.attribute',
+      argument: 'ENTITY.ATTRIBUTE',
+    },
+    {
+      name: 'weight',
+      shorthand: 'w',
+      type: [String],
+      deprecated: false,
+      description:
+        'Variant weight ratio as VARIANT=WEIGHT. Repeat for each variant; values are normalized and 0 receives no traffic.',
+      argument: 'VARIANT=WEIGHT',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The fallback variant to serve when the split attribute is unavailable',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Split a boolean flag in production',
+      value: `${packageName} flags split redesigned-checkout --environment production --by user.userId --weight off=95 --weight on=5`,
+    },
+    {
+      name: 'Split a string flag with a fallback variant',
+      value: `${packageName} flags split welcome-message -e production --by user.userId --default-variant control --weight control=90 --weight treatment=10`,
+    },
+    {
+      name: 'Exclude a variant from the split',
+      value: `${packageName} flags split checkout-copy -e preview --by user.userId --default-variant control --weight control=50 --weight treatment=50 --weight legacy=0`,
+    },
+  ],
+} as const;
+
+export const rolloutSubcommand = {
+  name: 'rollout',
+  aliases: [],
+  description:
+    'Configure a progressive rollout for a feature flag in an environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to configure (production, preview, or development)',
+      argument: 'ENV',
+    },
+    {
+      name: 'from-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The variant to roll away from (defaults to false for boolean flags)',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'to-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The variant to roll towards (defaults to true for boolean flags)',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'The fallback variant to serve when the rollout attribute is unavailable',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'by',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Entity attribute used for bucketing, in the form entity.attribute',
+      argument: 'ENTITY.ATTRIBUTE',
+    },
+    {
+      name: 'stage',
+      shorthand: 's',
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a rollout stage as PERCENTAGE,DURATION (e.g. "5,6h"). Can be specified multiple times. 100% is implied at the end.',
+      argument: 'PERCENTAGE,DURATION',
+    },
+    {
+      name: 'start',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'When the rollout should start: "now", a future relative time like "1h", or an ISO 8601 datetime',
+      argument: 'TIME',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Start a progressive boolean rollout in production',
+      value: `${packageName} flags rollout redesigned-checkout --environment production --by user.userId --stage 5,6h --stage 10,6h --stage 25,12h --stage 50,1d`,
+    },
+    {
+      name: 'Schedule a string-flag rollout for later',
+      value: `${packageName} flags rollout welcome-message -e production --by user.userId --from-variant control --to-variant treatment --default-variant control --stage 10,2h --stage 50,12h --start 2026-04-16T09:00:00Z`,
+    },
+    {
+      name: 'Update only the rollout schedule while keeping current variants',
+      value: `${packageName} flags rollout redesigned-checkout -e production --stage 5,30m --stage 25,2h --stage 50,8h`,
     },
   ],
 } as const;
@@ -158,7 +485,8 @@ export const archiveSubcommand = {
 export const disableSubcommand = {
   name: 'disable',
   aliases: [],
-  description: 'Disable a boolean feature flag in an environment',
+  description:
+    'Shortcut to serve the false variant of a boolean feature flag in an environment',
   arguments: [
     {
       name: 'flag',
@@ -180,8 +508,17 @@ export const disableSubcommand = {
       shorthand: 'v',
       type: String,
       deprecated: false,
-      description: 'The variant ID to serve while the flag is disabled',
+      description:
+        'The variant ID or value to serve while the flag is disabled',
       argument: 'VARIANT',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
     },
   ],
   examples: [
@@ -191,7 +528,11 @@ export const disableSubcommand = {
     },
     {
       name: 'Disable a flag with a specific variant',
-      value: `${packageName} flags disable my-feature -e production --variant off`,
+      value: `${packageName} flags disable my-feature -e production --variant false`,
+    },
+    {
+      name: 'Disable a flag with a revision message',
+      value: `${packageName} flags disable my-feature -e production --message "Pause rollout in production"`,
     },
   ],
 } as const;
@@ -199,7 +540,8 @@ export const disableSubcommand = {
 export const enableSubcommand = {
   name: 'enable',
   aliases: [],
-  description: 'Enable a boolean feature flag in an environment',
+  description:
+    'Shortcut to serve the true variant of a boolean feature flag in an environment',
   arguments: [
     {
       name: 'flag',
@@ -216,11 +558,23 @@ export const enableSubcommand = {
         'The environment to enable the flag in (production, preview, or development)',
       argument: 'ENV',
     },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
   ],
   examples: [
     {
       name: 'Enable a flag in production',
       value: `${packageName} flags enable my-feature --environment production`,
+    },
+    {
+      name: 'Enable a flag with a revision message',
+      value: `${packageName} flags enable my-feature --environment production --message "Resume production rollout"`,
     },
   ],
 } as const;
@@ -343,6 +697,55 @@ export const prepareSubcommand = {
   examples: [],
 } as const;
 
+export const overrideSubcommand = {
+  name: 'override',
+  aliases: [],
+  description:
+    'Encrypt flag overrides into a secure token for the vercel-flag-overrides cookie',
+  arguments: [
+    {
+      name: 'flag=value',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'expiration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Expiration time for the encrypted token (default: 1y)',
+      argument: 'TIME',
+    },
+    {
+      name: 'decrypt',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Decrypt an encrypted override token and print the JSON',
+      argument: 'TOKEN',
+    },
+  ],
+  examples: [
+    {
+      name: 'Encrypt a single flag override',
+      value: `${packageName} flags override my-flag=true`,
+    },
+    {
+      name: 'Encrypt multiple flag overrides',
+      value: `${packageName} flags override flag-a=true flag-b=hello`,
+    },
+    {
+      name: 'Set a custom expiration',
+      value: `${packageName} flags override my-flag=42 --expiration 30d`,
+    },
+    {
+      name: 'Decrypt an override token',
+      value: `${packageName} flags override --decrypt <token>`,
+    },
+  ],
+} as const;
+
 export const flagsCommand = {
   name: 'flags',
   aliases: [],
@@ -354,13 +757,19 @@ export const flagsCommand = {
   subcommands: [
     listSubcommand,
     inspectSubcommand,
-    addSubcommand,
+    createSubcommand,
+    openSubcommand,
+    updateSubcommand,
+    setSubcommand,
+    splitSubcommand,
+    rolloutSubcommand,
     removeSubcommand,
     archiveSubcommand,
     disableSubcommand,
     enableSubcommand,
     sdkKeysSubcommand,
     prepareSubcommand,
+    overrideSubcommand,
   ],
   options: [],
   examples: [],

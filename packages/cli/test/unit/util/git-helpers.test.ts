@@ -2,6 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'node:child_process';
 import {
   mkdtempSync,
+  mkdirSync,
   rmSync,
   writeFileSync,
   readFileSync,
@@ -90,7 +91,7 @@ describe('git-helpers', () => {
 
     it('getGitRootDirectory should return the repo root from a subdirectory', () => {
       const subDir = join(repoDir, 'subdir');
-      execSync(`mkdir -p "${subDir}"`);
+      mkdirSync(subDir, { recursive: true });
       const root = getGitRootDirectory({ cwd: subDir });
       expect(normalizePath(root)).toEqual(normalizePath(repoDir));
     });

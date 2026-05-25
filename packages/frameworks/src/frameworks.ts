@@ -66,7 +66,7 @@ export const frameworks = [
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/next-dark.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1701461207/front/import/nextjs.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/nextjs.png',
     tagline:
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
     description: 'A Next.js app and a Serverless Function API.',
@@ -156,11 +156,11 @@ export const frameworks = [
         const nowRoutes = JSON.parse(content);
         try {
           await unlink(nowRoutesPath);
-        } catch (err) {
+        } catch (_err) {
           // do nothing if deleting the file fails
         }
         return nowRoutes;
-      } catch (err) {
+      } catch (_err) {
         // if the file doesn't exist, we implement gatsby's recommendations
         // https://www.gatsbyjs.org/docs/caching
 
@@ -202,7 +202,7 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
-    supersedes: ['hydrogen', 'vite'],
+    supersedes: ['hydrogen', 'vite', 'node'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
@@ -250,7 +250,7 @@ export const frameworks = [
       'A user-obsessed, standards-focused, multi-strategy router you can deploy anywhere.',
     website: 'https://reactrouter.com',
     sort: 7,
-    supersedes: ['hydrogen', 'vite'],
+    supersedes: ['hydrogen', 'vite', 'node'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
@@ -1093,7 +1093,7 @@ export const frameworks = [
     demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit legacy app optimized Edge-first.',
@@ -1135,7 +1135,7 @@ export const frameworks = [
     demo: 'https://sveltekit-1-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit app optimized Edge-first.',
@@ -1525,7 +1525,7 @@ export const frameworks = [
     demo: 'https://nuxtjs-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/nuxt.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png',
+      'https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/nuxtjs.png',
     tagline:
       'Nuxt is the open source framework that makes full-stack development with Vue.js intuitive.',
     description: 'A Nuxt app, bootstrapped with create-nuxt-app.',
@@ -1920,9 +1920,10 @@ export const frameworks = [
     website: 'https://tanstack.com/start',
     supersedes: ['ionic-react', 'vite'],
     detectors: {
-      every: [
-        { matchPackage: '@tanstack/router-plugin' },
-        { matchPackage: 'nitro' },
+      every: [{ matchPackage: '@tanstack/router-plugin' }],
+      some: [
+        { matchPackage: '@tanstack/react-start' },
+        { matchPackage: '@tanstack/solid-start' },
       ],
     },
     settings: {
@@ -2069,7 +2070,7 @@ export const frameworks = [
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -2122,7 +2123,7 @@ export const frameworks = [
     description: 'A Flask app, ready for production',
     website: 'https://flask.palletsprojects.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -2217,14 +2218,13 @@ export const frameworks = [
   {
     name: 'Django',
     slug: 'django',
-    experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
     tagline:
       'Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design. ',
     description: 'A Django project served via the Python Runtime.',
     website: 'https://www.djangoproject.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -2239,6 +2239,11 @@ export const frameworks = [
         {
           path: 'Pipfile',
           matchContent: '[Dd]jango',
+        },
+        {
+          // a default django project will create a manage.py which sets DJANGO_SETTINGS_MODULE
+          path: 'manage.py',
+          matchContent: 'DJANGO_SETTINGS_MODULE',
         },
       ],
     },
@@ -2268,6 +2273,44 @@ export const frameworks = [
         dest: '/',
       },
     ],
+  },
+  {
+    name: 'Ash',
+    slug: 'ash',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/ash.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/ash-dark.svg',
+    tagline:
+      'A filesystem-first framework for durable backend agents on Vercel.',
+    description:
+      'An Ash app: agents authored as a directory of files, compiled and served on Vercel.',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"experimental-ash":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pnpm install`, `yarn install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'ash build',
+        placeholder: '`npm run build` or `ash build`',
+      },
+      devCommand: {
+        value: 'ash dev',
+        placeholder: 'ash dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+    experimental: true,
   },
   {
     name: 'Sanity (v3)',
@@ -2462,6 +2505,7 @@ export const frameworks = [
     description:
       'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
     website: 'https://hono.dev',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/hono' },
     defaultRoutes: [
       {
@@ -2688,6 +2732,7 @@ export const frameworks = [
     tagline: 'Fast, unopinionated, minimalist web framework for Node.js',
     description: 'Fast, unopinionated, minimalist web framework for Node.js',
     website: 'https://expressjs.com',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/express' },
     defaultRoutes: [
       {
@@ -2911,6 +2956,7 @@ export const frameworks = [
     description:
       'H(TTP) server framework built on top of web standards for high performance and composability.',
     website: 'https://h3.dev/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/h3' },
     defaultRoutes: [
       {
@@ -3135,6 +3181,7 @@ export const frameworks = [
     description:
       'Koa is a new web framework designed by the team behind Express, which aims to be a smaller, more expressive, and more robust foundation for web applications and APIs.',
     website: 'https://koajs.com',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/koa' },
     defaultRoutes: [
       {
@@ -3360,6 +3407,7 @@ export const frameworks = [
     description:
       'A progressive Node.js framework for building efficient, reliable and scalable server-side applications.',
     website: 'https://nestjs.com/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/nestjs' },
     defaultRoutes: [
       {
@@ -3643,6 +3691,7 @@ export const frameworks = [
     description:
       'TypeScript with End-to-End Type Safety, type integrity, and exceptional developer experience. Supercharged by Bun.',
     website: 'https://elysiajs.com/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/elysia' },
     defaultRoutes: [
       {
@@ -3868,6 +3917,7 @@ export const frameworks = [
     description:
       'Fastify is a web framework highly focused on providing the best developer experience with the least overhead and a powerful plugin architecture.',
     website: 'https://fastify.dev/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/fastify' },
     defaultRoutes: [
       {
@@ -4128,7 +4178,6 @@ export const frameworks = [
   {
     name: 'Python',
     slug: 'python',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline:
@@ -4136,7 +4185,7 @@ export const frameworks = [
     description:
       'A generic Python application deployed as a serverless function.',
     website: 'https://python.org',
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -4279,9 +4328,109 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Axum',
+    slug: 'axum',
+    experimental: true,
+    supersedes: ['rust'],
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/axum.svg',
+    tagline:
+      'Ergonomic and modular web framework built with Tokio, Tower, and Hyper.',
+    description: 'An Axum application deployed as a serverless function.',
+    website: 'https://github.com/tokio-rs/axum',
+    useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
+    ignoreRuntimes: ['@vercel/rust'],
+    detectors: {
+      every: [
+        {
+          path: 'Cargo.toml',
+          matchContent: 'axum\\s*=',
+        },
+        {
+          path: 'src/main.rs',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`cargo run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/src/main',
+      },
+    ],
+  },
+  {
+    name: 'Actix Web',
+    slug: 'actix-web',
+    experimental: true,
+    runtimeFramework: true,
+    supersedes: ['rust'],
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/actix-web.svg',
+    tagline:
+      'A powerful, pragmatic, and extremely fast web framework for Rust.',
+    description: 'An Actix Web application deployed as a serverless function.',
+    website: 'https://actix.rs',
+    useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
+    ignoreRuntimes: ['@vercel/rust'],
+    detectors: {
+      every: [
+        {
+          path: 'Cargo.toml',
+          matchContent: 'actix-web\\s*=',
+        },
+        {
+          path: 'src/main.rs',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`cargo run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/src/main',
+      },
+    ],
+  },
+  {
     name: 'Node',
     slug: 'node',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/node.svg',
     tagline:
@@ -4289,15 +4438,50 @@ export const frameworks = [
     description:
       'A generic Node.js application deployed as a serverless function.',
     website: 'https://nodejs.org',
-    useRuntime: { src: 'server.ts', use: '@vercel/backends' },
+    useRuntime: { src: 'package.json', use: '@vercel/backends' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
       every: [
         {
+          path: 'package.json',
+        },
+      ],
+      some: [
+        {
+          path: 'server.cjs',
+        },
+        {
+          path: 'server.js',
+        },
+        {
+          path: 'server.mjs',
+        },
+        {
+          path: 'server.mts',
+        },
+        {
           path: 'server.ts',
         },
         {
-          path: 'package.json',
+          path: 'server.cts',
+        },
+        {
+          path: 'src/server.cjs',
+        },
+        {
+          path: 'src/server.js',
+        },
+        {
+          path: 'src/server.mjs',
+        },
+        {
+          path: 'src/server.mts',
+        },
+        {
+          path: 'src/server.ts',
+        },
+        {
+          path: 'src/server.cts',
         },
       ],
     },
@@ -4311,7 +4495,8 @@ export const frameworks = [
         value: null,
       },
       devCommand: {
-        placeholder: '`npm run dev` or `npx ts-node server.ts`',
+        placeholder:
+          '`npm run dev`, `node server.js`, or `npx ts-node server.ts`',
         value: null,
       },
       outputDirectory: {
@@ -4332,7 +4517,6 @@ export const frameworks = [
   {
     name: 'Go',
     slug: 'go',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
     tagline: 'An open-source programming language supported by Google.',
@@ -4412,6 +4596,37 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Mastra',
+    slug: 'mastra',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/mastra.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/mastra-dark.svg',
+    tagline: 'Build AI agents with a modern TypeScript stack',
+    description:
+      'Mastra is a framework for building AI-powered apps and agents with workflows, memory, streaming, evals, tracing, and Studio, an interactive UI for dev and testing.',
+    website: 'https://mastra.ai',
+    detectors: {
+      every: [{ matchPackage: 'mastra' }],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `mastra build`',
+        value: 'mastra build',
+      },
+      devCommand: {
+        value: 'mastra dev',
+      },
+      outputDirectory: {
+        value: '.mastra',
+      },
+    },
+    getOutputDirName: async () => '.mastra',
   },
   {
     name: 'Other',

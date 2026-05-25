@@ -8,24 +8,25 @@ import { readdirSync, statSync } from 'fs';
 
 import {
   download,
+  FileBlob,
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
   runNpmInstall,
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
-  type Reporter,
   Span,
-  type TraceEvent,
   validateNpmrc,
   type Builder,
   type BuildOptions,
   type BuildResultV2,
   type BuildResultV2Typical,
   type BuildResultV3,
+  type BuildResultVX,
   type Config,
   type Cron,
   type Files,
@@ -34,8 +35,16 @@ import {
   type PackageJson,
   glob,
   type Service,
+  getInternalServiceCronPath,
+  getInternalServiceFunctionPath,
+  getServiceQueueTopicConfigs,
   isBackendBuilder,
+  isQueueBackedService,
+  isScheduleTriggeredService,
   type Lambda,
+  type TriggerEvent,
+  sanitizeConsumerName,
+  downloadFile,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -57,6 +66,9 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -66,6 +78,7 @@ import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
   writeBuildResult,
+  isLambda,
   type PathOverride,
 } from '../../util/build/write-build-result';
 import type Client from '../../util/client';
@@ -80,7 +93,12 @@ import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import {
+  getLinkedProject,
+  getProjectLink,
+  VERCEL_DIR,
+} from '../../util/projects/link';
+import { printProjectNotFoundError } from '../../util/projects/project-not-found-error';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -88,8 +106,10 @@ import {
   type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
 import readJSONFile from '../../util/read-json-file';
+import { getStaticServiceSchedules } from '../../util/service-schedules';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import ua from '../../util/ua';
 import { validateCronSecret } from '../../util/validate-cron-secret';
 import {
   compileVercelConfig,
@@ -98,8 +118,22 @@ import {
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
+import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
-import { mkdir, writeFile } from 'fs/promises';
+import { validatePackageManifest } from '../../util/validate-package-manifest';
+import { shouldEmbedFlagsDefinitions } from '../../util/flags/build-embedding';
+
+/** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
+function buildCommandWithGlobalFlags(
+  baseSubcommand: string,
+  argv: string[]
+): string {
+  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  const full = globalFlags.length
+    ? `${baseSubcommand} ${globalFlags.join(' ')}`
+    : baseSubcommand;
+  return cli.getCommandNamePlain(full);
+}
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -120,6 +154,7 @@ interface BuildOutputConfig {
   routes?: BuildResultV2Typical['routes'];
   overrides?: Record<string, PathOverride>;
   framework?: {
+    slug: string;
     version: string;
   };
   crons?: Cron[];
@@ -143,14 +178,6 @@ export interface BuildsManifest {
   };
 }
 
-class InMemoryReporter implements Reporter {
-  public events: TraceEvent[] = [];
-
-  report(event: TraceEvent) {
-    this.events.push(event);
-  }
-}
-
 export default async function main(client: Client): Promise<number> {
   const telemetryClient = new BuildTelemetryClient({
     opts: {
@@ -158,9 +185,8 @@ export default async function main(client: Client): Promise<number> {
     },
   });
 
-  // Setup tracer to output into the build directory
-  const reporter = new InMemoryReporter();
-  const rootSpan = new Span({ name: 'vc', reporter });
+  // Create build trace span as a child of the CLI-wide root span
+  const rootSpan = client.rootSpan?.child('vc') ?? new Span({ name: 'vc' });
 
   let { cwd } = client;
   cwd = await resolveProjectCwd(cwd);
@@ -194,6 +220,8 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
+    telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
+    telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
   } catch (error) {
     printError(error);
     return 1;
@@ -235,8 +263,36 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
+  const projectNameOrId = parsedArgs.flags['--project'];
+
   // If repo linked, update `cwd` to the repo root
-  const link = await getProjectLink(client, cwd);
+  let link = await rootSpan
+    .child('vc.getProjectLink')
+    .trace(() => getProjectLink(client, cwd, projectNameOrId, true));
+
+  // No local link matched `--project`; resolve via API before the
+  // settings-pull prompt would silently re-link to the wrong project.
+  if (projectNameOrId && !link) {
+    const linkedFromApi = await getLinkedProject(
+      client,
+      cwd,
+      projectNameOrId,
+      true
+    );
+    if (linkedFromApi.status === 'linked') {
+      link = {
+        projectId: linkedFromApi.project.id,
+        orgId: linkedFromApi.org.id,
+        repoRoot: linkedFromApi.repoRoot,
+      };
+    } else if (linkedFromApi.status === 'error') {
+      return linkedFromApi.exitCode;
+    } else {
+      await printProjectNotFoundError(client, projectNameOrId, 'build');
+      return 1;
+    }
+  }
+
   const projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
@@ -246,11 +302,42 @@ export default async function main(client: Client): Promise<number> {
 
   // Read project settings, and pull them from Vercel if necessary
   const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
-  let project = await readProjectSettings(vercelDir);
+  let project = await rootSpan
+    .child('vc.readProjectSettings')
+    .trace(() => readProjectSettings(vercelDir));
   const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
     let confirmed = yes;
     if (!confirmed) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
+            message:
+              'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  `pull --yes --environment ${target}`,
+                  client.argv
+                ),
+                when: 'retrieve project settings',
+              },
+              {
+                command: buildCommandWithGlobalFlags(
+                  'build --yes',
+                  client.argv
+                ),
+                when: 're-run build after pull',
+              },
+            ],
+          },
+          1
+        );
+        return 1;
+      }
       if (!isTTY) {
         output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
@@ -268,29 +355,31 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     if (!confirmed) {
-      output.print(`Canceled. No Project Settings retrieved.\n`);
+      if (!client.nonInteractive)
+        output.print(`Canceled. No Project Settings retrieved.\n`);
       return 0;
     }
     const { argv: originalArgv } = client;
     client.cwd = join(cwd, projectRootDirectory);
-    client.argv = [
+    client.setArgv([
       ...originalArgv.slice(0, 2),
       'pull',
       `--environment`,
       target,
-    ];
+    ]);
     const result = await pullCommandLogic(
       client,
       client.cwd,
       Boolean(parsedArgs.flags['--yes']),
       target,
-      parsedArgs.flags
+      parsedArgs.flags,
+      projectNameOrId
     );
     if (result !== 0) {
       return result;
     }
     client.cwd = cwd;
-    client.argv = originalArgv;
+    client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
   }
 
@@ -299,6 +388,12 @@ export default async function main(client: Client): Promise<number> {
   const outputDir = parsedArgs.flags['--output']
     ? resolve(parsedArgs.flags['--output'])
     : defaultOutputDir;
+
+  client.traceDiagnosticsPath = join(
+    outputDir,
+    'diagnostics',
+    'cli_traces.json'
+  );
 
   await Promise.all([
     fs.remove(outputDir),
@@ -313,35 +408,72 @@ export default async function main(client: Client): Promise<number> {
     cliVersion: cliPkg.version,
   };
 
-  if (!process.env.VERCEL_BUILD_IMAGE) {
+  const deploymentId = parsedArgs.flags['--id'];
+
+  // When --id is provided, system env vars are fetched from the deployment,
+  // so the warning about missing system env vars does not apply.
+  if (
+    !process.env.VERCEL_BUILD_IMAGE &&
+    !deploymentId &&
+    !client.nonInteractive
+  ) {
     output.warn(
       'Build not running on Vercel. System environment variables will not be available.'
     );
   }
-
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
-    const envPath = join(
-      cwd,
-      projectRootDirectory,
-      VERCEL_DIR,
-      `.env.${target}.local`
-    );
-    // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
-    const dotenvResult = dotenv.config({
-      path: envPath,
-      debug: output.isDebugEnabled(),
-    });
-    if (dotenvResult.error) {
-      output.debug(
-        `Failed loading environment variables: ${dotenvResult.error}`
-      );
-    } else if (dotenvResult.parsed) {
-      for (const key of Object.keys(dotenvResult.parsed)) {
-        envToUnset.add(key);
+    const loadEnvSpan = rootSpan.child('vc.loadEnv');
+    try {
+      if (deploymentId) {
+        // Set the team context so API calls include the teamId query param.
+        // Without this, the API can't find the deployment.
+        if (link?.orgId?.startsWith('team_')) {
+          client.config.currentTeam = link.orgId;
+        }
+
+        // When --id is provided, fetch env vars from the deployment
+        // instead of loading from local .env files.
+        output.debug(
+          `Fetching environment variables for deployment ${deploymentId}`
+        );
+        const { buildEnv } = await fetchDeploymentBuildEnv(
+          client,
+          deploymentId
+        );
+        for (const [key, value] of Object.entries(buildEnv)) {
+          envToUnset.add(key);
+          process.env[key] = value;
+        }
+        output.debug(
+          `Loaded ${Object.keys(buildEnv).length} environment variables from deployment ${deploymentId}`
+        );
+      } else {
+        const envPath = join(
+          cwd,
+          projectRootDirectory,
+          VERCEL_DIR,
+          `.env.${target}.local`
+        );
+        // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
+        const dotenvResult = dotenv.config({
+          path: envPath,
+          debug: output.isDebugEnabled(),
+        });
+        if (dotenvResult.error) {
+          output.debug(
+            `Failed loading environment variables: ${dotenvResult.error}`
+          );
+        } else if (dotenvResult.parsed) {
+          for (const key of Object.keys(dotenvResult.parsed)) {
+            envToUnset.add(key);
+          }
+          output.debug(`Loaded environment variables from "${envPath}"`);
+        }
       }
-      output.debug(`Loaded environment variables from "${envPath}"`);
+    } finally {
+      loadEnvSpan.stop();
     }
 
     // For legacy Speed Insights
@@ -367,8 +499,58 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan.stop();
     }
 
+    if (client.nonInteractive) {
+      const relOutputDir = relative(cwd, outputDir);
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: AGENT_STATUS.OK,
+            outputDir: outputDir,
+            outputDirRelative: relOutputDir.startsWith('..')
+              ? outputDir
+              : relOutputDir,
+            target,
+            message: 'Build completed successfully.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags('deploy', client.argv),
+                when: 'Deploy the build output',
+              },
+            ],
+          },
+          null,
+          2
+        )}\n`
+      );
+    }
     return 0;
   } catch (err: any) {
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: 'build_failed',
+            message: err?.message ?? String(err),
+            next: [
+              {
+                command: buildCommandWithGlobalFlags('pull --yes', client.argv),
+                when: 'Ensure project settings are present',
+              },
+              {
+                command: buildCommandWithGlobalFlags(
+                  'build --yes',
+                  client.argv
+                ),
+                when: 're-run build',
+              },
+            ],
+          },
+          null,
+          2
+        )}\n`
+      );
+    }
     output.prettyError(err);
 
     // Write error to `builds.json` file
@@ -382,19 +564,6 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
-    try {
-      const diagnosticsOutputPath = join(outputDir, 'diagnostics');
-      await mkdir(diagnosticsOutputPath, { recursive: true });
-      // Ensure that all traces have flushed to disk before we exit
-      await writeFile(
-        join(diagnosticsOutputPath, 'cli_traces.json'),
-        JSON.stringify(reporter.events)
-      );
-    } catch (err) {
-      output.error('Failed to write diagnostics trace file');
-      output.prettyError(err);
-    }
-
     // Unset environment variables that were added by dotenv
     // (this is mostly for the unit tests)
     for (const key of envToUnset) {
@@ -434,49 +603,54 @@ async function doBuild(
   if (sourceConfigFile) {
     corepackShimDir = await initCorepack({ repoRootPath: cwd });
 
-    const installCommand = project.settings.installCommand;
-    if (typeof installCommand === 'string') {
-      if (installCommand.trim()) {
-        output.log(`Running install command before config compilation...`);
-        await runCustomInstallCommand({
-          destPath: workPath,
-          installCommand,
-          spawnOpts: { env: process.env },
-          projectCreatedAt: project.settings.createdAt,
-        });
+    const installDepsSpan = span.child('vc.installDeps');
+    try {
+      const installCommand = project.settings.installCommand;
+      if (typeof installCommand === 'string') {
+        if (installCommand.trim()) {
+          output.log(`Running install command before config compilation...`);
+          await runCustomInstallCommand({
+            destPath: workPath,
+            installCommand,
+            spawnOpts: { env: process.env },
+            projectCreatedAt: project.settings.createdAt,
+          });
+        } else {
+          output.debug('Skipping empty install command');
+        }
       } else {
-        output.debug('Skipping empty install command');
+        output.log(`Installing dependencies before config compilation...`);
+        await runNpmInstall(
+          workPath,
+          [],
+          { env: process.env },
+          undefined,
+          project.settings.createdAt
+        );
       }
-    } else {
-      output.log(`Installing dependencies before config compilation...`);
-      await runNpmInstall(
-        workPath,
-        [],
-        { env: process.env },
-        undefined,
-        project.settings.createdAt
-      );
+    } finally {
+      installDepsSpan.stop();
     }
     process.env.VERCEL_INSTALL_COMPLETED = '1';
   }
 
-  const compileResult = await compileVercelConfig(workPath);
+  const compileResult = await span
+    .child('vc.compileVercelConfig')
+    .trace(() => compileVercelConfig(workPath));
 
   const vercelConfigPath =
     localConfigPath ||
     compileResult.configPath ||
     join(workPath, 'vercel.json');
 
-  const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
+  const [pkg, vercelConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(vercelConfigPath),
-    readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
-  if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
 
   if (hasInstrumentation) {
     output.debug(
@@ -489,11 +663,9 @@ async function doBuild(
     vercelConfig[fileNameSymbol] = compileResult.wasCompiled
       ? compileResult.sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME
       : 'vercel.json';
-  } else if (nowConfig) {
-    nowConfig[fileNameSymbol] = 'now.json';
   }
 
-  const localConfig = vercelConfig || nowConfig || {};
+  const localConfig = vercelConfig || {};
   const validateError = validateConfig(localConfig);
 
   if (validateError) {
@@ -522,9 +694,16 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
-    const { emitFlagsDatafiles } = await import('./emit-flags-datafiles');
-    await emitFlagsDatafiles(cwd, process.env);
+  if (await shouldEmbedFlagsDefinitions(cwd)) {
+    const { prepareFlagsDefinitions } = await import(
+      '@vercel/prepare-flags-definitions'
+    );
+    await prepareFlagsDefinitions({
+      cwd,
+      env: process.env as Record<string, string | undefined>,
+      userAgentSuffix: ua,
+      output,
+    });
   }
 
   // Get a list of source files
@@ -548,6 +727,7 @@ async function doBuild(
 
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let zeroConfigFallbackRoutes: Route[] = [];
   let detectedServices: Service[] | undefined;
   let isZeroConfig = false;
 
@@ -555,19 +735,21 @@ async function doBuild(
     output.warn(
       'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
     );
-    builds = builds.map(b => expandBuild(files, b)).flat();
+    builds = builds.flatMap(b => expandBuild(files, b));
   } else {
     // Zero config
     isZeroConfig = true;
 
     // Detect the Vercel Builders that will need to be invoked
-    const detectedBuilders = await detectBuilders(files, pkg, {
-      ...localConfig,
-      projectSettings,
-      ignoreBuildScript: true,
-      featHandleMiss: true,
-      workPath,
-    });
+    const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
+      detectBuilders(files, pkg, {
+        ...localConfig,
+        projectSettings,
+        ignoreBuildScript: true,
+        featHandleMiss: true,
+        workPath,
+      })
+    );
 
     if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
       throw detectedBuilders.errors[0];
@@ -586,18 +768,20 @@ async function doBuild(
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
 
-    // Inject service URL environment variables so they're available during builds.
-    // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
-    // these env vars are baked into the client bundle so they can be accessed in the client code.
-    // User-defined env vars take precedence and won't be overwritten.
-    if (detectedServices && detectedServices.length > 0) {
-      const serviceUrlEnvVars = getServiceUrlEnvVars({
+    // Legacy URL injection for `experimentalServices`. The `services` field
+    // opts out of this and uses explicit per-service
+    // `env` declarations (handled inside the builder loop below).
+    if (
+      detectedBuilders.useImplicitEnvInjection &&
+      detectedServices &&
+      detectedServices.length > 0
+    ) {
+      const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
         services: detectedServices,
         frameworkList,
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
       });
-
       for (const [key, value] of Object.entries(serviceUrlEnvVars)) {
         process.env[key] = value;
         output.debug(`Injected service URL env var: ${key}=${value}`);
@@ -605,6 +789,16 @@ async function doBuild(
     }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
+    const detectedHostRewriteRoutes = (
+      detectedBuilders as typeof detectedBuilders & {
+        hostRewriteRoutes?: Route[] | null;
+      }
+    ).hostRewriteRoutes;
+    zeroConfigRoutes = appendRoutesToPhase({
+      routes: zeroConfigRoutes,
+      newRoutes: detectedHostRewriteRoutes ?? null,
+      phase: null,
+    });
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
@@ -618,11 +812,14 @@ async function doBuild(
       phase: 'error',
     });
     zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+    zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, span);
+  const buildersWithPkgs = await span
+    .child('vc.importBuilders')
+    .trace(() => importBuilders(builderSpecs, cwd, span));
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -681,24 +878,30 @@ async function doBuild(
     corepackShimDir = await initCorepack({ repoRootPath });
   }
   const diagnostics: Files = {};
+  const packageManifests: Array<{
+    workspace: string;
+    key: string;
+    manifest: Record<string, unknown>;
+    service?: Service;
+    builderUse: string;
+  }> = [];
 
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
-  const servicesByBuilderSrc = new Map<string, Service>();
+  const hasQueueServices =
+    hasDetectedServices && detectedServices!.some(isQueueBackedService);
+  const synthesizedServiceCrons: Cron[] = [];
+  const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
-      if (service.builder.src) {
-        const existing = servicesByBuilderSrc.get(service.builder.src);
-        if (existing) {
-          throw new NowBuildError({
-            code: 'DUPLICATE_SERVICE_BUILDER_SRC',
-            message: `Services "${existing.name}" and "${service.name}" both have the same builder source "${service.builder.src}". Each service must have a unique builder source.`,
-          });
-        }
-        servicesByBuilderSrc.set(service.builder.src, service);
-      }
+      serviceByBuilder.set(service.builder, service);
     }
   }
+
+  const preDeployEntries: {
+    service: string;
+    callback?: () => Promise<void>;
+  }[] = [];
 
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
@@ -720,12 +923,10 @@ async function doBuild(
       // entrypoint, so their routes are emitted relative to the workspace root
       // (not polluted with the workspace directory prefix).
       const service = hasDetectedServices
-        ? servicesByBuilderSrc.get(build.src)
+        ? serviceByBuilder.get(build)
         : undefined;
       const stripServiceRoutePrefix =
-        !!service?.routePrefix &&
-        service?.routePrefix !== '/' &&
-        service?.routePrefixSource === 'generated';
+        !!service?.routePrefix && service.routePrefix !== '/';
 
       let buildWorkPath = workPath;
       let buildEntrypoint = build.src;
@@ -800,6 +1001,7 @@ async function doBuild(
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
+            ...(hasQueueServices ? { hasWorkerServices: true } : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
             // propagated to individual builders.
@@ -811,6 +1013,7 @@ async function doBuild(
             },
             installCommand: service.installCommand ?? undefined,
             buildCommand: service.buildCommand ?? undefined,
+            preDeployCommand: service.preDeployCommand ?? undefined,
             framework: builderFramework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
@@ -845,6 +1048,16 @@ async function doBuild(
 
       const serviceRoutePrefix = build.config?.routePrefix;
       const serviceWorkspace = build.config?.workspace;
+      const preDeployCmd = service?.preDeployCommand?.trim();
+
+      const preDeployEntry =
+        preDeployCmd && service
+          ? ({ service: service.name } as (typeof preDeployEntries)[number])
+          : undefined;
+      if (preDeployEntry) {
+        preDeployEntries.push(preDeployEntry);
+      }
+
       const buildOptions: BuildOptions = {
         files: buildFiles,
         entrypoint: buildEntrypoint,
@@ -853,10 +1066,19 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
-        ...(typeof serviceRoutePrefix === 'string' ||
-        typeof serviceWorkspace === 'string'
+        ...(preDeployCmd
+          ? {
+              registerPreDeploy: (callback: () => Promise<void>) => {
+                preDeployEntry!.callback = callback;
+              },
+            }
+          : undefined),
+        ...(service
           ? {
               service: {
+                name: service.name,
+                type: service.type,
+                trigger: service.trigger,
                 routePrefix:
                   typeof serviceRoutePrefix === 'string'
                     ? serviceRoutePrefix
@@ -865,6 +1087,7 @@ async function doBuild(
                   typeof serviceWorkspace === 'string'
                     ? serviceWorkspace
                     : undefined,
+                schedule: service.schedule,
               },
             }
           : undefined),
@@ -872,11 +1095,41 @@ async function doBuild(
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
+
+      // Inject per-service URL environment variables so they're available during builds.
+      // for frontend frameworks like Vite (VITE_) or Next.js (NEXT_PUBLIC_) where
+      // these env vars are baked into the client bundle so they can be accessed in the client code.
+      // User-defined env takes precedence and won't be overwritten. The env will be cleared
+      // after the build is complete
+      const restoreEnv = new Map<string, string | undefined>();
+      if (detectedServices && service?.env) {
+        const perServiceEnv = getServiceUrlEnvVars({
+          requestedEnv: service.env,
+          consumerService: service,
+          services: detectedServices,
+          frameworkList,
+          currentEnv: process.env,
+          deploymentUrl: process.env.VERCEL_URL,
+        });
+        for (const [key, value] of Object.entries(perServiceEnv)) {
+          if (key in process.env) continue;
+          restoreEnv.set(key, process.env[key]);
+          process.env[key] = value;
+          output.debug(`Injected service URL env var: ${key}=${value}`);
+        }
+      }
       let buildResult: BuildResultV2 | BuildResultV3;
+      let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
-        buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          async () => builder.build(buildOptions)
-        );
+        rawBuildResult = await builderSpan.trace<
+          BuildResultV2 | BuildResultV3 | BuildResultVX
+        >(async () => builder.build(buildOptions));
+        if (builder.version === -1) {
+          const vx = rawBuildResult as BuildResultVX;
+          buildResult = vx.result;
+        } else {
+          buildResult = rawBuildResult as BuildResultV2 | BuildResultV3;
+        }
 
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
@@ -899,6 +1152,15 @@ async function doBuild(
           }
         }
       } finally {
+        // Restore any process.env keys we set from service envVars so the
+        // next builder iteration starts from a clean slate.
+        for (const [key, prior] of restoreEnv) {
+          if (prior === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = prior;
+          }
+        }
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan
@@ -906,7 +1168,51 @@ async function doBuild(
             .trace(async () => {
               return await builder.diagnostics?.(buildOptions);
             });
-          Object.assign(diagnostics, builderDiagnostics);
+          if (builderDiagnostics) {
+            const prefix =
+              service && service.workspace !== '.'
+                ? service.workspace + '/' + builderPkg.name + '/'
+                : '';
+            for (const [key, value] of Object.entries(builderDiagnostics)) {
+              const fullKey = prefix + key;
+              if (key.endsWith('package-manifest.json')) {
+                try {
+                  let data: string;
+                  if (value.type === 'FileBlob') {
+                    data = (value as unknown as FileBlob).data.toString();
+                  } else {
+                    data = await streamToString(value.toStream());
+                  }
+                  const packageManifest = JSON.parse(data);
+                  const validationError =
+                    validatePackageManifest(packageManifest);
+                  if (validationError) {
+                    output.warn(
+                      `Invalid package-manifest.json from ${fullKey}: ${validationError}`
+                    );
+                  } else {
+                    const workspace =
+                      service && service.workspace !== '.'
+                        ? service.workspace
+                        : '.';
+                    packageManifests.push({
+                      workspace,
+                      key: fullKey,
+                      manifest: packageManifest,
+                      service,
+                      builderUse: builderPkg.name,
+                    });
+                  }
+                } catch (e) {
+                  output.debug(
+                    `Failed to parse ${fullKey}: ${e instanceof Error ? e.message : String(e)}`
+                  );
+                }
+              } else {
+                diagnostics[fullKey] = value;
+              }
+            }
+          }
         } catch (error) {
           output.error('Collecting diagnostics failed');
           output.debug(error);
@@ -1010,9 +1316,75 @@ async function doBuild(
         });
       }
 
+      if (service && isQueueBackedService(service) && 'output' in buildResult) {
+        attachQueueServiceTrigger(buildResult.output, service);
+      }
+
+      if (
+        service &&
+        isScheduleTriggeredService(service) &&
+        !('crons' in buildResult && buildResult.crons?.length)
+      ) {
+        const staticSchedules = getStaticServiceSchedules(service.schedule);
+        if (typeof service.runtime === 'string' && staticSchedules.length > 0) {
+          const cronEntrypoint =
+            service.entrypoint || service.builder.src || 'index';
+          for (const schedule of staticSchedules) {
+            synthesizedServiceCrons.push({
+              path: getInternalServiceCronPath(
+                service.name,
+                cronEntrypoint,
+                service.handlerFunction || 'cron'
+              ),
+              schedule,
+            });
+          }
+        } else {
+          throw new NowBuildError({
+            code: 'CRON_SERVICE_NO_CRONS',
+            message: `Scheduled service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
+          });
+        }
+      }
+
+      let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
+      if ('buildOutputPath' in buildResult) {
+        // Read this builder's own Build Output API config directly. When
+        // multiple builders write into `.vercel/output`, a later filesystem
+        // merge can overwrite `config.json` from a sibling builder.
+        const buildOutputConfigPath = join(
+          buildResult.buildOutputPath,
+          'config.json'
+        );
+        const buildOutputConfig = await readJSONFile<BuildOutputConfig>(
+          buildOutputConfigPath
+        );
+        if (buildOutputConfig instanceof CantParseJSONFile) {
+          throw buildOutputConfig;
+        }
+
+        if (buildOutputConfig) {
+          if (buildOutputConfig.overrides) {
+            overrides.push(buildOutputConfig.overrides);
+          }
+          if (
+            hasDetectedServices &&
+            service &&
+            Array.isArray(buildOutputConfig.routes) &&
+            detectedServices
+          ) {
+            buildOutputConfig.routes = scopeRoutesToServiceOwnership({
+              routes: buildOutputConfig.routes as Route[],
+              owner: service,
+              allServices: detectedServices,
+            });
+          }
+          mergedBuildResult = buildOutputConfig;
+        }
+      }
       // Store the build result to generate the final `config.json` after
       // all builds have completed
-      buildResults.set(build, buildResult);
+      buildResults.set(build, mergedBuildResult);
 
       let buildOutputLength = 0;
       if ('output' in buildResult) {
@@ -1031,7 +1403,7 @@ async function doBuild(
             writeBuildResult({
               repoRootPath,
               outputDir,
-              buildResult,
+              buildResult: rawBuildResult,
               build,
               builder,
               builderPkg,
@@ -1065,9 +1437,63 @@ async function doBuild(
     }
   }
 
+  // Run pre-deploy commands after all builders succeeded.
+  // A builder is responsible for handling preDeployCommand, so
+  // it will actually own its env, tracing, etc.
+  // We do not fire them during the build itself, because not all builds
+  // might succeed and be actually deployed.
+  for (const entry of preDeployEntries) {
+    if (entry.callback) {
+      await entry.callback();
+    } else {
+      output.warn(
+        `Service "${entry.service}" has a preDeployCommand but its builder does not support it. The command was not executed.`
+      );
+    }
+  }
+
+  // Aggregate individual package-manifest.json files from builders into
+  // a single project-manifest.json keyed by service workspace.
+  if (packageManifests.length > 0) {
+    const projectManifest: Record<string, unknown> = {};
+    for (const {
+      workspace,
+      manifest,
+      service,
+      builderUse,
+    } of packageManifests) {
+      projectManifest[`${builderUse}:${workspace}`] = {
+        ...manifest,
+        workspace,
+        builder: builderUse,
+        framework: service?.framework,
+        serviceName: service?.name,
+        serviceType: service?.type,
+        routePrefix: service?.routePrefix,
+      };
+    }
+    if (Object.keys(projectManifest).length > 0) {
+      const projectManifestBlob = new FileBlob({
+        data: JSON.stringify(projectManifest),
+      });
+      diagnostics['project-manifest.json'] = projectManifestBlob;
+      ops.push(
+        downloadFile(
+          projectManifestBlob,
+          join(outputDir, 'diagnostics', 'project-manifest.json')
+        ).then(
+          () => undefined,
+          err => err
+        )
+      );
+    }
+  }
+
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
   }
+
+  const collectSpan = span.child('vc.finalizeBuildOutput');
 
   // Wait for filesystem operations to complete
   // TODO render progress bar?
@@ -1135,14 +1561,6 @@ async function doBuild(
     if (existingConfig.overrides) {
       overrides.push(existingConfig.overrides);
     }
-    // Find the `Build` entry for this config file and update the build result
-    for (const [build, buildResult] of buildResults.entries()) {
-      if ('buildOutputPath' in buildResult) {
-        output.debug(`Using "config.json" for "${build.use}`);
-        buildResults.set(build, existingConfig);
-        break;
-      }
-    }
   }
 
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
@@ -1155,7 +1573,7 @@ async function doBuild(
       let entrypoint = build.src!;
 
       if (hasDetectedServices && typeof build.src === 'string') {
-        const service = servicesByBuilderSrc.get(build.src);
+        const service = serviceByBuilder.get(build);
         if (
           service &&
           service.type === 'web' &&
@@ -1178,13 +1596,23 @@ async function doBuild(
       routes: zeroConfigRoutes,
     });
   }
-  const mergedRoutes = mergeRoutes({
+  let mergedRoutes = mergeRoutes({
     userRoutes: routesResult.routes,
     builds: builderRoutes,
   });
+  if (zeroConfigFallbackRoutes.length) {
+    mergedRoutes = appendRoutesToPhase({
+      routes: mergedRoutes,
+      newRoutes: zeroConfigFallbackRoutes,
+      phase: 'filesystem',
+    });
+  }
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
+  const mergedCrons = mergeCrons(
+    [...(localConfig.crons || []), ...synthesizedServiceCrons],
+    buildResults.values()
+  );
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedDeploymentId = await mergeDeploymentId(
     existingConfig?.deploymentId,
@@ -1233,16 +1661,19 @@ async function doBuild(
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
   await writeFlagsJSON(buildResults.values(), outputDir);
+  collectSpan.stop();
 
   const relOutputDir = relative(cwd, outputDir);
-  output.print(
-    `${prependEmoji(
-      `Build Completed in ${chalk.bold(
-        relOutputDir.startsWith('..') ? outputDir : relOutputDir
-      )} ${chalk.gray(buildStamp())}`,
-      emoji('success')
-    )}\n`
-  );
+  if (!client.nonInteractive) {
+    output.print(
+      `${prependEmoji(
+        `Build Completed in ${chalk.bold(
+          relOutputDir.startsWith('..') ? outputDir : relOutputDir
+        )} ${chalk.gray(buildStamp())}`,
+        emoji('success')
+      )}\n`
+    );
+  }
 
   // Analyze .vc-config.json files if environment variable is set
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
@@ -1266,6 +1697,7 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
 }
 
 const LAMBDA_SIZE_LIMIT_MB = 250;
+const CLOSE_TO_LIMIT_MB = LAMBDA_SIZE_LIMIT_MB - 5;
 
 function printFileSizeBreakdown(files: Map<string, number>): void {
   // Group files by package or directory structure
@@ -1284,7 +1716,7 @@ function printFileSizeBreakdown(files: Map<string, number>): void {
     .slice(0, 10);
 
   if (sortedDeps.length > 0) {
-    output.print(chalk.yellow('  Large dependencies:\n'));
+    output.print(chalk.yellow('Large dependencies:\n'));
     for (const [dep, size] of sortedDeps) {
       if (size >= 0.5) {
         // Only show files >= 500KB
@@ -1330,46 +1762,44 @@ async function analyzeVcConfigFiles(
     (r): r is NonNullable<typeof r> => r !== null
   );
 
-  // Separate exceeded and normal functions
+  // Sort by size descending (largest first)
   const sortedResults = validResults.sort((a, b) => b.size - a.size);
-  const exceededFunctions = sortedResults.filter(
-    r => r.size > LAMBDA_SIZE_LIMIT_MB
-  );
-  const normalFunctions = sortedResults.filter(
-    r => r.size <= LAMBDA_SIZE_LIMIT_MB
-  );
 
-  // Show warning once if there are exceeded functions
-  if (exceededFunctions.length > 0) {
-    output.print(
-      `${chalk.red.bold(`⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached`)}\n\n`
-    );
+  output.print(chalk.bold(`\nServerless function size info:\n`));
 
-    // List all affected functions
-    for (const result of exceededFunctions) {
+  let numExceeded = 0;
+  for (const result of sortedResults) {
+    const exceeded = result.size >= LAMBDA_SIZE_LIMIT_MB;
+    const close = result.size >= CLOSE_TO_LIMIT_MB && !exceeded;
+
+    // Print warning if function exceeded or is close to limit
+    if (exceeded) {
+      numExceeded++;
       output.print(
-        `${chalk.red('Function :')} ${chalk.red.bold(result.path)}\n` +
-          `${chalk.red('Size     :')} ${chalk.red.bold(result.size.toFixed(2))} MB\n`
+        chalk.yellow(
+          `\n⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached\n`
+        )
       );
-
-      // Show breakdown of largest files/dependencies
-      printFileSizeBreakdown(result.files);
-      output.print('\n');
+    } else if (close) {
+      output.print(
+        chalk.yellow(
+          `\n⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed almost reached\n`
+        )
+      );
     }
 
-    // Show summary of normal functions
-    if (normalFunctions.length > 0) {
-      output.print(chalk.cyan(`Other functions:\n`));
-      for (const result of normalFunctions) {
-        output.print(
-          `${chalk.cyan(result.path)}: ${chalk.bold(result.size.toFixed(2))} MB\n`
-        );
-      }
-    }
+    output.print(
+      `${chalk.cyan('Function :')} ${chalk.cyan.bold(result.path)}\n` +
+        `${chalk.cyan('Size     :')} ${chalk.cyan.bold(result.size.toFixed(2))} MB\n`
+    );
+    printFileSizeBreakdown(result.files);
+  }
 
+  // Throw error if any functions exceeded the limit
+  if (numExceeded > 0) {
     throw new NowBuildError({
       code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
-      message: `${exceededFunctions.length} function${exceededFunctions.length === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
+      message: `${numExceeded} function${numExceeded === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
       link: 'https://vercel.link/serverless-function-size',
       action: 'Learn More',
     });
@@ -1483,7 +1913,7 @@ function getDirectorySizeInMB(dir: string): {
 async function getFramework(
   cwd: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>
-): Promise<{ version: string } | undefined> {
+): Promise<{ slug: string; version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList,
@@ -1500,27 +1930,37 @@ async function getFramework(
         'framework' in buildResult &&
         build.use === detectedFramework.useRuntime.use
       ) {
-        return buildResult.framework;
+        return buildResult.framework
+          ? {
+              slug: buildResult.framework.slug,
+              version: buildResult.framework.version,
+            }
+          : undefined;
       }
     }
   }
 
   // determine framework version from listed package.json version
-  if (detectedFramework.detectedVersion) {
+  if (detectedFramework.slug) {
     // check for a valid, explicit version, not a range
-    if (semver.valid(detectedFramework.detectedVersion)) {
+    if (
+      detectedFramework.detectedVersion &&
+      semver.valid(detectedFramework.detectedVersion)
+    ) {
       return {
+        slug: detectedFramework.slug,
         version: detectedFramework.detectedVersion,
       };
     }
-  }
 
-  // determine framework version with runtime lookup
-  const frameworkVersion = detectFrameworkVersion(detectedFramework);
-  if (frameworkVersion) {
-    return {
-      version: frameworkVersion,
-    };
+    // determine framework version with runtime lookup
+    const frameworkVersion = detectFrameworkVersion(detectedFramework);
+    if (frameworkVersion) {
+      return {
+        slug: detectedFramework.slug,
+        version: frameworkVersion,
+      };
+    }
   }
 }
 
@@ -1575,7 +2015,6 @@ function mergeImages(
   }
   return images;
 }
-
 function mergeCrons(
   crons: BuildOutputConfig['crons'] = [],
   buildResults: Iterable<BuildResult | BuildOutputConfig>
@@ -1736,4 +2175,114 @@ function getServicesMergeEntrypoint(
   const normalized = normalizeServiceRoutePrefix(routePrefix);
   const sortKey = String(10000 - normalized.length).padStart(5, '0');
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
+}
+
+function attachQueueServiceTrigger(
+  buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
+  service: Service
+): void {
+  const topics = getServiceQueueTopicConfigs(service);
+  const consumer = sanitizeConsumerName(
+    getInternalServiceFunctionPath(service.name)
+  );
+
+  if (service.builder.use !== '@vercel/python' && topics.length > 1) {
+    throw new Error(
+      `Worker service "${service.name}" has ${topics.length} topics, but multiple topics are only supported for Python workers.`
+    );
+  }
+
+  for (const topicConfig of topics) {
+    const trigger: TriggerEvent = {
+      type: 'queue/v2beta',
+      topic: topicConfig.topic,
+      consumer,
+    };
+    if (topicConfig.retryAfterSeconds !== undefined) {
+      trigger.retryAfterSeconds = topicConfig.retryAfterSeconds;
+    }
+    if (topicConfig.initialDelaySeconds !== undefined) {
+      trigger.initialDelaySeconds = topicConfig.initialDelaySeconds;
+    }
+
+    if (isLambda(buildOutput)) {
+      appendQueueTrigger(buildOutput, trigger);
+    } else {
+      for (const output of Object.values(buildOutput)) {
+        if (isLambda(output)) {
+          appendQueueTrigger(output, trigger);
+        }
+      }
+    }
+  }
+}
+
+function appendQueueTrigger(lambda: Lambda, trigger: TriggerEvent): void {
+  const existingTriggers = Array.isArray(lambda.experimentalTriggers)
+    ? lambda.experimentalTriggers
+    : [];
+  const alreadyConfigured = existingTriggers.some(
+    existing =>
+      existing.type === trigger.type &&
+      existing.topic === trigger.topic &&
+      existing.consumer === trigger.consumer
+  );
+  if (!alreadyConfigured) {
+    lambda.experimentalTriggers = [...existingTriggers, trigger];
+  }
+}
+
+async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    chunks.push(Uint8Array.from(buffer));
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
+
+const INTEGRATIONS_POLL_INTERVAL_MS = 5000;
+const INTEGRATIONS_POLL_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes, matches API timeout
+
+/**
+ * Fetches build environment variables for a deployment from the API.
+ * If integrations are still provisioning, polls until they complete.
+ */
+async function fetchDeploymentBuildEnv(
+  client: Client,
+  deploymentId: string
+): Promise<{ env: Record<string, string>; buildEnv: Record<string, string> }> {
+  const deadline = Date.now() + INTEGRATIONS_POLL_TIMEOUT_MS;
+  let isPolling = false;
+
+  while (Date.now() < deadline) {
+    try {
+      return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
+    } catch (err: unknown) {
+      // If the API returns integrationsStatus: 'pending', poll until ready
+      if (
+        err &&
+        typeof err === 'object' &&
+        'integrationsStatus' in err &&
+        (err as { integrationsStatus?: string }).integrationsStatus ===
+          'pending'
+      ) {
+        if (!isPolling) {
+          output.spinner(
+            'Waiting for deployment integrations to finish provisioning...'
+          );
+          isPolling = true;
+        }
+        await new Promise(resolve =>
+          setTimeout(resolve, INTEGRATIONS_POLL_INTERVAL_MS)
+        );
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new Error(
+    'Timed out waiting for deployment integrations to complete provisioning.'
+  );
 }

@@ -54,6 +54,12 @@ export class EnvAddTelemetryClient
     }
   }
 
+  trackCliFlagNoSensitive(noSensitive: boolean | undefined) {
+    if (noSensitive) {
+      this.trackCliFlag('no-sensitive');
+    }
+  }
+
   trackCliFlagForce(force: boolean | undefined) {
     if (force) {
       this.trackCliFlag('force');

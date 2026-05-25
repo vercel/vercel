@@ -36,6 +36,11 @@ export default async function startRollingRelease({
   if (deployment.target !== 'production') {
     if (yes) {
       promoteByCreation = true;
+    } else if (client.nonInteractive) {
+      output.error(
+        'This deployment is not a production deployment. In non-interactive mode use --yes to create a new production deployment and start the rolling release.'
+      );
+      return 1;
     } else {
       const question =
         'This deployment is not a production deployment and cannot be directly promoted. A new deployment will be built using your production environment. Are you sure you want to continue?';

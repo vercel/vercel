@@ -1,4 +1,6 @@
 import { getFlagsSpecification } from './get-flags-specification';
+import { getCommandNamePlain } from './pkg-name';
+import { normalizeFlagName, stripSensitiveAuthArgs } from './redact-args';
 
 export const globalCommandOptions = [
   {
@@ -81,6 +83,88 @@ export const globalCommandOptions = [
   { name: 'api', shorthand: null, type: String, deprecated: false },
 ] as const;
 
+/**
+ * Long and short names for global CLI flags (from globalCommandOptions).
+ * Use when building suggested `next` commands so only context flags are forwarded.
+ */
+export const GLOBAL_CLI_FLAG_NAMES: ReadonlySet<string> = (() => {
+  const set = new Set<string>();
+  for (const opt of globalCommandOptions) {
+    set.add(`--${opt.name}`);
+    if (opt.shorthand) {
+      set.add(`-${opt.shorthand}`);
+    }
+  }
+  return set;
+})();
+
+/**
+ * Whether a global CLI flag expects a separate argv token (String type).
+ */
+export function globalCliFlagTakesValue(flagName: string): boolean {
+  const normalized = normalizeFlagName(flagName);
+  for (const opt of globalCommandOptions) {
+    if (`--${opt.name}` === normalized) {
+      return opt.type === String;
+    }
+    if (opt.shorthand && `-${opt.shorthand}` === normalized) {
+      return opt.type === String;
+    }
+  }
+  return false;
+}
+
+/**
+ * Subcommand option names that take a separate argv token (not boolean).
+ * Used when the suggested `next` command is the SAME subcommand so we
+ * preserve e.g. --slug acme, --status 301 alongside globals.
+ */
+const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
+  '--status',
+  '--name',
+  '--slug',
+  '--version', // redirects list --version
+  '--search',
+  '--format',
+  '--page',
+  '--per-page',
+]);
+
+function suggestionFlagTakesSeparateValue(flagName: string): boolean {
+  const name = normalizeFlagName(flagName);
+  if (globalCliFlagTakesValue(name)) return true;
+  return SUBCOMMAND_FLAG_TAKES_VALUE.has(name);
+}
+
+/**
+ * Builds a flag suffix for suggested commands that repeat the SAME subcommand
+ * as the user's invocation. Preserves subcommand-specific flags and their
+ * values; skips bare positionals. Use this instead of getGlobalFlagsOnlyFromArgs
+ * when next[] points at the same command (e.g. teams add with missing --name).
+ *
+ * When next[] points at a different subcommand (e.g. promote, list), use
+ * getGlobalFlagsOnlyFromArgs so flags that don't apply are not forwarded.
+ */
+export function getSameSubcommandSuggestionFlags(args: string[]): string[] {
+  const safeArgs = stripSensitiveAuthArgs(args);
+  const out: string[] = [];
+  for (let i = 0; i < safeArgs.length; i++) {
+    const a = safeArgs[i];
+    if (!a.startsWith('-')) continue;
+    out.push(a);
+    if (a.includes('=')) continue;
+    const name = a;
+    if (
+      suggestionFlagTakesSeparateValue(name) &&
+      i + 1 < safeArgs.length &&
+      !safeArgs[i + 1].startsWith('-')
+    ) {
+      out.push(safeArgs[++i]);
+    }
+  }
+  return out;
+}
+
 const GLOBAL_OPTIONS = getFlagsSpecification(globalCommandOptions);
 
 export default () => GLOBAL_OPTIONS;
@@ -158,3 +242,64 @@ export const allOption = {
   deprecated: false,
   description: 'List resources across all projects',
 } as const;
+
+export const projectOption = {
+  name: 'project',
+  shorthand: null,
+  type: String,
+  argument: 'NAME_OR_ID',
+  description: 'Project name or ID (defaults to the linked project)',
+  deprecated: false,
+} as const;
+
+type GlobalOpt = (typeof globalCommandOptions)[number];
+
+const GLOBAL_LONG_TO_OPT = new Map<string, GlobalOpt>();
+const GLOBAL_SHORT_TO_OPT = new Map<string, GlobalOpt>();
+for (const opt of globalCommandOptions) {
+  GLOBAL_LONG_TO_OPT.set(`--${opt.name}`, opt);
+  if (opt.shorthand) {
+    GLOBAL_SHORT_TO_OPT.set(`-${opt.shorthand}`, opt);
+  }
+}
+
+/**
+ * Collects only global CLI flags from argv for suggested next commands.
+ */
+export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
+  const safeArgs = stripSensitiveAuthArgs(args);
+  const out: string[] = [];
+  for (let i = 0; i < safeArgs.length; i++) {
+    const a = safeArgs[i];
+    let opt: GlobalOpt | undefined;
+    if (a.startsWith('--') && a.includes('=')) {
+      const name = a.slice(2).split('=')[0];
+      opt = GLOBAL_LONG_TO_OPT.get(`--${name}`);
+      if (opt) out.push(a);
+      continue;
+    }
+    opt = GLOBAL_LONG_TO_OPT.get(a) || GLOBAL_SHORT_TO_OPT.get(a);
+    if (!opt) continue;
+    out.push(a);
+    if (opt.type === String && !a.includes('=')) {
+      const next = safeArgs[i + 1];
+      if (next && !next.startsWith('-')) {
+        out.push(next);
+        i++;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Builds a suggested command with only global CLI flags preserved from argv.
+ * Useful for agent next[] hints that should keep context flags like --cwd.
+ */
+export function getCommandNameWithGlobalFlags(
+  commandTemplate: string,
+  argv: string[]
+): string {
+  const flags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}

@@ -1,13 +1,14 @@
 import { join, basename, dirname } from 'path';
 import loadJSON from 'load-json-file';
-import writeJSON from 'write-json-file';
 import { accessSync, constants } from 'fs';
+import * as config from '@vercel/cli-config';
 import { fileNameSymbol } from '@vercel/client';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import highlight from '../output/highlight';
 import type { VercelConfig } from '../dev/types';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
@@ -19,19 +20,18 @@ import {
 import output from '../../output-manager';
 
 const VERCEL_DIR = getGlobalPathConfig();
-const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
-const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
+const CONFIG_FILE_PATH = config.getConfigFilePath(VERCEL_DIR);
+const AUTH_CONFIG_FILE_PATH = config.getAuthConfigFilePath(VERCEL_DIR);
 
 // reads "global config" file atomically
 export const readConfigFile = (): GlobalConfig => {
-  const config = loadJSON.sync(CONFIG_FILE_PATH);
-  return config;
+  return config.readGlobalConfigFile(CONFIG_FILE_PATH);
 };
 
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
   try {
-    return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+    config.writeGlobalConfigFile(CONFIG_FILE_PATH, stuff);
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (isErrnoException(err) && err.code === 'EPERM') {
@@ -57,19 +57,12 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
 
 // reads "auth config" file atomically
 export const readAuthConfigFile = (): AuthConfig => {
-  const config = loadJSON.sync(AUTH_CONFIG_FILE_PATH);
-  return config;
+  return config.readAuthConfigFile(AUTH_CONFIG_FILE_PATH);
 };
 
 export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
-  if (authConfig.skipWrite) {
-    return;
-  }
   try {
-    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, authConfig, {
-      indent: 2,
-      mode: 0o600,
-    });
+    return config.writeAuthConfigFile(AUTH_CONFIG_FILE_PATH, authConfig);
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (err.code === 'EPERM') {
@@ -123,23 +116,22 @@ export function readLocalConfig(
   }
 
   try {
-    try {
-      accessSync(target, constants.F_OK);
-      config = loadJSON.sync(target);
-    } catch {
-      // File doesn't exist, config remains undefined
-    }
+    accessSync(target, constants.F_OK);
+    config = loadJSON.sync(target);
   } catch (err: unknown) {
-    if (isError(err) && err.name === 'JSONError') {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      // File doesn't exist, config remains undefined
+    } else if (isError(err) && err.name === 'JSONError') {
       output.error(err.message);
+      process.exit(1);
     } else if (isErrnoException(err)) {
       const code = err.code ? ` (${err.code})` : '';
-
       output.error(`Failed to read config file: ${target}${code}`);
+      process.exit(1);
     } else {
       output.prettyError(err);
+      process.exit(1);
     }
-    process.exit(1);
   }
 
   if (!config) {
@@ -160,6 +152,13 @@ export function readLocalConfig(
         accessSync(configPath, constants.F_OK);
         sourceFile = basename(configPath);
         break;
+      } catch {}
+    }
+    if (!sourceFile && isVercelTomlEnabled()) {
+      const tomlPath = join(workPath, 'vercel.toml');
+      try {
+        accessSync(tomlPath, constants.F_OK);
+        sourceFile = 'vercel.toml';
       } catch {}
     }
     config[fileNameSymbol] = sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME;

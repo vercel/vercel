@@ -1,0 +1,19 @@
+[project]
+name = "fixture-52-force-bundle-no-wheels"
+version = "0.0.1"
+requires-python = "~=3.14.0"
+dependencies = [
+  # Heavy deps to push the bundle over 249 MB and trigger externalization.
+  "scipy~=1.17.1",
+  "numpy~=2.4.3",
+  "pandas~=3.0.1",
+  "matplotlib~=3.10.8",
+  "pillow~=12.1.1",
+  "flask",
+  # simplejson 3.18.0 has wheels only up to cp310 and no py3-none-any
+  # fallback.  On Python 3.14 none of the wheels match, so the builder
+  # force-bundles it instead of externalizing for runtime installation.
+  # The C speedup extension is optional, so it builds from sdist on any
+  # Python version.
+  "simplejson==3.18.0",
+]

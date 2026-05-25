@@ -14,13 +14,11 @@ const exampleAbsolute = (name: string) =>
 
 const skipped: string[] = ['05-react-router-custom-server'];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   if (skipped.includes(fixture)) {
     // this is currently failing due to the remix artifact being pruned
     continue;
   }
-  // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(join(fixturesPath, fixture))

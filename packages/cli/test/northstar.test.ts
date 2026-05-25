@@ -23,7 +23,7 @@ beforeEach(async () => {
   try {
     await fs.remove(getGlobalConfigPath());
     await fs.remove(getConfigAuthPath());
-  } catch (err) {
+  } catch (_err) {
     process.exit(1);
   }
 });

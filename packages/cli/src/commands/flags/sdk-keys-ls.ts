@@ -93,6 +93,7 @@ function outputSdkKeysJson(client: Client, keys: SdkKey[]) {
       type: key.type,
       environment: key.environment,
       label: key.label ?? null,
+      partialKeyValue: key.partialKeyValue ?? null,
       createdAt: key.createdAt,
       updatedAt: key.updatedAt,
     })),
@@ -101,7 +102,14 @@ function outputSdkKeysJson(client: Client, keys: SdkKey[]) {
 }
 
 function printSdkKeysTable(keys: SdkKey[]) {
-  const headers = ['Hash Key', 'Type', 'Environment', 'Label', 'Created'];
+  const headers = [
+    'Hash Key',
+    'Type',
+    'Environment',
+    'Label',
+    'Partial Key Value',
+    'Created',
+  ];
   const now = Date.now();
 
   const rows = keys.map(key => [
@@ -109,12 +117,13 @@ function printSdkKeysTable(keys: SdkKey[]) {
     getTypeLabel(key.type),
     key.environment,
     key.label || chalk.dim('-'),
+    key.partialKeyValue || chalk.dim('-'),
     ms(now - key.createdAt) + ' ago',
   ]);
 
   const table = formatTable(
     headers,
-    ['l', 'l', 'l', 'l', 'l'],
+    ['l', 'l', 'l', 'l', 'l', 'l'],
     [{ name: '', rows }]
   );
   output.print(`\n${table}\n`);

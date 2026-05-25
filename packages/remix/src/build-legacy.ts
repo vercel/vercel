@@ -465,7 +465,7 @@ module.exports = config;`;
       if (lockfilePath && lockfileRaw) {
         cleanupOps.push(
           fs
-            .writeFile(lockfilePath, lockfileRaw)
+            .writeFile(lockfilePath, Uint8Array.from(lockfileRaw))
             .then(() => debug(`Restored original "${lockfilePath}" file`))
         );
       }
@@ -616,7 +616,11 @@ module.exports = config;`;
     continue: true,
   });
 
-  return { routes, output, framework: { version: remixVersion } };
+  return {
+    routes,
+    output,
+    framework: { slug: 'remix', version: remixVersion },
+  };
 };
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {

@@ -1,5 +1,17 @@
 # @vercel/static-config
 
+## 3.3.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 3.2.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
 ## 3.1.2
 
 ### Patch Changes

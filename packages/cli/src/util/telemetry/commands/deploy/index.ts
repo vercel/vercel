@@ -136,6 +136,13 @@ export class DeployTelemetryClient
       this.trackCliFlag('prod');
     }
   }
+
+  trackTargetEnvironment(target: string | undefined) {
+    super.trackTargetEnvironment(
+      target === 'production' ? 'production' : 'preview'
+    );
+  }
+
   trackCliFlagPublic(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('public');
@@ -154,6 +161,30 @@ export class DeployTelemetryClient
   trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
+    }
+  }
+  trackCliFlagJson(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('json');
+    }
+  }
+  trackCliOptionFormat(format: string | undefined) {
+    if (format) {
+      this.trackCliOption({
+        option: 'format',
+        value: format,
+      });
+    }
+  }
+
+  trackCliFlagFunctionsBeta(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('functions-beta');
+    }
+  }
+  trackCliFlagNoFunctionsBeta(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-functions-beta');
     }
   }
 

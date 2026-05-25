@@ -56,7 +56,7 @@ export default async (client: Client): Promise<number> => {
   try {
     if (actionOrDeployId === 'status') {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('promote', 'status');
+        telemetry.trackCliFlagHelp('rollback', 'status');
         output.print(
           help(statusSubcommand, {
             columns: client.stderr.columns,
@@ -69,7 +69,7 @@ export default async (client: Client): Promise<number> => {
       const project = await getProjectByCwdOrLink({
         autoConfirm: parsedArgs.flags['--yes'],
         client,
-        commandName: 'promote',
+        commandName: 'rollback',
         projectNameOrId: parsedArgs.args[2],
       });
 

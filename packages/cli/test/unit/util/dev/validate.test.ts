@@ -1,7 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
+  const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
+
+  afterEach(() => {
+    if (originalServicesEnv === undefined) {
+      delete process.env.VERCEL_USE_SERVICES;
+    } else {
+      process.env.VERCEL_USE_SERVICES = originalServicesEnv;
+    }
+  });
+
   it('should not error with empty config', async () => {
     const config = {};
     const error = validateConfig(config);
@@ -22,6 +32,281 @@ describe('validateConfig', () => {
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  it('should not error with maxDuration set to "max"', async () => {
+    // Runtime allows maxDuration "max"; VercelConfig types expect number only.
+    const config = {
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 'max' as const },
+      },
+    } as unknown as Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with experimentalServices mount config', async () => {
+    const config = {
+      experimentalServices: {
+        frontend: {
+          framework: 'nextjs',
+          mount: '/',
+        },
+        api: {
+          entrypoint: 'api/index.ts',
+          mount: {
+            path: '/api',
+            subdomain: 'api',
+          },
+        },
+        docs: {
+          framework: 'nextjs',
+          mount: {
+            subdomain: 'docs',
+          },
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with services mount config', async () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const config = {
+      services: {
+        frontend: {
+          type: 'web',
+          root: '.',
+          framework: 'nextjs',
+          mount: '/',
+        },
+        api: {
+          type: 'web',
+          root: 'api',
+          entrypoint: 'index.ts',
+          mount: {
+            path: '/api',
+          },
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
+  it('should require type in services config', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        api: {
+          root: '.',
+          entrypoint: 'api/index.ts',
+          mount: '/api',
+        } as any,
+      },
+    });
+    expect(error?.message).toContain('missing required property `type`');
+  });
+
+  it('should require root in services config', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        api: {
+          type: 'web',
+          entrypoint: 'api/index.ts',
+          mount: '/api',
+        } as any,
+      },
+    });
+    expect(error?.message).toContain('missing required property `root`');
+  });
+
+  it('should reject services when VERCEL_USE_SERVICES is not set', async () => {
+    delete process.env.VERCEL_USE_SERVICES;
+    const error = validateConfig({
+      services: {
+        frontend: {
+          framework: 'nextjs',
+          mount: '/',
+        },
+      },
+    });
+    expect(error?.message).toEqual(
+      'Invalid vercel.json - should NOT have additional property `services`. Please remove it.'
+    );
+  });
+
+  it.each([
+    ['routePrefix', { routePrefix: '/api' }],
+    ['subdomain', { subdomain: 'api' }],
+    ['builder', { builder: '@vercel/node' }],
+    ['installCommand', { installCommand: 'pnpm install' }],
+    ['worker service', { type: 'worker' }],
+    ['mount.subdomain', { mount: { subdomain: 'api' } }],
+  ])('should reject deprecated services config field %s', (_, serviceConfig) => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        api: {
+          type: 'web',
+          root: '.',
+          entrypoint: 'api/index.ts',
+          ...serviceConfig,
+        } as any,
+      },
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('should reject services and experimentalServices together', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        api: {
+          type: 'web',
+          root: '.',
+          entrypoint: 'api/index.ts',
+          mount: '/api',
+        },
+      },
+      experimentalServices: {
+        legacy: {
+          entrypoint: 'legacy/index.ts',
+          routePrefix: '/legacy',
+        },
+      },
+    });
+    expect(error?.code).toBe('SERVICES_AND_EXPERIMENTAL_SERVICES');
+  });
+
+  it('should not error with public service static schedule arrays', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        cleanup: {
+          type: 'job',
+          root: '.',
+          trigger: 'schedule',
+          runtime: 'python',
+          entrypoint: 'jobs/cleanup.py',
+          schedule: ['0 0 * * *', '0 12 * * *'],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should reject dynamic schedules inside public service schedule arrays', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        cleanup: {
+          type: 'job',
+          root: '.',
+          trigger: 'schedule',
+          runtime: 'python',
+          entrypoint: 'jobs/cleanup.py',
+          schedule: ['<dynamic>'],
+        },
+      },
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('should not error with public service dynamic schedule string', () => {
+    process.env.VERCEL_USE_SERVICES = '1';
+    const error = validateConfig({
+      services: {
+        cleanup: {
+          type: 'job',
+          root: '.',
+          trigger: 'schedule',
+          runtime: 'python',
+          entrypoint: 'jobs/cleanup.py',
+          schedule: '<dynamic>',
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should not error with legacy cron service type', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        cleanup: {
+          type: 'cron',
+          entrypoint: 'cleanup.py',
+          schedule: '0 0 * * *',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with schedule-triggered job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        cleanup: {
+          type: 'job',
+          trigger: 'schedule',
+          entrypoint: 'cleanup.py',
+          schedule: '0 0 * * *',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with queue-triggered job services using topic objects', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        processor: {
+          type: 'job',
+          trigger: 'queue',
+          entrypoint: 'worker.py',
+          topics: [
+            {
+              topic: 'orders',
+              retryAfterSeconds: 10,
+              initialDelaySeconds: 5,
+            },
+          ],
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should not error with workflow-triggered job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        workflow: {
+          type: 'job',
+          trigger: 'workflow',
+          entrypoint: 'src/workflow.ts',
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0]);
+    expect(error).toBeNull();
+  });
+
+  it('should reject unsupported beat config for job services', () => {
+    const error = validateConfig({
+      experimentalServices: {
+        processor: {
+          type: 'job',
+          trigger: 'queue',
+          entrypoint: 'worker.py',
+          topics: ['orders'],
+          beat: {
+            schedule: '0 * * * *',
+          },
+        } as any,
+      },
+    });
+    expect(error).not.toBeNull();
   });
 
   it('should not error with builds and routes', async () => {
@@ -434,17 +719,17 @@ describe('validateConfig', () => {
     );
   });
 
-  it.each(['x86_64', 'arm64'] as const)(
-    'should not error with valid architecture: %s',
-    architecture => {
-      const error = validateConfig({
-        functions: {
-          'api/user.go': { architecture, memory: 128, maxDuration: 5 },
-        },
-      });
-      expect(error).toBeNull();
-    }
-  );
+  it.each([
+    'x86_64',
+    'arm64',
+  ] as const)('should not error with valid architecture: %s', architecture => {
+    const error = validateConfig({
+      functions: {
+        'api/user.go': { architecture, memory: 128, maxDuration: 5 },
+      },
+    });
+    expect(error).toBeNull();
+  });
 
   it('should error with invalid architecture', () => {
     const error = validateConfig({

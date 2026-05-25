@@ -8,7 +8,7 @@ import getRedirects from '../../util/redirects/get-redirects';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);
@@ -145,6 +145,18 @@ export default async function list(client: Client, argv: string[]) {
     resultMessage += ` ${chalk.gray(lsStamp())}`;
 
     output.log(resultMessage);
+
+    if (
+      client.nonInteractive &&
+      redirects.length === 0 &&
+      !staging &&
+      !versionIdFlag
+    ) {
+      output.log(
+        `  ${getCommandNamePlain('redirects list')} shows production redirects only. ` +
+          `If you added redirects but do not see them here, they may still be staged only—run ${getCommandNamePlain('redirects list --staging')} to view staged changes.`
+      );
+    }
 
     if (redirects.length > 0) {
       output.print(formatRedirectsTable(redirects));

@@ -1,12 +1,8 @@
-import { describe, expect, it, afterEach, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import api from '../../../../src/commands/api';
 
 describe('api', () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe('--help', () => {
     it('prints help message', async () => {
       client.setArgv('api', '--help');
@@ -23,7 +19,9 @@ describe('api', () => {
       client.setArgv('api', 'v2/user');
       const exitCode = await api(client);
       expect(exitCode).toEqual(1);
-      expect(client.getFullOutput()).toContain('Endpoint must start with /');
+      expect(client.getFullOutput()).toContain(
+        'Use an API path starting with /'
+      );
     });
 
     it('should reject protocol-relative URLs to prevent SSRF', async () => {

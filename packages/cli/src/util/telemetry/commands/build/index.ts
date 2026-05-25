@@ -41,4 +41,13 @@ export class BuildTelemetryClient
       this.trackCliFlag('standalone');
     }
   }
+
+  trackCliOptionId(id: string | undefined) {
+    if (id) {
+      this.trackCliOption({
+        option: 'id',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

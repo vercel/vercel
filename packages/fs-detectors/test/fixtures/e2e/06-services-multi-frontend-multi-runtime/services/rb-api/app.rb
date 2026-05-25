@@ -1,12 +1,12 @@
 require 'sinatra'
 require 'json'
 
-get '/api/rb' do
+get '/' do
   content_type :json
   JSON.generate(message: 'Hello from Sinatra')
 end
 
-get '/api/rb/ping' do
+get '/ping' do
   content_type :json
   JSON.generate(message: 'pong from Sinatra')
 end

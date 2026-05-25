@@ -1,0 +1,6 @@
+__pycache__/
+.venv/
+venv/
+.vercel/
+build/
+services_zc_frontend_services_services_fastapi.egg-info/

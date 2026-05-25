@@ -3,7 +3,7 @@ import {
   normalizeRoutePrefix,
   scopeRouteSourceToOwnership,
 } from '@vercel/routing-utils';
-import { type Service } from '@vercel/build-utils';
+import type { Service } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
 interface ScopeRoutesToServiceOwnershipOptions {
   routes: Route[];

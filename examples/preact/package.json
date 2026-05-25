@@ -31,6 +31,9 @@
     "preact-render-to-string": "6.0.3",
     "preact-router": "^4.1.1"
   },
+  "overrides": {
+    "lodash.template": "4.5.0"
+  },
   "jest": {
     "preset": "jest-preset-preact",
     "setupFiles": [

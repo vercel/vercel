@@ -64,7 +64,7 @@ export const apiCommand = {
       type: [String],
       argument: 'KEY=VALUE',
       deprecated: false,
-      description: 'Add a string parameter (no type parsing)',
+      description: 'Add a string option (no type parsing)',
     },
     {
       name: 'header',

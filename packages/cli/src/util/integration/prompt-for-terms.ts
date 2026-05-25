@@ -2,8 +2,32 @@ import output from '../../output-manager';
 import type Client from '../client';
 import type { AcceptedPolicies, Integration } from './types';
 
-const MARKETPLACE_ADDENDUM_URL =
+export const MARKETPLACE_ADDENDUM_URL =
   'https://vercel.com/legal/integration-marketplace-end-users-addendum';
+
+/** URLs for legal text referenced by `integration accept-terms` and install flows. */
+export function getMarketplacePolicyLinks(
+  integration: Pick<Integration, 'privacyDocUri' | 'eulaDocUri'>
+): {
+  marketplace_addendum: string;
+  integration_privacy_policy?: string;
+  integration_eula?: string;
+} {
+  const links: {
+    marketplace_addendum: string;
+    integration_privacy_policy?: string;
+    integration_eula?: string;
+  } = {
+    marketplace_addendum: MARKETPLACE_ADDENDUM_URL,
+  };
+  if (integration.privacyDocUri) {
+    links.integration_privacy_policy = integration.privacyDocUri;
+  }
+  if (integration.eulaDocUri) {
+    links.integration_eula = integration.eulaDocUri;
+  }
+  return links;
+}
 
 export async function promptForTermAcceptance(
   client: Client,

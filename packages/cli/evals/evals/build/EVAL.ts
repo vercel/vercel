@@ -1,9 +1,19 @@
 import { readFileSync, existsSync } from 'fs';
 import { test, expect } from 'vitest';
 
+function getShellCommands(): string[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: Array<{ command: string }> };
+  };
+
+  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+}
+
 /**
  * vc build eval: we expect the agent to have run a successful build and
- * to have used a non-interactive flag, recording the command in command-used.txt.
+ * to have used a non-interactive flag, as observed from the recorded shell commands.
  */
 test('build completed successfully', () => {
   const outputDir = '.vercel/output';
@@ -15,15 +25,21 @@ test('build completed successfully', () => {
 });
 
 test('agent used a non-interactive build command', () => {
-  expect(existsSync('command-used.txt')).toBe(true);
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
 
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  expect(command.length).toBeGreaterThan(0);
-  expect(command).toMatch(/\b(vercel|vc)\s+build\b/);
+  const buildCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+build\b/.test(command)
+  );
+  expect(buildCommands.length).toBeGreaterThan(0);
 
-  const hasNonInteractive =
-    command.includes('--yes') ||
-    /\s-y(\s|$)/.test(command) ||
-    command.endsWith('-y');
+  const hasNonInteractive = buildCommands.some(command => {
+    return (
+      command.includes('--yes') ||
+      /\s-y(\s|$)/.test(command) ||
+      command.endsWith('-y') ||
+      command.includes('--non-interactive')
+    );
+  });
   expect(hasNonInteractive).toBe(true);
 });

@@ -1,0 +1,40 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from FastAPI web service"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/sync-cleanup/crons/jobs/cleanup/sync_handler",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/sync-cleanup/crons/jobs/cleanup/sync_handler",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/async-cleanup/crons/jobs/async_cleanup/async_handler",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/async-cleanup/crons/jobs/async_cleanup/async_handler",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    }
+  ]
+}

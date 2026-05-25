@@ -1,17 +1,37 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
 import {
   PythonDependencyExternalizer,
   calculateBundleSize,
+  getPackagesReachableOnPlatform,
   lambdaKnapsack,
+  shouldShowFunctionsBetaHint,
   LAMBDA_SIZE_THRESHOLD_BYTES,
-  LAMBDA_PACKING_TARGET_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  HIVE_LAMBDA_SIZE_BYTES,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef, FileBlob } from '@vercel/build-utils';
+import { detectTargetPlatform } from '../src/platform-info';
+import {
+  UV_VERSION,
+  UV_BINARY_CHECKSUM,
+  downloadUvBinaryForTarget,
+} from '../src/uv';
+
+// Mock getVenvSitePackagesDirs to avoid needing a real Python venv in
+// analyze() tests. Returns an empty array so mirrorPackagesIntoVendor
+// produces no vendor files and the bundle size comes solely from the
+// files passed to analyze().
+vi.mock('../src/install', async () => {
+  const actual = await vi.importActual('../src/install');
+  return {
+    ...actual,
+    getVenvSitePackagesDirs: vi.fn().mockResolvedValue([]),
+  };
+});
 
 describe('dependency externalizer support', () => {
   describe('shouldEnableRuntimeInstall', () => {
@@ -40,7 +60,8 @@ describe('dependency externalizer support', () => {
         uvLockPath,
         uvProjectDir: '/tmp/work',
         projectName: 'test-project',
-        noBuildCheckFailed: false,
+        pythonMajor: 3,
+        pythonMinor: 12,
         pythonPath: '/usr/bin/python3',
         hasCustomCommand,
       });
@@ -145,11 +166,52 @@ describe('dependency externalizer support', () => {
       const size = await calculateBundleSize({});
       expect(size).toBe(0);
     });
+
+    it('uses pre-populated size on FileFsRef without stat', async () => {
+      // FileFsRef with a pre-populated size should be used directly
+      // without hitting the filesystem, so we can use a non-existent path.
+      const files = {
+        'file1.txt': new FileFsRef({
+          fsPath: '/nonexistent/file1.txt',
+          size: 100,
+        }),
+        'file2.txt': new FileFsRef({
+          fsPath: '/nonexistent/file2.txt',
+          size: 200,
+        }),
+      };
+
+      const size = await calculateBundleSize(files);
+      expect(size).toBe(300);
+    });
+
+    it('mixes pre-populated and stat-based sizes', async () => {
+      const tempDir = path.join(tmpdir(), `size-mixed-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const filePath = path.join(tempDir, 'real.txt');
+      fs.writeFileSync(filePath, 'a'.repeat(50));
+
+      const files = {
+        'pre-sized.txt': new FileFsRef({
+          fsPath: '/nonexistent/pre-sized.txt',
+          size: 150,
+        }),
+        'real.txt': new FileFsRef({ fsPath: filePath }),
+      };
+
+      try {
+        const size = await calculateBundleSize(files);
+        expect(size).toBe(200);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
   });
 
   describe('Lambda size constants', () => {
-    it('LAMBDA_SIZE_THRESHOLD_BYTES is 249 MB', () => {
-      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
+    it('LAMBDA_SIZE_THRESHOLD_BYTES is 245 MB', () => {
+      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(245 * 1024 * 1024);
     });
 
     it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
@@ -160,6 +222,53 @@ describe('dependency externalizer support', () => {
       expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
         LAMBDA_SIZE_THRESHOLD_BYTES
       );
+    });
+
+    it('HIVE_LAMBDA_SIZE_BYTES is 1 GB', () => {
+      expect(HIVE_LAMBDA_SIZE_BYTES).toBe(1 * 1024 * 1024 * 1024);
+    });
+
+    it('Hive limit is greater than the ephemeral storage limit', () => {
+      expect(HIVE_LAMBDA_SIZE_BYTES).toBeGreaterThan(
+        LAMBDA_EPHEMERAL_STORAGE_BYTES
+      );
+    });
+  });
+
+  describe('shouldShowFunctionsBetaHint', () => {
+    const originalEnv = process.env.VERCEL_FUNCTIONS_BETA_HINT;
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_FUNCTIONS_BETA_HINT;
+      } else {
+        process.env.VERCEL_FUNCTIONS_BETA_HINT = originalEnv;
+      }
+    });
+
+    it('returns true when VERCEL_FUNCTIONS_BETA_HINT is "1"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = '1';
+      expect(shouldShowFunctionsBetaHint()).toBe(true);
+    });
+
+    it('returns true when VERCEL_FUNCTIONS_BETA_HINT is "true"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = 'true';
+      expect(shouldShowFunctionsBetaHint()).toBe(true);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is unset', () => {
+      delete process.env.VERCEL_FUNCTIONS_BETA_HINT;
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is "0"', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = '0';
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
+    });
+
+    it('returns false when VERCEL_FUNCTIONS_BETA_HINT is an unrecognised value', () => {
+      process.env.VERCEL_FUNCTIONS_BETA_HINT = 'yes';
+      expect(shouldShowFunctionsBetaHint()).toBe(false);
     });
   });
 
@@ -265,6 +374,454 @@ version = "2.31.0"
       expect(result.packageVersions['my-app']).toBeUndefined();
       // requests should still be classified
       expect(result.publicPackages).toContain('requests');
+    });
+  });
+
+  describe('getPackagesReachableOnPlatform', () => {
+    it('returns null when projectName is undefined', async () => {
+      const lockFile = { packages: [] };
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        undefined,
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).toBeNull();
+    });
+
+    it('returns null when root package is not found in lock file', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).toBeNull();
+    });
+
+    it('includes all unmarked dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "flask" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "flask"
+version = "3.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('flask')).toBe(true);
+    });
+
+    it('excludes packages guarded by win32 marker on linux', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "pywin32"
+version = "306"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('pywin32')).toBe(false);
+    });
+
+    it('prunes entire subtree behind an excluded marker', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "pywin32"
+version = "306"
+dependencies = [
+    { name = "pywin32-ctypes" },
+]
+
+[[package]]
+name = "pywin32-ctypes"
+version = "0.2.2"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('pywin32')).toBe(false);
+      expect(result!.has('pywin32-ctypes')).toBe(false);
+    });
+
+    it('includes packages with linux-satisfied markers', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "uvloop", marker = "sys_platform == 'linux'" },
+]
+
+[[package]]
+name = "uvloop"
+version = "0.19.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('uvloop')).toBe(true);
+    });
+
+    it('includes win32 packages when target is win32', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "pywin32"
+version = "306"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'win32',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('pywin32')).toBe(true);
+    });
+
+    it('traverses transitive dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+dependencies = [
+    { name = "urllib3" },
+    { name = "certifi" },
+]
+
+[[package]]
+name = "urllib3"
+version = "2.1.0"
+
+[[package]]
+name = "certifi"
+version = "2024.2.2"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('urllib3')).toBe(true);
+      expect(result!.has('certifi')).toBe(true);
+    });
+
+    it('does not include the root project itself in the reachable set', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('my-app')).toBe(false);
+      expect(result!.has('requests')).toBe(true);
+    });
+
+    it('handles diamond dependencies without duplication', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "pkg-a" },
+    { name = "pkg-b" },
+]
+
+[[package]]
+name = "pkg-a"
+version = "1.0.0"
+dependencies = [
+    { name = "shared" },
+]
+
+[[package]]
+name = "pkg-b"
+version = "1.0.0"
+dependencies = [
+    { name = "shared" },
+]
+
+[[package]]
+name = "shared"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('pkg-a')).toBe(true);
+      expect(result!.has('pkg-b')).toBe(true);
+      expect(result!.has('shared')).toBe(true);
+      expect(result!.size).toBe(3);
+    });
+
+    it('handles compound markers with mixed platform conditions', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "linux-only", marker = "sys_platform == 'linux' and python_version >= '3.12'" },
+    { name = "win-and-py", marker = "sys_platform == 'win32' and python_version >= '3.12'" },
+]
+
+[[package]]
+name = "linux-only"
+version = "1.0.0"
+
+[[package]]
+name = "win-and-py"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('linux-only')).toBe(true);
+      expect(result!.has('win-and-py')).toBe(false);
+    });
+
+    it('normalizes package names for matching', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "My-App"
+version = "0.1.0"
+dependencies = [
+    { name = "My-Package" },
+]
+
+[[package]]
+name = "My-Package"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('my-package')).toBe(true);
+    });
+
+    it('returns empty set when root has no dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.size).toBe(0);
+    });
+
+    it('excludes os_name == nt dependencies on linux', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "colorama", marker = "os_name == 'nt'" },
+    { name = "click" },
+]
+
+[[package]]
+name = "colorama"
+version = "0.4.6"
+
+[[package]]
+name = "click"
+version = "8.1.7"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('click')).toBe(true);
+      expect(result!.has('colorama')).toBe(false);
     });
   });
 
@@ -375,15 +932,207 @@ version = "2.31.0"
     });
   });
 
-  describe('LAMBDA_PACKING_TARGET_BYTES', () => {
-    it('defaults to 245 MB', () => {
-      expect(LAMBDA_PACKING_TARGET_BYTES).toBe(245 * 1024 * 1024);
+  describe('analyze', () => {
+    const originalEnv = process.env.VERCEL_PYTHON_ON_HIVE;
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_ON_HIVE;
+      } else {
+        process.env.VERCEL_PYTHON_ON_HIVE = originalEnv;
+      }
     });
 
-    it('is less than LAMBDA_SIZE_THRESHOLD_BYTES', () => {
-      expect(LAMBDA_PACKING_TARGET_BYTES).toBeLessThan(
-        LAMBDA_SIZE_THRESHOLD_BYTES
-      );
+    it('throws user-friendly error for custom install command with oversized bundle', async () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+
+      const tempDir = path.join(tmpdir(), `dep-ext-analyze-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      // Create a sparse file that reports > 245 MB without using real disk space
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      fs.ftruncateSync(fd, LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        venvPath: tempDir,
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonMajor: 3,
+        pythonMinor: 12,
+        pythonPath: '/usr/bin/python3',
+        hasCustomCommand: true,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        await expect(ext.analyze(files)).rejects.toThrow(
+          'exceeds the size limit'
+        );
+
+        // Re-create the externalizer since the previous one may have mutated state
+        const ext2 = new PythonDependencyExternalizer({
+          venvPath: tempDir,
+          vendorDir: '_vendor',
+          workPath: tempDir,
+          uvLockPath: path.join(tempDir, 'uv.lock'),
+          uvProjectDir: tempDir,
+          projectName: 'test-project',
+          pythonMajor: 3,
+          pythonMinor: 12,
+          pythonPath: '/usr/bin/python3',
+          hasCustomCommand: true,
+        });
+
+        try {
+          await ext2.analyze(files);
+          expect.fail('Expected analyze() to throw');
+        } catch (error: unknown) {
+          const message = (error as Error).message;
+          expect(message).toContain('custom install command');
+          expect(message).not.toContain('Lambda size limit');
+          expect(message).not.toContain('runtime dependency installation');
+        }
+      } finally {
+        fs.removeSync(tempDir);
+      }
     });
+
+    it('does not throw for custom install command when bundle is under threshold', async () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+
+      const tempDir = path.join(tmpdir(), `dep-ext-analyze-ok-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const smallFilePath = path.join(tempDir, 'small-file.dat');
+      fs.writeFileSync(smallFilePath, 'a'.repeat(100));
+
+      const ext = new PythonDependencyExternalizer({
+        venvPath: tempDir,
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonMajor: 3,
+        pythonMinor: 12,
+        pythonPath: '/usr/bin/python3',
+        hasCustomCommand: true,
+      });
+
+      const files = {
+        'small-file.dat': new FileFsRef({ fsPath: smallFilePath }),
+      };
+
+      try {
+        const result = await ext.analyze(files);
+        expect(result.runtimeInstallEnabled).toBe(false);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+  });
+});
+
+describe('detectTargetPlatform', () => {
+  const originalEnv = process.env.VERCEL_BUILD_ARCH;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.VERCEL_BUILD_ARCH;
+    } else {
+      process.env.VERCEL_BUILD_ARCH = originalEnv;
+    }
+  });
+
+  it('returns linux sysPlatform regardless of host', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.sysPlatform).toBe('linux');
+    expect(platform.os).toBe('linux');
+  });
+
+  it('returns manylinux osName', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.osName).toBe('manylinux');
+  });
+
+  it('returns gnu libc', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.libc).toBe('gnu');
+  });
+
+  it('defaults to x86_64 archName', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('x86_64');
+  });
+
+  it('returns valid glibc version numbers', () => {
+    delete process.env.VERCEL_BUILD_ARCH;
+    const platform = detectTargetPlatform();
+    expect(platform.osMajor).toBeGreaterThanOrEqual(2);
+    expect(platform.osMinor).toBeGreaterThanOrEqual(0);
+  });
+
+  it('returns aarch64 when VERCEL_BUILD_ARCH is aarch64', () => {
+    process.env.VERCEL_BUILD_ARCH = 'aarch64';
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('aarch64');
+    expect(platform.sysPlatform).toBe('linux');
+  });
+
+  it('returns x86_64 when VERCEL_BUILD_ARCH is x86_64', () => {
+    process.env.VERCEL_BUILD_ARCH = 'x86_64';
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('x86_64');
+  });
+
+  it('is case-insensitive', () => {
+    process.env.VERCEL_BUILD_ARCH = 'AARCH64';
+    const platform = detectTargetPlatform();
+    expect(platform.archName).toBe('aarch64');
+  });
+
+  it('throws on unrecognized VERCEL_BUILD_ARCH', () => {
+    process.env.VERCEL_BUILD_ARCH = 'mips';
+    expect(() => detectTargetPlatform()).toThrow(
+      'Unrecognized VERCEL_BUILD_ARCH'
+    );
+  });
+});
+
+describe('UV_BINARY_CHECKSUM', () => {
+  it('is a 64-character hex string', () => {
+    expect(UV_BINARY_CHECKSUM).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('downloadUvBinaryForTarget', () => {
+  it('returns cached binary without downloading', async () => {
+    const cacheDir = path.join(tmpdir(), `uv-dl-cache-${Date.now()}`);
+    const target = 'x86_64-unknown-linux-gnu';
+    const destDir = path.join(cacheDir, `uv-${UV_VERSION}-${target}`);
+    const destBinary = path.join(destDir, 'uv');
+
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.writeFileSync(destBinary, '#!/bin/sh\necho mock');
+    fs.chmodSync(destBinary, 0o755);
+
+    try {
+      const result = await downloadUvBinaryForTarget(cacheDir);
+      expect(result).toBe(destBinary);
+    } finally {
+      fs.removeSync(cacheDir);
+    }
   });
 });

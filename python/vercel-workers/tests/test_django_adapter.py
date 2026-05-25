@@ -3,9 +3,14 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
+
+import vercel.workers._queue.send as queue_service
+from vercel.workers import _queue
 
 # Skip all tests if Django is not available (optional dependency)
 try:
@@ -158,8 +163,8 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         self.assertIsNone(cfg.token)
         self.assertIsNone(cfg.base_url)
         self.assertIsNone(cfg.base_path)
-        self.assertIsNone(cfg.retention_seconds)
-        self.assertIsNone(cfg.deployment_id)
+        self.assertIsNone(cfg.retention)
+        self.assertIs(cfg.deployment_id, _queue.DEPLOYMENT_ID_UNSET)
         self.assertEqual(cfg.timeout, 10.0)
         self.assertEqual(cfg.cache_alias, "default")
         self.assertEqual(cfg.cache_key_prefix, "vercel-workers:django-tasks")
@@ -170,7 +175,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
             "token": "test-token",
             "base_url": "https://example.com",
             "base_path": "/api/v3",
-            "retention_seconds": 86400,
+            "retention": 86400,
             "deployment_id": "deploy-123",
             "timeout": 30.0,
             "cache_alias": "redis",
@@ -181,7 +186,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         self.assertEqual(cfg.token, "test-token")
         self.assertEqual(cfg.base_url, "https://example.com")
         self.assertEqual(cfg.base_path, "/api/v3")
-        self.assertEqual(cfg.retention_seconds, 86400)
+        self.assertEqual(cfg.retention, 86400)
         self.assertEqual(cfg.deployment_id, "deploy-123")
         self.assertEqual(cfg.timeout, 30.0)
         self.assertEqual(cfg.cache_alias, "redis")
@@ -376,7 +381,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
@@ -422,14 +427,13 @@ class TestDjangoAsgiApp(unittest.TestCase):
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
 
-    def test_post_callback_delays_until_run_after_by_changing_visibility(self) -> None:
-        """Test that run_after in the future delays the message."""
+    def test_post_callback_executes_task_with_run_after_normally(self) -> None:
+        # run_after delays are handled at send time via Vqs-Delay-Seconds, not on receive
         raw_body = (
             b'{"type":"com.vercel.queue.v1beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
-        fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
-        run_after = fixed_now + timedelta(seconds=123)
+        run_after = datetime(2025, 1, 1, 0, 2, 3, tzinfo=UTC)
 
         class FakeVisibilityExtender:
             def __init__(self, *args, **kwargs):
@@ -465,54 +469,45 @@ class TestDjangoAsgiApp(unittest.TestCase):
         }
 
         async def run():
-            with patch.object(vwd_app, "_now_utc", return_value=fixed_now):
-                with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
+            with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
+                with patch.object(
+                    vwd_app.queue_callback,
+                    "parse_cloudevent",
+                    return_value=("q", "c", "m"),
+                ):
                     with patch.object(
                         vwd_app.queue_callback,
-                        "parse_cloudevent",
-                        return_value=("q", "c", "m"),
+                        "receive_message_by_id",
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
-                            "receive_message_by_id",
-                            return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                            "VisibilityExtender",
+                            FakeVisibilityExtender,
                         ):
                             with patch.object(
                                 vwd_app.queue_callback,
-                                "VisibilityExtender",
-                                FakeVisibilityExtender,
-                            ):
-                                with patch.object(
-                                    vwd_app.queue_callback,
-                                    "change_visibility",
-                                ) as change_visibility:
-                                    with patch.object(
-                                        vwd_app.queue_callback,
-                                        "delete_message",
-                                    ) as delete_message:
-                                        app = vwd_app.get_asgi_app(backend_alias="default")
-                                        sent = await self._asgi_request(
-                                            app,
-                                            method="POST",
-                                            path="/callback",
-                                            headers=[
-                                                (b"content-type", b"application/cloudevents+json"),
-                                            ],
-                                            body=raw_body,
-                                        )
-                                        return sent, change_visibility, delete_message
+                                "delete_message",
+                            ) as delete_message:
+                                app = vwd_app.get_asgi_app(backend_alias="default")
+                                sent = await self._asgi_request(
+                                    app,
+                                    method="POST",
+                                    path="/callback",
+                                    headers=[
+                                        (b"content-type", b"application/cloudevents+json"),
+                                    ],
+                                    body=raw_body,
+                                )
+                                return sent, delete_message
 
-        sent, change_visibility, delete_message = asyncio.run(run())
+        sent, delete_message = asyncio.run(run())
 
-        # Task should NOT have been executed (delayed)
-        # Visibility should have been changed, not deleted
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        # Task should execute normally, because delay is handled at send time
+        delete_message.assert_called_once()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
-        self.assertTrue(body["delayed"])
-        self.assertEqual(body["timeoutSeconds"], 123)
 
     def test_rejects_wrong_queue(self) -> None:
         """Test that messages from unexpected queues are rejected."""
@@ -648,7 +643,7 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
@@ -687,6 +682,86 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
         self.assertTrue(body["delayed"])
         # First retry uses base delay (5 seconds by default)
         self.assertIn("timeoutSeconds", body)
+
+
+@_skip_without_django
+class TestDjangoEnqueueSerializesNonPrimitiveTypes(unittest.TestCase):
+    def _make_backend(self) -> Any:
+        mock_backend = MagicMock(spec=vwd_backend.VercelQueuesBackend)
+        mock_backend._cfg = vwd_backend.VercelQueuesBackendOptions()
+        mock_backend.alias = "default"
+        mock_backend.enqueue = vwd_backend.VercelQueuesBackend.enqueue.__get__(mock_backend)
+        mock_backend.validate_task = MagicMock()
+        return mock_backend
+
+    def _make_task(self) -> Any:
+        task = MagicMock()
+        task.module_path = "myapp.tasks.my_task"
+        task.takes_context = False
+        task.backend = "default"
+        task.queue_name = "default"
+        task.priority = 0
+        task.run_after = None
+        return task
+
+    def _capture_enqueue(
+        self,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> dict[str, Any]:
+        captured: list[bytes] = []
+
+        class _FakeResponse:
+            status_code = 200
+            reason_phrase = "OK"
+            text = ""
+
+            def raise_for_status(self) -> None:
+                pass
+
+            def json(self) -> dict:  # pyright: ignore[reportMissingTypeArgument]
+                return {"messageId": "msg-django"}
+
+        class _FakeClient:
+            def __init__(self, **kw: object) -> None:
+                pass
+
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *a: object) -> bool:
+                return False
+
+            def post(self, url: str, *, content: bytes, headers: dict) -> _FakeResponse:  # pyright: ignore[reportMissingTypeArgument]
+                captured.append(content)
+                return _FakeResponse()
+
+        backend = self._make_backend()
+        task = self._make_task()
+
+        with (
+            patch.dict("os.environ", {"VERCEL_QUEUE_TOKEN": "tok", "VERCEL_DEPLOYMENT_ID": "dpl"}),
+            patch.object(queue_service.httpx, "Client", _FakeClient),
+            patch.object(backend, "_store_result"),
+        ):
+            backend.enqueue(task, args=args, kwargs=kwargs)
+
+        return json.loads(captured[0])
+
+    def test_enqueue_with_uuid(self) -> None:
+        uid = uuid4()
+        body = self._capture_enqueue(args=(uid,), kwargs={})
+        self.assertEqual(body["args"], [str(uid)])
+
+    def test_enqueue_with_datetime(self) -> None:
+        dt = datetime.now()
+        body = self._capture_enqueue(args=(dt,), kwargs={})
+        self.assertEqual(body["args"], [dt.isoformat()])
+
+    def test_enqueue_with_decimal(self) -> None:
+        dec = Decimal("9.99")
+        body = self._capture_enqueue(args=(), kwargs={"price": dec})
+        self.assertAlmostEqual(body["kwargs"]["price"], 9.99)
 
 
 if __name__ == "__main__":

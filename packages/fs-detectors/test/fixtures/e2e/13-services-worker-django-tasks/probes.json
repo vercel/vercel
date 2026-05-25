@@ -1,0 +1,40 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Django web service"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/enqueue",
+      "method": "POST",
+      "body": { "request_id": "probe-13-jobs" },
+      "status": 200,
+      "mustContain": "probe-13-jobs"
+    },
+    {
+      "path": "/status/jobs/probe-13-jobs",
+      "status": 200,
+      "mustContain": "probe-13-jobs",
+      "retries": 5,
+      "retryDelay": 2000
+    },
+    {
+      "path": "/_svc/worker/index",
+      "method": "POST",
+      "body": {},
+      "status": 404,
+      "mustContain": "404 from Django web service"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Django web service"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from FastAPI web service"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/scheduler/crons/jobs/sync/daily_sync",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/scheduler/crons/jobs/sync/daily_sync",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/scheduler/crons/jobs/report/generate_report",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/scheduler/crons/jobs/report/generate_report",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/scheduler/crons/jobs/sync/every_minute",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/scheduler/crons/jobs/report/every_five",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/scheduler/crons/unknown/path",
+      "method": "POST",
+      "body": {},
+      "status": 404,
+      "mustContain": "no cron handler for path"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "probes": [
-    { "logMustContain": "uv at \"" },
+    { "logMustContain": "Using uv " },
     { "logMustNotContain": "falling back to pip" },
     {
       "path": "/api",

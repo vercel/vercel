@@ -120,6 +120,19 @@ describe('flags rm', () => {
     expect(exitCode).toEqual(0);
   });
 
+  it('errors in non-interactive mode without --yes', async () => {
+    testFlags[0].state = 'archived';
+    (client.stdin as any).isTTY = false;
+    client.setArgv('flags', 'rm', testFlags[0].slug);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing required flag --yes'
+    );
+  });
+
   it('errors when flag is not archived', async () => {
     // testFlags[0] has state: 'active' by default
     client.setArgv('flags', 'rm', testFlags[0].slug, '--yes');

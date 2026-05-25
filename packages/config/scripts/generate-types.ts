@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 interface JSONSchema {
@@ -20,12 +20,18 @@ interface JSONSchema {
   additionalProperties?: boolean | any;
   patternProperties?: Record<string, any>;
   $ref?: string;
+  const?: string | number | boolean;
   private?: boolean;
 }
 
 const HEADER = `/**
- * Vercel configuration type that mirrors the vercel.json schema
- * https://openapi.vercel.sh/vercel.json
+ * AUTO-GENERATED — DO NOT EDIT
+ *
+ * This file is generated from the vercel.json OpenAPI schema.
+ * To modify, update scripts/generate-types.ts and re-run:
+ *   pnpm generate-types
+ *
+ * Schema: https://openapi.vercel.sh/vercel.json
  */
 `;
 
@@ -70,6 +76,11 @@ function generateJSDoc(schema: JSONSchema, indent = ''): string {
 function convertSchemaType(schema: JSONSchema, depth = 0): string {
   const indent = '  '.repeat(depth);
 
+  if (schema.const !== undefined) {
+    if (typeof schema.const === 'string') return `'${schema.const}'`;
+    return String(schema.const);
+  }
+
   if (schema.enum) {
     return schema.enum.map(v => (v === null ? 'null' : `'${v}'`)).join(' | ');
   }
@@ -85,6 +96,13 @@ function convertSchemaType(schema: JSONSchema, depth = 0): string {
   if (schema.type === 'array') {
     if (schema.items) {
       const itemType = convertSchemaType(schema.items, depth);
+      const isUnion =
+        schema.items.oneOf ||
+        schema.items.anyOf ||
+        (schema.items.enum && schema.items.enum.length > 1);
+      if (isUnion) {
+        return `(${itemType})[]`;
+      }
       return `${itemType}[]`;
     }
     return 'any[]';
@@ -160,6 +178,116 @@ function convertSchemaType(schema: JSONSchema, depth = 0): string {
     default:
       return 'any';
   }
+}
+
+function generateRoutingTypes(schema: JSONSchema): string[] {
+  const output: string[] = [];
+
+  const redirectsItemSchema = schema.properties?.redirects?.items;
+  const rewritesItemSchema = schema.properties?.rewrites?.items;
+  const headersItemSchema = schema.properties?.headers?.items;
+  const hasVariants = redirectsItemSchema?.properties?.has?.items?.anyOf;
+
+  if (!hasVariants) return output;
+
+  const hostVariant = hasVariants.find(
+    (v: any) => v.properties?.type?.enum?.[0] === 'host'
+  );
+  const valueSchema = hostVariant?.properties?.value;
+  if (valueSchema) {
+    output.push(
+      `/**\n * Value for condition matching - can be a string or an operator object\n */`
+    );
+    output.push(
+      `export type MatchableValue = ${convertSchemaType(valueSchema, 0)};`
+    );
+    output.push('');
+  }
+
+  output.push(
+    `/**\n * Condition for matching in redirects, rewrites, and headers\n */`
+  );
+  output.push('export type Condition =');
+  for (const variant of hasVariants) {
+    const types = variant.properties?.type?.enum;
+    const required = variant.required || [];
+    const typeStr = types.map((t: string) => `'${t}'`).join(' | ');
+    const parts: string[] = [`type: ${typeStr}`];
+    for (const key of Object.keys(variant.properties || {})) {
+      if (key === 'type') continue;
+      const optional = !required.includes(key) ? '?' : '';
+      parts.push(
+        `${key}${optional}: ${key === 'value' ? 'MatchableValue' : 'string'}`
+      );
+    }
+    output.push(`  | { ${parts.join('; ')} }`);
+  }
+  output.push(';');
+  output.push('');
+
+  output.push(
+    `/**\n * The object form of MatchableValue (excludes the plain string shorthand)\n */`
+  );
+  output.push(
+    'export type MatchableValueObject = Exclude<MatchableValue, string>;'
+  );
+  output.push('');
+
+  const typeOverrides: Record<string, string> = {
+    has: 'Condition[]',
+    missing: 'Condition[]',
+    headers: 'Header[]',
+  };
+
+  function generateInterface(
+    name: string,
+    itemSchema: JSONSchema,
+    doc: string
+  ) {
+    if (!itemSchema?.properties) return;
+    output.push(`/**\n * ${doc}\n */`);
+    output.push(`export interface ${name} {`);
+    for (const [key, propSchema] of Object.entries(
+      itemSchema.properties as Record<string, JSONSchema>
+    )) {
+      const jsdoc = generateJSDoc(propSchema, '  ');
+      if (jsdoc) output.push(jsdoc);
+      const optional = !itemSchema.required?.includes(key) ? '?' : '';
+      const propType = typeOverrides[key] || convertSchemaType(propSchema, 1);
+      output.push(`  ${key}${optional}: ${propType};`);
+    }
+    output.push('}');
+    output.push('');
+  }
+
+  generateInterface(
+    'Header',
+    headersItemSchema?.properties?.headers?.items,
+    'HTTP header key/value pair'
+  );
+  generateInterface(
+    'Redirect',
+    redirectsItemSchema,
+    'Redirect definition matching vercel.json schema'
+  );
+  generateInterface(
+    'Rewrite',
+    rewritesItemSchema,
+    'Rewrite definition matching vercel.json schema'
+  );
+  generateInterface(
+    'HeaderRule',
+    headersItemSchema,
+    'Header rule definition matching vercel.json schema'
+  );
+
+  output.push(`/**\n * Union type for all routing helper outputs\n */`);
+  output.push(
+    'export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is internal to router'
+  );
+  output.push('');
+
+  return output;
 }
 
 function generateTypes(schema: JSONSchema): string {
@@ -295,78 +423,7 @@ function generateTypes(schema: JSONSchema): string {
     output.push('');
   }
 
-  // Keep existing routing types (Header, Condition, Redirect, Rewrite, HeaderRule)
-  output.push(`/**
- * HTTP header key/value pair
- */
-export interface Header {
-  key: string;
-  value: string;
-}
-
-/**
- * Condition for matching in redirects, rewrites, and headers
- */
-export interface Condition {
-  type: 'header' | 'cookie' | 'host' | 'query' | 'path';
-  key?: string;
-  value?: string | number;
-  eq?: string | number;
-  neq?: string;
-  inc?: string[];
-  ninc?: string[];
-  pre?: string;
-  suf?: string;
-  re?: string;
-  gt?: number;
-  gte?: number;
-  lt?: number;
-  lte?: number;
-}
-
-/**
- * Redirect matching vercel.json schema
- * Returned by routes.redirect()
- */
-export interface Redirect {
-  source: string;
-  destination: string;
-  permanent?: boolean;
-  statusCode?: number;
-  has?: Condition[];
-  missing?: Condition[];
-}
-
-/**
- * Rewrite matching vercel.json schema
- * Returned by routes.rewrite()
- */
-export interface Rewrite {
-  source: string;
-  destination: string;
-  has?: Condition[];
-  missing?: Condition[];
-  respectOriginCacheControl?: boolean;
-}
-
-/**
- * Header rule matching vercel.json schema
- * Returned by routes.header() and routes.cacheControl()
- */
-export interface HeaderRule {
-  source: string;
-  headers: Header[];
-  has?: Condition[];
-  missing?: Condition[];
-}
-
-/**
- * Union type for all routing helper outputs
- * Can be simple schema objects (Redirect, Rewrite, HeaderRule) or Routes with transforms
- * Note: Route type is defined in router.ts (uses src/dest instead of source/destination)
- */
-export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is internal to router
-`);
+  output.push(...generateRoutingTypes(schema));
 
   // Generate other helper types
   const wildcardProp = schema.properties?.wildcard;
@@ -460,8 +517,14 @@ export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is inter
           propType = 'BuildItem[]';
           break;
         case 'headers':
+          propType = 'HeaderRule[]';
+          break;
         case 'redirects':
+          propType = 'Redirect[]';
+          break;
         case 'rewrites':
+          propType = 'Rewrite[]';
+          break;
         case 'routes':
           propType = 'RouteType[]';
           break;
@@ -484,14 +547,16 @@ export const VercelConfig = {};`);
   return output.join('\n');
 }
 
-function main() {
+const SCHEMA_URL = 'https://openapi.vercel.sh/vercel.json';
+
+async function main() {
   try {
-    const schemaPath = process.argv[2] || '/tmp/vercel-schema.json';
     const outputPath = resolve(__dirname, '../src/types.ts');
 
-    console.log(`Reading schema from: ${schemaPath}`);
-    const schemaContent = readFileSync(schemaPath, 'utf-8');
-    const schema: JSONSchema = JSON.parse(schemaContent);
+    console.log(`Fetching schema from: ${SCHEMA_URL}`);
+    const res = await fetch(SCHEMA_URL);
+    if (!res.ok) throw new Error(`Failed to fetch schema: ${res.status}`);
+    const schema: JSONSchema = await res.json();
 
     console.log('Generating TypeScript types...');
     const types = generateTypes(schema);

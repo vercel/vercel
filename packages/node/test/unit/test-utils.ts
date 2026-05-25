@@ -14,25 +14,27 @@ export type Filesystem = {
 
 export async function prepareFilesystem(
   files: Fs,
-  folderPrefix = 'vercel-node-tests'
+  folderPrefix = 'vercel-node-tests',
+  workPathPrefix = ''
 ): Promise<Filesystem> {
   const directory = join(tmpdir(), `${folderPrefix}-${Date.now()}`);
-  await fs.mkdir(directory, { recursive: true });
+  const workPath = workPathPrefix ? join(directory, workPathPrefix) : directory;
+  await fs.mkdir(workPath, { recursive: true });
   const fileRefs: Files = {};
   for (const [key, value] of Object.entries(files)) {
-    const fullPath = join(directory, key);
+    const fullPath = join(workPath, key);
     await fs.mkdir(dirname(fullPath), { recursive: true });
     if (typeof value === 'string' || value instanceof Buffer) {
-      await fs.writeFile(join(directory, key), value);
+      await fs.writeFile(join(workPath, key), value);
     } else if (typeof value.copy === 'string') {
-      await fs.copyFile(join(directory, value.copy), join(directory, key));
+      await fs.copyFile(join(workPath, value.copy), join(workPath, key));
     }
     fileRefs[key] = await FileFsRef.fromFsPath({
-      fsPath: join(directory, key),
+      fsPath: join(workPath, key),
     });
   }
   return {
-    workPath: directory,
+    workPath,
     repoRootPath: directory,
     files: fileRefs,
   };

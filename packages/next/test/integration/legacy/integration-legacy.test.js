@@ -9,7 +9,7 @@ const {
 
 const runBuildLambda = createRunBuildLambda(builder);
 
-jest.setTimeout(360000);
+vi.setConfig({ testTimeout: 360000, hookTimeout: 360000 });
 
 it('Should build the 404-getstaticprops example', async () => {
   const { buildResult } = await runBuildLambda(
@@ -230,7 +230,7 @@ it('Should build the serverless-config-monorepo-present example', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should opt-out of shared lambdas when routes are detected', async () => {
   const {
     buildResult: { output },

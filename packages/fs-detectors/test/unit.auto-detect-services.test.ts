@@ -1,4 +1,5 @@
 import { detectServices, autoDetectServices } from '../src';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('autoDetectServices', () => {
@@ -25,12 +26,12 @@ describe('autoDetectServices', () => {
       expect(result.services!.frontend!.entrypoint).toBeUndefined();
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'backend',
+        root: 'backend',
         routePrefix: '/_/backend',
       });
     });
 
-    it('should detect only Next.js at root with no backend', async () => {
+    it('should return null for root-only Next.js with no backend', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -42,12 +43,7 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.services).not.toBeNull();
-      expect(result.services!.frontend).toMatchObject({
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services!.backend).toBeUndefined();
+      expect(result.services).toBeNull();
     });
 
     it('should not add backend service if backend/ dir exists but has no framework', async () => {
@@ -63,12 +59,7 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.services).not.toBeNull();
-      expect(result.services!.frontend).toMatchObject({
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services!.backend).toBeUndefined();
+      expect(result.services).toBeNull();
     });
   });
 
@@ -90,12 +81,12 @@ describe('autoDetectServices', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'nextjs',
-        entrypoint: 'frontend',
+        root: 'frontend',
         routePrefix: '/',
       });
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'backend',
+        root: 'backend',
         routePrefix: '/_/backend',
       });
     });
@@ -159,17 +150,17 @@ describe('autoDetectServices', () => {
 
       expect(result.services!.frontend).toMatchObject({
         framework: 'nextjs',
-        entrypoint: 'frontend',
+        root: 'frontend',
         routePrefix: '/',
       });
       expect(result.services!['service-a']).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'services/service-a',
+        root: 'services/service-a',
         routePrefix: '/_/service-a',
       });
       expect(result.services!['service-b']).toMatchObject({
         framework: 'flask',
-        entrypoint: 'services/service-b',
+        root: 'services/service-b',
         routePrefix: '/_/service-b',
       });
     });
@@ -198,7 +189,7 @@ describe('autoDetectServices', () => {
       expect(result.services!.frontend!.entrypoint).toBeUndefined();
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'services/api',
+        root: 'services/api',
         routePrefix: '/_/api',
       });
     });
@@ -267,22 +258,22 @@ describe('autoDetectServices', () => {
 
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        entrypoint: 'apps/web',
+        root: 'apps/web',
         routePrefix: '/',
       });
       expect(result.services!.auth).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'services/auth',
+        root: 'services/auth',
         routePrefix: '/_/auth',
       });
       expect(result.services!.payments).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'services/payments',
+        root: 'services/payments',
         routePrefix: '/_/payments',
       });
       expect(result.services!.notifications).toMatchObject({
         framework: 'flask',
-        entrypoint: 'services/notifications',
+        root: 'services/notifications',
         routePrefix: '/_/notifications',
       });
     });
@@ -419,12 +410,12 @@ describe('detectServices with auto-detection', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.frontend).toMatchObject({
         framework: 'sveltekit-1',
-        entrypoint: 'frontend',
+        root: 'frontend',
         routePrefix: '/',
       });
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'backend',
+        root: 'backend',
         routePrefix: '/_/backend',
       });
     });
@@ -454,14 +445,14 @@ describe('detectServices with auto-detection', () => {
       });
       expect(result.services!.backend).toMatchObject({
         framework: 'fastapi',
-        entrypoint: 'backend',
+        root: 'backend',
         routePrefix: '/_/backend',
       });
     });
   });
 
   describe('auto-detection fallback', () => {
-    it('should auto-detect services when no experimentalServices configured', async () => {
+    it('should return no services for root-only project without experimentalServices', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           buildCommand: 'npm run build',
@@ -475,19 +466,17 @@ describe('detectServices with auto-detection', () => {
 
       const result = await detectServices({ fs });
 
-      expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
       expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(1);
-      expect(result.services[0]).toMatchObject({
-        name: 'frontend',
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services[0].routePrefixSource).toBe('generated');
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toEqual([
+        {
+          code: 'NO_SERVICES_CONFIGURED',
+          message: 'No services configured. Add `services` to vercel.json.',
+        },
+      ]);
     });
 
-    it('should auto-detect services when vercel.json does not exist', async () => {
+    it('should return no services for root-only project without vercel.json', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -498,16 +487,14 @@ describe('detectServices with auto-detection', () => {
 
       const result = await detectServices({ fs });
 
-      expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
       expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(1);
-      expect(result.services[0]).toMatchObject({
-        name: 'frontend',
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services[0].routePrefixSource).toBe('generated');
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toEqual([
+        {
+          code: 'NO_SERVICES_CONFIGURED',
+          message: 'No services configured. Add `services` to vercel.json.',
+        },
+      ]);
     });
 
     it('should mark prefixed auto-detected services as generated', async () => {
@@ -524,15 +511,101 @@ describe('detectServices with auto-detection', () => {
       const result = await detectServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
       expect(result.source).toBe('auto-detected');
       expect(result.services).toHaveLength(2);
-      const backend = result.services.find(
+      expect(result.inferred).not.toBeNull();
+      expect(result.inferred!.services).toHaveLength(2);
+      const backend = result.inferred!.services.find(
         service => service.name === 'backend'
       );
       expect(backend).toBeDefined();
       expect(backend?.routePrefix).toBe('/_/backend');
       expect(backend?.routePrefixSource).toBe('generated');
     });
+  });
+});
+
+describe('autoDetectServices with detectEntrypoint callback', () => {
+  it('emits root + entrypoint for runtime services and root-only for frontend services', async () => {
+    const fs = new VirtualFilesystem({
+      'frontend/package.json': JSON.stringify({
+        dependencies: { next: '14.0.0' },
+      }),
+      'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+      'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+    });
+
+    const detectEntrypoint: DetectEntrypointFn = async ({
+      workPath,
+      framework,
+    }) => {
+      // Mock the per-runtime helper: assert the auto-detect plumbing
+      // forwards both the directory and the framework slug, and respond
+      // with a Python-style module:attr reference.
+      expect(workPath).toBe('backend');
+      expect(framework).toBe('fastapi');
+      return { kind: 'py-module:attr', entrypoint: 'main:app' };
+    };
+
+    const result = await autoDetectServices({ fs, detectEntrypoint });
+
+    expect(result.errors).toEqual([]);
+    expect(result.services).not.toBeNull();
+    expect(result.services!.frontend).toEqual({
+      framework: 'nextjs',
+      root: 'frontend',
+      routePrefix: '/',
+    });
+    expect(result.services!.frontend!.entrypoint).toBeUndefined();
+    expect(result.services!.backend).toEqual({
+      framework: 'fastapi',
+      root: 'backend',
+      entrypoint: 'main:app',
+      routePrefix: '/_/backend',
+    });
+  });
+
+  it('emits root only (no entrypoint) when the callback returns null for a runtime service', async () => {
+    const fs = new VirtualFilesystem({
+      'frontend/package.json': JSON.stringify({
+        dependencies: { next: '14.0.0' },
+      }),
+      'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+      // No main.py — the callback below returns null, mimicking a
+      // detector that couldn't find a concrete entrypoint. The framework
+      // hook resolves the actual file at build time.
+    });
+
+    const detectEntrypoint: DetectEntrypointFn = async () => null;
+
+    const result = await autoDetectServices({ fs, detectEntrypoint });
+
+    expect(result.errors).toEqual([]);
+    expect(result.services!.backend).toEqual({
+      framework: 'fastapi',
+      root: 'backend',
+      routePrefix: '/_/backend',
+    });
+    expect(result.services!.backend!.entrypoint).toBeUndefined();
+  });
+
+  it('does not invoke the callback for frontend-only services', async () => {
+    const fs = new VirtualFilesystem({
+      'frontend/package.json': JSON.stringify({
+        dependencies: { next: '14.0.0' },
+      }),
+      'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
+      'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
+    });
+
+    const calls: Array<{ workPath: string; framework?: string }> = [];
+    const detectEntrypoint: DetectEntrypointFn = async opts => {
+      calls.push(opts);
+      return { kind: 'py-module:attr', entrypoint: 'main:app' };
+    };
+
+    await autoDetectServices({ fs, detectEntrypoint });
+
+    expect(calls).toEqual([{ workPath: 'backend', framework: 'fastapi' }]);
   });
 });

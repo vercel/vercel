@@ -1,12 +1,14 @@
 import { frameworkList } from '@vercel/frameworks';
-import type {
-  ResolvedService,
-  ServiceDetectionError,
-} from '@vercel/fs-detectors';
+import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
+import {
+  getServiceQueueTopics,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
+  isWorkflowTriggeredService,
+} from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const chalk = require('chalk');
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
@@ -67,9 +69,34 @@ interface ServiceDescriptionInfo {
   colorFn: (text: string) => string;
 }
 
-function getServiceDescriptionInfo(
-  service: ResolvedService
-): ServiceDescriptionInfo {
+const jobTriggerLabels: Record<string, string> = {
+  queue: 'Job/Queue',
+  schedule: 'Job/Schedule',
+  workflow: 'Job/Workflow',
+};
+
+function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
+  if (
+    service.type === 'worker' ||
+    service.type === 'job' ||
+    service.type === 'cron'
+  ) {
+    const typeLabel =
+      service.type === 'worker'
+        ? 'Worker'
+        : (jobTriggerLabels[service.trigger ?? ''] ?? 'Job');
+    const typeColorFn = service.type === 'worker' ? chalk.magenta : chalk.cyan;
+
+    if (service.runtime) {
+      const runtimeName =
+        service.runtime.charAt(0).toUpperCase() + service.runtime.slice(1);
+      const runtimeColorFn = runtimeColors[service.runtime] || chalk.yellow;
+      const label = `${typeLabel}${chalk.white('/')}${runtimeColorFn(runtimeName)}`;
+      return { label, colorFn: typeColorFn };
+    }
+    return { label: typeLabel, colorFn: typeColorFn };
+  }
+
   const frameworkName = getFrameworkName(service.framework);
 
   // Show the most detailed info: framework > runtime > builder
@@ -86,32 +113,47 @@ function getServiceDescriptionInfo(
   return { label: 'unknown', colorFn: chalk.dim };
 }
 
-function getServiceTarget(service: ResolvedService): string {
-  switch (service.type) {
-    case 'cron':
-      return `schedule: ${service.schedule ?? 'none'}`;
-    case 'worker':
-      return `topic: ${service.topic ?? 'none'}`;
-    case 'web':
-    default:
-      return service.routePrefix
-        ? formatRoutePrefix(service.routePrefix)
-        : 'no route';
+function getServiceTarget(service: Service): string {
+  if (isScheduleTriggeredService(service)) {
+    return `schedule: ${service.schedule ?? 'none'}`;
   }
+
+  if (isQueueTriggeredService(service)) {
+    const topics = getServiceQueueTopics(service);
+    return `topics: ${topics.join(', ')}`;
+  }
+
+  if (isWorkflowTriggeredService(service)) {
+    return 'workflow';
+  }
+
+  return service.routePrefix
+    ? formatRoutePrefix(service.routePrefix)
+    : 'no route';
 }
 
 /**
  * Output format:
- * Multiple services detected. Project Settings:
+ * Detected services:
  *   frontend          [Next.js]   →  /
  *   api               [python]    →  /api/*
  *   cleanup           [node]      →  schedule: 0 0 * * *
- *   processor         [node]      →  topic: jobs
+ *   processor         [node]      →  topics: jobs
  */
-export function displayDetectedServices(services: ResolvedService[]): void {
-  output.print(`Multiple services detected. Project Settings:\n`);
+export function displayDetectedServices(services: Service[]): void {
+  output.print(`Detected services:\n`);
 
-  const rows: string[][] = services.map(service => {
+  const outputOrder: Record<string, number> = {
+    web: 0,
+    cron: 1,
+    job: 1,
+    worker: 2,
+  };
+  const sorted = [...services].sort(
+    (a, b) => (outputOrder[a.type] ?? 3) - (outputOrder[b.type] ?? 3)
+  );
+
+  const rows: string[][] = sorted.map(service => {
     const descInfo = getServiceDescriptionInfo(service);
     const target = getServiceTarget(service);
 
@@ -127,9 +169,11 @@ export function displayDetectedServices(services: ResolvedService[]): void {
   output.print(`${tableOutput}\n`);
 }
 
-export function displayServicesConfigNote(): void {
+export function displayServicesConfigNote(
+  configFileName = 'vercel.json'
+): void {
   output.print(
-    `\n${chalk.dim('Services (experimental) are configured via vercel.json.')}\n`
+    `\n${chalk.dim(`Services are configured via ${configFileName}.`)}\n`
   );
 }
 

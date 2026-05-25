@@ -110,6 +110,13 @@ export interface BuildOptions {
   buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 
   /**
+   * Called by the builder to register a callback that will execute the
+   * service's pre-deploy command. The CLI collects these and invokes
+   * them only after every builder has succeeded.
+   */
+  registerPreDeploy?: (callback: () => Promise<void>) => void;
+
+  /**
    * The current trace state from the internal vc tracing
    */
   span?: Span;
@@ -119,10 +126,20 @@ export interface BuildOptions {
    * multi-service project.
    */
   service?: {
+    /** The service name as declared in the project configuration. */
+    name?: string;
+    /** The service type (e.g., "web", "worker", "job"). */
+    type?: ServiceType;
+    /** The job trigger type (e.g., "queue", "schedule", "workflow"). */
+    trigger?: JobTrigger;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
+    /** Optional subdomain this service is mounted on (e.g., "api"). */
+    subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
+    /** Cron schedule expression(s) (e.g., "0 0 * * *"). Only present for cron services. */
+    schedule?: string | string[];
   };
 }
 
@@ -239,6 +256,12 @@ export interface StartDevServerSuccess {
    * dev server will forcefully be killed.
    */
   shutdown?: () => Promise<void>;
+
+  /**
+   * Cron entries produced by the builder for this service.
+   * Used by the dev orchestrator to schedule cron triggers.
+   */
+  crons?: Cron[];
 }
 
 /**
@@ -251,7 +274,6 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Credit to Iain Reid, MIT license.
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PackageJson {
   /**
    * An author or contributor
@@ -410,11 +432,13 @@ export interface Builder {
   config?: Config;
 }
 
+export type MaxDuration = number | 'max';
+
 export interface BuilderFunctions {
   [key: string]: {
     architecture?: LambdaArchitecture;
     memory?: number;
-    maxDuration?: number;
+    maxDuration?: MaxDuration;
     regions?: string[];
     functionFailoverRegions?: string[];
     runtime?: string;
@@ -442,12 +466,25 @@ export interface ProjectSettings {
   commandForIgnoringBuildStep?: string | null;
 }
 
+/*
+ * This is a builder whose build output version may dynamically change.
+ */
+export interface BuilderVX {
+  version: -1;
+  build: BuildVX;
+  diagnostics?: Diagnostics;
+  prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
+}
+
 export interface BuilderV2 {
   version: 2;
   build: BuildV2;
   diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
 }
 
 export interface BuilderV3 {
@@ -547,9 +584,30 @@ export interface Cron {
   schedule: string;
 }
 
+export interface ServiceQueueTopic {
+  topic: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+}
+
+export type ServiceTopics = string[] | ServiceQueueTopic[];
+export const JOB_TRIGGERS = ['queue', 'schedule', 'workflow'] as const;
+export type JobTrigger = (typeof JOB_TRIGGERS)[number];
+
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
+  service: string;
+}
+
+// union (in the future) type to handle all possible variants
+export type EnvVar = ServiceRefEnvVar;
+
+export type EnvVars = Record<string, EnvVar>;
+
 export interface Service {
   name: string;
   type: ServiceType;
+  trigger?: JobTrigger;
   group?: string;
   workspace: string;
   entrypoint?: string;
@@ -558,14 +616,99 @@ export interface Service {
   runtime?: string;
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
   /* web service config */
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
-  /* cron service config */
-  schedule?: string;
-  /* worker service config */
-  topic?: string;
-  consumer?: string;
+  subdomain?: string;
+  /* scheduled job config */
+  schedule?: string | string[];
+  /* optional handler for a schedule-triggered job in format of {module}:{callable} */
+  handlerFunction?: string;
+  /* worker/job service config */
+  topics?: ServiceTopics;
+  /* environment variables declared by the user to be injected into this service. */
+  env?: EnvVars;
+}
+
+export function getServiceQueueTopicConfigs(config: {
+  type?: ServiceType;
+  topics?: ServiceTopics;
+}): ServiceQueueTopic[] {
+  if (Array.isArray(config.topics) && config.topics.length > 0) {
+    return typeof config.topics[0] === 'string'
+      ? (config.topics as string[]).map(topic => ({ topic }))
+      : (config.topics as ServiceQueueTopic[]);
+  }
+
+  return config.type === 'worker' ? [{ topic: 'default' }] : [];
+}
+
+export function getServiceQueueTopics(config: {
+  type?: ServiceType;
+  topics?: ServiceTopics;
+}): string[] {
+  return getServiceQueueTopicConfigs(config).map(topic => topic.topic);
+}
+
+export function isQueueTriggeredService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    service.type === 'worker' ||
+    (service.type === 'job' && service.trigger === 'queue')
+  );
+}
+
+export function isScheduleTriggeredService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    service.type === 'cron' ||
+    (service.type === 'job' && service.trigger === 'schedule')
+  );
+}
+
+export function isWorkflowTriggeredService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return service.type === 'job' && service.trigger === 'workflow';
+}
+
+/** Returns true for any service that consumes queue messages (worker, queue-triggered job, workflow-triggered job). */
+export function isQueueBackedService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    isQueueTriggeredService(service) || isWorkflowTriggeredService(service)
+  );
+}
+
+export type ReportedServiceType = 'web' | 'schedule' | 'queue' | 'workflow';
+
+export function getReportedServiceType(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): ReportedServiceType | undefined {
+  switch (service.type) {
+    case 'web':
+      return 'web';
+    case 'cron':
+      return 'schedule';
+    case 'worker':
+      return 'queue';
+    case 'job':
+      if (service.trigger === 'schedule') return 'schedule';
+      if (service.trigger === 'queue') return 'queue';
+      if (service.trigger === 'workflow') return 'workflow';
+      return undefined;
+    default:
+      return undefined;
+  }
 }
 
 /** The framework which created the function */
@@ -590,6 +733,7 @@ export interface BuildResultV2Typical {
     value: string;
   }>;
   framework?: {
+    slug: string;
     version: string;
   };
   flags?: { definitions: FlagDefinitions };
@@ -601,7 +745,12 @@ export interface BuildResultV2Typical {
    * @example "abc123"
    */
   deploymentId?: string;
+  crons?: Cron[];
 }
+
+export type BuildResultVX =
+  | { resultVersion: 2; result: BuildResultV2 }
+  | { resultVersion: 3; result: BuildResultV3 };
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
@@ -609,8 +758,10 @@ export interface BuildResultV3 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   output: Lambda | EdgeFunction;
+  crons?: Cron[];
 }
 
+export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
@@ -737,7 +888,19 @@ export interface TriggerEvent extends TriggerEventBase {
 
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
-export type ServiceType = 'web' | 'cron' | 'worker';
+export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
+
+export interface ExperimentalServiceMount {
+  /** URL path prefix where the service is mounted. */
+  path?: string;
+  /** Optional subdomain this service is mounted on. */
+  subdomain?: string;
+}
+
+export interface ServiceMount {
+  /** URL path prefix where the service is mounted. */
+  path: string;
+}
 
 /**
  * Configuration for a service in vercel.json.
@@ -745,8 +908,15 @@ export type ServiceType = 'web' | 'cron' | 'worker';
  */
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
+  trigger?: JobTrigger;
   /**
-   * Service entrypoint, relative to the project root.
+   * Path to the service's root directory relative to the project root.
+   * Should contain a manifest file (package.json, pyproject.toml, etc.).
+   * Defaults to ".".
+   */
+  root?: string;
+  /**
+   * Service entrypoint, relative to the service root directory.
    * Can be either a file path (runtime entrypoint) or a directory path
    * (service workspace for framework-based services).
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
@@ -760,26 +930,34 @@ export interface ExperimentalServiceConfig {
   /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
   runtime?: string;
 
+  workspace?: string;
   buildCommand?: string;
   installCommand?: string;
+  preDeployCommand?: string;
 
   /** Lambda config */
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
 
   /* Web service config */
-  /** URL prefix for routing */
+  /** Preferred routing config alias for routePrefix/subdomain. */
+  mount?: string | ExperimentalServiceMount;
+  /** URL prefix for routing (deprecated, use mount instead) */
   routePrefix?: string;
+  /** Subdomain this service should respond to (web services only). */
+  subdomain?: string;
 
-  /* Cron service config */
-  /** Cron schedule expression (e.g., "0 0 * * *") */
-  schedule?: string;
+  /* Scheduled job config */
+  /** Cron schedule expression(s) (e.g., "0 0 * * *") */
+  schedule?: string | string[];
 
-  /* Worker service config */
-  topic?: string;
-  consumer?: string;
+  /* Worker/job service config */
+  topics?: ServiceTopics;
+
+  /* Environment variables to inject into this service env */
+  env?: EnvVars;
 }
 
 /**
@@ -787,6 +965,56 @@ export interface ExperimentalServiceConfig {
  * @experimental This feature is experimental and may change.
  */
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
+
+/**
+ * Public configuration for a service in vercel.json.
+ */
+export interface ServiceConfig {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+  /**
+   * Path to the service's root directory relative to the project root.
+   * Should contain a manifest file (package.json, pyproject.toml, etc.).
+   * Defaults to ".".
+   */
+  root?: string;
+  /**
+   * Service entrypoint, relative to the service root directory.
+   * Can be either a file path (runtime entrypoint) or a directory path
+   * (service workspace for framework-based services).
+   */
+  entrypoint?: string;
+
+  /** Framework to use */
+  framework?: string;
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  runtime?: string;
+
+  buildCommand?: string;
+  preDeployCommand?: string;
+
+  /** Lambda config */
+  memory?: number;
+  maxDuration?: MaxDuration;
+  includeFiles?: string | string[];
+  excludeFiles?: string | string[];
+
+  /* Web service config */
+  /** Preferred routing config for route paths. */
+  mount?: string | ServiceMount;
+
+  /* Scheduled job config */
+  /** Cron schedule expression(s) (e.g., "0 0 * * *") */
+  schedule?: string | string[];
+
+  /* Queue-triggered job config */
+  topics?: ServiceTopics;
+}
+
+/**
+ * Map of service name to public service configuration.
+ */
+export type Services = Record<string, ServiceConfig>;
 
 /**
  * Map of service group name to array of service names belonging to that group.
@@ -798,3 +1026,39 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
  * }
  */
 export type ExperimentalServiceGroups = Record<string, string[]>;
+
+/**
+ * Result of a runtime builder's normalized entrypoint detection.
+ *
+ * - `kind: 'file'` — `entrypoint` is a path relative to the scanned `workPath`
+ *   (e.g. `"src/index.ts"`, `"main.go"`, `"main.py"`).
+ * - `kind: 'py-module:attr'` — `entrypoint` is a Python `module:attr` reference
+ *   where the module is dot-separated and resolved relative to the scanned
+ *   `workPath` (e.g. `"main:app"`, `"src.main:app"`).
+ *
+ * @experimental This feature is experimental and may change.
+ */
+export type DetectedEntrypoint =
+  | { kind: 'file'; entrypoint: string }
+  | { kind: 'py-module:attr'; entrypoint: string }
+  | null;
+
+/**
+ * Input to a runtime builder's normalized entrypoint detector.
+ * @experimental This feature is experimental and may change.
+ */
+export interface DetectEntrypointOptions {
+  /** Path to the candidate service directory relative to project root. */
+  workPath: string;
+  /** Framework slug detected for this directory, if any. */
+  framework?: string;
+}
+
+/**
+ * Normalized entrypoint detector signature, implemented by each runtime builder
+ * and consumed by services auto-detection to populate suggested service configs.
+ * @experimental This feature is experimental and may change.
+ */
+export type DetectEntrypointFn = (
+  opts: DetectEntrypointOptions
+) => Promise<DetectedEntrypoint>;

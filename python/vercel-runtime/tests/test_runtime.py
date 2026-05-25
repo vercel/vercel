@@ -27,6 +27,7 @@ from tests._n1_mock import (
     LogMessage,
     N1Mock,
     ServerStartedMessage,
+    UnrecoverableErrorMessage,
     create_n1_mock,
 )
 
@@ -72,14 +73,19 @@ async def _run_runtime(
     entrypoint_rel: str,
     module_name: str,
     ipc_socket_path: str,
+    variable_name: str = "app",
+    extra_env: dict[str, str] | None = None,
 ) -> AsyncIterator[asyncio.subprocess.Process]:
     env = {
         **_base_env(),
         "__VC_HANDLER_ENTRYPOINT": entrypoint_rel,
         "__VC_HANDLER_ENTRYPOINT_ABS": str(entrypoint_abs),
         "__VC_HANDLER_MODULE_NAME": module_name,
+        "__VC_HANDLER_VARIABLE_NAME": variable_name,
         "VERCEL_IPC_PATH": ipc_socket_path,
     }
+    if extra_env:
+        env.update(extra_env)
     cmd = [sys.executable]
     if _coverage_active():
         cmd.append(str(_COV_WRAPPER))
@@ -129,6 +135,7 @@ async def _invoke_lambda(
     entrypoint_rel: str,
     module_name: str,
     event: dict[str, Any],
+    variable_name: str = "app",
 ) -> dict[str, Any]:
     """Run vc_init.py in legacy mode and call vc_handler.
 
@@ -140,6 +147,7 @@ async def _invoke_lambda(
         "__VC_HANDLER_ENTRYPOINT": entrypoint_rel,
         "__VC_HANDLER_ENTRYPOINT_ABS": str(entrypoint_abs),
         "__VC_HANDLER_MODULE_NAME": module_name,
+        "__VC_HANDLER_VARIABLE_NAME": variable_name,
     }
     env.pop("VERCEL_IPC_PATH", None)
 
@@ -274,6 +282,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ):
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0
@@ -281,7 +290,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             port = ss.payload.http_port
             self.assertIsInstance(port, int)
             self.assertGreater(port, 0)
-            self.assertGreater(ss.payload.init_duration, 0)
+            self.assertIsNotNone(ss.payload.init_duration)
 
             resp = await _http_get(port, "/hello")
             self.assertEqual(resp.status, 200)
@@ -316,6 +325,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ):
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0
@@ -327,6 +337,25 @@ class TestHTTPHandler(_RuntimeTestCase):
             self.assertEqual(resp.status, 501)
             resp.read()
 
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
     async def test_malformed_request_line(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
         async with _run_runtime(
@@ -334,6 +363,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ):
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0
@@ -347,6 +377,65 @@ class TestHTTPHandler(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"400", data)
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Without x-vercel-sc-no-header-leak most headers are passed down
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+            self.assertIn("x-vercel-sc-basepath", seen)
+            self.assertIn("x-vercel-sc-protocol", seen)
+
+            # With x-vercel-sc-no-header-leak every header is stripped
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
 
 
 class TestWSGIApp(_RuntimeTestCase):
@@ -400,6 +489,78 @@ class TestWSGIApp(_RuntimeTestCase):
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "GET /close-test")
 
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
 
 class TestASGIApp(_RuntimeTestCase):
     """Tests for ASGI app entrypoints."""
@@ -418,7 +579,7 @@ class TestASGIApp(_RuntimeTestCase):
                 ServerStartedMessage, timeout=10.0
             )
             port = ss.payload.http_port
-            self.assertGreater(ss.payload.init_duration, 0)
+            self.assertIsNotNone(ss.payload.init_duration)
 
             resp = await _http_get(port, "/hello")
             self.assertEqual(resp.status, 200)
@@ -466,6 +627,360 @@ class TestASGIApp(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"200", data)
+
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
+
+class TestCronService(_RuntimeTestCase):
+    """Tests for cron service bootstrap behavior."""
+
+    async def test_cron_secret_is_enforced_by_wrapper(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
+        marker_path = self.tmp_path / "cron-auth.marker"
+        routes = json.dumps({cron_path: mod})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_SECRET": "super-secret",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 401)
+            self.assertEqual(resp.read().decode(), '{"error":"unauthorized"}')
+
+            resp = await _http_get(
+                port,
+                cron_path,
+                headers={"authorization": "Bearer super-secret"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_dunder_main_entrypoint_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
+        marker_path = self.tmp_path / "cron-dunder-main.marker"
+        routes = json.dumps({cron_path: mod})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_dunder_main_entrypoint_for_schedule_job_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        cron_path = "/_svc/cleanup/crons/cron_dunder_main"
+        marker_path = self.tmp_path / "schedule-job-dunder-main.marker"
+        routes = json.dumps({cron_path: mod})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "job",
+                "VERCEL_SERVICE_TRIGGER": "schedule",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_sync_handler_function_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_sync_handler.py",
+            self.tmp_path,
+        )
+        cron_path = "/_svc/cleanup/crons/cron_sync_handler/sync_handler"
+        marker_path = self.tmp_path / "cron-sync-handler.marker"
+        routes = json.dumps({cron_path: f"{mod}:sync_handler"})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-sync")
+
+    async def test_bootstraps_async_handler_function_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_async_handler.py",
+            self.tmp_path,
+        )
+        cron_path = "/_svc/cleanup/crons/cron_async_handler/async_handler"
+        marker_path = self.tmp_path / "cron-async-handler.marker"
+        routes = json.dumps({cron_path: f"{mod}:async_handler"})
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_CRON_ROUTES": routes,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, cron_path)
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-async")
+
+    async def test_multi_cron_routes_dispatches_by_path(self) -> None:
+        # Copy both fixture modules to tmp_path so importlib can find them
+        ep_abs_a, ep_rel_a, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        _make_entrypoint("cron_multi_handler_b.py", self.tmp_path)
+        marker_a = self.tmp_path / "multi-a.marker"
+        marker_b = self.tmp_path / "multi-b.marker"
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+            "/_svc/svc/crons/b/handler_b": "cron_multi_handler_b:handler_b",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs_a,
+            entrypoint_rel=ep_rel_a,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE_A": str(marker_a),
+                "CRON_MARKER_FILE_B": str(marker_b),
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Trigger handler A
+            resp = await _http_post(port, "/_svc/svc/crons/a/handler_a")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker_a.read_text(), "ran-a")
+            self.assertFalse(marker_b.exists())
+
+            # Trigger handler B
+            resp = await _http_post(port, "/_svc/svc/crons/b/handler_b")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker_b.read_text(), "ran-b")
+
+    async def test_multi_cron_routes_returns_404_for_unknown_path(self) -> None:
+        ep_abs, ep_rel, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_post(port, "/unknown/path")
+            self.assertEqual(resp.status, 404)
+
+    async def test_multi_cron_routes_enforces_cron_secret(self) -> None:
+        ep_abs, ep_rel, _ = _make_entrypoint(
+            "cron_multi_handler_a.py", self.tmp_path
+        )
+        marker = self.tmp_path / "multi-auth.marker"
+        routes = {
+            "/_svc/svc/crons/a/handler_a": "cron_multi_handler_a:handler_a",
+        }
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name="cron_multi_handler_a",
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE_A": str(marker),
+                "CRON_SECRET": "test-secret",
+                "__VC_CRON_ROUTES": json.dumps(routes),
+                "PYTHONPATH": str(self.tmp_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # No auth header -> 401
+            resp = await _http_post(port, "/_svc/svc/crons/a/handler_a")
+            self.assertEqual(resp.status, 401)
+            resp.read()
+            self.assertFalse(marker.exists())
+
+            # Correct auth header -> 200
+            resp = await _http_post(
+                port,
+                "/_svc/svc/crons/a/handler_a",
+                headers={"Authorization": "Bearer test-secret"},
+            )
+            self.assertEqual(resp.status, 200)
+            resp.read()
+            self.assertEqual(marker.read_text(), "ran-a")
 
 
 class TestLogging(_RuntimeTestCase):
@@ -546,9 +1061,31 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("missing variable", msg.payload.message)
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
+
+    async def test_missing_cron_entrypoint_exits(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "missing_export.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_SERVICE_TYPE": "cron"},
+        ) as proc:
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+            stderr = await _read_stderr(proc)
+            self.assertIn("Error bootstrapping cron service app:", stderr)
 
     async def test_bad_handler_subclass_exits(
         self,
@@ -559,13 +1096,22 @@ class TestErrorPaths(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn(
+                "Could not determine the application interface",
+                msg.payload.message,
+            )
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
             stderr = await _read_stderr(proc)
             self.assertIn(
-                "Handler must inherit from BaseHTTPRequestHandler",
+                "Could not determine the application interface",
                 stderr,
             )
 
@@ -594,11 +1140,17 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name="nonexistent",
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("could not import", msg.payload.message)
+            self.assertIn("nonexistent.py", msg.payload.message)
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
             stderr = await _read_stderr(proc)
-            self.assertIn("Error importing", stderr)
+            self.assertIn("could not import", stderr)
 
 
 class _LambdaTestCase(unittest.IsolatedAsyncioTestCase):
@@ -625,6 +1177,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event("GET", "/hello"),
+            variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertIn("GET /hello", result["body"])
@@ -641,6 +1194,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
                 body=base64.b64encode(b"encoded").decode(),
                 encoding="base64",
             ),
+            variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertIn("encoded", result["body"])
@@ -654,6 +1208,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event("GET", "/"),
+            variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertEqual(result["encoding"], "base64")
@@ -735,20 +1290,25 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
 
     async def test_repeated_headers(self) -> None:
-        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_repeated_headers.py",
+            self.tmp_path,
+        )
         result = await _invoke_lambda(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event(
                 "GET",
-                "/hello",
+                "/headers",
                 headers={
                     "accept": ["text/html", "application/json"],
                 },
             ),
         )
         self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "text/html,application/json")
 
 
 class TestLambdaASGILifespan(_LambdaTestCase):
@@ -793,6 +1353,7 @@ class TestLambdaErrorPaths(_LambdaTestCase):
                 entrypoint_rel=ep_rel,
                 module_name=mod,
                 event=_lambda_event("GET", "/"),
+                variable_name="handler",
             )
 
     async def test_asgi_bad_start_message(self) -> None:

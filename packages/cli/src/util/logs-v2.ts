@@ -1,6 +1,12 @@
 import ms from 'ms';
 import type Client from './client';
 
+export interface RequestLogMessage {
+  level: string;
+  message: string;
+  messageTruncated?: boolean;
+}
+
 export interface RequestLogEntry {
   id: string;
   timestamp: number;
@@ -18,6 +24,7 @@ export interface RequestLogEntry {
   cache?: string;
   traceId?: string;
   messageTruncated?: boolean;
+  logs: RequestLogMessage[];
 }
 
 export interface RequestLogsResponse {
@@ -43,6 +50,44 @@ export interface FetchRequestLogsOptions {
   requestId?: string;
   branch?: string;
   page?: number;
+}
+
+type DisplayLogLevel = RequestLogEntry['level'];
+
+const LOG_LEVEL_SEVERITY: Record<
+  'info' | 'warning' | 'error' | 'fatal',
+  number
+> = {
+  info: 0,
+  warning: 1,
+  error: 2,
+  fatal: 3,
+};
+
+function getLogLevelSeverity(level: string): number {
+  return LOG_LEVEL_SEVERITY[level as keyof typeof LOG_LEVEL_SEVERITY] ?? -1;
+}
+
+function getDisplayLog(
+  logs: RequestLogMessage[],
+  requestedLevels?: string[]
+): RequestLogMessage | undefined {
+  if (logs.length === 0) {
+    return undefined;
+  }
+
+  const matchingLogs =
+    requestedLevels && requestedLevels.length > 0
+      ? logs.filter(log => requestedLevels.includes(log.level))
+      : logs;
+
+  const candidates = matchingLogs.length > 0 ? matchingLogs : logs;
+
+  return candidates.reduce((selected, current) =>
+    getLogLevelSeverity(current.level) > getLogLevelSeverity(selected.level)
+      ? current
+      : selected
+  );
 }
 
 function parseRelativeTime(input: string): number {
@@ -158,16 +203,21 @@ export async function fetchRequestLogs(
   }>(url);
 
   const logs: RequestLogEntry[] = (data.rows || []).map(row => {
-    const firstLog = row.logs?.[0];
+    const requestLogs: RequestLogMessage[] = (row.logs || []).map(log => ({
+      level: log.level || 'info',
+      message: log.message || '',
+      messageTruncated: log.messageTruncated,
+    }));
+    const displayLog = getDisplayLog(requestLogs, options.level);
     const firstEvent = row.events?.[0];
     return {
       id: row.requestId || '',
       timestamp: row.timestamp ? new Date(row.timestamp).getTime() : Date.now(),
       deploymentId: row.deploymentId || '',
       projectId: options.projectId,
-      level: (firstLog?.level as RequestLogEntry['level']) || 'info',
-      message: firstLog?.message || '',
-      messageTruncated: firstLog?.messageTruncated,
+      level: (displayLog?.level as DisplayLogLevel) || 'info',
+      message: displayLog?.message || '',
+      messageTruncated: displayLog?.messageTruncated,
       source: (firstEvent?.source as RequestLogEntry['source']) || 'static',
       domain: row.domain || '',
       requestMethod: row.requestMethod || '',
@@ -178,6 +228,7 @@ export async function fetchRequestLogs(
       branch: row.branch,
       cache: row.cache,
       traceId: row.traceId,
+      logs: requestLogs,
     };
   });
 

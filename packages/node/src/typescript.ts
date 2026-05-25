@@ -141,10 +141,9 @@ export function register(opts: Options = {}): Register {
     compiler = require_.resolve(options.compiler || 'typescript', {
       paths: [options.project || cwd],
     });
-  } catch (e) {
+  } catch (_e) {
     compiler = 'typescript';
   }
-  //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
   if (compiler === 'typescript') {
     console.log(

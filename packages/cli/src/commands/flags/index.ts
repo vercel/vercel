@@ -9,7 +9,12 @@ import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
 import inspect from './inspect';
-import add from './add';
+import create from './add';
+import openFlag from './open';
+import update from './update';
+import set from './set';
+import split from './split';
+import rollout from './rollout';
 import rm from './rm';
 import archive from './archive';
 import disable from './disable';
@@ -19,26 +24,39 @@ import {
   flagsCommand,
   listSubcommand,
   inspectSubcommand,
-  addSubcommand,
+  createSubcommand,
+  openSubcommand,
+  updateSubcommand,
+  setSubcommand,
+  splitSubcommand,
+  rolloutSubcommand,
   removeSubcommand,
   archiveSubcommand,
   disableSubcommand,
   prepareSubcommand,
   enableSubcommand,
   sdkKeysSubcommand,
+  overrideSubcommand,
 } from './command';
 import emitDatafiles from './emit-datafiles';
+import override from './override';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
-  add: getCommandAliases(addSubcommand),
+  create: getCommandAliases(createSubcommand),
+  open: getCommandAliases(openSubcommand),
+  update: getCommandAliases(updateSubcommand),
+  set: getCommandAliases(setSubcommand),
+  split: getCommandAliases(splitSubcommand),
+  rollout: getCommandAliases(rolloutSubcommand),
   rm: getCommandAliases(removeSubcommand),
   archive: getCommandAliases(archiveSubcommand),
   disable: getCommandAliases(disableSubcommand),
   enable: getCommandAliases(enableSubcommand),
   'sdk-keys': getCommandAliases(sdkKeysSubcommand),
   prepare: getCommandAliases(prepareSubcommand),
+  override: getCommandAliases(overrideSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -96,14 +114,54 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
-    case 'add':
+    case 'open':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
-        printHelp(addSubcommand);
+        printHelp(openSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, args);
+      telemetry.trackCliSubcommandOpen(subcommandOriginal);
+      return openFlag(client, args);
+    case 'create':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(createSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      return create(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
+    case 'set':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(setSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return set(client, args);
+    case 'split':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(splitSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSplit(subcommandOriginal);
+      return split(client, args);
+    case 'rollout':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(rolloutSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRollout(subcommandOriginal);
+      return rollout(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -147,6 +205,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPrepare(subcommandOriginal);
       return emitDatafiles(client);
+    case 'override':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(overrideSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandOverride(subcommandOriginal);
+      return override(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

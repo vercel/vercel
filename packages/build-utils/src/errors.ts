@@ -67,7 +67,7 @@ export function getPrettyError(obj: {
       link: prop ? `${docsUrl}#${prop.toLowerCase()}` : docsUrl,
       action: 'View Documentation',
     });
-  } catch (e) {
+  } catch (_e) {
     return new NowBuildError({
       code: 'INVALID_VERCEL_CONFIG',
       message: `Failed to validate configuration.`,

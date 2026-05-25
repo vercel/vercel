@@ -53,12 +53,14 @@ describe('getPageName()', () => {
       pageName: 'bar/ssr',
       isPageData: true,
     },
-  ])(
-    'Should return "$pageName" for "$input"',
-    ({ input, pathPrefix, pageName, isPageData }) => {
-      const actual = getPageName(input, pathPrefix);
-      expect(actual.pathName).toEqual(pageName);
-      expect(actual.isPageData).toEqual(isPageData);
-    }
-  );
+  ])('Should return "$pageName" for "$input"', ({
+    input,
+    pathPrefix,
+    pageName,
+    isPageData,
+  }) => {
+    const actual = getPageName(input, pathPrefix);
+    expect(actual.pathName).toEqual(pageName);
+    expect(actual.isPageData).toEqual(isPageData);
+  });
 });

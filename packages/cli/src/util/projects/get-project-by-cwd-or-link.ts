@@ -1,6 +1,9 @@
 import type Client from '../client';
-import { ProjectNotFound } from '../errors-ts';
+import { LinkRequiredError, ProjectNotFound } from '../errors-ts';
+import { argvHasNonInteractive } from '../agent-output';
 import { ensureLink } from '../link/ensure-link';
+import { resolveProjectCwd } from './find-project-root';
+import { getLinkedProject } from './link';
 import getProjectByNameOrId from './get-project-by-id-or-name';
 import type { Project } from '@vercel-internals/types';
 
@@ -11,6 +14,7 @@ export default async function getProjectByCwdOrLink({
   commandName,
   cwd,
   projectNameOrId,
+  forReadOnlyCommand,
 }: {
   autoConfirm?: boolean;
   nonInteractive?: boolean;
@@ -18,6 +22,12 @@ export default async function getProjectByCwdOrLink({
   commandName: string;
   cwd?: string;
   projectNameOrId?: string;
+  /**
+   * When true with non-interactive mode, resolve the project only from an
+   * existing link (or env). Never run interactive `setupAndLink` / `--yes`
+   * (read-only commands do not accept `--yes`).
+   */
+  forReadOnlyCommand?: boolean;
 }): Promise<Project> {
   if (projectNameOrId) {
     const project = await getProjectByNameOrId(client, projectNameOrId);
@@ -26,6 +36,30 @@ export default async function getProjectByCwdOrLink({
     }
     return project;
   }
+
+  const effectiveNonInteractive =
+    nonInteractive ??
+    client.nonInteractive ??
+    argvHasNonInteractive(client.argv);
+
+  if (forReadOnlyCommand && effectiveNonInteractive) {
+    const resolvedCwd = await resolveProjectCwd(cwd ?? client.cwd);
+    const link = await getLinkedProject(client, resolvedCwd);
+    if (link.status === 'linked' && link.project) {
+      return link.project;
+    }
+    if (link.status === 'error') {
+      const err: NodeJS.ErrnoException = new Error('Link project error');
+      err.code = 'ERR_LINK_PROJECT';
+      throw err;
+    }
+    throw new LinkRequiredError();
+  }
+
+  // Non-interactive resolution (explicit name, env, `.vercel`, repo link, or
+  // unambiguous auto-detect) lives in `ensureLink` / `setupAndLink` / `inputProject`
+  // so we emit structured `outputActionRequired` where appropriate instead of
+  // throwing here. See docs/non-interactive-mode.md.
 
   // ensure the current directory is a linked project
   const linkedProject = await ensureLink(

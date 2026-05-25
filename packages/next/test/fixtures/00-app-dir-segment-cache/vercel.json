@@ -20,7 +20,9 @@
       "mustContain": "foobar-1"
     }
   ],
-  "env": {
-    "NEXT_BUILDER_INTEGRATION": "1"
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { TelemetryClient } from '../..';
 
-export class FlagsAddTelemetryClient extends TelemetryClient {
+export class FlagsCreateTelemetryClient extends TelemetryClient {
   trackCliArgumentSlug(slug: string | undefined) {
     if (slug) {
       this.trackCliArgument({

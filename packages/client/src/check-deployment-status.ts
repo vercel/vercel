@@ -62,7 +62,6 @@ export function parseRetryAfterMs(response: any): number | null {
   }
 }
 
-/* eslint-disable */
 export async function* checkDeploymentStatus(
   deployment: Deployment,
   clientOptions: VercelClientOptions
@@ -197,6 +196,19 @@ export async function* checkDeploymentStatus(
         finishedEvents.add('checks-running');
         yield { type: 'checks-running', payload: deploymentUpdate };
       }
+    }
+
+    // v2 checks: if deployment-alias check has failed, exit immediately
+    if (
+      deploymentUpdate.checks?.['deployment-alias']?.state === 'failed' &&
+      !finishedEvents.has('checks-v2-failed')
+    ) {
+      debug('v2 deployment-alias check failed');
+      finishedEvents.add('checks-v2-failed');
+      return yield {
+        type: 'checks-v2-failed',
+        payload: deploymentUpdate,
+      };
     }
 
     if (isAliasAssigned(deploymentUpdate)) {

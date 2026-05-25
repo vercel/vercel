@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { projectOption } from '../../util/arg-common';
 
 // has to be ms compliant
 // https://github.com/vercel/ms/blob/fe5338229cfdac6822891dcb9c24660b4d2e612b/src/index.ts#L95
@@ -17,13 +18,7 @@ export const logsCommand = {
     },
   ],
   options: [
-    {
-      name: 'project',
-      shorthand: 'p',
-      type: String,
-      deprecated: false,
-      description: 'Project ID or name (defaults to linked project)',
-    },
+    { ...projectOption, shorthand: 'p' },
     {
       name: 'deployment',
       shorthand: 'd',
@@ -94,22 +89,31 @@ export const logsCommand = {
       shorthand: 'f',
       type: Boolean,
       deprecated: false,
-      description:
-        'Stream live runtime logs (implicit when deployment URL/ID is specified)',
+      description: 'Stream live runtime logs for a deployment',
     },
     {
       name: 'no-follow',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Disable implicit --follow for deployment arguments',
+      description:
+        'No-op; deployment arguments only stream logs when --follow is set',
     },
     {
       name: 'query',
       shorthand: 'q',
       type: String,
       deprecated: false,
-      description: 'Full-text search query',
+      description:
+        'Advanced search query (supports filter syntax, e.g. "status:500 error")',
+    },
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      deprecated: true,
+      description:
+        'Advanced search query (supports filter syntax, e.g. "status:500 error")',
     },
     {
       name: 'request-id',
@@ -144,11 +148,11 @@ export const logsCommand = {
   examples: [
     {
       name: 'Stream live logs for a deployment URL',
-      value: `${packageName} logs https://my-app-xxxxx.vercel.app`,
+      value: `${packageName} logs https://my-app-xxxxx.vercel.app --follow`,
     },
     {
       name: 'Stream live logs for a deployment ID',
-      value: `${packageName} logs dpl_xxxxx`,
+      value: `${packageName} logs dpl_xxxxx --follow`,
     },
     {
       name: 'Display recent logs for the linked project',
@@ -160,7 +164,7 @@ export const logsCommand = {
     },
     {
       name: 'Display logs for a specific deployment (historical)',
-      value: `${packageName} logs dpl_xxxxx --no-follow`,
+      value: `${packageName} logs dpl_xxxxx`,
     },
     {
       name: 'Filter logs by status code and output as JSON',
@@ -169,6 +173,10 @@ export const logsCommand = {
     {
       name: 'Search logs and pipe to jq',
       value: `${packageName} logs --query "timeout" --json | jq '.message'`,
+    },
+    {
+      name: 'Use advanced search query with filters',
+      value: `${packageName} logs --query 'status:500 error' --json | jq '.message'`,
     },
     {
       name: 'Display production logs only',

@@ -7,8 +7,12 @@
     }
   ],
   "env": {
-    "NODE_ENV": "development",
-    "NEXT_BUILDER_INTEGRATION": "1"
+    "NODE_ENV": "development"
+  },
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
   },
   "probes": [
     {

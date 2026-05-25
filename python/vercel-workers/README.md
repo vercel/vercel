@@ -49,7 +49,7 @@ For worker services, `worker.py` should expose worker definitions (for example a
 ## Examples
 
 - `examples/basic`: FastAPI producer + `@subscribe` worker service
-- `examples/celery`: Celery adapter + worker service
+- `examples/celery`: Celery + worker service
 - `examples/dramatiq`: Dramatiq adapter + worker service
 - `examples/django`: Django tasks backend + queue callback route at `/api/queue/callback`
 

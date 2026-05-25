@@ -53,6 +53,20 @@ describe('integration', () => {
             description: 'Relational database',
             tags: ['Storage', 'Postgres'],
           },
+          {
+            name: 'Acme Product A',
+            slug: 'acme-two-products/acme-a',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme A product',
+            tags: ['Storage', 'Kv', 'Redis'],
+          },
+          {
+            name: 'Acme Product B',
+            slug: 'acme-two-products/acme-b',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme B product',
+            tags: ['Storage', 'Queue'],
+          },
         ],
       });
     });
@@ -70,6 +84,8 @@ describe('integration', () => {
       expect(stderr).toContain('Description: Serverless Postgres database');
       expect(stderr).toContain('Acme KV (acme-multi/acme-kv)');
       expect(stderr).toContain('Acme DB (acme-multi/acme-db)');
+      expect(stderr).toContain('Acme Product A (acme-two-products/acme-a)');
+      expect(stderr).toContain('Acme Product B (acme-two-products/acme-b)');
     });
 
     it('continues when categories endpoint fails', async () => {
@@ -80,7 +96,7 @@ describe('integration', () => {
 
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain(
-        'WARN! Failed to fetch integration categories. Continuing without categories: Response Error (404)'
+        'WARNING! Failed to fetch integration categories. Continuing without categories: Response Error (404)'
       );
 
       const output = JSON.parse(client.stdout.getFullOutput());
@@ -107,6 +123,20 @@ describe('integration', () => {
             description: 'Relational database',
             tags: ['databases', 'Postgres'],
           },
+          {
+            name: 'Acme Product A',
+            slug: 'acme-two-products/acme-a',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme A product',
+            tags: ['databases', 'Kv', 'Redis'],
+          },
+          {
+            name: 'Acme Product B',
+            slug: 'acme-two-products/acme-b',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme B product',
+            tags: ['databases', 'Queue'],
+          },
         ],
       });
     });
@@ -120,6 +150,104 @@ describe('integration', () => {
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain(
         'Error: Failed to fetch marketplace integrations: Response Error (500)'
+      );
+    });
+
+    describe('search term filtering', () => {
+      it('filters products by name', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'neon', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Neon Postgres');
+      });
+
+      it('filters products by provider', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'acme', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(4);
+        expect(output.products.map((p: { name: string }) => p.name)).toEqual([
+          'Acme KV',
+          'Acme DB',
+          'Acme Product A',
+          'Acme Product B',
+        ]);
+      });
+
+      it('filters products by description', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'key-value', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Acme KV');
+      });
+
+      it('filters products by tag', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'postgres', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(2);
+        expect(output.products.map((p: { name: string }) => p.name)).toEqual([
+          'Neon Postgres',
+          'Acme DB',
+        ]);
+      });
+
+      it('is case-insensitive', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'NEON', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Neon Postgres');
+      });
+
+      it('shows message when no products match the search term', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'nonexistent');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const stderr = client.stderr.getFullOutput();
+        expect(stderr).toContain(
+          'No marketplace products matching "nonexistent" found.'
+        );
+      });
+
+      it('returns all products when no search term is provided', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(5);
+      });
+    });
+
+    it('errors when too many arguments are provided', async () => {
+      client.setArgv('integration', 'discover', 'arg1', 'arg2');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
+
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'Invalid number of arguments. Usage: `vercel integration discover [query]`'
       );
     });
 
@@ -140,6 +268,28 @@ describe('integration', () => {
         {
           key: 'subcommand:discover',
           value: 'discover',
+        },
+        {
+          key: 'flag:json',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('tracks telemetry for search term argument', async () => {
+      useIntegrationDiscover();
+      client.setArgv('integration', 'discover', 'postgres', '--json');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:discover',
+          value: 'discover',
+        },
+        {
+          key: 'argument:query',
+          value: '[REDACTED]',
         },
         {
           key: 'flag:json',

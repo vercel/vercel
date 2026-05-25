@@ -6,7 +6,7 @@ import param from '../../util/output/param';
 import chars from '../../util/output/chars';
 import eraseLines from '../../util/output/erase-lines';
 import getUser from '../../util/get-user';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { email as regexEmail } from '../../util/input/regexes';
 import getTeams from '../../util/teams/get-teams';
 import inviteUserToTeam from '../../util/teams/invite-user-to-team';
@@ -18,6 +18,20 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { inviteSubcommand } from './command';
+import {
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
+import {
+  getGlobalFlagsOnlyFromArgs,
+  getSameSubcommandSuggestionFlags,
+} from '../../util/arg-common';
+
+/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
+function withGlobalFlags(client: Client, commandTemplate: string): string {
+  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -57,10 +71,49 @@ export default async function invite(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
   const { args: emails } = parsedArgs;
+
+  if (client.nonInteractive && emails.length === 0) {
+    const fullArgs = client.argv.slice(2);
+    const inviteIdx = fullArgs.indexOf('invite');
+    const afterInvite = inviteIdx >= 0 ? fullArgs.slice(inviteIdx + 1) : [];
+    // Same subcommand (teams invite): keep any flags the user passed.
+    const flagParts = getSameSubcommandSuggestionFlags(afterInvite);
+    const cmd = getCommandNamePlain(
+      `teams invite <email> ${flagParts.join(' ')}`.trim()
+    );
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'missing_arguments',
+        action: 'missing_arguments',
+        message: `In non-interactive mode at least one email is required. Run: ${cmd}`,
+        next: [
+          {
+            command: cmd,
+            when: 'to invite teammates (replace <email> with a teammate email)',
+          },
+        ],
+      },
+      1
+    );
+    return 1;
+  }
 
   output.spinner('Fetching teams');
   const teams = await getTeams(client);
@@ -78,6 +131,24 @@ export default async function invite(
     )}.\nPlease select a team scope using ${getCommandName(
       `switch`
     )} or use ${cmd('--scope')}`;
+    if (client.nonInteractive) {
+      const switchCmd = withGlobalFlags(client, 'teams switch <slug>');
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'team_scope_required',
+          message: `Team scope is required for teams invite. Run ${switchCmd} or use --scope.`,
+          next: [
+            {
+              command: switchCmd,
+              when: 'to select a team scope (replace <slug> with your team slug)',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(err);
     return 1;
   }
@@ -96,11 +167,34 @@ export default async function invite(
         let userInfo = null;
 
         try {
-          // eslint-disable-next-line no-await-in-loop
           const res = await inviteUserToTeam(client, currentTeam.id, email);
           userInfo = res.username;
         } catch (err: unknown) {
           if (isAPIError(err) && err.code === 'user_not_found') {
+            if (client.nonInteractive) {
+              const fullArgs = client.argv.slice(2);
+              const inviteIdx = fullArgs.indexOf('invite');
+              const afterInvite =
+                inviteIdx >= 0 ? fullArgs.slice(inviteIdx + 1) : [];
+              const flagParts = getSameSubcommandSuggestionFlags(afterInvite);
+              const retryCmd = getCommandNamePlain(
+                `teams invite <email> ${flagParts.join(' ')}`.trim()
+              );
+              outputAgentError(
+                client,
+                {
+                  status: 'error',
+                  reason: 'user_not_found',
+                  message: `No user exists with the email address "${email}".`,
+                  next: [
+                    {
+                      command: retryCmd,
+                    },
+                  ],
+                },
+                1
+              );
+            }
             output.error(`No user exists with the email address "${email}".`);
             return 1;
           }
@@ -127,7 +221,6 @@ export default async function invite(
   do {
     email = '';
     try {
-      // eslint-disable-next-line no-await-in-loop
       email = await client.input.text({
         message: `- ${inviteUserPrefix}`,
         validate: validateEmail,
@@ -142,7 +235,6 @@ export default async function invite(
       elapsed = stamp();
       output.spinner(inviteUserPrefix + email);
       try {
-        // eslint-disable-next-line no-await-in-loop
         const { username } = await inviteUserToTeam(
           client,
           currentTeam.id,

@@ -1,4 +1,4 @@
-import { test, expect } from 'vitest';
+import { test, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -34,15 +34,55 @@ function getProjectConfig(): { projectId: string; orgId: string } {
   return JSON.parse(readFileSync('.vercel/project.json', 'utf-8'));
 }
 
-const token = getToken();
-const { projectId, orgId } = getProjectConfig();
-const vercel = new Vercel({ bearerToken: token });
+let token: string;
+let projectId: string;
+let orgId: string;
+let vercel: Vercel;
+let headers: Record<string, string>;
+
+beforeAll(() => {
+  token = getToken();
+  ({ projectId, orgId } = getProjectConfig());
+  vercel = new Vercel({ bearerToken: token });
+  headers = { Authorization: `Bearer ${token}` };
+});
+
+afterAll(async () => {
+  // Clean up Neon stores created during the eval so they don't leak.
+  // Runs before the runner's destroy() deletes the ephemeral project.
+  if (!token || !projectId) return;
+  try {
+    const res = await fetch(
+      `https://api.vercel.com/v1/storage/stores?projectId=${projectId}&teamId=${orgId}`,
+      { headers }
+    );
+    if (!res.ok) return;
+
+    const data = (await res.json()) as {
+      stores?: { id?: string; name?: string }[];
+    };
+
+    for (const store of data.stores ?? []) {
+      if (!store.id) continue;
+      try {
+        await fetch(
+          `https://api.vercel.com/v1/storage/stores/integration/${store.id}?teamId=${orgId}`,
+          { method: 'DELETE', headers }
+        );
+      } catch {
+        // Best-effort cleanup
+      }
+    }
+  } catch {
+    // Best-effort cleanup
+  }
+}, 60_000);
 
 test('neon integration is installed with resource "my-test-db"', async () => {
   // The SDK doesn't expose /v1/storage/stores, so we use fetch directly
   const res = await fetch(
     `https://api.vercel.com/v1/storage/stores?projectId=${projectId}&teamId=${orgId}`,
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers }
   );
   expect(res.ok).toBe(true);
 

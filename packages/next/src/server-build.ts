@@ -557,9 +557,10 @@ export async function serverBuild({
     let nextServerBuildTrace;
     let instrumentationHookBuildTrace;
 
-    const useBundledServer =
-      semver.gte(nextVersion, BUNDLED_SERVER_NEXT_VERSION) &&
-      process.env.VERCEL_NEXT_BUNDLED_SERVER === '1';
+    const useBundledServer = semver.gte(
+      nextVersion,
+      BUNDLED_SERVER_NEXT_VERSION
+    );
 
     if (useBundledServer) {
       debug('Using bundled Next.js server');
@@ -1002,7 +1003,7 @@ export async function serverBuild({
               await fs.readFile(`${serverComponentFile}.nft.json`, 'utf8')
             );
             scTrace.files.forEach((file: string) => files.push(file));
-          } catch (err) {
+          } catch (_err) {
             /* non-fatal for now */
           }
         }
@@ -2062,6 +2063,30 @@ export async function serverBuild({
 
       ...(isNextDataServerResolving
         ? [
+            // remove x-nextjs-data header for non _next/data requests
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '/(?!_next/data(?:/|$))(.*)'
+              ),
+              has: [
+                {
+                  type: 'header',
+                  key: 'x-nextjs-data',
+                },
+              ],
+              transforms: [
+                {
+                  type: 'request.headers',
+                  op: 'delete',
+                  target: {
+                    key: 'x-nextjs-data',
+                  },
+                },
+              ],
+              continue: true,
+            },
             // ensure x-nextjs-data header is always present
             // if we are doing middleware next data resolving
             {
@@ -2957,7 +2982,7 @@ export async function serverBuild({
             },
           ]),
     ],
-    framework: { version: nextVersion },
+    framework: { slug: 'nextjs', version: nextVersion },
     flags: variantsManifest || undefined,
   };
 }

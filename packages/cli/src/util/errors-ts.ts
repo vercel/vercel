@@ -324,11 +324,11 @@ export class InvalidDeploymentId extends NowError<
   'INVALID_DEPLOYMENT_ID',
   { id: string }
 > {
-  constructor(id: string) {
+  constructor(id: string, message?: string | null) {
     super({
       code: 'INVALID_DEPLOYMENT_ID',
       meta: { id },
-      message: `The deployment id "${id}" is not valid.`,
+      message: message || `The deployment id "${id}" is not valid.`,
     });
   }
 }
@@ -701,12 +701,12 @@ export class AliasInUse extends NowError<'ALIAS_IN_USE', { alias: string }> {
  * a certificate for a domain but the domain is missing. An example would
  * be alias.
  */
-export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
+export class CertMissing extends NowError<'CERT_MISSING', { domain: string }> {
   constructor(domain: string) {
     super({
-      code: 'ALIAS_IN_USE',
+      code: 'CERT_MISSING',
       meta: { domain },
-      message: `The alias is already in use`,
+      message: `The certificate for domain ${domain} is missing`,
     });
   }
 }
@@ -733,10 +733,21 @@ export class ConflictingConfigFiles extends NowBuildError {
       code: 'CONFLICTING_CONFIG_FILES',
       message:
         message ||
-        'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+        'Multiple config files found. Please use only one configuration file.',
       link: link || 'https://vercel.link/combining-old-and-new-config',
     });
     this.files = files;
+  }
+}
+
+export class DeprecatedNowJson extends NowBuildError {
+  constructor(_file: string) {
+    super({
+      code: 'DEPRECATED_NOW_JSON',
+      message:
+        'The `now.json` file is deprecated and no longer supported. Please rename it to `vercel.json`.',
+      link: 'https://vercel.com/docs/projects/project-configuration',
+    });
   }
 }
 
@@ -1064,6 +1075,19 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
       code: 'PROJECT_NOT_FOUND',
       meta: {},
       message: `There is no project for "${nameOrId}"`,
+    });
+  }
+}
+
+/** Thrown when a read-only command needs a linked project but none is configured (non-interactive). */
+export class LinkRequiredError extends NowError<'LINK_REQUIRED', {}> {
+  constructor(
+    message: string = 'No project is linked in this directory. Run `vercel link` or pass a project name.'
+  ) {
+    super({
+      code: 'LINK_REQUIRED',
+      meta: {},
+      message,
     });
   }
 }

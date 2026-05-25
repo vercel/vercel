@@ -15,6 +15,7 @@ import {
   Redirect,
   Route,
   RouteApiError,
+  RouteInput,
   RouteWithHandle,
   RouteWithSrc,
 } from './types';
@@ -80,9 +81,11 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
   }
 }
 
-export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
+export function normalizeRoutes(
+  inputRoutes: RouteInput[] | null
+): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
-    return { routes: inputRoutes, error: null };
+    return { routes: inputRoutes as Route[] | null, error: null };
   }
 
   const routes: Route[] = [];
@@ -90,7 +93,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   const errors: string[] = [];
 
   inputRoutes.forEach((r, i) => {
-    const route = { ...r };
+    const route = { ...r } as Route;
     routes.push(route);
 
     // Convert aliases (source -> src, destination -> dest, statusCode -> status)
@@ -197,7 +200,7 @@ function checkRegexSyntax(
 ): string | null {
   try {
     new RegExp(src);
-  } catch (err) {
+  } catch (_err) {
     const prop = type === 'Route' ? 'src`/`source' : 'source';
     return `${type} at index ${index} has invalid \`${prop}\` regular expression "${src}".`;
   }
@@ -221,7 +224,7 @@ function checkPatternSyntax(
   const destinationSegments = new Set<string>();
   try {
     sourceSegments = new Set(sourceToRegex(source).segments);
-  } catch (err) {
+  } catch (_err) {
     return {
       message: `${type} at index ${index} has invalid \`source\` pattern "${source}".`,
       link: 'https://vercel.link/invalid-route-source-pattern',
@@ -243,7 +246,7 @@ function checkPatternSyntax(
           destinationSegments.add(name)
         );
       }
-    } catch (err) {
+    } catch (_err) {
       // Since checkPatternSyntax() is a validation helper, we don't want to
       // replicate all possible URL parsing here so we consume the error.
       // If this really is an error, we'll throw later in convertRedirects().

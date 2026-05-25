@@ -17,6 +17,15 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliArgumentOperationId(operationId: string | undefined) {
+    if (operationId) {
+      this.trackCliArgument({
+        arg: 'operationId',
+        value: operationId,
+      });
+    }
+  }
+
   trackCliOptionMethod(method: string | undefined) {
     if (method) {
       const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'];

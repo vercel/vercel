@@ -1,5 +1,98 @@
 # @vercel/frameworks
 
+## 3.26.1
+
+### Patch Changes
+
+- 0dbb8e5: Detect TanStack Start projects without requiring a top-level `nitro` dependency by matching Start packages directly.
+
+## 3.26.0
+
+### Minor Changes
+
+- 51785a6: Add Ash framework preset
+
+## 3.25.1
+
+### Patch Changes
+
+- c95a7ca: Move framework import screenshots from Cloudinary (`assets.vercel.com`) to Vercel Blob. The four affected entries (Next.js, Nuxt, SvelteKit, SvelteKit legacy) now point at `https://py8fhxnkzwtsqdo9.public.blob.vercel-storage.com/front/import/*.png`. Same images, different host — consumers see no behavior change.
+
+## 3.25.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/error-utils@2.1.0
+
+## 3.24.2
+
+### Patch Changes
+
+- 09d9000: Fix the frameworks demo URL public-access test to check the public `/_logs` route instead of looking up alias hosts through the deployments API.
+
+## 3.24.1
+
+### Patch Changes
+
+- Add actix framework preset ([#15752](https://github.com/vercel/vercel/pull/15752))
+
+## 3.24.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+### Patch Changes
+
+- remove experimental flag on node preset ([#15628](https://github.com/vercel/vercel/pull/15628))
+
+## 3.23.0
+
+### Minor Changes
+
+- Add Mastra framework preset ([#15076](https://github.com/vercel/vercel/pull/15076))
+
+## 3.22.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
+## 3.21.1
+
+### Patch Changes
+
+- [go] remove experimental flag on "go" frameworks preset ([#15435](https://github.com/vercel/vercel/pull/15435))
+
+## 3.21.0
+
+### Minor Changes
+
+- Make the generic "python" framework and the Django framework not experimental ([#15429](https://github.com/vercel/vercel/pull/15429))
+
+## 3.20.0
+
+### Minor Changes
+
+- Add a content filter for manage.py for django framework detection. ([#15348](https://github.com/vercel/vercel/pull/15348))
+
+- Detect django framework when manage.py is found. ([#15314](https://github.com/vercel/vercel/pull/15314))
+
+## 3.19.1
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
 ## 3.19.0
 
 ### Minor Changes

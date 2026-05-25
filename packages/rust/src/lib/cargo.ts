@@ -1,6 +1,7 @@
-import fs from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import toml from '@iarna/toml';
+import { parse as tomlParse } from 'smol-toml';
 import execa from 'execa';
 
 export interface CargoMetadataRoot {
@@ -163,7 +164,7 @@ export async function findCargoWorkspace(
     root: string;
   };
   return {
-    toml: await toml.parse.stream(fs.createReadStream(projectDescription.root)),
+    toml: tomlParse(await readFile(projectDescription.root, 'utf8')),
     root: projectDescription.root,
   };
 }
@@ -189,11 +190,11 @@ export async function findCargoBuildConfiguration(
     '.cargo/config.toml'
   );
 
-  if (!fs.existsSync(configPath)) {
+  if (!existsSync(configPath)) {
     return null;
   }
 
-  const config = await toml.parse.stream(fs.createReadStream(configPath));
+  const config = tomlParse(await readFile(configPath, 'utf8'));
   return config as unknown as CargoBuildConfiguration;
 }
 

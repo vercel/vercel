@@ -1,4 +1,3 @@
-import url from 'url';
 import { createRequire } from 'module';
 import { promises as fsp } from 'fs';
 import { join, dirname, extname } from 'path';
@@ -134,11 +133,8 @@ export const startDevServer: StartDevServer = async opts => {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
 
-    const parsed = url.parse(meta.requestUrl, true);
-    if (
-      typeof parsed.pathname !== 'string' ||
-      !matchers.test(parsed.pathname)
-    ) {
+    const parsed = new URL(meta.requestUrl, 'http://localhost');
+    if (!matchers.test(parsed.pathname)) {
       // If the "matchers" doesn't say to handle this
       // path then skip middleware invocation
       return null;
@@ -270,7 +266,7 @@ export const startDevServer: StartDevServer = async opts => {
       if (runtime === 'bun') {
         try {
           process.kill(pid, 'SIGTERM');
-        } catch (err) {
+        } catch (_err) {
           // The process might have already exited, for example, if the application
           // handler threw an error. Try terminating the process to be sure.
           await treeKill(pid);

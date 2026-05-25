@@ -1,6 +1,11 @@
 /**
- * Vercel configuration type that mirrors the vercel.json schema
- * https://openapi.vercel.sh/vercel.json
+ * AUTO-GENERATED — DO NOT EDIT
+ *
+ * This file is generated from the vercel.json OpenAPI schema.
+ * To modify, update scripts/generate-types.ts and re-run:
+ *   pnpm generate-types
+ *
+ * Schema: https://openapi.vercel.sh/vercel.json
  */
 
 export type Framework =
@@ -50,6 +55,7 @@ export type Framework =
   | 'fastapi'
   | 'flask'
   | 'fasthtml'
+  | 'django'
   | 'sanity-v3'
   | 'sanity'
   | 'storybook'
@@ -57,10 +63,17 @@ export type Framework =
   | 'hono'
   | 'express'
   | 'h3'
+  | 'koa'
   | 'nestjs'
   | 'elysia'
   | 'fastify'
   | 'xmcp'
+  | 'python'
+  | 'ruby'
+  | 'rust'
+  | 'node'
+  | 'go'
+  | 'services'
   | null;
 
 export interface FunctionConfig {
@@ -73,27 +86,25 @@ export interface FunctionConfig {
    */
   includeFiles?: string;
   /**
-   * An integer defining how long your Serverless Function should be allowed to run on every request in seconds (between 1 and the maximum limit of your plan).
+   * An integer defining how long your Serverless Function should be allowed to run on every request in seconds (between 1 and the maximum limit of your plan), or the string `'max'` to use the maximum duration allowed by your plan.
    */
-  maxDuration?: number;
+  maxDuration?: number | 'max';
   /**
    * An integer defining the memory your Serverless Function should be provided with (between 128 and 10240).
    */
   memory?: number;
   /**
-   * An array of regions where this Serverless Function will be deployed.
-   * This setting overrides the top-level `regions` setting for matching functions.
-   */
-  regions?: string[];
-  /**
-   * An array of passive regions where this Serverless Function can fail over during outages.
-   * This setting overrides top-level `functionFailoverRegions` for matching functions.
-   */
-  functionFailoverRegions?: string[];
-  /**
    * The npm package name of a Runtime, including its version
    */
   runtime?: string;
+  /**
+   * An array of regions this Serverless Function should be deployed to.
+   */
+  regions?: string[];
+  /**
+   * An array of passive regions this Serverless Function can fail over to during a lambda outage.
+   */
+  functionFailoverRegions?: string[];
   /**
    * A boolean that defines whether the Function supports cancellation (default: false)
    */
@@ -101,54 +112,83 @@ export interface FunctionConfig {
   /**
    * An array of experimental triggers for this Serverless Function. Currently only supports queue triggers.
    */
-  experimentalTriggers?: (TriggerEventConfigV1 | TriggerEventConfigV2)[];
-}
-
-interface TriggerEventConfigBase {
-  /**
-   * Name of the queue topic to consume from
-   */
-  topic: string;
-  /**
-   * Maximum number of delivery attempts
-   */
-  maxDeliveries?: number;
-  /**
-   * Delay in seconds before retrying failed executions
-   */
-  retryAfterSeconds?: number;
-  /**
-   * Initial delay in seconds before first execution attempt
-   */
-  initialDelaySeconds?: number;
-  /**
-   * Maximum number of concurrent executions for this consumer
-   */
-  maxConcurrency?: number;
-}
-
-/**
- * Queue trigger config for v1beta - requires explicit consumer name
- */
-export interface TriggerEventConfigV1 extends TriggerEventConfigBase {
-  type: 'queue/v1beta';
-  /**
-   * Name of the consumer group for this trigger (required for v1beta)
-   */
-  consumer: string;
-}
-
-/**
- * Queue trigger config for v2beta - consumer is derived from function path
- */
-export interface TriggerEventConfigV2 extends TriggerEventConfigBase {
-  type: 'queue/v2beta';
+  experimentalTriggers?: (
+    | {
+        /**
+         * Event type pattern this trigger handles
+         */
+        type: 'queue/v1beta';
+        /**
+         * Name of the queue topic to consume from
+         */
+        topic: string;
+        /**
+         * Name of the consumer group for this trigger
+         */
+        consumer: string;
+        /**
+         * Maximum number of delivery attempts
+         */
+        maxDeliveries?: number;
+        /**
+         * Delay in seconds before retrying failed executions
+         */
+        retryAfterSeconds?: number;
+        /**
+         * Initial delay in seconds before first execution attempt
+         */
+        initialDelaySeconds?: number;
+        /**
+         * Maximum number of concurrent executions for this consumer
+         */
+        maxConcurrency?: number;
+      }
+    | {
+        /**
+         * Event type pattern this trigger handles
+         */
+        type: 'queue/v2beta';
+        /**
+         * Name of the queue topic to consume from
+         */
+        topic: string;
+        /**
+         * Maximum number of delivery attempts
+         */
+        maxDeliveries?: number;
+        /**
+         * Delay in seconds before retrying failed executions
+         */
+        retryAfterSeconds?: number;
+        /**
+         * Initial delay in seconds before first execution attempt
+         */
+        initialDelaySeconds?: number;
+        /**
+         * Maximum number of concurrent executions for this consumer
+         */
+        maxConcurrency?: number;
+      }
+  )[];
 }
 
 export interface CronJob {
   schedule: string;
   path: string;
 }
+
+export interface ServiceQueueTopic {
+  topic: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+}
+
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
+  service: string;
+}
+
+export type EnvVar = ServiceRefEnvVar;
 
 export interface GitDeploymentConfig {
   [branch: string]: boolean;
@@ -196,7 +236,7 @@ export interface ImageConfig {
   contentSecurityPolicy?: string;
   dangerouslyAllowSVG?: boolean;
   domains?: string[];
-  formats?: 'image/avif' | 'image/webp' | 'image/jpeg' | 'image/png'[];
+  formats?: ('image/avif' | 'image/webp' | 'image/jpeg' | 'image/png')[];
   localPatterns?: {
     pathname?: string;
     search?: string;
@@ -214,6 +254,74 @@ export interface ImageConfig {
 }
 
 /**
+ * Value for condition matching - can be a string or an operator object
+ */
+export type MatchableValue =
+  | string
+  | {
+      /**
+       * Equal to
+       */
+      eq?: string | number;
+      /**
+       * Not equal
+       */
+      neq?: string;
+      /**
+       * In array
+       */
+      inc?: string[];
+      /**
+       * Not in array
+       */
+      ninc?: string[];
+      /**
+       * Starts with
+       */
+      pre?: string;
+      /**
+       * Ends with
+       */
+      suf?: string;
+      /**
+       * Regex
+       */
+      re?: string;
+      /**
+       * Greater than
+       */
+      gt?: number;
+      /**
+       * Greater than or equal to
+       */
+      gte?: number;
+      /**
+       * Less than
+       */
+      lt?: number;
+      /**
+       * Less than or equal to
+       */
+      lte?: number;
+    };
+
+/**
+ * Condition for matching in redirects, rewrites, and headers
+ */
+export type Condition =
+  | { type: 'host'; value: MatchableValue }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: MatchableValue;
+    };
+
+/**
+ * The object form of MatchableValue (excludes the plain string shorthand)
+ */
+export type MatchableValueObject = Exclude<MatchableValue, string>;
+
+/**
  * HTTP header key/value pair
  */
 export interface Header {
@@ -222,65 +330,98 @@ export interface Header {
 }
 
 /**
- * Condition for matching in redirects, rewrites, and headers
- */
-export interface Condition {
-  type: 'header' | 'cookie' | 'host' | 'query' | 'path';
-  key?: string;
-  value?: string | number;
-  eq?: string | number;
-  neq?: string;
-  inc?: string[];
-  ninc?: string[];
-  pre?: string;
-  suf?: string;
-  re?: string;
-  gt?: number;
-  gte?: number;
-  lt?: number;
-  lte?: number;
-}
-
-/**
- * Redirect matching vercel.json schema
- * Returned by routes.redirect()
+ * Redirect definition matching vercel.json schema
  */
 export interface Redirect {
+  /**
+   * A pattern that matches each incoming pathname (excluding querystring).
+   */
   source: string;
+  /**
+   * A location destination defined as an absolute pathname or external URL.
+   */
   destination: string;
+  /**
+   * A boolean to toggle between permanent and temporary redirect. When `true`, the status code is `308`. When `false` the status code is `307`.
+   */
   permanent?: boolean;
+  /**
+   * An optional integer to define the status code of the redirect.
+   * @private
+   */
   statusCode?: number;
+  /**
+   * An array of requirements that are needed to match
+   */
   has?: Condition[];
+  /**
+   * An array of requirements that are needed to match
+   */
   missing?: Condition[];
+  /**
+   * An array of environment variable names that should be replaced at runtime in the destination
+   */
+  env?: string[];
 }
 
 /**
- * Rewrite matching vercel.json schema
- * Returned by routes.rewrite()
+ * Rewrite definition matching vercel.json schema
  */
 export interface Rewrite {
+  /**
+   * A pattern that matches each incoming pathname (excluding querystring).
+   */
   source: string;
+  /**
+   * An absolute pathname to an existing resource or an external URL.
+   */
   destination: string;
+  /**
+   * An array of requirements that are needed to match
+   */
   has?: Condition[];
+  /**
+   * An array of requirements that are needed to match
+   */
   missing?: Condition[];
+  /**
+   * An optional integer to override the status code of the response.
+   */
+  statusCode?: number;
+  /**
+   * An array of environment variable names that should be replaced at runtime in the destination
+   */
+  env?: string[];
+  /**
+   * When set to true (default), external rewrites will respect the Cache-Control header from the origin. When false, caching is disabled for this rewrite.
+   */
   respectOriginCacheControl?: boolean;
 }
 
 /**
- * Header rule matching vercel.json schema
- * Returned by routes.header() and routes.cacheControl()
+ * Header rule definition matching vercel.json schema
  */
 export interface HeaderRule {
+  /**
+   * A pattern that matches each incoming pathname (excluding querystring)
+   */
   source: string;
+  /**
+   * An array of key/value pairs representing each response header.
+   */
   headers: Header[];
+  /**
+   * An array of requirements that are needed to match
+   */
   has?: Condition[];
+  /**
+   * An array of requirements that are needed to match
+   */
   missing?: Condition[];
 }
 
 /**
- * Union type for all router helper outputs
- * Can be simple schema objects (Redirect, Rewrite, HeaderRule) or Routes with transforms
- * Note: Route type is defined in router.ts (uses src/dest instead of source/destination)
+ * Union type for all routing helper outputs
  */
 export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is internal to router
 
@@ -319,10 +460,11 @@ export interface VercelConfig {
    */
   cleanUrls?: boolean;
   /**
-   * An object containing the deployment's environment variable names and values. Secrets can be referenced by prefixing the value with `@`
-   * @deprecated
+   * Environment variables to expose to the deployment. Either a flat
+   * `Record<string, string>` of literal values (the deprecated shape, kept for
+   * back-compat) or an `EnvVar` record
    */
-  env?: Record<string, string>;
+  env?: Record<string, string> | Record<string, EnvVar>;
   /**
    * An array of the passive regions the deployment's Serverless Functions should be deployed to that can be failed over to during a lambda outage
    */
@@ -343,7 +485,7 @@ export interface VercelConfig {
   /**
    * A list of header definitions.
    */
-  headers?: RouteType[];
+  headers?: HeaderRule[];
   images?: ImageConfig;
   /**
    * A name for the deployment
@@ -356,7 +498,7 @@ export interface VercelConfig {
   /**
    * A list of redirect definitions.
    */
-  redirects?: RouteType[];
+  redirects?: Redirect[];
   /**
    * The path to a file containing bulk redirects; supports JSON, JSONL, and CSV
    */
@@ -368,7 +510,7 @@ export interface VercelConfig {
   /**
    * A list of rewrite definitions.
    */
-  rewrites?: RouteType[];
+  rewrites?: Rewrite[];
   /**
    * A list of routes objects used to rewrite paths to point towards other internal or external paths
    */
@@ -427,6 +569,114 @@ export interface VercelConfig {
    * Enables Bun for the project and specifies the version to use.
    */
   bunVersion?: string;
+  /**
+   * Enables configuration of multiple services in a single deployment. Map of service name to service configuration.
+   * @private
+   */
+  experimentalServices?: Record<
+    string,
+    {
+      /**
+       * Service type: web, worker, or job. Defaults to web.
+       */
+      type?: 'web' | 'cron' | 'worker' | 'job';
+      /**
+       * Trigger for job services.
+       */
+      trigger?: 'queue' | 'schedule' | 'workflow';
+      /**
+       * Path to the service's root directory relative to the project root.
+       * Should contain a manifest file (package.json, pyproject.toml, etc.).
+       * Defaults to ".".
+       */
+      root?: string;
+      /**
+       * Entry file for the service, relative to the service root directory.
+       */
+      entrypoint?: string;
+      /**
+       * Path to the directory containing the service manifest file (package.json, pyproject.toml, etc.). Defaults to "." (project root).
+       * @deprecated Use `root` instead.
+       */
+      workspace?: string;
+      /**
+       * Preferred routing config alias for routePrefix/subdomain.
+       */
+      mount?:
+        | string
+        | {
+            path?: string;
+            subdomain?: string;
+          };
+      /**
+       * URL prefix for routing (web services only).
+       */
+      routePrefix?: string;
+      /**
+       * Subdomain for host-based routing (web services only).
+       */
+      subdomain?: string;
+      /**
+       * Framework to use.
+       */
+      framework?: string;
+      /**
+       * Builder to use, e.g. @vercel/node, @vercel/python.
+       */
+      builder?: string;
+      /**
+       * Specific lambda runtime to use, e.g. nodejs24.x, python3.14.
+       */
+      runtime?: string;
+      /**
+       * Build command for the service.
+       */
+      buildCommand?: string;
+      /**
+       * Install command for the service.
+       */
+      installCommand?: string;
+      /**
+       * Command to run after build process succeed but before the deployment's
+       * output is uploaded. Runs during `vercel build` including local builds
+       * and builds on Vercel.
+       */
+      preDeployCommand?: string;
+      /**
+       * Memory allocation in MB (128-10240).
+       */
+      memory?: number;
+      /**
+       * Max duration in seconds (1-900).
+       */
+      maxDuration?: number;
+      /**
+       * Files to include in bundle.
+       */
+      includeFiles?: string | string[];
+      /**
+       * Files to exclude from bundle.
+       */
+      excludeFiles?: string | string[];
+      /**
+       * Cron schedule expression(s) (e.g., "0 0 * * *"). Required for schedule-triggered job services.
+       */
+      schedule?: string;
+      /**
+       * Topic names or queue topic configs for worker and queue-triggered job services.
+       */
+      topics?: string[] | ServiceQueueTopic[];
+      /**
+       * Environment variables to inject into this service at build and runtime.
+       */
+      env?: Record<string, EnvVar>;
+    }
+  >;
+  /**
+   * Enables grouping of services. Map of service group name to an array of service names belonging to that group.
+   * @private
+   */
+  experimentalServiceGroups?: Record<string, string[]>;
 }
 
 /**

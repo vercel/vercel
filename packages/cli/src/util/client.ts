@@ -6,9 +6,15 @@ import input from '@inquirer/input';
 import password from '@inquirer/password';
 import search from '@inquirer/search';
 import select from '@inquirer/select';
+import { join, resolve } from 'node:path';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import type { VercelConfig } from '@vercel/client';
+import {
+  getGlobalPathConfig as getSharedGlobalPathConfig,
+  readConfigFile as readSharedConfigFile,
+  writeConfigFile as writeSharedConfigFile,
+} from '@vercel/cli-config';
 import retry, {
   type RetryFunction,
   type Options as RetryOptions,
@@ -26,6 +32,7 @@ import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
+import type { Span } from '@vercel/build-utils';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -40,11 +47,18 @@ import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
+import type { z } from 'zod';
 import output from '../output-manager';
+import { parseArguments } from './get-args';
 import { processTokenResponse, refreshTokenRequest } from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
+};
+
+type ParsedArgsCache = {
+  args: string[];
+  flags: Record<string, string | boolean | undefined>;
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
@@ -53,6 +67,8 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
   accountId?: string;
+  /** When true, 429 responses are returned immediately instead of waiting for Retry-After and retrying */
+  bailOn429?: boolean;
 }
 
 export interface ClientOptions extends Stdio {
@@ -96,7 +112,7 @@ export function hasRefreshToken(
 }
 
 export default class Client extends EventEmitter implements Stdio {
-  argv: string[];
+  private _argv: string[] = [];
   apiUrl: string;
   authConfig: AuthConfig;
   stdin: ReadableTTY;
@@ -117,13 +133,18 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Root trace span for CLI diagnostics */
+  rootSpan?: Span;
+  /** Path to write CLI trace diagnostics. Only set by `vc build`; other commands do not write traces. */
+  traceDiagnosticsPath?: string;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
+  private _parsedArgsCache?: ParsedArgsCache;
 
   constructor(opts: ClientOptions) {
     super();
     this.agent = opts.agent;
-    this.argv = opts.argv;
+    this.setArgv(opts.argv);
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
     this.stdin = opts.stdin;
@@ -174,6 +195,35 @@ export default class Client extends EventEmitter implements Stdio {
           { input: this.stdin, output: this.stderr }
         ),
     };
+  }
+
+  get argv(): string[] {
+    return this._argv;
+  }
+
+  setArgv(argv: string[]): void;
+  setArgv(...argv: string[]): void;
+  setArgv(argvOrFirst: string[] | string, ...rest: string[]) {
+    const argv = Array.isArray(argvOrFirst)
+      ? argvOrFirst
+      : [argvOrFirst, ...rest];
+
+    this._argv = argv;
+    this._parsedArgsCache = undefined;
+  }
+
+  private getParsedArgs(): ParsedArgsCache {
+    if (!this._parsedArgsCache) {
+      this._parsedArgsCache = parseArguments(
+        this.argv.slice(2),
+        {},
+        {
+          permissive: true,
+        }
+      ) as ParsedArgsCache;
+    }
+
+    return this._parsedArgsCache;
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -236,6 +286,8 @@ export default class Client extends EventEmitter implements Stdio {
       return;
     }
 
+    // Token refresh does not change the authenticated user, so the cached
+    // userId is intentionally preserved here.
     this.updateAuthConfig({
       token: tokens.access_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
@@ -251,6 +303,44 @@ export default class Client extends EventEmitter implements Stdio {
     output.debug('Tokens refreshed successfully.');
   }
 
+  getGlobalPathConfig(): string {
+    const confFlag = this.getParsedArgs().flags['--global-config'];
+
+    if (typeof confFlag === 'string') {
+      return resolve(this.cwd, confFlag);
+    }
+
+    return getSharedGlobalPathConfig();
+  }
+
+  async readConfig<S extends z.ZodType>(
+    fileName: string,
+    schema: S
+  ): Promise<z.output<S>> {
+    const filePath = join(this.getGlobalPathConfig(), fileName);
+    return readSharedConfigFile(filePath, schema);
+  }
+
+  async maybeReadConfig<S extends z.ZodType>(
+    fileName: string,
+    schema: S
+  ): Promise<z.output<S> | null> {
+    try {
+      return await this.readConfig(fileName, schema);
+    } catch {
+      return null;
+    }
+  }
+
+  async writeConfig<S extends z.ZodType>(
+    fileName: string,
+    schema: S,
+    value: z.output<S>
+  ): Promise<void> {
+    const filePath = join(this.getGlobalPathConfig(), fileName);
+    writeSharedConfigFile(filePath, schema, value);
+  }
+
   updateConfig(config: Partial<GlobalConfig>) {
     this.config = { ...this.config, ...config };
   }
@@ -264,7 +354,7 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   emptyAuthConfig() {
-    this.authConfig = {};
+    this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
   writeToAuthConfigFile() {
@@ -350,13 +440,20 @@ export default class Client extends EventEmitter implements Stdio {
         } else {
           url.searchParams.delete('teamId');
         }
-      } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
+      } else if (
+        opts.useCurrentTeam !== false &&
+        this.config.currentTeam &&
+        !url.searchParams.has('teamId')
+      ) {
         url.searchParams.set('teamId', this.config.currentTeam);
       }
     }
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+    if (this.agentName) {
+      headers.set('x-ai-agent', this.agentName);
+    }
 
     await this.ensureAuthorized();
 
@@ -396,6 +493,15 @@ export default class Client extends EventEmitter implements Stdio {
       printIndications(res);
 
       if (!res.ok) {
+        // Return 3xx responses directly when manual redirect is requested
+        if (
+          opts.redirect === 'manual' &&
+          res.status >= 300 &&
+          res.status < 400
+        ) {
+          return res;
+        }
+
         const error = await responseError(res);
 
         // we should force reauth only if error has a teamId
@@ -409,6 +515,8 @@ export default class Client extends EventEmitter implements Stdio {
             // there's no sense in retrying
             return bail(normalizeError(reauthError));
           }
+        } else if (res.status === 429 && opts.bailOn429) {
+          return bail(error);
         } else if (typeof error.retryAfterMs === 'number') {
           // Respect the Retry-After header and then try again below.
           // This covers 429 responses which would otherwise bail out

@@ -33,6 +33,15 @@ export const usageCommand = {
         'Show usage breakdown by time period instead of aggregated totals (daily, weekly, monthly)',
       deprecated: false,
     },
+    {
+      name: 'group-by',
+      shorthand: null,
+      type: String,
+      argument: 'DIMENSION',
+      description:
+        'Group usage by a dimension instead of aggregated totals (project, region)',
+      deprecated: false,
+    },
     formatOption,
     jsonOption,
   ],
@@ -52,6 +61,14 @@ export const usageCommand = {
     {
       name: 'Show weekly usage breakdown',
       value: `${packageName} usage --breakdown weekly`,
+    },
+    {
+      name: 'Show usage grouped by project',
+      value: `${packageName} usage --group-by project`,
+    },
+    {
+      name: 'Show usage grouped by region',
+      value: `${packageName} usage --group-by region`,
     },
     {
       name: 'Output usage data as JSON',

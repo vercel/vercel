@@ -187,7 +187,15 @@ const runtime: Runtime = {
   startDevServer: rustStartDevServer,
   shouldServe: async (options): Promise<boolean> => {
     debug(`Requested ${options.requestPath} for ${options.entrypoint}`);
-    return Promise.resolve(options.requestPath === options.entrypoint);
+    // Match exact path or path without .rs extension
+    const entrypointWithoutExt = options.entrypoint.replace(/\.rs$/, '');
+    const matches =
+      options.requestPath === options.entrypoint ||
+      options.requestPath === entrypointWithoutExt;
+    debug(
+      `shouldServe: ${matches} (entrypointWithoutExt: ${entrypointWithoutExt})`
+    );
+    return Promise.resolve(matches);
   },
 };
 

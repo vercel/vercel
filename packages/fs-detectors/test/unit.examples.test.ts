@@ -1,4 +1,4 @@
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import { detectFramework, LocalFileSystemDetector } from '../src';
 import { getExamples } from '../../../examples/__tests__/test-utils';
 
@@ -12,8 +12,6 @@ const overrides = new Map([
   ['starlette', 'python'],
   // Sinatra is a Ruby framework without a dedicated framework preset
   ['sinatra', 'ruby'],
-  // Axum is a Rust framework without a dedicated framework preset
-  ['axum', 'rust'],
   // Gin is a Go framework without a dedicated framework preset
   ['gin', 'go'],
 ]);
@@ -24,26 +22,27 @@ const experimentalExamples = new Set([
   'starlette',
   'sinatra',
   'axum',
+  'actix-web',
   'gin',
   'django',
 ]);
 
 describe('examples should be detected', () => {
-  it.each(getExamples())(
-    'should detect $exampleName',
-    async ({ exampleName, examplePath }) => {
-      const fs = new LocalFileSystemDetector(examplePath);
-      const useExperimentalFrameworks = experimentalExamples.has(exampleName);
-      const framework = await detectFramework({
-        fs,
-        frameworkList,
-        useExperimentalFrameworks,
-      });
-      if (!framework) {
-        throw new Error(`Framework not detected for example "${exampleName}".`);
-      }
-
-      expect(framework).toBe(overrides.get(framework) ?? framework);
+  it.each(getExamples())('should detect $exampleName', async ({
+    exampleName,
+    examplePath,
+  }) => {
+    const fs = new LocalFileSystemDetector(examplePath);
+    const useExperimentalFrameworks = experimentalExamples.has(exampleName);
+    const framework = await detectFramework({
+      fs,
+      frameworkList,
+      useExperimentalFrameworks,
+    });
+    if (!framework) {
+      throw new Error(`Framework not detected for example "${exampleName}".`);
     }
-  );
+
+    expect(framework).toBe(overrides.get(framework) ?? framework);
+  });
 });

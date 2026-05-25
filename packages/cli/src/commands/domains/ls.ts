@@ -69,7 +69,9 @@ export default async function ls(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await getScope(client, {
+    resolveLocalScope: true,
+  });
 
   const lsStamp = stamp();
 

@@ -22,7 +22,6 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
 
 // @preserve pre-next-server-target
 
-// eslint-disable-next-line
 const NextServer = require('__NEXT_SERVER_PATH__').default;
 
 // @preserve next-server-preload-target

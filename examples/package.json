@@ -5,11 +5,14 @@
   "scripts": {
     "test-unit": "pnpm test __tests__/unit/",
     "test-e2e": "pnpm test __tests__/integration/",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail"
+    "test": "vitest run --config ../vitest.config.mts",
+    "vitest-run": "vitest -c ../vitest.config.mts",
+    "vitest-unit": "glob --absolute '__tests__/unit/'",
+    "vitest-e2e": "glob --absolute '__tests__/integration/'"
   },
   "devDependencies": {
-    "@types/jest": "27.4.1",
     "@vercel/build-utils": "workspace:*",
-    "@vercel/frameworks": "workspace:*"
+    "@vercel/frameworks": "workspace:*",
+    "vitest": "2.0.3"
   }
 }

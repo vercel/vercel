@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import redirects from '../../../../src/commands/redirects';
 import { useUser } from '../../../mocks/user';
@@ -474,6 +474,138 @@ describe('redirects add', () => {
       );
 
       await expect(exitCodePromise).resolves.toEqual(1);
+    });
+  });
+
+  describe('client.nonInteractive', () => {
+    it('should output action_required JSON with next command when source or destination missing in non-interactive mode', async () => {
+      mockGetVersions();
+      client.nonInteractive = true;
+
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('redirects', 'add');
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toContain('source and destination are required');
+      expect(Array.isArray(payload.next)).toBe(true);
+      expect(payload.next[0].command).toContain('redirects add');
+      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].when).toBe('to add a redirect');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('should output action_required JSON when only source provided in non-interactive mode', async () => {
+      mockGetVersions();
+      client.nonInteractive = true;
+
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('redirects', 'add', '/old-path');
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.next[0].command).toContain('redirects add');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('should output JSON only on success when non-interactive with full args', async () => {
+      mockGetVersions();
+      mockPutRedirects();
+
+      client.nonInteractive = true;
+      client.setArgv('redirects', 'add', '/old-path', '/new-path', '--yes');
+      const exitCode = await redirects(client);
+
+      expect(exitCode).toEqual(0);
+      const out = client.stdout.getFullOutput();
+      const json = JSON.parse(out);
+      expect(json.status).toEqual('ok');
+      expect(json.redirect).toEqual({
+        source: '/old-path',
+        destination: '/new-path',
+        statusCode: 307,
+        caseSensitive: false,
+        preserveQueryParams: false,
+      });
+      expect(json.next).toBeDefined();
+      expect(json.stagingOnly).toBe(true);
+      expect(json.inProduction).toBe(false);
+      expect(json.message).toContain('staging');
+      expect(json.message).toContain('production');
+      const nextCommands = json.next.map((n: { command: string }) => n.command);
+      expect(
+        nextCommands.some((c: string) => c.includes('list --staging'))
+      ).toBe(true);
+      expect(nextCommands.some((c: string) => c.includes('promote'))).toBe(
+        true
+      );
+      expect(nextCommands.some((c: string) => c.includes('version-1'))).toBe(
+        true
+      );
+
+      client.nonInteractive = false;
+    });
+
+    it('should not forward add-only flags into list/promote next commands', async () => {
+      mockGetVersions();
+      mockPutRedirects();
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'redirects',
+        'add',
+        '/old-path',
+        '/new-path',
+        '--yes',
+        '--status',
+        '301',
+        '--cwd',
+        '/tmp/proj'
+      );
+      const exitCode = await redirects(client);
+      expect(exitCode).toEqual(0);
+
+      const json = JSON.parse(client.stdout.getFullOutput());
+      const nextCommands = json.next.map((n: { command: string }) => n.command);
+      const promoteCmd = nextCommands.find((c: string) =>
+        c.includes('promote')
+      );
+      const listCmd = nextCommands.find((c: string) =>
+        c.includes('list --staging')
+      );
+      expect(promoteCmd).toBeDefined();
+      expect(listCmd).toBeDefined();
+      // --status is add-only; must not appear on promote/list suggestions
+      expect(promoteCmd).not.toContain('--status');
+      expect(listCmd).not.toContain('--status');
+      // global --cwd should still be forwarded
+      expect(promoteCmd).toContain('--cwd');
+      expect(promoteCmd).toContain('/tmp/proj');
+      expect(promoteCmd).toContain('--yes');
+
+      client.nonInteractive = false;
     });
   });
 });

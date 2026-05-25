@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import redirects from '../../../../src/commands/redirects';
 import { useUser } from '../../../mocks/user';
@@ -149,6 +149,40 @@ describe('redirects remove', () => {
       await exitCodePromise;
     });
 
+    it('should output error JSON when redirect not found in non-interactive mode', async () => {
+      mockGetVersions();
+      mockGetRedirects({ redirects: [] });
+
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv(
+        'redirects',
+        'remove',
+        '/nonexistent',
+        '--cwd=/tmp/project',
+        '--non-interactive'
+      );
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('redirect_not_found');
+      expect(payload.message).toContain('/nonexistent');
+      expect(payload.message).toContain('not found');
+      expect(payload.next[0].command).toContain('redirects list');
+      expect(payload.next[0].command).toContain('--cwd=/tmp/project');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
     it('should error when no source provided', async () => {
       client.setArgv('redirects', 'remove');
       const exitCodePromise = redirects(client);
@@ -156,6 +190,90 @@ describe('redirects remove', () => {
       await expect(client.stderr).toOutput('Missing required argument: source');
 
       await expect(exitCodePromise).resolves.toEqual(1);
+    });
+  });
+
+  describe('client.nonInteractive', () => {
+    it('should output action_required JSON when source missing in non-interactive mode with flags preserved', async () => {
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv(
+        'redirects',
+        'remove',
+        '--cwd=/tmp/project',
+        '--non-interactive'
+      );
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toContain('Missing required argument: source');
+      expect(payload.next[0].command).toContain('redirects remove <source>');
+      expect(payload.next[0].command).toContain('--cwd=/tmp/project');
+      expect(payload.next[0].command).toContain('--non-interactive');
+      expect(payload.next[0].command).toContain('--yes');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('should output action_required JSON with next command when --yes not provided in non-interactive mode', async () => {
+      mockGetVersions();
+      mockGetRedirects();
+
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('redirects', 'remove', '/old-path');
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('confirmation_required');
+      expect(payload.message).toContain('--yes to confirm removal');
+      expect(Array.isArray(payload.next)).toBe(true);
+      expect(payload.next[0].command).toContain('redirects remove');
+      expect(payload.next[0].command).toContain('/old-path');
+      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].when).toBe('to confirm removal');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('should output JSON only on success when non-interactive with --yes', async () => {
+      mockGetVersions();
+      mockGetRedirects();
+      mockDeleteRedirects();
+
+      client.nonInteractive = true;
+      client.setArgv('redirects', 'remove', '/old-path', '--yes');
+      const exitCode = await redirects(client);
+
+      expect(exitCode).toEqual(0);
+      const out = client.stdout.getFullOutput();
+      const json = JSON.parse(out);
+      expect(json.status).toEqual('ok');
+      expect(json.removed).toEqual({ source: '/old-path' });
+      expect(json.next).toBeDefined();
+      expect(json.next[0].command).toContain('redirects promote');
+      expect(json.next[0].command).toContain('version-1');
+
+      client.nonInteractive = false;
     });
   });
 });

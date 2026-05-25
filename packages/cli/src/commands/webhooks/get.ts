@@ -4,7 +4,8 @@ import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import getWebhook from '../../util/webhooks/get-webhook';
 import getScope from '../../util/get-scope';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import { validateJsonOutput } from '../../util/output-format';
 import { WebhooksGetTelemetryClient } from '../../util/telemetry/commands/webhooks/get';
 import output from '../../output-manager';
@@ -35,6 +36,21 @@ export default async function get(client: Client, argv: string[]) {
   const getStamp = stamp();
 
   if (!webhookId) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_id',
+          message: 'Webhook ID is required. Provide ID as the first argument.',
+          next: [
+            { command: getCommandNamePlain('webhooks ls') },
+            { command: getCommandNamePlain('webhooks get <id>') },
+          ],
+        },
+        1
+      );
+    }
     output.error(`${getCommandName(`webhooks get <id>`)} expects one argument`);
     return 1;
   }
@@ -47,7 +63,7 @@ export default async function get(client: Client, argv: string[]) {
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
+  const asJson = formatResult.jsonOutput || client.nonInteractive;
 
   if (args.length !== 1) {
     output.error(
@@ -61,15 +77,30 @@ export default async function get(client: Client, argv: string[]) {
   output.debug(`Fetching webhook info`);
 
   const { contextName } = await getScope(client);
-  output.spinner(
-    `Fetching Webhook ${webhookId} under ${chalk.bold(contextName)}`
-  );
+  if (!client.nonInteractive) {
+    output.spinner(
+      `Fetching Webhook ${webhookId} under ${chalk.bold(contextName)}`
+    );
+  }
 
   let webhook;
   try {
     webhook = await getWebhook(client, webhookId);
   } catch (err: unknown) {
+    output.stopSpinner();
     if (isAPIError(err) && err.status === 404) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'webhook_not_found',
+            message: `Webhook not found: ${webhookId}.`,
+            next: [{ command: getCommandNamePlain('webhooks ls') }],
+          },
+          1
+        );
+      }
       output.error(`Webhook not found: ${webhookId}`);
       output.log(`Run ${getCommandName(`webhooks ls`)} to see your webhooks.`);
       return 1;
@@ -79,7 +110,20 @@ export default async function get(client: Client, argv: string[]) {
 
   if (asJson) {
     output.stopSpinner();
-    client.stdout.write(`${JSON.stringify(webhook, null, 2)}\n`);
+    const jsonOutput = client.nonInteractive
+      ? {
+          status: 'ok' as const,
+          webhook,
+          message: `Webhook ${webhookId} found.`,
+          next: [
+            {
+              command: getCommandNamePlain(`webhooks rm ${webhookId} --yes`),
+              when: 'Remove this webhook',
+            },
+          ],
+        }
+      : webhook;
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else {
     output.log(
       `Webhook ${webhookId} found under ${chalk.bold(contextName)} ${chalk.gray(

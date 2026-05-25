@@ -1,11 +1,15 @@
-/* eslint-disable no-console */
 import { spawn } from 'child_process';
 import type Client from '../../util/client';
 import { curlCommand } from './command';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
-import { getDeploymentUrlAndToken, setupCurlLikeCommand } from './shared';
+import {
+  getDeploymentUrlAndToken,
+  getFullUrlAndToken,
+  setupCurlLikeCommand,
+} from './shared';
+import { trace } from './trace';
 
 export default async function curl(client: Client): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({
@@ -14,19 +18,31 @@ export default async function curl(client: Client): Promise<number> {
     },
   });
 
-  const setup = setupCurlLikeCommand(client, curlCommand, telemetryClient);
+  const setup = setupCurlLikeCommand(client, curlCommand, telemetryClient, {
+    allowFullUrl: true,
+  });
 
   if (typeof setup === 'number') {
     return setup;
   }
 
-  const { path, deploymentFlag, protectionBypassFlag, toolFlags } = setup;
-
-  const result = await getDeploymentUrlAndToken(client, 'curl', path, {
+  const {
+    path,
+    isFullUrl,
     deploymentFlag,
     protectionBypassFlag,
-    autoConfirm: setup.yes,
-  });
+    toolFlags,
+    trace: traceFlag,
+    json: jsonFlag,
+  } = setup;
+
+  const result = isFullUrl
+    ? await getFullUrlAndToken(client, path, protectionBypassFlag)
+    : await getDeploymentUrlAndToken(client, 'curl', path, {
+        deploymentFlag,
+        protectionBypassFlag,
+        autoConfirm: setup.yes,
+      });
 
   if (typeof result === 'number') {
     return result;
@@ -44,6 +60,17 @@ export default async function curl(client: Client): Promise<number> {
   }
 
   curlFlags.unshift('--url', fullUrl);
+
+  if (traceFlag) {
+    return trace(client, {
+      fullUrl,
+      link: result.link ?? null,
+      curlFlags,
+      json: jsonFlag,
+      yes: setup.yes,
+      telemetry: telemetryClient,
+    });
+  }
 
   output.debug(`Executing: curl ${curlFlags.map(requoteArgs).join(' ')}`);
 

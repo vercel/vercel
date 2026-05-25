@@ -153,6 +153,18 @@ describe('flags archive', () => {
     expect(exitCode).toEqual(0);
   });
 
+  it('errors in non-interactive mode without --yes', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv('flags', 'archive', testFlags[0].slug);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing required flag --yes'
+    );
+  });
+
   it('errors without flag argument', async () => {
     client.setArgv('flags', 'archive');
     const exitCode = await flags(client);

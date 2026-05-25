@@ -15,7 +15,6 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
 import type Now from '../../util';
-import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
@@ -24,21 +23,15 @@ import eraseLines from '../output/erase-lines';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
-function printInspectUrl(
-  inspectorUrl: string | null | undefined,
-  deployStamp: () => string
-) {
+function printInspectUrl(inspectorUrl: string | null | undefined) {
   if (!inspectorUrl) {
     return;
   }
 
-  output.print(
-    prependEmoji(
-      `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
-      emoji('inspect')
-    ) + `\n`
-  );
+  // Timing belongs on the Build/Ready line, not on the URL line which is instant.
+  printAlignedLabel('Inspect', chalk.cyan(inspectorUrl));
 }
 
 export default async function processDeployment({
@@ -51,13 +44,14 @@ export default async function processDeployment({
   withFullLogs,
   agent,
   manual,
+  jsonOutput,
+  functionsBeta,
+  linkedProject,
   ...args
 }: {
   now: Now;
   path: string;
   requestBody: DeploymentOptions;
-  uploadStamp: () => string;
-  deployStamp: () => string;
   quiet: boolean;
   force?: boolean;
   withCache?: boolean;
@@ -74,12 +68,14 @@ export default async function processDeployment({
   agent?: Agent;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
+  jsonOutput?: boolean;
+  functionsBeta?: boolean;
+  linkedProject?: Project;
 }) {
   const {
     now,
     path,
     requestBody,
-    deployStamp,
     force,
     withCache,
     quiet,
@@ -133,8 +129,9 @@ export default async function processDeployment({
     output.stopSpinner();
   }
 
-  let rollingRelease: ProjectRollingRelease | undefined;
-  let project: Project | ProjectNotFound | undefined;
+  let rollingRelease: ProjectRollingRelease | undefined =
+    linkedProject?.rollingRelease;
+  let project: Project | ProjectNotFound | undefined = linkedProject;
   let latestLogMessage = '';
 
   try {
@@ -202,21 +199,18 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(deployment.inspectorUrl, deployStamp);
+        printInspectUrl(deployment.inspectorUrl);
 
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
 
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji(withFullLogs ? 'link' : 'loading')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment ? { gutter: '▲' } : {}
         );
 
-        if (quiet || process.env.FORCE_TTY === '1') {
+        if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
@@ -225,7 +219,7 @@ export default async function processDeployment({
         }
 
         latestLogMessage =
-          deployment.readyState === 'QUEUED' ? 'Queued...' : 'Building...';
+          deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
         if (withFullLogs) {
           let promise: Promise<void>;
@@ -249,7 +243,7 @@ export default async function processDeployment({
                 const lines = parseLogLines(event);
                 const message = lines[0];
                 if (message) {
-                  latestLogMessage = `Building: ${message}`;
+                  latestLogMessage = message;
                   output.spinner(latestLogMessage, 0);
                 }
               },
@@ -266,7 +260,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'building' && !withFullLogs) {
-        output.spinner(latestLogMessage || 'Building...', 0);
+        output.spinner(latestLogMessage || 'Building…', 0);
       }
 
       if (event.type === 'canceled') {
@@ -280,40 +274,47 @@ export default async function processDeployment({
       }
 
       if (event.type === 'ready' && rollingRelease) {
-        output.spinner('Releasing...', 0);
+        output.spinner('Releasing…', 0);
         stopSpinner();
         return event.payload;
       }
 
-      // If `checksState` is present, we can only continue to "Completing" if the checks finished,
-      // otherwise we might show "Completing" before "Running Checks".
-      if (
-        event.type === 'ready' &&
-        (event.payload.checksState
-          ? event.payload.checksState === 'completed'
-          : true) &&
-        !withFullLogs
-      ) {
+      if (event.type === 'ready' && !withFullLogs) {
+        const v1ChecksPending =
+          event.payload.checksState &&
+          event.payload.checksState !== 'completed';
+        const v2ChecksPending =
+          event.payload.checks?.['deployment-alias']?.state === 'pending';
+
         stopSpinner();
         process.stderr.write(eraseLines(2));
         const isProdDeployment = event.payload.target === 'production';
         const previewUrl = `https://${event.payload.url}`;
-        output.print(
-          prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-              previewUrl
-            )} ${deployStamp()}`,
-            emoji('success')
-          ) + `\n`
+        printAlignedLabel(
+          isProdDeployment ? 'Production' : 'Preview',
+          chalk.cyan(previewUrl),
+          isProdDeployment ? { gutter: '▲' } : {}
         );
-        output.spinner('Completing...', 0);
+
+        if (v1ChecksPending || v2ChecksPending) {
+          output.spinner('Running Checks…', 0);
+        } else {
+          output.spinner('Completing…', 0);
+        }
       }
 
+      // v1 checks running
       if (event.type === 'checks-running' && !withFullLogs) {
-        output.spinner('Running Checks...', 0);
+        output.spinner('Running Checks…', 0);
       }
 
+      // v1 checks failed
       if (event.type === 'checks-conclusion-failed') {
+        stopSpinner();
+        return event.payload;
+      }
+
+      if (event.type === 'checks-v2-failed') {
         stopSpinner();
         return event.payload;
       }
@@ -321,6 +322,16 @@ export default async function processDeployment({
       // Handle error events
       if (event.type === 'error') {
         stopSpinner();
+
+        // Check if solvable with --functions-beta
+        if (!functionsBeta) {
+          const maybeSizeError = handleErrorSolvableWithFunctionsBeta(
+            event.payload
+          );
+          if (maybeSizeError) {
+            throw maybeSizeError;
+          }
+        }
 
         if (!archive) {
           const maybeError = handleErrorSolvableWithArchive(event.payload);
@@ -355,12 +366,7 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          output.print(
-            prependEmoji(
-              `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-              emoji('link')
-            ) + '\n'
-          );
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
         }
 
         event.payload.indications = indications;
@@ -370,6 +376,36 @@ export default async function processDeployment({
   } catch (err) {
     stopSpinner();
     throw err;
+  }
+}
+
+export class FunctionsSizeLimitError extends Error {
+  link =
+    'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
+}
+
+export function handleErrorSolvableWithFunctionsBeta(error: unknown) {
+  if (isErrorLike(error)) {
+    // Primary: match the Python-specific error code
+    const isLambdaSizeExceeded =
+      'errorCode' in error && error.errorCode === 'LAMBDA_SIZE_EXCEEDED';
+    // Fallback: match error message pattern for resilience
+    const isMessageMatch =
+      !isLambdaSizeExceeded &&
+      'errorMessage' in error &&
+      typeof error.errorMessage === 'string' &&
+      error.errorMessage.includes('exceeds') &&
+      (error.errorMessage.includes('Lambda size limit') ||
+        error.errorMessage.includes('Lambda ephemeral storage') ||
+        error.errorMessage.includes('exceeds Lambda limit'));
+
+    if (isLambdaSizeExceeded || isMessageMatch) {
+      return new FunctionsSizeLimitError(
+        (error as any).errorMessage ||
+          (error as any).message ||
+          'Function build exceeded the maximum size limit.'
+      );
+    }
   }
 }
 

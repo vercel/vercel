@@ -96,7 +96,7 @@ it('should only match supported node versions, otherwise throw an error', async 
 });
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('16.0.0')).toHaveProperty('major', 16);
@@ -655,6 +655,69 @@ it('should support exposeErrBody correctly', async () => {
     });
   }).toThrowError(
     `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
+it('should support partialFallback correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: true,
+  });
+  expect(prerenderWithTrue.partialFallback).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: false,
+  });
+  expect(prerenderWithFalse.partialFallback).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: undefined,
+  });
+  expect(prerenderWithUndefined.partialFallback).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.partialFallback).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 'true',
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 1,
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
   );
 });
 

@@ -1,6 +1,12 @@
+import type { JSONValue } from '@vercel-internals/types';
+
+export type FlagKind = 'boolean' | 'string' | 'number' | 'json';
+
+export type FlagVariantValue = JSONValue;
+
 export interface FlagVariant {
   id: string;
-  value: string | number | boolean;
+  value: FlagVariantValue;
   label?: string;
   description?: string;
 }
@@ -21,18 +27,38 @@ export interface FlagSplitOutcome {
   defaultVariantId: string;
 }
 
+export interface FlagRolloutOutcome {
+  type: 'rollout';
+  base: {
+    type: 'entity';
+    kind: string;
+    attribute: string;
+  };
+  startTimestamp: number;
+  rollFromVariantId: string;
+  rollToVariantId: string;
+  defaultVariantId: string;
+  slots: Array<{
+    durationMs: number;
+    promille: number;
+  }>;
+}
+
 export interface FlagCondition {
   lhs:
     | { type: 'segment' }
     | { type: 'entity'; kind: string; attribute: string };
   cmp: string;
+  cmpOptions?: {
+    ignoreCase?: boolean;
+  };
   rhs?: string | number | boolean | { type: string; items?: unknown[] };
 }
 
 export interface FlagRule {
   id: string;
   conditions: FlagCondition[];
-  outcome: FlagOutcome | FlagSplitOutcome;
+  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome;
 }
 
 export interface FlagEnvironmentConfig {
@@ -42,7 +68,7 @@ export interface FlagEnvironmentConfig {
     environment: string;
   };
   pausedOutcome?: FlagOutcome;
-  fallthrough: FlagOutcome | FlagSplitOutcome;
+  fallthrough: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome;
   rules: FlagRule[];
   targets?: Record<
     string,
@@ -55,7 +81,7 @@ export interface Flag {
   id: string;
   slug: string;
   description?: string;
-  kind: 'boolean' | 'string' | 'number';
+  kind: FlagKind;
   state: 'active' | 'archived';
   variants: FlagVariant[];
   environments: Record<string, FlagEnvironmentConfig>;
@@ -106,6 +132,15 @@ export interface SdkKey {
   updatedAt: number;
   label?: string;
   deletedAt?: number;
+  // Server-masked preview of the key value, e.g. `vf_server_abc********`.
+  // Safe to display; never contains the full secret.
+  partialKeyValue?: string;
+}
+
+// Returned only from the create endpoint, where the API reveals the
+// plaintext key once. The list endpoint never returns these fields, and the
+// CLI must never emit them in `flags sdk-keys ls` output (table or JSON).
+export interface CreatedSdkKey extends SdkKey {
   keyValue?: string;
   tokenValue?: string;
   connectionString?: string;
@@ -117,7 +152,7 @@ export interface SdkKeysListResponse {
 
 export interface CreateFlagRequest {
   slug: string;
-  kind: 'boolean' | 'string' | 'number';
+  kind: FlagKind;
   description?: string;
   variants?: FlagVariant[];
   environments: Record<string, FlagEnvironmentConfig>;

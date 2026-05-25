@@ -2,11 +2,22 @@ import {
   isBackendFramework,
   isPythonFramework,
 } from '@vercel/build-utils/dist/framework-helpers';
+import {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+} from '@vercel/build-utils';
+import type { Framework } from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
+  EnvVars,
   ServiceRuntime,
   ExperimentalServices,
+  Services,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ResolvedService,
 } from './types';
 import {
@@ -15,6 +26,20 @@ import {
   STATIC_BUILDERS,
   ROUTE_OWNING_BUILDERS,
 } from './types';
+
+// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
+// but service auto-detection should still consider them.
+export const DETECTION_FRAMEWORKS = frameworkList.filter(
+  (framework: Framework) =>
+    !framework.experimental || framework.runtimeFramework
+);
+
+export {
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceCronPath,
+};
 
 export async function hasFile(
   fs: DetectorFilesystem,
@@ -27,13 +52,53 @@ export async function hasFile(
   }
 }
 
-/**
- * Reserved internal namespace used by services routing/runtime plumbing.
- */
-export const INTERNAL_SERVICE_PREFIX = '/_svc';
+export function isPublicServicesEnabled(): boolean {
+  return (
+    process.env.VERCEL_USE_SERVICES === '1' ||
+    process.env.VERCEL_USE_SERVICES?.toLowerCase() === 'true'
+  );
+}
 
-export function getInternalServiceFunctionPath(serviceName: string): string {
-  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
+export function validateServicesConfigGate(
+  config: { services?: Services } | null | undefined
+): ServiceDetectionError | null {
+  if (config?.services !== undefined && !isPublicServicesEnabled()) {
+    return {
+      code: 'INVALID_VERCEL_CONFIG',
+      message:
+        'Invalid vercel.json - should NOT have additional property `services`. Please remove it.',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Reserved internal namespace used by the dev queue proxy.
+ */
+export const INTERNAL_QUEUES_PREFIX = '/_svc/_queues';
+
+function normalizeInternalServiceEntrypoint(entrypoint: string): string {
+  const normalized = entrypoint
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\.[^/.]+$/, '');
+  return normalized || 'index';
+}
+
+export function getInternalServiceWorkerPathPrefix(
+  serviceName: string
+): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
+}
+
+export function getInternalServiceWorkerPath(
+  serviceName: string,
+  entrypoint: string,
+  handler = 'worker'
+): string {
+  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
+  return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
 
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
@@ -61,6 +126,58 @@ export function isRouteOwningBuilder(service: ResolvedService): boolean {
 }
 
 /**
+ * Infer runtime from a framework slug.
+ *
+ * Examples:
+ * - `python` -> `python`
+ * - `fastapi` -> `python`
+ * - `express` -> `node`
+ */
+export function inferRuntimeFromFramework(
+  framework: string | null | undefined
+): ServiceRuntime | undefined {
+  if (!framework) {
+    return undefined;
+  }
+
+  // Runtime framework slug maps directly to runtime name.
+  if (framework in RUNTIME_BUILDERS) {
+    return framework as ServiceRuntime;
+  }
+
+  if (isPythonFramework(framework)) {
+    return 'python';
+  }
+  if (isBackendFramework(framework)) {
+    return 'node';
+  }
+
+  return undefined;
+}
+
+export function isFrontendFramework(
+  framework: string | null | undefined
+): boolean {
+  if (!framework) {
+    return false;
+  }
+  return !inferRuntimeFromFramework(framework);
+}
+
+export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
+  frameworks: readonly T[],
+  runtime?: ServiceRuntime
+): T[] {
+  if (!runtime) {
+    return [...frameworks];
+  }
+
+  return frameworks.filter(
+    framework => inferRuntimeFromFramework(framework.slug) === runtime
+  );
+}
+
+/**
  * Infer runtime from available service configuration.
  *
  * Priority (highest to lowest):
@@ -83,17 +200,9 @@ export function inferServiceRuntime(config: {
     return config.runtime as ServiceRuntime;
   }
 
-  // Runtime framework slug maps directly to runtime name.
-  if (config.framework && config.framework in RUNTIME_BUILDERS) {
-    return config.framework as ServiceRuntime;
-  }
-
-  // Infer from framework
-  if (isPythonFramework(config.framework)) {
-    return 'python';
-  }
-  if (isBackendFramework(config.framework)) {
-    return 'node';
+  const frameworkRuntime = inferRuntimeFromFramework(config.framework);
+  if (frameworkRuntime) {
+    return frameworkRuntime;
   }
 
   // Infer from builder
@@ -118,33 +227,128 @@ export function inferServiceRuntime(config: {
 }
 
 export interface ReadVercelConfigResult {
-  config: { experimentalServices?: ExperimentalServices } | null;
+  config: {
+    services?: Services;
+    experimentalServices?: ExperimentalServices;
+    env?: Record<string, string> | EnvVars;
+  } | null;
   error: ServiceDetectionError | null;
 }
 
 /**
- * Read and parse vercel.json from filesystem.
+ * Read and parse vercel.json or vercel.toml from filesystem.
  * Returns the parsed config or an error if the file exists but is invalid.
  */
 export async function readVercelConfig(
   fs: DetectorFilesystem
 ): Promise<ReadVercelConfigResult> {
   const hasVercelJson = await fs.hasPath('vercel.json');
-  if (!hasVercelJson) {
-    return { config: null, error: null };
+  if (hasVercelJson) {
+    try {
+      const content = await fs.readFile('vercel.json');
+      const config = JSON.parse(content.toString());
+      const gateError = validateServicesConfigGate(config);
+      if (gateError) {
+        return { config: null, error: gateError };
+      }
+      return { config, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_JSON',
+          message:
+            'Failed to parse vercel.json. Ensure it contains valid JSON.',
+        },
+      };
+    }
   }
 
-  try {
-    const content = await fs.readFile('vercel.json');
-    const config = JSON.parse(content.toString());
-    return { config, error: null };
-  } catch {
-    return {
-      config: null,
-      error: {
-        code: 'INVALID_VERCEL_JSON',
-        message: 'Failed to parse vercel.json. Ensure it contains valid JSON.',
-      },
-    };
+  const hasVercelToml =
+    process.env.VERCEL_TOML_CONFIG_ENABLED === '1' &&
+    (await fs.hasPath('vercel.toml'));
+  if (hasVercelToml) {
+    try {
+      const { parse: tomlParse } = await import('smol-toml');
+      const content = await fs.readFile('vercel.toml');
+      const config = tomlParse(content.toString());
+      const gateError = validateServicesConfigGate(config);
+      if (gateError) {
+        return { config: null, error: gateError };
+      }
+      return { config: config as any, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_TOML',
+          message:
+            'Failed to parse vercel.toml. Ensure it contains valid TOML.',
+        },
+      };
+    }
+  }
+
+  return { config: null, error: null };
+}
+
+/**
+ * Assign route prefixes to inferred services.
+ *
+ * A frontend service gets `/`, the rest get `/_/{name}`.
+ * A single non-frontend service would also get `/`.
+ * If no frontend service found, then multiple services get `/_/{name}`.
+ *
+ * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
+ */
+export function assignRoutePrefixes(
+  services: ExperimentalServices
+): ServiceDetectionWarning[] {
+  const warnings: ServiceDetectionWarning[] = [];
+  const names = Object.keys(services);
+
+  if (names.length === 1) {
+    services[names[0]].routePrefix = '/';
+    return warnings;
+  }
+
+  const frontendNames = names.filter(name =>
+    isFrontendFramework(services[name].framework)
+  );
+
+  let rootName: string | null = null;
+  if (frontendNames.length === 1) {
+    rootName = frontendNames[0];
+  } else if (frontendNames.length > 1) {
+    rootName =
+      frontendNames.find(n => n === 'frontend' || n === 'web') ??
+      frontendNames.sort()[0];
+    warnings.push({
+      code: 'MULTIPLE_FRONTENDS',
+      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
+    });
+  }
+
+  for (const name of names) {
+    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
+  }
+
+  return warnings;
+}
+
+export function combineBuildCommand(
+  buildCommand: string | undefined,
+  preDeployCommand: string | string[] | undefined
+): string | undefined {
+  const preDeploy = Array.isArray(preDeployCommand)
+    ? preDeployCommand.join(' && ')
+    : preDeployCommand;
+
+  if (preDeploy && buildCommand) {
+    return `${buildCommand} && ${preDeploy}`;
+  } else if (preDeploy) {
+    return preDeploy;
+  } else {
+    return buildCommand;
   }
 }

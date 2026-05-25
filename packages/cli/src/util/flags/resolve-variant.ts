@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import deepEqual from 'fast-deep-equal';
 import type { FlagVariant } from './types';
 
 export interface ResolveVariantResult {
@@ -6,28 +8,29 @@ export interface ResolveVariantResult {
 }
 
 /**
- * Formats a variant for display in error messages and prompts.
- * Shows the ID, value, and label if available.
+ * Formats a variant value for display.
+ */
+export function formatVariantValue(value: FlagVariant['value']): string {
+  return JSON.stringify(value);
+}
+
+/**
+ * Formats a variant for display in prompts and messages.
+ * Shows the value first, followed by the label if available.
  */
 export function formatVariantForDisplay(variant: FlagVariant): string {
-  const parts = [variant.id];
-  parts.push(`value: ${JSON.stringify(variant.value)}`);
+  const parts = [formatVariantValue(variant.value)];
   if (variant.label) {
-    parts.push(`label: "${variant.label}"`);
+    parts.push(chalk.dim(variant.label));
   }
-  return parts.join(', ');
+  return parts.join(' ');
 }
 
 /**
  * Formats a list of variants for error messages.
  */
 export function formatAvailableVariants(variants: FlagVariant[]): string {
-  return variants
-    .map(v => {
-      const label = v.label ? ` (${v.label})` : '';
-      return `  - ${JSON.stringify(v.value)}${label}`;
-    })
-    .join('\n');
+  return variants.map(v => `  - ${formatAvailableVariant(v)}`).join('\n');
 }
 
 /**
@@ -35,10 +38,12 @@ export function formatAvailableVariants(variants: FlagVariant[]): string {
  *
  * Resolution order:
  * 1. Exact match on variant ID
- * 2. Match on variant value (supports true/false, string values, numbers, etc.)
- * 3. Case-insensitive match on variant label
+ * 2. Match on variant value (supports booleans, strings, numbers, and JSON)
  *
- * @param input - The user-provided variant identifier (ID, value, or label)
+ * Labels are intentionally excluded because they are presentation-oriented and
+ * may not be unique across variants.
+ *
+ * @param input - The user-provided variant identifier (ID or value)
  * @param variants - The available variants for the flag
  * @returns The resolved variant or null with an error message
  */
@@ -52,75 +57,112 @@ export function resolveVariant(
     return { variant: byId, error: null };
   }
 
-  // 2. Try to match by value
-  // First try exact string match (for string variants with values like "off")
-  const byExactValue = variants.find(v => v.value === input);
-  if (byExactValue) {
-    return { variant: byExactValue, error: null };
-  }
-
-  // Then try parsed value (handles "true"/"false" for boolean flags)
+  // 2. Try to match by parsed value so JSON-kind flags can resolve objects,
+  // arrays, null, and other JSON literals by value.
   const parsedInput = parseVariantValue(input);
   const byValue = variants.find(v => valuesMatch(v.value, parsedInput));
   if (byValue) {
     return { variant: byValue, error: null };
   }
 
-  // 3. Try case-insensitive match on label
-  const inputLower = input.toLowerCase();
-  const byLabel = variants.find(v => v.label?.toLowerCase() === inputLower);
-  if (byLabel) {
-    return { variant: byLabel, error: null };
+  // 3. Fall back to an exact string match so string variants like "true" or
+  // "020" still resolve naturally when no parsed-value match exists.
+  const byExactStringValue = variants.find(v => v.value === input);
+  if (byExactStringValue) {
+    return { variant: byExactStringValue, error: null };
   }
 
   // No match found - return helpful error
   const availableList = formatAvailableVariants(variants);
-  const error = `Variant "${input}" not found.\n\nAvailable variants:\n${availableList}\n\nYou can specify a variant by its value (e.g., "true", "false") or label.`;
+  const error = `Variant "${input}" not found.\n\nAvailable variants:\n${availableList}\n\nYou can specify a variant by its ID or value.`;
 
   return { variant: null, error };
 }
 
+export function resolveVariantOrThrow(
+  input: string,
+  variants: FlagVariant[],
+  optionName: string
+): FlagVariant {
+  const result = resolveVariant(input, variants);
+  if (result.error || !result.variant) {
+    throw new Error(
+      `${optionName} ${chalk.bold(input)} is invalid. ${result.error || 'Variant not found.'}`
+    );
+  }
+
+  return result.variant;
+}
+
+export function resolveVariantByIdOrThrow(
+  variantId: string,
+  variants: FlagVariant[],
+  optionName: string
+): FlagVariant {
+  const variant = variants.find(candidate => candidate.id === variantId);
+  if (!variant) {
+    throw new Error(
+      `${optionName} references an unknown variant ${chalk.bold(variantId)}.`
+    );
+  }
+
+  return variant;
+}
+
 /**
  * Parses a string input into the appropriate type for comparison.
- * Handles booleans, numbers, and strings.
+ * Handles JSON literals first, then falls back to the raw string input.
  */
-function parseVariantValue(input: string): string | number | boolean {
-  // Handle boolean values (only true/false)
-  const lowerInput = input.toLowerCase();
-  if (lowerInput === 'true') {
-    return true;
-  }
-  if (lowerInput === 'false') {
-    return false;
+function parseVariantValue(input: string): FlagVariant['value'] {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return input;
   }
 
-  // Handle numeric values
-  const num = Number(input);
-  if (!isNaN(num) && input.trim() !== '') {
-    return num;
-  }
+  try {
+    return JSON.parse(trimmed) as FlagVariant['value'];
+  } catch {
+    const lowerInput = trimmed.toLowerCase();
+    if (lowerInput === 'true') {
+      return true;
+    }
+    if (lowerInput === 'false') {
+      return false;
+    }
 
-  // Return as string
-  return input;
+    const parsedNumber = Number(trimmed);
+    if (!Number.isNaN(parsedNumber)) {
+      return parsedNumber;
+    }
+
+    return input;
+  }
 }
 
 /**
  * Compares two variant values for equality.
- * Handles type coercion for common cases.
  */
 function valuesMatch(
-  variantValue: string | number | boolean,
-  inputValue: string | number | boolean
+  variantValue: FlagVariant['value'],
+  inputValue: FlagVariant['value']
 ): boolean {
-  // Direct equality
-  if (variantValue === inputValue) {
-    return true;
+  return deepEqual(variantValue, inputValue);
+}
+
+function formatAvailableVariant(variant: FlagVariant): string {
+  const value = formatStyledVariantValue(variant.value);
+  if (!variant.label) {
+    return value;
   }
 
-  // String comparison of values (for cases like "off" matching string "off")
-  if (String(variantValue) === String(inputValue)) {
-    return true;
+  return `${value} ${chalk.dim(variant.label)}`;
+}
+
+function formatStyledVariantValue(value: FlagVariant['value']): string {
+  const formattedValue = formatVariantValue(value);
+  if (typeof value !== 'string') {
+    return chalk.bold(formattedValue);
   }
 
-  return false;
+  return `"${chalk.bold(formattedValue.slice(1, -1))}"`;
 }

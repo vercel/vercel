@@ -1,5 +1,11 @@
 # @vercel/related-projects
 
+## 1.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
 ## 1.0.1
 
 ### Patch Changes

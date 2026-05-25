@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from ._queue.client import AsyncQueueClient, QueueClient
 from .client import (
+    Ack,
     MessageMetadata,
-    WorkerTimeoutResult,
+    RetryAfter,
+    WorkerJSONEncoder,
     get_asgi_app,
     get_wsgi_app,
     has_subscriptions,
@@ -28,7 +31,11 @@ from .exceptions import (
 
 __all__ = [
     "MessageMetadata",
-    "WorkerTimeoutResult",
+    "Ack",
+    "RetryAfter",
+    "WorkerJSONEncoder",
+    "QueueClient",
+    "AsyncQueueClient",
     "subscribe",
     "get_wsgi_app",
     "get_asgi_app",

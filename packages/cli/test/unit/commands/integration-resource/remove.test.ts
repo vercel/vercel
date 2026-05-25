@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationResourceCommand from '../../../../src/commands/integration-resource';
 import { client } from '../../../mocks/client';
 import { useResources } from '../../../mocks/integration';
@@ -60,6 +60,25 @@ describe('integration-resource', () => {
         );
 
         await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('parses resource when global flags precede integration-resource', async () => {
+        useResources();
+        mockDeleteResource();
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv(
+          '--cwd',
+          '/tmp/p',
+          '--non-interactive',
+          'integration-resource',
+          'remove',
+          resource,
+          '--yes'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toBe(0);
+        await expect(client.stderr).toOutput('Deleting resource…');
       });
 
       it('exits gracefully when no resource is found to delete', async () => {
@@ -387,6 +406,10 @@ describe('integration-resource', () => {
           useResources();
         });
 
+        afterEach(() => {
+          vi.restoreAllMocks();
+        });
+
         it('should error when no arguments passed', async () => {
           client.setArgv('integration-resource', 'remove');
           const exitCodePromise = integrationResourceCommand(client);
@@ -403,6 +426,32 @@ describe('integration-resource', () => {
             'Cannot specify more than one resource at a time.'
           );
           await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('writes structured JSON in non-interactive mode when more than one resource is passed', async () => {
+          vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+            throw new Error(`exit:${code ?? 0}`);
+          }) as () => never);
+          client.nonInteractive = true;
+          client.setArgv(
+            '--cwd',
+            '/tmp/r',
+            'integration-resource',
+            'remove',
+            'a',
+            'b',
+            '--yes'
+          );
+          await expect(integrationResourceCommand(client)).rejects.toThrow(
+            'exit:1'
+          );
+          const payload = JSON.parse(client.stdout.getFullOutput().trim());
+          expect(payload.status).toBe('error');
+          expect(payload.reason).toBe('invalid_arguments');
+          expect(payload.next?.[0]?.command).toContain(
+            'integration-resource remove <resource> --disconnect-all --yes'
+          );
+          expect(payload.next?.[0]?.command).toContain('--cwd /tmp/r');
         });
 
         it('should error when attempting to remove a resource with projects', async () => {

@@ -9,12 +9,14 @@ import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import move from './move';
+import price from './price';
 import {
   addSubcommand,
   buySubcommand,
   domainsCommand,
   inspectSubcommand,
   moveSubcommand,
+  priceSubcommand,
   removeSubcommand,
   transferInSubcommand,
 } from './command';
@@ -29,6 +31,7 @@ const COMMAND_CONFIG = {
   inspect: ['inspect'],
   ls: ['ls', 'list'],
   move: ['move'],
+  price: ['price'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
 };
@@ -100,6 +103,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandBuy(subcommandOriginal);
       return buy(client, args);
+    case 'price':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(priceSubcommand);
+      }
+      telemetry.trackCliSubcommandPrice(subcommandOriginal);
+      return price(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);

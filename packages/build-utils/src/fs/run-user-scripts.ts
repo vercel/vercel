@@ -276,7 +276,7 @@ export function getNodeBinPaths({
 
 async function chmodPlusX(fsPath: string) {
   const s = await fs.stat(fsPath);
-  const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
+  const newMode = s.mode | 64 | 8 | 1;
   if (s.mode === newMode) return;
   const base8 = newMode.toString(8).slice(-3);
   await fs.chmod(fsPath, base8);
@@ -579,7 +579,7 @@ async function checkTurboSupportsCorepack(
   if (turboConfigPath) {
     try {
       turboJson = json5.parse(await fs.readFile(turboConfigPath, 'utf8'));
-    } catch (err) {
+    } catch (_err) {
       console.warn(
         `WARNING: Failed to parse ${path.basename(turboConfigPath)}`
       );
@@ -676,7 +676,6 @@ export async function walkParentDirs({
   for (const dir of traverseUpDirectories({ start, base })) {
     const fullPath = path.join(dir, filename);
 
-    // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(fullPath)) {
       return fullPath;
     }

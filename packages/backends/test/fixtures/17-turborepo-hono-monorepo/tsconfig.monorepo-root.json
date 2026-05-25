@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Base layer: extended by tsconfig.monorepo-parent.json (two-level extends chain).
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "useUnknownInCatchVariables": true
+  }
+}

@@ -13,7 +13,7 @@ export async function updateCurrentTeamAfterLogin(
     let user = null;
     try {
       user = await getUser(client);
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       // Shouldn't happen since we just logged in
       output.error('Failed to fetch the logged in user. Please try again.');
       return 1;

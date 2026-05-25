@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vercel-workers"
-version = "0.0.10"
+version = "0.0.24"
 description = "Python SDK for Vercel Workers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,12 +12,10 @@ license = "MIT"
 dependencies = [
     "httpx>=0.27.0",
     "anyio>=4.0.0",
+    "pydantic>=2.7.0",
     "python-dotenv",
     "vercel>=0.3.7",
 ]
-
-[project.scripts]
-test = "pytest:main"
 
 [project.optional-dependencies]
 dev = [
@@ -61,6 +59,7 @@ test = [
 
 [tool.uv]
 default-groups = ["test"]
+exclude-newer = "2 days"
 
 [tool.setuptools.packages.find]
 where = ["src"]

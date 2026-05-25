@@ -1,0 +1,20 @@
+# Stubbed fs-err: re-exports std::fs with no tokio dependency.
+# Needed because the upstream uv workspace enables fs-err/tokio which
+# pulls in tokio (incompatible with WASM). uv-requirements-txt only
+# uses fs-err in test code, so this stub just re-exports std::fs.
+[package]
+name = "fs-err"
+version = "3.3.0"
+edition.workspace = true
+rust-version.workspace = true
+license = "MIT OR Apache-2.0"
+
+[lib]
+doctest = false
+
+[dependencies]
+
+[features]
+default = []
+# no-op: absorbs the tokio feature request without pulling in tokio
+tokio = []

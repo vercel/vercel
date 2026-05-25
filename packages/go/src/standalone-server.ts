@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { dirname, join } from 'path';
-import { readFile, writeFile, pathExists, copy } from 'fs-extra';
+import { readFile, pathExists, copy } from 'fs-extra';
 import {
   BuildOptions,
   Files,
@@ -87,6 +87,14 @@ export async function buildStandaloneServer({
   const userServerPath = join(outDir, 'user-server');
   const bootstrapPath = join(outDir, 'executable');
 
+  // Detect vendored dependencies by checking for vendor/modules.txt,
+  // the canonical marker created by `go mod vendor`
+  const vendorModulesPath = join(workPath, 'vendor', 'modules.txt');
+  const isVendored = await pathExists(vendorModulesPath);
+  if (isVendored) {
+    debug('Detected vendor directory, using -mod=vendor for build');
+  }
+
   // Determine build target based on entrypoint location
   // - main.go at root: build '.'
   // - cmd/api/main.go: build './cmd/api'
@@ -98,15 +106,17 @@ export async function buildStandaloneServer({
   );
 
   try {
-    await go.build(buildTarget, userServerPath);
+    await go.build(buildTarget, userServerPath, { vendorMode: isVendored });
   } catch (err) {
     console.error(`Failed to build standalone Go server: ${buildTarget}`);
     throw err;
   }
 
-  // Build the bootstrap wrapper that handles IPC protocol (vc-init.go + vc-utils.go)
-  const bootstrapSrc = join(__dirname, '../vc-init.go');
-  const utilsSrc = join(__dirname, '../vc-utils.go');
+  // Build the bootstrap wrapper that handles IPC protocol
+  const bootstrapDir = join(__dirname, '../bootstrap');
+  const bootstrapSrc = join(bootstrapDir, 'vc-init.go');
+  const utilsSrc = join(bootstrapDir, 'vc-utils.go');
+  const bootstrapGoModSrc = join(bootstrapDir, 'go.mod');
   debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
 
   try {
@@ -118,14 +128,27 @@ export async function buildStandaloneServer({
     await copy(bootstrapSrc, bootstrapGoFile);
     await copy(utilsSrc, join(bootstrapBuildDir, 'vc-utils.go'));
 
-    // Initialize a minimal go.mod for the bootstrap
-    const bootstrapGoMod = join(bootstrapBuildDir, 'go.mod');
-    await writeFile(bootstrapGoMod, 'module vc-init\n\ngo 1.21\n');
+    // Copy the bootstrap go.mod
+    await copy(bootstrapGoModSrc, join(bootstrapBuildDir, 'go.mod'));
 
-    // Build bootstrap with same env (cross-compile settings)
+    // Build an isolated env for the bootstrap — only system essentials
+    // plus cross-compile settings. User-provided Go env vars (e.g.
+    // GOEXPERIMENT) must not leak in as they may be incompatible with
+    // the Go version used to compile the bootstrap wrapper.
+    // createGo() will add GOROOT, GO111MODULE, GOMODCACHE, GOCACHE,
+    // and update PATH internally.
+    const bootstrapEnv: Record<string, string> = {
+      PATH: process.env.PATH || '',
+      HOME: process.env.HOME || '',
+      TMPDIR: process.env.TMPDIR || '',
+      GOARCH: architecture === 'arm64' ? 'arm64' : 'amd64',
+      GOOS: 'linux',
+      CGO_ENABLED: '0',
+    };
+
     const bootstrapGo = await createGo({
       modulePath: bootstrapBuildDir,
-      opts: { cwd: bootstrapBuildDir, env },
+      opts: { cwd: bootstrapBuildDir, env: bootstrapEnv },
       workPath: bootstrapBuildDir,
     });
 
@@ -203,8 +226,8 @@ export async function startStandaloneDevServer(
   const runTarget =
     resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
 
-  const devWrapper = join(__dirname, '../vc-init-dev.go');
-  const devUtils = join(__dirname, '../vc-utils.go');
+  const devWrapper = join(__dirname, '../bootstrap/vc-init-dev.go');
+  const devUtils = join(__dirname, '../bootstrap/vc-utils.go');
 
   debug(
     `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`

@@ -4,7 +4,9 @@ import { readFile } from 'node:fs/promises';
 import type { BuildOptions } from '@vercel/build-utils';
 
 export const resolveEntrypointAndFormat = async (
-  args: Pick<BuildOptions, 'entrypoint' | 'workPath'>
+  args: Pick<BuildOptions, 'entrypoint' | 'workPath'> & {
+    defaultFormat?: 'esm' | 'cjs';
+  }
 ) => {
   const extension = extname(args.entrypoint);
   const extensionMap: Record<
@@ -21,7 +23,7 @@ export const resolveEntrypointAndFormat = async (
 
   const extensionInfo = extensionMap[extension] || extensionMap['.js'];
   let resolvedFormat: 'esm' | 'cjs' | undefined =
-    extensionInfo.format === 'auto' ? undefined : extensionInfo.format;
+    extensionInfo.format === 'auto' ? args.defaultFormat : extensionInfo.format;
 
   const packageJsonPath = join(args.workPath, 'package.json');
   let pkg: Record<string, unknown> = {};

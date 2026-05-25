@@ -26,6 +26,9 @@ export interface DevServerOptions {
   envValues?: Record<string, string>;
   repoRoot?: string;
   services?: ResolvedService[];
+  useImplicitServicesEnvInjection?: boolean;
+  projectId?: string;
+  orgId?: string;
 }
 
 export interface EnvConfigs {
@@ -55,9 +58,10 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export interface HttpHandler {
-  (req: http.IncomingMessage, res: http.ServerResponse): void;
-}
+export type HttpHandler = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) => void;
 
 export interface BuilderInputs {
   [path: string]: FileFsRef;

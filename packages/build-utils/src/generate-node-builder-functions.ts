@@ -58,7 +58,7 @@ export function generateNodeBuilderFunctions(
       if (frameworkVersion) {
         version = frameworkVersion;
       }
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
     res.output.framework = {

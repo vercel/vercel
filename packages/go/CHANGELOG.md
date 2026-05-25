@@ -1,5 +1,61 @@
 # @vercel/go
 
+## 3.7.1
+
+### Patch Changes
+
+- e6dc048: Fix standalone Go server builds failing when user sets Go-version-specific env vars (e.g. GOEXPERIMENT). The bootstrap wrapper now builds with a clean environment, excluding user-provided env vars that may be incompatible with the Go version used for the wrapper. Also moves bootstrap source files to a `bootstrap/` subdirectory and bumps the bootstrap Go version from 1.21 to 1.23.
+
+## 3.7.0
+
+### Minor Changes
+
+- fb0cb8d: Add normalized entrypoint detector for runtime builders.
+
+## 3.6.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 3.5.0
+
+### Minor Changes
+
+- Support go apps using vendored dependencies. ([#15907](https://github.com/vercel/vercel/pull/15907))
+
+## 3.4.7
+
+### Patch Changes
+
+- Do not hang if the go process panics on startup. ([#15761](https://github.com/vercel/vercel/pull/15761))
+
+- [go] update `waitForServer` to not ping root endpoint ([#15765](https://github.com/vercel/vercel/pull/15765))
+
+## 3.4.6
+
+### Patch Changes
+
+- Improve Go build failures by including the compiler output in surfaced errors. ([#15651](https://github.com/vercel/vercel/pull/15651))
+
+## 3.4.5
+
+### Patch Changes
+
+- chore(deps-dev): bump tar from 7.5.7 to 7.5.11 ([#15492](https://github.com/vercel/vercel/pull/15492))
+
+## 3.4.4
+
+### Patch Changes
+
+- [go] versions 1.26 + 1.25 ([#15432](https://github.com/vercel/vercel/pull/15432))
+
+## 3.4.3
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
 ## 3.4.2
 
 ### Patch Changes

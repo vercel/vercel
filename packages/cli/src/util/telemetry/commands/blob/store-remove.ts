@@ -14,4 +14,10 @@ export class BlobRemoveStoreTelemetryClient
       });
     }
   }
+
+  trackCliFlagYes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('yes');
+    }
+  }
 }

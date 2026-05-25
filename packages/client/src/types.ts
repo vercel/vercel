@@ -2,9 +2,11 @@ import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
+  EnvVars,
   Images,
   ProjectSettings,
   Cron,
+  Services,
   ExperimentalServices,
   ExperimentalServiceGroups,
 } from '@vercel/build-utils';
@@ -106,6 +108,14 @@ export interface Deployment {
   alias: string[];
   aliasAssigned: boolean;
   aliasError: string | null;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   expiration?: number;
   proposedExpiration?: number;
   undeletedAt?: number;
@@ -149,7 +159,7 @@ export interface VercelConfig {
   meta?: string[];
   version?: number;
   public?: boolean;
-  env?: Dictionary<string>;
+  env?: Dictionary<string> | EnvVars;
   build?: {
     env?: Dictionary<string>;
   };
@@ -181,6 +191,7 @@ export interface VercelConfig {
    * This file will be included in prebuilt deployments.
    */
   bulkRedirectsPath?: string | null;
+  services?: Services;
   /**
    * @experimental This feature is experimental and may change.
    */

@@ -6,6 +6,7 @@ export type {
   Rewrite,
   HeaderRule,
   Condition,
+  MatchableValue,
   RouteType,
 } from '../types';
 export {

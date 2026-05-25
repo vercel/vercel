@@ -1,0 +1,220 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+  },
+  "files": {
+    // Allowlist source directories, exclude examples/ (has its own biome.json)
+    // and test fixtures (contain intentionally broken files that cause parse errors).
+    "includes": [
+      "api/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "internals/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "packages/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "!packages/**/test/fixtures/**",
+      "!packages/**/test/fixtures-*/**",
+      "!packages/**/test/dev/fixtures/**",
+      "!packages/**/test/build-fixtures/**",
+      "!packages/**/test/cache-fixtures/**",
+      "!packages/**/test/**/test-limit-exceeded*/**",
+      "!packages/cli/types/**",
+      "test/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "utils/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "*.js",
+      "*.ts",
+      "*.mjs",
+    ],
+  },
+  // Formatter settings match the existing Prettier configuration
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80,
+  },
+  "javascript": {
+    "formatter": {
+      // Matches Prettier: singleQuote: true
+      "quoteStyle": "single",
+      // Matches Prettier: trailingComma: "es5"
+      "trailingCommas": "es5",
+      // Matches Prettier: arrowParens: "avoid"
+      "arrowParentheses": "asNeeded",
+    },
+  },
+  // Disable import sorting to avoid churn
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "off",
+      },
+    },
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+
+      // Not relevant for this codebase (no browser UI)
+      "a11y": "off",
+
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noInnerDeclarations": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noConstantCondition": "error",
+        "noVoidTypeReturn": "error",
+        "noUnreachable": "error",
+        // Too noisy to enable now (277 hits)
+        "noUnusedFunctionParameters": "off",
+        // Disabled — too many existing violations
+        "noSwitchDeclarations": "off",
+        "useValidTypeof": "off",
+        "useParseIntRadix": "off",
+        // CSS rules — not applicable
+        "noUnknownMediaFeatureName": "off",
+        "noInvalidDirectionInLinearGradient": "off",
+      },
+
+      "suspicious": {
+        "noDuplicateObjectKeys": "error",
+        "noFocusedTests": "error",
+        "noSkippedTests": "error",
+        "noRedeclare": "error",
+        "noRedundantUseStrict": "error",
+        "noUselessEscapeInString": "error",
+        "noConstEnum": "error",
+        "noArrayIndexKey": "error",
+        "useAdjacentOverloadSignatures": "error",
+        "noDuplicateParameters": "error",
+        "noShadowRestrictedNames": "error",
+        "noThenProperty": "error",
+        "noTemplateCurlyInString": "error",
+        // Intentionally allowed across the codebase
+        "noExplicitAny": "off",
+        "noTsIgnore": "off",
+        // Disabled — too many existing violations
+        "noAssignInExpressions": "off",
+        "noImplicitAnyLet": "off",
+        "noDoubleEquals": "off",
+        "noGlobalIsNan": "off",
+        "noConfusingVoidType": "off",
+        "noPrototypeBuiltins": "off",
+        "useIterableCallbackReturn": "off",
+        "noControlCharactersInRegex": "off",
+        // CSS rules — not applicable
+        "noShorthandPropertyOverrides": "off",
+        "noDuplicateFontNames": "off",
+        "noNonNullAssertedOptionalChain": "off",
+      },
+
+      "style": {
+        // Globally off; overridden to "error" in packages/cli (see overrides)
+        "useConst": "off",
+        "useImportType": "off",
+        "useShorthandFunctionType": "error",
+        "useExportType": "error",
+        // Too noisy to enable now (786 hits)
+        "useNodejsImportProtocol": "off",
+        // Intentionally allowed across the codebase
+        "noNonNullAssertion": "off",
+        // Disabled — too many existing violations
+        "useTemplate": "off",
+      },
+
+      "complexity": {
+        "noCommaOperator": "error",
+        "noArguments": "error",
+        "noUselessLoneBlockStatements": "error",
+        "noUselessCatch": "error",
+        "useDateNow": "error",
+        "useFlatMap": "error",
+        "noUselessTernary": "error",
+        "noUselessRename": "error",
+        "noUselessEscapeInRegex": "error",
+        "noUselessSwitchCase": "error",
+        "noUselessContinue": "error",
+        "noUselessFragments": "error",
+        "noUselessConstructor": "error",
+        // Intentionally allowed across the codebase
+        "noBannedTypes": "off",
+        // Disabled — too many existing violations
+        "useArrowFunction": "off",
+        "useLiteralKeys": "off",
+        "useOptionalChain": "off",
+        "noUselessUndefinedInitialization": "off",
+        "useRegexLiterals": "off",
+        // CSS rules — not applicable
+        "noImportantStyles": "off",
+      },
+
+      // Not relevant for this codebase (server-side Node.js)
+      "performance": "off",
+
+      "security": {
+        "noDangerouslySetInnerHtml": "error",
+        "noDangerouslySetInnerHtmlWithChildren": "error",
+        // Disabled — too many existing violations
+        "noGlobalEval": "off",
+      },
+    },
+  },
+  "overrides": [
+    // Disable linting and formatting for generated code, fixtures, and vendored files
+    {
+      "includes": [
+        "packages/*/dist/**",
+        "packages/**/test/fixtures/**",
+        "packages/**/test/fixtures-*/**",
+        "packages/**/test/dev/fixtures/**",
+        "packages/**/test/build-fixtures/**",
+        "packages/**/test/cache-fixtures/**",
+        "packages/cli/src/util/dev/templates/*.ts",
+        "packages/cli/@types/**",
+        "packages/cli/download/**",
+        "packages/cli/bin/**",
+        "packages/cli/link/**",
+        "packages/client/tests/fixtures/**",
+        "packages/client/lib/**",
+        "packages/node/src/bridge.ts",
+        "packages/hydrogen/edge-entry.js",
+        "packages/next/test/integration/middleware/**",
+        "packages/next/test/integration/middleware-eval/**",
+        "packages/middleware/src/entries.js",
+        "packages/gatsby-plugin-vercel-analytics/**",
+        "packages/functions/**/*.js",
+      ],
+      "linter": {
+        "enabled": false,
+      },
+      "formatter": {
+        "enabled": false,
+      },
+    },
+    // CLI package has stricter rules
+    {
+      "includes": ["packages/cli/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConst": "error",
+            "useImportType": "error",
+          },
+        },
+      },
+    },
+    // no-console only applies to CLI source code, not tests/scripts/evals
+    {
+      "includes": ["packages/cli/src/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "error",
+          },
+        },
+      },
+    },
+  ],
+}

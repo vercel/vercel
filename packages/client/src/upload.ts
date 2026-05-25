@@ -59,9 +59,16 @@ export async function* upload(
         return yield event;
       }
     } else {
-      // If the deployment has succeeded here, don't continue
-      if (event.type === 'alias-assigned') {
-        debug('Deployment succeeded on file check');
+      // If the deployment has succeeded or v2 checks failed, don't continue
+      if (
+        event.type === 'alias-assigned' ||
+        event.type === 'checks-v2-failed'
+      ) {
+        debug(
+          event.type === 'alias-assigned'
+            ? 'Deployment succeeded on file check'
+            : 'v2 deployment-alias check failed on file check'
+        );
 
         return yield event;
       }
@@ -105,7 +112,10 @@ export async function* upload(
   try {
     debug('Starting deployment creation');
     for await (const event of deploy(files, clientOptions, deploymentOptions)) {
-      if (event.type === 'alias-assigned') {
+      if (
+        event.type === 'alias-assigned' ||
+        event.type === 'checks-v2-failed'
+      ) {
         debug('Deployment is ready');
         return yield event;
       }

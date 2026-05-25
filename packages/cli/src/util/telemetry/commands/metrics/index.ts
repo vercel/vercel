@@ -24,19 +24,10 @@ export class MetricsTelemetryClient
     }
   }
 
-  trackCliOptionEvent(v: string | undefined) {
+  trackCliArgumentMetricId(v: string | undefined) {
     if (v) {
-      this.trackCliOption({
-        option: 'event',
-        value: v,
-      });
-    }
-  }
-
-  trackCliOptionMeasure(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'measure',
+      this.trackCliArgument({
+        arg: 'metric-id',
         value: v,
       });
     }
@@ -64,15 +55,6 @@ export class MetricsTelemetryClient
     if (typeof v === 'number') {
       this.trackCliOption({
         option: 'limit',
-        value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliOptionOrderBy(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'order-by',
         value: this.redactedValue,
       });
     }
@@ -110,15 +92,6 @@ export class MetricsTelemetryClient
       this.trackCliOption({
         option: 'granularity',
         value: v,
-      });
-    }
-  }
-
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
       });
     }
   }

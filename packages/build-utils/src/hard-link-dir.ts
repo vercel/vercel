@@ -20,7 +20,6 @@ export async function hardLinkDir(src: string, destDirs: string[]) {
             try {
               await fs.mkdir(destSubdir, { recursive: true });
             } catch (err: any) {
-              // eslint-disable-line
               if (err.code !== 'EEXIST') throw err;
             }
             return destSubdir;
@@ -35,7 +34,6 @@ export async function hardLinkDir(src: string, destDirs: string[]) {
           try {
             await linkOrCopyFile(srcFile, destFile);
           } catch (err: any) {
-            // eslint-disable-line
             if (err.code === 'ENOENT') {
               // Ignore broken symlinks
               return;
@@ -52,7 +50,6 @@ async function linkOrCopyFile(srcFile: string, destFile: string) {
   try {
     await linkOrCopy(srcFile, destFile);
   } catch (err: any) {
-    // eslint-disable-line
     if (err.code === 'ENOENT') {
       await fs.mkdir(path.dirname(destFile), { recursive: true });
       await linkOrCopy(srcFile, destFile);
@@ -72,7 +69,6 @@ async function linkOrCopy(srcFile: string, destFile: string) {
   try {
     await fs.link(srcFile, destFile);
   } catch (err: any) {
-    // eslint-disable-line
     if (err.code !== 'EXDEV') throw err;
     await fs.copyFile(srcFile, destFile);
   }

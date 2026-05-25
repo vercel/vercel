@@ -2,18 +2,21 @@ import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname, join } from 'path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
-import frameworkList, { Framework } from '@vercel/frameworks';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import type {
   PackageJson,
   Builder,
   Config,
   BuilderFunctions,
+  Services,
+  ExperimentalServices,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
   isPythonEntrypoint,
+  isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
@@ -27,8 +30,21 @@ export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
 
 /**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
+ * These files are excluded from static file serving.
  */
-export const REGEX_VERCEL_PLATFORM_FILES = `api/**,package.json,${REGEX_MIDDLEWARE_FILES}`;
+export const REGEX_VERCEL_PLATFORM_FILES = [
+  'api/**',
+  'node_modules/**',
+  REGEX_MIDDLEWARE_FILES,
+  'package.json',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lock',
+  'bun.lockb',
+  '.gitignore',
+  'README.md',
+].join(',');
 
 /**
  * Pattern for non-Vercel platform files.
@@ -49,6 +65,8 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
+  services?: Services;
+  experimentalServices?: ExperimentalServices;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -116,18 +134,26 @@ export async function detectBuilders(
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
+  hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
+  fallbackRoutes?: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
+  useImplicitEnvInjection?: boolean;
 }> {
-  const { projectSettings = {} } = options;
+  const { services, experimentalServices, projectSettings = {} } = options;
   const { framework } = projectSettings;
+  const configuredServices = services ?? experimentalServices;
+  const hasServicesConfig =
+    configuredServices != null && typeof configuredServices === 'object';
 
-  if (framework === 'services') {
+  if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
+      configuredServices: configuredServices,
+      projectFramework: framework,
     });
   }
 
@@ -259,7 +285,8 @@ export async function detectBuilders(
       buildCommand &&
       !fileName.includes('/') &&
       fileName !== 'now.json' &&
-      fileName !== 'vercel.json'
+      fileName !== 'vercel.json' &&
+      fileName !== 'vercel.toml'
     ) {
       fallbackEntrypoint = fileName;
     }
@@ -367,12 +394,13 @@ export async function detectBuilders(
   if (frontendBuilder) {
     // Add @vercel/static build for public files for server-based frameworks
     // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
-    // This applies to Express, Hono, Go, and Python-based server frameworks.
+    // This applies to Express, Hono, Go, Python, and experimental backends.
     if (
-      frontendBuilder?.use === '@vercel/express' ||
-      frontendBuilder?.use === '@vercel/hono' ||
-      frontendBuilder?.use === '@vercel/python' ||
-      frontendBuilder?.use === '@vercel/go'
+      isOfficialRuntime('express', frontendBuilder?.use) ||
+      isOfficialRuntime('hono', frontendBuilder?.use) ||
+      isOfficialRuntime('python', frontendBuilder?.use) ||
+      isOfficialRuntime('go', frontendBuilder?.use) ||
+      isOfficialRuntime('backends', frontendBuilder?.use)
     ) {
       builders.push({
         src: 'public/**/*',
@@ -457,6 +485,24 @@ async function maybeGetApiBuilder(
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
     const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    if (!isEntrypoint) {
+      return null;
+    }
+  }
+
+  // For Node.js files under api/, verify they are valid entrypoints before
+  // creating a builder. This only applies to api/ files — root-level platform
+  // files (middleware.js, proxy.js, etc.) use different export signatures and
+  // must not be filtered by API handler pattern detection.
+  const nodeExtensions = ['.js', '.mjs', '.ts', '.tsx'];
+  if (
+    fileName.startsWith('api/') &&
+    process.env.VERCEL_NODE_FILTER_ENTRYPOINTS === '1' &&
+    nodeExtensions.some(ext => fileName.endsWith(ext)) &&
+    options.workPath
+  ) {
+    const fsPath = join(options.workPath, fileName);
+    const isEntrypoint = await isNodeEntrypoint({ fsPath });
     if (!isEntrypoint) {
       return null;
     }
@@ -677,13 +723,15 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.maxDuration !== undefined &&
+      func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
         func.maxDuration > 900 ||
         !Number.isInteger(func.maxDuration))
     ) {
       return {
         code: 'invalid_function_duration',
-        message: 'Functions must have a duration between 1 and 900.',
+        message:
+          'Functions must have a maxDuration between 1 and 900, or "max".',
       };
     }
 
@@ -1126,9 +1174,9 @@ function getRouteResult(
       const hasApiBuild = apiBuilders.find(builder => {
         return builder.src?.startsWith('api/');
       });
-      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild) {
-        // This route is only necessary to hide the directory listing
-        // to avoid enumerating serverless function names.
+      // Skip for Next.js: it serves /api (Pages + App Router) and 404s unmatched
+      // paths; adding a catch-all here would 404 dynamic routes like /api/flow/[id]/next.
+      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild && !isNextjs) {
         // But it causes issues in `vc dev` for frameworks that handle
         // their own functions such as redwood, so we ignore.
         rewriteRoutes.push({
@@ -1139,7 +1187,7 @@ function getRouteResult(
     } else {
       defaultRoutes.push(...apiRoutes);
 
-      if (apiRoutes.length) {
+      if (apiRoutes.length && !isNextjs) {
         defaultRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',

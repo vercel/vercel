@@ -1,0 +1,8 @@
+[project]
+name = "services-zc-root-backend-backend"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.133.0",
+    "uvicorn==0.41.0",
+]

@@ -41,7 +41,9 @@ const PYTHON_PACKAGES = getPythonPackages(root).map(pkg => ({
 }));
 
 if (PYTHON_PACKAGES.length === 0) {
-  throw new Error('No Python packages discovered under python/*/pyproject.toml');
+  throw new Error(
+    'No Python packages discovered under python/*/pyproject.toml'
+  );
 }
 const PYTHON_PACKAGE_NAMES = PYTHON_PACKAGES.map(pkg => pkg.name);
 
@@ -112,7 +114,7 @@ function printUsage() {
 Options:
   --package <name>   Publish only one package (repeatable).
   --package=all      Publish all configured packages (default).
-  --force            Publish even if version has not changed vs HEAD^.
+  --force            Publish even if already appears to be on PyPI.
 
 Known packages:
   ${PYTHON_PACKAGE_NAMES.join('\n  ')}
@@ -156,34 +158,46 @@ function assertVersionPin(pkg, currentVersion) {
   }
 }
 
-function getPreviousVersion(pyprojectPath) {
+async function isPublishedOnPyPI(packageName, version) {
+  const url = `https://pypi.org/pypi/${packageName}/${version}/json`;
+  console.log(`Checking PyPI: ${url}`);
+  let res;
   try {
-    const previousToml = execFileSync('git', ['show', `HEAD^:${pyprojectPath}`], {
-      encoding: 'utf8',
-      cwd: root,
+    res = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(10_000),
     });
-    return parseVersion(previousToml);
-  } catch {
-    // First commit or file did not exist in parent commit.
-    return '';
+  } catch (err) {
+    throw new Error(
+      `could not check whether ${packageName} ${version} has been published on PyPI: ${err.message}`
+    );
   }
+  if (res.ok) {
+    return true;
+  }
+  if (res.status === 404) {
+    return false;
+  }
+  throw new Error(
+    `could not check whether ${packageName} ${version} has been published on PyPI: HTTP ${res.status}`
+  );
 }
 
-function publishPackage(pkg, { force }) {
+async function publishPackage(pkg, { force }) {
   const pyprojectFullPath = resolve(root, pkg.pyprojectPath);
   const currentVersion = parseVersion(readFileSync(pyprojectFullPath, 'utf8'));
-  const previousVersion = getPreviousVersion(pkg.pyprojectPath);
 
-  if (currentVersion === previousVersion && !force) {
-    console.log(
-      `Python ${pkg.name} version unchanged (${currentVersion}), skipping PyPI publication.`
-    );
-    return;
+  if (!force) {
+    const alreadyPublished = await isPublishedOnPyPI(pkg.name, currentVersion);
+    if (alreadyPublished) {
+      console.log(
+        `Python ${pkg.name} ${currentVersion} already on PyPI, skipping publication.`
+      );
+      return;
+    }
   }
 
-  console.log(
-    `Python ${pkg.name} version changed: ${previousVersion || '(none)'} -> ${currentVersion}`
-  );
+  console.log(`Publishing ${pkg.name} ${currentVersion} to PyPI...`);
 
   assertVersionPin(pkg, currentVersion);
 
@@ -191,13 +205,7 @@ function publishPackage(pkg, { force }) {
   const distDir = resolve(root, pkg.distDir);
   rmSync(distDir, { recursive: true, force: true });
 
-  run('uv', [
-    'build',
-    '--package',
-    pkg.name,
-    '--out-dir',
-    `${pkg.distDir}/`,
-  ]);
+  run('uv', ['build', '--package', pkg.name, '--out-dir', `${pkg.distDir}/`]);
 
   const wheels = readdirSync(distDir).filter(file => file.endsWith('.whl'));
   if (wheels.length !== 1) {
@@ -229,14 +237,14 @@ function publishPackage(pkg, { force }) {
   console.log(`Successfully published ${pkg.name} ${currentVersion} on PyPI.`);
 }
 
-function main() {
+async function main() {
   const { force, packageNames } = parseArgs(process.argv.slice(2));
   const selectedPackages = packageNames.map(name => pythonPackageMap.get(name));
 
   const failures = [];
   for (const pkg of selectedPackages) {
     try {
-      publishPackage(pkg, { force });
+      await publishPackage(pkg, { force });
     } catch (err) {
       console.error(`\nFailed to publish ${pkg.name}: ${err.message}\n`);
       failures.push(pkg.name);
@@ -251,14 +259,13 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (error) {
+main().catch(error => {
   if (error instanceof UsageError) {
     console.error(error.message);
     console.error('');
     printUsage();
-    process.exit(1);
+  } else {
+    console.error(error);
   }
-  throw error;
-}
+  process.exit(1);
+});

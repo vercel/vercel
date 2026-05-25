@@ -13,7 +13,7 @@ export function findRootDir(): string | null {
       }
       dir = path.dirname(dir);
     }
-  } catch (e) {
+  } catch (_e) {
     throw new VercelOidcTokenError(
       'Token refresh only supported in node server environments'
     );

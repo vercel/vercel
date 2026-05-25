@@ -198,7 +198,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
   } else if (dest !== cwd) {
     try {
       fs.mkdirSync(dest);
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
     }
   }

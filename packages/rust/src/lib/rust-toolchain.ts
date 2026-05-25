@@ -21,7 +21,7 @@ export const installRustToolchain = async (): Promise<void> => {
   try {
     await execa(`rustup -V`, [], { shell: true, stdio: 'ignore' });
     debug('Rust Toolchain is already installed, skipping download');
-  } catch (err) {
+  } catch (_err) {
     await downloadRustToolchain();
   }
 };

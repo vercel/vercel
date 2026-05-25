@@ -34,10 +34,11 @@ export default async function main(client: Client) {
     getFlagsSpecification(integrationResourceCommand.options),
     { permissive: true }
   );
-  const { subcommand, subcommandOriginal } = getSubcommand(
-    args.slice(1),
-    COMMAND_CONFIG
-  );
+  const {
+    subcommand,
+    subcommandOriginal,
+    args: subArgs,
+  } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
   const needHelp = flags['--help'];
 
@@ -66,7 +67,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandCreateThreshold(subcommandOriginal);
-      return createThreshold(client);
+      return createThreshold(client, subArgs);
     }
     case 'remove': {
       if (needHelp) {
@@ -75,7 +76,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return remove(client);
+      return remove(client, subArgs);
     }
     case 'disconnect': {
       if (needHelp) {
@@ -84,7 +85,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandDisconnect(subcommandOriginal);
-      return disconnect(client);
+      return disconnect(client, subArgs);
     }
     default: {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

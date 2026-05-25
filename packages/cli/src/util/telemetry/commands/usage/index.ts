@@ -38,4 +38,13 @@ export class UsageTelemetryClient
       });
     }
   }
+
+  trackCliOptionGroupBy(groupBy: string | undefined) {
+    if (groupBy) {
+      this.trackCliOption({
+        option: 'group-by',
+        value: groupBy,
+      });
+    }
+  }
 }

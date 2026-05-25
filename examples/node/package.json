@@ -1,0 +1,10 @@
+{
+  "name": "generic-node-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone Node.js server deployed with Vercel's generic node preset.",
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "typescript": "4.9.5"
+  }
+}

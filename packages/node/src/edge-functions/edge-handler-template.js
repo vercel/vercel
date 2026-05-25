@@ -61,7 +61,6 @@ async function parseRequestEvent(event) {
 }
 
 // This will be invoked by logic using this template
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function registerFetchListener(module, options, dependencies) {
   let handler;
 

@@ -8,10 +8,9 @@ import chalk from 'chalk';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
 import { responseError } from './error';
-import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import type { GitMetadata, Org } from '@vercel-internals/types';
+import type { GitMetadata, Org, Project } from '@vercel-internals/types';
 import type { VercelConfig } from './dev/types';
 import type Client from './client';
 import { type FetchOptions, isJSONObject } from './client';
@@ -55,6 +54,9 @@ export interface CreateOptions {
   autoAssignCustomDomains?: boolean;
   agentName?: string;
   manual?: boolean;
+  jsonOutput?: boolean;
+  functionsBeta?: boolean;
+  linkedProject?: Project;
 }
 
 export interface RemoveOptions {
@@ -106,7 +108,7 @@ export default class Now {
     path: string,
     {
       // Legacy
-      nowConfig: nowConfig = {},
+      nowConfig = {},
 
       // Latest
       name,
@@ -124,7 +126,6 @@ export default class Now {
       forceNew = false,
       withCache = false,
       target = null,
-      deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
@@ -132,13 +133,15 @@ export default class Now {
       autoAssignCustomDomains,
       agentName,
       manual,
+      jsonOutput = false,
+      functionsBeta,
+      linkedProject,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
     archive?: ArchiveFormat
   ) {
     const hashes: any = {};
-    const uploadStamp = stamp();
 
     const requestBody = {
       ...nowConfig,
@@ -166,8 +169,6 @@ export default class Now {
       agent: this._client.agent,
       path,
       requestBody,
-      uploadStamp,
-      deployStamp,
       quiet,
       force: forceNew,
       withCache,
@@ -183,6 +184,9 @@ export default class Now {
       withFullLogs,
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
+      jsonOutput,
+      functionsBeta,
+      linkedProject,
     });
 
     if (deployment && deployment.warnings) {

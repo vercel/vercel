@@ -1,0 +1,17 @@
+[package]
+name = "vercel-actix-starter"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[dependencies]
+actix-web = "4"
+actix-rt = "2"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+vercel_runtime = { path = "../../crates/vercel_runtime", features = ["actix"] }

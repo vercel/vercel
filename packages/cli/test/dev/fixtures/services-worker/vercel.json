@@ -1,0 +1,21 @@
+{
+  "experimentalServices": {
+    "web": {
+      "framework": "fastapi",
+      "entrypoint": "web",
+      "routePrefix": "/"
+    },
+    "worker-exact": {
+      "type": "worker",
+      "runtime": "python",
+      "entrypoint": "worker/worker.py",
+      "topics": ["tasks-topic"]
+    },
+    "worker-wildcard": {
+      "type": "worker",
+      "runtime": "python",
+      "entrypoint": "worker-wildcard/worker.py",
+      "topics": ["tasks-*"]
+    }
+  }
+}

@@ -1,3 +1,4 @@
 {
-  "installCommand": "pip install -r requirements-vercel.txt"
+  "installCommand": "pip install -r requirements-vercel.txt",
+  "buildCommand": "python3 -c 'import fastapi'  # check installation"
 }

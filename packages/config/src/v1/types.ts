@@ -16,6 +16,7 @@ export type {
   ImageConfig,
   Header,
   Condition,
+  MatchableValue,
   Redirect,
   Rewrite,
   HeaderRule,

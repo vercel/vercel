@@ -41,7 +41,6 @@ export default async function list(
   client: Client,
   {
     message = 'the question',
-    // eslint-disable-line no-unused-vars
     choices: _choices = [
       {
         name: 'something\ndescription\ndetails\netc',

@@ -58,6 +58,14 @@ class EndPayload:
 
 
 @attrs.frozen
+class UnrecoverableErrorPayload:
+    """Payload for ``unrecoverable-error``."""
+
+    exit_code: int
+    message: str
+
+
+@attrs.frozen
 class MetricPayload:
     """Payload for ``metric``."""
 
@@ -101,6 +109,14 @@ class EndMessage:
 
     type: Literal["end"]
     payload: EndPayload
+
+
+@attrs.frozen
+class UnrecoverableErrorMessage:
+    """``unrecoverable-error`` message."""
+
+    type: Literal["unrecoverable-error"]
+    payload: UnrecoverableErrorPayload
 
 
 @attrs.frozen
@@ -169,6 +185,15 @@ def _parse_message(raw: dict[str, Any]) -> N1Message:
             ),
         )
 
+    if msg_type == "unrecoverable-error":
+        return UnrecoverableErrorMessage(
+            type="unrecoverable-error",
+            payload=UnrecoverableErrorPayload(
+                exit_code=payload.get("exitCode", 0),
+                message=payload.get("message", ""),
+            ),
+        )
+
     if msg_type == "metric":
         return MetricMessage(
             type="metric",
@@ -187,6 +212,7 @@ N1Message = (
     | HandlerStartedMessage
     | LogMessage
     | EndMessage
+    | UnrecoverableErrorMessage
     | MetricMessage
     | UnknownMessage
 )

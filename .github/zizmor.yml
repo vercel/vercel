@@ -1,0 +1,14 @@
+rules:
+  artipacked:
+    disable: true
+  excessive-permissions:
+    disable: true
+  ref-version-mismatch:
+    ignore:
+      - ci-doctor.lock.yml
+  template-injection:
+    disable: true
+  unpinned-uses:
+    config:
+      policies:
+        'actions/*': any

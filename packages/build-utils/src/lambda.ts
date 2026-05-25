@@ -10,6 +10,7 @@ import type {
   Env,
   Files,
   FunctionFramework,
+  MaxDuration,
   TriggerEvent,
   TriggerEventInput,
 } from './types';
@@ -62,7 +63,7 @@ export interface LambdaOptionsBase {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture?: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   environment?: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -160,7 +161,7 @@ export class Lambda {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   environment: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -262,7 +263,10 @@ export class Lambda {
     }
 
     if (maxDuration !== undefined) {
-      assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
+      assert(
+        typeof maxDuration === 'number' || maxDuration === 'max',
+        '"maxDuration" is not a number or "max"'
+      );
     }
 
     if (allowQuery !== undefined) {
@@ -357,14 +361,6 @@ export class Lambda {
           trigger.consumer.length > 0,
           `${prefix}.consumer cannot be empty`
         );
-
-        // v2beta allows only one trigger per function
-        if (trigger.type === 'queue/v2beta') {
-          assert(
-            experimentalTriggers.length === 1,
-            '"experimentalTriggers" can only have one item for queue/v2beta'
-          );
-        }
 
         // Validate optional queue configuration
         if (trigger.maxDeliveries !== undefined) {
@@ -559,6 +555,18 @@ export async function getLambdaOptionsFromFunction({
               return trigger;
             }
           );
+
+        // User-configured functions can only have one v2beta trigger.
+        // Services may attach multiple triggers programmatically.
+        if (
+          experimentalTriggers &&
+          experimentalTriggers.length > 1 &&
+          experimentalTriggers.some(t => t.type === 'queue/v2beta')
+        ) {
+          throw new Error(
+            `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
+          );
+        }
 
         return {
           architecture: fn.architecture,

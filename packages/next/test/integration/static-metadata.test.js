@@ -1,4 +1,3 @@
-/* eslint-env jest */
 process.env.NEXT_BUILDER_INTEGRATION = '1';
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
@@ -10,10 +9,10 @@ const {
 
 const runBuildLambda = createRunBuildLambda(builder);
 
-jest.setTimeout(360000);
+vi.setConfig({ testTimeout: 360000, hookTimeout: 360000 });
 
 describe('Static Metadata Integration Test', () => {
-  // eslint-disable-next-line jest/no-disabled-tests
+  // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
   it.skip('should build static metadata and verify Prerender outputs', async () => {
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-static-metadata-test')

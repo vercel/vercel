@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { describe, expect, it } from 'vitest';
 import {
   resolveVariant,
@@ -103,23 +105,30 @@ describe('resolve-variant', () => {
       });
     });
 
-    describe('resolution by label', () => {
-      it('resolves variant by label (case-insensitive)', () => {
+    describe('label handling', () => {
+      it('does not resolve variant by label', () => {
         const result = resolveVariant('Enabled', booleanVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_abc123');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "Enabled" not found');
+        expect(result.error).toContain(
+          'You can specify a variant by its ID or value.'
+        );
       });
 
-      it('resolves variant by label with different case', () => {
+      it('does not resolve variant by label with different case', () => {
         const result = resolveVariant('enabled', booleanVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_abc123');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "enabled" not found');
+        expect(result.error).toContain('Enabled');
+        expect(result.error).toContain('Disabled');
       });
 
-      it('resolves "Control Group" label', () => {
+      it('shows labels in available variants when a label-like selector is used', () => {
         const result = resolveVariant('Control Group', stringVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_str1');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "Control Group" not found');
+        expect(result.error).toContain('Control Group');
+        expect(result.error).toContain('Variant A');
       });
     });
 
@@ -136,7 +145,7 @@ describe('resolve-variant', () => {
       it('includes helpful message in error', () => {
         const result = resolveVariant('bad-value', stringVariants);
         expect(result.error).toContain(
-          'You can specify a variant by its value'
+          'You can specify a variant by its ID or value.'
         );
       });
 
@@ -151,29 +160,33 @@ describe('resolve-variant', () => {
   describe('formatVariantForDisplay', () => {
     it('formats variant with label', () => {
       const result = formatVariantForDisplay(booleanVariants[0]);
-      expect(result).toContain('variant_abc123');
-      expect(result).toContain('value: true');
-      expect(result).toContain('label: "Enabled"');
+      expect(stripAnsi(result)).toBe('true Enabled');
+      expect(result).toBe(`true ${chalk.dim('Enabled')}`);
     });
 
     it('formats variant without label', () => {
       const result = formatVariantForDisplay(stringVariants[2]);
-      expect(result).toContain('variant_str3');
-      expect(result).toContain('value: "off"');
-      expect(result).not.toContain('label');
+      expect(result).toBe('"off"');
     });
   });
 
   describe('formatAvailableVariants', () => {
     it('formats list of variants with labels', () => {
       const result = formatAvailableVariants(booleanVariants);
-      expect(result).toContain('- true (Enabled)');
-      expect(result).toContain('- false (Disabled)');
+      expect(stripAnsi(result)).toContain('- true Enabled');
+      expect(stripAnsi(result)).toContain('- false Disabled');
+      expect(result).toContain(
+        `- ${chalk.bold('true')} ${chalk.dim('Enabled')}`
+      );
+      expect(result).toContain(
+        `- ${chalk.bold('false')} ${chalk.dim('Disabled')}`
+      );
     });
 
     it('formats list of variants without labels', () => {
       const result = formatAvailableVariants([stringVariants[2]]);
-      expect(result).toContain('- "off"');
+      expect(stripAnsi(result)).toContain('- "off"');
+      expect(result).toContain(`- "${chalk.bold('off')}"`);
       expect(result).not.toContain('(');
     });
   });

@@ -15,16 +15,16 @@ export class Awaiter {
     );
 
   public waitUntil = (promise: Promise<unknown>) => {
-    this.promises.add(promise);
+    // Attach an error handler immediately to prevent unhandled promise rejections
+    // while still tracking the promise for awaiting later
+    const handledPromise = Promise.resolve(promise).catch(this.onError);
+    this.promises.add(handledPromise);
   };
 
   private waitForBatch = async () => {
     const promises = Array.from(this.promises);
     this.promises.clear();
-    await Promise.all(
-      promises.map(promise =>
-        Promise.resolve(promise).then(() => undefined, this.onError)
-      )
-    );
+    // Errors are already handled in waitUntil, so we just need to await completion
+    await Promise.all(promises);
   };
 }

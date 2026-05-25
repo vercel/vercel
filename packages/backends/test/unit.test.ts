@@ -7,6 +7,7 @@ import { build } from '../src/index';
 import { join, resolve } from 'node:path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
+import { pathToRegexp } from 'path-to-regexp';
 import {
   readdir,
   readFile,
@@ -18,6 +19,9 @@ import {
   realpath,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import type { IncomingMessage } from 'node:http';
+import { Server as HttpServer } from 'node:http';
+import { createServerlessEventHandler } from '../../node/src/serverless-functions/serverless-handler.mts';
 
 const meta = { skipDownload: true };
 const defaultConfig = {
@@ -79,6 +83,9 @@ const USE_DEBUG_DIR = false;
 process.env.VERCEL_BUILDER_DEBUG = '0';
 
 const DEBUG_DIR = join(__dirname, 'debug');
+const SERVICE_ROUTE_PREFIX_PATCH = Symbol.for(
+  'vc.service.route-prefix-strip.patch'
+);
 
 const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
   // Always copy source to a random tmp dir
@@ -179,7 +186,7 @@ describe('successful builds', async () => {
     ); // copying fixture and running npm install so it takes a while
   }
 
-  // eslint-disable-next-line jest/no-disabled-tests
+  // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
   it.skip(`builds workflow-server`, async () => {
     const workPath = resolve(process.env.HOME!, 'code/workflow-server');
 
@@ -198,6 +205,37 @@ describe('successful builds', async () => {
     await extractAndExecuteLambda(lambda, tempDir);
   }, 20000);
 });
+
+it.skipIf(process.platform === 'win32')(
+  'does not crash when a workspace dep cannot be resolved',
+  async () => {
+    const fixtureName = '17-turborepo-hono-monorepo';
+    const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+    const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+    // Add an unresolvable workspace dep import to server.ts
+    const serverPath = join(workDir, 'apps/api/server.ts');
+    const serverContent = await readFile(serverPath, 'utf-8');
+    await writeFile(
+      serverPath,
+      `// @ts-expect-error\nimport { MAGIC } from '@repo/unresolvable'\nconsole.log(MAGIC)\n${serverContent}`
+    );
+
+    // The workspace dep has no exports/main, so rolldown can't resolve it.
+    // Before the fix, this caused: "File .../apps/api/@repo/unresolvable does not exist."
+    await expect(
+      build({
+        files: {},
+        workPath: join(workDir, 'apps/api'),
+        config: getFixtureConfig(await loadVercelJson(fixtureSource)),
+        meta,
+        entrypoint: 'package.json',
+        repoRootPath: workDir,
+      })
+    ).resolves.toBeDefined();
+  },
+  30000
+);
 
 it('extractAndExecuteLambda throws with invalid code', async () => {
   const validLambda = new NodejsLambda({
@@ -237,23 +275,290 @@ it('extractAndExecuteLambda throws with invalid code', async () => {
   ).rejects.toThrow();
 });
 
+it('maps service internal function output without leading slash', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'js-api');
+  expect(
+    result.routes?.some(route => route.dest === '/_svc/js-api/index')
+  ).toBe(true);
+  expect(result.output.index).toBeUndefined();
+  expect(result.output['_svc/js-api/index']).toBeDefined();
+  expect(result.output['/_svc/js-api/index']).toBeUndefined();
+  expect(lambda.handler).toBe('index.mjs');
+}, 30000);
+
+it('prefixes emitted service route sources with routePrefix', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api/js',
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'js-api');
+  expect(result.routes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: '^/api/js(?:/(.*))?$',
+        dest: '/_svc/js-api/index',
+      }),
+    ])
+  );
+  expect(result.output.index).toBeUndefined();
+  expect(lambda.handler).toContain('__vc_service_vc_init');
+  expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX).toBe('/api/js');
+  expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP).toBe('1');
+}, 30000);
+
+it('does not double-prefix routes already authored with routePrefix', async () => {
+  const fixtureName = '04-hono-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api',
+      serviceName: 'hono-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'hono-api');
+  expect(result.routes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: pathToRegexp('/api/data').regexp.source,
+        dest: '/_svc/hono-api/index',
+        methods: ['GET'],
+      }),
+      expect.objectContaining({
+        src: pathToRegexp('/api/user/:id').regexp.source,
+        dest: '/_svc/hono-api/index',
+        methods: ['GET'],
+      }),
+      expect.objectContaining({
+        src: '^/api(?:/(.*))?$',
+        dest: '/_svc/hono-api/index',
+      }),
+    ])
+  );
+  expect(result.output.index).toBeUndefined();
+  expect(lambda.handler).toContain('__vc_service_vc_init');
+}, 30000);
+
+it('does not rewrite non-service route outputs', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: defaultConfig,
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = result.output.index as unknown as NodejsLambda;
+  expect(result.output['_svc/js-api/index']).toBeUndefined();
+  expect(lambda.handler).toBe('index.mjs');
+}, 30000);
+
+it('strips service route prefixes for express apps at runtime', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir, lambdaOutputDir } = await getWorkDir(
+    fixtureName,
+    fixtureSource
+  );
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api/js',
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'js-api');
+  const response = await requestBuiltLambda({
+    lambda,
+    dir: lambdaOutputDir,
+    path: '/api/js/user/123',
+    routePrefix: '/api/js',
+  });
+
+  expect(response.status).toBe(200);
+  expect(readLambdaResponseBody(response)).toBe('Hello World');
+}, 30000);
+
+it('emits crons[] and a dispatcher shim for a schedule-triggered service', async () => {
+  const fixtureName = '20-cron-default-export';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      serviceName: 'cleanup',
+    },
+    meta,
+    entrypoint: 'index.mjs',
+    repoRootPath: workDir,
+    service: {
+      name: 'cleanup',
+      type: 'job',
+      trigger: 'schedule',
+      schedule: '0 0 * * *',
+    },
+  })) as BuildResultV2Typical;
+
+  // Build result includes the cron entry the CLI/orchestrator consumes.
+  expect(result.crons).toEqual([
+    expect.objectContaining({
+      path: '/_svc/cleanup/crons/index/cron',
+      schedule: '0 0 * * *',
+    }),
+  ]);
+
+  // Lambda is mounted at the internal service path.
+  const lambda = getServiceLambda(result, 'cleanup');
+  expect(lambda).toBeDefined();
+
+  // Lambda handler points at the dispatcher shim, not the user file.
+  expect(lambda.handler).toContain('__vc_cron_dispatch');
+
+  // The dispatcher shim is in the lambda bundle and embeds the route
+  // table inline (not via lambda env, since AWS Lambda rejects env var
+  // names with leading underscores).
+  expect(lambda.files).toBeDefined();
+  const dispatcherFileKey = Object.keys(lambda.files!).find(k =>
+    k.endsWith('__vc_cron_dispatch.mjs')
+  );
+  expect(dispatcherFileKey).toBeDefined();
+  const dispatcherFile = lambda.files![dispatcherFileKey!] as unknown as {
+    data: Buffer | string;
+  };
+  const dispatcherSource =
+    typeof dispatcherFile.data === 'string'
+      ? dispatcherFile.data
+      : dispatcherFile.data.toString('utf-8');
+  expect(dispatcherSource).toContain(
+    `JSON.parse('{"/_svc/cleanup/crons/index/cron":"default"}')`
+  );
+  expect(lambda.environment.__VC_CRON_ROUTES).toBeUndefined();
+
+  // No catchall route — cron services only respond at their internal cron path.
+  const hasCatchall = result.routes?.some(
+    r => typeof r.src === 'string' && r.src.includes('(.*)')
+  );
+  expect(hasCatchall).toBe(false);
+}, 60000);
+
+it('rejects entrypoints with named-function (module:function) syntax', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  await expect(
+    build({
+      files: {},
+      workPath: workDir,
+      config: {
+        ...defaultConfig,
+        // fs-detectors sets `handlerFunction` from `entrypoint:
+        // "file.ts:foo"` colon syntax. JS-land has no precedent for
+        // named-function entrypoints — the guard rejects it loudly.
+        handlerFunction: 'someHandler',
+      },
+      meta,
+      entrypoint: 'src/server.ts',
+      repoRootPath: workDir,
+    })
+  ).rejects.toThrow(/Named-function entrypoints are not supported/);
+}, 30000);
+
+it('strips service route prefixes for hono apps at runtime', async () => {
+  const fixtureName = '04-hono-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir, lambdaOutputDir } = await getWorkDir(
+    fixtureName,
+    fixtureSource
+  );
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api',
+      serviceName: 'hono-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'hono-api');
+  const response = await requestBuiltLambda({
+    lambda,
+    dir: lambdaOutputDir,
+    path: '/api/user/123',
+    routePrefix: '/api',
+  });
+
+  expect(response.status).toBe(200);
+  expect(readLambdaResponseBody(response)).toBe('User ID: 123');
+}, 30000);
+
 const extractAndExecuteLambda = async (
   lambda: NodejsLambda,
   dir: string,
   extractDirectly = false
 ) => {
-  const out = await lambda.createZip();
-  const lambdaZipPath = join(dir, 'lambda.zip');
-  await writeFile(lambdaZipPath, new Uint8Array(out));
-
-  // When extractDirectly is true, extract to dir directly (for debug output)
-  // Otherwise, extract to dir/lambda subfolder
-  const unzipPath = extractDirectly ? dir : join(dir, 'lambda');
-  await execa('unzip', ['-o', lambdaZipPath, '-d', unzipPath], {
-    stdio: 'ignore',
-  });
-
-  const handlerPath = join(unzipPath, lambda.handler);
+  const { handlerPath, unzipPath } = await extractLambda(
+    lambda,
+    dir,
+    extractDirectly
+  );
 
   // Wrap in a Promise to properly wait for the process to exit
   await new Promise<void>((resolve, reject) => {
@@ -320,4 +625,92 @@ const extractAndExecuteLambda = async (
       settle(() => resolve());
     }, 2000);
   });
+};
+
+const extractLambda = async (
+  lambda: NodejsLambda,
+  dir: string,
+  extractDirectly = false
+) => {
+  const out = await lambda.createZip();
+  const lambdaZipPath = join(dir, 'lambda.zip');
+  await writeFile(lambdaZipPath, new Uint8Array(out));
+
+  // When extractDirectly is true, extract to dir directly (for debug output)
+  // Otherwise, extract to dir/lambda subfolder
+  const unzipPath = extractDirectly ? dir : join(dir, 'lambda');
+  await execa('unzip', ['-o', lambdaZipPath, '-d', unzipPath], {
+    stdio: 'ignore',
+  });
+
+  return {
+    unzipPath,
+    handlerPath: join(unzipPath, lambda.handler),
+  };
+};
+
+const getServiceLambda = (result: BuildResultV2Typical, serviceName: string) =>
+  result.output[`_svc/${serviceName}/index`] as unknown as NodejsLambda;
+
+const requestBuiltLambda = async (args: {
+  lambda: NodejsLambda;
+  dir: string;
+  path: string;
+  routePrefix: string;
+}) => {
+  const { handlerPath } = await extractLambda(args.lambda, args.dir);
+  const originalEmit = HttpServer.prototype.emit;
+  const originalRoutePrefix = process.env.VERCEL_SERVICE_ROUTE_PREFIX;
+  const originalStrip = process.env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP;
+
+  process.env.VERCEL_SERVICE_ROUTE_PREFIX = args.routePrefix;
+  process.env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+
+  try {
+    const { handler, onExit } = await createServerlessEventHandler(
+      handlerPath,
+      {
+        mode: 'buffer',
+        shouldAddHelpers: false,
+      }
+    );
+
+    try {
+      return await handler({
+        method: 'GET',
+        url: args.path,
+        headers: {
+          host: 'example.com',
+          'x-forwarded-host': 'example.com',
+        },
+      } as unknown as IncomingMessage);
+    } finally {
+      await onExit();
+    }
+  } finally {
+    HttpServer.prototype.emit = originalEmit;
+    delete (globalThis as any)[SERVICE_ROUTE_PREFIX_PATCH];
+    restoreEnvVar('VERCEL_SERVICE_ROUTE_PREFIX', originalRoutePrefix);
+    restoreEnvVar('VERCEL_SERVICE_ROUTE_PREFIX_STRIP', originalStrip);
+  }
+};
+
+const readLambdaResponseBody = (
+  response: Awaited<ReturnType<typeof requestBuiltLambda>>
+) => {
+  if (response.body === null) {
+    return '';
+  }
+
+  return Buffer.isBuffer(response.body)
+    ? response.body.toString(response.encoding)
+    : '';
+};
+
+const restoreEnvVar = (name: string, value: string | undefined) => {
+  if (typeof value === 'string') {
+    process.env[name] = value;
+  } else {
+    delete process.env[name];
+  }
 };

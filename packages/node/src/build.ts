@@ -44,6 +44,7 @@ import type {
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
+import { generateProjectManifest } from './diagnostics';
 import {
   validateConfiguredRuntime,
   entrypointToOutputPath,
@@ -62,8 +63,7 @@ interface DownloadOptions {
 
 const require_ = createRequire(__filename);
 
-// eslint-disable-next-line no-useless-escape
-const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+const libPathRegEx = /^node_modules|[/\\]node_modules[/\\]/;
 
 async function downloadInstallAndBundle({
   files,
@@ -84,6 +84,7 @@ async function downloadInstallAndBundle({
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -119,7 +120,15 @@ async function downloadInstallAndBundle({
     );
   }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnEnv };
+  return {
+    entrypointPath,
+    entrypointFsDirname,
+    nodeVersion,
+    spawnEnv,
+    cliType,
+    lockfilePath,
+    lockfileVersion,
+  };
 }
 
 function renameTStoJS(path: string) {
@@ -405,6 +414,15 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
+// Track whether bundling routes have already been emitted so they are only
+// included once across all bundled entrypoint builds.
+let bundlingRoutesEmitted = false;
+
+/** @internal Reset bundling routes state between test runs. */
+export function _resetBundlingRoutesEmitted() {
+  bundlingRoutesEmitted = false;
+}
+
 export const build = async ({
   files,
   entrypoint,
@@ -436,6 +454,9 @@ export const build = async ({
     entrypointFsDirname,
     nodeVersion,
     spawnEnv,
+    cliType,
+    lockfilePath,
+    lockfileVersion,
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
@@ -593,15 +614,87 @@ export const build = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    const supportsResponseStreaming =
+    // AWS custom handlers can't stream responses. The canonical gate
+    // lives in `@vercel/build-utils`'s `getLambdaSupportsStreaming`, but
+    // the build-container picks that up on its own rollout cadence —
+    // until then this build-time signal is what protects users on the
+    // Node builder. Keep this in sync with the central gate.
+    let supportsResponseStreaming: boolean | undefined;
+    if (awsLambdaHandler) {
+      supportsResponseStreaming = false;
+    } else if (
       (staticConfig?.supportsResponseStreaming ??
         staticConfig?.experimentalResponseStreaming) === true
-        ? true
-        : undefined;
+    ) {
+      supportsResponseStreaming = true;
+    }
+
+    const enableBundling =
+      process.env.VERCEL_API_FUNCTION_BUNDLING === '1' &&
+      config.zeroConfig === true &&
+      !isMiddleware &&
+      !isEdgeFunction;
+
+    if (enableBundling) {
+      // All bundleable lambdas share this identical handler file so that
+      // groupLambdas can match their handler field and digest, grouping
+      // them into a single Lambda. At runtime, the shared handler uses
+      // x-matched-path to route to the correct user entrypoint.
+      const bundledHandlerName = '___vc_bundled_api_handler.js';
+      const entrypointPrefix = relative(baseDir, workPath).split(sep).join('/');
+      preparedFiles[bundledHandlerName] = new FileBlob({
+        data: readFileSync(
+          join(dirname(__filename), 'bundling-handler.js'),
+          'utf8'
+        ).replace(
+          'process.env.VERCEL_ENTRYPOINT_PREFIX',
+          JSON.stringify(entrypointPrefix)
+        ),
+      });
+      handler = bundledHandlerName;
+
+      // Inject x-matched-path as a request header so the bundled handler
+      // knows which entrypoint to invoke. These routes are identical for
+      // every bundled entrypoint, so only emit them once to avoid
+      // inflating the route table during route merging.
+      if (!bundlingRoutesEmitted) {
+        bundlingRoutesEmitted = true;
+        routes = [
+          { handle: 'hit' },
+          {
+            src: '/index(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+          {
+            src: '/((?!index$).*?)(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/$1',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+        ];
+      }
+    }
 
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      experimentalAllowBundling: enableBundling || undefined,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
       useWebApi: isMiddleware ? true : useWebApi,
@@ -617,6 +710,20 @@ export const build = async ({
         process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
         '1',
     });
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write node manifest: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 
   return { routes, output };

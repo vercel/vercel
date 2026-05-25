@@ -37,13 +37,14 @@ export default async function metrics(client: Client): Promise<number> {
     subArgs,
     COMMAND_CONFIG
   );
+  const positionalMetric = subArgs[0] === 'query' ? subArgs[1] : subArgs[0];
 
   const needHelp = parsedArgs.flags['--help'];
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('metrics', subcommand);
     output.print(help(metricsCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printSubHelp(command: Command) {
@@ -60,7 +61,7 @@ export default async function metrics(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('metrics', subcommandOriginal);
         printSubHelp(schemaSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSchema(subcommandOriginal);
       const schemaFn = (await import('./schema')).default;
@@ -70,10 +71,10 @@ export default async function metrics(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('metrics', subcommandOriginal);
         output.print(help(metricsCommand, { columns: client.stderr.columns }));
-        return 2;
+        return 0;
       }
-      // Show help if --event is not provided (required for query)
-      if (!parsedArgs.flags['--event']) {
+      // Show help if no metric was provided for the default query form.
+      if (!positionalMetric) {
         output.print(help(metricsCommand, { columns: client.stderr.columns }));
         return 2;
       }

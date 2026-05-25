@@ -84,6 +84,14 @@ function generateExample(
 }
 
 /**
+ * Whether a field uses a vercel-region control where the server handles region selection.
+ */
+export function isServerHandledRegion(prop: MetadataSchemaProperty): boolean {
+  const control = prop['ui:control'];
+  return control === 'vercel-region' || control === 'multi-vercel-region';
+}
+
+/**
  * Format metadata schema as help text for CLI display
  * @param schema The metadata schema to format
  * @param integrationName The integration slug/name
@@ -117,7 +125,10 @@ export function formatMetadataSchemaHelp(
     }
 
     const isRequired = required.has(key);
-    const requiredSuffix = isRequired ? chalk.red(' (required)') : '';
+    const requiredSuffix =
+      isRequired && !isServerHandledRegion(prop)
+        ? chalk.red(' (required)')
+        : '';
 
     const typeHint =
       prop.type === 'boolean'
@@ -160,4 +171,32 @@ export function formatMetadataSchemaHelp(
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Merges integration-level metadata schema (e.g. org name, region) with
+ * product-level metadata schema (e.g. platform) into a single schema.
+ * Installation-level fields appear first, followed by product-level fields.
+ * Product properties win on key collision.
+ */
+export function mergeMetadataSchemas(
+  productSchema?: MetadataSchema,
+  integrationSchema?: MetadataSchema
+): MetadataSchema | undefined {
+  if (!productSchema && !integrationSchema) return undefined;
+  if (!integrationSchema) return productSchema;
+  if (!productSchema) return integrationSchema;
+  return {
+    type: 'object',
+    properties: {
+      ...integrationSchema.properties,
+      ...productSchema.properties,
+    },
+    required: [
+      ...new Set([
+        ...(integrationSchema.required ?? []),
+        ...(productSchema.required ?? []),
+      ]),
+    ],
+  };
 }

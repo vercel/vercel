@@ -370,8 +370,9 @@ describe('inspect', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${deployment.url}" in ${user.username}`
       );
-      expect(client.getFullOutput().split('\n').slice(1).join('\n'))
-        .toMatchInlineSnapshot(`
+      expect(
+        client.getFullOutput().split('\n').slice(1).join('\n')
+      ).toMatchInlineSnapshot(`
         "status	● Queued
         "
       `);
@@ -394,8 +395,9 @@ describe('inspect', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${deployment.url}" in ${user.username}`
       );
-      expect(client.getFullOutput().split('\n').slice(1).join('\n'))
-        .toMatchInlineSnapshot(`
+      expect(
+        client.getFullOutput().split('\n').slice(1).join('\n')
+      ).toMatchInlineSnapshot(`
         "2024-06-03T15:01:10.339Z  Hello, world!
         2024-06-03T15:01:10.340Z  Bye...
         status	● Error
@@ -438,8 +440,9 @@ describe('inspect', () => {
       await Promise.all<void>([runInspect(), slowlyDeploy()]);
 
       expect(exitCode).toEqual(0);
-      expect(client.getFullOutput().split('\n').slice(1).join('\n'))
-        .toMatchInlineSnapshot(`
+      expect(
+        client.getFullOutput().split('\n').slice(1).join('\n')
+      ).toMatchInlineSnapshot(`
         "2024-06-03T15:01:10.339Z  Hello, world!
         2024-06-03T15:01:10.340Z  building...
         2024-06-03T15:01:11.000Z  build complete

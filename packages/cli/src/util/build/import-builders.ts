@@ -7,6 +7,7 @@ import { isStaticRuntime } from '@vercel/fs-detectors';
 import type {
   BuilderV2,
   BuilderV3,
+  BuilderVX,
   PackageJson,
   Span,
 } from '@vercel/build-utils';
@@ -25,7 +26,7 @@ export interface BuilderWithPkg {
    * absolute path to the package.json of the builder
    */
   pkgPath: string;
-  builder: BuilderV2 | BuilderV3;
+  builder: BuilderV2 | BuilderV3 | BuilderVX;
   pkg: PackageJson & { name: string };
   /**
    * true if the builder was installed into `.vercel/builders` (e.g. via npm);

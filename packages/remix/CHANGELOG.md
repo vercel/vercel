@@ -1,5 +1,62 @@
 # @vercel/remix-builder
 
+## 5.8.2
+
+### Patch Changes
+
+- 744e96c: Serve React Router v7 prerendered routes from static HTML/data files instead of the SSR function.
+
+  Previously, when `react-router build` ran with `prerender()` configured, the prerendered HTML and `.data` files were emitted into the build output but the per-route SSR function was still installed at the same logical paths, so the filesystem handle resolved requests to the function instead of the static files.
+
+  The builder now scans the client output for prerender artifacts (`<path>.html` and `index.html` for the root) and, when found, skips the SSR function override and emits a pre-filesystem rewrite from `/<path>` to the prerendered HTML file. Routes that aren't prerendered continue to be served by the SSR function unchanged.
+
+## 5.8.1
+
+### Patch Changes
+
+- 97f87f7: Emit `.data` function entries for React Router single-fetch routes so per-route function config is preserved. Also emits a `_root.data` entry for the root index route, which uses that URL (not `/index.data`) for its single-fetch document loader.
+
+## 5.8.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+  - @vercel/error-utils@2.1.0
+
+## 5.7.2
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+## 5.7.1
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+## 5.7.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+
+## 5.6.0
+
+### Minor Changes
+
+- [remix] Support future.v8_middleware option ([#15189](https://github.com/vercel/vercel/pull/15189))
+
 ## 5.5.10
 
 ### Patch Changes

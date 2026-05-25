@@ -1,0 +1,17 @@
+{
+  "build": {
+    "env": {
+      "VERCEL_API_FUNCTION_BUNDLING": "1"
+    }
+  },
+  "probes": [
+    { "path": "/api/hello", "mustContain": "hello:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/another", "mustContain": "another:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/nested/deep", "mustContain": "deep:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/ts-handler", "mustContain": "typescript:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/esm-handler", "mustContain": "esm:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/web-get", "mustContain": "web-get:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/fetch-handler", "mustContain": "fetch:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/post-echo", "method": "POST", "body": "test-body", "mustContain": "echo:\"test-body\"" }
+  ]
+}

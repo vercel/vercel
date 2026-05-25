@@ -1,21 +1,33 @@
 import type { Route } from '@vercel/routing-utils';
 import type {
+  DetectEntrypointFn,
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ServiceConfig,
+  Services,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
   Service,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 export type {
+  DetectEntrypointFn,
+  EnvVar,
+  EnvVars,
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ServiceConfig,
+  Services,
   ServiceRuntime,
   ServiceType,
+  ServiceRefEnvVar,
   Service,
   Builder,
 };
@@ -32,39 +44,65 @@ export interface DetectServicesOptions {
    * If provided, vercel.json is read from this path.
    */
   workPath?: string;
+  /**
+   * Optional callback that, given a candidate service directory and its
+   * detected framework, returns a normalized entrypoint (file path or
+   * `module:attr` reference). Used to suggested service configs.
+   */
+  detectEntrypoint?: DetectEntrypointFn;
 }
 
 export interface ServicesRoutes {
+  /** Host-based rewrite routes for subdomain-mounted web services */
+  hostRewrites: Route[];
   /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
   defaults: Route[];
+  /** SPA fallback routes for static web services */
+  fallbacks: Route[];
   /**
-   * Internal routes for cron services.
-   * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
-   * TODO: Implement
+   * Internal routes for schedule-triggered job services.
+   * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the scheduled job function.
    */
   crons: Route[];
   /**
    * Internal routes for worker services.
    * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
-   * TODO: Implement
    */
   workers: Route[];
 }
 
-export interface DetectServicesResult {
+export type ConfiguredServices = Services | ExperimentalServices;
+export type InferredServicesConfig = ExperimentalServices;
+
+export interface ResolvedServicesResult {
   services: Service[];
-  /**
-   * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
-   * - `auto-detected`: inferred from project structure
-   */
   source: DetectServicesSource;
-  /** Routing rules derived from services */
+  useImplicitEnvInjection: boolean;
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
+}
+
+export interface InferredServicesResult {
+  source: 'layout' | 'procfile' | 'railway' | 'render';
+  config: InferredServicesConfig;
+  services: Service[];
+  warnings: ServiceDetectionWarning[];
+}
+
+export interface DetectServicesResult extends ResolvedServicesResult {
+  /**
+   * Source of service definitions:
+   * - `configured`: loaded from explicit project configuration (`vercel.json#services` or legacy `experimentalServices`)
+   * - `auto-detected`: inferred from project structure
+   */
+  // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
+  /* Resolved services used by build/dev flows. */
+  resolved: ResolvedServicesResult;
+  /* Inferred services that can be migrated into project config. */
+  inferred: InferredServicesResult | null;
 }
 
 export type DetectServicesSource = 'configured' | 'auto-detected';
@@ -82,7 +120,7 @@ export interface ServiceDetectionError {
 }
 
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
-  node: '@vercel/node',
+  node: '@vercel/backends',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',

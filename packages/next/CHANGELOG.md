@@ -1,5 +1,141 @@
 # @vercel/next
 
+## 4.17.4
+
+### Patch Changes
+
+- c8bce3b: Upgrade to the latest Next.js adapter
+
+## 4.17.3
+
+### Patch Changes
+
+- 79d9508: Update to latest Next.js adapter
+
+## 4.17.2
+
+### Patch Changes
+
+- bb61428: Include framework slug in output/config.json
+
+## 4.17.1
+
+### Patch Changes
+
+- 34e7b09: Update to latest Next.js adapter
+
+## 4.17.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 4.16.8
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15970](https://github.com/vercel/vercel/pull/15970))
+
+## 4.16.7
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15456](https://github.com/vercel/vercel/pull/15456))
+
+## 4.16.6
+
+### Patch Changes
+
+- Remove the `x-nextjs-data` request header for non-`/_next/data` routes before Next.js data route normalization. ([#15894](https://github.com/vercel/vercel/pull/15894))
+
+## 4.16.5
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15775](https://github.com/vercel/vercel/pull/15775))
+
+## 4.16.4
+
+### Patch Changes
+
+- Copy post-build public files into V3 build output so they are included in Git-driven deploys ([#15780](https://github.com/vercel/vercel/pull/15780))
+
+## 4.16.3
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+- fix(next): merge next-minimal-server.js.nft.json into server trace for prebuilt deployments ([#15688](https://github.com/vercel/vercel/pull/15688))
+
+- Update to latest Next.js adapter ([#15695](https://github.com/vercel/vercel/pull/15695))
+
+## 4.16.2
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+## 4.16.1
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15440](https://github.com/vercel/vercel/pull/15440))
+
+## 4.16.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 4.15.42
+
+### Patch Changes
+
+- Revert "[next] vary fallback allowQuery for partial fallback shells" ([#15418](https://github.com/vercel/vercel/pull/15418))
+
+## 4.15.41
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15382](https://github.com/vercel/vercel/pull/15382))
+
+## 4.15.40
+
+### Patch Changes
+
+- vary fallback `allowQuery` by params for partial fallback shells ([#15338](https://github.com/vercel/vercel/pull/15338))
+
+## 4.15.39
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15366](https://github.com/vercel/vercel/pull/15366))
+
+## 4.15.38
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15360](https://github.com/vercel/vercel/pull/15360))
+
+## 4.15.37
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
+## 4.15.36
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15296](https://github.com/vercel/vercel/pull/15296))
+
+## 4.15.35
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
 ## 4.15.34
 
 ### Patch Changes

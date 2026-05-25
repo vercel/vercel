@@ -204,11 +204,11 @@ describe('getRegExpFromPath()', () => {
       expect(re).toBeInstanceOf(RegExp);
     });
 
-    it.each(urls)(
-      'should match URL "$url" - $expected',
-      ({ url, expected }) => {
-        expect(re.test(url)).toEqual(expected);
-      }
-    );
+    it.each(urls)('should match URL "$url" - $expected', ({
+      url,
+      expected,
+    }) => {
+      expect(re.test(url)).toEqual(expected);
+    });
   });
 });

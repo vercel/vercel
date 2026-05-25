@@ -69,7 +69,7 @@ async function* postDeployment(
     let deployment = undefined;
     try {
       deployment = await response.json();
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Invalid JSON response');
     }
 

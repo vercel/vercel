@@ -1,0 +1,7 @@
+[project]
+name = "services-worker-wildcard"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "vercel-workers>=0.0.10",
+]

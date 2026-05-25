@@ -1,23 +1,29 @@
-import { execSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { test, expect } from 'vitest';
 
-function getEnvKeysFromProject(): string[] {
-  const keys = new Set<string>();
-  for (const target of ['production', 'preview']) {
-    const out = execSync(`vercel env ls ${target} --format json`, {
-      encoding: 'utf-8',
-      cwd: process.cwd(),
-    });
-    const data = JSON.parse(out) as { envs?: Array<{ key: string }> };
-    for (const e of data.envs ?? []) keys.add(e.key);
-  }
-  return [...keys];
+type ShellCommand = {
+  command: string;
+  success?: boolean;
+};
+
+function getShellCommandEntries(): ShellCommand[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: ShellCommand[] };
+  };
+
+  return results.o11y?.shellCommands ?? [];
+}
+
+function getShellCommands(): string[] {
+  return getShellCommandEntries().map(c => c.command);
 }
 
 /**
  * env remove eval: agent adds an env var with unique key, then removes it
- * using non-interactive flags, and records the remove command and key.
+ * using non-interactive flags. The grader verifies command usage and success
+ * from results.json without trying to correlate generated shell variable names.
  */
 test('project is linked', () => {
   expect(
@@ -26,32 +32,71 @@ test('project is linked', () => {
 });
 
 test('agent used vercel env remove', () => {
-  expect(existsSync('command-used.txt')).toBe(true);
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
 
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  expect(command.length).toBeGreaterThan(0);
-  expect(command).toMatch(/\b(vercel|vc)\s+env\s+(rm|remove)\b/);
+  const envRemoveCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+(rm|remove)\b/.test(command)
+  );
+  expect(envRemoveCommands.length).toBeGreaterThan(0);
 });
 
-test('agent used non-interactive flags for remove', () => {
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  const hasNonInteractive =
-    command.includes('--yes') ||
-    /\s-y(\s|$)/.test(command) ||
-    command.includes('--non-interactive');
+test('agent used vercel env add', () => {
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
+
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
+});
+
+test('agent used non-interactive flags for add', () => {
+  const commands = getShellCommands();
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
+
+  const hasNonInteractive = envAddCommands.some(command => {
+    return (
+      command.includes('--yes') ||
+      /\s-y(\s|$)/.test(command) ||
+      command.includes('--non-interactive') ||
+      command.includes('--value')
+    );
+  });
   expect(hasNonInteractive).toBe(true);
 });
 
-test('agent recorded the env key used', () => {
-  expect(existsSync('env-key-used.txt')).toBe(true);
+test('agent used non-interactive flags for remove', () => {
+  const commands = getShellCommands();
+  const envRemoveCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+(rm|remove)\b/.test(command)
+  );
+  expect(envRemoveCommands.length).toBeGreaterThan(0);
 
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  expect(key.length).toBeGreaterThan(0);
-  expect(key).toMatch(/^EVAL_REMOVE_/);
+  const hasNonInteractive = envRemoveCommands.some(command => {
+    return (
+      command.includes('--yes') ||
+      /\s-y(\s|$)/.test(command) ||
+      command.includes('--non-interactive')
+    );
+  });
+  expect(hasNonInteractive).toBe(true);
 });
 
-test('env var was removed from project', () => {
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  const keys = getEnvKeysFromProject();
-  expect(keys).not.toContain(key);
+test('agent env add and remove commands completed successfully', () => {
+  const commands = getShellCommandEntries();
+
+  const successfulAddCommands = commands.filter(
+    entry => /\b(vercel|vc)\s+env\s+add\b/.test(entry.command) && entry.success
+  );
+  const successfulRemoveCommands = commands.filter(
+    entry =>
+      /\b(vercel|vc)\s+env\s+(rm|remove)\b/.test(entry.command) && entry.success
+  );
+
+  expect(successfulAddCommands.length).toBeGreaterThan(0);
+  expect(successfulRemoveCommands.length).toBeGreaterThan(0);
 });

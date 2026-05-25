@@ -1,5 +1,7 @@
 export type BreakdownPeriod = 'daily' | 'weekly' | 'monthly';
 
+export type GroupByDimension = 'project' | 'region';
+
 export interface ServiceAggregation {
   pricingQuantity: number;
   effectiveCost: number;
@@ -8,6 +10,13 @@ export interface ServiceAggregation {
 }
 
 export interface PeriodAggregation {
+  services: Map<string, ServiceAggregation>;
+  totalPricingQuantity: number;
+  totalEffectiveCost: number;
+  totalBilledCost: number;
+}
+
+export interface GroupAggregation {
   services: Map<string, ServiceAggregation>;
   totalPricingQuantity: number;
   totalEffectiveCost: number;
@@ -23,6 +32,7 @@ export interface UsageData {
   chargeCount: number;
   services: Map<string, ServiceAggregation>;
   periodUsage: Map<string, PeriodAggregation>;
+  groupByUsage: Map<string, GroupAggregation>;
   grandTotals: {
     pricingQuantity: number;
     effectiveCost: number;
@@ -33,6 +43,7 @@ export interface UsageData {
 export interface OutputOptions {
   data: UsageData;
   breakdownPeriod?: BreakdownPeriod;
+  groupByDimension?: GroupByDimension;
   startTime: number;
 }
 
@@ -41,4 +52,5 @@ export interface JsonOutputOptions {
   fromDate: string;
   toDate: string;
   breakdownPeriod?: BreakdownPeriod;
+  groupByDimension?: GroupByDimension;
 }

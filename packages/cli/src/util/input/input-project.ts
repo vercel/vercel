@@ -10,38 +10,45 @@ export default async function inputProject(
   client: Client,
   org: Org,
   detectedProjectName: string,
-  autoConfirm = false
+  autoConfirm = false,
+  skipAutoDetect = false
 ): Promise<Project | string> {
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
   let detectedProject = null;
-  output.spinner('Searching for existing projects…', 1000);
 
-  const [project, slugifiedProject] = await Promise.all([
-    getProjectByIdOrName(client, detectedProjectName, org.id),
-    slugifiedName !== detectedProjectName
-      ? getProjectByIdOrName(client, slugifiedName, org.id)
-      : null,
-  ]);
+  if (!skipAutoDetect) {
+    output.spinner('Searching for existing projects…', 1000);
 
-  detectedProject = !(project instanceof ProjectNotFound)
-    ? project
-    : !(slugifiedProject instanceof ProjectNotFound)
-      ? slugifiedProject
-      : null;
+    const [project, slugifiedProject] = await Promise.all([
+      getProjectByIdOrName(client, detectedProjectName, org.id),
+      slugifiedName !== detectedProjectName
+        ? getProjectByIdOrName(client, slugifiedName, org.id)
+        : null,
+    ]);
 
-  if (detectedProject && !detectedProject.id) {
-    throw new Error(`Detected linked project does not have "id".`);
+    detectedProject = !(project instanceof ProjectNotFound)
+      ? project
+      : !(slugifiedProject instanceof ProjectNotFound)
+        ? slugifiedProject
+        : null;
+
+    if (detectedProject && !detectedProject.id) {
+      throw new Error(`Detected linked project does not have "id".`);
+    }
+
+    output.stopSpinner();
   }
-
-  output.stopSpinner();
 
   if (autoConfirm) {
     return detectedProject || detectedProjectName;
   }
 
   if (client.nonInteractive) {
+    if (detectedProject) {
+      return detectedProject;
+    }
     const err = new Error('Confirmation required');
     (err as NodeJS.ErrnoException).code = 'HEADLESS';
     throw err;
@@ -60,7 +67,7 @@ export default async function inputProject(
     if (
       await client.input.confirm(
         `Found project ${chalk.cyan(
-          `“${org.slug}/${detectedProject.name}”`
+          `"${org.slug}/${detectedProject.name}"`
         )}. Link to it?`,
         true
       )
@@ -90,7 +97,7 @@ export default async function inputProject(
     } else if (hasMoreProjects) {
       let toLink: Project;
       await client.input.text({
-        message: "What's the name of your existing project?",
+        message: 'Existing project name?',
         validate: async val => {
           if (!val) {
             return 'Project name cannot be empty';
@@ -123,7 +130,7 @@ export default async function inputProject(
 
   // user wants to create a new project
   return await client.input.text({
-    message: `What’s your project’s name?`,
+    message: `Name?`,
     default: !detectedProject ? slugifiedName : undefined,
     validate: async val => {
       if (!val) {
