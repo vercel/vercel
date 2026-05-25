@@ -24,11 +24,19 @@ export function setAutoUpdate(client: Client, enabled: boolean): void {
   writeToConfigFile(client.config);
 }
 
+export function isNativeBinaryInstall(): boolean {
+  return process.env.VERCEL_VC_NATIVE === '1';
+}
+
 export async function canAutoUpdate(
   client: Client,
   exitCode: number,
   command?: string
 ) {
+  if (isNativeBinaryInstall()) {
+    return false;
+  }
+
   if (!isAutoUpdateEnabled(client.config)) {
     return false;
   }
