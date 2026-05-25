@@ -33,6 +33,7 @@ import {
   debug,
   cloneEnv,
   getProvidedRuntime,
+  execCommand,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -119,7 +120,7 @@ type UndoActions = {
 export const version = 3;
 
 export async function build(options: BuildOptions) {
-  const { files, config, workPath, meta = {} } = options;
+  const { files, config, workPath, meta = {}, registerPreDeploy } = options;
   let { entrypoint } = options;
 
   const goPath = await getWriteableDirectory();
@@ -280,6 +281,19 @@ export async function build(options: BuildOptions) {
       supportsWrapper: true,
       environment: {},
     });
+
+    const preDeployCommand = config?.preDeployCommand;
+    if (registerPreDeploy && typeof preDeployCommand === 'string') {
+      const capturedEnv = { ...env };
+      const capturedCwd = workPath;
+      registerPreDeploy(async () => {
+        debug(`Running pre-deploy command: \`${preDeployCommand}\``);
+        await execCommand(preDeployCommand, {
+          env: capturedEnv,
+          cwd: capturedCwd,
+        });
+      });
+    }
 
     return {
       output: lambda,
