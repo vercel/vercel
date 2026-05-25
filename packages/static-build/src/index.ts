@@ -44,6 +44,15 @@ import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
+import {
+  buildViteEnvironments,
+  detectViteServerEnvironments,
+  projectDeclaresViteServerEnvironment,
+} from './utils/vite-environments';
+import {
+  getNitroInjectionBuildCommand,
+  shouldInjectNitro,
+} from './utils/inject-nitro';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
 import {
@@ -380,8 +389,15 @@ export const build: BuildV2 = async ({
       frameworkList: frameworks,
     })) ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
-  const buildCommand = getCommand('build', pkg, config, framework);
+  let buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
+
+  // Cheap pre-install gate. After install we confirm SSR intent via package
+  // and vite.config heuristics (no `vite.resolveConfig` — see
+  // `nitroInjectionEligible` below).
+  const nitroInjectionEligible =
+    !meta.isDev && shouldInjectNitro({ pkg, config, buildCommand });
+  let usedNitroInjection = false;
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
@@ -741,6 +757,27 @@ export const build: BuildV2 = async ({
         debug(`WARN: A dev script is missing`);
       }
 
+      // Confirm Nitro injection without `vite.resolveConfig` (TanStack Start
+      // plugins can hang there). Package + vite.config source heuristics
+      // exclude plain Vite/Svelte SPAs and SvelteKit.
+      if (nitroInjectionEligible) {
+        const hasServerEnv = projectDeclaresViteServerEnvironment(
+          entrypointDir,
+          pkg
+        );
+        if (hasServerEnv) {
+          buildCommand = getNitroInjectionBuildCommand();
+          usedNitroInjection = true;
+          console.log(
+            `Detected \`vite build\` with a server environment but no \`nitro\` dependency. Replacing the build command with \`nitro build --builder vite\` for SSR support.`
+          );
+        } else {
+          debug(
+            'Skipping nitro injection: no SSR-shaped vite environment declared'
+          );
+        }
+      }
+
       if (buildCommand) {
         debug(`Executing "${buildCommand}"`);
       }
@@ -807,6 +844,31 @@ export const build: BuildV2 = async ({
         await BuildOutputV2.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV2) {
         return await BuildOutputV2.createBuildOutput(workPath);
+      }
+
+      // Post-build vite-environments mapping (Flow 2). Skipped when we already
+      // ran injected Nitro — that path should emit BOA v3 above; calling
+      // vite.resolveConfig here after a Nitro build can hang the container.
+      const viteDetection = usedNitroInjection
+        ? null
+        : await detectViteServerEnvironments(entrypointDir, pkg);
+      if (usedNitroInjection) {
+        debug(
+          'Skipping post-build vite-environments mapping after Nitro injection (expected BOA v3 or normal static fallthrough)'
+        );
+      }
+      if (viteDetection) {
+        debug(
+          `Vite environments path triggered (${viteDetection.environments
+            .map(e => `${e.name}:${e.consumer}`)
+            .join(', ')})`
+        );
+        return await buildViteEnvironments({
+          workPath: entrypointDir,
+          repoRootPath,
+          nodeVersion,
+          detection: viteDetection,
+        });
       }
 
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
