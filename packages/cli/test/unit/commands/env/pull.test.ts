@@ -90,10 +90,16 @@ describe('env pull', () => {
       (_req, res, next) => {
         pullRequests += 1;
         if (pullRequests === 1) {
-          res.status(403).json({
-            code: 'challenge_required',
-            message: 'Challenge required',
-          });
+          res
+            .status(403)
+            .set(
+              'WWW-Authenticate',
+              'Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"'
+            )
+            .json({
+              code: 'challenge_required',
+              message: 'Challenge required',
+            });
           return;
         }
         next?.();
@@ -122,6 +128,7 @@ describe('env pull', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
     expect(performDeviceCodeFlow).toHaveBeenCalledWith(client, {
       refreshToken: 'vcr_old',
+      acrValues: 'urn:vercel:loa:sudo',
     });
     expect(pullRequests).toBe(2);
     expect(client.authConfig.token).toBe('vca_new');

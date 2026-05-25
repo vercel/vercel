@@ -322,7 +322,15 @@ async function pullEnvRecordsForEnvPull(
     output.stopSpinner();
     output.log('Sensitive Environment Variables require fresh authentication.');
 
-    const tokens = await performDeviceCodeFlow(client, { refreshToken });
+    const acrValues = getAcrValuesFromWWWAuthenticate(error.wwwAuthenticate);
+    if (!acrValues) {
+      throw error;
+    }
+
+    const tokens = await performDeviceCodeFlow(client, {
+      refreshToken,
+      acrValues,
+    });
     if (!tokens) {
       throw error;
     }
@@ -337,6 +345,24 @@ async function pullEnvRecordsForEnvPull(
     output.spinner('Downloading');
     return await pullEnvRecords(client, pullId, source, options);
   }
+}
+
+function getAcrValuesFromWWWAuthenticate(header: string | undefined) {
+  if (!header) {
+    return;
+  }
+
+  const bearerIndex = header.toLowerCase().indexOf('bearer');
+  if (bearerIndex === -1) {
+    return;
+  }
+
+  const bearerChallenge = header.slice(bearerIndex + 'bearer'.length);
+  const match = bearerChallenge.match(
+    /(?:^|[,\s])acr_values=(?:"((?:\\.|[^"\\])*)"|([^,\s]+))/i
+  );
+
+  return match?.[1]?.replace(/\\(.)/g, '$1') ?? match?.[2];
 }
 
 function escapeValue(value: string | undefined) {

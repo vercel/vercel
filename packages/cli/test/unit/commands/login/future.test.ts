@@ -140,7 +140,7 @@ describe('login', () => {
   it.todo('Authorization request error');
   it.todo('Token request error');
 
-  it('sends sudo acr values for step-up device authorization requests', async () => {
+  it('sends provided acr values for step-up device authorization requests', async () => {
     vi.resetModules();
     const freshOauth = await import('../../../../src/util/oauth');
 
@@ -158,13 +158,14 @@ describe('login', () => {
 
     await freshOauth.deviceAuthorizationRequest({
       refresh_token: 'vcr_existing',
+      acr_values: 'urn:vercel:loa:custom',
     });
 
     expect(fetch.mock.calls[1][1]?.body?.toString()).toBe(
       new URLSearchParams({
         client_id: freshOauth.VERCEL_CLI_CLIENT_ID,
         refresh_token: 'vcr_existing',
-        acr_values: 'urn:vercel:loa:sudo',
+        acr_values: 'urn:vercel:loa:custom',
       }).toString()
     );
   });

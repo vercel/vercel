@@ -98,6 +98,7 @@ async function processDiscoveryEndpointResponse(
  */
 export async function deviceAuthorizationRequest(options?: {
   refresh_token?: string;
+  acr_values?: string;
 }): Promise<Response> {
   const body = new URLSearchParams({
     client_id: VERCEL_CLI_CLIENT_ID,
@@ -105,7 +106,9 @@ export async function deviceAuthorizationRequest(options?: {
 
   if (options?.refresh_token) {
     body.set('refresh_token', options.refresh_token);
-    body.set('acr_values', 'urn:vercel:loa:sudo');
+    if (options.acr_values) {
+      body.set('acr_values', options.acr_values);
+    }
   } else {
     body.set('scope', 'openid offline_access');
   }
