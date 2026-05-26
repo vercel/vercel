@@ -92,11 +92,12 @@ export const removeSubcommand = {
 export const priceSubcommand = {
   name: 'price',
   aliases: [],
-  description: 'Show registrar price quote for a domain',
+  description: 'Show registrar price quotes for one or more domains',
   arguments: [
     {
       name: 'domain',
       required: true,
+      multiple: true,
     },
   ],
   options: [formatOption],
@@ -104,6 +105,10 @@ export const priceSubcommand = {
     {
       name: 'Price quote for a domain',
       value: `${packageName} domains price example.com`,
+    },
+    {
+      name: 'Price quotes for multiple domains',
+      value: `${packageName} domains price one.com two.com three.com`,
     },
     {
       name: 'JSON output',
@@ -124,6 +129,34 @@ export const buySubcommand = {
   ],
   options: [],
   examples: [],
+} as const;
+
+export const checkSubcommand = {
+  name: 'check',
+  aliases: [],
+  description: 'Check if a domain is available to buy',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+      multiple: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Check if a domain is available',
+      value: `${packageName} domains check example.com`,
+    },
+    {
+      name: 'Check availability for multiple domains',
+      value: `${packageName} domains check one.com two.com three.com`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains check example.com --format json`,
+    },
+  ],
 } as const;
 
 export const moveSubcommand = {
@@ -181,6 +214,7 @@ export const domainsCommand = {
     inspectSubcommand,
     addSubcommand,
     buySubcommand,
+    checkSubcommand,
     moveSubcommand,
     priceSubcommand,
     transferInSubcommand,

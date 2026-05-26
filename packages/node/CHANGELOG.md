@@ -1,5 +1,13 @@
 # @vercel/node
 
+## 5.8.5
+
+### Patch Changes
+
+- ecf5033: Pass service type and framework to node manifest.
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
 ## 5.8.4
 
 ### Patch Changes

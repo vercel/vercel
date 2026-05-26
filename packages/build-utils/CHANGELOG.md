@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.26.2
+
+### Patch Changes
+
+- 647c1e8: Cleanup getLambdaSupportsStreaming
+
 ## 13.26.1
 
 ### Patch Changes

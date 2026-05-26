@@ -55,5 +55,76 @@ describe('domains price', () => {
         },
       ]);
     });
+
+    it('supports bulk registrar pricing lookup', async () => {
+      useUser();
+      let body: { domains?: string[] } | undefined;
+      client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+        body = req.body as { domains?: string[] };
+        res.json([
+          {
+            domain: 'one.com',
+            purchasePrice: 10,
+            renewalPrice: 20,
+            transferPrice: 30,
+            years: 1,
+          },
+          {
+            domain: 'two.com',
+            purchasePrice: 11,
+            renewalPrice: 21,
+            transferPrice: 31,
+            years: 1,
+          },
+        ]);
+      });
+
+      client.setArgv('domains', 'price', 'one.com', 'two.com');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+
+      const out = client.stderr.getFullOutput();
+      expect(out).toContain('Registrar pricing for one.com');
+      expect(out).toContain('Purchase: $10');
+      expect(out).toContain('Registrar pricing for two.com');
+      expect(out).toContain('Purchase: $11');
+      expect(body).toEqual({
+        domains: ['one.com', 'two.com'],
+      });
+    });
+
+    it('outputs JSON results array for bulk lookup', async () => {
+      useUser();
+      client.scenario.post('/v1/registrar/domains/price', (_req, res) => {
+        res.json([
+          {
+            domain: 'one.com',
+            purchasePrice: 10,
+            renewalPrice: 20,
+            transferPrice: 30,
+            years: 1,
+          },
+        ]);
+      });
+
+      client.setArgv('domains', 'price', 'one.com', 'two.com', '--format=json');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.stdout.getFullOutput()).toMatchInlineSnapshot(`
+        "{
+          "results": [
+            {
+              "domain": "one.com",
+              "purchasePrice": 10,
+              "renewalPrice": 20,
+              "transferPrice": 30,
+              "years": 1
+            }
+          ]
+        }
+        "
+      `);
+    });
   });
 });

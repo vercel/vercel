@@ -1,5 +1,16 @@
 # @vercel/backends
 
+## 0.8.0
+
+### Minor Changes
+
+- e917989: Add cron host script and spawn helper for vc dev.
+
+### Patch Changes
+
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
 ## 0.7.2
 
 ### Patch Changes

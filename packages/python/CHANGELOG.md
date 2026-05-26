@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.43.2
+
+### Patch Changes
+
+- 1318682: minor performance improvements
+
 ## 6.43.1
 
 ### Patch Changes
