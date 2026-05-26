@@ -1,6 +1,9 @@
 name: Test Dispatch Release Binary
 
 on:
+  push:
+    branches:
+      - melkey/fixing-release-binary-workflow
   workflow_dispatch:
     inputs:
       tag:
@@ -24,9 +27,6 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'test-dispatch-target.yml',
+              workflow_id: 'validate-binary.yml',
               ref: 'melkey/fixing-release-binary-workflow',
-              inputs: {
-                tag: '${{ inputs.tag }}',
-              },
             });
