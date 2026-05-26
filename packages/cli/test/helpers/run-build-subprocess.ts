@@ -45,7 +45,7 @@ export async function runBuildSubprocess(
     args?: string[];
   } = {}
 ): Promise<BuildSubprocessResult> {
-  const child = execa('node', [binaryPath, ...args], {
+  const subprocess = execa('node', [binaryPath, ...args], {
     cwd,
     env: {
       ...process.env,
@@ -59,12 +59,11 @@ export async function runBuildSubprocess(
     all: true,
   });
 
-  const result = await child;
+  const pid = subprocess.pid;
+  const result = await subprocess;
   const combined = result.all ?? '';
   const hangingChildPids =
-    result.pid != null && result.exitCode == null
-      ? listChildPids(result.pid)
-      : [];
+    pid != null && result.exitCode == null ? listChildPids(pid) : [];
 
   return {
     exitCode: result.exitCode,

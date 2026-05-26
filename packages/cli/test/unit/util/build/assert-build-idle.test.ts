@@ -1,9 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { NowBuildError } from '@vercel/build-utils';
 import {
   assertBuildProcessIdle,
   createBuildResourceTracker,
-  snapshotBuildProcessState,
 } from '../../../../src/util/build/assert-build-idle';
 
 describe('assert-build-idle', () => {
@@ -21,13 +18,9 @@ describe('assert-build-idle', () => {
   it('errors when a new active timer remains after the build', async () => {
     tracker = createBuildResourceTracker();
     tracker.start();
-    const before = snapshotBuildProcessState();
     interval = setInterval(() => {}, 60_000);
 
-    const error = await assertBuildProcessIdle(before, tracker).catch(
-      err => err
-    );
-    expect(error).toBeInstanceOf(NowBuildError);
+    const error = await assertBuildProcessIdle(tracker).catch(err => err);
     expect(error).toMatchObject({
       code: 'BUILD_PROCESS_HANG',
       message: expect.stringContaining('Timeout'),

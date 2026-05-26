@@ -1,40 +1,11 @@
 import async_hooks from 'node:async_hooks';
 import { NowBuildError } from '@vercel/build-utils';
-import { execFileSync } from 'node:child_process';
 
 const TRACKED_ASYNC_TYPES = new Set(['Timeout', 'Immediate']);
-
-export interface BuildProcessSnapshot {
-  childPids: number[];
-}
-
-function listChildPids(parentPid: number): number[] {
-  if (process.platform === 'win32') {
-    return [];
-  }
-
-  const cmd =
-    process.platform === 'darwin'
-      ? ['pgrep', '-P', String(parentPid)]
-      : ['ps', '-o', 'pid', '--no-headers', '--ppid', String(parentPid)];
-
-  try {
-    const output = execFileSync(cmd[0], cmd.slice(1), { encoding: 'utf8' });
-    return (output.match(/\d+/g) ?? []).map(Number);
-  } catch {
-    return [];
-  }
-}
 
 async function settleEventLoop(): Promise<void> {
   await new Promise<void>(resolve => setImmediate(resolve));
   await new Promise<void>(resolve => setImmediate(resolve));
-}
-
-export function snapshotBuildProcessState(): BuildProcessSnapshot {
-  return {
-    childPids: listChildPids(process.pid!),
-  };
 }
 
 export function createBuildResourceTracker() {
@@ -65,7 +36,6 @@ export function createBuildResourceTracker() {
 }
 
 export async function assertBuildProcessIdle(
-  before: BuildProcessSnapshot,
   tracker: ReturnType<typeof createBuildResourceTracker>
 ): Promise<void> {
   await settleEventLoop();
@@ -77,18 +47,6 @@ export async function assertBuildProcessIdle(
     throw new NowBuildError({
       code: 'BUILD_PROCESS_HANG',
       message: `Build completed but left active async resources (${leakingTimers.join(', ')}) that would prevent the CLI from exiting. This usually means a builder or build plugin did not clean up resources.`,
-      link: 'https://vercel.link/build-process-hang',
-    });
-  }
-
-  const afterChildPids = listChildPids(process.pid!);
-  const hangingChildPids = afterChildPids.filter(
-    pid => !before.childPids.includes(pid)
-  );
-  if (hangingChildPids.length > 0) {
-    throw new NowBuildError({
-      code: 'BUILD_PROCESS_HANG',
-      message: `Build completed but left ${hangingChildPids.length} child process(es) running (PIDs: ${hangingChildPids.join(', ')}).`,
       link: 'https://vercel.link/build-process-hang',
     });
   }

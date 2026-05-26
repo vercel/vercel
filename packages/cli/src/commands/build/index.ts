@@ -72,7 +72,6 @@ import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import {
   assertBuildProcessIdle,
   createBuildResourceTracker,
-  snapshotBuildProcessState,
 } from '../../util/build/assert-build-idle';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
@@ -496,7 +495,6 @@ export default async function main(client: Client): Promise<number> {
 
     const buildResourceTracker = createBuildResourceTracker();
     buildResourceTracker.start();
-    const buildProcessSnapshot = snapshotBuildProcessState();
     try {
       await rootSpan
         .child('vc.doBuild')
@@ -507,7 +505,7 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan.stop();
     }
 
-    await assertBuildProcessIdle(buildProcessSnapshot, buildResourceTracker);
+    await assertBuildProcessIdle(buildResourceTracker);
 
     if (client.nonInteractive) {
       const relOutputDir = relative(cwd, outputDir);
@@ -562,6 +560,10 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     output.prettyError(err);
+
+    if (err?.code === 'BUILD_PROCESS_HANG') {
+      client.forceExitAfterBuild = true;
+    }
 
     // Write error to `builds.json` file
     buildsJson.error = toEnumerableError(err);
