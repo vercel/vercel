@@ -57,6 +57,7 @@ describe('validateExperimentalEnvironmentVariables', () => {
     expect(error!.code).toBe('EXPERIMENTAL_ENVIRONMENT_VARIABLES');
     expect(error!.message).toContain('`NEON_DB_URL`');
     expect(error!.message).toContain('preview');
+    expect(error!.message).toContain('vercel env add');
     expect(error!.message).toContain('vercel env pull');
   });
 

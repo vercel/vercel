@@ -83,7 +83,7 @@ export function validateExperimentalEnvironmentVariables(
 
     if (!isVariableSet(name, options.env)) {
       errors.push(
-        `The \`${name}\` environment variable is required for the ${options.environment} environment (configured as required for ${formatRequiredEnvironments(definition.required)} in ${fileName}) but is not set. Run \`vercel env pull ${formatEnvFileHint(options.environment)}\` or add it to ${formatEnvFileHint(options.environment)}.`
+        `The \`${name}\` environment variable is required for the ${options.environment} environment (configured as required for ${formatRequiredEnvironments(definition.required)} in ${fileName}) but is not set. Add it with \`vercel env add ${name} ${options.environment}\`, then run \`vercel env pull ${formatEnvFileHint(options.environment)}\` to sync it locally.`
       );
       continue;
     }
