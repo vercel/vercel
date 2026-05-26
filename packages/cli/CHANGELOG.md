@@ -1,5 +1,45 @@
 # vercel
 
+## 54.5.0
+
+### Minor Changes
+
+- 6860c32: Add project manifest to rust builder.
+- 2c17a12: Added `--open` and `--view` flags to `vercel traces get`. `--open` opens the trace in the Vercel Dashboard instead of printing the markdown summary. `--view <timeline|tree|gantt>` selects the dashboard view and is only valid with `--open`.
+
+### Patch Changes
+
+- 620bcfa: Add `--type`, `--service`, and `--search` filter flags to `vercel connect list`.
+- ff2a980: Add a `vercel domains check` subcommand for registrar availability and extend
+  `vercel domains price` to support bulk price lookups for multiple domains.
+- Updated dependencies [1318682]
+- Updated dependencies [6860c32]
+- Updated dependencies [e917989]
+- Updated dependencies [baac149]
+- Updated dependencies [ecf5033]
+- Updated dependencies [73dbbe6]
+- Updated dependencies [647c1e8]
+- Updated dependencies [b1f766a]
+  - @vercel/python@6.43.2
+  - @vercel/rust@1.3.0
+  - @vercel/backends@0.8.0
+  - @vercel/go@3.8.0
+  - @vercel/node@5.8.5
+  - @vercel/ruby@2.4.0
+  - @vercel/build-utils@13.26.2
+  - @vercel/elysia@0.1.81
+  - @vercel/express@0.1.91
+  - @vercel/fastify@0.1.84
+  - @vercel/h3@0.1.90
+  - @vercel/hono@0.2.84
+  - @vercel/koa@0.1.64
+  - @vercel/nestjs@0.2.85
+  - @vercel/hydrogen@1.3.7
+  - @vercel/next@4.17.4
+  - @vercel/redwood@2.4.13
+  - @vercel/remix-builder@5.8.2
+  - @vercel/static-build@2.9.31
+
 ## 54.4.1
 
 ### Patch Changes
