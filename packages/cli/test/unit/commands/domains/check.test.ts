@@ -87,5 +87,65 @@ describe('domains check', () => {
         "
       `);
     });
+
+    it('accepts multiple domains and checks bulk availability', async () => {
+      useUser();
+      let body: { domains?: string[] } | undefined;
+      client.scenario.post('/v1/registrar/domains/availability', (req, res) => {
+        body = req.body as { domains?: string[] };
+        res.json({
+          results: [
+            { domain: 'one.com', available: true },
+            { domain: 'two.com', available: false },
+            { domain: 'three.com', available: true },
+          ],
+        });
+      });
+
+      client.setArgv('domains', 'check', 'one.com', 'two.com', 'three.com');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+
+      await expect(client.stderr).toOutput('one.com');
+      await expect(client.stderr).toOutput('two.com');
+      await expect(client.stderr).toOutput('three.com');
+      expect(body).toEqual({
+        domains: ['one.com', 'two.com', 'three.com'],
+      });
+    });
+
+    it('outputs json for multiple domains', async () => {
+      useUser();
+      client.scenario.post(
+        '/v1/registrar/domains/availability',
+        (_req, res) => {
+          res.json({
+            results: [
+              { domain: 'one.com', available: true },
+              { domain: 'two.com', available: false },
+            ],
+          });
+        }
+      );
+
+      client.setArgv('domains', 'check', 'one.com', 'two.com', '--format=json');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toMatchInlineSnapshot(`
+        "{
+          "results": [
+            {
+              "domain": "one.com",
+              "available": true
+            },
+            {
+              "domain": "two.com",
+              "available": false
+            }
+          ]
+        }
+        "
+      `);
+    });
   });
 });

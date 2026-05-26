@@ -134,6 +134,7 @@ export const checkSubcommand = {
     {
       name: 'domain',
       required: true,
+      multiple: true,
     },
   ],
   options: [formatOption],
@@ -141,6 +142,10 @@ export const checkSubcommand = {
     {
       name: 'Check if a domain is available',
       value: `${packageName} domains check example.com`,
+    },
+    {
+      name: 'Check availability for multiple domains',
+      value: `${packageName} domains check one.com two.com three.com`,
     },
     {
       name: 'JSON output',

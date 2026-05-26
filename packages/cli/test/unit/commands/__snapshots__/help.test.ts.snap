@@ -2000,7 +2000,7 @@ exports[`help command > domains help output snapshots > domains buy help output 
 
 exports[`help command > domains help output snapshots > domains check help output snapshots > domains check help column width 120 1`] = `
 "
-  ▲ vercel domains check domain [options]
+  ▲ vercel domains check domain ... [options]
 
   Check if a domain is available to buy                                                                                 
 
@@ -2028,6 +2028,10 @@ exports[`help command > domains help output snapshots > domains check help outpu
   - Check if a domain is available
 
     $ vercel domains check example.com
+
+  - Check availability for multiple domains
+
+    $ vercel domains check one.com two.com three.com
 
   - JSON output
 

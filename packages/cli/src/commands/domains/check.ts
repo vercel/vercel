@@ -12,6 +12,13 @@ import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 
+type BulkDomainAvailabilityResponse = {
+  results: {
+    domain: string;
+    available: boolean;
+  }[];
+};
+
 export default async function check(
   client: Client,
   argv: string[]
@@ -26,40 +33,92 @@ export default async function check(
   }
 
   const { args, flags } = parsedArgs;
-  const domain = args[0];
+  const domains = args;
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
     return 1;
   }
 
-  if (!domain) {
+  if (domains.length === 0) {
     output.error('Missing domain name. Usage: `vercel domains check <domain>`');
     return 1;
   }
 
-  if (!isRootDomain(domain)) {
+  if (domains.length > 50) {
     output.error(
-      `Invalid domain name ${param(domain)}. Run ${getCommandName(`domains --help`)}`
+      'Too many domains. You can check up to 50 domains per request.'
+    );
+    return 1;
+  }
+
+  const invalidDomains = domains.filter(domain => !isRootDomain(domain));
+  if (invalidDomains.length > 0) {
+    output.error(
+      `Invalid domain name(s): ${invalidDomains
+        .map(domain => param(domain))
+        .join(', ')}. Run ${getCommandName(`domains --help`)}`
     );
     return 1;
   }
 
   try {
-    const { available } = await getDomainStatus(client, domain);
+    const results =
+      domains.length === 1
+        ? [
+            {
+              domain: domains[0],
+              available: (await getDomainStatus(client, domains[0])).available,
+            },
+          ]
+        : (
+            await client.fetch<BulkDomainAvailabilityResponse>(
+              '/v1/registrar/domains/availability',
+              {
+                method: 'POST',
+                body: {
+                  domains,
+                },
+              }
+            )
+          ).results;
 
     if (formatResult.jsonOutput) {
-      client.stdout.write(
-        `${JSON.stringify({ domain, available: Boolean(available) }, null, 2)}\n`
-      );
+      if (results.length === 1) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              domain: results[0].domain,
+              available: Boolean(results[0].available),
+            },
+            null,
+            2
+          )}\n`
+        );
+      } else {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              results: results.map(result => ({
+                domain: result.domain,
+                available: Boolean(result.available),
+              })),
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       return 0;
     }
 
-    output.log(
-      `The domain ${param(domain)} is ${chalk.underline(
-        available ? 'available' : 'unavailable'
-      )}.`
-    );
+    for (const result of results) {
+      output.log(
+        `The domain ${param(result.domain)} is ${chalk.underline(
+          result.available ? 'available' : 'unavailable'
+        )}.`
+      );
+    }
     return 0;
   } catch (error) {
     if (isAPIError(error)) {
