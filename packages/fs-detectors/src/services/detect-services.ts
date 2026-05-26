@@ -6,6 +6,7 @@ import {
   scopeRouteSourceToOwnership,
 } from '@vercel/routing-utils';
 import type {
+  DetectEntrypointFn,
   DetectServicesOptions,
   DetectServicesResult,
   EnvVars,
@@ -90,6 +91,10 @@ function toInferredLayoutConfig(
       serviceConfig.type = service.type;
     }
 
+    if (typeof service.root === 'string') {
+      serviceConfig.root = service.root;
+    }
+
     if (typeof service.entrypoint === 'string') {
       serviceConfig.entrypoint = service.entrypoint;
     }
@@ -132,7 +137,7 @@ interface PlatformDetectResult {
 export async function detectServices(
   options: DetectServicesOptions
 ): Promise<DetectServicesResult> {
-  const { fs, workPath } = options;
+  const { fs, workPath, detectEntrypoint } = options;
 
   // Scope filesystem to workPath if provided
   const scopedFs = workPath ? fs.chdir(workPath) : fs;
@@ -169,6 +174,7 @@ export async function detectServices(
     const detectors: Array<{
       detect: (options: {
         fs: DetectorFilesystem;
+        detectEntrypoint?: DetectEntrypointFn;
       }) => Promise<PlatformDetectResult>;
       source: InferredServicesResult['source'];
     }> = [
@@ -179,7 +185,7 @@ export async function detectServices(
     ];
 
     for (const { detect, source } of detectors) {
-      const detectResult = await detect({ fs: scopedFs });
+      const detectResult = await detect({ fs: scopedFs, detectEntrypoint });
       const match = await tryResolveInferred(detectResult, source, scopedFs);
       if (match) return match;
     }

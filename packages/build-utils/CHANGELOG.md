@@ -1,5 +1,16 @@
 # @vercel/build-utils
 
+## 13.26.1
+
+### Patch Changes
+
+- fa25cb7: Fix config.framework in deserializeBuildOutput
+- 972cc84: Support workflow-triggered job services in queue infrastructure
+
+  Add `isWorkflowTriggeredService()` and `isQueueBackedService()` helpers so workflow services
+  are recognized by the queue broker, dev server, and build pipeline. Update Python runtime to
+  bootstrap workflow services as queue-backed workers.
+
 ## 13.26.0
 
 ### Minor Changes

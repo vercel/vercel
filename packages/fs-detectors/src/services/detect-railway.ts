@@ -1,5 +1,6 @@
 import { posix as posixPath } from 'path';
 import toml from 'smol-toml';
+import type { DetectEntrypointFn } from '@vercel/build-utils';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
@@ -12,6 +13,7 @@ import {
   assignRoutePrefixes,
   DETECTION_FRAMEWORKS,
   inferRuntimeFromFramework,
+  isFrontendFramework,
 } from './utils';
 
 export interface RailwayDetectResult {
@@ -81,8 +83,9 @@ const SKIP_DIRS = new Set([
  */
 export async function detectRailwayServices(options: {
   fs: DetectorFilesystem;
+  detectEntrypoint?: DetectEntrypointFn;
 }): Promise<RailwayDetectResult> {
-  const { fs } = options;
+  const { fs, detectEntrypoint } = options;
 
   const { configs, warnings } = await findRailwayConfigs(fs);
   if (configs.length === 0) {
@@ -168,11 +171,22 @@ export async function detectRailwayServices(options: {
     }
 
     const framework = frameworks[0];
+    const slug = framework.slug ?? undefined;
 
     let serviceConfig: ExperimentalServiceConfig = {};
-    serviceConfig.framework = framework.slug ?? undefined;
+    serviceConfig.framework = slug;
+
     if (cf.dirPath !== '.') {
-      serviceConfig.entrypoint = cf.dirPath;
+      serviceConfig.root = cf.dirPath;
+      if (detectEntrypoint && !isFrontendFramework(slug)) {
+        const detected = await detectEntrypoint({
+          workPath: cf.dirPath,
+          framework: slug,
+        });
+        if (detected) {
+          serviceConfig.entrypoint = detected.entrypoint;
+        }
+      }
     }
 
     if (cf.config.build?.buildCommand) {
