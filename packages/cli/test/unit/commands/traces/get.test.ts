@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import open from 'open';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import traces from '../../../../src/commands/traces';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -6,7 +7,12 @@ import type { Trace } from '../../../../src/commands/traces/types';
 
 vi.mock('../../../../src/util/projects/link');
 
+vi.mock('open', () => ({
+  default: vi.fn(),
+}));
+
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedOpen = vi.mocked(open);
 
 function mockLinkedProject() {
   mockedGetLinkedProject.mockResolvedValue({
@@ -62,6 +68,7 @@ describe('vercel traces get', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+    mockedOpen.mockResolvedValue(undefined as never);
   });
 
   it('prints the markdown summary to stdout for a 200 response', async () => {
@@ -253,5 +260,297 @@ describe('vercel traces get', () => {
 
     expect(calls).toBe(1);
     expect(exitCode).toBe(1);
+  });
+
+  describe('--open', () => {
+    it('opens the dashboard URL using the linked project slug/name', async () => {
+      mockLinkedProject();
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+
+      client.setArgv('traces', 'get', 'req_open', '--open');
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOpen).toHaveBeenCalledWith(
+        'https://vercel.com/my-team/traces-project/logs/traces/trace_001'
+      );
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'Opening https://vercel.com/my-team/traces-project/logs/traces/trace_001 in your browser...'
+      );
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('omits ?view= when --view is timeline', async () => {
+      mockLinkedProject();
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+
+      client.setArgv(
+        'traces',
+        'get',
+        'req_timeline',
+        '--open',
+        '--view',
+        'timeline'
+      );
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOpen).toHaveBeenCalledWith(
+        'https://vercel.com/my-team/traces-project/logs/traces/trace_001'
+      );
+    });
+
+    it('appends ?view=tree when --view=tree', async () => {
+      mockLinkedProject();
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+
+      client.setArgv('traces', 'get', 'req_tree', '--open', '--view', 'tree');
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOpen).toHaveBeenCalledWith(
+        'https://vercel.com/my-team/traces-project/logs/traces/trace_001?view=tree'
+      );
+    });
+
+    it('appends ?view=gantt when --view=gantt', async () => {
+      mockLinkedProject();
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+
+      client.setArgv('traces', 'get', 'req_gantt', '--open', '--view', 'gantt');
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOpen).toHaveBeenCalledWith(
+        'https://vercel.com/my-team/traces-project/logs/traces/trace_001?view=gantt'
+      );
+    });
+
+    it('errors when --open and --json are combined', async () => {
+      client.setArgv('traces', 'get', 'req_x', '--open', '--json');
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '`--json` and `--open` cannot be used together.'
+      );
+      expect(mockedOpen).not.toHaveBeenCalled();
+    });
+
+    it('errors when --view is used without --open', async () => {
+      client.setArgv('traces', 'get', 'req_x', '--view', 'tree');
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '`--view` can only be used with `--open`.'
+      );
+      expect(mockedOpen).not.toHaveBeenCalled();
+    });
+
+    it('errors on an invalid --view value', async () => {
+      client.setArgv(
+        'traces',
+        'get',
+        'req_x',
+        '--open',
+        '--view',
+        'flamegraph'
+      );
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '`--view` must be one of: timeline, tree, gantt. Received: flamegraph'
+      );
+      expect(mockedOpen).not.toHaveBeenCalled();
+    });
+
+    it('resolves --scope=team_id via /teams/:id to get the slug', async () => {
+      mockNotLinked();
+      client.scenario.get('/teams/team_abc', (_req, res) => {
+        res.json({
+          id: 'team_abc',
+          slug: 'team-alpha',
+          name: 'Team Alpha',
+        });
+      });
+      client.scenario.get('/v9/projects/project-from-flag', (_req, res) => {
+        res.json({
+          id: 'prj_xyz',
+          name: 'project-from-flag',
+          accountId: 'team_abc',
+          updatedAt: Date.now(),
+          createdAt: Date.now(),
+        });
+      });
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+
+      client.setArgv(
+        'traces',
+        'get',
+        'req_scope',
+        '--open',
+        '--scope',
+        'team_abc',
+        '--project',
+        'project-from-flag'
+      );
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOpen).toHaveBeenCalledWith(
+        'https://vercel.com/team-alpha/project-from-flag/logs/traces/trace_001'
+      );
+    });
+
+    it('uses --scope verbatim when it is already a slug', async () => {
+      mockNotLinked();
+      client.scenario.get('/v9/projects/project-from-flag', (_req, res) => {
+        res.json({
+          id: 'prj_xyz',
+          name: 'project-from-flag',
+          accountId: 'team_abc',
+          updatedAt: Date.now(),
+          createdAt: Date.now(),
+        });
+      });
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+
+      client.setArgv(
+        'traces',
+        'get',
+        'req_slug',
+        '--open',
+        '--scope',
+        'team-alpha',
+        '--project',
+        'project-from-flag'
+      );
+      const exitCode = await traces(client);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOpen).toHaveBeenCalledWith(
+        'https://vercel.com/team-alpha/project-from-flag/logs/traces/trace_001'
+      );
+    });
+  });
+
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      client.nonInteractive = false;
+    });
+
+    function readAgentPayload(): Record<string, unknown> {
+      const stdout = client.stdout.getFullOutput().trim();
+      return JSON.parse(stdout);
+    }
+
+    function spyExit() {
+      return vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+    }
+
+    it('emits invalid_arguments JSON when --json and --open are combined', async () => {
+      const exitSpy = spyExit();
+      client.nonInteractive = true;
+      client.setArgv('traces', 'get', 'req_x', '--open', '--json');
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_arguments');
+      expect(payload.message).toBe(
+        '`--json` and `--open` cannot be used together.'
+      );
+
+      exitSpy.mockRestore();
+    });
+
+    it('emits invalid_arguments JSON when --view is used without --open', async () => {
+      const exitSpy = spyExit();
+      client.nonInteractive = true;
+      client.setArgv('traces', 'get', 'req_x', '--view', 'tree');
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_arguments');
+      expect(payload.message).toBe('`--view` can only be used with `--open`.');
+
+      exitSpy.mockRestore();
+    });
+
+    it('emits invalid_arguments JSON on an invalid --view value', async () => {
+      const exitSpy = spyExit();
+      client.nonInteractive = true;
+      client.setArgv(
+        'traces',
+        'get',
+        'req_x',
+        '--open',
+        '--view',
+        'flamegraph'
+      );
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_arguments');
+      expect(payload.message).toBe(
+        '`--view` must be one of: timeline, tree, gantt. Received: flamegraph'
+      );
+
+      exitSpy.mockRestore();
+    });
+
+    it('emits not_found JSON when --open --project resolves to an unknown project', async () => {
+      const exitSpy = spyExit();
+      mockNotLinked();
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+      client.scenario.get('/v9/projects/missing-project', (_req, res) => {
+        res.status(404).json({ error: { code: 'not_found' } });
+      });
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'traces',
+        'get',
+        'req_missing_project',
+        '--open',
+        '--scope',
+        'team-alpha',
+        '--project',
+        'missing-project'
+      );
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('not_found');
+      expect(payload.message).toBe('Project not found: missing-project');
+
+      exitSpy.mockRestore();
+    });
   });
 });

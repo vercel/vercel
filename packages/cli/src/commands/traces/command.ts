@@ -24,6 +24,23 @@ export const getSubcommand = {
       description:
         'Project name or id to fetch the trace from (overrides the linked project).',
     },
+    {
+      name: 'open',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Open the trace in the Vercel Dashboard instead of printing it.',
+    },
+    {
+      name: 'view',
+      shorthand: null,
+      type: String,
+      argument: 'timeline|tree|gantt',
+      deprecated: false,
+      description:
+        'Dashboard view to open. Only valid with --open. Defaults to timeline.',
+    },
   ],
   examples: [
     {
@@ -41,6 +58,14 @@ export const getSubcommand = {
     {
       name: 'Fetch a trace from a specific team and project',
       value: `${packageName} traces get req_1234567890 --scope my-team --project my-app`,
+    },
+    {
+      name: 'Open the trace in the Vercel Dashboard',
+      value: `${packageName} traces get req_1234567890 --open`,
+    },
+    {
+      name: 'Open the trace in the Vercel Dashboard with the gantt view',
+      value: `${packageName} traces get req_1234567890 --open --view gantt`,
     },
   ],
 } as const;

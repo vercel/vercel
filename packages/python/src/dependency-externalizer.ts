@@ -32,6 +32,32 @@ import { detectTargetPlatform } from './platform-info';
 
 const readFile = promisify(fs.readFile);
 
+/**
+ * Files that are never needed at runtime and can be safely stripped from the
+ * vendor directory to reduce bundle size:
+ *
+ * - `*.pyi`          – type stubs for static type checkers
+ * - `py.typed`       – PEP 561 marker for typed packages
+ * - `WHEEL`          – wheel format metadata (installer use only)
+ * - `INSTALLER`      – records which tool installed the package
+ * - `direct_url.json`– PEP 610 install provenance
+ */
+const STRIP_BASENAMES = new Set([
+  'py.typed',
+  'WHEEL',
+  'INSTALLER',
+  'direct_url.json',
+]);
+
+function shouldStripVendorFile(filePath: string): boolean {
+  const segments = filePath.split(sep);
+  if (segments.includes('__pycache__')) return true;
+  const name = segments[segments.length - 1] ?? '';
+  if (name.endsWith('.pyc') || name.endsWith('.pyi')) return true;
+  if (STRIP_BASENAMES.has(name)) return true;
+  return false;
+}
+
 // AWS Lambda uncompressed size limit is 250MB, but we use 245MB to leave room for Lambda layers
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
 
@@ -744,10 +770,7 @@ export class PythonDependencyExternalizer {
           if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
             continue;
           }
-          if (
-            filePath.endsWith('.pyc') ||
-            filePath.split(sep).includes('__pycache__')
-          ) {
+          if (shouldStripVendorFile(filePath)) {
             continue;
           }
           const srcFsPath = join(dir, filePath);
@@ -831,11 +854,7 @@ export class PythonDependencyExternalizer {
           if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) {
             continue;
           }
-          // Skip .pyc and __pycache__
-          if (
-            filePath.endsWith('.pyc') ||
-            filePath.split(sep).includes('__pycache__')
-          ) {
+          if (shouldStripVendorFile(filePath)) {
             continue;
           }
 

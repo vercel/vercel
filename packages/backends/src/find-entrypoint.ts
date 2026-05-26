@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import type { DetectEntrypointFn } from '@vercel/build-utils';
@@ -112,6 +113,18 @@ export const findEntrypointOrThrow = async (cwd: string): Promise<string> => {
     );
   }
   return entrypoint;
+};
+
+export const findEntrypointWithHintOrThrow = async (
+  workPath: string,
+  configured: string | undefined
+): Promise<string> => {
+  const explicit =
+    configured && configured !== 'package.json' ? configured : null;
+  if (explicit && existsSync(join(workPath, explicit))) {
+    return explicit;
+  }
+  return findEntrypointOrThrow(workPath);
 };
 
 /**

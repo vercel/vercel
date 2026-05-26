@@ -180,10 +180,7 @@ export {
   getLambdaPreloadScripts,
   type BytecodeCachingOptions,
 } from './process-serverless/get-lambda-preload-scripts';
-export {
-  getLambdaSupportsStreaming,
-  type SupportsStreamingResult,
-} from './process-serverless/get-lambda-supports-streaming';
+export { getLambdaSupportsStreaming } from './process-serverless/get-lambda-supports-streaming';
 
 export {
   streamToDigestAsync,
