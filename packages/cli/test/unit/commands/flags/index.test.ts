@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import * as ls from '../../../../src/commands/flags/ls';
+import * as stale from '../../../../src/commands/flags/stale';
 import * as openFlag from '../../../../src/commands/flags/open';
 import * as rolloutFlag from '../../../../src/commands/flags/rollout';
 import * as splitFlag from '../../../../src/commands/flags/split';
@@ -9,6 +10,7 @@ import { client } from '../../../mocks/client';
 
 describe('flags', () => {
   const lsSpy = vi.spyOn(ls, 'default').mockResolvedValue(0);
+  const staleSpy = vi.spyOn(stale, 'default').mockResolvedValue(0);
   const openSpy = vi.spyOn(openFlag, 'default').mockResolvedValue(0);
   const rolloutSpy = vi.spyOn(rolloutFlag, 'default').mockResolvedValue(0);
   const splitSpy = vi.spyOn(splitFlag, 'default').mockResolvedValue(0);
@@ -16,6 +18,7 @@ describe('flags', () => {
 
   afterEach(() => {
     lsSpy.mockClear();
+    staleSpy.mockClear();
     openSpy.mockClear();
     rolloutSpy.mockClear();
     splitSpy.mockClear();
@@ -63,6 +66,14 @@ describe('flags', () => {
     client.setArgv('flags', 'open', ...args);
     await flags(client);
     expect(openSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  it('routes to stale subcommand', async () => {
+    const args: string[] = ['--older-than', '6mo'];
+
+    client.setArgv('flags', 'stale', ...args);
+    await flags(client);
+    expect(staleSpy).toHaveBeenCalledWith(client, args);
   });
 
   it('routes to update subcommand', async () => {

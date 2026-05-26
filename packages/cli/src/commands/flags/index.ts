@@ -8,6 +8,7 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
+import stale from './stale';
 import inspect from './inspect';
 import create from './add';
 import openFlag from './open';
@@ -23,6 +24,7 @@ import { sdkKeys } from './sdk-keys';
 import {
   flagsCommand,
   listSubcommand,
+  staleSubcommand,
   inspectSubcommand,
   createSubcommand,
   openSubcommand,
@@ -43,6 +45,7 @@ import override from './override';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
+  stale: getCommandAliases(staleSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   create: getCommandAliases(createSubcommand),
   open: getCommandAliases(openSubcommand),
@@ -106,6 +109,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
+    case 'stale':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(staleSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandStale(subcommandOriginal);
+      return stale(client, args);
     case 'inspect':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
