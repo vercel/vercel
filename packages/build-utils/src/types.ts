@@ -966,6 +966,27 @@ export interface ExperimentalServiceConfig {
  */
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 
+export type VercelTargetEnvironment = 'development' | 'preview' | 'production';
+
+/**
+ * Declares how an environment variable should be configured for a project.
+ * @experimental This feature is experimental and may change.
+ */
+export interface ExperimentalEnvironmentVariableDefinition {
+  type: 'secret' | 'config';
+  required: true | VercelTargetEnvironment[];
+  allowNonSecretDevelopment?: boolean;
+}
+
+/**
+ * Map of environment variable name to its declaration.
+ * @experimental This feature is experimental and may change.
+ */
+export type ExperimentalEnvironmentVariables = Record<
+  string,
+  ExperimentalEnvironmentVariableDefinition
+>;
+
 /**
  * Public configuration for a service in vercel.json.
  */

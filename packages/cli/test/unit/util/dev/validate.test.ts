@@ -1168,4 +1168,56 @@ describe('validateConfig', () => {
       );
     });
   });
+
+  describe('experimentalEnvironmentVariables', () => {
+    it('should accept valid experimentalEnvironmentVariables', () => {
+      const error = validateConfig({
+        experimentalEnvironmentVariables: {
+          NEON_DB_PASSWORD: {
+            type: 'secret',
+            required: true,
+            allowNonSecretDevelopment: true,
+          },
+          STRIPE_SK: {
+            type: 'secret',
+            required: ['production'],
+            allowNonSecretDevelopment: true,
+          },
+          NEON_DB_URL: {
+            type: 'config',
+            required: true,
+          },
+        },
+      });
+      expect(error).toBeNull();
+    });
+
+    it('should error when required uses invalid environment names', () => {
+      const error = validateConfig({
+        experimentalEnvironmentVariables: {
+          API_KEY: {
+            type: 'secret',
+            required: ['staging'],
+          },
+        },
+      } as unknown as Parameters<typeof validateConfig>[0]);
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain('experimentalEnvironmentVariables');
+    });
+
+    it('should error when allowNonSecretDevelopment is set on config type', () => {
+      const error = validateConfig({
+        experimentalEnvironmentVariables: {
+          API_URL: {
+            type: 'config',
+            required: true,
+            allowNonSecretDevelopment: true,
+          },
+        },
+      });
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe('INVALID_EXPERIMENTAL_ENVIRONMENT_VARIABLE');
+      expect(error!.message).toContain('allowNonSecretDevelopment');
+    });
+  });
 });
