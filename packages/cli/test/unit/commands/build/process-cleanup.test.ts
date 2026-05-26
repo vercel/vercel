@@ -1,6 +1,7 @@
 import { join } from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import build from '../../../../src/commands/build';
+import { BUILD_PROCESS_HANG_CHECK_ENV } from '../../../../src/util/build/build-process-hang-check';
 import { client } from '../../../mocks/client';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { runBuildSubprocess } from '../../../helpers/run-build-subprocess';
@@ -19,8 +20,13 @@ const fixture = (name: string) =>
  * static-build vite logic.
  */
 describe.skipIf(process.platform === 'win32')('build process cleanup', () => {
+  beforeEach(() => {
+    process.env[BUILD_PROCESS_HANG_CHECK_ENV] = '1';
+  });
+
   afterEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
+    delete process.env[BUILD_PROCESS_HANG_CHECK_ENV];
   });
 
   it('errors in-process when a builder leaves active timers', async () => {
@@ -60,5 +66,15 @@ describe.skipIf(process.platform === 'win32')('build process cleanup', () => {
 
     expect(result.timedOut).toBe(false);
     expect(result.exitCode).toBe(0);
+  });
+
+  it('skips hang detection when the feature flag is disabled', async () => {
+    delete process.env[BUILD_PROCESS_HANG_CHECK_ENV];
+    client.cwd = fixture('hanging-builder');
+    client.setArgv('build', '--yes');
+
+    const exitCode = await build(client);
+
+    expect(exitCode).toBe(0);
   });
 });

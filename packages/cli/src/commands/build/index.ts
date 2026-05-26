@@ -73,6 +73,7 @@ import {
   assertBuildProcessIdle,
   createBuildResourceTracker,
 } from '../../util/build/assert-build-idle';
+import { isBuildProcessHangCheckEnabled } from '../../util/build/build-process-hang-check';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -493,8 +494,10 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    const buildResourceTracker = createBuildResourceTracker();
-    buildResourceTracker.start();
+    const buildResourceTracker = isBuildProcessHangCheckEnabled()
+      ? createBuildResourceTracker()
+      : null;
+    buildResourceTracker?.start();
     try {
       await rootSpan
         .child('vc.doBuild')
@@ -505,7 +508,11 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan.stop();
     }
 
-    await assertBuildProcessIdle(buildResourceTracker);
+    if (buildResourceTracker) {
+      await rootSpan
+        .child('vc.assertBuildProcessIdle')
+        .trace(span => assertBuildProcessIdle(buildResourceTracker, span));
+    }
 
     if (client.nonInteractive) {
       const relOutputDir = relative(cwd, outputDir);
@@ -561,7 +568,10 @@ export default async function main(client: Client): Promise<number> {
     }
     output.prettyError(err);
 
-    if (err?.code === 'BUILD_PROCESS_HANG') {
+    if (
+      err?.code === 'BUILD_PROCESS_HANG' &&
+      isBuildProcessHangCheckEnabled()
+    ) {
       client.forceExitAfterBuild = true;
     }
 

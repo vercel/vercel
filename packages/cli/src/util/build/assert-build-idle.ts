@@ -1,5 +1,5 @@
 import async_hooks from 'node:async_hooks';
-import { NowBuildError } from '@vercel/build-utils';
+import { NowBuildError, type Span } from '@vercel/build-utils';
 
 const TRACKED_ASYNC_TYPES = new Set(['Timeout', 'Immediate']);
 
@@ -36,13 +36,22 @@ export function createBuildResourceTracker() {
 }
 
 export async function assertBuildProcessIdle(
-  tracker: ReturnType<typeof createBuildResourceTracker>
+  tracker: ReturnType<typeof createBuildResourceTracker>,
+  span?: Span
 ): Promise<void> {
   await settleEventLoop();
   tracker.stop();
 
   const pendingTypes = tracker.getPendingTypes();
   const leakingTimers = pendingTypes.filter(type => type === 'Timeout');
+
+  span?.setAttributes({
+    pendingAsyncResourceTypes: pendingTypes.join(',') || undefined,
+    leakingTimerCount:
+      leakingTimers.length > 0 ? String(leakingTimers.length) : undefined,
+    hangDetected: leakingTimers.length > 0 ? 'true' : 'false',
+  });
+
   if (leakingTimers.length > 0) {
     throw new NowBuildError({
       code: 'BUILD_PROCESS_HANG',

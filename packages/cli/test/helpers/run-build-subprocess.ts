@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import execa from 'execa';
+import { BUILD_PROCESS_HANG_CHECK_ENV } from '../../src/util/build/build-process-hang-check';
 
 const binaryPath = path.resolve(__dirname, '../../scripts/start.js');
 
@@ -52,6 +53,7 @@ export async function runBuildSubprocess(
       NO_UPDATE_NOTIFIER: '1',
       NO_COLOR: '1',
       FORCE_COLOR: '0',
+      [BUILD_PROCESS_HANG_CHECK_ENV]: '1',
     },
     timeout,
     killSignal: 'SIGKILL',
