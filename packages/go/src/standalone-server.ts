@@ -14,9 +14,10 @@ import {
   debug,
   cloneEnv,
   getLambdaOptionsFromFunction,
+  execCommand,
 } from '@vercel/build-utils';
 
-import { createGo } from './go-helpers';
+import { createGo, findGoBinary } from './go-helpers';
 
 /**
  * Find the go.mod file starting from a directory and scanning up.
@@ -54,6 +55,7 @@ export async function buildStandaloneServer({
   config,
   workPath,
   meta = {},
+  registerPreDeploy,
 }: BuildOptions): Promise<{ output: Lambda }> {
   debug(`Building standalone Go server: ${entrypoint}`);
 
@@ -95,21 +97,34 @@ export async function buildStandaloneServer({
     debug('Detected vendor directory, using -mod=vendor for build');
   }
 
-  // Determine build target based on entrypoint location
-  // - main.go at root: build '.'
-  // - cmd/api/main.go: build './cmd/api'
-  const buildTarget =
-    entrypoint === 'main.go' ? '.' : './' + dirname(entrypoint);
+  const buildCommand: string | undefined =
+    (config?.buildCommand as string) ??
+    (config?.projectSettings as any)?.buildCommand ??
+    undefined;
 
-  debug(
-    `Building user Go server (${architecture}): go build ${buildTarget} -> ${userServerPath}`
-  );
+  if (typeof buildCommand === 'string') {
+    debug(`Running custom build command: ${buildCommand}`);
+    const buildStartTime = Date.now();
+    await execCommand(buildCommand, {
+      env: { ...go.getEnv(), VERCEL_OUTPUT_FILE: userServerPath },
+      cwd: workPath,
+    });
+    await findGoBinary(workPath, userServerPath, goModPath, buildStartTime);
+  } else {
+    // Default: build the entrypoint with go build
+    const buildTarget =
+      entrypoint === 'main.go' ? '.' : './' + dirname(entrypoint);
 
-  try {
-    await go.build(buildTarget, userServerPath, { vendorMode: isVendored });
-  } catch (err) {
-    console.error(`Failed to build standalone Go server: ${buildTarget}`);
-    throw err;
+    debug(
+      `Building user Go server (${architecture}): go build ${buildTarget} -> ${userServerPath}`
+    );
+
+    try {
+      await go.build(buildTarget, userServerPath, { vendorMode: isVendored });
+    } catch (err) {
+      console.error(`Failed to build standalone Go server: ${buildTarget}`);
+      throw err;
+    }
   }
 
   // Build the bootstrap wrapper that handles IPC protocol
@@ -196,6 +211,19 @@ export async function buildStandaloneServer({
     architecture,
     runtimeLanguage: 'go',
   });
+
+  const preDeployCommand = config?.preDeployCommand;
+  if (registerPreDeploy && typeof preDeployCommand === 'string') {
+    const capturedEnv = { ...env };
+    const capturedCwd = workPath;
+    registerPreDeploy(async () => {
+      debug(`Running pre-deploy command: \`${preDeployCommand}\``);
+      await execCommand(preDeployCommand, {
+        env: capturedEnv,
+        cwd: capturedCwd,
+      });
+    });
+  }
 
   return { output: lambda };
 }
