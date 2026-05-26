@@ -202,6 +202,16 @@ Learn more: https://vercel.com/docs/functions/serverless-functions/runtimes/go
   return JSON.parse(analyzed) as Analyzed;
 }
 
+export interface GoModJson {
+  Module?: { Path: string };
+  Go?: string;
+  Require?: Array<{ Path: string; Version: string; Indirect?: boolean }>;
+  Replace?: Array<{
+    Old: { Path: string; Version?: string };
+    New: { Path: string; Version?: string };
+  }>;
+}
+
 export class GoWrapper {
   private env: Env;
   private opts: execa.Options;
@@ -252,6 +262,26 @@ export class GoWrapper {
       args.push('-e');
     }
     return this.execute(...args);
+  }
+
+  /**
+   * Runs `go mod edit -json <path>` and returns the parsed structure.
+   */
+  async modEditJson(goModPath: string): Promise<GoModJson | null> {
+    try {
+      debug(`Exec: go mod edit -json ${goModPath}`);
+      const result = await execa('go', ['mod', 'edit', '-json', goModPath], {
+        ...this.opts,
+        env: this.env,
+        extendEnv: false,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      return JSON.parse(result.stdout) as GoModJson;
+    } catch (err) {
+      debug(`Failed to read go.mod for manifest: ${err}`);
+      return null;
+    }
   }
 
   vendor() {

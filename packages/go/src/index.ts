@@ -263,9 +263,10 @@ export async function build(options: BuildOptions) {
 
     // Emit the manifest after resolving the Go version but before building the handler
     // injects the @vercel/go-bridge.
+    const goModJson = goModPath ? await go.modEditJson(goModPath) : null;
     await generateProjectManifest({
       workPath,
-      goModPath,
+      goModJson,
       resolvedGoVersion: go.resolvedVersion,
       framework: config.framework ?? undefined,
       serviceType: service ? getReportedServiceType(service) : undefined,

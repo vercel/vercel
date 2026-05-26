@@ -228,9 +228,10 @@ export async function buildStandaloneServer({
     });
   }
 
+  const goModJson = goModPath ? await go.modEditJson(goModPath) : null;
   await generateProjectManifest({
     workPath,
-    goModPath,
+    goModJson,
     resolvedGoVersion: go.resolvedVersion,
     framework: config.framework ?? undefined,
     serviceType: service ? getReportedServiceType(service) : undefined,
