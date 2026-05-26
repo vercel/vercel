@@ -126,6 +126,29 @@ export const buySubcommand = {
   examples: [],
 } as const;
 
+export const checkSubcommand = {
+  name: 'check',
+  aliases: [],
+  description: 'Check if a domain is available to buy',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Check if a domain is available',
+      value: `${packageName} domains check example.com`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains check example.com --format json`,
+    },
+  ],
+} as const;
+
 export const moveSubcommand = {
   name: 'move',
   aliases: [],
@@ -181,6 +204,7 @@ export const domainsCommand = {
     inspectSubcommand,
     addSubcommand,
     buySubcommand,
+    checkSubcommand,
     moveSubcommand,
     priceSubcommand,
     transferInSubcommand,

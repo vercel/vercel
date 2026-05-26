@@ -1998,6 +1998,44 @@ exports[`help command > domains help output snapshots > domains buy help output 
 "
 `;
 
+exports[`help command > domains help output snapshots > domains check help output snapshots > domains check help column width 120 1`] = `
+"
+  ▲ vercel domains check domain [options]
+
+  Check if a domain is available to buy                                                                                 
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Check if a domain is available
+
+    $ vercel domains check example.com
+
+  - JSON output
+
+    $ vercel domains check example.com --format json
+
+"
+`;
+
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
   ▲ vercel domains [command]
@@ -2033,6 +2071,13 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    new 
                                    dom…
                                    name
+  check        domain              Che…
+                                   if a
+                                   dom…
+                                   is  
+                                   ava…
+                                   to  
+                                   buy 
   move         domain destination  Move
                                    own…
                                    of a
@@ -2130,6 +2175,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   add          domain project      Add a domain name that you already own to a 
                                    Vercel Team                                 
   buy          domain              Purchase a new domain name                  
+  check        domain              Check if a domain is available to buy       
   move         domain destination  Move ownership of a domain name to another  
                                    Vercel Team                                 
   price        domain              Show registrar price quote for a domain     
@@ -2169,6 +2215,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   inspect      domain              Displays information related to a domain                                            
   add          domain project      Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
+  check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
   price        domain              Show registrar price quote for a domain                                             
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
