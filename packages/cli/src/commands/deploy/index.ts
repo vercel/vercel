@@ -3,6 +3,7 @@ import {
   getSupportedNodeVersion,
   scanParentDirs,
   PYTHON_FRAMEWORKS,
+  type VercelTargetEnvironment,
 } from '@vercel/build-utils';
 import {
   fileNameSymbol,
@@ -68,6 +69,7 @@ import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import { validateConfig } from '../../util/validate-config';
 import { validateExperimentalEnvironmentVariables } from '../../util/validate-experimental-environment-variables';
+import { loadLocalVercelEnvFile } from '../../util/env/load-local-vercel-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { getCommandName } from '../../util/pkg-name';
@@ -450,11 +452,22 @@ async function handleInitDeployment(
     return 1;
   }
 
+  const deployTarget = (target || 'preview') as VercelTargetEnvironment;
+  const localPulledEnv = await loadLocalVercelEnvFile(
+    cwd,
+    deployTarget,
+    rootDirectory
+  );
   const experimentalEnvError = validateExperimentalEnvironmentVariables(
     localConfig,
     {
-      environment: target || 'preview',
-      env: { ...process.env, ...deploymentEnv, ...deploymentBuildEnv },
+      environment: deployTarget,
+      env: {
+        ...process.env,
+        ...localPulledEnv,
+        ...deploymentEnv,
+        ...deploymentBuildEnv,
+      },
     }
   );
   if (experimentalEnvError) {
@@ -1421,11 +1434,22 @@ async function handleDefaultDeploy(
     return 1;
   }
 
+  const deployTarget = (target || 'preview') as VercelTargetEnvironment;
+  const localPulledEnv = await loadLocalVercelEnvFile(
+    cwd,
+    deployTarget,
+    rootDirectory
+  );
   const experimentalEnvError = validateExperimentalEnvironmentVariables(
     localConfig,
     {
-      environment: target || 'preview',
-      env: { ...process.env, ...deploymentEnv, ...deploymentBuildEnv },
+      environment: deployTarget,
+      env: {
+        ...process.env,
+        ...localPulledEnv,
+        ...deploymentEnv,
+        ...deploymentBuildEnv,
+      },
     }
   );
   if (experimentalEnvError) {
