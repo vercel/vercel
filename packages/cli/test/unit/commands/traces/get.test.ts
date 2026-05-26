@@ -1,5 +1,5 @@
 import open from 'open';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import traces from '../../../../src/commands/traces';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -446,6 +446,111 @@ describe('vercel traces get', () => {
       expect(mockedOpen).toHaveBeenCalledWith(
         'https://vercel.com/team-alpha/project-from-flag/logs/traces/trace_001'
       );
+    });
+  });
+
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      client.nonInteractive = false;
+    });
+
+    function readAgentPayload(): Record<string, unknown> {
+      const stdout = client.stdout.getFullOutput().trim();
+      return JSON.parse(stdout);
+    }
+
+    function spyExit() {
+      return vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+    }
+
+    it('emits invalid_arguments JSON when --json and --open are combined', async () => {
+      const exitSpy = spyExit();
+      client.nonInteractive = true;
+      client.setArgv('traces', 'get', 'req_x', '--open', '--json');
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_arguments');
+      expect(payload.message).toBe(
+        '`--json` and `--open` cannot be used together.'
+      );
+
+      exitSpy.mockRestore();
+    });
+
+    it('emits invalid_arguments JSON when --view is used without --open', async () => {
+      const exitSpy = spyExit();
+      client.nonInteractive = true;
+      client.setArgv('traces', 'get', 'req_x', '--view', 'tree');
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_arguments');
+      expect(payload.message).toBe('`--view` can only be used with `--open`.');
+
+      exitSpy.mockRestore();
+    });
+
+    it('emits invalid_arguments JSON on an invalid --view value', async () => {
+      const exitSpy = spyExit();
+      client.nonInteractive = true;
+      client.setArgv(
+        'traces',
+        'get',
+        'req_x',
+        '--open',
+        '--view',
+        'flamegraph'
+      );
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_arguments');
+      expect(payload.message).toBe(
+        '`--view` must be one of: timeline, tree, gantt. Received: flamegraph'
+      );
+
+      exitSpy.mockRestore();
+    });
+
+    it('emits not_found JSON when --open --project resolves to an unknown project', async () => {
+      const exitSpy = spyExit();
+      mockNotLinked();
+      client.scenario.get('/v1/projects/traces', (_req, res) => {
+        res.json({ trace: sampleTrace });
+      });
+      client.scenario.get('/v9/projects/missing-project', (_req, res) => {
+        res.status(404).json({ error: { code: 'not_found' } });
+      });
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'traces',
+        'get',
+        'req_missing_project',
+        '--open',
+        '--scope',
+        'team-alpha',
+        '--project',
+        'missing-project'
+      );
+
+      await expect(traces(client)).rejects.toThrow('exit');
+
+      const payload = readAgentPayload();
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('not_found');
+      expect(payload.message).toBe('Project not found: missing-project');
+
+      exitSpy.mockRestore();
     });
   });
 });

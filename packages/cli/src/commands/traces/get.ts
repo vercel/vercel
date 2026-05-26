@@ -9,6 +9,8 @@ import type { ProjectLinkResult } from '@vercel-internals/types';
 import getTeamById from '../../util/teams/get-team-by-id';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { help } from '../help';
 import { getSubcommand, tracesCommand } from './command';
 import { fetchTrace } from './fetch-trace';
@@ -54,7 +56,9 @@ async function resolveDashboardScope({
   projectFlag: string | undefined;
   teamId: string;
   linkedProject: ProjectLinkResult;
-}): Promise<{ teamSlug: string; projectName: string } | { error: string }> {
+}): Promise<
+  { teamSlug: string; projectName: string } | { error: string; reason: string }
+> {
   let teamSlug: string;
   if (scopeFlag) {
     // Team ids start with `team_`; anything else is already a slug.
@@ -67,20 +71,29 @@ async function resolveDashboardScope({
   } else if (linkedProject.status === 'linked') {
     teamSlug = linkedProject.org.slug;
   } else {
-    return { error: 'Unable to resolve team slug for the dashboard URL.' };
+    return {
+      error: 'Unable to resolve team slug for the dashboard URL.',
+      reason: AGENT_REASON.NOT_LINKED,
+    };
   }
 
   let projectName: string;
   if (projectFlag) {
     const project = await getProjectByNameOrId(client, projectFlag, teamId);
     if (project instanceof ProjectNotFound) {
-      return { error: `Project not found: ${projectFlag}` };
+      return {
+        error: `Project not found: ${projectFlag}`,
+        reason: AGENT_REASON.NOT_FOUND,
+      };
     }
     projectName = project.name;
   } else if (linkedProject.status === 'linked') {
     projectName = linkedProject.project.name;
   } else {
-    return { error: 'Unable to resolve project name for the dashboard URL.' };
+    return {
+      error: 'Unable to resolve project name for the dashboard URL.',
+      reason: AGENT_REASON.NOT_LINKED,
+    };
   }
 
   return { teamSlug, projectName };
@@ -115,21 +128,43 @@ export default async function get(
   telemetry.trackCliOptionView(viewFlag);
 
   if (json && openFlag) {
-    output.error('`--json` and `--open` cannot be used together.');
+    const msg = '`--json` and `--open` cannot be used together.';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+      });
+    }
+    output.error(msg);
     return 1;
   }
 
   if (viewFlag && !openFlag) {
-    output.error('`--view` can only be used with `--open`.');
+    const msg = '`--view` can only be used with `--open`.';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+      });
+    }
+    output.error(msg);
     return 1;
   }
 
   let view: View | undefined;
   if (viewFlag !== undefined) {
     if (!isView(viewFlag)) {
-      output.error(
-        `\`--view\` must be one of: ${VIEW_OPTIONS.join(', ')}. Received: ${viewFlag}`
-      );
+      const msg = `\`--view\` must be one of: ${VIEW_OPTIONS.join(', ')}. Received: ${viewFlag}`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: msg,
+        });
+      }
+      output.error(msg);
       return 1;
     }
     view = viewFlag;
@@ -192,7 +227,15 @@ export default async function get(
   if (openFlag) {
     if (!linkedProject) {
       // Should be unreachable: the open path forces linkedProject resolution above.
-      output.error('Unable to resolve project link for the dashboard URL.');
+      const msg = 'Unable to resolve project link for the dashboard URL.';
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
+          message: msg,
+        });
+      }
+      output.error(msg);
       return 1;
     }
     const resolved = await resolveDashboardScope({
@@ -203,6 +246,13 @@ export default async function get(
       linkedProject,
     });
     if ('error' in resolved) {
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: AGENT_STATUS.ERROR,
+          reason: resolved.reason,
+          message: resolved.error,
+        });
+      }
       output.error(resolved.error);
       return 1;
     }
