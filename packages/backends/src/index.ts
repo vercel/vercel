@@ -40,7 +40,10 @@ export type {
   PathOptions,
 } from './cervel/index.js';
 import { rolldown } from './rolldown/index.js';
-import { introspection } from './rolldown/introspection.js';
+import {
+  introspection,
+  type IntrospectionRouteConfig,
+} from './rolldown/introspection.js';
 import { nft } from './rolldown/nft.js';
 import { maybeDoBuildCommand } from './build.js';
 import { typescript } from './typescript.js';
@@ -58,6 +61,47 @@ function hasExplicitBuildCommand(
 ): boolean {
   const cmd = config.buildCommand ?? config.projectSettings?.buildCommand;
   return typeof cmd === 'string' && cmd.trim().length > 0;
+}
+
+/**
+ * Narrow an arbitrary `IntrospectionRouteConfig` (sourced from a user-stamped
+ * symbol) to the `NodejsLambdaOptions` fields we are willing to thread
+ * through to the per-route Lambda. Anything else is dropped silently — the
+ * stamped config is untrusted user input and we don't want to forward
+ * unknown fields into the build output.
+ *
+ * Returns `undefined` when no recognized fields are present, so callers can
+ * fall through to the default Lambda without producing a duplicate.
+ */
+function pickLambdaOverrides(
+  config: IntrospectionRouteConfig | undefined
+): Partial<NodejsLambdaOptions> | undefined {
+  if (!config || typeof config !== 'object') return undefined;
+  const overrides: Partial<NodejsLambdaOptions> = {};
+  if (typeof config.architecture === 'string') {
+    overrides.architecture =
+      config.architecture as NodejsLambdaOptions['architecture'];
+  }
+  if (typeof config.memory === 'number') {
+    overrides.memory = config.memory;
+  }
+  if (typeof config.maxDuration === 'number') {
+    overrides.maxDuration = config.maxDuration;
+  }
+  if (Array.isArray(config.regions)) {
+    overrides.regions = config.regions.filter(
+      (r): r is string => typeof r === 'string'
+    );
+  }
+  if (Array.isArray(config.functionFailoverRegions)) {
+    overrides.functionFailoverRegions = config.functionFailoverRegions.filter(
+      (r): r is string => typeof r === 'string'
+    );
+  }
+  if (typeof config.supportsCancellation === 'boolean') {
+    overrides.supportsCancellation = config.supportsCancellation;
+  }
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 
 export const build: BuildV2 = async args => {
@@ -341,7 +385,9 @@ export const build: BuildV2 = async args => {
       ? [{ handle: 'filesystem' }]
       : [
           { handle: 'filesystem' },
-          ...introspectionResult.routes.map(remapRouteDestination),
+          ...introspectionResult.routes.map(({ config: _, ...rest }) =>
+            remapRouteDestination(rest)
+          ),
           {
             src: getServiceCatchallSource(serviceRoutePrefix),
             dest: internalServiceFunctionPath ?? '/',
@@ -352,19 +398,69 @@ export const build: BuildV2 = async args => {
       ? { [internalServiceOutputPath]: lambda }
       : { index: lambda };
 
-    for (const route of routes) {
-      if (route.dest) {
-        if (route.dest === '/') {
-          continue;
-        }
-        // Only the exact service alias needs the leading slash removed.
-        const outputPath =
-          route.dest === internalServiceFunctionPath &&
-          internalServiceOutputPath
-            ? internalServiceOutputPath
-            : route.dest;
-        output[outputPath] = lambda;
+    // Per-route Lambda overrides sourced from the framework's well-known
+    // config symbol (`Symbol.for('@vercel/backends.config')` for Hono). The
+    // introspection child process stamps this onto each route entry it
+    // emits; we honor it here by emitting a dedicated `NodejsLambda` per
+    // distinct config slice, sharing the same bundled `files` / `handler`
+    // as the default Lambda — overrides only change runtime configuration,
+    // not the bundled code.
+    //
+    // Lambdas are deduplicated by a deterministic key derived from the
+    // config slice, so multiple routes carrying the same config (e.g.
+    // several routes pinned to the same `iad1` region) share a single
+    // Lambda instance. Function count stays proportional to the number of
+    // distinct configurations, not the number of matching routes.
+    const routeLambdaCache = new Map<string, Lambda>();
+
+    const buildRouteLambda = (
+      overrides: Partial<NodejsLambdaOptions>
+    ): Lambda => {
+      const key = JSON.stringify(overrides);
+      const cached = routeLambdaCache.get(key);
+      if (cached) return cached;
+      const routeLambda = new NodejsLambda({
+        ...lambdaArgs,
+        ...overrides,
+      });
+      if (shouldStripServiceRoutePrefix && serviceRoutePrefix) {
+        routeLambda.environment = {
+          ...routeLambda.environment,
+          VERCEL_SERVICE_ROUTE_PREFIX: serviceRoutePrefix,
+          VERCEL_SERVICE_ROUTE_PREFIX_STRIP: '1',
+        };
       }
+      routeLambdaCache.set(key, routeLambda);
+      return routeLambda;
+    };
+
+    // Resolve overrides per introspected route. We key by the (possibly
+    // remapped) output path so a `route()`-flattened path lines up with
+    // the route entry we attach the Lambda to below.
+    const configByOutputPath = new Map<string, Partial<NodejsLambdaOptions>>();
+    for (const introspectedRoute of introspectionResult.routes) {
+      if (!introspectedRoute.dest || introspectedRoute.dest === '/') continue;
+      const outputPath =
+        introspectedRoute.dest === internalServiceFunctionPath &&
+        internalServiceOutputPath
+          ? internalServiceOutputPath
+          : introspectedRoute.dest;
+      const overrides = pickLambdaOverrides(introspectedRoute.config);
+      if (overrides) {
+        configByOutputPath.set(outputPath, overrides);
+      }
+    }
+
+    for (const route of routes) {
+      if (!route.dest) continue;
+      if (route.dest === '/') continue;
+      // Only the exact service alias needs the leading slash removed.
+      const outputPath =
+        route.dest === internalServiceFunctionPath && internalServiceOutputPath
+          ? internalServiceOutputPath
+          : route.dest;
+      const overrides = configByOutputPath.get(outputPath);
+      output[outputPath] = overrides ? buildRouteLambda(overrides) : lambda;
     }
 
     return {

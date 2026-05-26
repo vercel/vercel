@@ -5,7 +5,12 @@ export const END_INTROSPECTION_RESULT = '\n__VERCEL_INTROSPECTION_END__\n';
 export const setupCloseHandlers = (
   cb: () =>
     | {
-        routes: { src: string; dest: string; methods: string[] }[];
+        routes: {
+          src: string;
+          dest: string;
+          methods: string[];
+          config?: unknown;
+        }[];
         additionalFolders?: string[];
         additionalDeps?: string[];
       }

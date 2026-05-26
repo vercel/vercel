@@ -52,6 +52,11 @@ export const introspectApp = async (args: {
         src: z.string(),
         dest: z.string(),
         methods: z.array(z.string()),
+        // Per-route Vercel Function config sourced from the framework's
+        // well-known symbol (`Symbol.for('@vercel/backends.config')`).
+        // Schema is intentionally permissive — the build-time consumer
+        // narrows to known `NodejsLambdaOptions` fields.
+        config: z.record(z.unknown()).optional(),
       })
     ),
     additionalFolders: z

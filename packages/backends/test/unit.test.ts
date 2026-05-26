@@ -206,6 +206,87 @@ describe('successful builds', async () => {
   }, 20000);
 });
 
+describe('per-route config via VERCEL_CONFIG symbol', () => {
+  it.skipIf(process.platform === 'win32')(
+    'maps each tagged sub-app to its own NodejsLambda',
+    async () => {
+      // Fixture: a Hono app with three sub-apps. Each sub-app has a
+      // `Symbol.for('@vercel/backends.config')` property stamped on it
+      // pinning its routes to a specific Vercel region. The build should
+      // emit one Lambda per distinct config plus a default Lambda for
+      // untagged routes.
+      const fixtureName = '21-hono-route-config';
+      const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+      const vercelJson = await loadVercelJson(fixtureSource);
+      const config = getFixtureConfig(vercelJson);
+      const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+      const result = (await build({
+        files: {},
+        workPath: workDir,
+        config,
+        meta,
+        entrypoint: 'package.json',
+        repoRootPath: workDir,
+      })) as BuildResultV2Typical;
+
+      // Default Lambda — receives `/` and any untagged routes. No regions.
+      const defaultLambda = result.output.index as unknown as NodejsLambda;
+      expect(defaultLambda).toBeDefined();
+      expect(defaultLambda.regions).toBeUndefined();
+
+      // iad1: both `/api/iad1/hello` and `/api/iad1/world` were registered
+      // on the same tagged sub-app, so they must collapse onto a single
+      // dedicated Lambda instance.
+      const iad1Hello = result.output[
+        '/api/iad1/hello'
+      ] as unknown as NodejsLambda;
+      const iad1World = result.output[
+        '/api/iad1/world'
+      ] as unknown as NodejsLambda;
+      expect(iad1Hello).toBeDefined();
+      expect(iad1Hello.regions).toEqual(['iad1']);
+      expect(iad1World).toBe(iad1Hello);
+
+      // sfo1: pinned with a distinct failover. Must be a different Lambda
+      // instance from iad1.
+      const sfo1Hello = result.output[
+        '/api/sfo1/hello'
+      ] as unknown as NodejsLambda;
+      expect(sfo1Hello).toBeDefined();
+      expect(sfo1Hello.regions).toEqual(['sfo1']);
+      expect(sfo1Hello.functionFailoverRegions).toEqual(['pdx1']);
+      expect(sfo1Hello).not.toBe(iad1Hello);
+
+      // fra1: a third distinct config => a third distinct Lambda.
+      const fra1Hello = result.output[
+        '/api/fra1/hello'
+      ] as unknown as NodejsLambda;
+      expect(fra1Hello).toBeDefined();
+      expect(fra1Hello.regions).toEqual(['fra1']);
+      expect(fra1Hello).not.toBe(iad1Hello);
+      expect(fra1Hello).not.toBe(sfo1Hello);
+
+      // Untagged route on the root app — must land on the default Lambda.
+      const healthLambda = result.output[
+        '/api/health'
+      ] as unknown as NodejsLambda;
+      expect(healthLambda).toBeDefined();
+      expect(healthLambda.regions).toBeUndefined();
+      expect(healthLambda).toBe(defaultLambda);
+
+      // Every Lambda — default and region-pinned alike — must share the
+      // exact same bundled files. The symbol is a runtime-config knob, not
+      // a code-splitting one.
+      const defaultFiles = Object.keys(defaultLambda.files ?? {});
+      expect(Object.keys(iad1Hello.files ?? {})).toEqual(defaultFiles);
+      expect(Object.keys(sfo1Hello.files ?? {})).toEqual(defaultFiles);
+      expect(Object.keys(fra1Hello.files ?? {})).toEqual(defaultFiles);
+    },
+    60000
+  );
+});
+
 it.skipIf(process.platform === 'win32')(
   'does not crash when a workspace dep cannot be resolved',
   async () => {

@@ -24,15 +24,46 @@ import {
 
 const require = createRequire(import.meta.url);
 
+/**
+ * Per-route Vercel Function configuration carried back from the
+ * introspection child process. Sourced from the framework-specific
+ * well-known symbol (`Symbol.for('@vercel/backends.config')` for Hono),
+ * not from `vercel.json`. The shape matches the existing
+ * `BuilderFunctions[*]` slice but only the fields used by
+ * `NodejsLambdaOptions` are propagated downstream.
+ */
+export interface IntrospectionRouteConfig {
+  architecture?: string;
+  memory?: number;
+  maxDuration?: number;
+  regions?: string[];
+  functionFailoverRegions?: string[];
+  supportsCancellation?: boolean;
+}
+
 export interface IntrospectionResult {
   routes: Array<{
     src: string;
     dest: string;
     methods: string[];
+    config?: IntrospectionRouteConfig;
   }>;
   additionalFolders: string[];
   additionalDeps: string[];
 }
+
+const introspectionRouteConfigSchema = z
+  .object({
+    architecture: z.string().optional(),
+    memory: z.number().optional(),
+    maxDuration: z.number().optional(),
+    regions: z.array(z.string()).optional(),
+    functionFailoverRegions: z.array(z.string()).optional(),
+    supportsCancellation: z.boolean().optional(),
+  })
+  // Tolerate (and discard) unknown fields so future additions on the
+  // user-stamped symbol don't break older builders.
+  .passthrough();
 
 const introspectionSchema = z.object({
   routes: z.array(
@@ -40,6 +71,7 @@ const introspectionSchema = z.object({
       src: z.string(),
       dest: z.string(),
       methods: z.array(z.string()),
+      config: introspectionRouteConfigSchema.optional(),
     })
   ),
   additionalFolders: z.array(z.string()).optional(),
@@ -264,7 +296,12 @@ export const introspection = async (
     });
 
     return {
-      routes: introspectionData.routes,
+      routes: introspectionData.routes.map(r => ({
+        src: r.src,
+        dest: r.dest,
+        methods: r.methods,
+        ...(r.config && { config: r.config as IntrospectionRouteConfig }),
+      })),
       additionalFolders,
       additionalDeps: introspectionData.additionalDeps ?? [],
     };

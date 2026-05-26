@@ -1,0 +1,44 @@
+[
+  {
+    "handle": "filesystem"
+  },
+  {
+    "src": "^(?:\\/api\\/health)(?:\\/$)?$",
+    "dest": "/api/health",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/api\\/iad1\\/hello)(?:\\/$)?$",
+    "dest": "/api/iad1/hello",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/api\\/iad1\\/world)(?:\\/$)?$",
+    "dest": "/api/iad1/world",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/api\\/sfo1\\/hello)(?:\\/$)?$",
+    "dest": "/api/sfo1/hello",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/api\\/fra1\\/hello)(?:\\/$)?$",
+    "dest": "/api/fra1/hello",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "/(.*)",
+    "dest": "/"
+  }
+]
