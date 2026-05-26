@@ -14,8 +14,10 @@ import type { Cron } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
+  isQueueBackedService,
   isQueueTriggeredService,
   isScheduleTriggeredService,
+  isWorkflowTriggeredService,
   cloneEnv,
   getNodeBinPaths,
   spawnCommand,
@@ -147,7 +149,7 @@ interface ServiceDevProcess {
 }
 
 function getServiceRoutePrefixes(service: Service): string[] {
-  if (isQueueTriggeredService(service)) {
+  if (isQueueTriggeredService(service) || isWorkflowTriggeredService(service)) {
     return [getInternalServiceWorkerPathPrefix(service.name)];
   }
   if (isScheduleTriggeredService(service)) {
@@ -272,7 +274,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
-    this.hasQueueServices = options.services.some(isQueueTriggeredService);
+    this.hasQueueServices = options.services.some(isQueueBackedService);
   }
 
   // Synchronously SIGKILL every tracked process group. Used from

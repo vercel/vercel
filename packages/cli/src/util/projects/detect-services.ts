@@ -13,6 +13,7 @@ import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
+import { createDetectEntrypoint } from './detect-entrypoint';
 
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
@@ -67,7 +68,10 @@ export async function tryDetectServices(
   }
 
   const fs = new LocalFileSystemDetector(cwd);
-  const result = await detectServices({ fs });
+  const result = await detectServices({
+    fs,
+    detectEntrypoint: createDetectEntrypoint(cwd),
+  });
 
   // No services configured
   const hasNoServicesError = result.errors.some(

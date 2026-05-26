@@ -39,7 +39,7 @@ import {
   getInternalServiceFunctionPath,
   getServiceQueueTopicConfigs,
   isBackendBuilder,
-  isQueueTriggeredService,
+  isQueueBackedService,
   isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
@@ -889,7 +889,7 @@ async function doBuild(
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
   const hasQueueServices =
-    hasDetectedServices && detectedServices!.some(isQueueTriggeredService);
+    hasDetectedServices && detectedServices!.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
@@ -1316,11 +1316,7 @@ async function doBuild(
         });
       }
 
-      if (
-        service &&
-        isQueueTriggeredService(service) &&
-        'output' in buildResult
-      ) {
+      if (service && isQueueBackedService(service) && 'output' in buildResult) {
         attachQueueServiceTrigger(buildResult.output, service);
       }
 

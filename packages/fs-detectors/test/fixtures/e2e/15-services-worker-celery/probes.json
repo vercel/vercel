@@ -13,9 +13,16 @@
     {
       "path": "/enqueue",
       "method": "POST",
-      "body": {},
+      "body": { "request_id": "probe-15-jobs" },
       "status": 200,
-      "mustContain": "ok"
+      "mustContain": "probe-15-jobs"
+    },
+    {
+      "path": "/status/jobs/probe-15-jobs",
+      "status": 200,
+      "mustContain": "probe-15-jobs",
+      "retries": 5,
+      "retryDelay": 2000
     },
     {
       "path": "/_svc/worker/index",

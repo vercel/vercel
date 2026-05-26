@@ -802,6 +802,9 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  // Lambda uses a read-only filesystem; skip .pyc generation to avoid
+  // wasted syscalls on every import.
+  lambdaEnv.PYTHONDONTWRITEBYTECODE = '1';
   Object.assign(lambdaEnv, quirksResult.env);
   if (shouldInstallVercelWorkers) {
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
