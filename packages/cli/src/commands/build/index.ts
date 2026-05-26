@@ -179,6 +179,31 @@ export interface BuildsManifest {
 }
 
 export default async function main(client: Client): Promise<number> {
+  // Monkey-patch fs.watch and FSWatcher to capture creation stack traces
+  const fsModule = require('fs');
+  const originalWatch = fsModule.watch;
+  fsModule.watch = function patchedWatch(...args: any[]) {
+    const watcher = originalWatch.apply(this, args);
+    const stack = new Error().stack;
+    client.stdout.write(
+      `[build-diag] fs.watch created for: ${args[0]}\n[build-diag]   stack: ${stack?.split('\n').slice(1, 5).join(' <- ')}\n`
+    );
+    return watcher;
+  };
+  const fsPromises = require('fs/promises');
+  const originalFspWatch =
+    typeof fsPromises.watch === 'function' ? fsPromises.watch : null;
+  if (originalFspWatch) {
+    fsPromises.watch = function patchedFspWatch(...args: any[]) {
+      const watcher = originalFspWatch.apply(this, args);
+      const stack = new Error().stack;
+      client.stdout.write(
+        `[build-diag] fsPromises.watch created for: ${args[0]}\n[build-diag]   stack: ${stack?.split('\n').slice(1, 5).join(' <- ')}\n`
+      );
+      return watcher;
+    };
+  }
+
   const telemetryClient = new BuildTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -489,14 +514,50 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
+    // Snapshot handles before build to diff later
+    const handlesBefore = new Set(
+      ((process as any)._getActiveHandles?.() ?? []).map(
+        (h: any) => h.constructor?.name ?? typeof h
+      )
+    );
+    const handlesBeforeCount = ((process as any)._getActiveHandles?.() ?? [])
+      .length;
+    client.stdout.write(
+      `[build-diag] handles before doBuild: ${handlesBeforeCount} (${[...handlesBefore].join(', ')})\n`
+    );
+
     try {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
           doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
         );
+
+      // Snapshot handles after build to see what was added
+      const handlesAfter = (process as any)._getActiveHandles?.() ?? [];
+      client.stdout.write(
+        `[build-diag] handles after doBuild: ${handlesAfter.length}\n`
+      );
+      for (const h of handlesAfter) {
+        const type = h.constructor?.name ?? typeof h;
+        const info: string[] = [type];
+        if (type === 'Socket' && h.remoteAddress) {
+          info.push(`remote=${h.remoteAddress}:${h.remotePort}`);
+        }
+        if (type === 'Socket' && h._host) {
+          info.push(`host=${h._host}`);
+        }
+        if (type === 'FSWatcher' && h._filename) {
+          info.push(`file=${h._filename}`);
+        }
+        client.stdout.write(`[build-diag]   - ${info.join(' ')}\n`);
+      }
+
+      client.stdout.write('[build-diag] build main: doBuild trace resolved\n');
     } finally {
+      client.stdout.write('[build-diag] build main: stopping rootSpan\n');
       await rootSpan.stop();
+      client.stdout.write('[build-diag] build main: rootSpan stopped\n');
     }
 
     if (client.nonInteractive) {
@@ -523,6 +584,7 @@ export default async function main(client: Client): Promise<number> {
         )}\n`
       );
     }
+    client.stdout.write('[build-diag] build main: returning 0\n');
     return 0;
   } catch (err: any) {
     if (client.nonInteractive) {
@@ -1675,10 +1737,20 @@ async function doBuild(
     );
   }
 
+  client.stdout.write('[build-diag] doBuild: after "Build Completed in"\n');
+
   // Analyze .vc-config.json files if environment variable is set
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
+    client.stdout.write(
+      '[build-diag] doBuild: starting analyzeVcConfigFiles\n'
+    );
     await analyzeVcConfigFiles(cwd, outputDir);
+    client.stdout.write(
+      '[build-diag] doBuild: finished analyzeVcConfigFiles\n'
+    );
   }
+
+  client.stdout.write('[build-diag] doBuild: returning\n');
 }
 
 function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {

@@ -446,6 +446,8 @@ const main = async () => {
       return;
     }
 
+    client.stdout.write('[build-diag] saveTelemetry: start\n');
+
     const postCommandSpan = rootSpan.child('vc.postCommand');
 
     telemetryEventStore.updateTeamId(
@@ -455,6 +457,9 @@ const main = async () => {
       client?.authConfig.userId ?? authConfig.userId
     );
     if (!telemetryEventStore.hasUserId) {
+      client.stdout.write(
+        '[build-diag] saveTelemetry: awaiting earlyGetUserPromise\n'
+      );
       const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
       try {
         const user = await earlyGetUserPromise;
@@ -466,8 +471,12 @@ const main = async () => {
       } finally {
         getUserSpan.stop();
       }
+      client.stdout.write(
+        '[build-diag] saveTelemetry: earlyGetUserPromise resolved\n'
+      );
     }
 
+    client.stdout.write('[build-diag] saveTelemetry: resolving projectId\n');
     try {
       const envProjectId = getPlatformEnv('PROJECT_ID');
       if (envProjectId) {
@@ -488,7 +497,11 @@ const main = async () => {
     }
     telemetry.trackProjectId(telemetryEventStore.currentProjectId);
 
+    client.stdout.write(
+      '[build-diag] saveTelemetry: saving telemetry events\n'
+    );
     await telemetryEventStore.save();
+    client.stdout.write('[build-diag] saveTelemetry: done\n');
     postCommandSpan.stop();
     telemetrySaved = true;
   };
@@ -1269,13 +1282,17 @@ const main = async () => {
     return finishWithExitCode(1);
   }
 
+  client.stdout.write('[build-diag] cli main: starting saveTelemetry\n');
   await saveTelemetry();
+  client.stdout.write('[build-diag] cli main: saveTelemetry done\n');
 
   rootSpan.stop();
+  client.stdout.write('[build-diag] cli main: rootSpan stopped\n');
 
   // Flush trace events to disk. Only `vc build` sets traceDiagnosticsPath,
   // so traces are not written for other commands (deploy, env, etc.).
   if (client.traceDiagnosticsPath) {
+    client.stdout.write('[build-diag] cli main: writing trace diagnostics\n');
     try {
       await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
       await writeFile(
@@ -1286,21 +1303,29 @@ const main = async () => {
       output.error('Failed to write diagnostics trace file');
       output.prettyError(err);
     }
+    client.stdout.write('[build-diag] cli main: trace diagnostics written\n');
   }
 
+  client.stdout.write('[build-diag] cli main: returning exitCode\n');
   return exitCode;
 };
 
 main()
   .then(async exitCode => {
+    client.stdout.write('[build-diag] post-main .then(): entered\n');
     if (SHOULD_CHECK_FOR_UPDATES) {
+      client.stdout.write('[build-diag] post-main: checking for updates\n');
       const latest = getLatestVersion({
         pkg,
       });
+      client.stdout.write(
+        `[build-diag] post-main: getLatestVersion returned ${latest ?? 'undefined'}\n`
+      );
       if (latest) {
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
         const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
 
+        client.stdout.write('[build-diag] post-main: checking canAutoUpdate\n');
         if (
           await canAutoUpdate(
             client,
@@ -1308,6 +1333,7 @@ main()
             resolvedCommandForUpdate
           )
         ) {
+          client.stdout.write('[build-diag] post-main: running auto-update\n');
           const upgradeExitCode = await executeUpgrade();
           process.exitCode = originalExitCode;
           if (upgradeExitCode !== 0) {
@@ -1318,6 +1344,7 @@ main()
           return;
         }
 
+        client.stdout.write(`[build-diag] post-main: isTTY=${isTTY}\n`);
         if (isTTY) {
           // Interactive mode: prompt user to update now
           const errorMsg =
@@ -1392,6 +1419,60 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
       }
     }
 
+    client.stdout.write('[build-diag] post-main: setting process.exitCode\n');
+
+    // Destroy the keep-alive HTTP agent so its sockets don't block exit
+    const agentType = client.agent?.constructor?.name ?? 'undefined';
+    client.stdout.write(`[build-diag] destroying agent: ${agentType}\n`);
+    client.agent?.destroy();
+
+    // Unref any remaining handles so they don't block exit
+    const activeHandles = (process as any)._getActiveHandles?.() ?? [];
+    for (const h of activeHandles) {
+      if (typeof h.unref === 'function') {
+        h.unref();
+      }
+    }
+
     process.exitCode = exitCode;
+    client.stdout.write('[build-diag] post-main: done, process should exit\n');
+
+    // Dump active handles keeping the event loop alive
+    const handles = (process as any)._getActiveHandles?.() ?? [];
+    client.stdout.write(`[build-diag] active handles (${handles.length}):\n`);
+    for (const h of handles) {
+      const type = h.constructor?.name ?? typeof h;
+      const parts: string[] = [type];
+      if (type === 'Socket') {
+        if (h.remoteAddress) {
+          parts.push(`remote=${h.remoteAddress}:${h.remotePort}`);
+        }
+        if (h.localPort) {
+          parts.push(`local=:${h.localPort}`);
+        }
+        parts.push(`readable=${h.readable} writable=${h.writable}`);
+        parts.push(
+          `ref=${!h._handle?.hasRef || h._handle?.hasRef() ? 'yes' : 'no'}`
+        );
+      } else if (type === 'FSWatcher') {
+        if (h._filename) {
+          parts.push(`file=${h._filename}`);
+        }
+      } else if (type === 'Timer' || type === 'Timeout') {
+        parts.push(`ref=${h.hasRef?.() ? 'yes' : 'no'}`);
+      }
+      client.stdout.write(`[build-diag]   - ${parts.join(' ')}\n`);
+    }
+    const requests = (process as any)._getActiveRequests?.() ?? [];
+    if (requests.length > 0) {
+      client.stdout.write(
+        `[build-diag] active requests (${requests.length}):\n`
+      );
+      for (const r of requests) {
+        client.stdout.write(
+          `[build-diag]   - ${r.constructor?.name ?? typeof r}\n`
+        );
+      }
+    }
   })
   .catch(handleUnexpected);
