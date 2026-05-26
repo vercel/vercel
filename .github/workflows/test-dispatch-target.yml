@@ -1,0 +1,15 @@
+name: Test Dispatch Target
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag passed by the dispatch smoke test
+        required: true
+
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo dispatched tag
+        run: echo "Dispatched tag: ${{ inputs.tag }}"
