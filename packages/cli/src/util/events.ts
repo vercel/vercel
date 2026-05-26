@@ -35,7 +35,7 @@ async function printEvents(
   abortController?: AbortController
 ) {
   const { log, debug } = output;
-  const { contextName } = await getScope(client);
+  const scope = mode === 'deploy' ? await getScope(client) : null;
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -80,7 +80,7 @@ async function printEvents(
                   try {
                     const json = await getDeployment(
                       client,
-                      contextName,
+                      scope!.contextName,
                       urlOrDeploymentId
                     );
                     if (json.readyState === 'READY') {
