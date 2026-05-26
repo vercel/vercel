@@ -92,11 +92,12 @@ export const removeSubcommand = {
 export const priceSubcommand = {
   name: 'price',
   aliases: [],
-  description: 'Show registrar price quote for a domain',
+  description: 'Show registrar price quotes for one or more domains',
   arguments: [
     {
       name: 'domain',
       required: true,
+      multiple: true,
     },
   ],
   options: [formatOption],
@@ -104,6 +105,10 @@ export const priceSubcommand = {
     {
       name: 'Price quote for a domain',
       value: `${packageName} domains price example.com`,
+    },
+    {
+      name: 'Price quotes for multiple domains',
+      value: `${packageName} domains price one.com two.com three.com`,
     },
     {
       name: 'JSON output',

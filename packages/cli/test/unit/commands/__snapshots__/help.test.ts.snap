@@ -2096,7 +2096,9 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    pri…
                                    quo…
                                    for 
-                                   a   
+                                   one 
+                                   or  
+                                   more
                                    dom…
   transfer-in  domain              Tra…
                                    in a
@@ -2182,7 +2184,8 @@ exports[`help command > domains help output snapshots > domains help column widt
   check        domain              Check if a domain is available to buy       
   move         domain destination  Move ownership of a domain name to another  
                                    Vercel Team                                 
-  price        domain              Show registrar price quote for a domain     
+  price        domain              Show registrar price quotes for one or more 
+                                   domains                                     
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
@@ -2221,7 +2224,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   buy          domain              Purchase a new domain name                                                          
   check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
-  price        domain              Show registrar price quote for a domain                                             
+  price        domain              Show registrar price quotes for one or more domains                                 
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
@@ -2332,9 +2335,9 @@ exports[`help command > domains help output snapshots > domains move help output
 
 exports[`help command > domains help output snapshots > domains price help output snapshots > domains price help column width 120 1`] = `
 "
-  ▲ vercel domains price domain [options]
+  ▲ vercel domains price domain ... [options]
 
-  Show registrar price quote for a domain                                                                               
+  Show registrar price quotes for one or more domains                                                                   
 
   Options:
 
@@ -2360,6 +2363,10 @@ exports[`help command > domains help output snapshots > domains price help outpu
   - Price quote for a domain
 
     $ vercel domains price example.com
+
+  - Price quotes for multiple domains
+
+    $ vercel domains price one.com two.com three.com
 
   - JSON output
 
