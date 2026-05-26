@@ -42,6 +42,10 @@ if (!binaryPath) {
 
 const result = childProcess.spawnSync(binaryPath, process.argv.slice(2), {
   stdio: 'inherit',
+  env: {
+    ...process.env,
+    VERCEL_VC_NATIVE: '1',
+  },
   windowsHide: false,
 });
 

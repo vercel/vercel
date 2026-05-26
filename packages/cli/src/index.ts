@@ -64,6 +64,7 @@ import { executeUpgrade } from './util/upgrade';
 import {
   canAutoUpdate,
   hasAutoUpdatePreference,
+  isNativeBinaryInstall,
   setAutoUpdate,
 } from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
@@ -1293,7 +1294,7 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    if (SHOULD_CHECK_FOR_UPDATES) {
+    if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
       const latest = getLatestVersion({
         pkg,
       });
