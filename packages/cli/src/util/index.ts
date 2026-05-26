@@ -17,6 +17,7 @@ import { type FetchOptions, isJSONObject } from './client';
 import type { ArchiveFormat, Dictionary } from '@vercel/client';
 import output from '../output-manager';
 import sleep from './sleep';
+import { stripCliOnlyVercelConfigFields } from './strip-cli-only-vercel-config';
 
 export interface NowOptions {
   client: Client;
@@ -144,7 +145,7 @@ export default class Now {
     const hashes: any = {};
 
     const requestBody = {
-      ...nowConfig,
+      ...stripCliOnlyVercelConfigFields(nowConfig),
       env,
       build,
       public: wantsPublic || nowConfig.public,

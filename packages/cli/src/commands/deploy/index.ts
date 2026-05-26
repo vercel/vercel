@@ -66,6 +66,8 @@ import param from '../../util/output/param';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
+import { validateConfig } from '../../util/validate-config';
+import { validateExperimentalEnvironmentVariables } from '../../util/validate-experimental-environment-variables';
 import parseMeta from '../../util/parse-meta';
 import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { getCommandName } from '../../util/pkg-name';
@@ -439,6 +441,24 @@ async function handleInitDeployment(
     await addProcessEnv(log, deploymentBuildEnv);
   } catch (err: unknown) {
     error(errorToString(err));
+    return 1;
+  }
+
+  const configValidationError = validateConfig(localConfig);
+  if (configValidationError) {
+    output.prettyError(configValidationError);
+    return 1;
+  }
+
+  const experimentalEnvError = validateExperimentalEnvironmentVariables(
+    localConfig,
+    {
+      environment: target || 'preview',
+      env: { ...process.env, ...deploymentEnv, ...deploymentBuildEnv },
+    }
+  );
+  if (experimentalEnvError) {
+    output.prettyError(experimentalEnvError);
     return 1;
   }
 
@@ -1392,6 +1412,24 @@ async function handleDefaultDeploy(
     await addProcessEnv(log, deploymentBuildEnv);
   } catch (err: unknown) {
     error(errorToString(err));
+    return 1;
+  }
+
+  const configValidationError = validateConfig(localConfig);
+  if (configValidationError) {
+    output.prettyError(configValidationError);
+    return 1;
+  }
+
+  const experimentalEnvError = validateExperimentalEnvironmentVariables(
+    localConfig,
+    {
+      environment: target || 'preview',
+      env: { ...process.env, ...deploymentEnv, ...deploymentBuildEnv },
+    }
+  );
+  if (experimentalEnvError) {
+    output.prettyError(experimentalEnvError);
     return 1;
   }
   // #endregion
