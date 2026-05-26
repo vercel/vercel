@@ -34,6 +34,7 @@ export default async function check(
 
   const { args, flags } = parsedArgs;
   const domains = args;
+  const hasMultipleInputDomains = domains.length > 1;
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -84,7 +85,7 @@ export default async function check(
           ).results;
 
     if (formatResult.jsonOutput) {
-      if (results.length === 1) {
+      if (!hasMultipleInputDomains && results.length === 1) {
         client.stdout.write(
           `${JSON.stringify(
             {

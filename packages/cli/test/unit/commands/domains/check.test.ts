@@ -147,5 +147,32 @@ describe('domains check', () => {
         "
       `);
     });
+
+    it('outputs results array for multiple inputs even with one api result', async () => {
+      useUser();
+      client.scenario.post(
+        '/v1/registrar/domains/availability',
+        (_req, res) => {
+          res.json({
+            results: [{ domain: 'one.com', available: true }],
+          });
+        }
+      );
+
+      client.setArgv('domains', 'check', 'one.com', 'two.com', '--format=json');
+      const exitCode = await domains(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toMatchInlineSnapshot(`
+        "{
+          "results": [
+            {
+              "domain": "one.com",
+              "available": true
+            }
+          ]
+        }
+        "
+      `);
+    });
   });
 });
