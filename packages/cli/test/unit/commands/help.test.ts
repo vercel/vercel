@@ -271,6 +271,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('domains check help output snapshots', () => {
+      it('domains check help column width 120', () => {
+        expect(
+          help(domains.checkSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('domains price help output snapshots', () => {
       it('domains price help column width 120', () => {
         expect(
