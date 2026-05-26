@@ -66,6 +66,11 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
             );
           }
           ctx.deploymentLogs = await logsRes.json();
+          logDeploymentLogsSummary(
+            deploymentId,
+            `fetch attempt ${i + 1}`,
+            ctx.deploymentLogs
+          );
 
           if (
             Array.isArray(ctx.deploymentLogs) &&
@@ -123,6 +128,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         deploymentLogs,
         logLength: deploymentLogs?.length,
       });
+      logMissingDeploymentLogDetails(deploymentId, toCheck, deploymentLogs);
       ctx.deploymentLogs = null;
       const error = new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
@@ -347,6 +353,69 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   }
 
   assert(hadTest, 'probe must have a test condition');
+}
+
+function logDeploymentLogsSummary(deploymentId, label, deploymentLogs) {
+  if (!Array.isArray(deploymentLogs)) {
+    console.log(
+      `Deployment logs ${label} for ${deploymentId}: ${typeof deploymentLogs}`
+    );
+    return;
+  }
+
+  const dates = deploymentLogs
+    .map(log => log.date)
+    .filter(date => typeof date === 'number');
+
+  console.log(
+    `Deployment logs ${label} for ${deploymentId}: ${
+      deploymentLogs.length
+    } lines, firstDate=${dates[0] ?? 'n/a'}, lastDate=${
+      dates[dates.length - 1] ?? 'n/a'
+    }`
+  );
+}
+
+function logMissingDeploymentLogDetails(
+  deploymentId,
+  expected,
+  deploymentLogs
+) {
+  if (!Array.isArray(deploymentLogs)) {
+    console.log(
+      `Deployment logs missing "${expected}" for ${deploymentId}: ${typeof deploymentLogs}`
+    );
+    return;
+  }
+
+  const sampleLogText = log =>
+    typeof log.text === 'string' ? log.text.slice(0, 500) : '';
+  const firstLogs = deploymentLogs.slice(0, 5).map(sampleLogText);
+  const lastLogs = deploymentLogs.slice(-5).map(sampleLogText);
+  const keyword = expected
+    .toLowerCase()
+    .split(/\W+/)
+    .find(part => part.length >= 3);
+  const matchingLogs = keyword
+    ? deploymentLogs
+        .filter(
+          log =>
+            typeof log.text === 'string' &&
+            log.text.toLowerCase().includes(keyword)
+        )
+        .slice(0, 5)
+        .map(sampleLogText)
+    : [];
+
+  console.log({
+    deploymentId,
+    expected,
+    logLength: deploymentLogs.length,
+    firstLogs,
+    lastLogs,
+    keyword,
+    matchingLogs,
+  });
 }
 
 async function testDeployment(fixturePath, opts = {}) {
