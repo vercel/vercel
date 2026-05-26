@@ -15,9 +15,11 @@ import {
   cloneEnv,
   getLambdaOptionsFromFunction,
   execCommand,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 
 import { createGo, findGoBinary } from './go-helpers';
+import { generateProjectManifest } from './diagnostics';
 
 /**
  * Find the go.mod file starting from a directory and scanning up.
@@ -56,6 +58,7 @@ export async function buildStandaloneServer({
   workPath,
   meta = {},
   registerPreDeploy,
+  service,
 }: BuildOptions): Promise<{ output: Lambda }> {
   debug(`Building standalone Go server: ${entrypoint}`);
 
@@ -224,6 +227,15 @@ export async function buildStandaloneServer({
       });
     });
   }
+
+  const goModJson = goModPath ? await go.modEditJson(goModPath) : null;
+  await generateProjectManifest({
+    workPath,
+    goModJson,
+    resolvedGoVersion: go.resolvedVersion,
+    framework: config.framework ?? undefined,
+    serviceType: service ? getReportedServiceType(service) : undefined,
+  });
 
   return { output: lambda };
 }
