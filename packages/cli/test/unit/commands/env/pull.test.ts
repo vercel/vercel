@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
 import env from '../../../../src/commands/env';
+import { getAcrValuesFromWWWAuthenticate } from '../../../../src/commands/env/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
@@ -16,6 +17,35 @@ vi.mock('../../../../src/commands/login/future', async importOriginal => ({
   >()),
   performDeviceCodeFlow: vi.fn(),
 }));
+
+describe('getAcrValuesFromWWWAuthenticate', () => {
+  it.each([
+    [undefined, undefined],
+    ['', undefined],
+    ['Basic realm="Vercel"', undefined],
+    ['Bearer error="insufficient_user_authentication"', undefined],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"',
+      'urn:vercel:loa:sudo',
+    ],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values=urn:vercel:loa:sudo',
+      'urn:vercel:loa:sudo',
+    ],
+    [
+      'Digest realm="api", Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"',
+      'urn:vercel:loa:sudo',
+    ],
+    ['Bearer acr_values="urn:vercel:loa:\\"sudo\\""', 'urn:vercel:loa:"sudo"'],
+    [
+      'Bearer acr_values="urn:first", error="insufficient_user_authentication", acr_values="urn:second"',
+      'urn:first',
+    ],
+    ['Bearer error="insufficient_user_authentication", acr_values=""', ''],
+  ])('parses %s as %s', (header, expected) => {
+    expect(getAcrValuesFromWWWAuthenticate(header)).toBe(expected);
+  });
+});
 
 describe('env pull', () => {
   describe('--help', () => {

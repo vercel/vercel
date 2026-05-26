@@ -347,7 +347,7 @@ async function pullEnvRecordsForEnvPull(
   }
 }
 
-function getAcrValuesFromWWWAuthenticate(header: string | undefined) {
+export function getAcrValuesFromWWWAuthenticate(header: string | undefined) {
   if (!header) {
     return;
   }
