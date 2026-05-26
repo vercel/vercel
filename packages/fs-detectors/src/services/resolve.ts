@@ -839,9 +839,10 @@ export async function resolveConfiguredService(
       'package.json';
   } else if (config.framework) {
     const isCronService = isScheduleTriggeredService({ type, trigger });
+    const isWorkflowJob = type === 'job' && trigger === 'workflow';
     if (
       isNodeBackendFramework(config.framework) &&
-      (type === 'web' || isCronService)
+      (type === 'web' || isCronService || isWorkflowJob)
     ) {
       builderUse = '@vercel/backends';
     } else {
@@ -861,8 +862,11 @@ export async function resolveConfiguredService(
     }
     if (inferredRuntime === 'node') {
       const isCronService = isScheduleTriggeredService({ type, trigger });
+      const isWorkflowJob = type === 'job' && trigger === 'workflow';
       builderUse =
-        type === 'web' || isCronService ? '@vercel/backends' : '@vercel/node';
+        type === 'web' || isCronService || isWorkflowJob
+          ? '@vercel/backends'
+          : '@vercel/node';
     } else {
       builderUse = getBuilderForRuntime(inferredRuntime);
     }
