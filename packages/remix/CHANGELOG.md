@@ -1,5 +1,12 @@
 # @vercel/remix-builder
 
+## 5.8.3
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+
 ## 5.8.2
 
 ### Patch Changes

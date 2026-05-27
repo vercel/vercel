@@ -1,5 +1,35 @@
 # vercel
 
+## 54.5.1
+
+### Patch Changes
+
+- 57ea4ba: Reduce duplicate user and team lookups during CLI scope resolution.
+- b66bd3e: Fix prebuilt deployments failing with "invalid relative path" when using the `--standalone` flag in pnpm monorepos by skipping external node_modules symlinks and copying traced files at their logical paths instead.
+- 9ad632d: Handle CLI update flows safely for native binary installs.
+- Updated dependencies [b66bd3e]
+- Updated dependencies [0e04bc5]
+- Updated dependencies [eecd10d]
+  - @vercel/build-utils@13.26.3
+  - @vercel/python@6.43.3
+  - @vercel/node@5.8.6
+  - @vercel/backends@0.8.1
+  - @vercel/elysia@0.1.82
+  - @vercel/express@0.1.92
+  - @vercel/fastify@0.1.85
+  - @vercel/go@3.8.0
+  - @vercel/h3@0.1.91
+  - @vercel/hono@0.2.85
+  - @vercel/hydrogen@1.3.8
+  - @vercel/koa@0.1.65
+  - @vercel/nestjs@0.2.86
+  - @vercel/next@4.17.4
+  - @vercel/redwood@2.4.14
+  - @vercel/remix-builder@5.8.3
+  - @vercel/ruby@2.4.0
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.9.32
+
 ## 54.5.0
 
 ### Minor Changes
