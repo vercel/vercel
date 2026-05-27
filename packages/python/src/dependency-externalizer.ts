@@ -60,7 +60,7 @@ function shouldStripVendorFile(filePath: string): boolean {
 
 // AWS Lambda uncompressed size limit is 250MB, but we use 245MB to leave room
 // for the standard Lambda layers (rusty runtime, lambdawrapper). When the
-// OpenTelemetry collector layer is also attached, we reserve an additional 15MB.
+// OpenTelemetry collector layer is also attached, we reserve an additional 5MB.
 const LAMBDA_BASE_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
 const OTEL_LAYER_RESERVATION_BYTES = 5 * 1024 * 1024;
 
