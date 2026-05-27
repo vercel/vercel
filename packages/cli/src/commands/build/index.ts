@@ -240,7 +240,9 @@ export default async function main(client: Client): Promise<number> {
       flags: parsedArgs.flags,
     }) || 'preview';
 
-  const yes = Boolean(parsedArgs.flags['--yes']);
+  // When --id is provided the flow is non-interactive (script-driven),
+  // so auto-confirm prompts like the project-settings pull.
+  const yes = Boolean(parsedArgs.flags['--yes'] || parsedArgs.flags['--id']);
 
   // Check for deprecated env var
   const hasDeprecatedEnvVar =
@@ -370,7 +372,7 @@ export default async function main(client: Client): Promise<number> {
     const result = await pullCommandLogic(
       client,
       client.cwd,
-      Boolean(parsedArgs.flags['--yes']),
+      yes,
       target,
       parsedArgs.flags,
       projectNameOrId
@@ -381,6 +383,13 @@ export default async function main(client: Client): Promise<number> {
     client.cwd = cwd;
     client.setArgv(originalArgv);
     project = await readProjectSettings(vercelDir);
+
+    // Re-resolve the project link after pull has established it.
+    // This is needed so that `link.orgId` is available when --id is
+    // used to set the team context for the deployment env pull API call.
+    if (!link) {
+      link = await getProjectLink(client, cwd);
+    }
   }
 
   // Delete output directory from potential previous build
@@ -2257,7 +2266,15 @@ async function fetchDeploymentBuildEnv(
 
   while (Date.now() < deadline) {
     try {
-      return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
+      const result = await pullEnvRecords(
+        client,
+        deploymentId,
+        'vercel-cli:pull'
+      );
+      if (isPolling) {
+        output.stopSpinner();
+      }
+      return result;
     } catch (err: unknown) {
       // If the API returns integrationsStatus: 'pending', poll until ready
       if (
