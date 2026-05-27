@@ -174,3 +174,25 @@ This runs your local CLI build against any project without needing to install it
 2. **Don't skip CI hooks** - Lint and type checks run in pre-commit
 3. **Don't forget type-check** - Run `pnpm type-check` before pushing
 4. **Don't modify examples for testing** - They're used for integration tests
+
+## Cursor Cloud specific instructions
+
+### Node version management
+
+The vercel repo requires Node 22 (`.nvmrc` = 22). Before running commands:
+
+```bash
+export NVM_DIR="/home/ubuntu/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use 22
+```
+
+### Typecheck notes
+
+`pnpm type-check` will show 2 expected failures: `vercel` (CLI) and `@vercel/python-analysis` need build artifacts to typecheck. Run `pnpm build` first if you need full type-checking, or scope to specific packages: `cd packages/<name> && pnpm type-check`.
+
+### Running tests
+
+Run unit tests per-package: `cd packages/<name> && pnpm test-unit`. Not all packages have `test-unit`; check `package.json` scripts. Some packages use `vitest` directly (e.g., `@vercel/node` uses `pnpm test`).
+
+### pnpm version
+
+This repo uses pnpm 8.3.1 (older than the other repos in the workspace). Do not upgrade without coordination.
