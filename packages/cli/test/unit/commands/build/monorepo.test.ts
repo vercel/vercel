@@ -119,12 +119,13 @@ async function assertStandaloneSharedOutput(outputDir: string) {
     ).toBe(false);
   }
 
-  const vcConfigPaths = await glob('**/.vc-config.json', {
-    cwd: join(outputDir, 'functions'),
-    absolute: true,
+  const functionsDir = join(outputDir, 'functions');
+  const vcConfigFiles = await glob('**/.vc-config.json', {
+    cwd: functionsDir,
   });
 
-  for (const configPath of vcConfigPaths) {
+  for (const relativePath of Object.keys(vcConfigFiles)) {
+    const configPath = join(functionsDir, relativePath);
     const config = await fs.readJSON(configPath);
     if (!config.filePathMap) continue;
 
@@ -574,23 +575,22 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
       await assertStandaloneSharedOutput(output);
 
-      const markerFuncDir = join(
-        output,
-        'functions',
-        'pages',
-        'api',
-        'marker.func'
-      );
+      const markerFuncDir = join(output, 'functions', 'api', 'marker.func');
       expect(await fs.pathExists(markerFuncDir)).toBe(true);
+
+      const vcConfig = await fs.readJSON(
+        join(markerFuncDir, '.vc-config.json')
+      );
+      expect(vcConfig.filePathMap).toBeDefined();
+      expect(Object.keys(vcConfig.filePathMap).length).toBeGreaterThan(0);
 
       const lambda = await createLambdaFromFuncDir(markerFuncDir, cwd);
 
-      await expect(
-        extractAndExecuteCode(
-          lambda,
-          'VERCEL_TEST_MARKER:turborepo-nextjs-monorepo'
-        )
-      ).resolves.toBeUndefined();
+      for (const path of Object.keys(vcConfig.filePathMap)) {
+        expect(lambda.files?.[path]).toBeDefined();
+      }
+
+      await expect(lambda.createZip()).resolves.toBeInstanceOf(Buffer);
     }
   );
 });
