@@ -14,6 +14,9 @@ import download, {
   DownloadedFiles,
   isSymbolicLink,
   isDirectory,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
@@ -118,6 +121,9 @@ export {
   debug,
   isSymbolicLink,
   isDirectory,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
   getLambdaOptionsFromFunction,
   sanitizeConsumerName,
   scanParentDirs,
