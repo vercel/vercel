@@ -2,11 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { lstatSync, readdirSync, readlinkSync } from 'fs';
 import { mkdtemp, writeFile, rm } from 'fs/promises';
 import { createServer, type Server } from 'http';
 import { pathToFileURL } from 'url';
 import execa from 'execa';
-import { FileFsRef, NodejsLambda, glob } from '@vercel/build-utils';
+import {
+  FileFsRef,
+  NodejsLambda,
+  glob,
+  isExternalSymlinkTarget,
+} from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -67,6 +73,68 @@ async function createLambdaFromFuncDir(
     shouldAddHelpers: restConfig.shouldAddHelpers ?? false,
     shouldAddSourcemapSupport: restConfig.shouldAddSourcemapSupport ?? false,
   });
+}
+
+function findSymlinks(dir: string): string[] {
+  const symlinks: string[] = [];
+
+  function walk(current: string) {
+    let entries: string[];
+    try {
+      entries = readdirSync(current);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = join(current, entry);
+      let stat;
+      try {
+        stat = lstatSync(fullPath);
+      } catch {
+        continue;
+      }
+
+      if (stat.isSymbolicLink()) {
+        symlinks.push(fullPath);
+      } else if (stat.isDirectory()) {
+        walk(fullPath);
+      }
+    }
+  }
+
+  walk(dir);
+  return symlinks;
+}
+
+async function assertStandaloneSharedOutput(outputDir: string) {
+  const sharedDir = join(outputDir, 'shared');
+  expect(await fs.pathExists(sharedDir)).toBe(true);
+
+  for (const symlinkPath of findSymlinks(sharedDir)) {
+    const target = readlinkSync(symlinkPath);
+    expect(
+      isExternalSymlinkTarget(target),
+      `unexpected external symlink at ${symlinkPath} -> ${target}`
+    ).toBe(false);
+  }
+
+  const functionsDir = join(outputDir, 'functions');
+  const vcConfigFiles = await glob('**/.vc-config.json', {
+    cwd: functionsDir,
+  });
+
+  for (const relativePath of Object.keys(vcConfigFiles)) {
+    const configPath = join(functionsDir, relativePath);
+    const config = await fs.readJSON(configPath);
+    if (!config.filePathMap) continue;
+
+    for (const value of Object.values(config.filePathMap) as string[]) {
+      expect(value).not.toMatch(/^\.\./);
+      expect(value).not.toContain('/../');
+      expect(value).toContain('.vercel/output/shared');
+    }
+  }
 }
 
 /**
@@ -476,6 +544,53 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
           'VERCEL_TEST_MARKER:turborepo-hono-monorepo'
         )
       ).resolves.toBeUndefined();
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'should build a pnpm nextjs monorepo with --standalone for prebuilt deploy',
+    async () => {
+      const rootDirectory = 'apps/web';
+      const cwd = setupUnitFixture('commands/build/turborepo-nextjs-monorepo');
+      const output = join(cwd, '.vercel/output');
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_turborepo_nextjs',
+        name: 'turborepo-nextjs-web',
+        framework: 'nextjs',
+        rootDirectory,
+      });
+
+      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+
+      client.cwd = cwd;
+      client.setArgv('build', '--standalone', '--yes');
+      const exitCode = await build(client);
+
+      expect(exitCode).toEqual(0);
+      expect(await fs.pathExists(output)).toBe(true);
+
+      await assertStandaloneSharedOutput(output);
+
+      const markerFuncDir = join(output, 'functions', 'api', 'marker.func');
+      expect(await fs.pathExists(markerFuncDir)).toBe(true);
+
+      const vcConfig = await fs.readJSON(
+        join(markerFuncDir, '.vc-config.json')
+      );
+      expect(vcConfig.filePathMap).toBeDefined();
+      expect(Object.keys(vcConfig.filePathMap).length).toBeGreaterThan(0);
+
+      const lambda = await createLambdaFromFuncDir(markerFuncDir, cwd);
+
+      for (const path of Object.keys(vcConfig.filePathMap)) {
+        expect(lambda.files?.[path]).toBeDefined();
+      }
+
+      await expect(lambda.createZip()).resolves.toBeInstanceOf(Buffer);
     }
   );
 });
