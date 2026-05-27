@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.26.3
+
+### Patch Changes
+
+- b66bd3e: Fix prebuilt deployments failing with "invalid relative path" when using the `--standalone` flag in pnpm monorepos by skipping external node_modules symlinks and copying traced files at their logical paths instead.
+
 ## 13.26.2
 
 ### Patch Changes
