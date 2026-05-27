@@ -6,6 +6,7 @@ import {
   redirectsSchema,
   rewritesSchema,
   trailingSlashSchema,
+  firewallRulesSchema,
 } from '@vercel/routing-utils';
 import type { VercelConfig } from './dev/types';
 import {
@@ -653,6 +654,7 @@ const vercelConfigSchema = {
     services: servicesSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,
+    firewallRules: firewallRulesSchema,
   },
 };
 

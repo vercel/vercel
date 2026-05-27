@@ -188,6 +188,55 @@ describe('normalizeConfig', () => {
     expect(result.routes).toEqual([{ src: '/a', dest: '/b' }]);
   });
 
+  it('should preserve firewallRules through normalization', () => {
+    const firewallRules = [
+      {
+        name: 'Block admin',
+        active: true,
+        conditionGroup: [
+          {
+            conditions: [{ type: 'path', op: 're', value: '/admin/(.*)' }],
+          },
+          {
+            conditions: [{ type: 'method', op: 'neq', value: 'GET' }],
+          },
+        ],
+        action: { mitigate: { action: 'deny' } },
+      },
+      {
+        name: 'Rate limit API',
+        active: true,
+        conditionGroup: [
+          {
+            conditions: [{ type: 'path', op: 'pre', value: '/api' }],
+          },
+        ],
+        action: {
+          mitigate: {
+            action: 'rate_limit',
+            rateLimit: {
+              algo: 'fixed_window',
+              window: 60,
+              limit: 100,
+              keys: ['ip_address'],
+              action: 'deny',
+            },
+          },
+        },
+      },
+    ];
+
+    const config = {
+      redirects: [{ source: '/old', destination: '/new', permanent: true }],
+      firewallRules,
+    } as unknown as VercelConfig;
+
+    const result = normalizeConfig(config);
+
+    expect(result.firewallRules).toEqual(firewallRules);
+    expect(result.redirects).toEqual(config.redirects);
+  });
+
   it('should normalize mixed Route and Redirect formats in routes array', () => {
     // This simulates: routes.rewrite() with transforms (Route format) + routes.redirect() without transforms (Redirect format)
     const config = {
@@ -367,6 +416,49 @@ describe('compileVercelConfig', () => {
         },
       ],
     });
+  });
+
+  it('should compile vercel.ts with firewallRules', async () => {
+    const vercelTsPath = join(tmpDir, 'vercel.ts');
+    const vercelTsContent = `
+      export const config = {
+        firewallRules: [
+          {
+            name: 'Block admin',
+            active: true,
+            conditionGroup: [
+              { conditions: [{ type: 'path', op: 're', value: '/admin/(.*)' }] },
+              { conditions: [{ type: 'method', op: 'neq', value: 'GET' }] },
+            ],
+            action: { mitigate: { action: 'deny' } },
+          },
+        ],
+        redirects: [
+          { source: '/docs', destination: 'https://vercel.com/docs' },
+        ],
+      };
+    `;
+    await writeFile(vercelTsPath, vercelTsContent);
+
+    const result = await compileVercelConfig(tmpDir);
+
+    expect(result.wasCompiled).toBe(true);
+
+    const compiledConfig = require(result.configPath!);
+    expect(compiledConfig.firewallRules).toEqual([
+      {
+        name: 'Block admin',
+        active: true,
+        conditionGroup: [
+          { conditions: [{ type: 'path', op: 're', value: '/admin/(.*)' }] },
+          { conditions: [{ type: 'method', op: 'neq', value: 'GET' }] },
+        ],
+        action: { mitigate: { action: 'deny' } },
+      },
+    ]);
+    expect(compiledConfig.redirects).toEqual([
+      { source: '/docs', destination: 'https://vercel.com/docs' },
+    ]);
   });
 
   it('should not merge routes and rewrites even if both contain transforms', async () => {
