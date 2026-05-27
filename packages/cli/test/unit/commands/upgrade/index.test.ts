@@ -67,8 +67,10 @@ describe('upgrade', () => {
       const exitCode = await upgrade(client);
 
       expect(exitCode).toBe(0);
-      await expect(client.stderr).toOutput('Upgrade command:');
-      await expect(client.stderr).toOutput('@vercel/vc-native@latest');
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('Upgrade command:');
+      expect(output).toContain('@vercel/vc-native@latest');
+      expect(output.split(' ')).not.toContain('vercel@latest');
     });
   });
 
