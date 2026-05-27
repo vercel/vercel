@@ -1,0 +1,40 @@
+{
+  "name": "@vercel/aws",
+  "description": "",
+  "homepage": "https://vercel.com",
+  "files": [
+    "**/*.js",
+    "**/*.d.ts",
+    "**/*.md"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "version": "0.0.0",
+  "repository": {
+    "directory": "packages/aws",
+    "type": "git",
+    "url": "git+https://github.com/vercel/vercel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vercel/vercel/issues"
+  },
+  "devDependencies": {
+    "vitest": "2.0.1"
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "scripts": {
+    "test": "vitest",
+    "build": "node ../../utils/build.mjs"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
