@@ -28,8 +28,9 @@ describe('getUpdateCommand', () => {
   it('should update the native package when running through vc-native', async () => {
     process.env.VERCEL_VC_NATIVE = '1';
 
-    await expect(getUpdateCommand()).resolves.toEqual(
-      'npm i -g @vercel/vc-native@latest --force'
-    );
+    const updateCommand = await getUpdateCommand();
+
+    expect(updateCommand).toContain('@vercel/vc-native@latest');
+    expect(updateCommand.split(' ')).not.toContain('vercel@latest');
   });
 });

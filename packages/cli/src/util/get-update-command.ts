@@ -83,11 +83,8 @@ export async function isGlobal() {
 }
 
 export default async function getUpdateCommand(): Promise<string> {
-  if (isNativeBinaryInstall()) {
-    return `npm i -g ${nativePackageName}@latest --force`;
-  }
-
-  const pkgAndVersion = `${packageName}@latest`;
+  const nativeInstall = isNativeBinaryInstall();
+  const pkgAndVersion = `${nativeInstall ? nativePackageName : packageName}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);
   let { cliType, lockfilePath } = await scanParentDirs(
@@ -108,5 +105,7 @@ export default async function getUpdateCommand(): Promise<string> {
     }
   }
 
-  return `${cliType} ${install} ${pkgAndVersion}`;
+  const force = nativeInstall && cliType === 'npm' ? ' --force' : '';
+
+  return `${cliType} ${install} ${pkgAndVersion}${force}`;
 }

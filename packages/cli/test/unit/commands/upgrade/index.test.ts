@@ -67,9 +67,8 @@ describe('upgrade', () => {
       const exitCode = await upgrade(client);
 
       expect(exitCode).toBe(0);
-      await expect(client.stderr).toOutput(
-        'Upgrade command: npm i -g @vercel/vc-native@latest --force'
-      );
+      await expect(client.stderr).toOutput('Upgrade command:');
+      await expect(client.stderr).toOutput('@vercel/vc-native@latest');
     });
   });
 
@@ -111,10 +110,8 @@ describe('upgrade', () => {
 
       expect(exitCode).toBe(0);
       const json = JSON.parse(client.stdout.getFullOutput());
-      expect(json).toHaveProperty(
-        'upgradeCommand',
-        'npm i -g @vercel/vc-native@latest --force'
-      );
+      expect(json.upgradeCommand).toContain('@vercel/vc-native@latest');
+      expect(json.upgradeCommand.split(' ')).not.toContain('vercel@latest');
     });
   });
 
