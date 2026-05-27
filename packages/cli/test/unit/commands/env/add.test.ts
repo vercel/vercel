@@ -354,6 +354,50 @@ describe('env add', () => {
       });
     });
 
+    describe('--sensitive warns about env pull', () => {
+      it('shows a retrieval warning when --sensitive is passed explicitly with --yes', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.setArgv(
+          'env',
+          'add',
+          'SENSITIVE_WITH_YES',
+          'production',
+          '--sensitive',
+          '--value',
+          'supersecret',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        // Should warn that sensitive values cannot be retrieved via env pull
+        await expect(client.stderr).toOutput(
+          'Sensitive values cannot be retrieved later from the dashboard or CLI'
+        );
+
+        expect(spy).toHaveBeenCalled();
+        const [, , , type, , value] = spy.mock.calls[0] as unknown as [
+          unknown,
+          unknown,
+          unknown,
+          string,
+          unknown,
+          string,
+        ];
+        expect(type).toBe('sensitive');
+        // Verify the value is correctly stored (not empty)
+        expect(value).toBe('supersecret');
+
+        spy.mockRestore();
+      });
+    });
+
     describe('mixed Development + other Environments', () => {
       it('errors when the interactive checkbox picks Development alongside Production/Preview', async () => {
         client.setArgv('env', 'add', 'MIXED_TARGETS');
