@@ -36,6 +36,13 @@ Gets the current OIDC token from the request context or environment variable. Wi
 - `team?: string` - Team ID (team\_\*) or slug
 - `expirationBufferMs?: number` - Buffer time in ms before expiry to trigger refresh (default: 0)
 
+### `getVercelOidcTokenFromContext()`
+
+Synchronously reads the current OIDC token from the request context (`x-vercel-oidc-token` header) or the `VERCEL_OIDC_TOKEN` environment variable. Does not refresh the token. Use `getVercelOidcToken()` if you need automatic refresh in development.
+
 ### `getVercelOidcTokenSync()`
 
-Synchronously gets the current OIDC token without refreshing. Use `getVercelOidcToken()` if you need automatic refresh in development.
+> [!WARNING]
+> Deprecated — use [`getVercelOidcTokenFromContext()`](#getverceloidctokenfromcontext) instead. The `Sync` suffix was misleading because `getVercelOidcToken()` is not a sync/async pair with this function — it additionally refreshes the token when expired.
+
+Alias for `getVercelOidcTokenFromContext()`.

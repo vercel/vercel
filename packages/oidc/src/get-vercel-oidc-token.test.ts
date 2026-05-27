@@ -6,11 +6,16 @@ import * as fs from 'fs';
 
 vi.mock('./token-io');
 vi.mock('./get-context', () => ({
-  getContext: () => ({ headers: {} }),
+  getContext: vi.fn(() => ({ headers: {} })),
 }));
 
 import { findRootDir, getUserDataDir } from './token-io';
-import { getVercelOidcToken } from './get-vercel-oidc-token';
+import {
+  getVercelOidcToken,
+  getVercelOidcTokenFromContext,
+  getVercelOidcTokenSync,
+} from './get-vercel-oidc-token';
+import { getContext } from './get-context';
 import * as tokenUtil from './token-util';
 
 describe('getVercelOidcToken - Error Scenarios', () => {
@@ -400,6 +405,63 @@ describe('getVercelOidcToken - Error Scenarios', () => {
 
     expect(token).toBe(validToken);
     expect(getVercelOidcTokenSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('getVercelOidcTokenFromContext', () => {
+  beforeEach(() => {
+    vi.mocked(getContext).mockReturnValue({ headers: {} });
+    delete process.env.VERCEL_OIDC_TOKEN;
+  });
+
+  afterEach(() => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+  });
+
+  test('returns the token from the x-vercel-oidc-token request header', () => {
+    vi.mocked(getContext).mockReturnValue({
+      headers: { 'x-vercel-oidc-token': 'header-token' },
+    });
+
+    expect(getVercelOidcTokenFromContext()).toBe('header-token');
+  });
+
+  test('falls back to the VERCEL_OIDC_TOKEN env var when the header is absent', () => {
+    process.env.VERCEL_OIDC_TOKEN = 'env-token';
+
+    expect(getVercelOidcTokenFromContext()).toBe('env-token');
+  });
+
+  test('prefers the request header over the env var', () => {
+    vi.mocked(getContext).mockReturnValue({
+      headers: { 'x-vercel-oidc-token': 'header-token' },
+    });
+    process.env.VERCEL_OIDC_TOKEN = 'env-token';
+
+    expect(getVercelOidcTokenFromContext()).toBe('header-token');
+  });
+
+  test('throws a helpful error when neither the header nor the env var is set', () => {
+    expect(() => getVercelOidcTokenFromContext()).toThrow(
+      /'x-vercel-oidc-token' header is missing/
+    );
+  });
+});
+
+describe('getVercelOidcTokenSync (deprecated alias)', () => {
+  beforeEach(() => {
+    vi.mocked(getContext).mockReturnValue({ headers: {} });
+    delete process.env.VERCEL_OIDC_TOKEN;
+  });
+
+  afterEach(() => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+  });
+
+  test('delegates to getVercelOidcTokenFromContext', () => {
+    process.env.VERCEL_OIDC_TOKEN = 'env-token';
+
+    expect(getVercelOidcTokenSync()).toBe(getVercelOidcTokenFromContext());
   });
 });
 

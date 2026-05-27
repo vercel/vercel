@@ -8,6 +8,13 @@ export async function getVercelOidcToken(): Promise<string> {
   return '';
 }
 
+export function getVercelOidcTokenFromContext(): string {
+  return '';
+}
+
+/**
+ * @deprecated Use {@link getVercelOidcTokenFromContext} instead.
+ */
 export function getVercelOidcTokenSync(): string {
   return '';
 }

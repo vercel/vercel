@@ -1,6 +1,6 @@
 import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import type { FromWebTokenInit } from '@aws-sdk/credential-provider-web-identity';
-import { getVercelOidcTokenSync } from '@vercel/oidc';
+import { getVercelOidcTokenFromContext } from '@vercel/oidc';
 
 /**
  * The init object for the `awsCredentialsProvider` function.
@@ -74,7 +74,7 @@ export function awsCredentialsProvider(
     const { fromWebToken } = await loadAwsCredentialProviderWebIdentity();
     return fromWebToken({
       ...init,
-      webIdentityToken: getVercelOidcTokenSync(),
+      webIdentityToken: getVercelOidcTokenFromContext(),
     })();
   };
 }
