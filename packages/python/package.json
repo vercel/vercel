@@ -17,7 +17,7 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "type-check": "tsc --noEmit",
-    "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts",
+    "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 VERCEL_PYTHON_ON_HIVE=1 NODE_OPTIONS=--experimental-vm-modules vitest run --config ../../vitest.config.mts",
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts",
     "test-e2e": "pnpm test test/integration-*",
     "vitest-run": "vitest -c ../../vitest.config.mts",
