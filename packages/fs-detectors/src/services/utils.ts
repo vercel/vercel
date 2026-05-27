@@ -12,7 +12,6 @@ import type { Framework } from '@vercel/frameworks';
 import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
-  EnvVars,
   ServiceRuntime,
   ExperimentalServices,
   Services,
@@ -230,7 +229,6 @@ export interface ReadVercelConfigResult {
   config: {
     services?: Services;
     experimentalServices?: ExperimentalServices;
-    env?: Record<string, string> | EnvVars;
   } | null;
   error: ServiceDetectionError | null;
 }
