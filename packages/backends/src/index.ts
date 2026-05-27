@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { delimiter, join } from 'node:path';
+import { delimiter, join, relative } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
@@ -20,6 +20,7 @@ import {
   type Lambda,
   type NodejsLambdaOptions,
   isBunVersion,
+  FileFsRef,
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
 import { applyServiceVcInit } from './service-vc-init.js';
@@ -227,11 +228,12 @@ export const build: BuildV2 = async args => {
     // For workflow services the dispatch shim imports `workflow/runtime`
     // which is not referenced by the user's entrypoint. Add it as an
     // extra nft trace root so its dependencies end up in the lambda.
+    let workflowRuntimePath: string | undefined;
     if (isWorkflowService) {
       try {
         const userRequire = createRequire(join(args.workPath, 'package.json'));
-        const runtimePath = userRequire.resolve('workflow/runtime');
-        localBuildFiles.add(runtimePath);
+        workflowRuntimePath = userRequire.resolve('workflow/runtime');
+        localBuildFiles.add(workflowRuntimePath);
       } catch {
         debug('Could not resolve workflow/runtime for nft tracing');
       }
@@ -251,6 +253,22 @@ export const build: BuildV2 = async args => {
       conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
+
+    // nft skips `localBuildFiles` entries (they are trace roots, not
+    // outputs). The workflow runtime file itself must still be in the
+    // lambda so add it explicitly after tracing.
+    if (workflowRuntimePath) {
+      const repoRoot = args.repoRootPath || args.workPath;
+      const outputPath = relative(repoRoot, workflowRuntimePath).replace(
+        /\\/g,
+        '/'
+      );
+      if (!files[outputPath]) {
+        files[outputPath] = new FileFsRef({
+          fsPath: workflowRuntimePath,
+        });
+      }
+    }
 
     try {
       await generateProjectManifest({
