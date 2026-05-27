@@ -2,6 +2,9 @@ import { readFile, realpath } from 'fs-extra';
 import { sep, dirname, join, resolve } from 'path';
 import { scanParentDirs } from '@vercel/build-utils';
 import { packageName } from './pkg-name';
+import { isNativeBinaryInstall } from './native-install';
+
+const nativePackageName = '@vercel/vc-native';
 
 async function getConfigPrefix() {
   const paths = [
@@ -80,6 +83,10 @@ export async function isGlobal() {
 }
 
 export default async function getUpdateCommand(): Promise<string> {
+  if (isNativeBinaryInstall()) {
+    return `npm i -g ${nativePackageName}@latest --force`;
+  }
+
   const pkgAndVersion = `${packageName}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);

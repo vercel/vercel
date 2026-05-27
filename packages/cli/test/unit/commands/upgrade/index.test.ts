@@ -6,8 +6,15 @@ import * as configFilesUtil from '../../../../src/util/config/files';
 const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
 describe('upgrade', () => {
+  const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
+
   afterEach(() => {
     writeConfigSpy.mockClear();
+    if (originalVercelVcNative === undefined) {
+      delete process.env.VERCEL_VC_NATIVE;
+    } else {
+      process.env.VERCEL_VC_NATIVE = originalVercelVcNative;
+    }
   });
 
   describe('--help', () => {
@@ -42,6 +49,7 @@ describe('upgrade', () => {
     });
 
     it('prints upgrade information without executing', async () => {
+      delete process.env.VERCEL_VC_NATIVE;
       client.setArgv('upgrade', '--dry-run');
       const exitCode = await upgrade(client);
       expect(exitCode).toBe(0);
@@ -50,6 +58,18 @@ describe('upgrade', () => {
       await expect(client.stderr).toOutput('Installation type:');
       await expect(client.stderr).toOutput('Upgrade command:');
       await expect(client.stderr).toOutput('Automatic updates: Disabled');
+    });
+
+    it('prints native upgrade command for vc-native installs', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      client.setArgv('upgrade', '--dry-run');
+
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Upgrade command: npm i -g @vercel/vc-native@latest --force'
+      );
     });
   });
 
@@ -68,6 +88,7 @@ describe('upgrade', () => {
     });
 
     it('outputs valid JSON', async () => {
+      delete process.env.VERCEL_VC_NATIVE;
       client.setArgv('upgrade', '--json');
       const exitCode = await upgrade(client);
       expect(exitCode).toBe(0);
@@ -80,6 +101,20 @@ describe('upgrade', () => {
       expect(json).toHaveProperty('upgradeCommand');
       expect(json).toHaveProperty('autoUpdatesEnabled', false);
       expect(['global', 'local']).toContain(json.installationType);
+    });
+
+    it('outputs native upgrade command for vc-native installs', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      client.setArgv('upgrade', '--json');
+
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json).toHaveProperty(
+        'upgradeCommand',
+        'npm i -g @vercel/vc-native@latest --force'
+      );
     });
   });
 

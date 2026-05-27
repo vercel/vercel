@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Disable automatic update prompts and automatic upgrades for native CLI installs.
+Handle CLI update flows safely for native binary installs.
