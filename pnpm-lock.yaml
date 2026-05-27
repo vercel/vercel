@@ -202,6 +202,12 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/aws:
+    devDependencies:
+      vitest:
+        specifier: 2.0.1
+        version: 2.0.1(@types/node@20.11.0)
+
   packages/backends:
     dependencies:
       '@vercel/build-utils':
@@ -15737,12 +15743,6 @@ packages:
     engines: {node: '>=12'}
     dev: false
 
-  /magic-string@0.30.17:
-    resolution: {integrity: sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==}
-    dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
-    dev: true
-
   /magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
     dependencies:
@@ -20278,9 +20278,9 @@ packages:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
       chai: 5.2.0
-      debug: 4.4.0
+      debug: 4.4.3(supports-color@8.1.1)
       execa: 8.0.1
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 1.1.2
       picocolors: 1.1.1
       std-env: 3.9.0
