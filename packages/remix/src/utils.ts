@@ -333,6 +333,35 @@ export function findPrerenderedHtmlFile(
 }
 
 /**
+ * Pre-filesystem rewrite that maps a prerendered document URL to its static
+ * HTML artifact (e.g. `/about` -> `/about.html`, `/` -> `/index.html`).
+ */
+export function getPrerenderDocumentRewrite(
+  path: string,
+  htmlFile: string
+): { src: string; dest: string } {
+  return {
+    src: path === 'index' ? '^/$' : `^/${path}/?$`,
+    dest: `/${htmlFile}`,
+  };
+}
+
+/**
+ * When a route was prerendered to static HTML, the SSR function override is
+ * normally skipped so the filesystem can serve the artifact. The index route
+ * is an exception: its SSR function must remain registered so runtime-only
+ * paths like `/__manifest` reach the handler via the catch-all route.
+ */
+export function shouldRegisterSsrForPrerenderedRoute(path: string): boolean {
+  return path === 'index';
+}
+
+/** Catch-all destination for React Router SSR apps. */
+export function getReactRouterCatchAllDest(): 'index' {
+  return 'index';
+}
+
+/**
  * Updates the `dest` process.env object to match the `source` one.
  * A function is returned to restore the `dest` env back to how
  * it was originally.
