@@ -115,6 +115,17 @@ export async function checkRateLimit(
     'x-vercel-protection-bypass':
       process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '',
   });
+
+  console.log('[DEBUG]', {
+    'x-vercel-rate-limit-api': rateLimitId,
+    'x-vercel-rate-limit-key': fullRateLimitKey,
+    'user-agent': 'Bot/Vercel Rate Limit Checker',
+    'x-forwarded-for': requestHeaders.get('x-forwarded-for') || '',
+    'x-real-ip': requestHeaders.get('x-real-ip') || '',
+    'x-vercel-protection-bypass':
+      process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '',
+    url,
+  });
   const cookies = parseCookies(requestHeaders);
   // Forward the auth cookie if it exists.
   if (cookies._vercel_jwt) {
