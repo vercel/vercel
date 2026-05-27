@@ -251,14 +251,11 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const versionBanner = `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
   const msg = betaCommands.includes(targetOrSubcommand)
-    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    : `${getTitleName()} CLI ${pkg.version}`;
-  if (process.env.VERCEL === '1') {
-    output.print(`${msg}\n`);
-  } else {
-    output.debug(msg);
-  }
+    ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : versionBanner;
+  output.print(`${msg}\n`);
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
