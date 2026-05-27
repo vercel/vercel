@@ -699,7 +699,7 @@ export const build = async ({
       experimentalAllowBundling: enableBundling || undefined,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      useWebApi: isMiddleware ? true : useWebApi,
+      useWebApi: isMiddleware ? true : (useWebApi ?? staticConfig?.useWebApi),
       shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
