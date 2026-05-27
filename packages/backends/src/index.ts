@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { delimiter, join, relative } from 'node:path';
+import { delimiter, dirname, join, relative } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
@@ -256,7 +256,9 @@ export const build: BuildV2 = async args => {
 
     // nft skips `localBuildFiles` entries (they are trace roots, not
     // outputs). The workflow runtime file itself must still be in the
-    // lambda so add it explicitly after tracing.
+    // lambda so add it explicitly after tracing. We also need the
+    // package.json of the `workflow` package so Node can determine
+    // the module format (ESM via "type": "module").
     if (workflowRuntimePath) {
       const repoRoot = args.repoRootPath || args.workPath;
       const outputPath = relative(repoRoot, workflowRuntimePath).replace(
@@ -267,6 +269,35 @@ export const build: BuildV2 = async args => {
         files[outputPath] = new FileFsRef({
           fsPath: workflowRuntimePath,
         });
+      }
+      // Include the workflow package.json so Node knows it's ESM.
+      const userRequire = createRequire(join(args.workPath, 'package.json'));
+      try {
+        const pkgJsonPath = userRequire.resolve('workflow/package.json');
+        const pkgOutputPath = relative(repoRoot, pkgJsonPath).replace(
+          /\\/g,
+          '/'
+        );
+        if (!files[pkgOutputPath]) {
+          files[pkgOutputPath] = new FileFsRef({ fsPath: pkgJsonPath });
+        }
+      } catch {
+        // workflow/package.json may not be exported; try the directory.
+        try {
+          const workflowDir = dirname(userRequire.resolve('workflow'));
+          const pkgJsonPath = join(workflowDir, '..', 'package.json');
+          if (existsSync(pkgJsonPath)) {
+            const pkgOutputPath = relative(repoRoot, pkgJsonPath).replace(
+              /\\/g,
+              '/'
+            );
+            if (!files[pkgOutputPath]) {
+              files[pkgOutputPath] = new FileFsRef({ fsPath: pkgJsonPath });
+            }
+          }
+        } catch {
+          debug('Could not resolve workflow package.json');
+        }
       }
     }
 
