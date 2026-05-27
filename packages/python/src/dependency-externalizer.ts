@@ -62,7 +62,7 @@ function shouldStripVendorFile(filePath: string): boolean {
 // for the standard Lambda layers (rusty runtime, lambdawrapper). When the
 // OpenTelemetry collector layer is also attached, we reserve an additional 15MB.
 const LAMBDA_BASE_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
-const OTEL_LAYER_RESERVATION_BYTES = 15 * 1024 * 1024;
+const OTEL_LAYER_RESERVATION_BYTES = 5 * 1024 * 1024;
 
 export const LAMBDA_SIZE_THRESHOLD_BYTES =
   process.env.VERCEL_DEPLOYMENT_HAS_OTEL_LAYER === '1'
