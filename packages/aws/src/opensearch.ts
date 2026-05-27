@@ -7,9 +7,9 @@ import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
  *
  * All fields are optional — when omitted, values are read from the
  * environment variables that Vercel injects for an OpenSearch
- * Marketplace resource. Any field on the underlying
- * {@link ClientOptions} may also be passed and will be forwarded
- * to the `@opensearch-project/opensearch` `Client`.
+ * Marketplace resource. Any field on the underlying `ClientOptions`
+ * from `@opensearch-project/opensearch` may also be passed and will
+ * be forwarded to the `Client`.
  */
 export interface CreateOpenSearchOptions extends Partial<ClientOptions> {
   /**
