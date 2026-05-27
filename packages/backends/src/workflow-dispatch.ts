@@ -1,6 +1,7 @@
 import { FileBlob, type Files } from '@vercel/build-utils';
 import { readFileSync } from 'node:fs';
-import { dirname, extname, join, posix } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, extname, join, posix, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveEntrypointAndFormat } from './rolldown/resolve-format.js';
 
@@ -22,6 +23,7 @@ const CJS_TEMPLATE = readFileSync(
 );
 
 const BUNDLE_PATH_PLACEHOLDER = /['"]__VC_WORKFLOW_BUNDLE_PATH__['"]/g;
+const RUNTIME_PATH_PLACEHOLDER = /['"]__VC_WORKFLOW_RUNTIME_PATH__['"]/g;
 
 /**
  * Wrap a workflow service with a dispatcher shim that:
@@ -57,11 +59,32 @@ export async function applyWorkflowDispatch(args: {
       ? args.workflowBundlePath
       : posix.relative(dispatchDir, args.workflowBundlePath);
 
+  // Resolve the absolute path to `workflow/runtime` from the service's
+  // workPath so the dispatch shim can import it regardless of where the
+  // shim file ends up in the lambda. Node module resolution from a service
+  // subdirectory would fail if `workflow` is only installed at the repo root.
+  let runtimeImportPath = 'workflow/runtime';
+  try {
+    const userRequire = createRequire(join(args.workPath, 'package.json'));
+    const resolvedRuntime = userRequire.resolve('workflow/runtime');
+    // Compute a relative path from the dispatch shim to the resolved runtime.
+    const shimAbsDir = join(args.workPath, dispatchDir);
+    const runtimeRelative = relative(shimAbsDir, resolvedRuntime).replace(
+      /\\/g,
+      '/'
+    );
+    // Ensure the path starts with ./ for a relative import.
+    runtimeImportPath = runtimeRelative.startsWith('.')
+      ? runtimeRelative
+      : `./${runtimeRelative}`;
+  } catch {
+    // Fall back to bare specifier if resolution fails.
+  }
+
   const template = format === 'esm' ? ESM_TEMPLATE : CJS_TEMPLATE;
-  const dispatchSource = template.replace(
-    BUNDLE_PATH_PLACEHOLDER,
-    JSON.stringify(bundleRelative)
-  );
+  const dispatchSource = template
+    .replace(BUNDLE_PATH_PLACEHOLDER, JSON.stringify(bundleRelative))
+    .replace(RUNTIME_PATH_PLACEHOLDER, JSON.stringify(runtimeImportPath));
 
   return {
     handler: dispatchHandler,

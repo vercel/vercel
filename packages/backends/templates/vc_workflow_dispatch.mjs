@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createWorld, setWorld, workflowEntrypoint } from 'workflow/runtime';
+import { createWorld, setWorld, workflowEntrypoint } from '__VC_WORKFLOW_RUNTIME_PATH__';
 
 const __vc_dirname = dirname(fileURLToPath(import.meta.url));
 const __vc_bundle_code = readFileSync(

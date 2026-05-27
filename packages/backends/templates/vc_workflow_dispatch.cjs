@@ -16,11 +16,13 @@ const __vc_bundle_code = readFileSync(
 
 // `workflow/runtime` is ESM-only. Use a dynamic import (supported in CJS
 // since Node 14) and cache the handler promise so it resolves once.
+// The path is resolved at build time to avoid Node module resolution
+// issues when the dispatch shim lives in a service subdirectory.
 let __vc_handler_promise;
 
 function getHandler() {
   if (!__vc_handler_promise) {
-    __vc_handler_promise = import('workflow/runtime').then(
+    __vc_handler_promise = import('__VC_WORKFLOW_RUNTIME_PATH__').then(
       ({ createWorld, setWorld, workflowEntrypoint }) => {
         setWorld(createWorld());
         return workflowEntrypoint(__vc_bundle_code);
