@@ -345,7 +345,7 @@ test('ensure the `scope` property works with email', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
     '--public',
-    '--name',
+    '--project',
     session,
     '--force',
     '--yes',
@@ -375,7 +375,7 @@ test('ensure the `scope` property works with username', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
     '--public',
-    '--name',
+    '--project',
     session,
     '--force',
     '--yes',
@@ -461,7 +461,7 @@ test('create a builds deployments with no actual builds', async () => {
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
     directory,
     '--public',
-    '--name',
+    '--project',
     session,
     '--force',
     '--yes',
@@ -916,8 +916,10 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
   const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(/Serverless Functions.+memory/gm);
-  expect(output.stderr).toMatch(/Learn More/gm);
+  expect(output.stderr).toMatch(
+    /functions\['api\/\*\*\/\*\.js'\]\.memory.*should be >= 128/
+  );
+  expect(output.stderr).toMatch(/View Documentation/);
 });
 
 // TODO: This test is flaky, possibly due to the recent SIGTERM changes which now issue 500s

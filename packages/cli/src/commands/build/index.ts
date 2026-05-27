@@ -43,6 +43,7 @@ import {
   isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
+  type VercelTargetEnvironment,
   sanitizeConsumerName,
   downloadFile,
 } from '@vercel/build-utils';
@@ -235,11 +236,10 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target =
-    parseTarget({
-      flagName: 'target',
-      flags: parsedArgs.flags,
-    }) || 'preview';
+  const target = (parseTarget({
+    flagName: 'target',
+    flags: parsedArgs.flags,
+  }) || 'preview') as VercelTargetEnvironment;
 
   const yes = Boolean(parsedArgs.flags['--yes']);
 

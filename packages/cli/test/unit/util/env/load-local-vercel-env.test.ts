@@ -50,6 +50,8 @@ describe('loadLocalVercelEnvFile', () => {
   it('respects project rootDirectory when resolving the env file path', () => {
     const path = getLocalVercelEnvFilePath('/repo', 'preview', 'apps/web');
 
-    expect(path).toBe('/repo/apps/web/.vercel/.env.preview.local');
+    expect(path).toBe(
+      join('/repo', 'apps/web', '.vercel', '.env.preview.local')
+    );
   });
 });
