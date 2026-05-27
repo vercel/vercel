@@ -7,6 +7,7 @@ import output from '../../output-manager';
 export type EnvRecordsSource =
   | 'vercel-cli:env:ls'
   | 'vercel-cli:env:add'
+  | 'vercel-cli:env:import'
   | 'vercel-cli:env:rm'
   | 'vercel-cli:env:update'
   | 'vercel-cli:env:pull'
