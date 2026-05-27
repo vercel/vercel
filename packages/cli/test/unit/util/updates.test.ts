@@ -6,6 +6,7 @@ import * as configFilesUtil from '../../../src/util/config/files';
 import {
   canAutoUpdate,
   hasAutoUpdatePreference,
+  isNativeBinaryInstall,
   isAutoUpdateEnabled,
   setAutoUpdate,
 } from '../../../src/util/updates';
@@ -18,6 +19,7 @@ vi.mock('ci-info', () => ({
 
 const isGlobalSpy = vi.spyOn(updateCommand, 'isGlobal');
 const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
+const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
 
 function setIsCI(value: boolean) {
   Object.defineProperty(ciInfo, 'isCI', {
@@ -32,6 +34,11 @@ describe('updates', () => {
     isGlobalSpy.mockReset();
     writeConfigSpy.mockClear();
     setIsCI(false);
+    if (originalVercelVcNative === undefined) {
+      delete process.env.VERCEL_VC_NATIVE;
+    } else {
+      process.env.VERCEL_VC_NATIVE = originalVercelVcNative;
+    }
   });
 
   it('reads auto-update state from global config', () => {
@@ -55,6 +62,14 @@ describe('updates', () => {
     });
   });
 
+  it('detects native binary installs', () => {
+    delete process.env.VERCEL_VC_NATIVE;
+    expect(isNativeBinaryInstall()).toBe(false);
+
+    process.env.VERCEL_VC_NATIVE = '1';
+    expect(isNativeBinaryInstall()).toBe(true);
+  });
+
   it('allows auto-update only for successful global interactive invocations', async () => {
     client.config = { updates: { auto: true } };
     isGlobalSpy.mockResolvedValue(true);
@@ -64,6 +79,15 @@ describe('updates', () => {
 
   it('does not auto-update when disabled', async () => {
     client.config = { updates: { auto: false } };
+    isGlobalSpy.mockResolvedValue(true);
+
+    await expect(canAutoUpdate(client, 0)).resolves.toBe(false);
+    expect(isGlobalSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not auto-update native binary installs', async () => {
+    client.config = { updates: { auto: true } };
+    process.env.VERCEL_VC_NATIVE = '1';
     isGlobalSpy.mockResolvedValue(true);
 
     await expect(canAutoUpdate(client, 0)).resolves.toBe(false);

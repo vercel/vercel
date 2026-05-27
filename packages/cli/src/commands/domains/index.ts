@@ -4,6 +4,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import add from './add';
 import buy from './buy';
+import check from './check';
 import transferIn from './transfer-in';
 import inspect from './inspect';
 import ls from './ls';
@@ -13,6 +14,7 @@ import price from './price';
 import {
   addSubcommand,
   buySubcommand,
+  checkSubcommand,
   domainsCommand,
   inspectSubcommand,
   moveSubcommand,
@@ -28,6 +30,7 @@ import output from '../../output-manager';
 const COMMAND_CONFIG = {
   add: ['add'],
   buy: ['buy'],
+  check: ['check'],
   inspect: ['inspect'],
   ls: ['ls', 'list'],
   move: ['move'],
@@ -103,6 +106,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandBuy(subcommandOriginal);
       return buy(client, args);
+    case 'check':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(checkSubcommand);
+      }
+      telemetry.trackCliSubcommandCheck(subcommandOriginal);
+      return check(client, args);
     case 'price':
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);

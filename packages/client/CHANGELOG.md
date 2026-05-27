@@ -1,5 +1,19 @@
 # @vercel/client
 
+## 17.5.5
+
+### Patch Changes
+
+- Updated dependencies [b66bd3e]
+  - @vercel/build-utils@13.26.3
+
+## 17.5.4
+
+### Patch Changes
+
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
 ## 17.5.3
 
 ### Patch Changes

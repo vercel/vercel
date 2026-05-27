@@ -1,5 +1,20 @@
 # @vercel/koa
 
+## 0.1.65
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+  - @vercel/node@5.8.6
+
+## 0.1.64
+
+### Patch Changes
+
+- Updated dependencies [ecf5033]
+  - @vercel/node@5.8.5
+
 ## 0.1.63
 
 ### Patch Changes

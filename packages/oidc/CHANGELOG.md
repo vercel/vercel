@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.5.0
+
+### Minor Changes
+
+- 5a700dc: Add conditional edge-light export to support Edge Runtime
+
 ## 3.4.1
 
 ### Patch Changes

@@ -1,5 +1,23 @@
 # @vercel/node
 
+## 5.8.6
+
+### Patch Changes
+
+- eecd10d: Allow opting into the Web API handler interface (`Request` → `Response`) from the static `config` export of a Node.js Serverless Function by setting `useWebApi: true`.
+- Updated dependencies [b66bd3e]
+- Updated dependencies [eecd10d]
+  - @vercel/build-utils@13.26.3
+  - @vercel/static-config@3.4.0
+
+## 5.8.5
+
+### Patch Changes
+
+- ecf5033: Pass service type and framework to node manifest.
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
 ## 5.8.4
 
 ### Patch Changes

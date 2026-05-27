@@ -10,7 +10,7 @@ vi.mock('./get-context', () => ({
 }));
 
 import { findRootDir, getUserDataDir } from './token-io';
-import { getVercelOidcToken } from './get-vercel-oidc-token';
+import { getVercelOidcToken } from './get-vercel-oidc-token-with-refresh';
 import * as tokenUtil from './token-util';
 
 describe('getVercelOidcToken - Error Scenarios', () => {

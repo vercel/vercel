@@ -210,8 +210,20 @@ describe('dependency externalizer support', () => {
   });
 
   describe('Lambda size constants', () => {
-    it('LAMBDA_SIZE_THRESHOLD_BYTES is 245 MB', () => {
+    it('LAMBDA_SIZE_THRESHOLD_BYTES is 245 MB by default', () => {
       expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(245 * 1024 * 1024);
+    });
+
+    it('LAMBDA_SIZE_THRESHOLD_BYTES is 240 MB when otel layer is present', async () => {
+      process.env.VERCEL_DEPLOYMENT_HAS_OTEL_LAYER = '1';
+      try {
+        vi.resetModules();
+        const mod = await import('../src/dependency-externalizer');
+        expect(mod.LAMBDA_SIZE_THRESHOLD_BYTES).toBe(240 * 1024 * 1024);
+      } finally {
+        delete process.env.VERCEL_DEPLOYMENT_HAS_OTEL_LAYER;
+        vi.resetModules();
+      }
     });
 
     it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
