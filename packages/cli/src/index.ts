@@ -255,7 +255,7 @@ const main = async () => {
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : versionBanner;
-  output.print(`${msg}\n`);
+  output.print(`${chalk.dim(msg)}\n`);
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
