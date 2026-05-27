@@ -4,7 +4,8 @@
 // queue handler returned by `workflowEntrypoint`.
 //
 // Placeholders replaced at build time:
-//   __VC_WORKFLOW_BUNDLE_PATH__  – relative path to the CJS bundle file
+//   __VC_WORKFLOW_BUNDLE_PATH__   – relative path to the CJS bundle file
+//   __VC_WORKFLOW_RUNTIME_PATH__  – relative path to the bundled runtime
 
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -14,23 +15,17 @@ const __vc_bundle_code = readFileSync(
   'utf-8'
 );
 
-// `workflow/runtime` is ESM-only. Use a dynamic import (supported in CJS
-// since Node 14) and cache the handler promise so it resolves once.
-// The path is resolved at build time to avoid Node module resolution
-// issues when the dispatch shim lives in a service subdirectory.
-let __vc_handler_promise;
+// Load the pre-bundled workflow runtime (CJS). This avoids depending on
+// node_modules being present in the lambda — the runtime and all its
+// dependencies are bundled at build time by rolldown.
+const {
+  createWorld,
+  setWorld,
+  workflowEntrypoint,
+} = require(join(__dirname, '__VC_WORKFLOW_RUNTIME_PATH__'));
 
-function getHandler() {
-  if (!__vc_handler_promise) {
-    __vc_handler_promise = import('__VC_WORKFLOW_RUNTIME_PATH__').then(
-      ({ createWorld, setWorld, workflowEntrypoint }) => {
-        setWorld(createWorld());
-        return workflowEntrypoint(__vc_bundle_code);
-      }
-    );
-  }
-  return __vc_handler_promise;
-}
+setWorld(createWorld());
+const __vc_handler = workflowEntrypoint(__vc_bundle_code);
 
 /**
  * Adapt the Web API handler to the Node.js (req, res) signature expected by
@@ -38,8 +33,6 @@ function getHandler() {
  */
 module.exports = async function vcWorkflowDispatch(req, res) {
   try {
-    const handler = await getHandler();
-
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host || 'localhost';
     const url = new URL(req.url || '/', protocol + '://' + host);
@@ -70,7 +63,7 @@ module.exports = async function vcWorkflowDispatch(req, res) {
       duplex: 'half',
     });
 
-    const webRes = await handler(webReq);
+    const webRes = await __vc_handler(webReq);
 
     res.statusCode = webRes.status;
     for (const [key, value] of webRes.headers.entries()) {

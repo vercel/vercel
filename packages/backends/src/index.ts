@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { delimiter, dirname, join, relative } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
@@ -20,7 +19,6 @@ import {
   type Lambda,
   type NodejsLambdaOptions,
   isBunVersion,
-  FileFsRef,
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
 import { applyServiceVcInit } from './service-vc-init.js';
@@ -225,20 +223,6 @@ export const build: BuildV2 = async args => {
         ? userBuildResult?.localBuildFiles
         : rolldownResult.localBuildFiles;
 
-    // For workflow services the dispatch shim imports `workflow/runtime`
-    // which is not referenced by the user's entrypoint. Add it as an
-    // extra nft trace root so its dependencies end up in the lambda.
-    let workflowRuntimePath: string | undefined;
-    if (isWorkflowService) {
-      try {
-        const userRequire = createRequire(join(args.workPath, 'package.json'));
-        workflowRuntimePath = userRequire.resolve('workflow/runtime');
-        localBuildFiles.add(workflowRuntimePath);
-      } catch {
-        debug('Could not resolve workflow/runtime for nft tracing');
-      }
-    }
-
     const files = userBuildResult?.files || rolldownResult.files;
     const handler = userBuildResult?.handler || rolldownResult.handler;
     const nftWorkPath = userBuildResult?.outputDir || args.workPath;
@@ -253,53 +237,6 @@ export const build: BuildV2 = async args => {
       conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
-
-    // nft skips `localBuildFiles` entries (they are trace roots, not
-    // outputs). The workflow runtime file itself must still be in the
-    // lambda so add it explicitly after tracing. We also need the
-    // package.json of the `workflow` package so Node can determine
-    // the module format (ESM via "type": "module").
-    if (workflowRuntimePath) {
-      const repoRoot = args.repoRootPath || args.workPath;
-      const outputPath = relative(repoRoot, workflowRuntimePath).replace(
-        /\\/g,
-        '/'
-      );
-      if (!files[outputPath]) {
-        files[outputPath] = new FileFsRef({
-          fsPath: workflowRuntimePath,
-        });
-      }
-      // Include the workflow package.json so Node knows it's ESM.
-      const userRequire = createRequire(join(args.workPath, 'package.json'));
-      try {
-        const pkgJsonPath = userRequire.resolve('workflow/package.json');
-        const pkgOutputPath = relative(repoRoot, pkgJsonPath).replace(
-          /\\/g,
-          '/'
-        );
-        if (!files[pkgOutputPath]) {
-          files[pkgOutputPath] = new FileFsRef({ fsPath: pkgJsonPath });
-        }
-      } catch {
-        // workflow/package.json may not be exported; try the directory.
-        try {
-          const workflowDir = dirname(userRequire.resolve('workflow'));
-          const pkgJsonPath = join(workflowDir, '..', 'package.json');
-          if (existsSync(pkgJsonPath)) {
-            const pkgOutputPath = relative(repoRoot, pkgJsonPath).replace(
-              /\\/g,
-              '/'
-            );
-            if (!files[pkgOutputPath]) {
-              files[pkgOutputPath] = new FileFsRef({ fsPath: pkgJsonPath });
-            }
-          }
-        } catch {
-          debug('Could not resolve workflow package.json');
-        }
-      }
-    }
 
     try {
       await generateProjectManifest({
@@ -366,6 +303,7 @@ export const build: BuildV2 = async args => {
         handler,
         workPath: nftWorkPath,
         workflowBundlePath: workflowBundle.bundlePath,
+        runtimeBundlePath: workflowBundle.runtimeBundlePath,
       });
       lambdaFiles = dispatched.files;
       lambdaHandler = dispatched.handler;

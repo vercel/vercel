@@ -1,7 +1,6 @@
 import { FileBlob, type Files } from '@vercel/build-utils';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, extname, join, posix, relative } from 'node:path';
+import { dirname, extname, join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveEntrypointAndFormat } from './rolldown/resolve-format.js';
 
@@ -28,7 +27,7 @@ const RUNTIME_PATH_PLACEHOLDER = /['"]__VC_WORKFLOW_RUNTIME_PATH__['"]/g;
 /**
  * Wrap a workflow service with a dispatcher shim that:
  *   - reads the pre-built workflow bundle (a CJS string for VM execution)
- *   - initialises the workflow world via `createWorld` / `setWorld`
+ *   - loads the pre-bundled workflow runtime via require()
  *   - calls `workflowEntrypoint(bundleCode)` to get a Web API handler
  *   - adapts it to the Node.js `(req, res)` signature the lambda expects
  *
@@ -41,6 +40,8 @@ export async function applyWorkflowDispatch(args: {
   workPath: string;
   /** Relative path to the workflow bundle file inside the lambda files map. */
   workflowBundlePath: string;
+  /** Relative path to the bundled workflow runtime file. */
+  runtimeBundlePath?: string;
 }): Promise<{ files: Files; handler: string }> {
   const { format, extension } = await resolveShimFormat(args);
 
@@ -59,32 +60,17 @@ export async function applyWorkflowDispatch(args: {
       ? args.workflowBundlePath
       : posix.relative(dispatchDir, args.workflowBundlePath);
 
-  // Resolve the absolute path to `workflow/runtime` from the service's
-  // workPath so the dispatch shim can import it regardless of where the
-  // shim file ends up in the lambda. Node module resolution from a service
-  // subdirectory would fail if `workflow` is only installed at the repo root.
-  let runtimeImportPath = 'workflow/runtime';
-  try {
-    const userRequire = createRequire(join(args.workPath, 'package.json'));
-    const resolvedRuntime = userRequire.resolve('workflow/runtime');
-    // Compute a relative path from the dispatch shim to the resolved runtime.
-    const shimAbsDir = join(args.workPath, dispatchDir);
-    const runtimeRelative = relative(shimAbsDir, resolvedRuntime).replace(
-      /\\/g,
-      '/'
-    );
-    // Ensure the path starts with ./ for a relative import.
-    runtimeImportPath = runtimeRelative.startsWith('.')
-      ? runtimeRelative
-      : `./${runtimeRelative}`;
-  } catch {
-    // Fall back to bare specifier if resolution fails.
-  }
+  // Compute the relative path from the dispatch shim to the runtime bundle.
+  const runtimePath = args.runtimeBundlePath || 'workflow/runtime';
+  const runtimeRelative =
+    args.runtimeBundlePath && dispatchDir !== '.'
+      ? posix.relative(dispatchDir, args.runtimeBundlePath)
+      : runtimePath;
 
   const template = format === 'esm' ? ESM_TEMPLATE : CJS_TEMPLATE;
   const dispatchSource = template
     .replace(BUNDLE_PATH_PLACEHOLDER, JSON.stringify(bundleRelative))
-    .replace(RUNTIME_PATH_PLACEHOLDER, JSON.stringify(runtimeImportPath));
+    .replace(RUNTIME_PATH_PLACEHOLDER, JSON.stringify(runtimeRelative));
 
   return {
     handler: dispatchHandler,

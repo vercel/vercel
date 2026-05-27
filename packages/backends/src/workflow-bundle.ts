@@ -4,6 +4,7 @@ import { createRequire, builtinModules } from 'node:module';
 import { join, relative, extname } from 'node:path';
 
 const WORKFLOW_BUNDLE_FILENAME = '__vc_workflow_bundle.cjs';
+const WORKFLOW_RUNTIME_FILENAME = '__vc_workflow_runtime.cjs';
 
 /**
  * Build the workflow code into a single CJS bundle suitable for VM execution.
@@ -143,13 +144,61 @@ export async function buildWorkflowBundle(args: {
     );
   }
 
+  // Also bundle `workflow/runtime` into a self-contained CJS file.
+  // The dispatch shim needs `createWorld`, `setWorld`, and
+  // `workflowEntrypoint` at runtime. Rather than relying on
+  // node_modules being present in the lambda (which nft may not
+  // include properly), we bundle the runtime and all its deps.
+  let runtimeCode: string | null = null;
+  try {
+    const userRequire = createRequire(join(workPath, 'package.json'));
+    const runtimeEntry = userRequire.resolve('workflow/runtime');
+
+    const runtimeOut = await rolldownBuild({
+      input: runtimeEntry,
+      write: false,
+      cwd: workPath,
+      platform: 'node',
+      plugins: [inlineAllPlugin()],
+      resolve: {
+        conditionNames: ['import', 'require', 'default'],
+      },
+      output: {
+        format: 'cjs',
+        entryFileNames: WORKFLOW_RUNTIME_FILENAME,
+        exports: 'named',
+        sourcemap: 'inline',
+      },
+    });
+
+    for (const file of runtimeOut.output) {
+      if (file.type === 'chunk' && file.isEntry) {
+        runtimeCode = file.code;
+      }
+    }
+  } catch (err) {
+    debug(
+      `Failed to bundle workflow/runtime: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  const files: Files = {
+    [WORKFLOW_BUNDLE_FILENAME]: new FileBlob({
+      data: bundleCode,
+      mode: 0o644,
+    }),
+  };
+
+  if (runtimeCode) {
+    files[WORKFLOW_RUNTIME_FILENAME] = new FileBlob({
+      data: runtimeCode,
+      mode: 0o644,
+    });
+  }
+
   return {
     bundlePath: WORKFLOW_BUNDLE_FILENAME,
-    files: {
-      [WORKFLOW_BUNDLE_FILENAME]: new FileBlob({
-        data: bundleCode,
-        mode: 0o644,
-      }),
-    },
+    runtimeBundlePath: runtimeCode ? WORKFLOW_RUNTIME_FILENAME : undefined,
+    files,
   };
 }

@@ -4,18 +4,28 @@
 // queue handler returned by `workflowEntrypoint`.
 //
 // Placeholders replaced at build time:
-//   __VC_WORKFLOW_BUNDLE_PATH__  – relative path to the CJS bundle file
+//   __VC_WORKFLOW_BUNDLE_PATH__   – relative path to the CJS bundle file
+//   __VC_WORKFLOW_RUNTIME_PATH__  – relative path to the bundled runtime
 
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createWorld, setWorld, workflowEntrypoint } from '__VC_WORKFLOW_RUNTIME_PATH__';
+import { createRequire } from 'node:module';
 
 const __vc_dirname = dirname(fileURLToPath(import.meta.url));
 const __vc_bundle_code = readFileSync(
   join(__vc_dirname, '__VC_WORKFLOW_BUNDLE_PATH__'),
   'utf-8'
 );
+
+// Load the pre-bundled workflow runtime (CJS). This avoids depending on
+// node_modules being present in the lambda.
+const __vc_require = createRequire(import.meta.url);
+const {
+  createWorld,
+  setWorld,
+  workflowEntrypoint,
+} = __vc_require(join(__vc_dirname, '__VC_WORKFLOW_RUNTIME_PATH__'));
 
 // Initialise the workflow world (picks Vercel or local based on env).
 setWorld(createWorld());
