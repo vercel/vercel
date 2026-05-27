@@ -187,9 +187,11 @@ export default async function remove(client: Client) {
   );
 
   if (deployments.length > 200) {
+    const remaining = deployments.length - 200;
     output.warn(
-      'Only 200 deployments can get deleted at once. Please continue 10 minutes after deletion to remove the rest.'
+      `Only 200 deployments can be deleted at once. Deleting the first 200 now; ${remaining} will remain. Run again in 10 minutes to continue.`
     );
+    deployments = deployments.slice(0, 200);
   }
 
   if (!skipConfirmation) {
