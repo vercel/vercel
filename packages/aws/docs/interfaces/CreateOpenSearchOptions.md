@@ -161,7 +161,7 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 Defined in: [packages/aws/src/opensearch.ts:27](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L27)
 
-Overrides `<prefix>_OPENSEARCH_DASHBOARD_ENDPOINT`.
+Overrides `<prefix>_OPENSEARCH_ENDPOINT`.
 
 ---
 

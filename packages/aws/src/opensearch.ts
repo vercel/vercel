@@ -23,7 +23,7 @@ export interface CreateOpenSearchOptions extends Partial<ClientOptions> {
    * are connected.
    */
   prefix?: string;
-  /** Overrides `<prefix>_OPENSEARCH_DASHBOARD_ENDPOINT`. */
+  /** Overrides `<prefix>_OPENSEARCH_ENDPOINT`. */
   endpoint?: string;
   /** Overrides `<prefix>_AWS_REGION`. */
   region?: string;
@@ -61,7 +61,7 @@ export function createOpenSearch(opts: CreateOpenSearchOptions = {}): Client {
       suffix
     );
 
-  const endpoint = opts.endpoint ?? fromEnv('OPENSEARCH_DASHBOARD_ENDPOINT');
+  const endpoint = opts.endpoint ?? fromEnv('OPENSEARCH_ENDPOINT');
   const region = opts.region ?? fromEnv('AWS_REGION');
   const roleArn = opts.roleArn ?? fromEnv('AWS_ROLE_ARN');
 

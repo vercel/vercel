@@ -27,11 +27,11 @@ import { createOpenSearch } from './opensearch';
 
 const KEYS = [
   'STORAGE_AWS_RESOURCE_ARN',
-  'STORAGE_OPENSEARCH_DASHBOARD_ENDPOINT',
+  'STORAGE_OPENSEARCH_ENDPOINT',
   'STORAGE_AWS_REGION',
   'STORAGE_AWS_ROLE_ARN',
   'STORAGE2_AWS_RESOURCE_ARN',
-  'STORAGE2_OPENSEARCH_DASHBOARD_ENDPOINT',
+  'STORAGE2_OPENSEARCH_ENDPOINT',
   'STORAGE2_AWS_REGION',
   'STORAGE2_AWS_ROLE_ARN',
 ];
@@ -57,7 +57,7 @@ describe('createOpenSearch', () => {
   test('autodetects the prefix from the resource ARN', async () => {
     process.env.STORAGE_AWS_RESOURCE_ARN =
       'arn:aws:aoss:us-east-2:1:collection/abc';
-    process.env.STORAGE_OPENSEARCH_DASHBOARD_ENDPOINT =
+    process.env.STORAGE_OPENSEARCH_ENDPOINT =
       'https://example.aoss.amazonaws.com';
     process.env.STORAGE_AWS_REGION = 'us-east-2';
     process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/vercel-opensearch';
@@ -87,13 +87,13 @@ describe('createOpenSearch', () => {
   test('uses an explicit prefix override', () => {
     process.env.STORAGE_AWS_RESOURCE_ARN =
       'arn:aws:aoss:us-east-2:1:collection/one';
-    process.env.STORAGE_OPENSEARCH_DASHBOARD_ENDPOINT = 'https://one.example';
+    process.env.STORAGE_OPENSEARCH_ENDPOINT = 'https://one.example';
     process.env.STORAGE_AWS_REGION = 'us-east-2';
     process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/one';
 
     process.env.STORAGE2_AWS_RESOURCE_ARN =
       'arn:aws:aoss:us-east-2:1:collection/two';
-    process.env.STORAGE2_OPENSEARCH_DASHBOARD_ENDPOINT = 'https://two.example';
+    process.env.STORAGE2_OPENSEARCH_ENDPOINT = 'https://two.example';
     process.env.STORAGE2_AWS_REGION = 'eu-west-1';
     process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/two';
 
