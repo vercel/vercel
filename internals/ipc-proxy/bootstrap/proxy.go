@@ -1,7 +1,7 @@
-// vc-init.go - Bootstrap wrapper for standalone Go servers on Vercel
+// proxy.go - IPC proxy for standalone servers on Vercel.
 // This handles the IPC protocol required for executable runtime mode.
 //
-// The bootstrap:
+// The proxy:
 // 1. Connects to VERCEL_IPC_PATH Unix socket
 // 2. Starts the user's server on an internal port
 // 3. Sends "server-started" IPC message
