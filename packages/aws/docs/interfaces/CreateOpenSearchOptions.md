@@ -159,7 +159,7 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 Defined in: [packages/aws/src/opensearch.ts:19](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L19)
 
 The OpenSearch collection endpoint. Defaults to
-`process.env.OPENSEARCH_DASHBOARD_ENDPOINT`.
+`process.env.OPENSEARCH_ENDPOINT`.
 
 ---
 
@@ -314,7 +314,7 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 Defined in: [packages/aws/src/opensearch.ts:24](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L24)
 
 The AWS region the collection lives in. Defaults to
-`process.env.OPENSEARCH_REGION`.
+`process.env.AWS_REGION`.
 
 ---
 

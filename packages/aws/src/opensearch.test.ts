@@ -25,11 +25,7 @@ import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws';
 import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
 import { createOpenSearch } from './opensearch';
 
-const ENV_KEYS = [
-  'OPENSEARCH_DASHBOARD_ENDPOINT',
-  'OPENSEARCH_REGION',
-  'AWS_ROLE_ARN',
-] as const;
+const ENV_KEYS = ['OPENSEARCH_ENDPOINT', 'AWS_REGION', 'AWS_ROLE_ARN'] as const;
 
 describe('createOpenSearch', () => {
   const originalEnv: Record<string, string | undefined> = {};
@@ -53,9 +49,8 @@ describe('createOpenSearch', () => {
   });
 
   test('uses Vercel-injected env vars when no options are provided', async () => {
-    process.env.OPENSEARCH_DASHBOARD_ENDPOINT =
-      'https://example.aoss.amazonaws.com';
-    process.env.OPENSEARCH_REGION = 'us-east-2';
+    process.env.OPENSEARCH_ENDPOINT = 'https://example.aoss.amazonaws.com';
+    process.env.AWS_REGION = 'us-east-2';
     process.env.AWS_ROLE_ARN = 'arn:aws:iam::1234567890:role/vercel-opensearch';
 
     const client = createOpenSearch();
@@ -82,8 +77,8 @@ describe('createOpenSearch', () => {
   });
 
   test('explicit options override env', () => {
-    process.env.OPENSEARCH_DASHBOARD_ENDPOINT = 'https://env-endpoint.example';
-    process.env.OPENSEARCH_REGION = 'us-east-2';
+    process.env.OPENSEARCH_ENDPOINT = 'https://env-endpoint.example';
+    process.env.AWS_REGION = 'us-east-2';
     process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/env';
 
     createOpenSearch({
@@ -100,18 +95,16 @@ describe('createOpenSearch', () => {
 
   test('throws a helpful error when env vars are missing', () => {
     expect(() => createOpenSearch()).toThrow(
-      /OPENSEARCH_DASHBOARD_ENDPOINT.*OPENSEARCH_REGION.*AWS_ROLE_ARN/
+      /OPENSEARCH_ENDPOINT.*AWS_REGION.*AWS_ROLE_ARN/
     );
   });
 
   test('lists only the missing env vars in the error', () => {
-    process.env.OPENSEARCH_DASHBOARD_ENDPOINT = 'https://example';
-    process.env.OPENSEARCH_REGION = 'us-east-2';
+    process.env.OPENSEARCH_ENDPOINT = 'https://example';
+    process.env.AWS_REGION = 'us-east-2';
     // AWS_ROLE_ARN intentionally missing.
 
     expect(() => createOpenSearch()).toThrow(/AWS_ROLE_ARN/);
-    expect(() => createOpenSearch()).not.toThrow(
-      /OPENSEARCH_DASHBOARD_ENDPOINT/
-    );
+    expect(() => createOpenSearch()).not.toThrow(/OPENSEARCH_ENDPOINT/);
   });
 });
