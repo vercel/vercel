@@ -170,6 +170,13 @@ export class PythonDependencyExternalizer {
     const pythonOnHiveEnabled =
       process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
       process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+
+    console.log(
+      `[otel-debug] totalBundleSize=${(this.totalBundleSize / (1024 * 1024)).toFixed(2)} MB, ` +
+        `threshold=${(LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0)} MB, ` +
+        `exceeds=${this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES}`
+    );
+
     if (pythonOnHiveEnabled) {
       return false;
     } else if (
@@ -214,6 +221,11 @@ export class PythonDependencyExternalizer {
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
+
+    console.log(
+      `[otel-debug] VERCEL_DEPLOYMENT_HAS_OTEL_LAYER=${process.env.VERCEL_DEPLOYMENT_HAS_OTEL_LAYER ?? '<unset>'}, ` +
+        `LAMBDA_SIZE_THRESHOLD_BYTES=${(LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0)} MB`
+    );
 
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
