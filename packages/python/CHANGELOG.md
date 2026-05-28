@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.44.0
+
+### Minor Changes
+
+- 4f782b1: Support bytecode compilation for hive deployment path.
+
 ## 6.43.3
 
 ### Patch Changes
