@@ -1,5 +1,34 @@
 # @vercel/build-utils
 
+## 13.26.4
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+
+## 13.26.3
+
+### Patch Changes
+
+- b66bd3e: Fix prebuilt deployments failing with "invalid relative path" when using the `--standalone` flag in pnpm monorepos by skipping external node_modules symlinks and copying traced files at their logical paths instead.
+
+## 13.26.2
+
+### Patch Changes
+
+- 647c1e8: Cleanup getLambdaSupportsStreaming
+
+## 13.26.1
+
+### Patch Changes
+
+- fa25cb7: Fix config.framework in deserializeBuildOutput
+- 972cc84: Support workflow-triggered job services in queue infrastructure
+
+  Add `isWorkflowTriggeredService()` and `isQueueBackedService()` helpers so workflow services
+  are recognized by the queue broker, dev server, and build pipeline. Update Python runtime to
+  bootstrap workflow services as queue-backed workers.
+
 ## 13.26.0
 
 ### Minor Changes

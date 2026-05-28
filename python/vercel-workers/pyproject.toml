@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vercel-workers"
-version = "0.0.23"
+version = "0.0.24"
 description = "Python SDK for Vercel Workers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -59,6 +59,7 @@ test = [
 
 [tool.uv]
 default-groups = ["test"]
+exclude-newer = "2 days"
 
 [tool.setuptools.packages.find]
 where = ["src"]

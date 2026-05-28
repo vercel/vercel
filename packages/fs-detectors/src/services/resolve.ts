@@ -210,12 +210,6 @@ interface ResolveConfiguredServiceOptions {
 
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
-  /**
-   * Optional top-level `env` (from vercel.json `env`). Per-service `env`
-   * values take precedence; entries here are folded into every service that
-   * doesn't already define the same name.
-   */
-  rootEnv?: EnvVars;
 }
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
@@ -820,7 +814,9 @@ export async function resolveConfiguredService(
       ? getServiceQueueTopics({ type, topics: config.topics })
       : trigger === 'queue'
         ? config.topics
-        : undefined;
+        : trigger === 'workflow'
+          ? ['__wkf_*']
+          : undefined;
 
   let builderUse: string;
   let builderSrc: string;
@@ -1133,21 +1129,7 @@ export async function resolveAllConfiguredServices(
   const servicesByName = new Map(resolved.map(s => [s.name, s]));
   for (const service of resolved) {
     if (!service.env) continue;
-    validateEnvRefs(
-      service.env,
-      `Service "${service.name}" env`,
-      servicesByName,
-      errors,
-      service.name
-    );
-  }
-  if (options.rootEnv) {
-    validateEnvRefs(options.rootEnv, 'env', servicesByName, errors);
-    // Fold top-level env refs into every service's `env`, so the result
-    // is always written in the build output and API won't be needed to do that again
-    for (const service of resolved) {
-      service.env = { ...options.rootEnv, ...(service.env ?? {}) };
-    }
+    validateEnvRefs(service.env, service.name, servicesByName, errors);
   }
 
   return { services: resolved, errors };
@@ -1155,11 +1137,11 @@ export async function resolveAllConfiguredServices(
 
 function validateEnvRefs(
   env: EnvVars,
-  pathPrefix: string,
+  serviceName: string,
   servicesByName: Map<string, Service>,
-  errors: ServiceDetectionError[],
-  serviceName?: string
+  errors: ServiceDetectionError[]
 ): void {
+  const pathPrefix = `Service "${serviceName}" env`;
   for (const [envVarName, envVar] of Object.entries(env)) {
     if (envVar.type !== 'service-ref') continue;
 
@@ -1169,7 +1151,7 @@ function validateEnvRefs(
       errors.push({
         code: 'UNKNOWN_SERVICE_REF',
         message: `${pathPrefix}["${envVarName}"] references unknown service "${refName}".`,
-        ...(serviceName ? { serviceName } : {}),
+        serviceName,
       });
       continue;
     }
@@ -1177,7 +1159,7 @@ function validateEnvRefs(
       errors.push({
         code: 'INVALID_SERVICE_REF_TYPE',
         message: `${pathPrefix}["${envVarName}"] references service "${refName}" which is a ${target.type} service and has no URL. Only web services can be referenced.`,
-        ...(serviceName ? { serviceName } : {}),
+        serviceName,
       });
     }
   }

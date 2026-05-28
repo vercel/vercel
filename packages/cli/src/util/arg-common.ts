@@ -243,6 +243,15 @@ export const allOption = {
   description: 'List resources across all projects',
 } as const;
 
+export const projectOption = {
+  name: 'project',
+  shorthand: null,
+  type: String,
+  argument: 'NAME_OR_ID',
+  description: 'Project name or ID (defaults to the linked project)',
+  deprecated: false,
+} as const;
+
 type GlobalOpt = (typeof globalCommandOptions)[number];
 
 const GLOBAL_LONG_TO_OPT = new Map<string, GlobalOpt>();

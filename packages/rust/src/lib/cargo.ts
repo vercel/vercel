@@ -21,7 +21,7 @@ interface CargoPackage {
   license: string;
   license_file: string;
   description: string;
-  source: unknown;
+  source: string | null;
   dependencies: CargoDependency[];
   targets: CargoTarget[];
   features: CargoFeatures;
@@ -45,7 +45,7 @@ interface CargoDependency {
   name: string;
   source: string;
   req: string;
-  kind: unknown;
+  kind: null | 'dev' | 'build';
   rename: unknown;
   optional: boolean;
   uses_default_features: boolean;
@@ -104,8 +104,8 @@ interface Dep {
 }
 
 interface DepKind {
-  kind: unknown;
-  target: string;
+  kind: null | 'dev' | 'build';
+  target: string | null;
 }
 
 interface CargoMetadata {
@@ -121,15 +121,12 @@ interface Rs2 {
 }
 
 export async function getCargoMetadata(
-  options: execa.Options
+  options: execa.Options,
+  filterPlatform?: string
 ): Promise<CargoMetadataRoot> {
-  const { stdout: cargoMetaData } = await execa(
-    'cargo',
-    ['metadata', '--format-version', '1'],
-
-    options
-  );
-
+  const args = ['metadata', '--format-version', '1'];
+  if (filterPlatform) args.push('--filter-platform', filterPlatform);
+  const { stdout: cargoMetaData } = await execa('cargo', args, options);
   return JSON.parse(cargoMetaData) as CargoMetadataRoot;
 }
 

@@ -1,5 +1,32 @@
 # @vercel/h3
 
+## 0.1.92
+
+### Patch Changes
+
+- @vercel/node@5.8.7
+
+## 0.1.91
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+  - @vercel/node@5.8.6
+
+## 0.1.90
+
+### Patch Changes
+
+- Updated dependencies [ecf5033]
+  - @vercel/node@5.8.5
+
+## 0.1.89
+
+### Patch Changes
+
+- @vercel/node@5.8.4
+
 ## 0.1.88
 
 ### Patch Changes

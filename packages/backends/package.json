@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.7.1",
+  "version": "0.8.2",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -36,6 +36,7 @@
     "@vercel/nft": "1.10.0",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
+    "get-port": "5.1.1",
     "oxc-transform": "0.111.0",
     "path-to-regexp": "8.3.0",
     "resolve.exports": "2.0.3",

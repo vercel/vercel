@@ -1,4 +1,4 @@
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, projectOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const createSubcommand = {
@@ -163,6 +163,32 @@ export const listSubcommand = {
       deprecated: false,
       description: 'Cursor for the next page of results',
     },
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Search connectors by name or UID',
+    },
+    {
+      name: 'service',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+      description:
+        'Filter by service name (e.g. slack, mcp.linear.app). Repeatable.',
+    },
+    {
+      name: 'type',
+      shorthand: null,
+      type: [String],
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Filter by connector type (slack, github, oauth, custom). Repeatable.',
+    },
     formatOption,
   ],
   examples: [
@@ -173,6 +199,26 @@ export const listSubcommand = {
     {
       name: 'List every connector in the team',
       value: `${packageName} connect list --all-projects`,
+    },
+    {
+      name: 'Filter by connector type',
+      value: `${packageName} connect list --type slack`,
+    },
+    {
+      name: 'Filter by multiple types',
+      value: `${packageName} connect list --type oauth --type github`,
+    },
+    {
+      name: 'Filter by service name',
+      value: `${packageName} connect list --service mcp.linear.app`,
+    },
+    {
+      name: 'Search by text',
+      value: `${packageName} connect list --search linear`,
+    },
+    {
+      name: 'Combine filters',
+      value: `${packageName} connect list --type oauth --search prod`,
     },
     {
       name: 'Limit the number of results',
@@ -359,11 +405,8 @@ export const attachSubcommand = {
         'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description: 'Project name or ID (default: current linked project)',
     },
     {
@@ -438,11 +481,8 @@ export const detachSubcommand = {
   ],
   options: [
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description: 'Project name or ID (default: current linked project)',
     },
     {

@@ -12,6 +12,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { BlobListTelemetryClient } from '../../util/telemetry/commands/blob/list';
 import { printError } from '../../util/error';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { blobOpts, type BlobRWToken } from '../../util/blob/token';
 
 function isMode(mode: string): mode is 'folded' | 'expanded' {
   return mode === 'folded' || mode === 'expanded';
@@ -20,7 +21,7 @@ function isMode(mode: string): mode is 'folded' | 'expanded' {
 export default async function list(
   client: Client,
   argv: string[],
-  rwToken: string
+  auth: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobListTelemetryClient({
     opts: {
@@ -74,7 +75,7 @@ export default async function list(
 
     output.spinner('Fetching blobs');
     list = await blob.list({
-      token: rwToken,
+      ...blobOpts(auth),
       limit: limit ?? 10,
       cursor,
       mode,

@@ -6,9 +6,9 @@ import {
   scopeRouteSourceToOwnership,
 } from '@vercel/routing-utils';
 import type {
+  DetectEntrypointFn,
   DetectServicesOptions,
   DetectServicesResult,
-  EnvVars,
   ExperimentalServices,
   InferredServicesConfig,
   InferredServicesResult,
@@ -50,14 +50,6 @@ function emptyRoutes(): ServicesRoutes {
   };
 }
 
-function isEnvVars(
-  env: Record<string, string> | EnvVars | undefined
-): env is EnvVars {
-  if (!env) return false;
-  const first = Object.values(env)[0];
-  return typeof first === 'object' && first !== null;
-}
-
 function withResolvedResult(
   resolved: ResolvedServicesResult,
   inferred: InferredServicesResult | null = null
@@ -88,6 +80,10 @@ function toInferredLayoutConfig(
 
     if (service.type) {
       serviceConfig.type = service.type;
+    }
+
+    if (typeof service.root === 'string') {
+      serviceConfig.root = service.root;
     }
 
     if (typeof service.entrypoint === 'string') {
@@ -132,7 +128,7 @@ interface PlatformDetectResult {
 export async function detectServices(
   options: DetectServicesOptions
 ): Promise<DetectServicesResult> {
-  const { fs, workPath } = options;
+  const { fs, workPath, detectEntrypoint } = options;
 
   // Scope filesystem to workPath if provided
   const scopedFs = workPath ? fs.chdir(workPath) : fs;
@@ -169,6 +165,7 @@ export async function detectServices(
     const detectors: Array<{
       detect: (options: {
         fs: DetectorFilesystem;
+        detectEntrypoint?: DetectEntrypointFn;
       }) => Promise<PlatformDetectResult>;
       source: InferredServicesResult['source'];
     }> = [
@@ -179,7 +176,7 @@ export async function detectServices(
     ];
 
     for (const { detect, source } of detectors) {
-      const detectResult = await detect({ fs: scopedFs });
+      const detectResult = await detect({ fs: scopedFs, detectEntrypoint });
       const match = await tryResolveInferred(detectResult, source, scopedFs);
       if (match) return match;
     }
@@ -208,7 +205,6 @@ export async function detectServices(
       requireFileEntrypointForBackendRuntimes: Boolean(
         hasNonEmptyPublicServicesConfig
       ),
-      rootEnv: isEnvVars(vercelConfig?.env) ? vercelConfig?.env : undefined,
     }
   );
 

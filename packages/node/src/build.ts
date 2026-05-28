@@ -31,6 +31,7 @@ import {
   getEnvForPackageManager,
   scanParentDirs,
   isBunVersion,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -433,6 +434,7 @@ export const build = async ({
   repoRootPath,
   config = {},
   meta = {},
+  service,
   considerBuildCommand = false,
   entrypointCallback,
   checks = () => {},
@@ -698,7 +700,7 @@ export const build = async ({
       experimentalAllowBundling: enableBundling || undefined,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      useWebApi: isMiddleware ? true : useWebApi,
+      useWebApi: isMiddleware ? true : (useWebApi ?? staticConfig?.useWebApi),
       shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
@@ -720,6 +722,8 @@ export const build = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
     debug(

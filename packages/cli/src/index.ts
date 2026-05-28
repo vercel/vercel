@@ -64,6 +64,7 @@ import { executeUpgrade } from './util/upgrade';
 import {
   canAutoUpdate,
   hasAutoUpdatePreference,
+  isNativeBinaryInstall,
   setAutoUpdate,
 } from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
@@ -250,14 +251,11 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const versionBanner = `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
   const msg = betaCommands.includes(targetOrSubcommand)
-    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    : `${getTitleName()} CLI ${pkg.version}`;
-  if (process.env.VERCEL === '1') {
-    output.print(`${msg}\n`);
-  } else {
-    output.debug(msg);
-  }
+    ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : versionBanner;
+  output.print(`${chalk.dim(msg)}\n`);
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
@@ -1149,6 +1147,10 @@ const main = async () => {
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).telemetry;
           break;
+        case 'traces':
+          telemetry.trackCliCommandTraces(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).traces;
+          break;
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
@@ -1289,7 +1291,7 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    if (SHOULD_CHECK_FOR_UPDATES) {
+    if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
       const latest = getLatestVersion({
         pkg,
       });

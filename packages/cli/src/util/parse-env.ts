@@ -1,10 +1,7 @@
 import type { Dictionary } from '@vercel/client';
-import type { EnvVars } from '@vercel/build-utils';
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
-export const parseEnv = (
-  env?: string | string[] | Dictionary<string> | EnvVars
-) => {
+export const parseEnv = (env?: string | string[] | Dictionary<string>) => {
   if (!env) {
     return {};
   }
@@ -34,12 +31,6 @@ export const parseEnv = (
     }, startingDict);
   }
 
-  // Filter out new way to specify required env for services
-  const result: Dictionary<string> = {};
-  for (const [key, value] of Object.entries(env)) {
-    if (typeof value === 'string') {
-      result[key] = value;
-    }
-  }
-  return result;
+  // assume it's already an Object
+  return env;
 };

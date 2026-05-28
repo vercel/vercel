@@ -49,7 +49,7 @@ describe('@vercel/vc-native shim', () => {
     } else {
       await writeFile(
         binaryPath,
-        '#!/usr/bin/env node\nconsole.log("native shim ok:" + process.argv.slice(2).join(","));\n'
+        '#!/usr/bin/env node\nconsole.log("native shim ok:" + process.argv.slice(2).join(",") + ":" + process.env.VERCEL_VC_NATIVE);\n'
       );
     }
     await chmod(binaryPath, 0o755);
@@ -64,7 +64,7 @@ describe('@vercel/vc-native shim', () => {
     expect(stdout.trim()).toBe(
       process.platform === 'win32'
         ? process.version
-        : 'native shim ok:arg-one,arg-two'
+        : 'native shim ok:arg-one,arg-two:1'
     );
   });
 });

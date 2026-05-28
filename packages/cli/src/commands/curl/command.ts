@@ -35,6 +35,22 @@ export const curlCommand = {
         'Protection bypass secret for accessing protected deployments',
       argument: 'SECRET',
     },
+    {
+      name: 'trace',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Capture a session trace for the request and print the trace request id',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'With --trace, emit { response, requestId } as JSON on stdout',
+    },
   ],
   examples: [
     {
@@ -60,6 +76,10 @@ export const curlCommand = {
     {
       name: 'Use with protection bypass secret',
       value: `${packageName} curl /api/protected --protection-bypass <secret> -- --request GET`,
+    },
+    {
+      name: 'Capture a session trace for the request',
+      value: `${packageName} curl --trace /api/hello`,
     },
   ],
 } as const;
