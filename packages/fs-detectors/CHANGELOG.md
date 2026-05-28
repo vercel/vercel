@@ -1,5 +1,13 @@
 # @vercel/fs-detectors
 
+## 6.7.3
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+- Updated dependencies [6495585]
+  - @vercel/build-utils@13.26.4
+
 ## 6.7.2
 
 ### Patch Changes

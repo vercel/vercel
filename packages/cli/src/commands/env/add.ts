@@ -40,25 +40,67 @@ import {
 
 type EnvType = 'encrypted' | 'sensitive';
 
-/**
- * Per-target type resolution. The server silently promotes encrypted → sensitive
- * on policy-on teams for Production/Preview, and rejects sensitive on Development.
- * We mirror that server contract client-side so output and logs are honest.
- */
-function resolveTypeForTarget(
-  target: string,
+type EnvChoice = {
+  name: string;
+  value: string;
+  checked?: boolean;
+  disabled?: boolean | string;
+};
+
+const SENSITIVE_SECRET_PROMPT = 'Is the value a sensitive secret?';
+
+function filterEnvChoicesForSensitivity(
+  choices: EnvChoice[],
+  opts: { isSensitive: boolean; policyOn: boolean }
+): EnvChoice[] {
+  if (opts.isSensitive) {
+    return choices.filter(c => c.value !== 'development');
+  }
+  if (opts.policyOn) {
+    return choices.filter(c => c.value === 'development');
+  }
+  return choices;
+}
+
+function getTargetCompatibilityError(
+  envTargets: string[],
+  isSensitive: boolean,
+  policyOn: boolean
+): string | null {
+  const hasDevelopment = envTargets.includes('development');
+  const hasSensitiveCapable = envTargets.some(t => t !== 'development');
+
+  if (isSensitive && hasDevelopment) {
+    return `Sensitive Environment Variables are not supported on the Development Environment. Run ${getCommandName(
+      'env add'
+    )} separately for Development with a non-sensitive value.`;
+  }
+
+  if (!isSensitive && policyOn && hasSensitiveCapable) {
+    return `Your team requires sensitive Environment Variables for Production and Preview. To add a non-sensitive value, target the Development Environment only. Run ${getCommandName(
+      'env add'
+    )} with the development target instead.`;
+  }
+
+  return null;
+}
+
+function resolveFinalType(
+  envTargets: string[],
+  isSensitive: boolean,
   opts: { forceSensitive: boolean; forceEncrypted: boolean; policyOn: boolean }
 ): EnvType {
-  if (target === 'development') {
-    // Development never supports sensitive; caller is expected to have already
-    // rejected --sensitive when only development is selected.
+  const hasDevelopment = envTargets.includes('development');
+  if (hasDevelopment) {
     return 'encrypted';
   }
-  if (opts.forceEncrypted) return 'encrypted';
-  if (opts.forceSensitive) return 'sensitive';
-  if (opts.policyOn) return 'sensitive';
-  // Default for Production/Preview/custom environments.
-  return 'sensitive';
+  if (opts.forceEncrypted && !opts.policyOn) {
+    return 'encrypted';
+  }
+  if (isSensitive || opts.forceSensitive || opts.policyOn) {
+    return 'sensitive';
+  }
+  return 'encrypted';
 }
 
 /**
@@ -523,12 +565,7 @@ export default async function add(client: Client, argv: string[]) {
       }
     }
   }
-  const choices: Array<{
-    name: string;
-    value: string;
-    checked?: boolean;
-    disabled?: boolean | string;
-  }> = [
+  const choices: EnvChoice[] = [
     ...envTargetChoices
       .filter(c => !existingTargets.has(c.value))
       .map(c => ({ name: c.name, value: c.value })),
@@ -570,14 +607,107 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  // When policy is on, Production/Preview values are sensitive by default.
-  // Development stays available because it is stored as encrypted.
-  if (policyOn) {
-    for (const choice of choices) {
+  const isDevelopmentOnlyTarget =
+    envTargets.length === 1 && envTargets[0] === 'development';
+  const userWasExplicit = forceSensitive || forceEncrypted;
+  const skipSensitivePrompt =
+    userWasExplicit ||
+    client.nonInteractive ||
+    skipConfirm ||
+    isDevelopmentOnlyTarget;
+
+  let isSensitive: boolean;
+  if (forceSensitive) {
+    isSensitive = true;
+  } else if (forceEncrypted) {
+    isSensitive = false;
+  } else if (isDevelopmentOnlyTarget) {
+    isSensitive = false;
+  } else if (skipSensitivePrompt) {
+    isSensitive = true;
+  } else {
+    output.log(
+      `Sensitive values cannot be retrieved later from the dashboard or CLI.`
+    );
+    isSensitive = await client.input.confirm(SENSITIVE_SECRET_PROMPT, true);
+    if (policyOn && !isSensitive) {
+      output.log(
+        `Your team requires sensitive Environment Variables for Production and Preview. To add a non-sensitive value, you can only target the Development Environment.`
+      );
+    }
+  }
+
+  if (forceSensitive && envTargets.includes('development')) {
+    const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'sensitive_not_allowed_on_development',
+          message: msg,
+        },
+        1
+      );
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  if (envTargets.length > 0) {
+    const compatibilityError = getTargetCompatibilityError(
+      envTargets,
+      isSensitive,
+      policyOn
+    );
+    if (compatibilityError) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: isSensitive
+              ? 'sensitive_not_allowed_on_development'
+              : 'non_sensitive_not_allowed_on_production_preview',
+            message: compatibilityError,
+          },
+          1
+        );
+      }
+      output.error(compatibilityError);
+      return 1;
+    }
+  }
+
+  const envChoices = filterEnvChoicesForSensitivity(choices, {
+    isSensitive,
+    policyOn,
+  });
+
+  if (policyOn && isSensitive) {
+    for (const choice of envChoices) {
       if (choice.value === 'production' || choice.value === 'preview') {
         choice.checked = true;
       }
     }
+  } else if (envChoices.length === 1) {
+    envChoices[0].checked = true;
+  }
+
+  if (
+    !envGitBranch &&
+    envChoices.length === 0 &&
+    envTargets.length === 0 &&
+    !opts['--force']
+  ) {
+    output.error(
+      `No Environments are available for this variable with the selected sensitivity. ${
+        isSensitive
+          ? 'Sensitive Environment Variables cannot be added to Development.'
+          : 'Your team requires sensitive Environment Variables for Production and Preview.'
+      }`
+    );
+    return 1;
   }
 
   let envValue: string;
@@ -607,10 +737,17 @@ export default async function add(client: Client, argv: string[]) {
         ],
       });
     }
-    envValue = await client.input.password({
-      message: `What's the value of ${envName}?`,
-      mask: true,
-    });
+    if (isSensitive) {
+      envValue = await client.input.password({
+        message: `What's the value of ${envName}?`,
+        mask: true,
+      });
+    } else {
+      envValue = await client.input.text({
+        message: `What's the value of ${envName}?`,
+        validate: val => (val ? true : 'Value cannot be empty'),
+      });
+    }
   }
 
   const { finalValue } = await validateEnvValue({
@@ -618,10 +755,15 @@ export default async function add(client: Client, argv: string[]) {
     initialValue: envValue,
     skipConfirm,
     promptForValue: () =>
-      client.input.password({
-        message: `What's the value of ${envName}?`,
-        mask: true,
-      }),
+      isSensitive
+        ? client.input.password({
+            message: `What's the value of ${envName}?`,
+            mask: true,
+          })
+        : client.input.text({
+            message: `What's the value of ${envName}?`,
+            validate: val => (val ? true : 'Value cannot be empty'),
+          }),
     selectAction: choices =>
       client.input.select({ message: 'How to proceed?', choices }),
     showWarning: msg => output.warn(msg),
@@ -629,7 +771,7 @@ export default async function add(client: Client, argv: string[]) {
   });
 
   while (envTargets.length === 0) {
-    if (client.nonInteractive && choices.length > 0) {
+    if (client.nonInteractive && envChoices.length > 0) {
       outputActionRequired(client, {
         status: 'action_required',
         reason: 'missing_environment',
@@ -637,11 +779,11 @@ export default async function add(client: Client, argv: string[]) {
           client.argv,
           `env add ${envName} <environment> --value <value> --yes`
         )}`,
-        choices: choices.map(c => ({
+        choices: envChoices.map(c => ({
           id: c.value,
           name: typeof c.name === 'string' ? c.name : c.value,
         })),
-        next: choices.slice(0, 5).map(c => ({
+        next: envChoices.slice(0, 5).map(c => ({
           command: buildEnvAddCommandWithPreservedArgs(
             client.argv,
             `env add ${envName} ${c.value} --value <value> --yes`
@@ -651,12 +793,22 @@ export default async function add(client: Client, argv: string[]) {
     }
     envTargets = await client.input.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
-      choices,
+      choices: envChoices,
     });
 
     if (envTargets.length === 0) {
       output.error('Please select at least one Environment');
     }
+  }
+
+  const postSelectionError = getTargetCompatibilityError(
+    envTargets,
+    isSensitive,
+    policyOn
+  );
+  if (postSelectionError) {
+    output.error(postSelectionError);
+    return 1;
   }
 
   if (
@@ -698,73 +850,14 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   const hasDevelopment = envTargets.includes('development');
-  const hasSensitiveCapable = envTargets.some(t => t !== 'development');
 
-  if (forceSensitive && hasDevelopment) {
-    const msg = `--sensitive is not allowed with the Development Environment. Sensitive Environment Variables are only supported on Production and Preview.`;
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'sensitive_not_allowed_on_development',
-          message: msg,
-        },
-        1
-      );
-    }
-    output.error(msg);
-    return 1;
-  }
+  let finalType = resolveFinalType(envTargets, isSensitive, {
+    forceSensitive,
+    forceEncrypted,
+    policyOn,
+  });
 
-  if (hasDevelopment && hasSensitiveCapable) {
-    const msg = `Development cannot be combined with other Environments because Development does not support sensitive Environment Variables. Run ${getCommandName(
-      'env add'
-    )} separately for Development.`;
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'mixed_development_and_sensitive_capable_targets',
-          message: msg,
-        },
-        1
-      );
-    }
-    output.error(msg);
-    return 1;
-  }
-
-  // At this point envTargets is either all-development or all non-development.
-  let finalType: EnvType = resolveTypeForTarget(
-    hasDevelopment ? 'development' : 'production',
-    { forceSensitive, forceEncrypted, policyOn }
-  );
-
-  // Ask whether to keep it sensitive only when the user didn't say, the
-  // policy isn't enforcing, and at least one target would actually use it.
-  const userWasExplicit = forceSensitive || forceEncrypted;
-  const canPromptForType =
-    !client.nonInteractive &&
-    !userWasExplicit &&
-    !policyOn &&
-    hasSensitiveCapable &&
-    !skipConfirm;
-  if (canPromptForType) {
-    output.log(
-      `Sensitive values cannot be retrieved later from the dashboard or CLI.`
-    );
-    const keepSensitive = await client.input.confirm(
-      `Make it sensitive?`,
-      true
-    );
-    if (!keepSensitive) {
-      finalType = 'encrypted';
-    }
-  }
-
-  if (policyOn && hasSensitiveCapable) {
+  if (policyOn && !hasDevelopment) {
     if (forceEncrypted) {
       // User asked for encrypted on Production/Preview, but the team policy
       // will promote it to sensitive server-side regardless. Surface that so
@@ -773,10 +866,6 @@ export default async function add(client: Client, argv: string[]) {
         `--no-sensitive is ignored: your team enforces sensitive Environment Variables for Production and Preview.`
       );
       finalType = 'sensitive';
-    } else if (!userWasExplicit) {
-      output.log(
-        `Your team requires sensitive Environment Variables for Production and Preview.`
-      );
     }
   }
 
