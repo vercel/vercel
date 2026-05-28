@@ -9,7 +9,6 @@ import type {
   DetectEntrypointFn,
   DetectServicesOptions,
   DetectServicesResult,
-  EnvVars,
   ExperimentalServices,
   InferredServicesConfig,
   InferredServicesResult,
@@ -49,14 +48,6 @@ function emptyRoutes(): ServicesRoutes {
     crons: [],
     workers: [],
   };
-}
-
-function isEnvVars(
-  env: Record<string, string> | EnvVars | undefined
-): env is EnvVars {
-  if (!env) return false;
-  const first = Object.values(env)[0];
-  return typeof first === 'object' && first !== null;
 }
 
 function withResolvedResult(
@@ -214,7 +205,6 @@ export async function detectServices(
       requireFileEntrypointForBackendRuntimes: Boolean(
         hasNonEmptyPublicServicesConfig
       ),
-      rootEnv: isEnvVars(vercelConfig?.env) ? vercelConfig?.env : undefined,
     }
   );
 

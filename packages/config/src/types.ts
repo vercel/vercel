@@ -460,11 +460,10 @@ export interface VercelConfig {
    */
   cleanUrls?: boolean;
   /**
-   * Environment variables to expose to the deployment. Either a flat
-   * `Record<string, string>` of literal values (the deprecated shape, kept for
-   * back-compat) or an `EnvVar` record
+   * An object containing the deployment's environment variable names and values. Secrets can be referenced by prefixing the value with `@`
+   * @deprecated
    */
-  env?: Record<string, string> | Record<string, EnvVar>;
+  env?: Record<string, string>;
   /**
    * An array of the passive regions the deployment's Serverless Functions should be deployed to that can be failed over to during a lambda outage
    */
