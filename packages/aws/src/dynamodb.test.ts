@@ -140,6 +140,6 @@ describe('createDynamoDBDocument', () => {
       (innerClient as { config: Record<string, unknown> }).config.region
     ).toBe('us-east-2');
     expect(passedTranslate).toEqual(translateConfig);
-    expect((doc as { __doc: boolean }).__doc).toBe(true);
+    expect((doc as unknown as { __doc: boolean }).__doc).toBe(true);
   });
 });
