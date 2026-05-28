@@ -29,6 +29,10 @@ describe('getAcrValuesFromWWWAuthenticate', () => {
       'urn:vercel:loa:sudo',
     ],
     [
+      'Bearer error="insufficient_user_authentication", acr_values="foo bar"',
+      'foo bar',
+    ],
+    [
       'Bearer error="insufficient_user_authentication", acr_values=urn:vercel:loa:sudo',
       'urn:vercel:loa:sudo',
     ],
