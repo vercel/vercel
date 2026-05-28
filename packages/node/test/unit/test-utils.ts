@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import type { Files } from '@vercel/build-utils';
+import { glob } from 'glob';
 
 export type Fs = Record<string, Buffer | string | { copy: string }>;
 
@@ -38,4 +39,25 @@ export async function prepareFilesystem(
     repoRootPath: directory,
     files: fileRefs,
   };
+}
+
+export async function prepareFixtureFilesystem(
+  fixtureName: string,
+  folderPrefix = 'vercel-node-fixtures'
+): Promise<Filesystem> {
+  const fixtureDir = join(__dirname, '../unit-fixtures', fixtureName);
+  const fixtureFiles: Fs = {};
+  const paths = await glob('**/*', {
+    cwd: fixtureDir,
+    nodir: true,
+    dot: true,
+  });
+
+  for (const relativePath of paths) {
+    fixtureFiles[relativePath] = await fs.readFile(
+      join(fixtureDir, relativePath)
+    );
+  }
+
+  return prepareFilesystem(fixtureFiles, folderPrefix);
 }

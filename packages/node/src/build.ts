@@ -222,6 +222,7 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      moduleSyncCatchall: true,
       conditions,
       resolve(id, parent, job, cjsResolve) {
         const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
