@@ -26,7 +26,7 @@ export async function getBuildOutputDirectory(
 
 export async function readConfig(
   path: string
-): Promise<{ cache?: string[] } | undefined> {
+): Promise<{ cache?: string[]; crons?: unknown[] } | undefined> {
   try {
     const outputDir = join(path, BUILD_OUTPUT_DIR);
     const configPath = join(outputDir, 'config.json');

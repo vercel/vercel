@@ -42,6 +42,7 @@ import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
 import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
+import * as NitroCron from './utils/nitro';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
@@ -794,6 +795,19 @@ export const build: BuildV2 = async ({
       const buildOutputPathV3 =
         await BuildOutputV3.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV3) {
+        if (framework?.slug === 'nitro') {
+          const existingConfig =
+            await BuildOutputV3.readConfig(outputDirPrefix);
+          // Newer versions of nitro use the vercel preset and will emit the crons
+          // by default. Older versions may not use the vercel preset and so we need
+          // to detect the crons and inject them outselves.
+          if (!existingConfig?.crons?.length) {
+            const nitroCrons = await NitroCron.detectNitroCrons(workPath);
+            if (nitroCrons.length > 0) {
+              await NitroCron.patchConfigJson(buildOutputPathV3, nitroCrons);
+            }
+          }
+        }
         // Ensure that `vercel build` is being used for this Deployment
         return BuildOutputV3.createBuildOutput(
           meta,

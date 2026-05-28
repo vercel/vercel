@@ -1,0 +1,10 @@
+{
+  "name": "17-nitro-cron",
+  "private": true,
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "nitropack": "*"
+  }
+}
