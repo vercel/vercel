@@ -6,14 +6,14 @@
 
 > **createOpenSearch**(`opts?`): `Client`
 
-Defined in: [packages/aws/src/opensearch.ts:49](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L49)
+Defined in: [packages/aws/src/opensearch.ts:50](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L50)
 
-Creates an OpenSearch `Client` pre-configured for a Vercel
-Marketplace OpenSearch Serverless resource.
+Creates an OpenSearch `Client` pre-configured for a Vercel Marketplace
+OpenSearch resource.
 
 Credentials are obtained via Vercel OIDC + `sts:AssumeRoleWithWebIdentity`.
-The role, region, and endpoint default to env vars Vercel injects
-automatically when the project is connected to an OpenSearch resource.
+Configuration is resolved from the env vars Vercel injects under the
+resource's link prefix.
 
 ## Parameters
 
