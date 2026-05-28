@@ -14,12 +14,12 @@ import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
 export interface CreateOpenSearchOptions extends Partial<ClientOptions> {
   /**
    * The OpenSearch collection endpoint. Defaults to
-   * `process.env.OPENSEARCH_DASHBOARD_ENDPOINT`.
+   * `process.env.OPENSEARCH_ENDPOINT`.
    */
   endpoint?: string;
   /**
    * The AWS region the collection lives in. Defaults to
-   * `process.env.OPENSEARCH_REGION`.
+   * `process.env.AWS_REGION`.
    */
   region?: string;
   /**
@@ -47,13 +47,13 @@ export interface CreateOpenSearchOptions extends Partial<ClientOptions> {
  * ```
  */
 export function createOpenSearch(opts: CreateOpenSearchOptions = {}): Client {
-  const endpoint = opts.endpoint ?? process.env.OPENSEARCH_DASHBOARD_ENDPOINT;
-  const region = opts.region ?? process.env.OPENSEARCH_REGION;
+  const endpoint = opts.endpoint ?? process.env.OPENSEARCH_ENDPOINT;
+  const region = opts.region ?? process.env.AWS_REGION;
   const roleArn = opts.roleArn ?? process.env.AWS_ROLE_ARN;
 
   const missing: string[] = [];
-  if (!endpoint) missing.push('OPENSEARCH_DASHBOARD_ENDPOINT');
-  if (!region) missing.push('OPENSEARCH_REGION');
+  if (!endpoint) missing.push('OPENSEARCH_ENDPOINT');
+  if (!region) missing.push('AWS_REGION');
   if (!roleArn) missing.push('AWS_ROLE_ARN');
   if (missing.length > 0) {
     throw new Error(

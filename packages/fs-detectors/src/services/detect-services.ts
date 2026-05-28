@@ -128,7 +128,13 @@ interface PlatformDetectResult {
 export async function detectServices(
   options: DetectServicesOptions
 ): Promise<DetectServicesResult> {
-  const { fs, workPath, detectEntrypoint } = options;
+  const {
+    fs,
+    workPath,
+    detectEntrypoint,
+    configuredServices: providedConfiguredServices,
+    configuredServicesType,
+  } = options;
 
   // Scope filesystem to workPath if provided
   const scopedFs = workPath ? fs.chdir(workPath) : fs;
@@ -148,11 +154,19 @@ export async function detectServices(
     });
   }
 
+  const hasProvidedConfiguredServices =
+    providedConfiguredServices &&
+    Object.keys(providedConfiguredServices).length > 0;
   const hasNonEmptyPublicServicesConfig =
-    vercelConfig?.services && Object.keys(vercelConfig.services).length > 0;
-  const configuredServices = hasNonEmptyPublicServicesConfig
-    ? vercelConfig.services
-    : vercelConfig?.experimentalServices;
+    (hasProvidedConfiguredServices && configuredServicesType === 'services') ||
+    (!hasProvidedConfiguredServices &&
+      vercelConfig?.services &&
+      Object.keys(vercelConfig.services).length > 0);
+  const configuredServices = hasProvidedConfiguredServices
+    ? providedConfiguredServices
+    : hasNonEmptyPublicServicesConfig
+      ? vercelConfig?.services
+      : vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
