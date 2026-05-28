@@ -236,8 +236,8 @@ importers:
         specifier: workspace:*
         version: link:../build-utils
       '@vercel/nft':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.10.0
+        version: 1.10.0
       execa:
         specifier: 3.2.0
         version: 3.2.0
@@ -1182,8 +1182,8 @@ importers:
         specifier: workspace:*
         version: link:../cervel
       '@vercel/nft':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.10.0
+        version: 1.10.0
       '@vercel/node':
         specifier: workspace:*
         version: link:../node
@@ -1544,8 +1544,8 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/nft':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.10.0
+        version: 1.10.0
       '@vercel/node':
         specifier: workspace:*
         version: link:../node
@@ -1670,8 +1670,8 @@ importers:
   packages/next:
     dependencies:
       '@vercel/nft':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.10.0
+        version: 1.10.0
     devDependencies:
       '@next-community/adapter-vercel':
         specifier: 0.0.1-beta.22
@@ -1812,8 +1812,8 @@ importers:
         specifier: workspace:*
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.10.0
+        version: 1.10.0
       '@vercel/static-config':
         specifier: workspace:*
         version: link:../static-config
@@ -2123,8 +2123,8 @@ importers:
   packages/redwood:
     dependencies:
       '@vercel/nft':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.10.0
+        version: 1.10.0
       '@vercel/static-config':
         specifier: workspace:*
         version: link:../static-config
@@ -2182,8 +2182,8 @@ importers:
         specifier: workspace:*
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.10.0
+        version: 1.10.0
       '@vercel/static-config':
         specifier: workspace:*
         version: link:../static-config
@@ -10030,8 +10030,8 @@ packages:
       - debug
     dev: false
 
-  /@vercel/nft@1.5.0:
-    resolution: {integrity: sha512-IWTDeIoWhQ7ZtRO/JRKH+jhmeQvZYhtGPmzw/QGDY+wDCQqfm25P9yIdoAFagu4fWsK4IwZXDFIjrmp5rRm/sA==}
+  /@vercel/nft@1.10.0:
+    resolution: {integrity: sha512-iLOW4fcsgkipfOh2Bw3wB38YDfxTlxr7+j4uFeui2OswkNT28jIitS/aMce7tS0mef1YPQ8zLIDYr3a0aahNrA==}
     engines: {node: '>=20'}
     hasBin: true
     dependencies:
