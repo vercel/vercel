@@ -30,7 +30,7 @@
     "prepublishOnly": "pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@vercel/oidc": "*"
+    "@vercel/oidc": "workspace:*"
   },
   "peerDependencies": {
     "@auth/core": ">=0.37.0",
@@ -51,7 +51,7 @@
   "devDependencies": {
     "@auth/core": "0.37.4",
     "better-auth": "1.5.5",
-    "experimental-ash": "0.3.0-alpha.29",
+    "experimental-ash": "0.31.0",
     "typescript": "^5"
   },
   "private": false,
