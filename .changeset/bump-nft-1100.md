@@ -8,4 +8,4 @@
 '@vercel/remix-builder': patch
 ---
 
-Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders
+Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
