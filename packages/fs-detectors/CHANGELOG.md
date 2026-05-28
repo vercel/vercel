@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 6.7.4
+
+### Patch Changes
+
+- 1444502: Support discovering `experimentalServices` from Build Output API config during `vercel build`.
+
 ## 6.7.3
 
 ### Patch Changes

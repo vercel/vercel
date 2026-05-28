@@ -1,5 +1,12 @@
 # @vercel/koa
 
+## 0.1.67
+
+### Patch Changes
+
+- Updated dependencies [ab0e5aa]
+  - @vercel/node@5.8.8
+
 ## 0.1.66
 
 ### Patch Changes
