@@ -3709,14 +3709,25 @@ describe('worker services dependency installation', () => {
 
     // Worker dependency installation happens before dependency externalization.
     // Mock externalization to keep this test focused on install behavior.
-    vi.doMock('../src/dependency-externalizer', () => ({
-      PythonDependencyExternalizer: class {
-        async analyze() {
-          return { overLambdaLimit: false, allVendorFiles: {} };
-        }
-        async generateBundle() {}
-      },
-    }));
+    vi.doMock('../src/dependency-externalizer', async () => {
+      const actual = await vi.importActual('../src/dependency-externalizer');
+      return {
+        ...actual,
+        PythonDependencyExternalizer: class {
+          async analyze() {
+            return {
+              runtimeInstallEnabled: false,
+              allVendorFiles: {},
+              totalBundleSize: 0,
+            };
+          }
+          async generateBundle() {}
+          async collectBytecodeFiles() {
+            return { files: {}, totalSize: 0, perItemSizes: new Map() };
+          }
+        },
+      };
+    });
 
     const { build: buildWithMocks } = await import('../src/index');
 

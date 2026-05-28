@@ -39,6 +39,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     VERCEL_FORCE_BUILD_IN_HIVE,
     VERCEL_BUILD_CONTAINER_VERSION,
     VERCEL_RUNTIME_PYTHON,
+    VERCEL_PYTHON_COMPILEALL,
     VERCEL_WORKERS_PYTHON,
   } = process.env;
 
@@ -83,6 +84,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
         VERCEL_FORCE_BUILD_IN_HIVE,
         VERCEL_BUILD_CONTAINER_VERSION,
         VERCEL_RUNTIME_PYTHON,
+        VERCEL_PYTHON_COMPILEALL,
         VERCEL_WORKERS_PYTHON,
         NEXT_TELEMETRY_DISABLED: '1',
       },
