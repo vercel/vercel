@@ -39,6 +39,8 @@ export type ResolvedService = Service;
 
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
+  configuredServices?: ConfiguredServices;
+  configuredServicesType?: 'services' | 'experimentalServices';
   /**
    * Working directory path (relative to fs root).
    * If provided, vercel.json is read from this path.
