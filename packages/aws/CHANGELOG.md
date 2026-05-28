@@ -1,5 +1,11 @@
 # @vercel/aws
 
+## 0.2.1
+
+### Patch Changes
+
+- cb11ee2: Update `createOpenSearch` to read `OPENSEARCH_ENDPOINT` and `AWS_REGION` (replacing `OPENSEARCH_DASHBOARD_ENDPOINT` and `OPENSEARCH_REGION`).
+
 ## 0.2.0
 
 ### Minor Changes

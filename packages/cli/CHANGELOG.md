@@ -1,5 +1,28 @@
 # vercel
 
+## 54.6.1
+
+### Patch Changes
+
+- 1444502: Support discovering `experimentalServices` from Build Output API config during `vercel build`.
+- 7ba4713: Reorder `vercel env add` to ask whether a value is sensitive before collecting the value and selecting environments. Sensitive adds hide Development; teams with the sensitive env policy still prompt, and non-sensitive adds are limited to Development with clearer messaging.
+- Updated dependencies [ab0e5aa]
+- Updated dependencies [4f782b1]
+  - @vercel/backends@0.8.3
+  - @vercel/express@0.1.94
+  - @vercel/hono@0.2.87
+  - @vercel/next@4.17.5
+  - @vercel/node@5.8.8
+  - @vercel/redwood@2.4.15
+  - @vercel/remix-builder@5.8.4
+  - @vercel/python@6.44.0
+  - @vercel/static-build@2.9.33
+  - @vercel/elysia@0.1.84
+  - @vercel/fastify@0.1.87
+  - @vercel/h3@0.1.93
+  - @vercel/koa@0.1.67
+  - @vercel/nestjs@0.2.88
+
 ## 54.6.0
 
 ### Minor Changes

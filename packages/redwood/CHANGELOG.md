@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.4.15
+
+### Patch Changes
+
+- ab0e5aa: Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
+
 ## 2.4.14
 
 ### Patch Changes
