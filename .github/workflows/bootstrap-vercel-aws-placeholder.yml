@@ -45,6 +45,6 @@ jobs:
 
       - name: Publish to npm
         working-directory: /tmp/vercel-aws-placeholder
-        run: npm publish --access public
+        run: npm publish --access public # zizmor: ignore[use-trusted-publishing] - bootstrapping the package name so Trusted Publishing can be configured against it
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
