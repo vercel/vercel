@@ -5,7 +5,8 @@
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
   "files": [
-    "dist"
+    "dist",
+    "templates"
   ],
   "repository": {
     "type": "git",
