@@ -6,6 +6,11 @@ import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
+// Mock the auto-install agent tooling so it doesn't prompt during env add tests.
+vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
+  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('env add', () => {
   beforeEach(() => {
     useUser();
@@ -1075,75 +1080,63 @@ describe('env add', () => {
         logSpy.mockRestore();
       });
 
-      it('uses --value when provided and reaches next prompt (e.g. git_branch_required)', async () => {
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-          throw new Error('exit');
-        });
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
+      it('adds to all Preview branches when --value is provided without a branch', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+        const envName = 'PREVIEW_ALL_BRANCHES_VALUE';
         client.nonInteractive = true;
         client.setArgv(
           'env',
           'add',
-          'PREVIEW_VAR',
+          envName,
           'preview',
           '--value',
           'my-secret-value',
           '--yes'
         );
-        const exitCodePromise = env(client);
 
-        await expect(exitCodePromise).rejects.toThrow('exit');
-        const payload = JSON.parse(
-          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
-        );
-        expect(payload.reason).toBe('git_branch_required');
-        expect(
-          payload.next.some(
-            (n: { command: string }) =>
-              n.command.includes('preview') && n.command.includes('<gitbranch>')
-          )
-        ).toBe(true);
+        try {
+          await expect(env(client)).resolves.toBe(0);
 
-        exitSpy.mockRestore();
-        logSpy.mockRestore();
+          expect(spy).toHaveBeenCalledOnce();
+          expect(spy.mock.calls[0][4]).toBe(envName);
+          expect(spy.mock.calls[0][5]).toBe('my-secret-value');
+          expect(spy.mock.calls[0][6]).toEqual(['preview']);
+          expect(spy.mock.calls[0][7]).toBeUndefined();
+        } finally {
+          spy.mockRestore();
+        }
       });
 
-      it('outputs action_required when preview target and git branch not passed (no third argument)', async () => {
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-          throw new Error('exit');
-        });
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
+      it('adds stdin value to all Preview branches without a branch', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+        const envName = 'PREVIEW_ALL_BRANCHES_STDIN';
         client.nonInteractive = true;
         client.stdin.isTTY = false;
-        client.setArgv('env', 'add', 'PREVIEW_VAR', 'preview', '--yes');
+        client.setArgv('env', 'add', envName, 'preview', '--yes');
         const exitCodePromise = env(client);
         setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
 
-        await expect(exitCodePromise).rejects.toThrow('exit');
-        expect(logSpy).toHaveBeenCalled();
-        const payload = JSON.parse(
-          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
-        );
-        expect(payload).toMatchObject({
-          status: 'action_required',
-          reason: 'git_branch_required',
-          message: expect.stringMatching(/Git branch|third argument|Preview/),
-          next: expect.any(Array),
-        });
-        expect(payload.next.length).toBeGreaterThanOrEqual(1);
-        expect(
-          payload.next.some(
-            (n: { command: string }) =>
-              n.command.includes('preview') &&
-              (n.command.includes('<gitbranch>') ||
-                n.command.includes('--value'))
-          )
-        ).toBe(true);
+        try {
+          await expect(exitCodePromise).resolves.toBe(0);
 
-        exitSpy.mockRestore();
-        logSpy.mockRestore();
+          expect(spy).toHaveBeenCalledOnce();
+          expect(spy.mock.calls[0][4]).toBe(envName);
+          expect(spy.mock.calls[0][5]).toBe('value-via-stdin');
+          expect(spy.mock.calls[0][6]).toEqual(['preview']);
+          expect(spy.mock.calls[0][7]).toBeUndefined();
+        } finally {
+          spy.mockRestore();
+        }
       });
 
       it('does not output git_branch_required when branch is passed as third argument for preview', async () => {
