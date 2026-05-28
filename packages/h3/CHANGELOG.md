@@ -1,5 +1,11 @@
 # @vercel/h3
 
+## 0.1.92
+
+### Patch Changes
+
+- @vercel/node@5.8.7
+
 ## 0.1.91
 
 ### Patch Changes

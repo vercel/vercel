@@ -1,5 +1,13 @@
 # @vercel/client
 
+## 17.5.6
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+- Updated dependencies [6495585]
+  - @vercel/build-utils@13.26.4
+
 ## 17.5.5
 
 ### Patch Changes

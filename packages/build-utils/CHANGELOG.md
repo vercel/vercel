@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.26.4
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+
 ## 13.26.3
 
 ### Patch Changes
