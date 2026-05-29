@@ -1,0 +1,61 @@
+{
+  "name": "@vercel/connect",
+  "version": "0.0.6-alpha.1",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ash": {
+      "types": "./dist/ash/index.d.ts",
+      "default": "./dist/ash/index.js"
+    },
+    "./betterauth": {
+      "types": "./dist/betterauth/index.d.ts",
+      "default": "./dist/betterauth/index.js"
+    },
+    "./authjs": {
+      "types": "./dist/authjs/index.d.ts",
+      "default": "./dist/authjs/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm typecheck && pnpm build"
+  },
+  "dependencies": {
+    "@vercel/oidc": "workspace:*"
+  },
+  "peerDependencies": {
+    "@auth/core": ">=0.37.0",
+    "better-auth": ">=1.5.0",
+    "experimental-ash": ">=0.8.2"
+  },
+  "peerDependenciesMeta": {
+    "@auth/core": {
+      "optional": true
+    },
+    "better-auth": {
+      "optional": true
+    },
+    "experimental-ash": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@auth/core": "0.37.4",
+    "better-auth": "1.5.5",
+    "experimental-ash": "0.31.0",
+    "typescript": "^5"
+  },
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

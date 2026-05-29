@@ -623,6 +623,7 @@ export async function serverBuild({
         base: baseDir,
         cache: {},
         processCwd: entryPath,
+        moduleSyncCatchall: true,
         ignore: [
           ...requiredServerFilesManifest.ignore.map(file =>
             path.join(entryPath, file)
@@ -960,6 +961,7 @@ export async function serverBuild({
         base: baseDir,
         cache: traceCache,
         processCwd: projectDir,
+        moduleSyncCatchall: true,
       });
       traceResult.esmFileList.forEach(file => traceResult?.fileList.add(file));
       parentFilesMap = getFilesMapFromReasons(

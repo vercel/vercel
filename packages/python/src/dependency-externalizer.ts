@@ -29,6 +29,7 @@ import {
   UV_BUNDLE_DIR,
 } from './uv';
 import { detectTargetPlatform } from './platform-info';
+import { derivePycPath, type BytecodeCollectionResult } from './compileall';
 
 const readFile = promisify(fs.readFile);
 
@@ -889,6 +890,106 @@ export class PythonDependencyExternalizer {
     }
 
     return sizes;
+  }
+
+  /**
+   * Collect pre-compiled `.pyc` bytecode files for vendor packages.
+   *
+   * For each `.py` file listed in a package's RECORD, derives the expected
+   * `__pycache__/*.cpython-XY.pyc` path and checks whether it exists on
+   * disk (i.e. whether `compileall` produced it).  Files that do not exist
+   * are silently skipped.
+   *
+   * Must be called after `analyze()` which populates `sitePackageDirs` and
+   * `distributions`.
+   */
+  async collectBytecodeFiles({
+    vendorDirName,
+    includePackages,
+  }: {
+    vendorDirName: string;
+    includePackages?: string[];
+  }): Promise<BytecodeCollectionResult> {
+    if (!this.sitePackageDirs || !this.distributions) {
+      throw new Error('collectBytecodeFiles() must be called after analyze()');
+    }
+    if (this.pythonMajor == null || this.pythonMinor == null) {
+      return { files: {}, totalSize: 0, perItemSizes: new Map() };
+    }
+
+    const includeSet = includePackages
+      ? new Set(includePackages.map(normalizePackageName))
+      : null;
+
+    interface PycPending {
+      bundlePath: string;
+      srcFsPath: string;
+      packageName: string;
+    }
+    const pending: PycPending[] = [];
+
+    for (const dir of this.sitePackageDirs) {
+      const dirDistributions = this.distributions.get(dir);
+      if (!dirDistributions) continue;
+
+      for (const [name, dist] of dirDistributions) {
+        if (includeSet && !includeSet.has(name)) continue;
+
+        for (const { path: rawPath } of dist.files) {
+          const pycRel = derivePycPath(
+            rawPath,
+            this.pythonMajor,
+            this.pythonMinor
+          );
+          if (!pycRel) continue;
+
+          const pycFilePath = pycRel.replaceAll('/', sep);
+          const srcFsPath = join(dir, pycFilePath);
+          const bundlePath = join(vendorDirName, pycFilePath).replace(
+            /\\/g,
+            '/'
+          );
+          pending.push({ bundlePath, srcFsPath, packageName: name });
+        }
+      }
+    }
+
+    // Stat all .pyc files in parallel.  Missing files (compileall
+    // may have skipped them) are silently dropped.
+    const results = await Promise.all(
+      pending.map(async ({ bundlePath, srcFsPath, packageName }) => {
+        try {
+          const stats = await fs.promises.stat(srcFsPath);
+          return { bundlePath, srcFsPath, size: stats.size, packageName };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const files: Files = {};
+    let totalSize = 0;
+    const perItemSizes = new Map<string, number>();
+
+    for (const result of results) {
+      if (!result) continue;
+      files[result.bundlePath] = new FileFsRef({
+        fsPath: result.srcFsPath,
+        size: result.size,
+      });
+      totalSize += result.size;
+      perItemSizes.set(
+        result.packageName,
+        (perItemSizes.get(result.packageName) ?? 0) + result.size
+      );
+    }
+
+    debug(
+      `Collected ${Object.keys(files).length} bytecode files` +
+        ` (${(totalSize / (1024 * 1024)).toFixed(2)} MB)` +
+        (includePackages ? ` from ${includePackages.length} packages` : '')
+    );
+    return { files, totalSize, perItemSizes };
   }
 }
 
