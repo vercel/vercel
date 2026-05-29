@@ -55,4 +55,17 @@ export class LinkTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
+      value: actual,
+    });
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

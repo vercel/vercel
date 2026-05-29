@@ -5,7 +5,7 @@ import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
 import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
 import { type Command, help } from '../help';
-import { addSubcommand, linkCommand } from './command';
+import { addSubcommand, inspectSubcommand, linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
@@ -13,9 +13,11 @@ import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
 import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import getScope, { detectExplicitScope } from '../../util/get-scope';
+import inspectLink from './inspect';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
 };
 
 export default async function link(client: Client) {
@@ -33,10 +35,11 @@ export default async function link(client: Client) {
     return 1;
   }
 
-  const { subcommand, subcommandOriginal } = getSubcommand(
-    parsedArgs.args.slice(1),
-    COMMAND_CONFIG
-  );
+  const {
+    subcommand,
+    subcommandOriginal,
+    args: subcommandArgs,
+  } = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG);
 
   const telemetry = new LinkTelemetryClient({
     opts: {
@@ -75,6 +78,37 @@ export default async function link(client: Client) {
     });
 
     return 0;
+  }
+
+  if (subcommand === 'inspect') {
+    let inspectArgs;
+    try {
+      inspectArgs = parseArguments(
+        subcommandArgs,
+        getFlagsSpecification(inspectSubcommand.options)
+      );
+    } catch (error) {
+      printError(error);
+      return 1;
+    }
+
+    if (parsedArgs.flags['--help'] || inspectArgs.flags['--help']) {
+      telemetry.trackCliFlagHelp('link', subcommandOriginal);
+      printHelp(inspectSubcommand);
+      return 2;
+    }
+
+    telemetry.trackCliSubcommandInspect(subcommandOriginal);
+    telemetry.trackCliFlagJson(inspectArgs.flags['--json']);
+
+    try {
+      return await inspectLink(client, {
+        json: inspectArgs.flags['--json'],
+      });
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
   }
 
   // Default behavior (no subcommand) - original `vc link` flow
