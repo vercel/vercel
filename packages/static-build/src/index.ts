@@ -746,6 +746,10 @@ export const build: BuildV2 = async ({
         debug(`Executing "${buildCommand}"`);
       }
 
+      if (framework?.slug === 'nitro') {
+        await NitroCron.injectNitroTasksRoute(workPath);
+      }
+
       try {
         const found =
           typeof buildCommand === 'string'
@@ -776,6 +780,9 @@ export const build: BuildV2 = async ({
       } finally {
         if (framework?.slug === 'gatsby') {
           GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
+        }
+        if (framework?.slug === 'nitro') {
+          await NitroCron.cleanupNitroTasksRoute(workPath);
         }
       }
 

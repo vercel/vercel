@@ -94,6 +94,45 @@ export async function injectNitroCronGuard(
   }
 }
 
+// Route file injected before `nitro build` to register a production HTTP
+// handler for /_nitro/tasks/:name. Without this, Nitro tree-shakes the task
+// runtime entirely — the /_nitro/tasks endpoint is dev-only in Nitro's
+// vercel preset.
+const TASKS_ROUTE_PATH = ['routes', '_nitro', 'tasks', '[name].ts'];
+const TASKS_ROUTE_CONTENT = `\
+import { defineEventHandler, getRouterParam } from 'h3';
+import { runTask } from 'nitro/runtime';
+
+export default defineEventHandler(async (event) => {
+  const name = getRouterParam(event, 'name') ?? '';
+  const result = await runTask(name, {
+    payload: { scheduledTime: Date.now() },
+    context: {},
+  });
+  return result;
+});
+`;
+
+export async function injectNitroTasksRoute(workPath: string): Promise<void> {
+  const routeFile = path.join(workPath, ...TASKS_ROUTE_PATH);
+  await fs.mkdir(path.dirname(routeFile), { recursive: true });
+  await fs.writeFile(routeFile, TASKS_ROUTE_CONTENT);
+}
+
+export async function cleanupNitroTasksRoute(workPath: string): Promise<void> {
+  try {
+    const routeFile = path.join(workPath, ...TASKS_ROUTE_PATH);
+    await fs.rm(routeFile);
+    // Remove empty parent dirs if we created them
+    for (let i = TASKS_ROUTE_PATH.length - 1; i > 0; i--) {
+      const dir = path.join(workPath, ...TASKS_ROUTE_PATH.slice(0, i));
+      await fs.rmdir(dir).catch(() => {});
+    }
+  } catch {
+    // Non-fatal — build output is already written
+  }
+}
+
 export async function patchConfigJson(
   buildOutputPath: string,
   crons: Cron[]
