@@ -184,12 +184,48 @@ function getRunGroup(relativePath) {
   return segments.slice(0, timestampIndex + 1).join('/');
 }
 
+function getEvalGroup(relativePath) {
+  const segments = relativePath.split('/');
+  const timestampIndex = segments.findIndex(isTimestampSegment);
+  if (timestampIndex === -1) return 'ungrouped';
+
+  const runIndex = segments.findIndex(
+    (segment, index) => index > timestampIndex && /^run-\d+$/.test(segment)
+  );
+  if (runIndex !== -1) {
+    return segments.slice(0, runIndex).join('/');
+  }
+
+  return segments.slice(0, -1).join('/');
+}
+
+function isDiscoveryFile(relativePath) {
+  return (
+    relativePath.endsWith('/summary.json') ||
+    /\/run-\d+\/result\.json$/.test(relativePath)
+  );
+}
+
 function groupFilesByRun(files, resultsDir) {
   const groups = new Map();
 
   for (const fullPath of files) {
     const relativePath = getRelativePath(resultsDir, fullPath);
     const group = getRunGroup(relativePath);
+    const groupFiles = groups.get(group) ?? [];
+    groupFiles.push(fullPath);
+    groups.set(group, groupFiles);
+  }
+
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+function groupFilesByEval(files, resultsDir) {
+  const groups = new Map();
+
+  for (const fullPath of files) {
+    const relativePath = getRelativePath(resultsDir, fullPath);
+    const group = getEvalGroup(relativePath);
     const groupFiles = groups.get(group) ?? [];
     groupFiles.push(fullPath);
     groups.set(group, groupFiles);
@@ -205,7 +241,25 @@ function estimatePayloadPartBytes(payload) {
   );
 }
 
-async function chunkFilesByEstimatedRequestSize({
+async function estimateFilePartBytes(resultsDir, fullPath) {
+  const relativePath = getRelativePath(resultsDir, fullPath);
+  const fileInfo = await stat(fullPath);
+  return (
+    fileInfo.size +
+    Buffer.byteLength(relativePath, 'utf8') +
+    MULTIPART_FILE_OVERHEAD_BYTES
+  );
+}
+
+async function estimateFilesPartBytes(resultsDir, files) {
+  let total = 0;
+  for (const fullPath of files) {
+    total += await estimateFilePartBytes(resultsDir, fullPath);
+  }
+  return total;
+}
+
+async function chunkFilesWithoutDiscovery({
   files,
   resultsDir,
   payload,
@@ -218,11 +272,7 @@ async function chunkFilesByEstimatedRequestSize({
 
   for (const fullPath of files) {
     const relativePath = getRelativePath(resultsDir, fullPath);
-    const fileInfo = await stat(fullPath);
-    const fileBytes =
-      fileInfo.size +
-      Buffer.byteLength(relativePath, 'utf8') +
-      MULTIPART_FILE_OVERHEAD_BYTES;
+    const fileBytes = await estimateFilePartBytes(resultsDir, fullPath);
 
     if (payloadBytes + fileBytes > maxRequestBytes) {
       console.warn(
@@ -242,6 +292,114 @@ async function chunkFilesByEstimatedRequestSize({
 
   if (currentChunk.length > 0) {
     chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+async function chunkEvalFilesByEstimatedRequestSize({
+  files,
+  resultsDir,
+  payload,
+  maxRequestBytes,
+}) {
+  const sortedFiles = [...files].sort((a, b) =>
+    getRelativePath(resultsDir, a).localeCompare(getRelativePath(resultsDir, b))
+  );
+  const discoveryFiles = sortedFiles.filter(fullPath =>
+    isDiscoveryFile(getRelativePath(resultsDir, fullPath))
+  );
+  const artifactFiles = sortedFiles.filter(
+    fullPath => !isDiscoveryFile(getRelativePath(resultsDir, fullPath))
+  );
+
+  if (discoveryFiles.length === 0) {
+    return chunkFilesWithoutDiscovery({
+      files: sortedFiles,
+      resultsDir,
+      payload,
+      maxRequestBytes,
+    });
+  }
+
+  if (artifactFiles.length === 0) {
+    return [discoveryFiles];
+  }
+
+  const payloadBytes = estimatePayloadPartBytes(payload);
+  const discoveryBytes = await estimateFilesPartBytes(
+    resultsDir,
+    discoveryFiles
+  );
+  const baseBytes = payloadBytes + discoveryBytes;
+
+  if (baseBytes > maxRequestBytes) {
+    const evalGroup = getEvalGroup(
+      getRelativePath(resultsDir, discoveryFiles[0])
+    );
+    console.warn(
+      `Warning: discovery files for ${evalGroup} are approximately ${discoveryBytes} bytes before multipart framing and exceed --max-request-bytes=${maxRequestBytes}.`
+    );
+  }
+
+  const allFilesBytes =
+    baseBytes + (await estimateFilesPartBytes(resultsDir, artifactFiles));
+  if (allFilesBytes <= maxRequestBytes) {
+    return [sortedFiles];
+  }
+
+  const chunks = [];
+  let currentChunk = [...discoveryFiles];
+  let currentBytes = baseBytes;
+
+  for (const fullPath of artifactFiles) {
+    const relativePath = getRelativePath(resultsDir, fullPath);
+    const fileBytes = await estimateFilePartBytes(resultsDir, fullPath);
+
+    if (baseBytes + fileBytes > maxRequestBytes) {
+      console.warn(
+        `Warning: ${relativePath} plus discovery files is approximately ${baseBytes + fileBytes} bytes before multipart framing and exceeds --max-request-bytes=${maxRequestBytes}; uploading it in its own discoverable request.`
+      );
+    }
+
+    if (
+      currentChunk.length > discoveryFiles.length &&
+      currentBytes + fileBytes > maxRequestBytes
+    ) {
+      chunks.push(currentChunk);
+      currentChunk = [...discoveryFiles];
+      currentBytes = baseBytes;
+    }
+
+    currentChunk.push(fullPath);
+    currentBytes += fileBytes;
+  }
+
+  if (currentChunk.length > discoveryFiles.length) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+async function chunkRunGroupByEstimatedRequestSize({
+  files,
+  resultsDir,
+  payload,
+  maxRequestBytes,
+}) {
+  const chunks = [];
+  const evalGroups = groupFilesByEval(files, resultsDir);
+
+  for (const [_evalGroup, evalFiles] of evalGroups) {
+    chunks.push(
+      ...(await chunkEvalFilesByEstimatedRequestSize({
+        files: evalFiles,
+        resultsDir,
+        payload,
+        maxRequestBytes,
+      }))
+    );
   }
 
   return chunks;
@@ -412,7 +570,7 @@ async function main() {
         uploadGroup: group,
       },
     };
-    const chunks = await chunkFilesByEstimatedRequestSize({
+    const chunks = await chunkRunGroupByEstimatedRequestSize({
       files: sortedFiles,
       resultsDir,
       payload: groupPayload,
