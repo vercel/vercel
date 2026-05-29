@@ -84,10 +84,12 @@ vercel flags rm my-feature --yes                          # delete (must be arch
 Distribute traffic across variants with weights. Repeat `--weight VARIANT=WEIGHT` per variant; weights are normalized, and `0` excludes a variant from the split.
 
 ```bash
-vercel flags split redesigned-checkout -e production --by user.userId --weight off=95 --weight on=5
+vercel flags split redesigned-checkout -e production --by user.userId --weight false=95 --weight true=5
 vercel flags split welcome-message -e production --by user.userId --default-variant control --weight control=90 --weight treatment=10
 vercel flags split checkout-copy -e preview --by user.userId --default-variant control --weight control=50 --weight treatment=50 --weight legacy=0
 ```
+
+Each `VARIANT` in `--weight` must resolve to a variant by ID or value, not label. Default boolean flags have values `true` and `false` (labels `On`/`Off` don't resolve), so pass `false`/`true` rather than `off`/`on` unless a flag was created with explicit `off`/`on` variants.
 
 Options: `--environment`/`-e`, `--by ENTITY.ATTRIBUTE`, `--weight VARIANT=WEIGHT` (repeatable), `--default-variant`, `--message`.
 

@@ -18,15 +18,26 @@ vercel blob copy <from-url> <to-pathname> --access public              # copy
 
 ## Auth Modes
 
-By default `vercel blob` uses the linked project's connected store. Override with one of these auth modes (declared on the root `blob` command, so they work with any subcommand):
+`vercel blob` reads credentials from **local sources only**. It does not look up the linked project's connected store at runtime — even in a linked project, running a `blob` command without local credentials fails with `No Vercel Blob credentials found`. Resolution order (`getBlobRWToken` in `util/blob/token.ts`):
+
+1. `--rw-token <token>` flag — read/write token.
+2. `--oidc-token <token>` + `--store-id <id>` flags — must be passed together; `--store-id` accepts the ID with or without the `store_` prefix.
+3. `BLOB_READ_WRITE_TOKEN` env var, **or** `VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID` env vars (process env).
+4. The same variables loaded from `.env.local` in the current working directory.
+5. Otherwise: error.
 
 ```bash
 vercel blob put ./image.png --access public --rw-token "$BLOB_READ_WRITE_TOKEN"
 vercel blob put ./image.png --access public --oidc-token "$VERCEL_OIDC_TOKEN" --store-id store_abc123
 ```
 
-- `--rw-token <token>` — read/write token; use to write to a specific store without project link.
-- `--oidc-token <token>` + `--store-id <id>` — must be passed together; `--store-id` accepts the ID with or without the `store_` prefix.
+To use a linked project's Blob store without an explicit token, link the project and pull the credentials into `.env.local` first:
+
+```bash
+vercel link
+vercel env pull              # writes BLOB_READ_WRITE_TOKEN (or OIDC vars) to .env.local
+vercel blob put ./image.png --access public
+```
 
 ## Store Management
 
