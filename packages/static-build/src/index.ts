@@ -817,7 +817,6 @@ export const build: BuildV2 = async ({
               await NitroCron.patchConfigJson(buildOutputPathV3, nitroCrons);
             }
           }
-          await NitroCron.injectNitroCronGuard(buildOutputPathV3);
         }
         // Ensure that `vercel build` is being used for this Deployment
         return BuildOutputV3.createBuildOutput(
