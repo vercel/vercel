@@ -34,6 +34,10 @@ async function packAndDeploy(builderPath, shouldUnlink = true) {
 }
 
 const RANDOMNESS_PLACEHOLDER_STRING = 'RANDOMNESS_PLACEHOLDER';
+const DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS = 2000;
+const DEPLOYMENT_LOG_FETCH_ATTEMPTS = Math.ceil(
+  15000 / DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS
+);
 
 async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   if (probe.delay) {
@@ -54,7 +58,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     if (!ctx.deploymentLogs) {
       let lastErr;
 
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < DEPLOYMENT_LOG_FETCH_ATTEMPTS; i++) {
         try {
           const logsRes = await fetchWithAuth(
             `/v1/now/deployments/${deploymentId}/events?limit=-1`
@@ -76,16 +80,19 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         } catch (err) {
           lastErr = err;
         }
+        const logLineCount = Array.isArray(ctx.deploymentLogs)
+          ? ctx.deploymentLogs.length
+          : typeof ctx.deploymentLogs;
         ctx.deploymentLogs = null;
         console.log(
           'Retrying to fetch logs for',
           deploymentId,
-          'in 2 seconds. Read lines:',
-          Array.isArray(ctx.deploymentLogs)
-            ? ctx.deploymentLogs.length
-            : typeof ctx.deploymentLogs
+          `in ${DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS}ms. Read lines:`,
+          logLineCount
         );
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve =>
+          setTimeout(resolve, DEPLOYMENT_LOG_FETCH_RETRY_DELAY_MS)
+        );
       }
       if (
         !Array.isArray(ctx.deploymentLogs) ||

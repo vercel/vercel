@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { spawn } from 'child_process';
 import output from '../../../src/output-manager';
 import { executeUpgrade } from '../../../src/util/upgrade';
+import getUpdateCommand from '../../../src/util/get-update-command';
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -27,6 +28,7 @@ vi.mock('../../../src/util/get-update-command', () => ({
 
 const spawnMock = vi.mocked(spawn);
 const outputMock = vi.mocked(output);
+const getUpdateCommandMock = vi.mocked(getUpdateCommand);
 
 describe('executeUpgrade', () => {
   beforeEach(() => {
@@ -177,6 +179,29 @@ describe('executeUpgrade', () => {
     expect(spawnMock).toHaveBeenCalledWith(
       'npm',
       ['i', '-g', 'vercel@latest'],
+      {
+        stdio: ['inherit', 'pipe', 'pipe'],
+        shell: false,
+      }
+    );
+  });
+
+  it('should spawn with native package arguments', async () => {
+    getUpdateCommandMock.mockResolvedValueOnce(
+      'npm i -g @vercel/vc-native@latest --force'
+    );
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+
+    mockProcess.emit('close', 0);
+    await exitCodePromise;
+
+    expect(spawnMock).toHaveBeenCalledWith(
+      'npm',
+      ['i', '-g', '@vercel/vc-native@latest', '--force'],
       {
         stdio: ['inherit', 'pipe', 'pipe'],
         shell: false,

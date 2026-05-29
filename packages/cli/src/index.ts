@@ -61,6 +61,12 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
+import {
+  canAutoUpdate,
+  hasAutoUpdatePreference,
+  isNativeBinaryInstall,
+  setAutoUpdate,
+} from './util/updates';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
@@ -69,6 +75,7 @@ import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
+import { readVercelPluginActiveSessionMarker } from './util/telemetry/vercel-plugin';
 import { help } from './args';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
@@ -111,6 +118,7 @@ function hasProxyConfig(): boolean {
 epipebomb();
 
 let client: Client;
+let resolvedCommandForUpdate: string | undefined;
 
 // Register global error handlers early to catch errors during initialization.
 // Sentry is lazily initialized only when an error actually occurs.
@@ -243,14 +251,11 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const versionBanner = `${getTitleName()} CLI ${pkg.version} (Node.js ${process.versions.node})`;
   const msg = betaCommands.includes(targetOrSubcommand)
-    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    : `${getTitleName()} CLI ${pkg.version}`;
-  if (process.env.VERCEL === '1') {
-    output.print(`${msg}\n`);
-  } else {
-    output.debug(msg);
-  }
+    ? `${versionBanner} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : versionBanner;
+  output.print(`${chalk.dim(msg)}\n`);
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
@@ -365,6 +370,11 @@ const main = async () => {
   const { isAgent, agent: detectedAgent } = await determineAgent();
   telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
   telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
+  const vercelPluginMarker = readVercelPluginActiveSessionMarker();
+  if (vercelPluginMarker) {
+    telemetry.trackVercelPluginActiveSession();
+    telemetry.trackVercelPluginVersion(vercelPluginMarker.pluginVersion);
+  }
   telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
@@ -1137,6 +1147,10 @@ const main = async () => {
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).telemetry;
           break;
+        case 'traces':
+          telemetry.trackCliCommandTraces(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).traces;
+          break;
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
@@ -1178,6 +1192,7 @@ const main = async () => {
         earlyGetUserPromise = getUser(client).catch(() => undefined);
       }
 
+      resolvedCommandForUpdate = targetCommand;
       exitCode = await rootSpan
         .child('vc.cli.command', { command: subcommand || 'deploy' })
         .trace(() => func(client));
@@ -1276,12 +1291,30 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    if (SHOULD_CHECK_FOR_UPDATES) {
+    if (SHOULD_CHECK_FOR_UPDATES && !isNativeBinaryInstall()) {
       const latest = getLatestVersion({
         pkg,
       });
       if (latest) {
         const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
+        const originalExitCode = typeof exitCode === 'number' ? exitCode : 0;
+
+        if (
+          await canAutoUpdate(
+            client,
+            originalExitCode,
+            resolvedCommandForUpdate
+          )
+        ) {
+          const upgradeExitCode = await executeUpgrade();
+          process.exitCode = originalExitCode;
+          if (upgradeExitCode !== 0) {
+            output.log(
+              `Automatic update failed. Continuing with original exit code ${originalExitCode}.`
+            );
+          }
+          return;
+        }
 
         if (isTTY) {
           // Interactive mode: prompt user to update now
@@ -1311,6 +1344,16 @@ main()
 
             if (shouldUpgrade) {
               const upgradeExitCode = await executeUpgrade();
+              if (
+                upgradeExitCode === 0 &&
+                !hasAutoUpdatePreference(client.config)
+              ) {
+                const enableAutoUpdates = await client.input.confirm(
+                  'Enable automatic CLI updates for future releases?',
+                  false
+                );
+                setAutoUpdate(client, enableAutoUpdates);
+              }
               process.exitCode = upgradeExitCode;
               return;
             }

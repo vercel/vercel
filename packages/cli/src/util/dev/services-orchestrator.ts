@@ -14,8 +14,10 @@ import type { Cron } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
+  isQueueBackedService,
   isQueueTriggeredService,
   isScheduleTriggeredService,
+  isWorkflowTriggeredService,
   cloneEnv,
   getNodeBinPaths,
   spawnCommand,
@@ -23,6 +25,7 @@ import {
   runNpmInstall,
   getServiceUrlEnvVars,
   getExperimentalServiceUrlEnvVars,
+  type BuilderV2,
   type BuilderV3,
   type BuilderVX,
   type Config,
@@ -146,7 +149,7 @@ interface ServiceDevProcess {
 }
 
 function getServiceRoutePrefixes(service: Service): string[] {
-  if (isQueueTriggeredService(service)) {
+  if (isQueueTriggeredService(service) || isWorkflowTriggeredService(service)) {
     return [getInternalServiceWorkerPathPrefix(service.name)];
   }
   if (isScheduleTriggeredService(service)) {
@@ -271,7 +274,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
-    this.hasQueueServices = options.services.some(isQueueTriggeredService);
+    this.hasQueueServices = options.services.some(isQueueBackedService);
   }
 
   // Synchronously SIGKILL every tracked process group. Used from
@@ -612,14 +615,12 @@ export class ServicesOrchestrator {
       const builders = await importBuilders(new Set([builderSpec]), this.cwd);
       const builderWithPkg = builders.get(builderSpec);
       const builder = builderWithPkg?.builder as
+        | BuilderV2
         | BuilderV3
         | BuilderVX
         | undefined;
 
-      if (
-        (builder?.version !== 3 && builder?.version !== -1) ||
-        !builder?.startDevServer
-      ) {
+      if (!builder?.startDevServer) {
         return null;
       }
 

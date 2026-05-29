@@ -241,7 +241,7 @@ export default async function query(
   // too fine for the time range (granResult.adjusted will be true in that case).
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
-  if (granResult.adjusted && granResult.notice) {
+  if (!jsonOutput && granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
 
@@ -266,7 +266,9 @@ export default async function query(
     limit: limit ?? 10,
   };
 
-  output.spinner('Querying metrics...');
+  if (!jsonOutput) {
+    output.spinner('Querying metrics...');
+  }
   let response: MetricsQueryResponse;
   try {
     response = await client.fetch<MetricsQueryResponse>(
@@ -291,7 +293,9 @@ export default async function query(
     }
     return 1;
   } finally {
-    output.stopSpinner();
+    if (!jsonOutput) {
+      output.stopSpinner();
+    }
   }
 
   // Format and output

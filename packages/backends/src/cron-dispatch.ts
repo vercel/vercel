@@ -48,6 +48,13 @@ export async function applyCronDispatch(args: {
   workPath: string;
   /** Cron path → handler-function-name on the user module. */
   routes: Record<string, string>;
+  /**
+   * Optional override for the string the shim uses to import the user
+   * module. Defaults to the lambda-bundle relative `./<basename>` form.
+   * Callers (e.g. `startDevServer`) that host the shim outside the
+   * lambda bundle pass an absolute path or `file://` URL.
+   */
+  modulePathOverride?: string;
 }): Promise<{ files: Files; handler: string }> {
   const { format, extension } = await resolveShimFormat(args);
   // Use POSIX path utilities — lambda `files` map keys are always
@@ -58,7 +65,8 @@ export async function applyCronDispatch(args: {
   const dispatchHandler =
     handlerDir === '.' ? dispatchName : posix.join(handlerDir, dispatchName);
 
-  const handlerImportPath = `./${posix.basename(args.handler)}`;
+  const handlerImportPath =
+    args.modulePathOverride ?? `./${posix.basename(args.handler)}`;
 
   // Single-quote the route JSON so embedded double quotes don't need
   // escaping. Cron paths and handler names only contain

@@ -1,5 +1,21 @@
 # vercel-runtime
 
+## 0.14.1
+
+### Patch Changes
+
+- 1318682: minor performance improvements
+
+## 0.14.0
+
+### Minor Changes
+
+- 4d56632: Configure runtime cache for Python functions
+
+### Patch Changes
+
+- 796452d: Set exclude-newer to 2 days.
+
 ## 0.13.2
 
 ### Patch Changes

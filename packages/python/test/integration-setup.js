@@ -19,6 +19,19 @@ module.exports = function setupTests(groupIndex) {
   ]);
   const allFixtures = fs.readdirSync(fixturesPath);
   const skipFixtures = [];
+  const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+
+  beforeAll(() => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+  });
+
+  afterAll(() => {
+    if (originalCompileAllEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_COMPILEALL;
+    } else {
+      process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+    }
+  });
 
   let chunkedFixtures = allFixtures.filter(
     fixture => !skipFixtures.includes(fixture)

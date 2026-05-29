@@ -989,7 +989,8 @@ describe('link', () => {
           routePrefix: '/',
         },
         api: {
-          entrypoint: 'services/api',
+          root: 'services/api',
+          entrypoint: 'index:app',
           routePrefix: '/_/api',
         },
       },
@@ -1214,7 +1215,8 @@ describe('link', () => {
           routePrefix: '/',
         },
         api: {
-          entrypoint: 'services/api',
+          root: 'services/api',
+          entrypoint: 'index:app',
           routePrefix: '/_/api',
         },
       },
@@ -1296,7 +1298,8 @@ describe('link', () => {
           routePrefix: '/',
         },
         api: {
-          entrypoint: 'services/api',
+          root: 'services/api',
+          entrypoint: 'index:app',
           routePrefix: '/_/api',
         },
       },

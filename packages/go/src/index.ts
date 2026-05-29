@@ -33,6 +33,8 @@ import {
   debug,
   cloneEnv,
   getProvidedRuntime,
+  execCommand,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -54,7 +56,9 @@ import {
   startStandaloneDevServer,
 } from './standalone-server';
 
-export { shouldServe };
+import { generateProjectManifest, diagnostics } from './diagnostics';
+
+export { shouldServe, diagnostics };
 
 // in order to allow the user to have `main.go`,
 // we need our `main.go` to be called something else
@@ -119,7 +123,14 @@ type UndoActions = {
 export const version = 3;
 
 export async function build(options: BuildOptions) {
-  const { files, config, workPath, meta = {} } = options;
+  const {
+    files,
+    config,
+    workPath,
+    meta = {},
+    service,
+    registerPreDeploy,
+  } = options;
   let { entrypoint } = options;
 
   const goPath = await getWriteableDirectory();
@@ -250,6 +261,17 @@ export async function build(options: BuildOptions) {
       workPath,
     });
 
+    // Emit the manifest after resolving the Go version but before building the handler
+    // injects the @vercel/go-bridge.
+    const goModJson = goModPath ? await go.modEditJson(goModPath) : null;
+    await generateProjectManifest({
+      workPath,
+      goModJson,
+      resolvedGoVersion: go.resolvedVersion,
+      framework: config.framework ?? undefined,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+
     const outDir = await getWriteableDirectory();
     const buildOptions: BuildHandlerOptions = {
       downloadPath,
@@ -280,6 +302,19 @@ export async function build(options: BuildOptions) {
       supportsWrapper: true,
       environment: {},
     });
+
+    const preDeployCommand = config?.preDeployCommand;
+    if (registerPreDeploy && typeof preDeployCommand === 'string') {
+      const capturedEnv = { ...env };
+      const capturedCwd = workPath;
+      registerPreDeploy(async () => {
+        debug(`Running pre-deploy command: \`${preDeployCommand}\``);
+        await execCommand(preDeployCommand, {
+          env: capturedEnv,
+          cwd: capturedCwd,
+        });
+      });
+    }
 
     return {
       output: lambda,

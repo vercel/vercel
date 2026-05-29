@@ -146,6 +146,8 @@ export async function detectBuilders(
   const { services, experimentalServices, projectSettings = {} } = options;
   const { framework } = projectSettings;
   const configuredServices = services ?? experimentalServices;
+  const configuredServicesType =
+    services != null ? 'services' : 'experimentalServices';
   const hasServicesConfig =
     configuredServices != null && typeof configuredServices === 'object';
 
@@ -153,6 +155,7 @@ export async function detectBuilders(
     return getServicesBuilders({
       workPath: options.workPath,
       configuredServices: configuredServices,
+      configuredServicesType,
       projectFramework: framework,
     });
   }

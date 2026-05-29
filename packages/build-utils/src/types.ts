@@ -484,6 +484,7 @@ export interface BuilderV2 {
   diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
 }
 
 export interface BuilderV3 {
@@ -670,6 +671,23 @@ export function isScheduleTriggeredService(service: {
   );
 }
 
+export function isWorkflowTriggeredService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return service.type === 'job' && service.trigger === 'workflow';
+}
+
+/** Returns true for any service that consumes queue messages (worker, queue-triggered job, workflow-triggered job). */
+export function isQueueBackedService(service: {
+  type?: ServiceType;
+  trigger?: JobTrigger;
+}): boolean {
+  return (
+    isQueueTriggeredService(service) || isWorkflowTriggeredService(service)
+  );
+}
+
 export type ReportedServiceType = 'web' | 'schedule' | 'queue' | 'workflow';
 
 export function getReportedServiceType(service: {
@@ -715,6 +733,7 @@ export interface BuildResultV2Typical {
     value: string;
   }>;
   framework?: {
+    slug: string;
     version: string;
   };
   flags?: { definitions: FlagDefinitions };

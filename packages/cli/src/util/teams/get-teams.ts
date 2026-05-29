@@ -2,6 +2,7 @@ import { URLSearchParams } from 'url';
 import type Client from '../client';
 import type { Team } from '@vercel-internals/types';
 import { APIError, InvalidToken } from '../errors-ts';
+import { teamCache } from './get-team-by-id';
 
 export interface GetTeamsV1Options {
   apiVersion?: 1;
@@ -36,6 +37,37 @@ export default async function getTeams(
 ): Promise<Team[] | GetTeamsV2Response> {
   const { apiVersion = 1 } = opts;
 
+  if (apiVersion === 1) {
+    if (client.teams) {
+      return client.teams;
+    }
+
+    if (client.teamsPromise) {
+      return client.teamsPromise;
+    }
+
+    client.teamsPromise = fetchTeams(client, opts).then(result => {
+      const teams = Array.isArray(result) ? result : result.teams;
+      client.teams = teams;
+      return teams;
+    });
+
+    try {
+      return await client.teamsPromise;
+    } finally {
+      client.teamsPromise = undefined;
+    }
+  }
+
+  return fetchTeams(client, opts);
+}
+
+async function fetchTeams(
+  client: Client,
+  opts: GetTeamsV1Options | GetTeamsV2Options = {}
+): Promise<Team[] | GetTeamsV2Response> {
+  const { apiVersion = 1 } = opts;
+
   let query = '';
 
   if (opts.apiVersion === 2) {
@@ -57,7 +89,11 @@ export default async function getTeams(
       }
     );
     if (apiVersion === 1) {
-      return body.teams || [];
+      const teams = body.teams || [];
+      for (const team of teams) {
+        teamCache.set(team.id, team);
+      }
+      return teams;
     }
     return body;
   } catch (error) {

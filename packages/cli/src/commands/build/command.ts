@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 
 export const buildCommand = {
   name: 'build',
@@ -52,6 +52,7 @@ export const buildCommand = {
       argument: 'ID',
       deprecated: false,
     },
+    projectOption,
   ],
   examples: [
     {

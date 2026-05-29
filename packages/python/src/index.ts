@@ -35,13 +35,21 @@ import {
 import {
   discoverPackage,
   ensureUvProject,
+  getVenvSitePackagesDirs,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
 } from './install';
-import { PythonDependencyExternalizer } from './dependency-externalizer';
+import {
+  PythonDependencyExternalizer,
+  LAMBDA_SIZE_THRESHOLD_BYTES,
+  HIVE_LAMBDA_SIZE_BYTES,
+  lambdaKnapsack,
+  calculateBundleSize,
+} from './dependency-externalizer';
 import {
   UvRunner,
+  UV_LINUX_TARGET,
   getUvBinaryOrInstall,
   getUvCacheDir,
   findUvInPath,
@@ -56,6 +64,7 @@ import {
   createVenvEnv,
   getVenvPythonBin,
 } from './utils';
+import { validateBuildArch } from './platform-info';
 import { runQuirks } from './quirks';
 import {
   getDjangoSettings,
@@ -63,6 +72,13 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
+import {
+  collectAppBytecodeFiles,
+  getCompileAllAppExcludeRegex,
+  runCompileAll,
+  shouldUseCompileAll,
+  type BytecodeCollectionResult,
+} from './compileall';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -78,6 +94,71 @@ import {
 export { detectEntrypoint } from './entrypoint';
 
 export const version = -1;
+
+function addFiles(target: Files, source: Files) {
+  for (const [p, f] of Object.entries(source)) {
+    target[p] = f;
+  }
+}
+
+function addBytecodeWithinCapacity(
+  files: Files,
+  bytecodeInfo: BytecodeCollectionResult | undefined,
+  capacity: number
+): number {
+  if (!bytecodeInfo || bytecodeInfo.totalSize <= 0 || capacity <= 0) {
+    return capacity;
+  }
+
+  if (bytecodeInfo.totalSize <= capacity) {
+    addFiles(files, bytecodeInfo.files);
+    return capacity - bytecodeInfo.totalSize;
+  }
+
+  const selected = lambdaKnapsack(bytecodeInfo.perItemSizes, capacity);
+  let remainingCapacity = capacity;
+  for (const p of selected) {
+    const file = bytecodeInfo.files[p];
+    if (!file) continue;
+    files[p] = file;
+    remainingCapacity -= bytecodeInfo.perItemSizes.get(p) ?? 0;
+  }
+
+  return remainingCapacity;
+}
+
+async function addVendorBytecodeWithinCapacity({
+  files,
+  depExternalizer,
+  vendorDir,
+  bytecodeInfo,
+  capacity,
+}: {
+  files: Files;
+  depExternalizer: PythonDependencyExternalizer;
+  vendorDir: string;
+  bytecodeInfo: BytecodeCollectionResult | undefined;
+  capacity: number;
+}): Promise<number> {
+  if (!bytecodeInfo || bytecodeInfo.totalSize <= 0 || capacity <= 0) {
+    return capacity;
+  }
+
+  if (bytecodeInfo.totalSize <= capacity) {
+    addFiles(files, bytecodeInfo.files);
+    return capacity - bytecodeInfo.totalSize;
+  }
+
+  const selectedPkgs = lambdaKnapsack(bytecodeInfo.perItemSizes, capacity);
+  if (selectedPkgs.length === 0) return capacity;
+
+  const selectedBytecode = await depExternalizer.collectBytecodeFiles({
+    vendorDirName: vendorDir,
+    includePackages: selectedPkgs,
+  });
+  addFiles(files, selectedBytecode.files);
+  return capacity - selectedBytecode.totalSize;
+}
 
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
@@ -223,6 +304,40 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
+interface TargetPlatform {
+  /** uv-compatible platform triple, or undefined to use the host. */
+  uvPlatform: string | undefined;
+  /** Lambda architecture, or undefined to use the Lambda constructor default. */
+  architecture: 'x86_64' | 'arm64' | undefined;
+}
+
+/** Map an architecture name to a uv-compatible platform triple. */
+function archToUvPlatform(arch: string): string {
+  return `${validateBuildArch(arch)}-unknown-linux-gnu`;
+}
+
+/** Map an architecture name to a Lambda architecture value. */
+function archToLambdaArch(arch: string): 'x86_64' | 'arm64' {
+  return validateBuildArch(arch) === 'aarch64' ? 'arm64' : 'x86_64';
+}
+
+/** Resolve the target platform for wheel resolution and Lambda architecture. */
+function getTargetPlatform(isDev: boolean): TargetPlatform {
+  const arch = process.env.VERCEL_BUILD_ARCH;
+  if (arch) {
+    return {
+      uvPlatform: archToUvPlatform(arch),
+      architecture: archToLambdaArch(arch),
+    };
+  }
+
+  if (isDev || process.env.VERCEL_BUILD_IMAGE) {
+    return { uvPlatform: undefined, architecture: undefined };
+  }
+
+  return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
+}
+
 export const build: BuildVX = async ({
   workPath,
   repoRootPath,
@@ -247,6 +362,8 @@ export const build: BuildVX = async ({
   // When true, runtime dependency installation is disabled because
   // custom commands may install dependencies not tracked in uv.lock.
   let hasCustomCommand = false;
+
+  const target = getTargetPlatform(meta.isDev ?? false);
 
   debug(`workPath: ${workPath}`);
 
@@ -519,6 +636,7 @@ export const build: BuildVX = async ({
           projectDir,
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
+          pythonPlatform: target.uvPlatform,
         });
 
         // Stash the lock file into the cache dir so prepareCache
@@ -599,10 +717,13 @@ export const build: BuildVX = async ({
     baseEnv.VERCEL_RUNTIME_PYTHON ||
     `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
   debug(`Installing ${runtimeDep}`);
+  const pipPlatformArgs = target.uvPlatform
+    ? ['--python-platform', target.uvPlatform]
+    : [];
   await uv.pip({
     venvPath,
     projectDir: join(workPath, entryDirectory),
-    args: ['install', '--link-mode', 'copy', runtimeDep],
+    args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, runtimeDep],
   });
 
   if (shouldInstallVercelWorkers) {
@@ -614,7 +735,7 @@ export const build: BuildVX = async ({
     await uv.pip({
       venvPath,
       projectDir: join(workPath, entryDirectory),
-      args: ['install', '--link-mode', 'copy', workersDep],
+      args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, workersDep],
     });
   }
 
@@ -739,6 +860,11 @@ if os.path.isdir(_vendor):
 from vercel_runtime.vc_init import vc_handler
 `;
 
+  const automaticCompileAllEnabled = shouldUseCompileAll({
+    isDev: meta.isDev,
+    hasCustomCommand,
+  });
+
   const predefinedExcludes = [
     '.git/**',
     '.gitignore',
@@ -760,6 +886,9 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  // Lambda uses a read-only filesystem; skip .pyc generation to avoid
+  // wasted syscalls on every import.
+  lambdaEnv.PYTHONDONTWRITEBYTECODE = '1';
   Object.assign(lambdaEnv, quirksResult.env);
   if (shouldInstallVercelWorkers) {
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
@@ -782,6 +911,20 @@ from vercel_runtime.vc_init import vc_handler
     files[djangoStatic.manifestRelPath] = new FileFsRef({
       fsPath: join(workPath, djangoStatic.manifestRelPath),
     });
+  }
+
+  // in order to allow the user to have `server.py`, we
+  // need our `server.py` to be called something else
+  const handlerPyFilename = 'vc__handler__python';
+
+  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
+
+  // "fasthtml" framework requires a `.sesskey` file to exist,
+  // otherwise it tries to create one at runtime, which fails
+  // due Lambda's read-only filesystem
+  if (config.framework === 'fasthtml') {
+    const { SESSKEY = '' } = process.env;
+    files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
 
   // Bundle dependencies, using runtime installation for oversized bundles
@@ -807,6 +950,8 @@ from vercel_runtime.vc_init import vc_handler
   await builderSpan
     .child('vc.builder.python.bundle')
     .trace(async bundleSpan => {
+      // analyze() always computes source-only sizes so threshold
+      // decisions are not inflated by bytecode overhead.
       const depAnalysis = await depExternalizer.analyze(files);
 
       bundleSpan.setAttributes({
@@ -817,33 +962,96 @@ from vercel_runtime.vc_init import vc_handler
       });
 
       if (depAnalysis.runtimeInstallEnabled) {
+        // >245 MB source-only: the lambda zip is packed full with source
+        // packages via knapsack.  No room for bytecode.
         await depExternalizer.generateBundle(files);
       } else {
-        // Bundle all dependencies since we're not doing runtime installation
-        for (const [p, f] of Object.entries(depAnalysis.allVendorFiles)) {
-          files[p] = f;
+        // ≤245 MB source-only: bundle all dependencies.
+        addFiles(files, depAnalysis.allVendorFiles);
+
+        // Precompile bytecode and fill remaining Lambda capacity.
+        // compileall runs on the full workPath (with an exclude regex
+        // mirroring the glob excludes) and on site-packages.
+        // collectAppBytecodeFiles only collects .pyc for .py files
+        // present in the bundle, so excluded source files cannot
+        // re-enter the Lambda as generated .pyc files.
+        if (automaticCompileAllEnabled) {
+          await builderSpan
+            .child('vc.builder.python.compileall')
+            .trace(async compileSpan => {
+              const sitePackageDirs = (
+                await getVenvSitePackagesDirs(venvPath)
+              ).filter(d => fs.existsSync(d));
+              const pythonBin = getVenvPythonBin(venvPath);
+
+              console.log('Compiling Python application bytecode...');
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: [workPath],
+                env: pythonEnv,
+                excludeRegex: getCompileAllAppExcludeRegex(workPath),
+              });
+
+              console.log('Compiling Python dependency bytecode...');
+              await runCompileAll({
+                pythonBin,
+                filesOrDirectories: sitePackageDirs,
+                env: pythonEnv,
+              });
+
+              compileSpan.setAttributes({
+                'python.compileall.enabled': 'true',
+                'python.compileall.sitePackageDirectoryCount': String(
+                  sitePackageDirs.length
+                ),
+              });
+            });
+
+          // Collect bytecode and fill remaining capacity.
+          const pythonOnHiveEnabled =
+            process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+            process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+          const activeThreshold = pythonOnHiveEnabled
+            ? HIVE_LAMBDA_SIZE_BYTES
+            : LAMBDA_SIZE_THRESHOLD_BYTES;
+          const currentSize = await calculateBundleSize(files);
+          let remainingCapacity = activeThreshold - currentSize;
+
+          if (pythonVersion.major != null && pythonVersion.minor != null) {
+            const appBytecodeInfo = await collectAppBytecodeFiles({
+              workPath,
+              files,
+              pythonMajor: pythonVersion.major,
+              pythonMinor: pythonVersion.minor,
+            });
+            remainingCapacity = addBytecodeWithinCapacity(
+              files,
+              appBytecodeInfo,
+              remainingCapacity
+            );
+          }
+
+          const vendorBytecodeInfo = await depExternalizer.collectBytecodeFiles(
+            {
+              vendorDirName: vendorDir,
+            }
+          );
+          await addVendorBytecodeWithinCapacity({
+            files,
+            depExternalizer,
+            vendorDir,
+            bytecodeInfo: vendorBytecodeInfo,
+            capacity: remainingCapacity,
+          });
         }
       }
     });
-
-  // in order to allow the user to have `server.py`, we
-  // need our `server.py` to be called something else
-  const handlerPyFilename = 'vc__handler__python';
-
-  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
-
-  // "fasthtml" framework requires a `.sesskey` file to exist,
-  // otherwise it tries to create one at runtime, which fails
-  // due Lambda's read-only filesystem
-  if (config.framework === 'fasthtml') {
-    const { SESSKEY = '' } = process.env;
-    files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
-  }
 
   const output = new Lambda({
     files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
+    architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
   });
