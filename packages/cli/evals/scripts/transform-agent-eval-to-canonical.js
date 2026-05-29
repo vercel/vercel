@@ -1,5 +1,10 @@
+import { Buffer } from 'node:buffer';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+
+const DEFAULT_MAX_REQUEST_BYTES = 3_500_000;
+const MULTIPART_PAYLOAD_OVERHEAD_BYTES = 2048;
+const MULTIPART_FILE_OVERHEAD_BYTES = 1024;
 
 function parseArgs(argv) {
   const args = {};
@@ -23,6 +28,19 @@ function appendBypassQuery(url, bypassSecret) {
     parsed.searchParams.set('x-vercel-protection-bypass', bypassSecret);
   }
   return parsed.toString();
+}
+
+function parseMaxRequestBytes(value) {
+  if (!value) return DEFAULT_MAX_REQUEST_BYTES;
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    throw new Error(
+      `Invalid --max-request-bytes "${value}". Expected a positive number.`
+    );
+  }
+
+  return Math.floor(parsed);
 }
 
 async function listDirectories(dir) {
@@ -151,6 +169,10 @@ function shouldUploadFile(relativePath, uploadArtifacts) {
   return true;
 }
 
+function getRelativePath(resultsDir, fullPath) {
+  return path.relative(resultsDir, fullPath).replace(/\\/g, '/');
+}
+
 function isTimestampSegment(segment) {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d+)?Z$/.test(segment);
 }
@@ -166,9 +188,7 @@ function groupFilesByRun(files, resultsDir) {
   const groups = new Map();
 
   for (const fullPath of files) {
-    const relativePath = path
-      .relative(resultsDir, fullPath)
-      .replace(/\\/g, '/');
+    const relativePath = getRelativePath(resultsDir, fullPath);
     const group = getRunGroup(relativePath);
     const groupFiles = groups.get(group) ?? [];
     groupFiles.push(fullPath);
@@ -176,6 +196,55 @@ function groupFilesByRun(files, resultsDir) {
   }
 
   return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+function estimatePayloadPartBytes(payload) {
+  return (
+    Buffer.byteLength(JSON.stringify(payload), 'utf8') +
+    MULTIPART_PAYLOAD_OVERHEAD_BYTES
+  );
+}
+
+async function chunkFilesByEstimatedRequestSize({
+  files,
+  resultsDir,
+  payload,
+  maxRequestBytes,
+}) {
+  const chunks = [];
+  const payloadBytes = estimatePayloadPartBytes(payload);
+  let currentChunk = [];
+  let currentBytes = payloadBytes;
+
+  for (const fullPath of files) {
+    const relativePath = getRelativePath(resultsDir, fullPath);
+    const fileInfo = await stat(fullPath);
+    const fileBytes =
+      fileInfo.size +
+      Buffer.byteLength(relativePath, 'utf8') +
+      MULTIPART_FILE_OVERHEAD_BYTES;
+
+    if (payloadBytes + fileBytes > maxRequestBytes) {
+      console.warn(
+        `Warning: ${relativePath} is approximately ${fileBytes} bytes before multipart framing and exceeds --max-request-bytes=${maxRequestBytes}; uploading it in its own request.`
+      );
+    }
+
+    if (currentChunk.length > 0 && currentBytes + fileBytes > maxRequestBytes) {
+      chunks.push(currentChunk);
+      currentChunk = [];
+      currentBytes = payloadBytes;
+    }
+
+    currentChunk.push(fullPath);
+    currentBytes += fileBytes;
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
 }
 
 async function uploadFileGroup({
@@ -189,9 +258,7 @@ async function uploadFileGroup({
   formData.append('payload', JSON.stringify(payload));
 
   for (const fullPath of files) {
-    const relativePath = path
-      .relative(resultsDir, fullPath)
-      .replace(/\\/g, '/');
+    const relativePath = getRelativePath(resultsDir, fullPath);
     const buffer = await readFile(fullPath);
     formData.append(
       'results_file',
@@ -209,7 +276,13 @@ async function uploadFileGroup({
 
   const responseBody = await response.text();
   if (!response.ok) {
-    throw new Error(`Batch upload failed: ${response.status} ${responseBody}`);
+    const hint =
+      response.status === 413
+        ? ' Try lowering --max-request-bytes, or use --upload-artifacts results if an individual artifact is too large for the ingest endpoint.'
+        : '';
+    throw new Error(
+      `Batch upload failed: ${response.status} ${responseBody}${hint}`
+    );
   }
 
   return responseBody;
@@ -274,6 +347,9 @@ async function main() {
 
   const runMetadata = await collectRunMetadata(allFiles);
   const uploadArtifacts = args['upload-artifacts'] ?? 'all';
+  const maxRequestBytes = parseMaxRequestBytes(
+    args['max-request-bytes'] ?? process.env.CLI_EVAL_UPLOAD_MAX_REQUEST_BYTES
+  );
 
   if (!['results', 'all'].includes(uploadArtifacts)) {
     throw new Error(
@@ -282,9 +358,7 @@ async function main() {
   }
 
   const filesToUpload = allFiles.filter(fullPath => {
-    const relativePath = path
-      .relative(resultsDir, fullPath)
-      .replace(/\\/g, '/');
+    const relativePath = getRelativePath(resultsDir, fullPath);
     return shouldUploadFile(relativePath, uploadArtifacts);
   });
 
@@ -323,8 +397,14 @@ async function main() {
   }
 
   const fileGroups = groupFilesByRun(filesToUpload, resultsDir);
+  let uploadRequestCount = 0;
 
   for (const [group, files] of fileGroups) {
+    const sortedFiles = [...files].sort((a, b) =>
+      getRelativePath(resultsDir, a).localeCompare(
+        getRelativePath(resultsDir, b)
+      )
+    );
     const groupPayload = {
       ...payload,
       metadata: {
@@ -332,20 +412,43 @@ async function main() {
         uploadGroup: group,
       },
     };
-    const responseBody = await uploadFileGroup({
-      files,
+    const chunks = await chunkFilesByEstimatedRequestSize({
+      files: sortedFiles,
       resultsDir,
       payload: groupPayload,
-      ingestUrl,
-      headers,
+      maxRequestBytes,
     });
-    console.log(
-      `Uploaded batch ${args['batch-id']} group ${group} with ${files.length} file(s): ${responseBody}`
-    );
+
+    for (let index = 0; index < chunks.length; index += 1) {
+      const chunk = chunks[index];
+      const chunkPayload = {
+        ...groupPayload,
+        metadata: {
+          ...groupPayload.metadata,
+          uploadGroupFileCount: sortedFiles.length,
+          uploadPart: index + 1,
+          uploadParts: chunks.length,
+          uploadMaxRequestBytes: maxRequestBytes,
+        },
+      };
+      const responseBody = await uploadFileGroup({
+        files: chunk,
+        resultsDir,
+        payload: chunkPayload,
+        ingestUrl,
+        headers,
+      });
+      uploadRequestCount += 1;
+      const partLabel =
+        chunks.length > 1 ? ` part ${index + 1}/${chunks.length}` : '';
+      console.log(
+        `Uploaded batch ${args['batch-id']} group ${group}${partLabel} with ${chunk.length}/${sortedFiles.length} file(s): ${responseBody}`
+      );
+    }
   }
 
   console.log(
-    `Uploaded batch ${args['batch-id']} in ${fileGroups.length} request(s) with ${filesToUpload.length}/${allFiles.length} file(s).`
+    `Uploaded batch ${args['batch-id']} in ${uploadRequestCount} request(s) across ${fileGroups.length} group(s) with ${filesToUpload.length}/${allFiles.length} file(s).`
   );
 }
 
