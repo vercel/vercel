@@ -747,7 +747,10 @@ export const build: BuildV2 = async ({
       }
 
       if (framework?.slug === 'nitro') {
-        await NitroCron.injectNitroTasksRoute(workPath);
+        const deps = { ...pkg?.dependencies, ...pkg?.devDependencies };
+        const nitroRuntime =
+          'nitropack' in deps ? 'nitropack/runtime' : 'nitro/runtime';
+        await NitroCron.injectNitroTasksRoute(workPath, nitroRuntime);
       }
 
       try {
