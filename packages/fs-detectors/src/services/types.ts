@@ -12,6 +12,9 @@ import type {
   ServiceType,
   ServiceRefEnvVar,
   Service,
+  ServiceRoutingEntry,
+  ServiceRoutingConfigEntry,
+  ServiceRoutingPathEntry,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
@@ -29,6 +32,9 @@ export type {
   ServiceType,
   ServiceRefEnvVar,
   Service,
+  ServiceRoutingEntry,
+  ServiceRoutingConfigEntry,
+  ServiceRoutingPathEntry,
   Builder,
 };
 

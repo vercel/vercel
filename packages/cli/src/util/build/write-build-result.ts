@@ -168,10 +168,29 @@ function injectServiceEnvVars(
   if (service?.trigger) {
     lambda.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
   }
-  if (service?.routePrefix && service.routePrefix !== '/') {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
-  }
-  if (stripServiceRoutePrefix) {
+  // Prefixes the runtime should strip before the service sees the request.
+  // Derived from the resolved `routing` mounts (one service may own several),
+  // falling back to the canonical single `routePrefix`.
+  const stripPrefixes = service?.routing
+    ? Array.from(
+        new Set(
+          service.routing
+            .map(entry => entry.stripPrefix)
+            .filter((prefix): prefix is string => !!prefix && prefix !== '/')
+        )
+      )
+    : service?.routePrefix && service.routePrefix !== '/'
+      ? [service.routePrefix]
+      : [];
+
+  if (stripPrefixes.length === 1) {
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = stripPrefixes[0];
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+  } else if (stripPrefixes.length > 1) {
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIXES =
+      JSON.stringify(stripPrefixes);
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+  } else if (stripServiceRoutePrefix) {
     lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
   }
 }

@@ -604,6 +604,21 @@ export type EnvVar = ServiceRefEnvVar;
 
 export type EnvVars = Record<string, EnvVar>;
 
+/**
+ * A single resolved routing mount for a web service: the static path prefix it
+ * owns plus the literal prefix (if any) stripped before the service receives
+ * the request. Derived from the service's `routing` config (or legacy `mount`).
+ */
+export interface ServiceRoutingEntry {
+  /** Normalized literal prefix this entry owns, e.g. "/api" (root = "/"). */
+  prefix: string;
+  /**
+   * Literal prefix removed from the request path before the service receives
+   * it. `undefined` means no stripping (the service sees the public path).
+   */
+  stripPrefix?: string;
+}
+
 export interface Service {
   name: string;
   type: ServiceType;
@@ -621,6 +636,12 @@ export interface Service {
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
   subdomain?: string;
+  /**
+   * Resolved routing mounts for a web service (one per owned prefix), derived
+   * from the service's `routing` config. `routePrefix` remains the canonical
+   * single-mount alias used for the service URL and the static mountpoint.
+   */
+  routing?: ServiceRoutingEntry[];
   /* scheduled job config */
   schedule?: string | string[];
   /* optional handler for a schedule-triggered job in format of {module}:{callable} */
@@ -629,6 +650,20 @@ export interface Service {
   topics?: ServiceTopics;
   /* environment variables declared by the user to be injected into this service. */
   env?: EnvVars;
+}
+
+/**
+ * The route prefixes a web service owns. Uses the resolved `routing` mounts
+ * when present, otherwise falls back to the canonical single `routePrefix`.
+ */
+export function getServiceRoutePrefixes(service: Service): string[] {
+  const fromRouting = (service.routing ?? [])
+    .map(entry => entry.prefix)
+    .filter((prefix): prefix is string => typeof prefix === 'string');
+  if (fromRouting.length > 0) {
+    return fromRouting;
+  }
+  return typeof service.routePrefix === 'string' ? [service.routePrefix] : [];
 }
 
 export function getServiceQueueTopicConfigs(config: {
@@ -903,6 +938,24 @@ export interface ServiceMount {
 }
 
 /**
+ * A `routing` entry for public services:
+ * - a bare string owns that path prefix with no stripping (identity);
+ * - `{ paths, forward }` owns each pattern in `paths` and rewrites it to
+ *   `forward.path` (strip). All `paths` share the one `forward`.
+ */
+export type ServiceRoutingPathEntry =
+  | string
+  | { paths: string[]; forward?: { path: string } };
+
+/**
+ * A single `routing` entry as authored in vercel.json. Experimental services
+ * additionally support a `{ host }` mount on a subdomain.
+ */
+export type ServiceRoutingConfigEntry =
+  | ServiceRoutingPathEntry
+  | { host: { subdomain: string } };
+
+/**
  * Configuration for a service in vercel.json.
  * @experimental This feature is experimental and may change.
  */
@@ -944,6 +997,11 @@ export interface ExperimentalServiceConfig {
   /* Web service config */
   /** Preferred routing config alias for routePrefix/subdomain. */
   mount?: string | ExperimentalServiceMount;
+  /**
+   * Routing rules: the public paths this service owns and an optional `forward`
+   * that strips a static prefix before the service receives the request.
+   */
+  routing?: ServiceRoutingConfigEntry[];
   /** URL prefix for routing (deprecated, use mount instead) */
   routePrefix?: string;
   /** Subdomain this service should respond to (web services only). */
@@ -1002,6 +1060,11 @@ export interface ServiceConfig {
   /* Web service config */
   /** Preferred routing config for route paths. */
   mount?: string | ServiceMount;
+  /**
+   * Routing rules: the public paths this service owns and an optional `forward`
+   * that strips a static prefix before the service receives the request.
+   */
+  routing?: ServiceRoutingPathEntry[];
 
   /* Scheduled job config */
   /** Cron schedule expression(s) (e.g., "0 0 * * *") */
