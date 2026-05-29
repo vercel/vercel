@@ -806,17 +806,11 @@ export const build: BuildV2 = async ({
         await BuildOutputV3.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV3) {
         if (framework?.slug === 'nitro') {
-          const existingConfig =
-            await BuildOutputV3.readConfig(outputDirPrefix);
-          // Newer versions of nitro use the vercel preset and will emit the crons
-          // by default. Older versions may not use the vercel preset and so we need
-          // to detect the crons and inject them ourselves.
-          if (!existingConfig?.crons?.length) {
-            const nitroCrons = await NitroCron.detectNitroCrons(workPath);
-            if (nitroCrons.length > 0) {
-              await NitroCron.patchConfigJson(buildOutputPathV3, nitroCrons);
-            }
-          }
+          await NitroCron.injectNitroCrons(
+            workPath,
+            outputDirPrefix,
+            buildOutputPathV3
+          );
         }
         // Ensure that `vercel build` is being used for this Deployment
         return BuildOutputV3.createBuildOutput(

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { Cron } from '@vercel/build-utils';
+import { readConfig } from './build-output-v3';
 
 const NITRO_TASKS_PATH = '/_nitro/tasks/';
 
@@ -53,7 +54,7 @@ interface NitroConfig {
 
 const NITRO_CONFIG_NAMES = ['nitro.config.ts', 'nitro.config.js'];
 
-export async function detectNitroCrons(workPath: string): Promise<Cron[]> {
+async function detectNitroCrons(workPath: string): Promise<Cron[]> {
   // defineNitroConfig / defineConfig are typed identity helpers that Nitro
   // injects as auto-imports. Stub them so jiti can execute nitro.config.ts
   // outside of Nitro's build context.
@@ -97,7 +98,7 @@ export async function detectNitroCrons(workPath: string): Promise<Cron[]> {
   return crons;
 }
 
-export async function patchConfigJson(
+async function patchConfigJson(
   buildOutputPath: string,
   crons: Cron[]
 ): Promise<void> {
@@ -105,4 +106,20 @@ export async function patchConfigJson(
   const existing = JSON.parse(await fs.readFile(configPath, 'utf8'));
   existing.crons = crons;
   await fs.writeFile(configPath, JSON.stringify(existing, null, 2));
+}
+
+// Newer versions of nitro use the vercel preset and will emit the crons
+// by default. Older versions may not use the vercel preset and so we need
+// to detect the crons and inject them ourselves.
+export async function injectNitroCrons(
+  workPath: string,
+  outputDirPrefix: string,
+  buildOutputPath: string
+): Promise<void> {
+  const existingConfig = await readConfig(outputDirPrefix);
+  if (existingConfig?.crons?.length) return;
+  const nitroCrons = await detectNitroCrons(workPath);
+  if (nitroCrons.length > 0) {
+    await patchConfigJson(buildOutputPath, nitroCrons);
+  }
 }
