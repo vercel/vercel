@@ -71,8 +71,7 @@ describe('@vercel/vc-native shim', () => {
     ]);
 
     const installed = join(wrapperDir, 'bin', 'vercel.exe');
-    const { stdout } = await execFileAsync(process.execPath, [
-      installed,
+    const { stdout } = await execFileAsync(installed, [
       process.platform === 'win32' ? '--version' : 'arg-one',
       ...(process.platform === 'win32' ? [] : ['arg-two']),
     ]);
