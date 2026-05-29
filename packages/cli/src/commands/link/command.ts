@@ -22,12 +22,27 @@ export const addSubcommand = {
   ],
 } as const;
 
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description:
+    'Inspect whether the current directory is linked to a Vercel Project.',
+  arguments: [],
+  options: [],
+  examples: [
+    {
+      name: 'Inspect the current directory link',
+      value: `${packageName} link inspect`,
+    },
+  ],
+} as const;
+
 export const linkCommand = {
   name: 'link',
   aliases: [],
   description: 'Link a local directory to a Vercel Project.',
   arguments: [],
-  subcommands: [addSubcommand],
+  subcommands: [addSubcommand, inspectSubcommand],
   options: [
     {
       name: 'repo',
@@ -85,6 +100,10 @@ export const linkCommand = {
     {
       name: 'Add additional projects to an existing repository link',
       value: `${packageName} link add`,
+    },
+    {
+      name: 'Inspect the current directory link',
+      value: `${packageName} link inspect`,
     },
   ],
 } as const;

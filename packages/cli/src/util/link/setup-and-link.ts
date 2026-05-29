@@ -87,6 +87,18 @@ function formatCrossTeamMatch(match: CrossTeamMatch): string {
   )}`;
 }
 
+function formatOtherTeamMatch(
+  match: CrossTeamMatch,
+  currentTeamSlug?: string
+): string {
+  if (!currentTeamSlug) {
+    return formatCrossTeamMatch(match);
+  }
+  return `${formatCrossTeamMatch(match)} ${chalk.gray(
+    `(current scope: ${currentTeamSlug})`
+  )}`;
+}
+
 function formatTeamList(slugs: string[]): string {
   const shown = slugs.slice(0, 5);
   const suffix =
@@ -222,6 +234,8 @@ async function linkCrossTeamMatch({
   successEmoji,
   autoConfirm,
   pullEnv,
+  currentTeamId,
+  currentTeamSlug,
 }: {
   client: Client;
   path: string;
@@ -229,7 +243,17 @@ async function linkCrossTeamMatch({
   successEmoji: EmojiLabel;
   autoConfirm: boolean;
   pullEnv: boolean;
+  currentTeamId?: string;
+  currentTeamSlug?: string;
 }): Promise<ProjectLinkResult> {
+  if (currentTeamId && match.org.id !== currentTeamId) {
+    output.print(
+      `  Linking project under ${chalk.bold(
+        match.org.slug
+      )}; your current scope is ${chalk.bold(currentTeamSlug || currentTeamId)}.\n`
+    );
+  }
+
   client.config.currentTeam =
     match.org.type === 'team' ? match.org.id : undefined;
 
@@ -326,6 +350,8 @@ async function linkCrossTeamMatches({
   autoConfirm,
   nonInteractive,
   pullEnv,
+  currentTeamId,
+  currentTeamSlug,
 }: {
   client: Client;
   path: string;
@@ -334,6 +360,8 @@ async function linkCrossTeamMatches({
   autoConfirm: boolean;
   nonInteractive: boolean;
   pullEnv: boolean;
+  currentTeamId?: string;
+  currentTeamSlug?: string;
 }): Promise<ProjectLinkResult | null> {
   if (matches.length === 0) {
     return null;
@@ -350,11 +378,21 @@ async function linkCrossTeamMatches({
         successEmoji,
         autoConfirm,
         pullEnv,
+        currentTeamId,
+        currentTeamSlug,
       });
     }
 
+    const isOtherTeam = Boolean(
+      currentTeamId && match.org.id !== currentTeamId
+    );
     const confirmed = await client.input.confirm(
-      `Found project ${formatCrossTeamMatch(match)}. Link to it?`,
+      isOtherTeam
+        ? `Found project ${formatOtherTeamMatch(
+            match,
+            currentTeamSlug
+          )}. Link to this other team's project?`
+        : `Found project ${formatCrossTeamMatch(match)}. Link to it?`,
       true
     );
     if (confirmed) {
@@ -365,14 +403,16 @@ async function linkCrossTeamMatches({
         successEmoji,
         autoConfirm,
         pullEnv,
+        currentTeamId,
+        currentTeamSlug,
       });
     }
     return null;
   }
 
-  const currentTeamMatch = matches.find(
-    match => match.org.id === client.config.currentTeam
-  );
+  const currentTeamMatch = currentTeamId
+    ? matches.find(match => match.org.id === currentTeamId)
+    : undefined;
 
   if (autoConfirm && currentTeamMatch) {
     return await linkCrossTeamMatch({
@@ -382,6 +422,8 @@ async function linkCrossTeamMatches({
       successEmoji,
       autoConfirm,
       pullEnv,
+      currentTeamId,
+      currentTeamSlug,
     });
   }
 
@@ -390,7 +432,10 @@ async function linkCrossTeamMatches({
   }
 
   const choices = matches.map(match => ({
-    name: formatCrossTeamMatch(match),
+    name:
+      currentTeamId && match.org.id !== currentTeamId
+        ? formatOtherTeamMatch(match, currentTeamSlug)
+        : formatCrossTeamMatch(match),
     value: match as CrossTeamMatch | null,
   }));
   choices.push({
@@ -399,8 +444,9 @@ async function linkCrossTeamMatches({
   });
 
   const selected = await client.input.select<CrossTeamMatch | null>({
-    message:
-      'Found matching projects across teams. Which one do you want to link?',
+    message: currentTeamSlug
+      ? `No matching project found under ${currentTeamSlug}. Found matching projects in other teams. Which one do you want to link?`
+      : 'Found matching projects across teams. Which one do you want to link?',
     choices,
     default: currentTeamMatch ?? undefined,
   });
@@ -416,6 +462,8 @@ async function linkCrossTeamMatches({
     successEmoji,
     autoConfirm,
     pullEnv,
+    currentTeamId,
+    currentTeamSlug,
   });
 }
 
@@ -479,7 +527,22 @@ export default async function setupAndLink(
     let searchedTeamSlugs: string[] = [];
     let skippedLimitedTeamSlugs: string[] = [];
     let skippedLimitedTeams: Team[] = [];
-    output.spinner('Searching for existing projects…', 1000);
+    let currentTeamId: string | undefined;
+    let currentTeamSlug: string | undefined;
+    let otherTeamSearch:
+      | Promise<{
+          matches: CrossTeamMatch[];
+          searchedTeamSlugs: string[];
+        }>
+      | undefined;
+    let searchSpinnerActive = false;
+    const setSearchSpinner = (message: string) => {
+      if (searchSpinnerActive) {
+        output.stopSpinner();
+      }
+      output.spinner(message, 1000);
+      searchSpinnerActive = true;
+    };
     try {
       const searchResult = await searchProjectAcrossTeams(
         client,
@@ -489,16 +552,30 @@ export default async function setupAndLink(
           autoConfirm,
           nonInteractive,
           gitProjectName,
+          onSearchPhase: phase => {
+            if (phase === 'current-team') {
+              setSearchSpinner('Searching current team for existing projects…');
+            } else if (phase === 'other-teams') {
+              setSearchSpinner('Searching other teams for existing projects…');
+            } else {
+              setSearchSpinner('Searching teams for existing projects…');
+            }
+          },
         }
       );
       crossTeamMatches = searchResult.matches;
       searchedTeamSlugs = searchResult.searchedTeamSlugs;
       skippedLimitedTeamSlugs = searchResult.skippedLimitedTeamSlugs;
       skippedLimitedTeams = searchResult.skippedLimitedTeams;
+      currentTeamId = searchResult.currentTeamId;
+      currentTeamSlug = searchResult.currentTeamSlug;
+      otherTeamSearch = searchResult.otherTeamSearch;
     } catch (err) {
       output.debug(`Cross-team search failed: ${err}`);
     } finally {
-      output.stopSpinner();
+      if (searchSpinnerActive) {
+        output.stopSpinner();
+      }
     }
 
     if (crossTeamMatches.length > 0 && !autoConfirm && !nonInteractive) {
@@ -516,9 +593,55 @@ export default async function setupAndLink(
       autoConfirm,
       nonInteractive,
       pullEnv,
+      currentTeamId,
+      currentTeamSlug,
     });
     if (linkedMatch) {
       return linkedMatch;
+    }
+
+    if (otherTeamSearch) {
+      output.spinner('Searching other teams for existing projects…', 1000);
+      let otherTeamResult:
+        | {
+            matches: CrossTeamMatch[];
+            searchedTeamSlugs: string[];
+          }
+        | undefined;
+      try {
+        otherTeamResult = await otherTeamSearch;
+      } finally {
+        output.stopSpinner();
+      }
+
+      if (otherTeamResult.searchedTeamSlugs.length > 0) {
+        searchedTeamSlugs.push(...otherTeamResult.searchedTeamSlugs);
+      }
+
+      if (otherTeamResult.matches.length > 0) {
+        if (!autoConfirm && !nonInteractive) {
+          printCrossTeamSearchScope({
+            searchedTeamSlugs,
+            skippedLimitedTeamSlugs,
+          });
+        }
+
+        const linkedOtherTeamMatch = await linkCrossTeamMatches({
+          client,
+          path,
+          matches: otherTeamResult.matches,
+          successEmoji,
+          autoConfirm,
+          nonInteractive,
+          pullEnv,
+          currentTeamId,
+          currentTeamSlug,
+        });
+        if (linkedOtherTeamMatch) {
+          return linkedOtherTeamMatch;
+        }
+        skipAutoDetect = true;
+      }
     }
 
     if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
@@ -542,6 +665,8 @@ export default async function setupAndLink(
         autoConfirm,
         nonInteractive,
         pullEnv,
+        currentTeamId,
+        currentTeamSlug,
       });
       if (linkedLimitedMatch) {
         return linkedLimitedMatch;

@@ -5,7 +5,7 @@ import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
 import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
 import { type Command, help } from '../help';
-import { addSubcommand, linkCommand } from './command';
+import { addSubcommand, inspectSubcommand, linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
@@ -13,9 +13,11 @@ import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
 import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import getScope, { detectExplicitScope } from '../../util/get-scope';
+import inspectLink from './inspect';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
 };
 
 export default async function link(client: Client) {
@@ -75,6 +77,23 @@ export default async function link(client: Client) {
     });
 
     return 0;
+  }
+
+  if (subcommand === 'inspect') {
+    if (parsedArgs.flags['--help']) {
+      telemetry.trackCliFlagHelp('link', subcommandOriginal);
+      printHelp(inspectSubcommand);
+      return 2;
+    }
+
+    telemetry.trackCliSubcommandInspect(subcommandOriginal);
+
+    try {
+      return await inspectLink(client);
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
   }
 
   // Default behavior (no subcommand) - original `vc link` flow
@@ -140,6 +159,7 @@ export default async function link(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
+      pullEnv: false,
       searchAcrossTeams: !explicitScopeProvided,
     });
 
