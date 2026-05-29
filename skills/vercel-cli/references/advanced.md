@@ -51,13 +51,13 @@ Register Vercel Apps (OAuth client IDs) and manage team installations. Useful fo
 vercel oauth-apps register --name "My App" --slug my-app --redirect-uri https://app.example.com/oauth/callback
 vercel oauth-apps register --name "My App" --slug my-app --format json    # JSON output includes clientId
 vercel oauth-apps install --client-id cl_abc --permission read:project --permission read:deployment
-vercel oauth-apps install --client-id cl_abc --projects prj_a,prj_b       # or `*` for all projects
+vercel oauth-apps install --client-id cl_abc --permission read:project --projects prj_a,prj_b   # scope to projects (or `*` for all)
 vercel oauth-apps list-requests --format json                             # pending install requests
 vercel oauth-apps dismiss cl_abc123 --yes                                 # dismiss a pending request
 vercel oauth-apps remove inst_abc123 --yes                                # uninstall (aliases: rm, uninstall)
 ```
 
-`register` issues a client ID. `install` (alias `add`) installs an app to the current team using that client ID.
+`register` issues a client ID. `install` (alias `add`) installs an app to the current team using that client ID. At least one `--permission` is required (the install errors with `Provide at least one --permission` otherwise); repeat `--permission` for each scope the app needs.
 
 ## Other Commands
 
