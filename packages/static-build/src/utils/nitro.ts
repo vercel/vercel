@@ -5,13 +5,13 @@ import path from 'path';
 import type { Cron } from '@vercel/build-utils';
 import { readConfig } from './build-output-v3';
 
-const NITRO_TASKS_PATH = '/_nitro/tasks/';
+const NITRO_TASKS_PATH = '/_vercel/tasks/';
 
 // Route file injected before `nitro build` to register a production HTTP
-// handler for /_nitro/tasks/:name. Without this, Nitro tree-shakes the task
+// handler for /_vercel/tasks/:name. Without this, Nitro tree-shakes the task
 // runtime entirely — the /_nitro/tasks endpoint is dev-only in Nitro's
 // vercel preset.
-const TASKS_ROUTE_PATH = ['routes', '_nitro', 'tasks', '[name].ts'];
+const TASKS_ROUTE_PATH = ['routes', '_vercel', 'tasks', '[name].ts'];
 
 const TASKS_ROUTE_TEMPLATE = readFileSync(
   path.join(__dirname, '..', 'templates', 'vc_nitro_tasks.ts'),
