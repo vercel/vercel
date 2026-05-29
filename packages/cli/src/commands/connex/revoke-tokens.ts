@@ -39,7 +39,7 @@ export async function revokeTokens(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connect revoke-tokens <id>'
+      'Missing connector ID or UID. Usage: vercel connect revoke-tokens <connector>'
     );
     return 1;
   }
@@ -82,13 +82,14 @@ export async function revokeTokens(
   output.stopSpinner();
 
   const displayName = target.name || target.uid || target.id;
+  const supportsRevocation = target.supportsRevocation !== false;
 
-  // Resolve scope: flag → interactive TTY → error
-  let scope: 'mine' | 'all';
+  // Resolve subjectScope: flag → interactive TTY → error
+  let subjectScope: 'mine' | 'all';
   if (myTokens) {
-    scope = 'mine';
+    subjectScope = 'mine';
   } else if (allTokens) {
-    scope = 'all';
+    subjectScope = 'all';
   } else if (client.stdin.isTTY) {
     const choice = await client.input.select({
       message: 'Which tokens do you want to revoke?',
@@ -103,7 +104,7 @@ export async function revokeTokens(
         },
       ],
     });
-    scope = choice as 'mine' | 'all';
+    subjectScope = choice as 'mine' | 'all';
   } else {
     output.error(
       'Scope required. Use --my-tokens to revoke your tokens or --all-tokens to revoke all tokens.'
@@ -120,13 +121,19 @@ export async function revokeTokens(
       return 1;
     }
 
-    if (scope === 'mine') {
+    if (subjectScope === 'mine') {
       output.log(
         `Tokens issued from ${chalk.bold(displayName)} for your account will stop working. You'll need to re-authorize to use this connector again.`
       );
     } else {
       output.log(
         `Every token issued from ${chalk.bold(displayName)} will stop working. Anyone using this connector will need to re-authorize.`
+      );
+    }
+
+    if (!supportsRevocation) {
+      output.warn(
+        `${chalk.bold(displayName)} does not support provider-side token revocation. Tokens will be removed from Vercel Connect but may remain valid at the provider until they expire.`
       );
     }
 
@@ -141,7 +148,7 @@ export async function revokeTokens(
   }
 
   const body: Record<string, unknown> =
-    scope === 'mine'
+    subjectScope === 'mine'
       ? { subject: { type: 'user', id: client.authConfig.userId } }
       : {};
 
@@ -178,7 +185,8 @@ export async function revokeTokens(
         {
           id: target.id,
           uid: target.uid,
-          scope,
+          scope: subjectScope,
+          supportsRevocation,
           tokensFound: result.tokensFound,
           deleted: result.deleted,
           providerRevoked: result.providerRevoked,
@@ -193,7 +201,7 @@ export async function revokeTokens(
   }
 
   const plural = result.deleted === 1 ? 'token' : 'tokens';
-  if (scope === 'mine') {
+  if (subjectScope === 'mine') {
     output.success(
       `Revoked your ${plural} from ${chalk.bold(displayName)} (${result.deleted} ${plural} deleted).`
     );
@@ -203,7 +211,11 @@ export async function revokeTokens(
     );
   }
 
-  if (result.providerFailed > 0) {
+  if (!supportsRevocation) {
+    output.warn(
+      `${chalk.bold(displayName)} does not support provider-side token revocation. Tokens were removed from Vercel Connect but may remain valid at the provider until they expire.`
+    );
+  } else if (result.providerFailed > 0) {
     output.warn(
       `${result.providerFailed} token(s) could not be revoked from the provider. They have been removed from Vercel Connect.`
     );

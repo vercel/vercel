@@ -316,7 +316,7 @@ export const revokeTokensSubcommand = {
   description: 'Revoke tokens issued from a connector',
   arguments: [
     {
-      name: 'id',
+      name: 'connector',
       required: true,
     },
   ],

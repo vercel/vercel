@@ -255,7 +255,12 @@ describe('connex revoke-tokens', () => {
 
   it('emits a JSON receipt on --yes --format=json', async () => {
     client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
-      res.json({ id: CONNECTOR_ID, uid: CONNECTOR_UID, name: CONNECTOR_NAME });
+      res.json({
+        id: CONNECTOR_ID,
+        uid: CONNECTOR_UID,
+        name: CONNECTOR_NAME,
+        supportsRevocation: true,
+      });
     });
     client.scenario.delete(
       '/v1/connect/connectors/:clientId/tokens',
@@ -281,6 +286,7 @@ describe('connex revoke-tokens', () => {
       id: CONNECTOR_ID,
       uid: CONNECTOR_UID,
       scope: 'mine',
+      supportsRevocation: true,
       tokensFound: 2,
       deleted: 2,
       providerRevoked: 2,
@@ -368,6 +374,72 @@ describe('connex revoke-tokens', () => {
     expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain(
       'could not be revoked from the provider'
+    );
+  });
+
+  it('warns before confirmation when connector does not support provider revocation', async () => {
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({
+        id: CONNECTOR_ID,
+        uid: CONNECTOR_UID,
+        name: CONNECTOR_NAME,
+        supportsRevocation: false,
+      });
+    });
+    client.scenario.delete(
+      '/v1/connect/connectors/:clientId/tokens',
+      (_req, res) => {
+        res.json(DEFAULT_REVOKE_RESULT);
+      }
+    );
+
+    client.setArgv('connect', 'revoke-tokens', CONNECTOR_ID, '--my-tokens');
+
+    const exitCodePromise = connect(client);
+
+    await expect(client.stderr).toOutput(
+      'does not support provider-side token revocation'
+    );
+    await expect(client.stderr).toOutput('Are you sure?');
+    client.stdin.write('y\n');
+
+    const exitCode = await exitCodePromise;
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('warns after success when connector does not support provider revocation', async () => {
+    client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+      res.json({
+        id: CONNECTOR_ID,
+        uid: CONNECTOR_UID,
+        name: CONNECTOR_NAME,
+        supportsRevocation: false,
+      });
+    });
+    client.scenario.delete(
+      '/v1/connect/connectors/:clientId/tokens',
+      (_req, res) => {
+        res.json(DEFAULT_REVOKE_RESULT);
+      }
+    );
+
+    client.setArgv(
+      'connect',
+      'revoke-tokens',
+      CONNECTOR_ID,
+      '--my-tokens',
+      '--yes'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      'does not support provider-side token revocation'
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      'may remain valid at the provider'
     );
   });
 });

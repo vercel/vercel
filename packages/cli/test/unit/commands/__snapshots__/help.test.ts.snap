@@ -924,19 +924,21 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create         type    Create a new connector                             
-  update         id      Update connector branding (icon and colors)        
-  list                   List connectors linked to the current project      
-                         (falls back to every connector in the team when no 
-                         project is linked or when --all-projects is set)   
-  token          id      Get a token for a connector (accepts a connector ID
-                         like scl_abc or a UID like slack/my-bot)           
-  attach         client  Attach a Vercel project to a connector for one or  
-                         more environments                                  
-  detach         client  Detach a Vercel project from a connector           
-  remove         client  Delete a connector                                 
-  revoke-tokens  id      Revoke tokens issued from a connector              
-  open           id      Open a connector in the Vercel dashboard           
+  create         type       Create a new connector                      
+  update         id         Update connector branding (icon and colors) 
+  list                      List connectors linked to the current       
+                            project (falls back to every connector in   
+                            the team when no project is linked or when  
+                            --all-projects is set)                      
+  token          id         Get a token for a connector (accepts a      
+                            connector ID like scl_abc or a UID like     
+                            slack/my-bot)                               
+  attach         client     Attach a Vercel project to a connector for  
+                            one or more environments                    
+  detach         client     Detach a Vercel project from a connector    
+  remove         client     Delete a connector                          
+  revoke-tokens  connector  Revoke tokens issued from a connector       
+  open           id         Open a connector in the Vercel dashboard    
 
 
   Global Options:
