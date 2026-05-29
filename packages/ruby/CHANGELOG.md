@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.4.0
+
+### Minor Changes
+
+- 73dbbe6: Add project manifest to ruby builder.
+
 ## 2.3.2
 
 ### Patch Changes

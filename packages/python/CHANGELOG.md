@@ -1,5 +1,26 @@
 # @vercel/python
 
+## 6.44.0
+
+### Minor Changes
+
+- 4f782b1: Support bytecode compilation for hive deployment path.
+
+## 6.43.3
+
+### Patch Changes
+
+- 0e04bc5: Reduce lambda threshold bytes when VERCEL_DEPLOYMENT_HAS_OTEL_LAYER is set.
+
+  When the deployments use the otel collector it can push the deployment over the limit since we don't account
+  for the size overhead added by this layer. Reduce the total uncompressed size for these types of deployments.
+
+## 6.43.2
+
+### Patch Changes
+
+- 1318682: minor performance improvements
+
 ## 6.43.1
 
 ### Patch Changes

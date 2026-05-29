@@ -9,7 +9,6 @@ import type {
   DetectEntrypointFn,
   DetectServicesOptions,
   DetectServicesResult,
-  EnvVars,
   ExperimentalServices,
   InferredServicesConfig,
   InferredServicesResult,
@@ -49,14 +48,6 @@ function emptyRoutes(): ServicesRoutes {
     crons: [],
     workers: [],
   };
-}
-
-function isEnvVars(
-  env: Record<string, string> | EnvVars | undefined
-): env is EnvVars {
-  if (!env) return false;
-  const first = Object.values(env)[0];
-  return typeof first === 'object' && first !== null;
 }
 
 function withResolvedResult(
@@ -137,7 +128,13 @@ interface PlatformDetectResult {
 export async function detectServices(
   options: DetectServicesOptions
 ): Promise<DetectServicesResult> {
-  const { fs, workPath, detectEntrypoint } = options;
+  const {
+    fs,
+    workPath,
+    detectEntrypoint,
+    configuredServices: providedConfiguredServices,
+    configuredServicesType,
+  } = options;
 
   // Scope filesystem to workPath if provided
   const scopedFs = workPath ? fs.chdir(workPath) : fs;
@@ -157,11 +154,19 @@ export async function detectServices(
     });
   }
 
+  const hasProvidedConfiguredServices =
+    providedConfiguredServices &&
+    Object.keys(providedConfiguredServices).length > 0;
   const hasNonEmptyPublicServicesConfig =
-    vercelConfig?.services && Object.keys(vercelConfig.services).length > 0;
-  const configuredServices = hasNonEmptyPublicServicesConfig
-    ? vercelConfig.services
-    : vercelConfig?.experimentalServices;
+    (hasProvidedConfiguredServices && configuredServicesType === 'services') ||
+    (!hasProvidedConfiguredServices &&
+      vercelConfig?.services &&
+      Object.keys(vercelConfig.services).length > 0);
+  const configuredServices = hasProvidedConfiguredServices
+    ? providedConfiguredServices
+    : hasNonEmptyPublicServicesConfig
+      ? vercelConfig?.services
+      : vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -214,7 +219,6 @@ export async function detectServices(
       requireFileEntrypointForBackendRuntimes: Boolean(
         hasNonEmptyPublicServicesConfig
       ),
-      rootEnv: isEnvVars(vercelConfig?.env) ? vercelConfig?.env : undefined,
     }
   );
 

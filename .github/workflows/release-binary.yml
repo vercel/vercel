@@ -20,7 +20,7 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 concurrency:
-  group: release-binary-${{ github.ref }}
+  group: release-binary-${{ inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:

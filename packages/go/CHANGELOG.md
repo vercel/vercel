@@ -1,5 +1,12 @@
 # @vercel/go
 
+## 3.8.0
+
+### Minor Changes
+
+- baac149: Add project manifest to go builder.
+- b1f766a: Support preDeploy and build commands in go builder.
+
 ## 3.7.1
 
 ### Patch Changes
