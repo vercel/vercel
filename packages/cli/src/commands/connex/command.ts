@@ -356,6 +356,62 @@ export const tokenSubcommand = {
   ],
 } as const;
 
+export const revokeTokensSubcommand = {
+  name: 'revoke-tokens',
+  aliases: [],
+  description: 'Revoke tokens issued from a connector',
+  arguments: [
+    {
+      name: 'connector',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'my-tokens',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Revoke only your own tokens for this connector',
+    },
+    {
+      name: 'all-tokens',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Revoke every token for all users and installations. Requires team owner or member permissions.',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Interactively select which tokens to revoke',
+      value: `${packageName} connect revoke-tokens scl_abc123`,
+    },
+    {
+      name: 'Revoke only your own tokens',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens`,
+    },
+    {
+      name: 'Revoke all tokens for all users',
+      value: `${packageName} connect revoke-tokens scl_abc123 --all-tokens`,
+    },
+    {
+      name: 'Skip the confirmation prompt',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --format=json`,
+    },
+  ],
+} as const;
+
 export const openSubcommand = {
   name: 'open',
   aliases: [],
@@ -522,6 +578,7 @@ export const connexCommand = {
     attachSubcommand,
     detachSubcommand,
     removeSubcommand,
+    revokeTokensSubcommand,
     openSubcommand,
   ],
   examples: [
