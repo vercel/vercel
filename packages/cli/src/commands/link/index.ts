@@ -140,6 +140,7 @@ export default async function link(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
+      pullEnv: false,
       searchAcrossTeams: !explicitScopeProvided,
     });
 
