@@ -109,9 +109,9 @@ const wrapperDir = join(outputRoot, 'vc-native');
 await mkdir(join(wrapperDir, 'bin'), { recursive: true });
 await copyFile(
   join(packageRoot, 'bin', 'vercel'),
-  join(wrapperDir, 'bin', 'vercel')
+  join(wrapperDir, 'bin', 'vercel.exe')
 );
-await chmod(join(wrapperDir, 'bin', 'vercel'), 0o755);
+await chmod(join(wrapperDir, 'bin', 'vercel.exe'), 0o755);
 await copyFile(
   join(packageRoot, 'postinstall.mjs'),
   join(wrapperDir, 'postinstall.mjs')
@@ -125,8 +125,8 @@ await writePackageJson(wrapperDir, {
   homepage: 'https://vercel.com',
   repository: repository('packages/vc-native'),
   bin: {
-    vercel: './bin/vercel',
-    vc: './bin/vercel',
+    vercel: './bin/vercel.exe',
+    vc: './bin/vercel.exe',
   },
   scripts: {
     postinstall: 'node ./postinstall.mjs',

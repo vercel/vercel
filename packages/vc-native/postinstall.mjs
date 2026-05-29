@@ -27,7 +27,7 @@ const platform = platformMap[os.platform()] ?? os.platform();
 const arch = archMap[os.arch()] ?? os.arch();
 const packageName = `@vercel/vc-native-${platform}-${arch}`;
 const sourceBinary = platform === 'win32' ? 'vercel.exe' : 'vercel';
-const targetBinary = path.join(__dirname, 'bin', 'vercel');
+const targetBinary = path.join(__dirname, 'bin', 'vercel.exe');
 
 function packageNames() {
   return [packageName];

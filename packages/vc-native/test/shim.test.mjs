@@ -56,25 +56,33 @@ describe('@vercel/vc-native shim', () => {
     );
 
     const binaryPath = join(platformDir, 'bin', binaryName);
-    await writeFile(
-      binaryPath,
-      '#!/usr/bin/env node\nif (process.argv[2] === "--version") console.log("0.0.0-test"); else console.log("native shim ok:" + process.argv.slice(2).join(","));\n'
-    );
+    if (process.platform === 'win32') {
+      await copyFile(process.execPath, binaryPath);
+    } else {
+      await writeFile(
+        binaryPath,
+        '#!/usr/bin/env node\nif (process.argv[2] === "--version") console.log("0.0.0-test"); else console.log("native shim ok:" + process.argv.slice(2).join(","));\n'
+      );
+    }
     await chmod(binaryPath, 0o755);
 
     await execFileAsync(process.execPath, [
       join(wrapperDir, 'postinstall.mjs'),
     ]);
 
-    const installed = join(wrapperDir, 'bin', 'vercel');
-    const installedSource = await readFile(installed, 'utf8');
+    const installed = join(wrapperDir, 'bin', 'vercel.exe');
     const { stdout } = await execFileAsync(process.execPath, [
       installed,
-      'arg-one',
-      'arg-two',
+      process.platform === 'win32' ? '--version' : 'arg-one',
+      ...(process.platform === 'win32' ? [] : ['arg-two']),
     ]);
 
-    expect(installedSource).toContain('native shim ok');
-    expect(stdout.trim()).toBe('native shim ok:arg-one,arg-two');
+    if (process.platform === 'win32') {
+      expect(stdout.trim()).toBe(process.version);
+    } else {
+      const installedSource = await readFile(installed, 'utf8');
+      expect(installedSource).toContain('native shim ok');
+      expect(stdout.trim()).toBe('native shim ok:arg-one,arg-two');
+    }
   });
 });
