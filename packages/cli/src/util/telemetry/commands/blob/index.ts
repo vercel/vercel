@@ -41,6 +41,20 @@ export class BlobTelemetryClient
     });
   }
 
+  trackCliSubcommandSignedToken(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'signed-token',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPresign(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'presign',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandCreateStore(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'create-store',
