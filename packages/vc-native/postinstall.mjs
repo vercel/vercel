@@ -115,6 +115,7 @@ function main() {
 try {
   main();
 } catch (error) {
-  console.error(error.message);
-  process.exit(1);
+  // Do not fail package installation. If setup cannot install a native
+  // binary, the fallback bin shim will print a user-facing reinstall message.
+  console.warn(error.message);
 }
