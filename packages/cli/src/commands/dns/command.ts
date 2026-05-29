@@ -23,7 +23,7 @@ export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
   description:
-    'List DNS entries — for a single domain when an argument is given, or across every domain on the scope when omitted',
+    'List DNS entries. Pass a domain to list its records, or omit the argument to list records across every domain on the scope',
   default: true,
   arguments: [
     {
