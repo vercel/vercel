@@ -14,7 +14,9 @@ Most users only need `vercel alias` — domains and DNS are auto-configured when
 
 ## Typical Flow
 
-1. Add domain to project: `vercel domains add example.com my-project`
+1. Add domain to project. The arg count depends on whether the current directory is linked to a project:
+   - **Linked project** — pass one arg: `vercel domains add example.com`
+   - **Unlinked / different project** — pass two args: `vercel domains add example.com my-project`
 2. Configure nameservers at registrar to point to Vercel
 3. Deploy: `vercel --prod` (domain is auto-assigned)
 
@@ -49,13 +51,15 @@ vercel domains buy example.com
 
 ```bash
 vercel domains inspect example.com
-vercel domains add example.com my-project
+vercel domains add example.com              # in a linked project directory
+vercel domains add example.com my-project   # when unlinked or targeting another project
 ```
 
 ## DNS Records
 
 ```bash
-vercel dns ls example.com
+vercel dns ls                                          # list records across every domain on the scope
+vercel dns ls example.com                              # list records for a single domain
 vercel dns add example.com @ A 1.2.3.4
 vercel dns add example.com sub CNAME target.example.com
 vercel dns rm rec_abc123
