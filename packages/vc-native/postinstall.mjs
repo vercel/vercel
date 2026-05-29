@@ -35,7 +35,11 @@ function packageNames() {
 
 function resolveBinary(name) {
   const packageJsonPath = require.resolve(`${name}/package.json`);
-  const binaryPath = path.join(path.dirname(packageJsonPath), 'bin', sourceBinary);
+  const binaryPath = path.join(
+    path.dirname(packageJsonPath),
+    'bin',
+    sourceBinary
+  );
   if (!fs.existsSync(binaryPath)) {
     throw new Error(`Binary not found at ${binaryPath}`);
   }

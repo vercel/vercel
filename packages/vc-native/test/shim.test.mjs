@@ -1,10 +1,4 @@
-import {
-  chmod,
-  copyFile,
-  mkdir,
-  readFile,
-  writeFile,
-} from 'node:fs/promises';
+import { chmod, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -68,7 +62,9 @@ describe('@vercel/vc-native shim', () => {
     );
     await chmod(binaryPath, 0o755);
 
-    await execFileAsync(process.execPath, [join(wrapperDir, 'postinstall.mjs')]);
+    await execFileAsync(process.execPath, [
+      join(wrapperDir, 'postinstall.mjs'),
+    ]);
 
     const installed = join(wrapperDir, 'bin', 'vercel');
     const installedSource = await readFile(installed, 'utf8');
