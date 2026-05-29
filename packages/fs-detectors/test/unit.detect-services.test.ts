@@ -168,6 +168,34 @@ describe('detectServices', () => {
       });
     });
 
+    it('should support routing config with forward for public services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: {
+            web: {
+              framework: 'nextjs',
+              mount: '/',
+            },
+            api: {
+              entrypoint: 'api/index.ts',
+              routing: [
+                { paths: ['/api/:path*'], forward: { path: '/:path*' } },
+              ],
+            },
+          },
+        }),
+        'api/index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services.find(s => s.name === 'api')).toMatchObject({
+        entrypoint: 'api/index.ts',
+        routePrefix: '/api',
+        routing: [{ prefix: '/api', stripPrefix: '/api' }],
+      });
+    });
+
     it('should allow frontend frameworks without entrypoint', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
@@ -447,6 +475,68 @@ describe('detectServices', () => {
         routePrefixSource: 'generated',
         subdomain: 'docs',
       });
+    });
+
+    it('should support routing config with a path and a host (subdomain) entry', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.go',
+              routing: [
+                { paths: ['/api/:path*'], forward: { path: '/:path*' } },
+                { host: { subdomain: 'api' } },
+              ],
+            },
+          },
+        }),
+        'api/index.go': 'package main',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        routePrefix: '/api',
+        subdomain: 'api',
+        routing: [{ prefix: '/api', stripPrefix: '/api' }],
+      });
+    });
+
+    it('should generate a rewrite per prefix for a multi-prefix runtime service', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.go',
+              routing: [
+                {
+                  paths: ['/other/:path*', '/v2/:path*'],
+                  forward: { path: '/:path*' },
+                },
+              ],
+            },
+          },
+        }),
+        'api/index.go': 'package main',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        routing: [
+          { prefix: '/other', stripPrefix: '/other' },
+          { prefix: '/v2', stripPrefix: '/v2' },
+        ],
+      });
+
+      // Both prefixes should produce a rewrite into the same internal function.
+      const otherRoute = findMatchingRoute(result.routes.rewrites, '/other/x');
+      const v2Route = findMatchingRoute(result.routes.rewrites, '/v2/x');
+      expect(otherRoute?.dest).toBe('/_svc/api/index');
+      expect(v2Route?.dest).toBe('/_svc/api/index');
     });
 
     it('should resolve file entrypoint paths without explicit workspace', async () => {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 from urllib.parse import urlsplit
@@ -43,7 +44,43 @@ def get_service_route_prefix() -> str:
     )
 
 
-_service_route_prefix = get_service_route_prefix()
+def get_service_route_prefixes() -> list[str]:
+    """
+    All prefixes the runtime should strip, sorted longest-first so the most
+    specific prefix wins. Reads the multi-mount ``VERCEL_SERVICE_ROUTE_PREFIXES``
+    (a JSON array) when present, otherwise the single
+    ``VERCEL_SERVICE_ROUTE_PREFIX``. Empty when stripping is disabled.
+    """
+    if not is_service_route_prefix_strip_enabled():
+        return []
+
+    raw_multi = os.environ.get("VERCEL_SERVICE_ROUTE_PREFIXES")
+    if raw_multi:
+        try:
+            parsed = json.loads(raw_multi)
+        except (ValueError, TypeError):
+            parsed = None
+        if isinstance(parsed, list):
+            prefixes = [
+                normalize_service_route_prefix(item)
+                for item in parsed
+                if isinstance(item, str)
+            ]
+            prefixes = [prefix for prefix in prefixes if prefix]
+            if prefixes:
+                prefixes.sort(key=len, reverse=True)
+                return prefixes
+
+    single = normalize_service_route_prefix(
+        os.environ.get("VERCEL_SERVICE_ROUTE_PREFIX")
+    )
+    return [single] if single else []
+
+
+_service_route_prefixes = get_service_route_prefixes()
+_service_route_prefix = (
+    _service_route_prefixes[0] if _service_route_prefixes else ""
+)
 
 
 def split_request_target(target: str) -> tuple[str, str]:
@@ -95,9 +132,6 @@ def strip_service_route_prefix(
       "/_/backend/ping" -> ("/ping", "/_/backend")
       "/foo"            -> ("/foo", "")
     """
-    if prefix is None:
-        prefix = _service_route_prefix
-
     if path == "*":
         return path, ""
     if not path:
@@ -105,15 +139,21 @@ def strip_service_route_prefix(
     elif not path.startswith("/"):
         path = f"/{path}"
 
-    if not prefix:
-        return path, ""
+    if prefix is None:
+        prefixes = _service_route_prefixes
+    elif prefix:
+        prefixes = [prefix]
+    else:
+        prefixes = []
 
-    if path == prefix:
-        return "/", prefix
-
-    if path.startswith(f"{prefix}/"):
-        stripped = path[len(prefix) :]
-        return stripped if stripped else "/", prefix
+    for candidate in prefixes:
+        if not candidate:
+            continue
+        if path == candidate:
+            return "/", candidate
+        if path.startswith(f"{candidate}/"):
+            stripped = path[len(candidate) :]
+            return stripped if stripped else "/", candidate
 
     return path, ""
 
@@ -121,12 +161,6 @@ def strip_service_route_prefix(
 def apply_service_route_prefix_to_asgi_scope(
     scope: dict[str, Any], prefix: str | None = None
 ) -> None:
-    if prefix is None:
-        prefix = _service_route_prefix
-
-    if not prefix:
-        return
-
     path = scope.get("path", "/") or "/"
     stripped_path, matched_prefix = strip_service_route_prefix(path, prefix)
     if not matched_prefix:
@@ -138,7 +172,9 @@ def apply_service_route_prefix_to_asgi_scope(
     if isinstance(raw_path, (bytes, bytearray)):
         try:
             decoded = bytes(raw_path).decode("utf-8", "surrogateescape")
-            stripped_raw, _ = strip_service_route_prefix(decoded, prefix)
+            stripped_raw, _ = strip_service_route_prefix(
+                decoded, matched_prefix
+            )
             scope["raw_path"] = stripped_raw.encode("utf-8", "surrogateescape")
         except Exception:
             pass
@@ -166,9 +202,6 @@ def apply_service_route_prefix_to_target(
       - updated request target (path + optional query)
       - matched mount prefix for framework metadata (or "")
     """
-    if prefix is None:
-        prefix = _service_route_prefix
-
     path, query = split_request_target(target)
     path, root_path = strip_service_route_prefix(path, prefix)
     if query:

@@ -6,8 +6,10 @@ import type {
   ExperimentalServiceConfig,
   ServiceConfig,
   ServiceDetectionError,
+  ServiceRoutingEntry,
   ServiceRuntime,
 } from './types';
+import { normalizeServiceRouting } from './route-claims';
 import {
   getServiceQueueTopics,
   isQueueTriggeredService,
@@ -329,6 +331,8 @@ interface ResolvedServiceRoutingConfig {
   routePrefix?: string;
   subdomain?: string;
   routePrefixConfigured: boolean;
+  /** Normalized routing mounts, when the service used the `routing` config. */
+  entries?: ServiceRoutingEntry[];
 }
 
 function resolveServiceRoutingConfig(
@@ -340,6 +344,37 @@ function resolveServiceRoutingConfig(
 } {
   const hasLegacyRoutePrefix = typeof config.routePrefix === 'string';
   const hasLegacySubdomain = typeof config.subdomain === 'string';
+
+  if (Array.isArray(config.routing)) {
+    if (
+      config.mount !== undefined ||
+      hasLegacyRoutePrefix ||
+      hasLegacySubdomain
+    ) {
+      return {
+        error: {
+          code: 'CONFLICTING_ROUTING_CONFIG',
+          message: `Service "${name}" cannot mix "routing" with "mount", "routePrefix", or "subdomain". Use only one routing configuration style.`,
+          serviceName: name,
+        },
+      };
+    }
+    const normalized = normalizeServiceRouting(name, config.routing);
+    if (normalized.error) {
+      return { error: normalized.error };
+    }
+    const { entries, subdomain } = normalized.routing!;
+    // Multiple mounts are validated to share one service-relative namespace,
+    // so any owned prefix is a valid canonical mount for the service URL.
+    return {
+      routing: {
+        routePrefix: entries[0]?.prefix,
+        subdomain,
+        routePrefixConfigured: entries.length > 0,
+        entries,
+      },
+    };
+  }
 
   if (config.mount === undefined) {
     return {
@@ -744,6 +779,7 @@ export async function resolveConfiguredService(
   }
   const configuredRoutePrefix = routingResult.routing?.routePrefix;
   const configuredSubdomain = routingResult.routing?.subdomain;
+  const configuredRouteEntries = routingResult.routing?.entries;
   const routePrefixWasConfigured =
     routingResult.routing?.routePrefixConfigured ?? false;
 
@@ -935,6 +971,7 @@ export async function resolveConfiguredService(
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
     subdomain: normalizedSubdomain,
+    routing: type === 'web' ? configuredRouteEntries : undefined,
     framework: config.framework,
     builder: {
       src: builderSrc,

@@ -1,5 +1,8 @@
 import type { HasField, Route } from '@vercel/routing-utils';
-import { isScheduleTriggeredService } from '@vercel/build-utils';
+import {
+  getServiceRoutePrefixes,
+  isScheduleTriggeredService,
+} from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -358,26 +361,27 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
   const crons: Route[] = [];
   const workers: Route[] = [];
 
-  // Filter and sort web services by prefix length (longest first)
-  // so more specific routes match before broader ones.
-  const sortedWebServices = services
-    .filter(
-      (s): s is Service & { routePrefix: string } =>
-        s.type === 'web' && typeof s.routePrefix === 'string'
-    )
-    .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
+  const webServices = services.filter(s => s.type === 'web');
 
-  const allWebPrefixes = getWebRoutePrefixes(sortedWebServices);
+  // Every route prefix owned across all web services (one service may own
+  // several via its `routing` mounts). Used to scope ownership guards.
+  const allWebPrefixes = Array.from(
+    new Set(
+      webServices.flatMap(getServiceRoutePrefixes).map(normalizeRoutePrefix)
+    )
+  );
   const explicitHostPrefixGuard =
     getExplicitHostPrefixNegativeLookahead(allWebPrefixes);
 
-  for (const service of sortedWebServices) {
-    const { routePrefix } = service;
-    const normalizedPrefix = routePrefix.slice(1); // Strip leading /
-    const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
+  // Host rewrites stay per-service, keyed off the canonical `routePrefix`.
+  for (const service of webServices) {
     const hostCondition = getHostCondition(service);
-
-    if (hostCondition && routePrefix !== '/') {
+    const { routePrefix } = service;
+    if (
+      hostCondition &&
+      typeof routePrefix === 'string' &&
+      routePrefix !== '/'
+    ) {
       const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
       hostRewrites.push({
         src: '^/$',
@@ -396,16 +400,31 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         check: true,
       });
     }
+  }
 
+  // Path routes: one per (service, owned prefix), most specific prefix first.
+  const mounts = webServices
+    .flatMap(service =>
+      getServiceRoutePrefixes(service).map(prefix => ({
+        service,
+        prefix: normalizeRoutePrefix(prefix),
+      }))
+    )
+    .sort((a, b) => b.prefix.length - a.prefix.length);
+
+  for (const { service, prefix } of mounts) {
     // Route-owning builders (e.g., Next.js, @vercel/backends) produce their
     // own route tables. Skip synthetic route generation for them.
     if (isRouteOwningBuilder(service)) {
       continue;
     }
 
+    const normalizedPrefix = prefix.slice(1); // Strip leading /
+    const ownershipGuard = getOwnershipGuard(prefix, allWebPrefixes);
+
     if (isStaticBuild(service)) {
       // Static/SPA service: serve index.html for client-side routing
-      if (routePrefix === '/') {
+      if (prefix === '/') {
         fallbacks.push({
           src: scopeRouteSourceToOwnership('/(.*)', ownershipGuard),
           dest: '/index.html',
@@ -424,7 +443,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
       // `check: true` verifies the destination exists before applying the route
       const functionPath = getInternalServiceFunctionPath(service.name);
 
-      if (routePrefix === '/') {
+      if (prefix === '/') {
         defaults.push({
           src: scopeRouteSourceToOwnership('^/(.*)$', ownershipGuard),
           dest: functionPath,
@@ -459,17 +478,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function getWebRoutePrefixes(services: Service[]): string[] {
-  const unique = new Set<string>();
-  for (const service of services) {
-    if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
-      continue;
-    }
-    unique.add(normalizeRoutePrefix(service.routePrefix));
-  }
-  return Array.from(unique);
 }
 
 function getExplicitHostPrefixNegativeLookahead(

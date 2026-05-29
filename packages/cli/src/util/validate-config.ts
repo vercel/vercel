@@ -204,6 +204,85 @@ const servicesMountSchema = {
   ],
 };
 
+const routingForwardSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['path'],
+  properties: {
+    path: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+  },
+};
+
+const routingPathEntrySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['paths'],
+  properties: {
+    paths: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 100,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 512,
+      },
+    },
+    forward: routingForwardSchema,
+  },
+};
+
+const routingHostEntrySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['host'],
+  properties: {
+    host: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['subdomain'],
+      properties: {
+        subdomain: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 63,
+        },
+      },
+    },
+  },
+};
+
+// Public services: path entries only (no subdomain/host routing).
+const servicesRoutingSchema = {
+  type: 'array',
+  minItems: 1,
+  maxItems: 50,
+  items: {
+    oneOf: [
+      { type: 'string', minLength: 1, maxLength: 512 },
+      routingPathEntrySchema,
+    ],
+  },
+};
+
+// Experimental services: path entries plus host/subdomain mounts.
+const experimentalServicesRoutingSchema = {
+  type: 'array',
+  minItems: 1,
+  maxItems: 50,
+  items: {
+    oneOf: [
+      { type: 'string', minLength: 1, maxLength: 512 },
+      routingPathEntrySchema,
+      routingHostEntrySchema,
+    ],
+  },
+};
+
 const staticServiceScheduleSchema = {
   type: 'string',
   minLength: 9,
@@ -373,6 +452,7 @@ const experimentalServicesCommonProperties = {
 
 const experimentalServicesRoutableProperties = {
   mount: experimentalServicesMountSchema,
+  routing: experimentalServicesRoutingSchema,
   routePrefix: {
     type: 'string',
     minLength: 1,
@@ -401,6 +481,7 @@ const servicesCommonProperties = {
 
 const servicesRoutableProperties = {
   mount: servicesMountSchema,
+  routing: servicesRoutingSchema,
 };
 
 const servicesRequiredProperties = ['type', 'root'];

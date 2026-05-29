@@ -3,6 +3,7 @@ import {
   normalizeRoutePrefix,
   scopeRouteSourceToOwnership,
 } from '@vercel/routing-utils';
+import { getServiceRoutePrefixes } from '@vercel/build-utils';
 import type { Service } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
 interface ScopeRoutesToServiceOwnershipOptions {
@@ -18,8 +19,12 @@ function isWebServiceWithPrefix(
 function getWebRoutePrefixes(services: Service[]): string[] {
   const unique = new Set<string>();
   for (const service of services) {
-    if (!isWebServiceWithPrefix(service)) continue;
-    unique.add(normalizeRoutePrefix(service.routePrefix));
+    if (service.type !== 'web') continue;
+    // Include every prefix a service owns (it may own several via `routing`),
+    // so route-owning builders are scoped out of all of them.
+    for (const prefix of getServiceRoutePrefixes(service)) {
+      unique.add(normalizeRoutePrefix(prefix));
+    }
   }
   return Array.from(unique);
 }
