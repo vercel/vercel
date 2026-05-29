@@ -879,6 +879,36 @@ describe('parseCurlLikeArgs', () => {
     expect(parsed.target).toBe('https://example.com');
     expect(parsed.toolFlags).toEqual(['--silent']);
   });
+
+  it('ignores global flags before the command name', () => {
+    const parsed = parseCurlLikeArgs(
+      ['--cwd', 'apps/vercel-site', 'curl', '/new'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/new');
+    expect(parsed.toolFlags).toEqual([]);
+  });
+
+  it('ignores global flags with inline values before the command name', () => {
+    const parsed = parseCurlLikeArgs(
+      ['--cwd=apps/vercel-site', '--debug', 'curl', '/new', '--silent'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/new');
+    expect(parsed.toolFlags).toEqual(['--silent']);
+  });
+
+  it('ignores leading global flags when the command name is absent', () => {
+    const parsed = parseCurlLikeArgs(
+      ['--cwd', 'apps/vercel-site', '/new'],
+      'curl'
+    );
+
+    expect(parsed.target).toBe('/new');
+    expect(parsed.toolFlags).toEqual([]);
+  });
 });
 
 describe('getDeploymentUrlAndToken target selection', () => {
