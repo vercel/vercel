@@ -505,7 +505,15 @@ export default class Client extends EventEmitter implements Stdio {
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
-      const res = await this._fetch(url, opts);
+      let res: Awaited<ReturnType<Client['_fetch']>>;
+      try {
+        res = await this._fetch(url, opts);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return bail(err);
+        }
+        throw err;
+      }
 
       printIndications(res);
 

@@ -2,8 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   findPrerenderedHtmlFile,
   getPathFromRoute,
+  getPrerenderDocumentRewrite,
+  getReactRouterCatchAllDest,
   getReactRouterDataPaths,
   getRegExpFromPath,
+  shouldRegisterSsrForPrerenderedRoute,
 } from '../src/utils';
 import type { RouteManifest } from '../src/types';
 
@@ -37,6 +40,127 @@ describe('findPrerenderedHtmlFile()', () => {
     // `posts/:slug` never match (RR doesn't emit a `posts/:slug.html` file).
     const keys = new Set(['posts/foo.html', 'posts/foo.data']);
     expect(findPrerenderedHtmlFile('posts/:slug', keys)).toBeUndefined();
+  });
+});
+
+describe('getPrerenderDocumentRewrite()', () => {
+  it('rewrites the root path to `index.html`', () => {
+    expect(getPrerenderDocumentRewrite('index', 'index.html')).toEqual({
+      src: '^/$',
+      dest: '/index.html',
+    });
+  });
+
+  it('rewrites nested prerender paths to their HTML artifact', () => {
+    expect(getPrerenderDocumentRewrite('about', 'about.html')).toEqual({
+      src: '^/about/?$',
+      dest: '/about.html',
+    });
+  });
+});
+
+describe('shouldRegisterSsrForPrerenderedRoute()', () => {
+  it('keeps the SSR function only for the prerendered index route', () => {
+    expect(shouldRegisterSsrForPrerenderedRoute('index')).toBe(true);
+    expect(shouldRegisterSsrForPrerenderedRoute('about')).toBe(false);
+    expect(shouldRegisterSsrForPrerenderedRoute('__manifest')).toBe(false);
+  });
+});
+
+describe('getReactRouterCatchAllDest()', () => {
+  it('targets the index SSR function output key', () => {
+    expect(getReactRouterCatchAllDest()).toBe('index');
+  });
+});
+
+type RouteResolution = 'static-html' | 'ssr-function';
+
+function resolveReactRouterRequest(
+  requestPath: string,
+  options: {
+    prerenderRewrites: { src: string; dest: string }[];
+    catchAllDest: string;
+    hasIndexSsrFunction: boolean;
+    staticFiles: Set<string>;
+  }
+): RouteResolution {
+  for (const rewrite of options.prerenderRewrites) {
+    if (new RegExp(rewrite.src).test(requestPath)) {
+      const staticKey = rewrite.dest.replace(/^\//, '');
+      if (options.staticFiles.has(staticKey)) {
+        return 'static-html';
+      }
+    }
+  }
+
+  const staticKey = requestPath.replace(/^\//, '');
+  if (options.staticFiles.has(staticKey)) {
+    return 'static-html';
+  }
+
+  if (options.hasIndexSsrFunction && options.catchAllDest === 'index') {
+    return 'ssr-function';
+  }
+
+  if (options.staticFiles.has('index.html')) {
+    return 'static-html';
+  }
+
+  return 'ssr-function';
+}
+
+describe('react-router runtime route resolution with prerendered index', () => {
+  const prerenderRewrites = [
+    getPrerenderDocumentRewrite('index', 'index.html'),
+    getPrerenderDocumentRewrite('about', 'about.html'),
+  ];
+  const staticFiles = new Set([
+    'index.html',
+    '_root.data',
+    'about.html',
+    'about.data',
+  ]);
+
+  it('serves prerendered HTML for document requests', () => {
+    expect(
+      resolveReactRouterRequest('/', {
+        prerenderRewrites,
+        catchAllDest: getReactRouterCatchAllDest(),
+        hasIndexSsrFunction: true,
+        staticFiles,
+      })
+    ).toBe('static-html');
+    expect(
+      resolveReactRouterRequest('/about', {
+        prerenderRewrites,
+        catchAllDest: getReactRouterCatchAllDest(),
+        hasIndexSsrFunction: true,
+        staticFiles,
+      })
+    ).toBe('static-html');
+  });
+
+  it('routes `/__manifest` to the SSR function instead of prerendered HTML', () => {
+    expect(
+      resolveReactRouterRequest('/__manifest', {
+        prerenderRewrites,
+        catchAllDest: getReactRouterCatchAllDest(),
+        hasIndexSsrFunction: true,
+        staticFiles,
+      })
+    ).toBe('ssr-function');
+  });
+
+  it('regression: prerendered index without SSR catch-all served HTML for `/__manifest`', () => {
+    // Mirrors the broken CLI >=54.2.0 behavior from CICD-2715.
+    expect(
+      resolveReactRouterRequest('/__manifest', {
+        prerenderRewrites: [getPrerenderDocumentRewrite('about', 'about.html')],
+        catchAllDest: '/',
+        hasIndexSsrFunction: false,
+        staticFiles,
+      })
+    ).toBe('static-html');
   });
 });
 
@@ -103,19 +227,18 @@ describe('react-router prerender build output', () => {
 
       const htmlFile = findPrerenderedHtmlFile(path, staticFileKeys);
       if (htmlFile) {
-        assignments.push({ kind: 'static', path, htmlFile });
-        if (path !== 'index') {
-          prerenderRewrites.push({
-            src: `^/${path}/?$`,
-            dest: `/${htmlFile}`,
-          });
+        prerenderRewrites.push(getPrerenderDocumentRewrite(path, htmlFile));
+        if (!shouldRegisterSsrForPrerenderedRoute(path)) {
+          assignments.push({ kind: 'static', path, htmlFile });
+          continue;
         }
-        continue;
       }
 
       assignments.push({ kind: 'function', path });
       for (const dataPath of getReactRouterDataPaths(path)) {
-        dataAssignments.push({ dataPath, kind: 'function' });
+        if (!staticFileKeys.has(dataPath)) {
+          dataAssignments.push({ dataPath, kind: 'function' });
+        }
       }
       const reData = getRegExpFromPath(`${rePath}.data`);
       if (reData) {
@@ -127,7 +250,13 @@ describe('react-router prerender build output', () => {
       }
     }
 
-    return { assignments, dataAssignments, prerenderRewrites, dynamicRules };
+    return {
+      assignments,
+      dataAssignments,
+      prerenderRewrites,
+      dynamicRules,
+      catchAllDest: getReactRouterCatchAllDest(),
+    };
   }
 
   it('does not install an SSR function override for prerendered routes', () => {
@@ -140,11 +269,9 @@ describe('react-router prerender build output', () => {
     });
 
     const indexAssignment = assignments.find(a => a.path === 'index');
-    expect(indexAssignment).toEqual({
-      kind: 'static',
-      path: 'index',
-      htmlFile: 'index.html',
-    });
+    // The index route is prerendered but still registers its SSR function
+    // so runtime-only paths like `/__manifest` can reach the handler.
+    expect(indexAssignment).toEqual({ kind: 'function', path: 'index' });
   });
 
   it('still installs an SSR function override for non-prerendered routes', () => {
@@ -159,7 +286,7 @@ describe('react-router prerender build output', () => {
     });
   });
 
-  it('does not overwrite the prerendered `.data` file with the SSR function', () => {
+  it('does not overwrite prerendered `.data` files with the SSR function', () => {
     // For a prerendered route, the `.data` file was emitted by RR's prerender
     // step and is already in `staticFiles`. The build loop must NOT assign
     // the SSR function over the static `.data` key.
@@ -170,9 +297,12 @@ describe('react-router prerender build output', () => {
     expect(
       dataAssignments.find(d => d.dataPath === '_root.data')
     ).toBeUndefined();
-    expect(
-      dataAssignments.find(d => d.dataPath === 'index.data')
-    ).toBeUndefined();
+    // The root single-fetch URL is `/_root.data`; `index.data` is not
+    // prerendered and may still map to the SSR function.
+    expect(dataAssignments.find(d => d.dataPath === 'index.data')).toEqual({
+      dataPath: 'index.data',
+      kind: 'function',
+    });
   });
 
   it('emits a pre-filesystem rewrite from `/<path>` to the prerendered HTML file', () => {
@@ -184,12 +314,20 @@ describe('react-router prerender build output', () => {
       src: '^/about/?$',
       dest: '/about.html',
     });
-    // No rewrite needed for the root because BOA's filesystem handle
-    // already resolves `/` to `index.html` via the conventional index
-    // lookup; emitting a redundant rule would just be noise.
-    expect(
-      prerenderRewrites.find(r => r.dest === '/index.html')
-    ).toBeUndefined();
+    // The root route also needs an explicit rewrite so the catch-all SSR
+    // handler does not serve prerendered HTML for runtime-only paths.
+    expect(prerenderRewrites).toContainEqual({
+      src: '^/$',
+      dest: '/index.html',
+    });
+  });
+
+  it('routes the catch-all to the index SSR function for runtime-only paths', () => {
+    const { catchAllDest } = simulateBuildOutput();
+    // Internal React Router routes like `/__manifest` are not in the route
+    // manifest and rely on the catch-all reaching the SSR handler instead
+    // of a prerendered `index.html`.
+    expect(catchAllDest).toBe('index');
   });
 
   it('does not emit dynamic regex rules for prerendered routes', () => {

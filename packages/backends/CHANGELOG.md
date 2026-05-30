@@ -1,5 +1,18 @@
 # @vercel/backends
 
+## 0.8.3
+
+### Patch Changes
+
+- ab0e5aa: Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
+
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [6495585]
+  - @vercel/build-utils@13.26.4
+
 ## 0.8.1
 
 ### Patch Changes

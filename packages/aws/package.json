@@ -30,7 +30,7 @@
       "require": "./dist/dynamodb.js"
     }
   },
-  "version": "0.1.0",
+  "version": "0.2.1",
   "repository": {
     "directory": "packages/aws",
     "type": "git",
