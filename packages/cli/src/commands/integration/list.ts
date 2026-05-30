@@ -4,6 +4,8 @@ import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
 import type { Resource } from '../../util/integration-resource/types';
 import { getResources } from '../../util/integration-resource/get-resources';
+import { getClaimStatus } from '../../util/integration-resource/claim-status';
+import { packageName } from '../../util/pkg-name';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
@@ -135,6 +137,7 @@ export async function list(client: Client) {
     .filter(resourceIsFromMarketplace)
     .filter(filterOnFlags)
     .map(resource => {
+      const claim = getClaimStatus(resource);
       return {
         id: resource.id,
         name: resource.name,
@@ -143,8 +146,13 @@ export async function list(client: Client) {
         integration: resource.product?.slug,
         configurationId: resource.product?.integrationConfigurationId,
         projects: resource.projectsMetadata?.map(project => project.name),
+        claim,
       };
     });
+
+  const sandboxCount = results.filter(
+    r => r.claim.jsonValue === 'sandbox'
+  ).length;
 
   telemetry.trackCliOptionIntegration(
     parsedArguments.flags['--integration'],
@@ -160,6 +168,7 @@ export async function list(client: Client) {
       product: result.product,
       installationId: result.configurationId,
       projects: result.projects,
+      claim_status: result.claim.jsonValue,
     }));
     client.stdout.write(
       `${JSON.stringify({ resources: jsonResources }, null, 2)}\n`
@@ -179,12 +188,13 @@ export async function list(client: Client) {
   output.log(
     `${headerMessage}\n${table(
       [
-        ['Name', 'Status', 'Product', 'Integration', 'Projects'].map(header =>
-          chalk.bold(chalk.cyan(header))
+        ['Name', 'Status', 'Claim', 'Product', 'Integration', 'Projects'].map(
+          header => chalk.bold(chalk.cyan(header))
         ),
         ...results.map(result => [
           resourceLink(contextName, result) ?? chalk.gray('–'),
           resourceStatus(result.status ?? '–'),
+          result.claim.color(result.claim.label),
           result.product ?? chalk.gray('–'),
           integrationLink(result, team) ?? chalk.gray('–'),
           chalk.grey(
@@ -195,6 +205,15 @@ export async function list(client: Client) {
       { hsep: 8 }
     )}`
   );
+
+  if (sandboxCount > 0) {
+    const noun = sandboxCount === 1 ? 'resource' : 'resources';
+    output.log(`${sandboxCount} sandbox ${noun} can be claimed.`);
+    output.print(
+      `  Run \`${packageName} integration-resource claim <name>\` to claim one.\n`
+    );
+  }
+
   return 0;
 }
 

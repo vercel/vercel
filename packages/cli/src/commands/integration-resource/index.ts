@@ -8,11 +8,13 @@ import getSubcommand from '../../util/get-subcommand';
 import { IntegrationResourceTelemetryClient } from '../../util/telemetry/commands/integration-resource';
 import { type Command, help } from '../help';
 import {
+  claimSubcommand,
   createThresholdSubcommand,
   disconnectSubcommand,
   integrationResourceCommand,
   removeSubcommand,
 } from './command';
+import { claim } from './claim';
 import { createThreshold } from './create-threshold';
 import { disconnect } from './disconnect';
 import { remove } from './remove-resource';
@@ -21,6 +23,7 @@ const COMMAND_CONFIG = {
   remove: getCommandAliases(removeSubcommand),
   disconnect: getCommandAliases(disconnectSubcommand),
   'create-threshold': getCommandAliases(createThresholdSubcommand),
+  claim: getCommandAliases(claimSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -86,6 +89,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDisconnect(subcommandOriginal);
       return disconnect(client, subArgs);
+    }
+    case 'claim': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
+        printHelp(claimSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandClaim(subcommandOriginal);
+      return claim(client, subArgs);
     }
     default: {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

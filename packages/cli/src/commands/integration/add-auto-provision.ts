@@ -11,6 +11,9 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
+import { runClaimForResource } from '../integration-resource/claim';
+import { getResources } from '../../util/integration-resource/get-resources';
+import { packageName } from '../../util/pkg-name';
 import type {
   AcceptedPolicies,
   AutoProvisionedResponse,
@@ -44,6 +47,8 @@ interface AddAutoProvisionOptions extends PostProvisionOptions {
   installationId?: string;
   commandName?: 'integration add' | 'install';
   asJson?: boolean;
+  claim?: boolean;
+  noClaim?: boolean;
 }
 
 export async function addAutoProvision(
@@ -471,6 +476,58 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
+  // Sandbox resources (e.g. Stripe, Shopify) require the user to claim the
+  // account in the provider UI to convert from sandbox to a real owned account.
+  const isSandbox = provisioned.resource.ownership === 'sandbox';
+  if (isSandbox && !options.noClaim) {
+    telemetry.trackCliFlagClaim(options.claim);
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+
+    const shouldRunClaim =
+      options.claim || (client.stdin.isTTY && !options.asJson);
+
+    if (shouldRunClaim) {
+      let runClaim = !!options.claim;
+      if (!runClaim && client.stdin.isTTY) {
+        runClaim = await client.input.confirm(
+          `${chalk.bold(resourceName)} is a sandbox resource. Claim it now?`,
+          true
+        );
+      }
+
+      if (runClaim) {
+        try {
+          const allResources = await getResources(client);
+          const targetResource = allResources.find(
+            r => r.id === provisioned.resource.id
+          );
+          if (targetResource) {
+            await runClaimForResource(client, targetResource, {
+              suppressActionRequired: true,
+            });
+          } else {
+            output.warn(
+              `Could not locate the newly provisioned resource. Run \`${packageName} integration-resource claim ${resourceName}\` to claim it.`
+            );
+          }
+        } catch (error) {
+          output.warn(
+            `Failed to start claim flow: ${(error as Error).message}. Run \`${packageName} integration-resource claim ${resourceName}\` to retry.`
+          );
+        }
+      }
+    } else {
+      output.log(
+        `Sandbox resource — claim it with: ${chalk.cyan(`vercel integration-resource claim ${resourceName}`)}`
+      );
+    }
+  } else if (isSandbox && options.noClaim) {
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+    output.log(
+      `Sandbox resource — claim it later with: ${chalk.cyan(`vercel integration-resource claim ${resourceName}`)}`
+    );
+  }
+
   const guideSlug =
     integration.products.length > 1
       ? `${integration.slug}/${product.slug}`
@@ -528,6 +585,9 @@ export async function addAutoProvision(
         name: provisioned.resource.name,
         status: provisioned.resource.status,
         externalResourceId: provisioned.resource.externalResourceId,
+        ...(provisioned.resource.ownership && {
+          ownership: provisioned.resource.ownership,
+        }),
       },
       integration: {
         id: provisioned.integration.id,

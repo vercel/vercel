@@ -112,6 +112,13 @@ export async function add(
     }
   }
 
+  const claimFlag = flags['--claim'];
+  const noClaimFlag = flags['--no-claim'];
+  if (claimFlag && noClaimFlag) {
+    output.error('Cannot use both --claim and --no-claim.');
+    return 1;
+  }
+
   return await addAutoProvision(client, integrationSlug, resourceNameArg, {
     productSlug,
     metadata: metadataFlags,
@@ -123,5 +130,7 @@ export async function add(
     prefix,
     commandName,
     asJson,
+    claim: claimFlag,
+    noClaim: noClaimFlag,
   });
 }

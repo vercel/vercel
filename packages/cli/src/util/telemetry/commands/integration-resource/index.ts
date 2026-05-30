@@ -26,4 +26,11 @@ export class IntegrationResourceTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandClaim(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'claim',
+      value: actual,
+    });
+  }
 }
