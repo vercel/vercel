@@ -36,23 +36,48 @@ export interface ConnectTokenResponse {
   metadata?: Record<string, unknown>;
 }
 
-export class NoValidTokenError extends Error {
-  constructor(message: string) {
+export type ConnectVendorErrorPayload = Record<string, unknown>;
+
+export interface ConnectErrorOptions {
+  code?: string;
+  status?: number;
+  statusText?: string;
+  vendor?: ConnectVendorErrorPayload;
+}
+
+export class ConnectError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+  readonly statusText?: string;
+  readonly vendor?: ConnectVendorErrorPayload;
+
+  constructor(message: string, options: ConnectErrorOptions = {}) {
     super(message);
+    this.name = 'ConnectError';
+    this.code = options.code;
+    this.status = options.status;
+    this.statusText = options.statusText;
+    this.vendor = options.vendor;
+  }
+}
+
+export class NoValidTokenError extends ConnectError {
+  constructor(message: string, options?: ConnectErrorOptions) {
+    super(message, options);
     this.name = 'NoValidTokenError';
   }
 }
 
-export class UserAuthorizationRequiredError extends Error {
-  constructor(message: string) {
-    super(message);
+export class UserAuthorizationRequiredError extends ConnectError {
+  constructor(message: string, options?: ConnectErrorOptions) {
+    super(message, options);
     this.name = 'UserAuthorizationRequiredError';
   }
 }
 
-export class ConnectorInstallationRequiredError extends Error {
-  constructor(message: string) {
-    super(message);
+export class ConnectorInstallationRequiredError extends ConnectError {
+  constructor(message: string, options?: ConnectErrorOptions) {
+    super(message, options);
     this.name = 'ConnectorInstallationRequiredError';
   }
 }
@@ -103,48 +128,7 @@ export async function getTokenResponse(
   });
 
   if (!response.ok) {
-    let errorText: string | undefined;
-    let errorObject:
-      | { error?: { code?: string; message?: string } }
-      | undefined;
-    try {
-      errorText = await response.text();
-      const errorJson = JSON.parse(errorText);
-      if (typeof errorJson === 'object' && errorJson !== null) {
-        errorObject = errorJson;
-      }
-    } catch {}
-    const code = errorObject?.error?.code;
-    const message = errorObject?.error?.message;
-    if (code === 'no_token') {
-      throw new NoValidTokenError(
-        message || errorText || 'No valid token available'
-      );
-    }
-    if (code === 'user_authorization_required') {
-      throw new UserAuthorizationRequiredError(
-        message || errorText || 'User authorization is required'
-      );
-    }
-    if (
-      code === 'client_installation_required' ||
-      code === 'connector_installation_required'
-    ) {
-      throw new ConnectorInstallationRequiredError(
-        message || errorText || 'Connector installation is required'
-      );
-    }
-    throw new Error(
-      [
-        'Failed to get token:',
-        `${response.status}`,
-        response.statusText,
-        code ? ` - ${code}` : '',
-        errorText ? ` - ${errorText}` : '',
-      ]
-        .filter(Boolean)
-        .join(' ')
-    );
+    throw await createConnectErrorFromResponse(response, 'Failed to get token');
   }
 
   const data: ConnectTokenResponse = await response.json();
@@ -179,4 +163,146 @@ function evictLru(): void {
   if (oldestKey !== undefined) {
     cache.delete(oldestKey);
   }
+}
+
+interface ParsedConnectErrorResponse {
+  bodyText?: string;
+  code?: string;
+  message?: string;
+  vendor?: ConnectVendorErrorPayload;
+}
+
+export async function createConnectErrorFromResponse(
+  response: Response,
+  fallbackMessage: string
+): Promise<ConnectError> {
+  const parsedError = await readConnectErrorResponse(response);
+  return createConnectError(response, parsedError, fallbackMessage);
+}
+
+function createConnectError(
+  response: Response,
+  parsedError: ParsedConnectErrorResponse,
+  fallbackMessage: string
+): ConnectError {
+  const { code, message, bodyText } = parsedError;
+  const errorOptions = connectErrorOptions(response, parsedError);
+
+  if (code === 'no_token') {
+    return new NoValidTokenError(
+      message || bodyText || 'No valid token available',
+      errorOptions
+    );
+  }
+
+  if (code === 'user_authorization_required') {
+    return new UserAuthorizationRequiredError(
+      message || bodyText || 'User authorization is required',
+      errorOptions
+    );
+  }
+
+  if (
+    code === 'client_installation_required' ||
+    code === 'connector_installation_required'
+  ) {
+    return new ConnectorInstallationRequiredError(
+      message || bodyText || 'Connector installation is required',
+      errorOptions
+    );
+  }
+
+  return new ConnectError(
+    buildConnectResponseErrorMessage(response, parsedError, fallbackMessage),
+    errorOptions
+  );
+}
+
+async function readConnectErrorResponse(
+  response: Response
+): Promise<ParsedConnectErrorResponse> {
+  let bodyText: string | undefined;
+  try {
+    bodyText = await response.text();
+  } catch {}
+
+  if (!bodyText) {
+    return {};
+  }
+
+  try {
+    const body = JSON.parse(bodyText);
+    if (!isRecord(body)) {
+      return { bodyText };
+    }
+
+    const error = isRecord(body.error)
+      ? body.error
+      : isRecord(body.err)
+        ? body.err
+        : undefined;
+
+    if (!error) {
+      return { bodyText, vendor: vendorPayload(body) };
+    }
+
+    return {
+      bodyText,
+      code: typeof error.code === 'string' ? error.code : undefined,
+      message: typeof error.message === 'string' ? error.message : undefined,
+      vendor: vendorPayload(error) ?? vendorPayload(body),
+    };
+  } catch {
+    return { bodyText };
+  }
+}
+
+function connectErrorOptions(
+  response: Response,
+  parsedError: ParsedConnectErrorResponse
+): ConnectErrorOptions {
+  return {
+    code: parsedError.code,
+    status: response.status,
+    statusText: response.statusText,
+    vendor: parsedError.vendor,
+  };
+}
+
+function buildConnectResponseErrorMessage(
+  response: Response,
+  parsedError: ParsedConnectErrorResponse,
+  fallbackMessage: string
+): string {
+  if (parsedError.message) {
+    return parsedError.message;
+  }
+
+  return [
+    `${fallbackMessage}:`,
+    `${response.status}`,
+    response.statusText,
+    parsedError.code ? ` - ${parsedError.code}` : '',
+    parsedError.bodyText ? ` - ${parsedError.bodyText}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function vendorPayload(
+  error: Record<string, unknown>
+): ConnectVendorErrorPayload | undefined {
+  if (isRecord(error.vendor)) {
+    return error.vendor;
+  }
+
+  if (isRecord(error.meta) && isRecord(error.meta.vendor)) {
+    return error.meta.vendor;
+  }
+
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
