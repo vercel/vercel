@@ -71,7 +71,6 @@ describe('integration', () => {
         expect(header).toEqual([
           'Name',
           'Status',
-          'Claim',
           'Product',
           'Integration',
           'Projects',
@@ -81,7 +80,6 @@ describe('integration', () => {
         let data = parseSpacedTableRow(line.value ?? '');
         expect(data).toEqual([
           'store-acme-connected-project',
-          '–',
           '–',
           'Acme',
           'acme',
@@ -93,7 +91,6 @@ describe('integration', () => {
         expect(data).toEqual([
           'store-foo-bar-both-projects',
           '● Initializing',
-          '–',
           'Foo Bar',
           'foo-bar',
           'connected-project',
@@ -139,7 +136,6 @@ describe('integration', () => {
           expect(header).toEqual([
             'Name',
             'Status',
-            'Claim',
             'Product',
             'Integration',
             'Projects',
@@ -149,7 +145,6 @@ describe('integration', () => {
           let data = parseSpacedTableRow(line.value ?? '');
           expect(data).toEqual([
             'store-acme-connected-project',
-            '–',
             '–',
             'Acme',
             'acme',
@@ -161,7 +156,6 @@ describe('integration', () => {
           expect(data).toEqual([
             'store-foo-bar-both-projects',
             '● Initializing',
-            '–',
             'Foo Bar',
             'foo-bar',
             'connected-project',
@@ -205,7 +199,6 @@ describe('integration', () => {
           expect(header).toEqual([
             'Name',
             'Status',
-            'Claim',
             'Product',
             'Integration',
             'Projects',
@@ -215,7 +208,6 @@ describe('integration', () => {
           let data = parseSpacedTableRow(line.value ?? '');
           expect(data).toEqual([
             'store-acme-connected-project',
-            '–',
             '–',
             'Acme',
             'acme',
@@ -227,7 +219,6 @@ describe('integration', () => {
           expect(data).toEqual([
             'store-acme-other-project',
             '● Available',
-            '–',
             'Acme',
             'acme',
             'other-project',
@@ -238,7 +229,6 @@ describe('integration', () => {
           expect(data).toEqual([
             'store-foo-bar-both-projects',
             '● Initializing',
-            '–',
             'Foo Bar',
             'foo-bar',
             'connected-project',
@@ -250,7 +240,6 @@ describe('integration', () => {
           expect(data).toEqual([
             'store-acme-no-projects',
             '● Available',
-            '–',
             'Acme',
             'acme',
             '–',
@@ -298,7 +287,6 @@ describe('integration', () => {
           expect(header).toEqual([
             'Name',
             'Status',
-            'Claim',
             'Product',
             'Integration',
             'Projects',
@@ -308,7 +296,6 @@ describe('integration', () => {
           const data = parseSpacedTableRow(line.value ?? '');
           expect(data).toEqual([
             'store-acme-connected-project',
-            '–',
             '–',
             'Acme',
             'acme',
@@ -339,7 +326,6 @@ describe('integration', () => {
           expect(header).toEqual([
             'Name',
             'Status',
-            'Claim',
             'Product',
             'Integration',
             'Projects',
@@ -349,7 +335,6 @@ describe('integration', () => {
           let data = parseSpacedTableRow(line.value ?? '');
           expect(data).toEqual([
             'store-acme-connected-project',
-            '–',
             '–',
             'Acme',
             'acme',
@@ -361,7 +346,6 @@ describe('integration', () => {
           expect(data).toEqual([
             'store-acme-other-project',
             '● Available',
-            '–',
             'Acme',
             'acme',
             'other-project',
@@ -372,7 +356,6 @@ describe('integration', () => {
           expect(data).toEqual([
             'store-acme-no-projects',
             '● Available',
-            '–',
             'Acme',
             'acme',
             '–',
@@ -464,14 +447,14 @@ describe('integration', () => {
           ]);
         });
 
-        it('includes claim_status="na" for resources without ownership', async () => {
+        it('omits claim_status entirely for non-sandbox resources', async () => {
           client.setArgv('integration', 'list', '--format=json');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(0);
 
           const jsonOutput = JSON.parse(client.stdout.getFullOutput());
           for (const resource of jsonOutput.resources) {
-            expect(resource).toHaveProperty('claim_status', 'na');
+            expect(resource).not.toHaveProperty('claim_status');
           }
         });
       });

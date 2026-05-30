@@ -20,10 +20,7 @@ import {
   ClaimUrlError,
 } from '../../util/integration-resource/create-claim-url';
 import { pollForClaim } from '../../util/integration-resource/poll-for-claim';
-import {
-  getClaimStatus,
-  isSandboxResource,
-} from '../../util/integration-resource/claim-status';
+import { isSandboxResource } from '../../util/integration-resource/claim-status';
 import { IntegrationResourceClaimTelemetryClient } from '../../util/telemetry/commands/integration-resource/claim';
 import type { Resource } from '../../util/integration-resource/types';
 import { claimSubcommand } from './command';
@@ -175,9 +172,8 @@ export async function runClaimForResource(
   // Defensive: if the user named a non-sandbox resource, surface a clean error
   // without hitting the API.
   if (!isSandboxResource(targetResource)) {
-    const status = getClaimStatus(targetResource);
     output.error(
-      `'${targetResource.name}' is not a sandbox resource and cannot be claimed (current claim status: ${status.jsonValue}).`
+      `'${targetResource.name}' is not a sandbox resource and cannot be claimed.`
     );
     return 1;
   }
