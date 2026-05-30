@@ -1,7 +1,7 @@
 import { Pool, type PoolConfig } from 'pg';
 import { DsqlSigner } from '@aws-sdk/dsql-signer';
 import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
-import { requireEnv, resolvePrefix } from './internal/resolve-prefix';
+import { envKey, requireEnv, resolvePrefix } from './internal/resolve-prefix';
 
 /**
  * Options for {@link createAuroraDSQL}.
@@ -58,15 +58,20 @@ export function createAuroraDSQL(opts: CreateAuroraDSQLOptions = {}): Pool {
   const region = opts.region ?? fromEnv('AWS_REGION');
   const roleArn = opts.roleArn ?? fromEnv('AWS_ROLE_ARN');
 
-  const portValue = prefix ? process.env[`${prefix}_PGPORT`] : undefined;
+  const portValue =
+    prefix !== undefined ? process.env[envKey(prefix, 'PGPORT')] : undefined;
   const port = opts.port ?? (portValue ? Number(portValue) : 5432);
   const user =
     opts.user ??
-    (prefix ? process.env[`${prefix}_PGUSER`] : undefined) ??
+    (prefix !== undefined
+      ? process.env[envKey(prefix, 'PGUSER')]
+      : undefined) ??
     'admin';
   const database =
     opts.database ??
-    (prefix ? process.env[`${prefix}_PGDATABASE`] : undefined) ??
+    (prefix !== undefined
+      ? process.env[envKey(prefix, 'PGDATABASE')]
+      : undefined) ??
     'postgres';
 
   const {

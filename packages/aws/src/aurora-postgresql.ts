@@ -1,7 +1,7 @@
 import { Pool, type PoolConfig } from 'pg';
 import { Signer } from '@aws-sdk/rds-signer';
 import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
-import { requireEnv, resolvePrefix } from './internal/resolve-prefix';
+import { envKey, requireEnv, resolvePrefix } from './internal/resolve-prefix';
 
 /**
  * Options for {@link createAuroraPostgreSQL}.
@@ -62,13 +62,17 @@ export function createAuroraPostgreSQL(
   const roleArn = opts.roleArn ?? fromEnv('AWS_ROLE_ARN');
   const user = opts.user ?? fromEnv('PGUSER');
 
-  const portValue = prefix ? process.env[`${prefix}_PGPORT`] : undefined;
+  const portValue =
+    prefix !== undefined ? process.env[envKey(prefix, 'PGPORT')] : undefined;
   const port = opts.port ?? (portValue ? Number(portValue) : 5432);
   const database =
     opts.database ??
-    (prefix ? process.env[`${prefix}_PGDATABASE`] : undefined) ??
+    (prefix !== undefined
+      ? process.env[envKey(prefix, 'PGDATABASE')]
+      : undefined) ??
     'postgres';
-  const sslmode = prefix ? process.env[`${prefix}_PGSSLMODE`] : undefined;
+  const sslmode =
+    prefix !== undefined ? process.env[envKey(prefix, 'PGSSLMODE')] : undefined;
 
   const {
     prefix: _p,

@@ -32,10 +32,15 @@ import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
 import { createDynamoDB, createDynamoDBDocument } from './dynamodb';
 
 const KEYS = [
+  'AWS_RESOURCE_ARN',
+  'AWS_REGION',
+  'AWS_ROLE_ARN',
   'STORAGE_AWS_RESOURCE_ARN',
   'STORAGE_AWS_REGION',
   'STORAGE_AWS_ROLE_ARN',
   'STORAGE2_AWS_RESOURCE_ARN',
+  'STORAGE2_AWS_REGION',
+  'STORAGE2_AWS_ROLE_ARN',
 ];
 
 describe('createDynamoDB', () => {
@@ -99,6 +104,41 @@ describe('createDynamoDB', () => {
     process.env.STORAGE2_AWS_RESOURCE_ARN =
       'arn:aws:dynamodb:us-east-2:1:table/two';
     expect(() => createDynamoDB()).toThrow(/multiple DynamoDB resources/);
+  });
+
+  test('autodetects an unprefixed default connection', () => {
+    process.env.AWS_RESOURCE_ARN = 'arn:aws:dynamodb:us-east-2:1:table/default';
+    process.env.AWS_REGION = 'us-east-2';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
+
+    const client = createDynamoDB();
+    const config = (client as unknown as { config: Record<string, unknown> })
+      .config;
+    expect(config.region).toBe('us-east-2');
+    expect(awsCredentialsProvider).toHaveBeenCalledWith({
+      roleArn: 'arn:aws:iam::1:role/default',
+    });
+  });
+
+  test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
+    process.env.AWS_RESOURCE_ARN = 'arn:aws:dynamodb:us-east-2:1:table/default';
+    process.env.AWS_REGION = 'us-east-2';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
+
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:dynamodb:eu-west-1:1:table/second';
+    process.env.STORAGE2_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
+
+    const a = createDynamoDB();
+    const b = createDynamoDB({ prefix: 'STORAGE2' });
+
+    expect((a as unknown as { config: { region: string } }).config.region).toBe(
+      'us-east-2'
+    );
+    expect((b as unknown as { config: { region: string } }).config.region).toBe(
+      'eu-west-1'
+    );
   });
 });
 

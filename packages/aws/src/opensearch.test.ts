@@ -26,6 +26,10 @@ import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
 import { createOpenSearch } from './opensearch';
 
 const KEYS = [
+  'AWS_RESOURCE_ARN',
+  'OPENSEARCH_ENDPOINT',
+  'AWS_REGION',
+  'AWS_ROLE_ARN',
   'STORAGE_AWS_RESOURCE_ARN',
   'STORAGE_OPENSEARCH_ENDPOINT',
   'STORAGE_AWS_REGION',
@@ -127,5 +131,45 @@ describe('createOpenSearch', () => {
     process.env.STORAGE2_AWS_RESOURCE_ARN =
       'arn:aws:aoss:us-east-2:1:collection/two';
     expect(() => createOpenSearch()).toThrow(/multiple OpenSearch resources/);
+  });
+
+  test('autodetects an unprefixed default connection', () => {
+    process.env.AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/default';
+    process.env.OPENSEARCH_ENDPOINT = 'https://default.example';
+    process.env.AWS_REGION = 'us-east-2';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
+
+    const client = createOpenSearch();
+    const signerArgs = (AwsSigv4Signer as unknown as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0] as { region: string };
+    expect(signerArgs.region).toBe('us-east-2');
+    expect(
+      (client as unknown as { options: { node: string } }).options.node
+    ).toBe('https://default.example');
+  });
+
+  test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
+    process.env.AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/default';
+    process.env.OPENSEARCH_ENDPOINT = 'https://default.example';
+    process.env.AWS_REGION = 'us-east-2';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
+
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:aoss:eu-west-1:1:collection/second';
+    process.env.STORAGE2_OPENSEARCH_ENDPOINT = 'https://second.example';
+    process.env.STORAGE2_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
+
+    const a = createOpenSearch();
+    const b = createOpenSearch({ prefix: 'STORAGE2' });
+
+    expect((a as unknown as { options: { node: string } }).options.node).toBe(
+      'https://default.example'
+    );
+    expect((b as unknown as { options: { node: string } }).options.node).toBe(
+      'https://second.example'
+    );
   });
 });

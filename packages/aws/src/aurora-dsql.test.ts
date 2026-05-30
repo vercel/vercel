@@ -29,6 +29,13 @@ import { DsqlSigner } from '@aws-sdk/dsql-signer';
 import { createAuroraDSQL } from './aurora-dsql';
 
 const KEYS = [
+  'AWS_RESOURCE_ARN',
+  'AWS_REGION',
+  'AWS_ROLE_ARN',
+  'PGHOST',
+  'PGPORT',
+  'PGUSER',
+  'PGDATABASE',
   'STORAGE_AWS_RESOURCE_ARN',
   'STORAGE_AWS_REGION',
   'STORAGE_AWS_ROLE_ARN',
@@ -37,6 +44,12 @@ const KEYS = [
   'STORAGE_PGUSER',
   'STORAGE_PGDATABASE',
   'STORAGE2_AWS_RESOURCE_ARN',
+  'STORAGE2_AWS_REGION',
+  'STORAGE2_AWS_ROLE_ARN',
+  'STORAGE2_PGHOST',
+  'STORAGE2_PGPORT',
+  'STORAGE2_PGUSER',
+  'STORAGE2_PGDATABASE',
 ];
 
 describe('createAuroraDSQL', () => {
@@ -117,5 +130,45 @@ describe('createAuroraDSQL', () => {
     process.env.STORAGE2_AWS_RESOURCE_ARN =
       'arn:aws:dsql:us-east-2:1:cluster/def';
     expect(() => createAuroraDSQL()).toThrow(/multiple Aurora DSQL resources/);
+  });
+
+  function setDefault() {
+    process.env.AWS_RESOURCE_ARN = 'arn:aws:dsql:us-east-2:1:cluster/default';
+    process.env.AWS_REGION = 'us-east-2';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
+    process.env.PGHOST = 'default.dsql.us-east-2.on.aws';
+    process.env.PGPORT = '5432';
+    process.env.PGUSER = 'admin';
+    process.env.PGDATABASE = 'postgres';
+  }
+
+  test('autodetects an unprefixed default connection', () => {
+    setDefault();
+
+    const pool = createAuroraDSQL();
+    const config = (pool as unknown as { config: Record<string, unknown> })
+      .config;
+    expect(config.host).toBe('default.dsql.us-east-2.on.aws');
+    expect(config.database).toBe('postgres');
+  });
+
+  test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
+    setDefault();
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:dsql:eu-west-1:1:cluster/second';
+    process.env.STORAGE2_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
+    process.env.STORAGE2_PGHOST = 'second.dsql.eu-west-1.on.aws';
+    process.env.STORAGE2_PGPORT = '5432';
+    process.env.STORAGE2_PGUSER = 'admin';
+    process.env.STORAGE2_PGDATABASE = 'postgres';
+
+    const db1 = createAuroraDSQL();
+    const db2 = createAuroraDSQL({ prefix: 'STORAGE2' });
+
+    const host1 = (db1 as unknown as { config: { host: string } }).config.host;
+    const host2 = (db2 as unknown as { config: { host: string } }).config.host;
+    expect(host1).toBe('default.dsql.us-east-2.on.aws');
+    expect(host2).toBe('second.dsql.eu-west-1.on.aws');
   });
 });

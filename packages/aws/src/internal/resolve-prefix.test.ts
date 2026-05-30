@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { resolvePrefix, requireEnv } from './resolve-prefix';
+import { envKey, resolvePrefix, requireEnv } from './resolve-prefix';
 
 describe('resolvePrefix', () => {
   const original: Record<string, string | undefined> = {};
   const KEYS = [
+    'AWS_RESOURCE_ARN',
     'STORAGE_AWS_RESOURCE_ARN',
     'STORAGE2_AWS_RESOURCE_ARN',
     'STORAGE3_AWS_RESOURCE_ARN',
@@ -82,6 +83,28 @@ describe('resolvePrefix', () => {
       })
     ).toThrow(/multiple Aurora DSQL resources[\s\S]*STORAGE2[\s\S]*STORAGE3/);
   });
+
+  test('returns the empty prefix for an unprefixed default connection', () => {
+    process.env.AWS_RESOURCE_ARN = 'arn:aws:dsql:us-east-2:1:cluster/abc';
+    const prefix = resolvePrefix({
+      factory: 'createAuroraDSQL',
+      service: 'Aurora DSQL',
+      arnPrefix: 'arn:aws:dsql:',
+    });
+    expect(prefix).toBe('');
+  });
+
+  test('prefers the unprefixed default when prefixed resources also exist', () => {
+    process.env.AWS_RESOURCE_ARN = 'arn:aws:dsql:us-east-2:1:cluster/default';
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:dsql:eu-west-1:1:cluster/second';
+    const prefix = resolvePrefix({
+      factory: 'createAuroraDSQL',
+      service: 'Aurora DSQL',
+      arnPrefix: 'arn:aws:dsql:',
+    });
+    expect(prefix).toBe('');
+  });
 });
 
 describe('requireEnv', () => {
@@ -102,5 +125,24 @@ describe('requireEnv', () => {
     expect(() => requireEnv('createAuroraDSQL', 'STORAGE', 'PGHOST')).toThrow(
       /missing required environment variable STORAGE_PGHOST/
     );
+  });
+
+  test('reads the bare suffix when prefix is empty', () => {
+    process.env.PGHOST = 'default.host';
+    try {
+      expect(requireEnv('createAuroraDSQL', '', 'PGHOST')).toBe('default.host');
+    } finally {
+      delete process.env.PGHOST;
+    }
+  });
+});
+
+describe('envKey', () => {
+  test('returns bare suffix when prefix is empty', () => {
+    expect(envKey('', 'PGHOST')).toBe('PGHOST');
+  });
+
+  test('joins with underscore when prefix is non-empty', () => {
+    expect(envKey('STORAGE2', 'PGHOST')).toBe('STORAGE2_PGHOST');
   });
 });

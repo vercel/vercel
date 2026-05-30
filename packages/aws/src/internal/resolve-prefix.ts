@@ -1,16 +1,27 @@
 /**
- * Scans `process.env` for env vars matching `<PREFIX>_AWS_RESOURCE_ARN` whose
- * value starts with the given ARN service segment (e.g. `arn:aws:dsql:`).
+ * Scans `process.env` for env vars matching `<PREFIX>_AWS_RESOURCE_ARN` (or
+ * the bare `AWS_RESOURCE_ARN`, which the Marketplace injects for the first
+ * connected resource) whose value starts with the given ARN service segment
+ * (e.g. `arn:aws:dsql:`).
  *
- * Each Vercel Marketplace storage integration is linked to a project with a
- * user-chosen prefix. Vercel then injects every config value under that
- * prefix (e.g. `STORAGE_PGHOST`, `MY_DB_AWS_REGION`). Since the integration
+ * Each Vercel Marketplace storage integration is linked to a project under
+ * a prefix. The first connection has no prefix and uses bare env vars
+ * (`AWS_RESOURCE_ARN`, `PGHOST`, …); additional connections are prefixed
+ * (`STORAGE2_AWS_RESOURCE_ARN`, `STORAGE2_PGHOST`, …). Since the integration
  * the user wants is identified by its resource ARN — and the ARN contains
  * the AWS service name — we can derive the prefix from any matching
- * `_AWS_RESOURCE_ARN` in env.
+ * `_AWS_RESOURCE_ARN` (or bare `AWS_RESOURCE_ARN`) in env.
  *
- * Returns the matched prefix when exactly one resource of the given service
- * is connected. Throws a descriptive error otherwise.
+ * The returned prefix is an empty string for the unprefixed default
+ * connection, or the captured prefix otherwise.
+ *
+ * When a default and one or more prefixed resources of the same service are
+ * connected, the default wins — matching the Marketplace convention that the
+ * first connection is the implicit "primary." Callers can still request a
+ * specific prefixed resource explicitly via `{ prefix }`.
+ *
+ * Throws when no resource of the given service is connected, or when
+ * multiple prefixed resources are connected without a default to disambiguate.
  */
 export function resolvePrefix(opts: {
   /** Factory name, used in error messages. */
@@ -22,11 +33,20 @@ export function resolvePrefix(opts: {
 }): string {
   const matches: Array<{ prefix: string; arn: string }> = [];
   for (const [key, value] of Object.entries(process.env)) {
-    if (!key.endsWith('_AWS_RESOURCE_ARN')) continue;
     if (!value || !value.startsWith(opts.arnPrefix)) continue;
-    const prefix = key.slice(0, -'_AWS_RESOURCE_ARN'.length);
+    let prefix: string;
+    if (key === 'AWS_RESOURCE_ARN') {
+      prefix = '';
+    } else if (key.endsWith('_AWS_RESOURCE_ARN')) {
+      prefix = key.slice(0, -'_AWS_RESOURCE_ARN'.length);
+    } else {
+      continue;
+    }
     matches.push({ prefix, arn: value });
   }
+
+  const defaultMatch = matches.find(m => m.prefix === '');
+  if (defaultMatch) return defaultMatch.prefix;
 
   if (matches.length === 1) {
     return matches[0].prefix;
@@ -49,6 +69,14 @@ export function resolvePrefix(opts: {
 }
 
 /**
+ * Joins a prefix and suffix into an env var key. The unprefixed default
+ * connection uses bare keys (no leading underscore).
+ */
+export function envKey(prefix: string, suffix: string): string {
+  return prefix === '' ? suffix : `${prefix}_${suffix}`;
+}
+
+/**
  * Reads a required prefixed env var, throwing a helpful error if missing.
  */
 export function requireEnv(
@@ -56,7 +84,7 @@ export function requireEnv(
   prefix: string,
   suffix: string
 ): string {
-  const key = `${prefix}_${suffix}`;
+  const key = envKey(prefix, suffix);
   const value = process.env[key];
   if (!value) {
     throw new Error(

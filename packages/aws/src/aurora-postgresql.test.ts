@@ -28,6 +28,14 @@ import { Signer } from '@aws-sdk/rds-signer';
 import { createAuroraPostgreSQL } from './aurora-postgresql';
 
 const KEYS = [
+  'AWS_RESOURCE_ARN',
+  'AWS_REGION',
+  'AWS_ROLE_ARN',
+  'PGHOST',
+  'PGPORT',
+  'PGUSER',
+  'PGDATABASE',
+  'PGSSLMODE',
   'STORAGE_AWS_RESOURCE_ARN',
   'STORAGE_AWS_REGION',
   'STORAGE_AWS_ROLE_ARN',
@@ -37,6 +45,13 @@ const KEYS = [
   'STORAGE_PGDATABASE',
   'STORAGE_PGSSLMODE',
   'STORAGE2_AWS_RESOURCE_ARN',
+  'STORAGE2_AWS_REGION',
+  'STORAGE2_AWS_ROLE_ARN',
+  'STORAGE2_PGHOST',
+  'STORAGE2_PGPORT',
+  'STORAGE2_PGUSER',
+  'STORAGE2_PGDATABASE',
+  'STORAGE2_PGSSLMODE',
 ];
 
 describe('createAuroraPostgreSQL', () => {
@@ -115,6 +130,48 @@ describe('createAuroraPostgreSQL', () => {
       'arn:aws:rds:us-east-2:1:cluster:two';
     expect(() => createAuroraPostgreSQL()).toThrow(
       /multiple Aurora PostgreSQL resources/
+    );
+  });
+
+  function setDefault() {
+    process.env.AWS_RESOURCE_ARN = 'arn:aws:rds:us-east-2:1:cluster:default';
+    process.env.AWS_REGION = 'us-east-2';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
+    process.env.PGHOST = 'default.cluster.us-east-2.rds.amazonaws.com';
+    process.env.PGPORT = '5432';
+    process.env.PGUSER = 'app_user';
+    process.env.PGDATABASE = 'app';
+    process.env.PGSSLMODE = 'require';
+  }
+
+  test('autodetects an unprefixed default connection', () => {
+    setDefault();
+
+    const pool = createAuroraPostgreSQL();
+    const config = (pool as unknown as { config: Record<string, unknown> })
+      .config;
+    expect(config.host).toBe('default.cluster.us-east-2.rds.amazonaws.com');
+    expect(config.database).toBe('app');
+  });
+
+  test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
+    setDefault();
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:rds:eu-west-1:1:cluster:second';
+    process.env.STORAGE2_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
+    process.env.STORAGE2_PGHOST = 'second.cluster.eu-west-1.rds.amazonaws.com';
+    process.env.STORAGE2_PGUSER = 'app_user';
+    process.env.STORAGE2_PGDATABASE = 'app';
+
+    const db1 = createAuroraPostgreSQL();
+    const db2 = createAuroraPostgreSQL({ prefix: 'STORAGE2' });
+
+    expect((db1 as unknown as { config: { host: string } }).config.host).toBe(
+      'default.cluster.us-east-2.rds.amazonaws.com'
+    );
+    expect((db2 as unknown as { config: { host: string } }).config.host).toBe(
+      'second.cluster.eu-west-1.rds.amazonaws.com'
     );
   });
 });
