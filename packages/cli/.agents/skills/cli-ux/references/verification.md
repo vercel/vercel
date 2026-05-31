@@ -15,6 +15,8 @@ When changing CLI UX behavior:
 - cover stdout/stderr split for JSON or parseable output
 - cover warnings on stderr and never on machine stdout
 - cover empty list output: human empty copy, filtered empty copy, machine `[]`/`{}` stdout, exit `0`
+- cover resolved-state previews before confirmations when a command infers a resource
+- cover result blocks for local and remote side effects when mutations touch both
 - cover `--no-color`, `NO_COLOR`, and no ANSI where machine output is involved
 - cover `--yes`, `--force`, typed confirmation, and `--dry-run` when the command family supports them
 - cover retry/no-duplicate behavior for remote mutations
@@ -44,6 +46,9 @@ Reject or fix changes that:
 
 - add inferable prompts
 - ask the same concept twice
+- change prompt or success copy without checking surrounding flow and layout
+- confirm an inferred resource without showing the resolved target first
+- report a multi-side-effect mutation with one-line success only
 - use `scope` where `team` works
 - add emoji to primary result or progress rows
 - put timing on URL rows

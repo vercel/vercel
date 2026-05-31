@@ -88,6 +88,8 @@ Order:
 Rules:
 
 - Show detected state before dependent prompts.
+- A copy change is incomplete until the surrounding flow is checked: resolved state before decisions, side effects after mutation, and exact next action when useful.
+- Do not let better wording hide a bad order; move the state/result into the right surface.
 - Group related questions.
 - Prefer one chooser over several vague yes/no prompts.
 - Yes/no prompts confirm a concrete thing, not vague intent.
@@ -101,12 +103,15 @@ Any command that resolves a resource or changes local/remote state should use th
 
 - Treat an explicit command invocation as intent; do not ask a vague intent-confirmation prompt.
 - Show the resolved target before prompts or mutation: team, project, domain, path, environment, or integration.
+- Before confirming an inferred resource, show it as structured state, usually aligned rows such as `Project`, `Team`, `Directory`, `Source`, or `Settings`.
 - Ask for the smallest missing value with a concrete noun: `Which team?`, `Project?`, `Domain?`, `Environment?`, `Name?`.
 - Ask `Customize settings?` only after showing the inferred settings.
 - Ask root/path questions only when there is real ambiguity.
 - Compress detection into one useful line when possible.
 - Drop emoji from primary result and progress rows.
 - Print durable mutations as aligned result rows when there are multiple fields.
+- After local and remote mutation, result rows show both the remote resource and durable local artifacts changed.
+- `Linked`, `Created`, `Added`, and similar success rows confirm the outcome; they do not replace pre-confirmation resolved-state rows.
 - If work continues elsewhere, end with a stable inspect/status/logs command.
 - Offer optional follow-up work only when TTY, safe, and clearly secondary.
 - In non-interactive mode, emit the exact missing flag, payload field, or next command instead of asking.
@@ -185,8 +190,11 @@ Rules:
 - label width: 12 chars
 - value column: 14
 - Use aligned rows for durable multi-field results: links, deployments, aliases, domains, integrations, environment changes, and other completed mutations.
+- Use aligned rows for compact resolved-state previews before confirmation when a command has identified a resource.
 - Do not force aligned rows onto simple one-line success, plain lists, or dense tables.
 - Aligned-row labels are Title-Case nouns: `Linked`, `Inspect`, `Production`.
+- Preview labels use stable Title-Case nouns: `Project`, `Team`, `Directory`, `Source`, `Settings`.
+- If a mutation changes multiple durable things, one-line success is insufficient; print a compact result block.
 - Production touchpoints may use `▲`; preview/non-production rows do not.
 - URLs are cyan in human output and plain strings in JSON.
 - No colon after labels in aligned rows.
