@@ -17,6 +17,7 @@ When changing CLI UX behavior:
 - cover empty list output: human empty copy, filtered empty copy, machine `[]`/`{}` stdout, exit `0`
 - cover resolved-state previews before confirmations when a command infers a resource
 - cover result blocks for local and remote side effects when mutations touch both
+- cover raw gutter glyphs, not only stripped output: `▲` for production rows, blank gutter for preview/setup/link rows, and `✓` only for readiness/completion status
 - cover `--no-color`, `NO_COLOR`, and no ANSI where machine output is involved
 - cover `--yes`, `--force`, typed confirmation, and `--dry-run` when the command family supports them
 - cover retry/no-duplicate behavior for remote mutations
@@ -49,6 +50,9 @@ Reject or fix changes that:
 - change prompt or success copy without checking surrounding flow and layout
 - confirm an inferred resource without showing the resolved target first
 - report a multi-side-effect mutation with one-line success only
+- use a gutter glyph as decoration instead of semantic state
+- put `▲` on preview/setup/link/local file rows, or omit it from production rows
+- use `✓` as a generic icon on aligned result rows instead of readiness/completion status
 - use `scope` where `team` works
 - add emoji to primary result or progress rows
 - put timing on URL rows

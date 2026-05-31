@@ -181,12 +181,13 @@ Target aligned result rows:
   Domain      example.com
   Environment Production
 ▲ Enabled     example.com
+✓ Ready in 47s
 ```
 
 Rules:
 
-- no gutter: prefix is `"  "`
-- gutter: prefix is glyph + space, e.g. `"▲ "`
+- The first 2 columns are the gutter: either two spaces (`"  "`) or a semantic glyph plus space (`"▲ "`, `"✓ "`).
+- The gutter is not decoration. Use a glyph only when it carries state; otherwise keep the two-space gutter.
 - label width: 12 chars
 - value column: 14
 - Use aligned rows for durable multi-field results: links, deployments, aliases, domains, integrations, environment changes, and other completed mutations.
@@ -195,11 +196,12 @@ Rules:
 - Aligned-row labels are Title-Case nouns: `Linked`, `Inspect`, `Production`.
 - Preview labels use stable Title-Case nouns: `Project`, `Team`, `Directory`, `Source`, `Settings`.
 - If a mutation changes multiple durable things, one-line success is insufficient; print a compact result block.
-- Production touchpoints may use `▲`; preview/non-production rows do not.
+- Production rows and production alias rows use `▲`: `▲ Production`, `▲ Aliased`.
+- Preview, setup, link, settings, local file, and non-production rows keep the blank two-space gutter.
 - URLs are cyan in human output and plain strings in JSON.
 - No colon after labels in aligned rows.
 - No timing suffix on URL rows.
-- Deployment result blocks may append `✓ Ready in 47s`; that line is deployment readiness only.
+- Deployment result blocks may append `✓ Ready in 47s`; that line is readiness/completion state, not a generic success icon for every result row.
 - never hand-pad rows when a helper exists
 
 ## List + Detail Commands
@@ -225,7 +227,7 @@ Allowed primary glyphs:
 
 - `▲` production/Vercel touchpoint
 - `?` active prompt
-- `✓` final success
+- `✓` deployment readiness or terminal completion status
 - `·` inline separator
 - `→` relationship/transition
 - `…` continuing work

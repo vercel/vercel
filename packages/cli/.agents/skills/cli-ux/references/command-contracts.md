@@ -38,6 +38,7 @@ Rules:
 - Ask `Code directory?` only for real root ambiguity.
 - Compress framework detection: `Detected Next.js (Build Command: next build, Output Directory: .next)`.
 - Print aligned result rows with `printAlignedLabel()`: `Linked`, `Added`, and optional follow-up state.
+- Link/setup rows keep the blank two-space gutter. Do not use `▲` or `✓` for `Linked`, `Project`, `Directory`, `Settings`, or `Source`.
 - Offer `Pull environment variables now?` after linking when TTY and safe.
 
 Current gaps to migrate incrementally:
@@ -50,16 +51,16 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                             | Human prompt                                      | Non-interactive                        |
-| --------------------------------- | ------------------------------------------------- | -------------------------------------- |
-| Multiple teams                    | `Which team?`                                     | `action_required: missing_team`        |
-| One high-confidence project match | `Found project <team>/<project>. Link to it?`     | link only for explicit/repo-root match |
-| Multiple project matches          | `Which project?`                                  | `action_required: ambiguous_project`   |
-| No project match                  | `Project?` with create/link options, then `Name?` | require `--yes` or `project_not_found` |
-| Root choices exist                | `Code directory?`                                 | require root flag/config/payload       |
-| Settings differ                   | `Customize settings?`                             | require flags/config/payload           |
-| Optional env pull                 | `Pull environment variables now?`                 | skip unless explicitly requested       |
-| Stale/deleted link                | show stale link, then concrete relink choice      | `action_required: stale_link`          |
+| State                             | Human prompt                                                     | Non-interactive                        |
+| --------------------------------- | ---------------------------------------------------------------- | -------------------------------------- |
+| Multiple teams                    | `Which team?`                                                    | `action_required: missing_team`        |
+| One high-confidence project match | `Found project`, aligned `Project`, then `Link to this project?` | link only for explicit/repo-root match |
+| Multiple project matches          | `Which project?`                                                 | `action_required: ambiguous_project`   |
+| No project match                  | `Project?` with create/link options, then `Name?`                | require `--yes` or `project_not_found` |
+| Root choices exist                | `Code directory?`                                                | require root flag/config/payload       |
+| Settings differ                   | `Customize settings?`                                            | require flags/config/payload           |
+| Optional env pull                 | `Pull environment variables now?`                                | skip unless explicitly requested       |
+| Stale/deleted link                | show stale link, then concrete relink choice                     | `action_required: stale_link`          |
 
 Link acceptance matrix:
 
@@ -101,6 +102,7 @@ Rules:
 - Production custom-domain alias assignment prints `▲ Aliased` only when assigned.
 - `Inspect` prints before deployment URL rows.
 - Print aligned result rows with `printAlignedLabel()`: `Inspect`, `Preview`, `Production`, `Aliased`.
+- Preview rows keep the blank two-space gutter. `Production` and production `Aliased` rows use the `▲` gutter.
 - End completed deploy flows with `✓ Ready in 47s`.
 - `--no-wait` may print URLs and still-processing note; no `✓ Ready` unless already `READY`.
 - Build/log failures prefer inspect/log commands over blind retry.

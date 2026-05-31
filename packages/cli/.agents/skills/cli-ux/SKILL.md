@@ -22,7 +22,7 @@ Act like a CLI product engineer, not a string polisher.
 ## Workflow
 
 1. **Surface map.** List help, flags, prompts, progress, warnings, success, errors, tables/lists, detail views, JSON, and agent/non-interactive payloads.
-2. **Structure map.** For each touched line, identify its surface role, order, layout helper, resolved-state preview, mutation preview, result block, and next action.
+2. **Structure map.** For each touched line, identify its surface role, order, layout helper, gutter glyph or blank gutter, resolved-state preview, mutation preview, result block, and next action.
 3. **Mode map.** Trace TTY, non-TTY, `--non-interactive`, JSON/format flags, CI, and pipeable stdout.
 4. **State map.** Name team, project, cwd/root, environment, config files, framework/services, auth, remote resources, and defaults.
 5. **Question audit.** For every prompt, prove the value cannot be inferred and that a flag/arg/payload exists.
@@ -68,6 +68,7 @@ Top-tier commands:
 - show detected state before asking for overrides
 - show resolved targets in structured output before confirmations
 - show local and remote side effects in result blocks after mutation
+- use gutter glyphs only for semantic state, not decoration
 - use one concept per prompt
 - support flags or payloads for every prompt path
 - behave predictably in TTY, CI, and agent contexts
@@ -89,6 +90,7 @@ A CLI UX change is not done until:
 - resolved target and planned mutation are visible before risky work
 - inferred resource confirmations show the resolved target before asking
 - mutation results show durable remote resources and local artifacts changed
+- aligned rows use the correct gutter: `▲` for production rows, blank for preview/setup/link rows, `✓` only for readiness/completion status
 - every prompt has a flag, argument, or machine-readable action path
 - old vague prompts/output are locked out by tests
 - JSON/agent output remains valid, bounded, and stdout-clean
