@@ -177,6 +177,21 @@ function isTimestampSegment(segment) {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d+)?Z$/.test(segment);
 }
 
+function toDiscoverablePath(relativePath) {
+  const segments = relativePath.split('/');
+  const timestampIndex = segments.findIndex(isTimestampSegment);
+  if (timestampIndex <= 1) return relativePath;
+
+  const modelSegments = segments.slice(1, timestampIndex);
+  if (modelSegments.length <= 1) return relativePath;
+
+  return [
+    segments[0],
+    modelSegments.join('-'),
+    ...segments.slice(timestampIndex),
+  ].join('/');
+}
+
 function getRunGroup(relativePath) {
   const segments = relativePath.split('/');
   const timestampIndex = segments.findIndex(isTimestampSegment);
@@ -388,6 +403,13 @@ async function chunkRunGroupByEstimatedRequestSize({
   payload,
   maxRequestBytes,
 }) {
+  const allFilesBytes =
+    estimatePayloadPartBytes(payload) +
+    (await estimateFilesPartBytes(resultsDir, files));
+  if (allFilesBytes <= maxRequestBytes) {
+    return [files];
+  }
+
   const chunks = [];
   const evalGroups = groupFilesByEval(files, resultsDir);
 
@@ -417,10 +439,11 @@ async function uploadFileGroup({
 
   for (const fullPath of files) {
     const relativePath = getRelativePath(resultsDir, fullPath);
+    const uploadPath = toDiscoverablePath(relativePath);
     const buffer = await readFile(fullPath);
     formData.append(
       'results_file',
-      new File([buffer], relativePath, {
+      new File([buffer], uploadPath, {
         type: contentTypeFor(relativePath),
       })
     );
