@@ -1,25 +1,10 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../mocks/client';
 
 describe('Client confirmation prompts', () => {
-  const originalCI = process.env.CI;
-
-  const restoreCI = () => {
-    if (originalCI === undefined) {
-      delete process.env.CI;
-    } else {
-      process.env.CI = originalCI;
-    }
-  };
-
   beforeEach(() => {
     // Reset client state
     client.reset();
-    restoreCI();
-  });
-
-  afterEach(() => {
-    restoreCI();
   });
 
   describe('DELETE operations', () => {
@@ -71,11 +56,10 @@ describe('Client confirmation prompts', () => {
       expect(result).toBe(true);
     });
 
-    it('should show error in CI non-TTY mode without --dangerously-skip-permissions', async () => {
+    it('should show error in non-TTY mode without --dangerously-skip-permissions', async () => {
       // Disable skip to test non-TTY error behavior
       client.dangerouslySkipPermissions = false;
       client.stdin.isTTY = false;
-      process.env.CI = '1';
       client.input.confirm = vi.fn().mockResolvedValue(true);
 
       const result = await client.confirmMutatingOperation(
@@ -91,24 +75,6 @@ describe('Client confirmation prompts', () => {
       const output = client.stderr.getFullOutput();
       expect(output).toContain('DELETE operations require confirmation');
       expect(output).toContain('--dangerously-skip-permissions');
-    });
-
-    it('should prompt in non-CI non-TTY mode without --dangerously-skip-permissions', async () => {
-      client.dangerouslySkipPermissions = false;
-      client.stdin.isTTY = false;
-      delete process.env.CI;
-      client.input.confirm = vi.fn().mockResolvedValue(true);
-
-      const result = await client.confirmMutatingOperation(
-        '/v9/test',
-        'DELETE'
-      );
-
-      expect(client.input.confirm).toHaveBeenCalledTimes(1);
-      expect(result).toBe(true);
-      expect(client.stderr.getFullOutput()).not.toContain(
-        'DELETE operations require confirmation'
-      );
     });
 
     it('should work in non-TTY mode with --dangerously-skip-permissions flag', async () => {

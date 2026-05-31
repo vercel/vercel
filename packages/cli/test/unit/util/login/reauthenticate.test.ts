@@ -1,4 +1,12 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import reauthenticate from '../../../../src/util/login/reauthenticate';
 import { client } from '../../../mocks/client';
 import _fetch, { type Response } from 'node-fetch';
@@ -50,6 +58,11 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  delete process.env.CI;
+});
+
+afterEach(() => {
+  delete process.env.CI;
 });
 
 describe('reauthenticate', () => {
@@ -139,6 +152,20 @@ describe('reauthenticate', () => {
 
     expect(typeof result).not.toBe('number');
     expect(client.authConfig.token).toBe(tokenResult.access_token);
+  });
+
+  it('errors for SAML reauth when stdin is non-TTY in CI', async () => {
+    client.reset();
+    client.stdin.isTTY = false;
+    process.env.CI = '1';
+
+    await expect(
+      reauthenticate(client, {
+        teamId: 'team_ci_non_tty',
+        scope: 'vercel',
+        enforced: true,
+      })
+    ).rejects.toThrow('current environment is non-interactive');
   });
 
   it('does not append team_id when teamId is null', async () => {
