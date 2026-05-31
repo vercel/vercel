@@ -425,8 +425,8 @@ export default class Client extends EventEmitter implements Stdio {
       return true;
     }
 
-    // Check if we have a TTY for interactive prompts
-    if (!this.stdin.isTTY) {
+    // Check if we have a TTY for interactive prompts in CI.
+    if (!this.stdin.isTTY && process.env.CI) {
       output.error(
         `DELETE operations require confirmation. Use ${bold('--dangerously-skip-permissions')} to skip confirmation in non-interactive mode.`
       );
