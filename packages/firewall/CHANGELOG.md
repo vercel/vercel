@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.2.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+
 ## 1.2.0
 
 ### Minor Changes

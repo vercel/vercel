@@ -8,11 +8,15 @@ import {
   getInternalServiceCronPathPrefix,
   getInternalServiceCronPath,
 } from '@vercel/build-utils';
+import type { Framework } from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,
   ExperimentalServices,
+  Services,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ResolvedService,
 } from './types';
 import {
@@ -21,6 +25,13 @@ import {
   STATIC_BUILDERS,
   ROUTE_OWNING_BUILDERS,
 } from './types';
+
+// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
+// but service auto-detection should still consider them.
+export const DETECTION_FRAMEWORKS = frameworkList.filter(
+  (framework: Framework) =>
+    !framework.experimental || framework.runtimeFramework
+);
 
 export {
   INTERNAL_SERVICE_PREFIX,
@@ -38,6 +49,27 @@ export async function hasFile(
   } catch {
     return false;
   }
+}
+
+export function isPublicServicesEnabled(): boolean {
+  return (
+    process.env.VERCEL_USE_SERVICES === '1' ||
+    process.env.VERCEL_USE_SERVICES?.toLowerCase() === 'true'
+  );
+}
+
+export function validateServicesConfigGate(
+  config: { services?: Services } | null | undefined
+): ServiceDetectionError | null {
+  if (config?.services !== undefined && !isPublicServicesEnabled()) {
+    return {
+      code: 'INVALID_VERCEL_CONFIG',
+      message:
+        'Invalid vercel.json - should NOT have additional property `services`. Please remove it.',
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -194,7 +226,10 @@ export function inferServiceRuntime(config: {
 }
 
 export interface ReadVercelConfigResult {
-  config: { experimentalServices?: ExperimentalServices } | null;
+  config: {
+    services?: Services;
+    experimentalServices?: ExperimentalServices;
+  } | null;
   error: ServiceDetectionError | null;
 }
 
@@ -210,6 +245,10 @@ export async function readVercelConfig(
     try {
       const content = await fs.readFile('vercel.json');
       const config = JSON.parse(content.toString());
+      const gateError = validateServicesConfigGate(config);
+      if (gateError) {
+        return { config: null, error: gateError };
+      }
       return { config, error: null };
     } catch {
       return {
@@ -231,6 +270,10 @@ export async function readVercelConfig(
       const { parse: tomlParse } = await import('smol-toml');
       const content = await fs.readFile('vercel.toml');
       const config = tomlParse(content.toString());
+      const gateError = validateServicesConfigGate(config);
+      if (gateError) {
+        return { config: null, error: gateError };
+      }
       return { config: config as any, error: null };
     } catch {
       return {
@@ -245,4 +288,65 @@ export async function readVercelConfig(
   }
 
   return { config: null, error: null };
+}
+
+/**
+ * Assign route prefixes to inferred services.
+ *
+ * A frontend service gets `/`, the rest get `/_/{name}`.
+ * A single non-frontend service would also get `/`.
+ * If no frontend service found, then multiple services get `/_/{name}`.
+ *
+ * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
+ */
+export function assignRoutePrefixes(
+  services: ExperimentalServices
+): ServiceDetectionWarning[] {
+  const warnings: ServiceDetectionWarning[] = [];
+  const names = Object.keys(services);
+
+  if (names.length === 1) {
+    services[names[0]].routePrefix = '/';
+    return warnings;
+  }
+
+  const frontendNames = names.filter(name =>
+    isFrontendFramework(services[name].framework)
+  );
+
+  let rootName: string | null = null;
+  if (frontendNames.length === 1) {
+    rootName = frontendNames[0];
+  } else if (frontendNames.length > 1) {
+    rootName =
+      frontendNames.find(n => n === 'frontend' || n === 'web') ??
+      frontendNames.sort()[0];
+    warnings.push({
+      code: 'MULTIPLE_FRONTENDS',
+      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
+    });
+  }
+
+  for (const name of names) {
+    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
+  }
+
+  return warnings;
+}
+
+export function combineBuildCommand(
+  buildCommand: string | undefined,
+  preDeployCommand: string | string[] | undefined
+): string | undefined {
+  const preDeploy = Array.isArray(preDeployCommand)
+    ? preDeployCommand.join(' && ')
+    : preDeployCommand;
+
+  if (preDeploy && buildCommand) {
+    return `${buildCommand} && ${preDeploy}`;
+  } else if (preDeploy) {
+    return preDeploy;
+  } else {
+    return buildCommand;
+  }
 }

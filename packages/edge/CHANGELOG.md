@@ -1,5 +1,11 @@
 # @vercel/edge
 
+## 1.3.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+
 ## 1.3.0
 
 ### Minor Changes

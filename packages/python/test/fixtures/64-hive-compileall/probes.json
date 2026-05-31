@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "logMustContain": "Compiling Python application bytecode"
+    },
+    {
+      "logMustContain": "Compiling Python dependency bytecode"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"ok\":true"
+    }
+  ]
+}

@@ -183,6 +183,13 @@ export interface ServiceQueueTopic {
   initialDelaySeconds?: number;
 }
 
+export interface ServiceRefEnvVar {
+  type: 'service-ref';
+  service: string;
+}
+
+export type EnvVar = ServiceRefEnvVar;
+
 export interface GitDeploymentConfig {
   [branch: string]: boolean;
 }
@@ -629,6 +636,12 @@ export interface VercelConfig {
        */
       installCommand?: string;
       /**
+       * Command to run after build process succeed but before the deployment's
+       * output is uploaded. Runs during `vercel build` including local builds
+       * and builds on Vercel.
+       */
+      preDeployCommand?: string;
+      /**
        * Memory allocation in MB (128-10240).
        */
       memory?: number;
@@ -653,9 +666,9 @@ export interface VercelConfig {
        */
       topics?: string[] | ServiceQueueTopic[];
       /**
-       * Custom prefix to use to inject service URL env vars.
+       * Environment variables to inject into this service at build and runtime.
        */
-      envPrefix?: string;
+      env?: Record<string, EnvVar>;
     }
   >;
   /**

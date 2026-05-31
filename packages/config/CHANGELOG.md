@@ -1,5 +1,23 @@
 # @vercel/router-sdk
 
+## 0.5.1
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+
+## 0.5.0
+
+### Minor Changes
+
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+## 0.4.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
 ## 0.3.0
 
 ### Minor Changes

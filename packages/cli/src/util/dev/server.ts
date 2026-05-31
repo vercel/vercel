@@ -35,7 +35,7 @@ import {
   cloneEnv,
   type Env,
   getNodeBinPaths,
-  isQueueTriggeredService,
+  isQueueBackedService,
   type StartDevServerResult,
   FileFsRef,
   type PackageJson,
@@ -131,6 +131,15 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
   return 0;
 }
 
+export class DevCommandExitError extends Error {
+  exitCode: number;
+  constructor(message: string, exitCode: number) {
+    super(message);
+    this.name = 'DevCommandExitError';
+    this.exitCode = exitCode;
+  }
+}
+
 export default class DevServer {
   public cwd: string;
   public repoRoot: string;
@@ -181,6 +190,9 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+  private useImplicitServicesEnvInjection: boolean;
+  private projectId?: string;
+  private orgId?: string;
 
   private shouldUseServicesOrchestrator(): boolean {
     if (!this.services || this.services.length === 0) {
@@ -194,10 +206,14 @@ export default class DevServer {
     this.repoRoot = options.repoRoot ?? cwd;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.envValues = options.envValues || {};
+    this.projectId = options.projectId;
+    this.orgId = options.orgId;
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
     this.services = options.services;
+    this.useImplicitServicesEnvInjection =
+      options.useImplicitServicesEnvInjection ?? true;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -601,6 +617,7 @@ export default class DevServer {
 
     // no builds -> zero config
     if (
+      !vercelConfig.services &&
       !vercelConfig.experimentalServices &&
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {
@@ -737,6 +754,26 @@ export default class DevServer {
     // simulate parts of the platform for local environment
     allEnv['VERCEL_ENV'] = 'development';
     allEnv['VERCEL'] = '1';
+
+    // Expose the linked project's IDs the same way the platform does in
+    // prod/preview. Don't override a value the user explicitly set in their
+    // shell or `.env` files.
+    if (this.projectId && !process.env.VERCEL_PROJECT_ID) {
+      if (!('VERCEL_PROJECT_ID' in allEnv)) {
+        allEnv['VERCEL_PROJECT_ID'] = this.projectId;
+      }
+      if (!('VERCEL_PROJECT_ID' in runEnv)) {
+        runEnv['VERCEL_PROJECT_ID'] = this.projectId;
+      }
+    }
+    if (this.orgId && !process.env.VERCEL_ORG_ID) {
+      if (!('VERCEL_ORG_ID' in allEnv)) {
+        allEnv['VERCEL_ORG_ID'] = this.orgId;
+      }
+      if (!('VERCEL_ORG_ID' in runEnv)) {
+        runEnv['VERCEL_ORG_ID'] = this.orgId;
+      }
+    }
 
     // mirror how VERCEL_REGION is injected in prod/preview
     // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
@@ -944,14 +981,13 @@ export default class DevServer {
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
+        useImplicitEnvInjection: this.useImplicitServicesEnvInjection,
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
 
       // Instantiate the dev queue broker if any queue-backed services exist.
-      const queueServices = (this.services || []).filter(
-        isQueueTriggeredService
-      );
+      const queueServices = (this.services || []).filter(isQueueBackedService);
       if (queueServices.length > 0) {
         this.queueBroker = new QueueBroker(this.services || [], name =>
           this.orchestrator!.getServiceOrigin(name)
@@ -2657,8 +2693,20 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, this.address.port));
     });
 
-    p.on('exit', (code, signal) => {
-      output.debug(`Dev command exited with "${signal || code}"`);
+    const devProcessExited = new Promise<never>((_, reject) => {
+      p.on('error', err => {
+        output.debug(`Dev command errored: ${err}`);
+        reject(err);
+      });
+      p.on('exit', (code, signal) => {
+        output.debug(`Dev command exited with "${signal || code}"`);
+        reject(
+          new DevCommandExitError(
+            `Dev command “${devCommand}” exited with code ${signal || code}`,
+            code ?? 1
+          )
+        );
+      });
     });
 
     p.on('close', (code, signal) => {
@@ -2666,10 +2714,10 @@ export default class DevServer {
       this.devProcessOrigin = undefined;
     });
 
-    const devProcessHost = await checkForPort(
-      port,
-      DEV_SERVER_PORT_BIND_TIMEOUT
-    );
+    const devProcessHost = await Promise.race([
+      checkForPort(port, DEV_SERVER_PORT_BIND_TIMEOUT),
+      devProcessExited,
+    ]);
     this.devProcessOrigin = `http://${devProcessHost}:${port}`;
   }
 }

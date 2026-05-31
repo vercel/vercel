@@ -36,6 +36,7 @@ export const nft = async (
       processCwd: args.workPath,
       ts: true,
       mixedModules: true,
+      moduleSyncCatchall: true,
       conditions: args.conditions,
       ignore: ignorePatterns.length > 0 ? ignorePatterns : undefined,
       async readFile(fsPath) {

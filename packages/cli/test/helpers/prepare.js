@@ -151,7 +151,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'deploy-with-only-readme-vercel-json': {
       'vercel.json': JSON.stringify({ version: 2 }),
-      'README.md': 'readme contents',
+      'content.txt': 'content file contents',
     },
     'deploy-default-with-sub-directory': {
       'vercel.json': JSON.stringify({ version: 2 }),
@@ -160,9 +160,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'deploy-default-with-conflicting-sub-directory': {
       'list/vercel.json': JSON.stringify({ version: 2 }),
-      'list/list/README.md': 'nested nested readme contents',
-      'list/README.md':
-        'readme contents for deploy-default-with-conflicting-sub-directory',
+      'list/list/content.txt':
+        'nested contents for deploy-default-with-conflicting-sub-directory',
+      'list/content.txt':
+        'root contents for deploy-default-with-conflicting-sub-directory',
     },
     'deploy-default-with-prebuilt-preview': {
       'vercel.json': JSON.stringify({ version: 2 }),
@@ -247,6 +248,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
     },
     'zero-config-next-js-nested': {
+      // `pnpm-workspace.yaml` makes this fixture a workspace, which is what
+      // triggers the "In which directory is your code located?" prompt under
+      // the new input-root-directory behavior (prompt fires only when
+      // `getWorkspaces()` returns non-empty).
+      'pnpm-workspace.yaml': "packages:\n  - 'app'\n",
       'app/pages/index.js':
         'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
       'app/package.json': JSON.stringify({
@@ -487,6 +493,105 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           build: 'mkdir -p public && echo hi > public/index.txt',
         },
       }),
+    },
+    'vc-build-next-generated-nitro-service': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: 'nextjs',
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'next build',
+        },
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+      'pages/index.js':
+        'export default function Home() { return <p>Latest Next.js app</p>; }',
+      'next.config.js': `
+const fs = require('node:fs');
+const path = require('node:path');
+
+const experimentalServices = {
+  web: {
+    type: 'web',
+    root: '.',
+    entrypoint: 'package.json',
+    framework: 'nextjs',
+    mount: '/',
+  },
+  'nitro-api': {
+    type: 'web',
+    root: 'nitro',
+    entrypoint: 'package.json',
+    framework: 'nitro',
+    mount: '/api',
+  },
+};
+
+function writeExperimentalServicesConfig(projectDir) {
+  const outputDir = path.join(projectDir, '.vercel', 'output');
+  const configPath = path.join(outputDir, 'config.json');
+  let config = { version: 3 };
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    configPath,
+    JSON.stringify(
+      {
+        ...config,
+        version: 3,
+        experimentalServices,
+      },
+      null,
+      2
+    )
+  );
+}
+
+writeExperimentalServicesConfig(__dirname);
+
+module.exports = {};
+`,
+      'nitro/package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'nitro build',
+          dev: 'nitro dev',
+          prepare: 'nitro prepare',
+          preview: 'node .output/server/index.mjs',
+        },
+        devDependencies: {
+          nitropack: 'latest',
+        },
+      }),
+      'nitro/.npmrc': 'shamefully-hoist=true\nstrict-peer-dependencies=false\n',
+      'nitro/nitro.config.ts': `
+export default defineNitroConfig({
+  preset: 'vercel',
+  compatibilityDate: '2026-05-27',
+  srcDir: 'server'
+});
+`,
+      'nitro/server/routes/index.ts': `
+export default defineEventHandler(() => {
+  return 'nitro ok';
+});
+`,
     },
     'vercel-json-configuration-overrides': {
       'vercel.json': '{}',

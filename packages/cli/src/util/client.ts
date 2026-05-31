@@ -6,9 +6,15 @@ import input from '@inquirer/input';
 import password from '@inquirer/password';
 import search from '@inquirer/search';
 import select from '@inquirer/select';
+import { join, resolve } from 'node:path';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import type { VercelConfig } from '@vercel/client';
+import {
+  getGlobalPathConfig as getSharedGlobalPathConfig,
+  readConfigFile as readSharedConfigFile,
+  writeConfigFile as writeSharedConfigFile,
+} from '@vercel/cli-config';
 import retry, {
   type RetryFunction,
   type Options as RetryOptions,
@@ -31,9 +37,11 @@ import type {
   AuthConfig,
   GlobalConfig,
   JSONObject,
+  Team,
   Stdio,
   ReadableTTY,
   PaginationOptions,
+  User,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
@@ -41,11 +49,18 @@ import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
+import type { z } from 'zod';
 import output from '../output-manager';
+import { parseArguments } from './get-args';
 import { processTokenResponse, refreshTokenRequest } from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
+};
+
+type ParsedArgsCache = {
+  args: string[];
+  flags: Record<string, string | boolean | undefined>;
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
@@ -99,7 +114,7 @@ export function hasRefreshToken(
 }
 
 export default class Client extends EventEmitter implements Stdio {
-  argv: string[];
+  private _argv: string[] = [];
   apiUrl: string;
   authConfig: AuthConfig;
   stdin: ReadableTTY;
@@ -126,11 +141,17 @@ export default class Client extends EventEmitter implements Stdio {
   traceDiagnosticsPath?: string;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
+  private _parsedArgsCache?: ParsedArgsCache;
+  /** Request-scoped identity caches used to avoid repeated scope lookups. */
+  user?: User;
+  userPromise?: Promise<User>;
+  teams?: Team[];
+  teamsPromise?: Promise<Team[]>;
 
   constructor(opts: ClientOptions) {
     super();
     this.agent = opts.agent;
-    this.argv = opts.argv;
+    this.setArgv(opts.argv);
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
     this.stdin = opts.stdin;
@@ -181,6 +202,35 @@ export default class Client extends EventEmitter implements Stdio {
           { input: this.stdin, output: this.stderr }
         ),
     };
+  }
+
+  get argv(): string[] {
+    return this._argv;
+  }
+
+  setArgv(argv: string[]): void;
+  setArgv(...argv: string[]): void;
+  setArgv(argvOrFirst: string[] | string, ...rest: string[]) {
+    const argv = Array.isArray(argvOrFirst)
+      ? argvOrFirst
+      : [argvOrFirst, ...rest];
+
+    this._argv = argv;
+    this._parsedArgsCache = undefined;
+  }
+
+  private getParsedArgs(): ParsedArgsCache {
+    if (!this._parsedArgsCache) {
+      this._parsedArgsCache = parseArguments(
+        this.argv.slice(2),
+        {},
+        {
+          permissive: true,
+        }
+      ) as ParsedArgsCache;
+    }
+
+    return this._parsedArgsCache;
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -260,6 +310,44 @@ export default class Client extends EventEmitter implements Stdio {
     output.debug('Tokens refreshed successfully.');
   }
 
+  getGlobalPathConfig(): string {
+    const confFlag = this.getParsedArgs().flags['--global-config'];
+
+    if (typeof confFlag === 'string') {
+      return resolve(this.cwd, confFlag);
+    }
+
+    return getSharedGlobalPathConfig();
+  }
+
+  async readConfig<S extends z.ZodType>(
+    fileName: string,
+    schema: S
+  ): Promise<z.output<S>> {
+    const filePath = join(this.getGlobalPathConfig(), fileName);
+    return readSharedConfigFile(filePath, schema);
+  }
+
+  async maybeReadConfig<S extends z.ZodType>(
+    fileName: string,
+    schema: S
+  ): Promise<z.output<S> | null> {
+    try {
+      return await this.readConfig(fileName, schema);
+    } catch {
+      return null;
+    }
+  }
+
+  async writeConfig<S extends z.ZodType>(
+    fileName: string,
+    schema: S,
+    value: z.output<S>
+  ): Promise<void> {
+    const filePath = join(this.getGlobalPathConfig(), fileName);
+    writeSharedConfigFile(filePath, schema, value);
+  }
+
   updateConfig(config: Partial<GlobalConfig>) {
     this.config = { ...this.config, ...config };
   }
@@ -269,10 +357,20 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   updateAuthConfig(authConfig: Partial<AuthConfig>) {
+    if (authConfig.token && authConfig.token !== this.authConfig.token) {
+      this.user = undefined;
+      this.userPromise = undefined;
+      this.teams = undefined;
+      this.teamsPromise = undefined;
+    }
     this.authConfig = { ...this.authConfig, ...authConfig };
   }
 
   emptyAuthConfig() {
+    this.user = undefined;
+    this.userPromise = undefined;
+    this.teams = undefined;
+    this.teamsPromise = undefined;
     this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
@@ -407,7 +505,15 @@ export default class Client extends EventEmitter implements Stdio {
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
-      const res = await this._fetch(url, opts);
+      let res: Awaited<ReturnType<Client['_fetch']>>;
+      try {
+        res = await this._fetch(url, opts);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return bail(err);
+        }
+        throw err;
+      }
 
       printIndications(res);
 

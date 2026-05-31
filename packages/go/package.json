@@ -1,6 +1,6 @@
 {
   "name": "@vercel/go",
-  "version": "3.6.0",
+  "version": "3.8.0",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",
@@ -19,7 +19,8 @@
   },
   "files": [
     "dist",
-    "*.go"
+    "*.go",
+    "bootstrap"
   ],
   "devDependencies": {
     "@tootallnate/once": "1.1.2",

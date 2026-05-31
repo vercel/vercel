@@ -14,6 +14,9 @@ import download, {
   DownloadedFiles,
   isSymbolicLink,
   isDirectory,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
@@ -57,7 +60,10 @@ import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
-import { getServiceUrlEnvVars } from './get-service-url-env-vars';
+import {
+  getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
+} from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
@@ -109,11 +115,15 @@ export {
   getPlatformEnv,
   getPrefixedEnvVars,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
   streamToBuffer,
   streamToBufferChunks,
   debug,
   isSymbolicLink,
   isDirectory,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
   getLambdaOptionsFromFunction,
   sanitizeConsumerName,
   scanParentDirs,
@@ -133,6 +143,7 @@ export { getOsRelease, getProvidedRuntime } from './os';
 export * from './should-serve';
 export * from './schemas';
 export * from './package-manifest';
+export { generateProjectManifest } from './node-diagnostics';
 export * from './types';
 export * from './errors';
 
@@ -175,10 +186,7 @@ export {
   getLambdaPreloadScripts,
   type BytecodeCachingOptions,
 } from './process-serverless/get-lambda-preload-scripts';
-export {
-  getLambdaSupportsStreaming,
-  type SupportsStreamingResult,
-} from './process-serverless/get-lambda-supports-streaming';
+export { getLambdaSupportsStreaming } from './process-serverless/get-lambda-supports-streaming';
 
 export {
   streamToDigestAsync,

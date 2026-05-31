@@ -1,5 +1,6 @@
 import type Client from '../client';
 import getUser from '../get-user';
+import getTeamById from '../teams/get-team-by-id';
 import getTeams from '../teams/get-teams';
 import type { User, Team, Org } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -41,7 +42,45 @@ export default async function selectOrg(
     config: { currentTeam },
   } = client;
 
-  output.spinner('Loading scopes…', 1000);
+  if (autoConfirm && !client.nonInteractive) {
+    if (currentTeam) {
+      output.spinner('Loading team…', 1000);
+      try {
+        const team = await getTeamById(client, currentTeam);
+        return { type: 'team', id: team.id, slug: team.slug };
+      } catch (err) {
+        output.debug(`Unable to load current team directly: ${err}`);
+      } finally {
+        output.stopSpinner();
+      }
+    }
+
+    output.spinner('Loading user…', 1000);
+    let user: User;
+    try {
+      user = await getUser(client);
+    } finally {
+      output.stopSpinner();
+    }
+
+    if (user.version !== 'northstar') {
+      return { type: 'user', id: user.id, slug: user.username };
+    }
+
+    if (user.defaultTeamId) {
+      output.spinner('Loading team…', 1000);
+      try {
+        const team = await getTeamById(client, user.defaultTeamId);
+        return { type: 'team', id: team.id, slug: team.slug };
+      } catch (err) {
+        output.debug(`Unable to load default team directly: ${err}`);
+      } finally {
+        output.stopSpinner();
+      }
+    }
+  }
+
+  output.spinner('Loading teams…', 1000);
   let user: User;
   let teams: Team[];
   try {
@@ -95,14 +134,14 @@ export default async function selectOrg(
       reason: 'missing_scope',
       message:
         choices.length > 0
-          ? 'Provide --scope or --team explicitly. No default is applied in non-interactive mode.'
-          : 'No scopes available.',
+          ? 'Provide --team or --scope explicitly. No default is applied in non-interactive mode.'
+          : 'No teams available.',
       choices: choices.map(c => ({
         id: c.value.id,
         name: c.value.slug,
       })),
       next: choices.map(c => ({
-        command: `${packageName} link --scope ${c.value.slug}`,
+        command: `${packageName} link --team ${c.value.slug}`,
       })),
     };
     outputActionRequired(client, actionRequired);

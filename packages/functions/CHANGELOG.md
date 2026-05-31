@@ -1,5 +1,26 @@
 # @vercel/functions
 
+## 3.6.1
+
+### Patch Changes
+
+- Updated dependencies [5a700dc]
+  - @vercel/oidc@3.5.0
+
+## 3.6.0
+
+### Minor Changes
+
+- 102f82b: `getCache().set()` now defaults `options.name` to the provided `key` when omitted, so cache entries get a human-readable label in o11y by default. Pass `name: ''` to suppress this behavior and use the hashed key.
+
+## 3.5.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [ae20217]
+  - @vercel/oidc@3.4.1
+
 ## 3.5.0
 
 ### Minor Changes

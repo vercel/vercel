@@ -1,5 +1,11 @@
 node_modules
+!packages/node/test/unit-fixtures/**/node_modules
+!packages/node/test/unit-fixtures/**/node_modules/**
 dist
+dist-bin
+dist-native
+.pkg-staging
+.node-runtime
 .vscode
 .zed
 npm-debug.log

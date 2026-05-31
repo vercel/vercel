@@ -3,6 +3,7 @@ import {
   forceOption,
   formatOption,
   jsonOption,
+  projectOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -108,6 +109,7 @@ export const initSubcommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    projectOption,
     {
       name: 'functions-beta',
       shorthand: null,
@@ -158,6 +160,14 @@ export const continueSubcommand = {
       deprecated: false,
       description:
         'Compress the deployment code into an archive before uploading it',
+    },
+    {
+      name: 'error',
+      shorthand: null,
+      type: String,
+      argument: 'MESSAGE',
+      deprecated: false,
+      description: 'Mark the deployment as errored with a message',
     },
   ],
   examples: [
@@ -322,6 +332,7 @@ export const deployCommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    projectOption,
     {
       name: 'functions-beta',
       shorthand: null,

@@ -1,5 +1,121 @@
 # @vercel/fs-detectors
 
+## 6.7.4
+
+### Patch Changes
+
+- 1444502: Support discovering `experimentalServices` from Build Output API config during `vercel build`.
+
+## 6.7.3
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+- Updated dependencies [6495585]
+  - @vercel/build-utils@13.26.4
+
+## 6.7.2
+
+### Patch Changes
+
+- Updated dependencies [b66bd3e]
+  - @vercel/build-utils@13.26.3
+
+## 6.7.1
+
+### Patch Changes
+
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
+## 6.7.0
+
+### Minor Changes
+
+- feb8bed: Detect entrypoint file from render yaml.
+
+### Patch Changes
+
+- Updated dependencies [fa25cb7]
+- Updated dependencies [972cc84]
+  - @vercel/build-utils@13.26.1
+
+## 6.6.0
+
+### Minor Changes
+
+- 20247d6: Use builder entrypoint detection in service auto-detection.
+
+## 6.5.0
+
+### Minor Changes
+
+- 0c762a7: [services] detect services from Render
+- e1f4dd5: [services] detect services from Procfile
+
+### Patch Changes
+
+- Updated dependencies [bb61428]
+- Updated dependencies [137e5d1]
+  - @vercel/build-utils@13.26.0
+
+## 6.4.0
+
+### Minor Changes
+
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+### Patch Changes
+
+- Updated dependencies [0dbb8e5]
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/frameworks@3.26.1
+  - @vercel/build-utils@13.25.0
+
+## 6.3.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
+## 6.2.2
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+- Updated dependencies [51785a6]
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/frameworks@3.26.0
+  - @vercel/build-utils@13.23.0
+
+## 6.2.1
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
+## 6.2.0
+
+### Minor Changes
+
+- b4ada64: Implement scheduled jobs for JS/TS.
+
+### Patch Changes
+
+- 1e08c83: [services] error on framework = "services" but no services configured
+- Updated dependencies [e53dd86]
+- Updated dependencies [c95a7ca]
+  - @vercel/build-utils@13.22.0
+  - @vercel/frameworks@3.25.1
+
 ## 6.1.1
 
 ### Patch Changes
