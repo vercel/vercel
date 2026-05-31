@@ -85,7 +85,7 @@ import { determineAgent } from '@vercel/detect-agent';
 import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
 import {
   isOAuthError,
-  processTokenResponse,
+  processTokenExchangeResponse,
   tokenExchangeRequest,
 } from './util/oauth';
 import {
@@ -765,7 +765,7 @@ const main = async () => {
           team_id: teamId,
         });
         const [exchangeError, exchangedToken] =
-          await processTokenResponse(exchangeResponse);
+          await processTokenExchangeResponse(exchangeResponse);
 
         if (exchangeError) {
           telemetry.trackOidcTokenExchangeFailure(

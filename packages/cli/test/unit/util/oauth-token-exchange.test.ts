@@ -73,11 +73,66 @@ describe('tokenExchangeRequest', () => {
   });
 });
 
+describe('processTokenExchangeResponse', () => {
+  it('accepts the token exchange response shape returned by the API', async () => {
+    const [error, tokens] = await oauth.processTokenExchangeResponse(
+      response({
+        access_token: 'vca_exchanged',
+        token_type: 'Bearer',
+        expires_in: 600,
+        scope: '',
+        issued_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+      })
+    );
+
+    expect(error).toBeNull();
+    expect(tokens).toEqual({
+      access_token: 'vca_exchanged',
+      token_type: 'Bearer',
+      expires_in: 600,
+      scope: '',
+      issued_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+    });
+  });
+
+  it('rejects an unexpected issued token type', async () => {
+    const [error] = await oauth.processTokenExchangeResponse(
+      response({
+        access_token: 'vca_exchanged',
+        token_type: 'Bearer',
+        expires_in: 600,
+        issued_token_type: 'urn:ietf:params:oauth:token-type:refresh_token',
+      })
+    );
+
+    expect(error).toBeInstanceOf(TypeError);
+    expect(error?.message).toBe(
+      'Expected `issued_token_type` to be "urn:ietf:params:oauth:token-type:access_token"'
+    );
+  });
+
+  it('returns a token exchange specific OAuth error', async () => {
+    const [error] = await oauth.processTokenExchangeResponse(
+      response(
+        {
+          error: 'invalid_grant',
+          error_description: 'OIDC policy did not match',
+        },
+        400
+      )
+    );
+
+    expect(error?.message).toBe('OIDC token exchange request failed');
+  });
+});
+
 function json(data: unknown) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  );
+  return Promise.resolve(response(data));
+}
+
+function response(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
