@@ -39,6 +39,15 @@ export class EnvPullTelemetryClient
     }
   }
 
+  trackCliOptionScope(scope: string | undefined) {
+    if (scope) {
+      this.trackCliOption({
+        option: 'scope',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');

@@ -4,6 +4,14 @@ import { forceOption, formatOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
+const scopeOption = {
+  name: 'scope',
+  shorthand: 's',
+  type: String,
+  argument: 'SCOPE',
+  deprecated: false,
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -20,6 +28,7 @@ export const listSubcommand = {
   ],
   options: [
     formatOption,
+    scopeOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -76,6 +85,7 @@ export const addSubcommand = {
       description:
         'Skip the confirmation prompt when adding an Environment Variable',
     },
+    scopeOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -153,6 +163,7 @@ export const removeSubcommand = {
     },
   ],
   options: [
+    scopeOption,
     {
       ...yesOption,
       description:
@@ -227,6 +238,7 @@ export const pullSubcommand = {
       description:
         'Skip the confirmation prompt when removing an environment variable',
     },
+    scopeOption,
   ],
   examples: [
     {
@@ -274,6 +286,7 @@ export const runSubcommand = {
       argument: 'NAME',
       deprecated: false,
     },
+    scopeOption,
   ],
   examples: [
     {
@@ -315,6 +328,7 @@ export const updateSubcommand = {
       description:
         'Skip the confirmation prompt when updating an Environment Variable',
     },
+    scopeOption,
     {
       name: 'value',
       description:

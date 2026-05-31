@@ -165,6 +165,60 @@ describe('env run', () => {
       ]);
     });
 
+    it('should run command with an explicit project', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject(
+        {
+          ...defaultProject,
+          id: 'explicit-env-run',
+          name: 'explicit-env-run',
+          accountId: 'team_dummy',
+        },
+        [
+          {
+            type: 'encrypted',
+            id: 'explicit-env-run-var',
+            key: 'EXPLICIT_RUN_VAR',
+            value: 'from-explicit-project',
+            target: ['development'],
+            gitBranch: undefined,
+            configurationId: null,
+            updatedAt: 1557241361455,
+            createdAt: 1557241361455,
+          },
+        ]
+      );
+      const cwd = setupUnitFixture('vercel-pull-unlinked');
+      client.cwd = cwd;
+
+      client.setArgv(
+        'env',
+        'run',
+        '--project',
+        'explicit-env-run',
+        '--',
+        'echo',
+        'hello'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      expect(execa).toHaveBeenCalledWith('echo', ['hello'], {
+        cwd,
+        stdio: 'inherit',
+        reject: false,
+        env: expect.objectContaining({
+          EXPLICIT_RUN_VAR: 'from-explicit-project',
+        }),
+      });
+    });
+
     it('should run command with specified environment', async () => {
       useUser();
       useTeams('team_dummy');

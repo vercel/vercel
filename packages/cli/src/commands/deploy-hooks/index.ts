@@ -44,6 +44,11 @@ export default async function main(client: Client) {
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
+  const project = parsedArgs.flags['--project'];
+  const forwardedArgs = [...args];
+  if (typeof project === 'string') {
+    forwardedArgs.push('--project', project);
+  }
 
   const needHelp = parsedArgs.flags['--help'];
 
@@ -70,20 +75,20 @@ export default async function main(client: Client) {
         return printHelp(createSubcommand);
       }
       telemetry.trackCliSubcommandCreate(subcommandOriginal);
-      return create(client, args);
+      return create(client, forwardedArgs);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('deploy-hooks', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, args);
+      return rm(client, forwardedArgs);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('deploy-hooks', subcommandOriginal);
         return printHelp(listSubcommand);
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return ls(client, args);
+      return ls(client, forwardedArgs);
   }
 }
