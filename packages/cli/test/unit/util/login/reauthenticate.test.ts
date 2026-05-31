@@ -11,6 +11,10 @@ vi.mock('node-fetch', async () => ({
   default: vi.fn(),
 }));
 
+vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
+  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
+}));
+
 function mockResponse(data: unknown, ok = true): Response {
   return {
     ok,
@@ -91,6 +95,49 @@ describe('reauthenticate', () => {
     expect(typeof result).not.toBe('number');
 
     // Verify credentials were saved
+    expect(client.authConfig.token).toBe(tokenResult.access_token);
+  });
+
+  it('runs the device code flow for SAML reauth when stdin is non-TTY', async () => {
+    const teamId = 'team_non_tty';
+    const userCode = 'NTTY-1234';
+    const authorizationResult = {
+      device_code: randomUUID(),
+      user_code: userCode,
+      verification_uri: 'https://vercel.com/oauth/device',
+      verification_uri_complete: `https://vercel.com/oauth/device?user_code=${userCode}`,
+      expires_in: 30,
+      interval: 0.005,
+    };
+
+    fetch.mockResolvedValueOnce(mockResponse(authorizationResult));
+
+    const tokenResult = await simulateTokenPolling(
+      1,
+      mockResponse({
+        access_token: randomUUID(),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        refresh_token: randomUUID(),
+        scope: 'openid offline_access',
+      })
+    );
+
+    client.reset();
+    client.stdin.isTTY = false;
+    client.nonInteractive = true;
+
+    const resultPromise = reauthenticate(client, {
+      teamId,
+      scope: 'vercel',
+      enforced: true,
+    });
+
+    await expect(client.stderr).toOutput(`team_id=${teamId}`);
+
+    const result = await resultPromise;
+
+    expect(typeof result).not.toBe('number');
     expect(client.authConfig.token).toBe(tokenResult.access_token);
   });
 
