@@ -48,6 +48,7 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
+import { printAlignedLabel } from '../output/print-aligned-label';
 import {
   displayConfiguredServicesSetup,
   getServicesSetupState,
@@ -91,6 +92,10 @@ function formatCrossTeamMatch(match: CrossTeamMatch): string {
   return `${chalk.bold(match.org.slug)}/${match.project.name} ${formatMatchReason(
     match
   )}`;
+}
+
+function formatMatchSource(match: CrossTeamMatch): string {
+  return match.reason === 'repo-root' ? 'Git repository' : 'Folder name';
 }
 
 function formatTeamList(slugs: string[]): string {
@@ -192,10 +197,7 @@ async function maybePullEnvAfterLink(
 
   const pullEnvConfirmed =
     autoConfirm ||
-    (await client.input.confirm(
-      'Would you like to pull environment variables now?',
-      true
-    ));
+    (await client.input.confirm('Pull environment variables now?', true));
 
   if (!pullEnvConfirmed) {
     return;
@@ -278,7 +280,7 @@ async function promptForLimitedTeams(
   }
 
   return await client.input.checkbox<Team>({
-    message: 'Which SSO-protected teams should be searched?',
+    message: 'Which SSO-protected teams?',
     choices: teams.map(team => ({
       name: team.name ? `${team.name} (${team.slug})` : team.slug,
       value: team,
@@ -359,10 +361,10 @@ async function linkCrossTeamMatches({
       });
     }
 
-    const confirmed = await client.input.confirm(
-      `Found project ${formatCrossTeamMatch(match)}. Link to it?`,
-      true
-    );
+    output.print('  Found project\n');
+    printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
+    printAlignedLabel('Source', formatMatchSource(match));
+    const confirmed = await client.input.confirm('Link to this project?', true);
     if (confirmed) {
       return await linkCrossTeamMatch({
         client,
@@ -404,9 +406,9 @@ async function linkCrossTeamMatches({
     value: null,
   });
 
+  output.print('  Found matching projects across teams\n');
   const selected = await client.input.select<CrossTeamMatch | null>({
-    message:
-      'Found matching projects across teams. Which one do you want to link?',
+    message: 'Which project?',
     choices,
     default: currentTeamMatch ?? undefined,
   });
@@ -784,7 +786,7 @@ export default async function setupAndLink(
     let changeAdditionalSettings = false;
     if (!autoConfirm) {
       changeAdditionalSettings = await client.input.confirm(
-        'Do you want to change additional project settings?',
+        'Customize advanced settings?',
         false
       );
     }
@@ -862,10 +864,7 @@ export async function connectGitRepository(
 
     const shouldConnect =
       autoConfirm ||
-      (await client.input.confirm(
-        `Detected a repository. Connect it to this project?`,
-        true
-      ));
+      (await client.input.confirm(`Connect detected Git repository?`, true));
 
     if (!shouldConnect) {
       return;

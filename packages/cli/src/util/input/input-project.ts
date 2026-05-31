@@ -5,6 +5,7 @@ import { ProjectNotFound } from '../../util/errors-ts';
 import type { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
 export default async function inputProject(
   client: Client,
@@ -64,14 +65,9 @@ export default async function inputProject(
     );
   } else {
     // auto-detected a project to link
-    if (
-      await client.input.confirm(
-        `Found project ${chalk.cyan(
-          `"${org.slug}/${detectedProject.name}"`
-        )}. Link to it?`,
-        true
-      )
-    ) {
+    output.print('  Found project\n');
+    printAlignedLabel('Project', `${org.slug}/${detectedProject.name}`);
+    if (await client.input.confirm(`Link to this project?`, true)) {
       return detectedProject;
     }
 
@@ -120,7 +116,7 @@ export default async function inputProject(
         }));
 
       const toLink = await client.input.select<Project>({
-        message: 'Which existing project do you want to link?',
+        message: 'Which project?',
         choices,
       });
 

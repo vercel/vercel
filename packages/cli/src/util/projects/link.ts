@@ -26,6 +26,7 @@ import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
 import pull from '../../commands/env/pull';
 import { resolveProjectCwd } from './find-project-root';
+import toHumanPath from '../humanize-path';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -478,6 +479,8 @@ export async function linkFolderToProject(
   await addToGitIgnore(path);
 
   printAlignedLabel('Linked', `${orgSlug}/${projectName}`);
+  printAlignedLabel('Directory', toHumanPath(path));
+  printAlignedLabel('Settings', join(VERCEL_DIR, VERCEL_DIR_PROJECT));
 
   if (!pullEnv) {
     return;
@@ -490,10 +493,7 @@ export async function linkFolderToProject(
 
   const pullEnvConfirmed =
     autoConfirm ||
-    (await client.input.confirm(
-      'Would you like to pull environment variables now?',
-      true
-    ));
+    (await client.input.confirm('Pull environment variables now?', true));
 
   if (pullEnvConfirmed) {
     const originalCwd = client.cwd;
