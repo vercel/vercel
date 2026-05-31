@@ -31,6 +31,13 @@ export default async function reauthenticate(
     );
   }
 
+  if (!client.stdin.isTTY && process.env.CI) {
+    throw new Error(
+      `${reauthAction} for ${bold(error.scope)} scope, but the current environment is non-interactive so the device-code flow cannot be completed. ` +
+        `Run \`vercel login\` in an interactive shell, or set VERCEL_TOKEN / pass \`--token\` with a token that is authorized for that scope.`
+    );
+  }
+
   if (error.teamId && error.enforced) {
     output.log(
       `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
