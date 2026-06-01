@@ -49,6 +49,7 @@ export type Framework =
   | 'hydrogen'
   | 'vite'
   | 'tanstack-start'
+  | 'tanstack-start-lovable'
   | 'vitepress'
   | 'vuepress'
   | 'parcel'
