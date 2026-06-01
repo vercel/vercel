@@ -216,6 +216,29 @@ describe('getLambdaEnvironment()', () => {
       expect(environment.VERCEL_SOURCE_MAP).toBeUndefined();
       expect(environment.VERCEL_NODE_PRELOAD_SCRIPTS).toBeUndefined();
     });
+
+    it("doesn't add bytecode caching to VERCEL_NODE_PRELOAD_SCRIPTS if shouldDisableBytecodeCaching is true", () => {
+      const zipBuffer = Buffer.alloc(401 * 1024);
+      const lambda = new NodejsLambda({
+        shouldAddHelpers: false,
+        shouldAddSourcemapSupport: false,
+        shouldDisableBytecodeCaching: true,
+        files: {},
+        handler: 'index.js',
+        runtime: 'nodejs24.x',
+      });
+
+      const environment = getLambdaEnvironment(lambda, zipBuffer, {
+        vercelEnv: 'production',
+        useBytecodeCaching: '1',
+        useNativeBytecodeCaching: undefined,
+        bytecodeCachingThreshold: undefined,
+      });
+      expect(environment.AWS_LAMBDA_HANDLER).toBeUndefined();
+      expect(environment.VERCEL_SHOULD_ADD_HELPERS).toBeUndefined();
+      expect(environment.VERCEL_SOURCE_MAP).toBeUndefined();
+      expect(environment.VERCEL_NODE_PRELOAD_SCRIPTS).toBeUndefined();
+    });
   });
 
   it('adds next-data file to VERCEL_NODE_PRELOAD_SCRIPTS if framework is nextjs', () => {

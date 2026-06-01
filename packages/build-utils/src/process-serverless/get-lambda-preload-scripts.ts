@@ -9,6 +9,7 @@ interface LambdaLike {
   framework?: { slug: string };
   runtime: string;
   shouldAddSourcemapSupport?: boolean;
+  shouldDisableBytecodeCaching?: boolean;
 }
 
 /**
@@ -40,12 +41,14 @@ export function getLambdaPreloadScripts(
 
   /**
    * Only enable Bytecode Caching when:
+   *   - The lambda didn't opt out (e.g. not for Edge)
    *   - The feature flag is enabled.
    *   - The deployment is targeting production.
    *   - The lambda is using Node.js 20, 22 or 24
    *   - The lambda zip is larger than the minimum size.
    */
   if (
+    lambda.shouldDisableBytecodeCaching !== true &&
     options.vercelEnv === 'production' &&
     options.useBytecodeCaching === '1' &&
     ['nodejs20.x', 'nodejs22.x', 'nodejs24.x'].includes(lambda.runtime) &&

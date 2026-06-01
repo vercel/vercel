@@ -9,6 +9,7 @@ interface LambdaLike {
   runtime: string;
   shouldAddHelpers?: boolean;
   shouldAddSourcemapSupport?: boolean;
+  shouldDisableBytecodeCaching?: boolean;
   useWebApi?: boolean;
   shouldDisableAutomaticFetchInstrumentation?: boolean;
 }
