@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getJwtPayload,
-  isOidcJwtLike,
+  isOidcTokenLike,
 } from '../../../../src/util/auth/credential';
 
 describe('OIDC credential detection', () => {
@@ -11,6 +11,7 @@ describe('OIDC credential detection', () => {
       sub: 'repo:vercel/vercel:ref:refs/heads/main',
       aud: 'vercel',
       exp: 1_900_000_000,
+      iat: 1_800_000_000,
     });
 
     expect(getJwtPayload(token)).toEqual({
@@ -18,6 +19,7 @@ describe('OIDC credential detection', () => {
       sub: 'repo:vercel/vercel:ref:refs/heads/main',
       aud: 'vercel',
       exp: 1_900_000_000,
+      iat: 1_800_000_000,
     });
   });
 
@@ -27,9 +29,10 @@ describe('OIDC credential detection', () => {
       sub: 'repo:vercel/vercel:ref:refs/heads/main',
       aud: 'vercel',
       exp: 1_900_000_000,
+      iat: 1_800_000_000,
     });
 
-    expect(isOidcJwtLike(token)).toBe(true);
+    expect(isOidcTokenLike(token)).toBe(true);
   });
 
   it('detects OIDC JWT candidates with an audience array', () => {
@@ -38,28 +41,41 @@ describe('OIDC credential detection', () => {
       sub: 'repo:vercel/vercel:ref:refs/heads/main',
       aud: ['vercel', 'other-audience'],
       exp: 1_900_000_000,
+      iat: 1_800_000_000,
     });
 
-    expect(isOidcJwtLike(token)).toBe(true);
+    expect(isOidcTokenLike(token)).toBe(true);
   });
 
   it('rejects malformed JWT candidates', () => {
     expect(getJwtPayload('a.b.c')).toBe(null);
-    expect(isOidcJwtLike('a.b.c')).toBe(false);
+    expect(isOidcTokenLike('a.b.c')).toBe(false);
     expect(
-      isOidcJwtLike(
+      isOidcTokenLike(
         createJwt({
           iss: 'https://token.actions.githubusercontent.com',
           sub: 'repo:vercel/vercel:ref:refs/heads/main',
           aud: 'vercel',
+          iat: 1_800_000_000,
         })
       )
     ).toBe(false);
     expect(
-      isOidcJwtLike(
+      isOidcTokenLike(
         createJwt({
           iss: 'https://token.actions.githubusercontent.com',
           sub: 'repo:vercel/vercel:ref:refs/heads/main',
+          exp: 1_900_000_000,
+          iat: 1_800_000_000,
+        })
+      )
+    ).toBe(false);
+    expect(
+      isOidcTokenLike(
+        createJwt({
+          iss: 'https://token.actions.githubusercontent.com',
+          sub: 'repo:vercel/vercel:ref:refs/heads/main',
+          aud: 'vercel',
           exp: 1_900_000_000,
         })
       )
@@ -67,9 +83,9 @@ describe('OIDC credential detection', () => {
   });
 
   it('does not classify opaque tokens as OIDC', () => {
-    expect(isOidcJwtLike('vcp_abc.def')).toBe(false);
-    expect(isOidcJwtLike('abcdefghijklmnopqrstuvwx')).toBe(false);
-    expect(isOidcJwtLike('not-a-valid-token')).toBe(false);
+    expect(isOidcTokenLike('vcp_abc.def')).toBe(false);
+    expect(isOidcTokenLike('abcdefghijklmnopqrstuvwx')).toBe(false);
+    expect(isOidcTokenLike('not-a-valid-token')).toBe(false);
   });
 });
 

@@ -51,7 +51,7 @@ import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
-import { isOidcJwtLike } from './util/auth/credential';
+import { isOidcTokenLike } from './util/auth/credential';
 import { printError } from './util/error';
 import reportError from './util/report-error';
 import earlyGetConfig from './util/get-config';
@@ -740,7 +740,7 @@ const main = async () => {
       return finishWithExitCode(1);
     }
 
-    if (isOidcJwtLike(token)) {
+    if (isOidcTokenLike(token)) {
       const teamId = await resolveOidcTokenExchangeTeamId(
         parsedArgs.flags,
         client.config,
