@@ -59,6 +59,7 @@ import { MissingDotenvVarsError } from '../errors-ts';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from '../validate-config';
+import { validateExperimentalEnvironmentVariables } from '../validate-experimental-environment-variables';
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
@@ -783,6 +784,18 @@ export default class DevServer {
     }
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
+
+    const experimentalEnvError = validateExperimentalEnvironmentVariables(
+      vercelConfig,
+      {
+        environment: 'development',
+        env: allEnv,
+      }
+    );
+    if (experimentalEnvError) {
+      output.prettyError(experimentalEnvError);
+      await this.exit(1);
+    }
 
     // If the `devCommand` was modified via project settings
     // overrides then the dev process needs to be restarted

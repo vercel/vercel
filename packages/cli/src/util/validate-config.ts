@@ -613,6 +613,43 @@ const experimentalServiceGroupsSchema = {
   },
 };
 
+const experimentalEnvironmentVariableDefinitionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'required'],
+  properties: {
+    type: {
+      enum: ['secret', 'config'],
+    },
+    required: {
+      oneOf: [
+        { const: true },
+        {
+          type: 'array',
+          minItems: 1,
+          uniqueItems: true,
+          items: {
+            enum: ['development', 'preview', 'production'],
+          },
+        },
+      ],
+    },
+    allowNonSecretDevelopment: {
+      type: 'boolean',
+    },
+  },
+};
+
+/**
+ * Schema for experimental environment variable declarations.
+ * @experimental This feature is experimental and may change.
+ */
+const experimentalEnvironmentVariablesSchema = {
+  type: 'object',
+  propertyNames: envVarNamesSchema,
+  additionalProperties: experimentalEnvironmentVariableDefinitionSchema,
+};
+
 const vercelConfigSchema = {
   type: 'object',
   // These are not all possibilities because `vc dev`
@@ -633,6 +670,7 @@ const vercelConfigSchema = {
     services: servicesSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,
+    experimentalEnvironmentVariables: experimentalEnvironmentVariablesSchema,
   },
 };
 
@@ -712,6 +750,22 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       message:
         'The `experimentalServiceGroups` property requires `experimentalServices` to be defined. Service groups reference services by name.',
     });
+  }
+
+  if (config.experimentalEnvironmentVariables) {
+    for (const [name, definition] of Object.entries(
+      config.experimentalEnvironmentVariables
+    )) {
+      if (
+        definition.type === 'config' &&
+        definition.allowNonSecretDevelopment !== undefined
+      ) {
+        return new NowBuildError({
+          code: 'INVALID_EXPERIMENTAL_ENVIRONMENT_VARIABLE',
+          message: `Invalid ${config[fileNameSymbol] || 'vercel.json'} - \`experimentalEnvironmentVariables.${name}.allowNonSecretDevelopment\` is only supported when \`type\` is \`secret\`.`,
+        });
+      }
+    }
   }
 
   return null;

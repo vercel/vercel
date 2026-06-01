@@ -44,6 +44,7 @@ import {
   isScheduleTriggeredService,
   type Lambda,
   type TriggerEvent,
+  type VercelTargetEnvironment,
   sanitizeConsumerName,
   downloadFile,
 } from '@vercel/build-utils';
@@ -111,6 +112,7 @@ import readJSONFile from '../../util/read-json-file';
 import { getStaticServiceSchedules } from '../../util/service-schedules';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import { validateExperimentalEnvironmentVariables } from '../../util/validate-experimental-environment-variables';
 import ua from '../../util/ua';
 import { validateCronSecret } from '../../util/validate-cron-secret';
 import {
@@ -246,11 +248,10 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target =
-    parseTarget({
-      flagName: 'target',
-      flags: parsedArgs.flags,
-    }) || 'preview';
+  const target = (parseTarget({
+    flagName: 'target',
+    flags: parsedArgs.flags,
+  }) || 'preview') as VercelTargetEnvironment;
 
   const yes = Boolean(parsedArgs.flags['--yes']);
 
@@ -505,7 +506,16 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
+          doBuild(
+            client,
+            project,
+            buildsJson,
+            cwd,
+            outputDir,
+            span,
+            standalone,
+            target
+          )
         );
     } finally {
       await rootSpan.stop();
@@ -601,7 +611,8 @@ async function doBuild(
   cwd: string,
   outputDir: string,
   span: Span,
-  standalone: boolean = false
+  standalone: boolean = false,
+  target: 'development' | 'preview' | 'production' = 'preview'
 ): Promise<void> {
   const { localConfigPath } = client;
 
@@ -690,6 +701,17 @@ async function doBuild(
     if (cronSecretError) {
       throw cronSecretError;
     }
+  }
+
+  const experimentalEnvError = validateExperimentalEnvironmentVariables(
+    localConfig,
+    {
+      environment: target,
+      env: process.env,
+    }
+  );
+  if (experimentalEnvError) {
+    throw experimentalEnvError;
   }
 
   const projectSettings = {
