@@ -36,7 +36,7 @@ export async function detach(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connect detach <client>'
+      'Missing connector ID or UID. Usage: vercel connect detach <connector>'
     );
     return 1;
   }

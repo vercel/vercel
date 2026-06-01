@@ -179,7 +179,7 @@ export async function list(
       return item;
     });
     client.stdout.write(
-      `${JSON.stringify({ clients: jsonClients, cursor: response.cursor }, null, 2)}\n`
+      `${JSON.stringify({ connectors: jsonClients, cursor: response.cursor }, null, 2)}\n`
     );
     return 0;
   }
