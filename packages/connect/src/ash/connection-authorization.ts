@@ -303,10 +303,23 @@ function buildInteractiveDefinition(
         const response = await startAuthorization(
           options.connector,
           buildTokenParams(options, principal),
-          { ...options.connectOptions, callbackUrl: callbackUrl ?? webhook }
+          {
+            ...options.connectOptions,
+            callbackUrl: callbackUrl ?? webhook,
+            deviceCode: true,
+          }
         );
         return {
-          challenge: buildChallenge(options, response.url),
+          challenge: {
+            url: response.url,
+            ...(response.deviceCode ? { userCode: response.deviceCode } : null),
+            ...(response.expiresAt
+              ? { expiresAt: new Date(response.expiresAt).toISOString() }
+              : null),
+            ...(options.instructions
+              ? { instructions: options.instructions }
+              : null),
+          } satisfies ConnectionAuthorizationChallenge,
           state: { verifier: response.verifier },
         };
       } catch (error) {
@@ -368,16 +381,6 @@ function principalToSubject(
     return { type: 'app' };
   }
   return { type: 'user', id: principal.id, issuer: principal.issuer };
-}
-
-function buildChallenge(
-  options: AshAuthorizationOptions,
-  url: string
-): ConnectionAuthorizationChallenge {
-  if (options.instructions === undefined) {
-    return { url };
-  }
-  return { url, instructions: options.instructions };
 }
 
 /**

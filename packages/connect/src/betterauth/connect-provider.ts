@@ -31,6 +31,7 @@ import { getVercelOidcToken } from '@vercel/oidc';
 import { getOAuth2Tokens, type OAuth2UserInfo } from 'better-auth/oauth2';
 import type { GenericOAuthConfig } from 'better-auth/plugins/generic-oauth';
 import { tryGetVercelTeamId, withTeamId } from '../internal/team-id.js';
+import { ConnectError, createConnectErrorFromResponse } from '../token.js';
 
 const CONNECT_AUTHORIZATION_URL = 'https://connect.vercel.com/oauth/authorize';
 const CONNECT_TOKEN_URL = 'https://connect.vercel.com/oauth/token';
@@ -115,24 +116,29 @@ export function connect(options: BetterAuthConnectOptions): GenericOAuthConfig {
         body: body.toString(),
       });
       if (!response.ok) {
-        throw new Error(
-          `Failed to exchange Vercel Connect authorization code: ${response.status} ${response.statusText}: ${await response.text()}`
+        throw await createConnectErrorFromResponse(
+          response,
+          'Failed to exchange Vercel Connect authorization code'
         );
       }
       return getOAuth2Tokens(await response.json());
     },
     getUserInfo: async (tokens): Promise<OAuth2UserInfo | null> => {
       if (!tokens.accessToken) {
-        throw new Error(
-          'Missing access token for Vercel Connect userinfo request'
+        throw new ConnectError(
+          'Missing access token for Vercel Connect userinfo request',
+          {
+            code: 'missing_access_token',
+          }
         );
       }
       const response = await fetch(CONNECT_USERINFO_URL, {
         headers: { Authorization: `Bearer ${tokens.accessToken}` },
       });
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch Vercel Connect user info: ${response.status} ${response.statusText}: ${await response.text()}`
+        throw await createConnectErrorFromResponse(
+          response,
+          'Failed to fetch Vercel Connect user info'
         );
       }
       const user = (await response.json()) as {

@@ -1,5 +1,21 @@
 # vercel
 
+## 54.7.0
+
+### Minor Changes
+
+- 0b4e1ef: Add `vercel connect revoke-tokens` subcommand to revoke tokens issued from a connector.
+
+### Patch Changes
+
+- ba6e7c6: Internal: fix `_deploy` eval grader passing `--token ""` in the Docker sandbox where `VERCEL_TOKEN` isn't in process env. Only pass `--token` when set; CLI falls back to `auth.json` otherwise.
+- 92988c2: Handle sensitive Environment Variable pull challenges in the CLI.
+- 3986bb0: Stop retrying intentionally aborted requests so the CLI exits promptly after a deployment is ready.
+- 64f5484: Allow SAML re-authentication to use device-code flow in non-TTY sessions.
+- 97fdbbe: [flags] fix dep detection for build embedding
+- Updated dependencies [2d918b8]
+  - @vercel/remix-builder@5.8.5
+
 ## 54.6.1
 
 ### Patch Changes
