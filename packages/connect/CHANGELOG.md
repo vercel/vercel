@@ -1,5 +1,11 @@
 # @vercel/connect
 
+## 0.1.1
+
+### Patch Changes
+
+- 5baab3a: Add repository metadata for npm provenance validation.
+
 ## 0.1.0
 
 ### Minor Changes
