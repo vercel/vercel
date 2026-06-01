@@ -30,6 +30,7 @@ import {
   type HandleValue,
   type Route,
 } from '@vercel/routing-utils';
+import { shouldUseCleanUrls } from '../clean-urls';
 import {
   type Builder,
   cloneEnv,
@@ -157,6 +158,10 @@ export default class DevServer {
     return this._address;
   }
 
+  public getCleanUrlsByDefault(): boolean | null | undefined {
+    return this.cleanUrlsByDefault;
+  }
+
   public devCacheDir: string;
   private currentDevCommand?: string;
   private caseSensitive: boolean;
@@ -180,6 +185,7 @@ export default class DevServer {
   >;
   private originalProjectSettings?: ProjectSettings;
   private projectSettings?: ProjectSettings;
+  private cleanUrlsByDefault?: boolean | null;
   private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
   private queueBroker?: QueueBroker;
@@ -211,6 +217,7 @@ export default class DevServer {
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
+    this.cleanUrlsByDefault = options.cleanUrlsByDefault;
     this.services = options.services;
     this.useImplicitServicesEnvInjection =
       options.useImplicitServicesEnvInjection ?? true;
@@ -607,8 +614,10 @@ export default class DevServer {
       ...pickOverrides(vercelConfig),
     };
 
-    const { error: routeError, routes: maybeRoutes } =
-      getTransformedRoutes(vercelConfig);
+    const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
+      ...vercelConfig,
+      cleanUrlsByDefault: this.cleanUrlsByDefault,
+    });
     if (routeError) {
       output.prettyError(routeError);
       await this.exit();
@@ -622,7 +631,11 @@ export default class DevServer {
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {
       const featHandleMiss = true; // enable for zero config
-      const { projectSettings, cleanUrls, trailingSlash } = vercelConfig;
+      const { projectSettings, trailingSlash } = vercelConfig;
+      const cleanUrls = shouldUseCleanUrls(
+        vercelConfig.cleanUrls,
+        this.cleanUrlsByDefault
+      );
 
       const files = (await getFiles(this.cwd, {})).map(f =>
         relative(this.cwd, f)
@@ -632,6 +645,7 @@ export default class DevServer {
         tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
+        cleanUrlsByDefault: this.cleanUrlsByDefault,
         featHandleMiss,
         cleanUrls,
         trailingSlash,
@@ -2881,25 +2895,22 @@ async function shouldServe(
     ? requestPath.slice(0, -1)
     : requestPath;
 
-  if (
-    vercelConfig.cleanUrls &&
-    vercelConfig.trailingSlash &&
-    cleanSrc === trimmedPath
-  ) {
+  const cleanUrls = shouldUseCleanUrls(
+    vercelConfig.cleanUrls,
+    devServer.getCleanUrlsByDefault()
+  );
+
+  if (cleanUrls && vercelConfig.trailingSlash && cleanSrc === trimmedPath) {
     // Mimic fmeta-util and convert cleanUrls and trailingSlash
     return true;
   } else if (
-    vercelConfig.cleanUrls &&
+    cleanUrls &&
     !vercelConfig.trailingSlash &&
     cleanSrc === requestPath
   ) {
     // Mimic fmeta-util and convert cleanUrls
     return true;
-  } else if (
-    !vercelConfig.cleanUrls &&
-    vercelConfig.trailingSlash &&
-    src === trimmedPath
-  ) {
+  } else if (!cleanUrls && vercelConfig.trailingSlash && src === trimmedPath) {
     // Mimic fmeta-util and convert trailingSlash
     return true;
   } else if (typeof builder.shouldServe === 'function') {

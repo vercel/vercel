@@ -8,6 +8,7 @@ import {
   convertTrailingSlash,
   sourceToRegex,
 } from './superstatic';
+import { shouldUseCleanUrls } from './clean-urls';
 import {
   GetRoutesProps,
   HasField,
@@ -28,6 +29,7 @@ export {
 } from './service-route-ownership';
 export * from './schemas';
 export { getCleanUrls, sourceToRegex } from './superstatic';
+export * from './clean-urls';
 export * from './types';
 
 const VALID_HANDLE_VALUES = [
@@ -302,15 +304,19 @@ function notEmpty<T>(value: T | null | undefined): value is T {
 export function getTransformedRoutes(
   vercelConfig: GetRoutesProps
 ): NormalizedRoutes {
-  const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
-    vercelConfig;
+  const {
+    cleanUrls,
+    cleanUrlsByDefault,
+    rewrites,
+    redirects,
+    headers,
+    trailingSlash,
+  } = vercelConfig;
   const { routes: userRoutes = null } = vercelConfig;
   let routes: Route[] | null = null;
 
-  if (typeof cleanUrls !== 'undefined') {
-    const normalized = normalizeRoutes(
-      convertCleanUrls(cleanUrls, trailingSlash)
-    );
+  if (shouldUseCleanUrls(cleanUrls, cleanUrlsByDefault)) {
+    const normalized = normalizeRoutes(convertCleanUrls(true, trailingSlash));
     if (normalized.error) {
       normalized.error.code = 'invalid_clean_urls';
       return { routes, error: normalized.error };

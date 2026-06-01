@@ -373,6 +373,7 @@ export type ProjectProtectionBypass = Record<
 
 export interface Project extends ProjectSettings {
   id: string;
+  cleanUrlsByDefault?: boolean | null;
   analytics?: {
     id: string;
     enabledAt?: number;

@@ -104,6 +104,7 @@ export default async function dev(
   }
 
   let projectSettings: ProjectSettings | undefined;
+  let cleanUrlsByDefault: boolean | null | undefined;
   let envValues: Record<string, string> = {};
   let repoRoot: string | undefined;
   let projectId: string | undefined;
@@ -129,6 +130,7 @@ export default async function dev(
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
+    cleanUrlsByDefault = project.cleanUrlsByDefault;
     projectId = project.id;
     orgId = org.id;
 
@@ -179,6 +181,7 @@ export default async function dev(
 
   const devServer = new DevServer(cwd, {
     projectSettings,
+    cleanUrlsByDefault,
     envValues,
     repoRoot,
     services,

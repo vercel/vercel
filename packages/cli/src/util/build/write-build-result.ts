@@ -44,6 +44,7 @@ import {
   type VercelConfig,
   getVercelIgnore,
 } from '@vercel/client';
+import { shouldUseCleanUrls } from '../clean-urls';
 import outputManager from '../../output-manager';
 
 const { normalize } = posix;
@@ -307,7 +308,10 @@ async function writeBuildResultV2(args: {
         output,
         normalizedPath,
         overrides,
-        vercelConfig?.cleanUrls
+        shouldUseCleanUrls(
+          vercelConfig?.cleanUrls,
+          vercelConfig?.cleanUrlsByDefault
+        )
       );
     } else if (isEdgeFunction(output)) {
       await writeEdgeFunction(
@@ -478,7 +482,7 @@ async function writeStaticFile(
   file: File,
   path: string,
   overrides: Record<string, PathOverride>,
-  cleanUrls = false
+  cleanUrls = true
 ) {
   let fsPath = path;
   let override: PathOverride | null = null;

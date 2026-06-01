@@ -1,7 +1,8 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname, join } from 'path';
-import type { Route, RouteWithSrc } from '@vercel/routing-utils';
+import { type Route, type RouteWithSrc } from '@vercel/routing-utils';
+import { shouldUseCleanUrls } from './clean-urls';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import type {
   PackageJson,
@@ -69,6 +70,7 @@ export interface Options {
   experimentalServices?: ExperimentalServices;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
+  cleanUrlsByDefault?: boolean | null;
   cleanUrls?: boolean;
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
@@ -894,7 +896,7 @@ function getApiRoute(
   const out = createRouteFromPath(
     fileName,
     Boolean(options.featHandleMiss),
-    Boolean(options.cleanUrls)
+    shouldUseCleanUrls(options.cleanUrls, options.cleanUrlsByDefault)
   );
 
   return {
@@ -1145,7 +1147,7 @@ function getRouteResult(
           .map(ext => ext.slice(1))
           .join('|')}))`;
 
-        if (options.cleanUrls) {
+        if (shouldUseCleanUrls(options.cleanUrls, options.cleanUrlsByDefault)) {
           redirectRoutes.push({
             src: `^/(api(?:.+)?)/index${extGroup}?/?$`,
             headers: { Location: options.trailingSlash ? '/$1/' : '/$1' },
@@ -1214,7 +1216,9 @@ function getRouteResult(
     errorRoutes.push({
       status: 404,
       src: '^(?!/api).*$',
-      dest: options.cleanUrls ? '/404' : '/404.html',
+      dest: shouldUseCleanUrls(options.cleanUrls, options.cleanUrlsByDefault)
+        ? '/404'
+        : '/404.html',
     });
   }
 

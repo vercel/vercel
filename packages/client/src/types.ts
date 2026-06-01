@@ -167,6 +167,7 @@ export interface VercelConfig {
   routes?: Route[];
   files?: string[];
   cleanUrls?: boolean;
+  cleanUrlsByDefault?: boolean | null;
   rewrites?: Rewrite[];
   redirects?: Redirect[];
   headers?: Header[];
