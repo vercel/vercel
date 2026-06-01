@@ -1,0 +1,11 @@
+{
+  "name": "turborepo-nextjs-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "pnpm --filter web build"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

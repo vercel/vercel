@@ -1,4 +1,4 @@
-import { formatOption } from '../../util/arg-common';
+import { formatOption, projectOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const schemaSubcommand = {
@@ -103,12 +103,8 @@ export const metricsCommand = {
       argument: 'SIZE',
     },
     {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      deprecated: false,
-      description: 'Project name or ID (default: linked project)',
-      argument: 'NAME_OR_ID',
     },
     {
       name: 'all',

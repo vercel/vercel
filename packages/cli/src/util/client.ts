@@ -37,9 +37,11 @@ import type {
   AuthConfig,
   GlobalConfig,
   JSONObject,
+  Team,
   Stdio,
   ReadableTTY,
   PaginationOptions,
+  User,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
@@ -140,6 +142,11 @@ export default class Client extends EventEmitter implements Stdio {
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
   private _parsedArgsCache?: ParsedArgsCache;
+  /** Request-scoped identity caches used to avoid repeated scope lookups. */
+  user?: User;
+  userPromise?: Promise<User>;
+  teams?: Team[];
+  teamsPromise?: Promise<Team[]>;
 
   constructor(opts: ClientOptions) {
     super();
@@ -350,10 +357,20 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   updateAuthConfig(authConfig: Partial<AuthConfig>) {
+    if (authConfig.token && authConfig.token !== this.authConfig.token) {
+      this.user = undefined;
+      this.userPromise = undefined;
+      this.teams = undefined;
+      this.teamsPromise = undefined;
+    }
     this.authConfig = { ...this.authConfig, ...authConfig };
   }
 
   emptyAuthConfig() {
+    this.user = undefined;
+    this.userPromise = undefined;
+    this.teams = undefined;
+    this.teamsPromise = undefined;
     this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
@@ -488,7 +505,15 @@ export default class Client extends EventEmitter implements Stdio {
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
-      const res = await this._fetch(url, opts);
+      let res: Awaited<ReturnType<Client['_fetch']>>;
+      try {
+        res = await this._fetch(url, opts);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return bail(err);
+        }
+        throw err;
+      }
 
       printIndications(res);
 

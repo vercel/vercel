@@ -3,6 +3,9 @@
 ## Overview
 
 - `vercel domains` — manage domain ownership and project assignment
+- `vercel domains check` — check registrar availability (single or bulk)
+- `vercel domains price` — get registrar quotes (single or bulk)
+- `vercel domains buy` — purchase a domain
 - `vercel dns` — manage DNS records (when using Vercel nameservers)
 - `vercel alias` — map deployment URLs to custom domains
 - `vercel certs` — manage SSL certificates (usually auto-managed)
@@ -16,6 +19,38 @@ Most users only need `vercel alias` — domains and DNS are auto-configured when
 3. Deploy: `vercel --prod` (domain is auto-assigned)
 
 Or manually alias: `vercel alias set <deployment-url> example.com`
+
+## Domain Discovery
+
+### Availability
+
+```bash
+vercel domains check example.com
+vercel domains check one.com two.com three.com --format=json
+```
+
+### Pricing
+
+```bash
+vercel domains price example.com
+vercel domains price one.com two.com three.com --format=json
+```
+
+### Notes
+
+- `domains check` and `domains price` support up to 50 domains per request.
+- If `domains price` doesn't output a purchase price for a given domain, the domain is unavailable. If you only need availability data, just use `domains check`. If you need both price and availability data, use `domains price` to fetch both at once.
+
+## Purchase
+
+```bash
+vercel domains buy example.com
+```
+
+```bash
+vercel domains inspect example.com
+vercel domains add example.com my-project
+```
 
 ## DNS Records
 

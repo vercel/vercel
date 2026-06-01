@@ -33,6 +33,7 @@ import {
   isBackendBuilder,
   isExperimentalBackendsEnabled,
   type Service,
+  isExternalSymlink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
@@ -876,6 +877,13 @@ export function filesWithoutFsRefs(
     if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
       if (standalone && sharedDest) {
+        // pnpm and other package managers create symlinks in node_modules that
+        // point outside the app directory (e.g. ../../node_modules/.pnpm/...).
+        // These targets are rejected during prebuilt deploys, so skip them.
+        // The traced dependency files are included at their logical paths.
+        if (isExternalSymlink(file)) {
+          continue;
+        }
         shared[path] = file;
         filePathMap[normalizePath(path)] = normalizePath(
           relative(repoRootPath, join(sharedDest, path))

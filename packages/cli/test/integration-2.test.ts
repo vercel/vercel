@@ -28,6 +28,32 @@ const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const session = Math.random().toString(36).split('.')[1];
 
+async function findFilesNamed(
+  dir: string,
+  fileName: string
+): Promise<string[]> {
+  let entries;
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch (err: any) {
+    if (err.code === 'ENOENT') {
+      return [];
+    }
+    throw err;
+  }
+
+  const nestedFiles = await Promise.all(
+    entries.map(async entry => {
+      const absolutePath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        return findFilesNamed(absolutePath, fileName);
+      }
+      return entry.isFile() && entry.name === fileName ? [absolutePath] : [];
+    })
+  );
+  return nestedFiles.flat();
+}
+
 async function setupProject(
   process: CLIProcess,
   projectName: string,
@@ -1031,9 +1057,9 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   // Ensure the message is correct pattern
   expect(stderr).toMatch(/Linked\s+/m);
 
-  // Ensure .gitignore contains .vercel and .env*.local (from env pull)
+  // Ensure .gitignore contains .vercel and .env* (from env pull)
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n.env*.local\n');
+  expect(gitignore).toBe('.vercel\n.env*\n');
 });
 
 test('[vc dev] should show prompts to set up project', async () => {
@@ -1198,6 +1224,108 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
   expect(builds.target).toBe('preview');
   expect(builds.builds[0].src).toBe('package.json');
   expect(builds.builds[0].use).toBe('@vercel/static-build');
+});
+
+test('[vc build] should build experimentalServices emitted by latest Next.js config output', async () => {
+  const directory = await setupE2EFixture(
+    'vc-build-next-generated-nitro-service'
+  );
+  const output = await execCli(binaryPath, ['build'], {
+    cwd: directory,
+    env: {
+      NEXT_ENABLE_ADAPTER: '1',
+      NEXT_TELEMETRY_DISABLED: '1',
+    },
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(`${output.stdout}\n${output.stderr}`).toMatch(
+    /Build Completed in \.vercel\/output|Build completed successfully\./
+  );
+
+  const config = await fs.readJSON(
+    path.join(directory, '.vercel/output/config.json')
+  );
+  expect(config.experimentalServices).toEqual({
+    web: expect.objectContaining({
+      framework: 'nextjs',
+      mount: '/',
+    }),
+    'nitro-api': expect.objectContaining({
+      framework: 'nitro',
+      mount: '/api',
+    }),
+  });
+  expect(config.services).toBeUndefined();
+
+  const outputDirectory = path.join(directory, '.vercel/output');
+
+  expect(
+    await fs.pathExists(path.join(outputDirectory, 'static/index.html'))
+  ).toBe(true);
+  const nextBuildManifestPaths = await findFilesNamed(
+    path.join(outputDirectory, 'static/_next/static'),
+    '_buildManifest.js'
+  );
+  expect(nextBuildManifestPaths.length).toBeGreaterThan(0);
+
+  const functionsDirectory = path.join(outputDirectory, 'functions');
+  const nitroChunkPaths = await findFilesNamed(functionsDirectory, 'nitro.mjs');
+  expect(nitroChunkPaths.length).toBeGreaterThan(0);
+  const nitroFunctionDirectory = nitroChunkPaths
+    .map(filePath =>
+      path
+        .relative(functionsDirectory, filePath)
+        .split(path.sep)
+        .find(segment => segment.endsWith('.func'))
+    )
+    .find(Boolean);
+  expect(nitroFunctionDirectory).toBeDefined();
+  const nitroFunctionName = nitroFunctionDirectory!.replace(/\.func$/, '');
+  const nitroFunctionConfig = await fs.readJSON(
+    path.join(functionsDirectory, nitroFunctionDirectory!, '.vc-config.json')
+  );
+  expect(nitroFunctionConfig).toEqual(
+    expect.objectContaining({
+      handler: 'index.mjs',
+      launcherType: 'Nodejs',
+    })
+  );
+  expect(
+    await fs.pathExists(
+      path.join(
+        functionsDirectory,
+        nitroFunctionDirectory!,
+        'chunks/routes/index.mjs'
+      )
+    )
+  ).toBe(true);
+  expect(config.routes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: expect.stringContaining('/api'),
+        dest: `/${nitroFunctionName}`,
+      }),
+    ])
+  );
+
+  const builds = await fs.readJSON(path.join(outputDirectory, 'builds.json'));
+  const nextBuilds = builds.builds.filter(
+    (build: { src: string; use: string }) =>
+      build.src === 'package.json' && build.use === '@vercel/next'
+  );
+  expect(nextBuilds).toHaveLength(1);
+  expect(builds.builds).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: 'package.json',
+        use: '@vercel/next',
+      }),
+      expect.objectContaining({
+        src: 'nitro/package.json',
+        use: '@vercel/static-build',
+      }),
+    ])
+  );
 });
 
 test('[vc build] should build project with `@vercel/speed-insights`', async () => {

@@ -1759,6 +1759,7 @@ export const build: BuildV2 = async buildOptions => {
         base: baseDir,
         cache: nftCache,
         processCwd: entryPath,
+        moduleSyncCatchall: true,
       });
       result.esmFileList.forEach(file => result.fileList.add(file));
 

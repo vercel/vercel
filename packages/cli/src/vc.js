@@ -16,7 +16,8 @@ if (
   (process.argv[2] === '--version' || process.argv[2] === '-v')
 ) {
   const { version } = await import('./version.mjs');
-  console.error(`Vercel CLI ${version}`);
+  const binaryLabel = process.env.VERCEL_VC_NATIVE === '1' ? ' (native)' : '';
+  console.error(`Vercel CLI ${version}${binaryLabel}`);
   console.log(version);
   process.exit(0);
 }

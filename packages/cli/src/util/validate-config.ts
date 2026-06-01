@@ -274,43 +274,24 @@ const envVarNamesSchema = {
 };
 
 const envVarSchema = {
-  oneOf: [
-    {
-      type: 'object',
-      additionalProperties: false,
-      required: ['type', 'service'],
-      properties: {
-        type: { const: 'service-ref' },
-        service: {
-          type: 'string',
-          minLength: 1,
-          maxLength: 64,
-          pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
-        },
-      },
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'service'],
+  properties: {
+    type: { const: 'service-ref' },
+    service: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 64,
+      pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
     },
-  ],
+  },
 };
 
 const envVarRecordSchema = {
   type: 'object',
   additionalProperties: envVarSchema,
   propertyNames: envVarNamesSchema,
-};
-
-/**
- * Top-level `env` accepts both a literal `Record<string, string>` (deprecated)
- * or a new way that allows specifying required URLs to inject into service's env.
- */
-const topLevelEnvSchema = {
-  oneOf: [
-    {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      propertyNames: envVarNamesSchema,
-    },
-    envVarRecordSchema,
-  ],
 };
 
 const experimentalServicesCommonProperties = {
@@ -649,7 +630,6 @@ const vercelConfigSchema = {
     images: imagesSchema,
     crons: cronsSchema,
     bunVersion: { type: 'string' },
-    env: topLevelEnvSchema,
     services: servicesSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,

@@ -28,6 +28,8 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import { isAPIError } from '../../util/errors-ts';
+import { performDeviceCodeFlow } from '../login/future';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -237,7 +239,7 @@ export async function envPullCommandLogic(
   output.spinner('Downloading');
 
   const pullId = deploymentId || link.project.id;
-  const pullResult = await pullEnvRecords(client, pullId, source, {
+  const pullResult = await pullEnvRecordsForEnvPull(client, pullId, source, {
     target: environment || 'development',
     gitBranch,
   });
@@ -282,11 +284,11 @@ export async function envPullCommandLogic(
   if (filename === '.env.local') {
     // When the file is `.env.local`, we also add it to `.gitignore`
     // to avoid accidentally committing it to git.
-    // We use '.env*.local' to match the default .gitignore from
+    // We use '.env*' to match the default .gitignore from
     // create-next-app template. See:
-    // https://github.com/vercel/next.js/blob/06abd634899095b6cc28e6e8315b1e8b9c8df939/packages/create-next-app/templates/app/js/gitignore#L28
+    // https://github.com/vercel/next.js/commit/09a385669b3757ef59065138901eb3084d35d418
     const rootPath = link.repoRoot ?? cwd;
-    isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
+    isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*');
   }
 
   output.print(
@@ -297,6 +299,70 @@ export async function envPullCommandLogic(
       emoji('success')
     )}\n`
   );
+}
+
+async function pullEnvRecordsForEnvPull(
+  client: Client,
+  pullId: string,
+  source: EnvRecordsSource,
+  options: { target: string; gitBranch?: string }
+) {
+  try {
+    return await pullEnvRecords(client, pullId, source, options);
+  } catch (error) {
+    if (!isAPIError(error) || error.code !== 'challenge_required') {
+      throw error;
+    }
+
+    const refreshToken = client.authConfig.refreshToken;
+    if (!refreshToken || client.authConfig.tokenSource || !client.stdin.isTTY) {
+      throw error;
+    }
+
+    output.stopSpinner();
+    output.log('Sensitive Environment Variables require fresh authentication.');
+
+    const acrValues = getAcrValuesFromWWWAuthenticate(error.wwwAuthenticate);
+    if (!acrValues) {
+      throw error;
+    }
+
+    const tokens = await performDeviceCodeFlow(client, {
+      refreshToken,
+      acrValues,
+    });
+    if (!tokens) {
+      throw error;
+    }
+
+    client.updateAuthConfig({
+      token: tokens.access_token,
+      userId: undefined,
+      expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+    });
+    client.writeToAuthConfigFile();
+
+    output.spinner('Downloading');
+    return await pullEnvRecords(client, pullId, source, options);
+  }
+}
+
+export function getAcrValuesFromWWWAuthenticate(header: string | undefined) {
+  if (!header) {
+    return;
+  }
+
+  const bearerIndex = header.toLowerCase().indexOf('bearer');
+  if (bearerIndex === -1) {
+    return;
+  }
+
+  const bearerChallenge = header.slice(bearerIndex + 'bearer'.length);
+  const match = bearerChallenge.match(
+    /(?:^|[,\s])acr_values=(?:"((?:\\.|[^"\\])*)"|([^,\s]+))/i
+  );
+
+  return match?.[1]?.replace(/\\(.)/g, '$1') ?? match?.[2];
 }
 
 function escapeValue(value: string | undefined) {

@@ -63,6 +63,13 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandRevokeTokens(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'revoke-tokens',
+      value: actual,
+    });
+  }
+
   trackCliArgumentClient(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
@@ -148,6 +155,18 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliFlagMyTokens(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('my-tokens');
+    }
+  }
+
+  trackCliFlagAllTokens(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('all-tokens');
+    }
+  }
+
   trackCliFlagAllProjects(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('all-projects');
@@ -169,6 +188,51 @@ export class ConnexTelemetryClient
         option: 'next',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliOptionSearch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'search',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionService(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    for (const raw of v) {
+      for (const svc of raw.split(',')) {
+        const trimmed = svc.trim();
+        if (!trimmed) {
+          continue;
+        }
+        this.trackCliOption({
+          option: 'service',
+          value: this.redactedValue,
+        });
+      }
+    }
+  }
+
+  trackCliOptionType(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    for (const raw of v) {
+      for (const t of raw.split(',')) {
+        const trimmed = t.trim();
+        if (!trimmed) {
+          continue;
+        }
+        this.trackCliOption({
+          option: 'type',
+          value: trimmed,
+        });
+      }
     }
   }
 
@@ -196,15 +260,6 @@ export class ConnexTelemetryClient
           value: this.redactedTargetName(trimmed),
         });
       }
-    }
-  }
-
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
     }
   }
 }

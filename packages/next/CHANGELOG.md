@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 4.17.5
+
+### Patch Changes
+
+- ab0e5aa: Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
+
+## 4.17.4
+
+### Patch Changes
+
+- c8bce3b: Upgrade to the latest Next.js adapter
+
+## 4.17.3
+
+### Patch Changes
+
+- 79d9508: Update to latest Next.js adapter
+
 ## 4.17.2
 
 ### Patch Changes
