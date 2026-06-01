@@ -60,6 +60,15 @@ export class BlobPresignTelemetryClient
     }
   }
 
+  trackCliOptionValidFor(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'valid-for',
+        value,
+      });
+    }
+  }
+
   trackCliOptionIfMatch(value: string | undefined) {
     if (value) {
       this.trackCliOption({

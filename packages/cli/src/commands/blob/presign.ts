@@ -6,7 +6,8 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { parseAccessFlag } from '../../util/blob/access';
 import { blobOpts, type BlobRWToken } from '../../util/blob/token';
-import { BlobPresignTelemetryClient } from '../../util/telemetry/commands/blob/presign';
+import { resolveBlobValidUntil } from '../../util/blob/validity';
+import { BlobPresignTelemetryClient } from '../../util/telemetry/commands/blob';
 import { presignSubcommand } from './command';
 
 const VALID_OPERATIONS = ['get', 'head', 'put', 'delete'] as const;
@@ -107,6 +108,7 @@ export default async function presign(
     '--delegation-token': delegationTokenFlag,
     '--client-signing-token': clientSigningTokenFlag,
     '--valid-until': validUntil,
+    '--valid-for': validFor,
     '--if-match': ifMatch,
     '--allow-overwrite': allowOverwrite,
     '--add-random-suffix': addRandomSuffix,
@@ -128,6 +130,12 @@ export default async function presign(
 
   const operation = parseOperation(operationFlag);
   if (!operation) {
+    return 1;
+  }
+
+  const validity = resolveBlobValidUntil({ validUntil, validFor });
+  if (validity.error) {
+    output.error(validity.error);
     return 1;
   }
 
@@ -169,6 +177,7 @@ export default async function presign(
   telemetryClient.trackCliOptionDelegationToken(delegationTokenFlag);
   telemetryClient.trackCliOptionClientSigningToken(clientSigningTokenFlag);
   telemetryClient.trackCliOptionValidUntil(validUntil);
+  telemetryClient.trackCliOptionValidFor(validFor);
   telemetryClient.trackCliOptionIfMatch(ifMatch);
   telemetryClient.trackCliFlagAllowOverwrite(allowOverwrite);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
@@ -191,7 +200,7 @@ export default async function presign(
             ...blobOpts(auth),
             pathname,
             operations: [operation],
-            validUntil,
+            validUntil: validity.validUntil,
             ...(operation === 'put'
               ? {
                   allowedContentTypes,
@@ -209,7 +218,7 @@ export default async function presign(
         operation,
         pathname,
         access,
-        validUntil,
+        validUntil: validity.validUntil,
         ...(operation === 'put'
           ? {
               allowedContentTypes,

@@ -127,6 +127,53 @@ describe('blob presign', () => {
     });
   });
 
+  it('should convert --valid-for to validUntil', async () => {
+    const now = 1761930000000;
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    const exitCode = await presign(
+      client,
+      [
+        'my-file.txt',
+        '--access',
+        'public',
+        '--operation',
+        'get',
+        '--valid-for',
+        '30m',
+      ],
+      testAuth
+    );
+
+    dateNowSpy.mockRestore();
+
+    expect(exitCode).toBe(0);
+    expect(mockedBlob.issueSignedToken).toHaveBeenCalledWith({
+      token: 'vercel_blob_rw_test_token_123',
+      pathname: 'my-file.txt',
+      operations: ['get'],
+      validUntil: now + 30 * 60 * 1000,
+    });
+    expect(mockedBlob.presignUrl).toHaveBeenCalledWith(
+      {
+        delegationToken: 'delegation-token',
+        clientSigningToken: 'client-signing-token',
+      },
+      {
+        operation: 'get',
+        pathname: 'my-file.txt',
+        access: 'public',
+        validUntil: now + 30 * 60 * 1000,
+      }
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'argument:pathname', value: '[REDACTED]' },
+      { key: 'option:access', value: 'public' },
+      { key: 'option:operation', value: 'get' },
+      { key: 'option:valid-for', value: '30m' },
+    ]);
+  });
+
   it('should use provided signed-token values when both are passed', async () => {
     const exitCode = await presign(
       client,
@@ -229,6 +276,29 @@ describe('blob presign', () => {
     expect(exitCode).toBe(1);
     expect(mockedOutput.error).toHaveBeenCalledWith(
       'Missing required argument: pathname'
+    );
+  });
+
+  it('should reject --valid-until with --valid-for', async () => {
+    const exitCode = await presign(
+      client,
+      [
+        'my-file.txt',
+        '--access',
+        'public',
+        '--valid-until',
+        '1761938400000',
+        '--valid-for',
+        '1h',
+      ],
+      testAuth
+    );
+
+    expect(exitCode).toBe(1);
+    expect(mockedBlob.issueSignedToken).not.toHaveBeenCalled();
+    expect(mockedBlob.presignUrl).not.toHaveBeenCalled();
+    expect(mockedOutput.error).toHaveBeenCalledWith(
+      'The --valid-until and --valid-for flags are mutually exclusive. Pass only one.'
     );
   });
 

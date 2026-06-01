@@ -74,6 +74,33 @@ describe('blob signed-token', () => {
     ]);
   });
 
+  it('should convert --valid-for to validUntil', async () => {
+    const now = 1761930000000;
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    const exitCode = await signedToken(
+      client,
+      ['--operation', 'get', '--valid-for', '1h'],
+      testAuth
+    );
+
+    dateNowSpy.mockRestore();
+
+    expect(exitCode).toBe(0);
+    expect(mockedBlob.issueSignedToken).toHaveBeenCalledWith({
+      token: 'vercel_blob_rw_test_token_123',
+      pathname: undefined,
+      operations: ['get'],
+      validUntil: now + 60 * 60 * 1000,
+      allowedContentTypes: undefined,
+      maximumSizeInBytes: undefined,
+    });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:operation', value: 'get' },
+      { key: 'option:valid-for', value: '1h' },
+    ]);
+  });
+
   it('should pass upload constraints', async () => {
     const exitCode = await signedToken(
       client,
@@ -104,6 +131,27 @@ describe('blob signed-token', () => {
       { key: 'option:allowed-content-type', value: 'image/*,video/*' },
       { key: 'option:maximum-size-in-bytes', value: '1048576' },
     ]);
+  });
+
+  it('should reject --valid-until with --valid-for', async () => {
+    const exitCode = await signedToken(
+      client,
+      [
+        '--operation',
+        'get',
+        '--valid-until',
+        '1761938400000',
+        '--valid-for',
+        '1h',
+      ],
+      testAuth
+    );
+
+    expect(exitCode).toBe(1);
+    expect(mockedBlob.issueSignedToken).not.toHaveBeenCalled();
+    expect(mockedOutput.error).toHaveBeenCalledWith(
+      'The --valid-until and --valid-for flags are mutually exclusive. Pass only one.'
+    );
   });
 
   it('should reject invalid operation values', async () => {

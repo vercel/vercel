@@ -5,7 +5,8 @@ import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { blobOpts, type BlobRWToken } from '../../util/blob/token';
-import { BlobSignedTokenTelemetryClient } from '../../util/telemetry/commands/blob/signed-token';
+import { resolveBlobValidUntil } from '../../util/blob/validity';
+import { BlobSignedTokenTelemetryClient } from '../../util/telemetry/commands/blob';
 import { signedTokenSubcommand } from './command';
 
 const VALID_OPERATIONS = ['get', 'head', 'put', 'delete'] as const;
@@ -72,6 +73,7 @@ export default async function signedToken(
     '--pathname': pathname,
     '--operation': operationValues,
     '--valid-until': validUntil,
+    '--valid-for': validFor,
     '--allowed-content-type': allowedContentTypes,
     '--maximum-size-in-bytes': maximumSizeInBytes,
     '--json': asJson,
@@ -82,9 +84,16 @@ export default async function signedToken(
     return 1;
   }
 
+  const validity = resolveBlobValidUntil({ validUntil, validFor });
+  if (validity.error) {
+    output.error(validity.error);
+    return 1;
+  }
+
   telemetryClient.trackCliOptionPathname(pathname);
   telemetryClient.trackCliOptionOperation(operationValues);
   telemetryClient.trackCliOptionValidUntil(validUntil);
+  telemetryClient.trackCliOptionValidFor(validFor);
   telemetryClient.trackCliOptionAllowedContentType(allowedContentTypes);
   telemetryClient.trackCliOptionMaximumSizeInBytes(maximumSizeInBytes);
   telemetryClient.trackCliFlagJson(asJson);
@@ -97,7 +106,7 @@ export default async function signedToken(
       ...blobOpts(auth),
       pathname,
       operations,
-      validUntil,
+      validUntil: validity.validUntil,
       allowedContentTypes,
       maximumSizeInBytes,
     });

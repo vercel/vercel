@@ -267,8 +267,18 @@ export const signedTokenSubcommand = {
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Absolute expiration time as Unix timestamp in milliseconds',
+      description:
+        'Absolute expiration time as Unix timestamp in milliseconds (mutually exclusive with --valid-for)',
       argument: 'TIMESTAMP_MS',
+    },
+    {
+      name: 'valid-for',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Relative duration before expiration (for example: 15m, 1h, 7d; mutually exclusive with --valid-until)',
+      argument: 'DURATION',
     },
     {
       name: 'allowed-content-type',
@@ -354,8 +364,18 @@ export const presignSubcommand = {
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Absolute expiration time as Unix timestamp in milliseconds',
+      description:
+        'Absolute expiration time as Unix timestamp in milliseconds (mutually exclusive with --valid-for)',
       argument: 'TIMESTAMP_MS',
+    },
+    {
+      name: 'valid-for',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Relative duration before expiration (for example: 15m, 1h, 7d; mutually exclusive with --valid-until)',
+      argument: 'DURATION',
     },
     {
       name: 'if-match',

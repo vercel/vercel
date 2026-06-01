@@ -1,6 +1,8 @@
 import { TelemetryClient } from '../..';
 import type { blobCommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
+export { BlobPresignTelemetryClient } from './presign';
+export { BlobSignedTokenTelemetryClient } from './signed-token';
 
 export class BlobTelemetryClient
   extends TelemetryClient

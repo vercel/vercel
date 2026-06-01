@@ -33,6 +33,15 @@ export class BlobSignedTokenTelemetryClient
     }
   }
 
+  trackCliOptionValidFor(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'valid-for',
+        value,
+      });
+    }
+  }
+
   trackCliOptionAllowedContentType(value: string[] | undefined) {
     if (value && value.length > 0) {
       this.trackCliOption({
