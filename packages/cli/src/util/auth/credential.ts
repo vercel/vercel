@@ -3,7 +3,7 @@ import { decodeJwt, decodeProtectedHeader } from 'jose';
 /**
  * @internal Exported only for focused unit tests around OIDC token detection.
  */
-export interface JwtPayload {
+export interface PartialOidcTokenPayload {
   iss?: unknown;
   sub?: unknown;
   aud?: unknown;
@@ -13,7 +13,7 @@ export interface JwtPayload {
 
 interface DecodedJwt {
   header: Record<string, unknown>;
-  payload: JwtPayload;
+  payload: PartialOidcTokenPayload;
 }
 
 interface SubjectTokenClaims {
@@ -41,7 +41,7 @@ export function isOidcTokenLike(token: string): boolean {
 /**
  * @internal Exported only for focused unit tests around OIDC token detection.
  */
-export function getJwtPayload(token: string): JwtPayload | null {
+export function getJwtPayload(token: string): PartialOidcTokenPayload | null {
   return maybeDecodeJwt(token)?.payload ?? null;
 }
 
@@ -49,7 +49,7 @@ function maybeDecodeJwt(token: string): DecodedJwt | null {
   try {
     return {
       header: decodeProtectedHeader(token) as Record<string, unknown>,
-      payload: decodeJwt(token) as JwtPayload,
+      payload: decodeJwt(token) as PartialOidcTokenPayload,
     };
   } catch {}
 
