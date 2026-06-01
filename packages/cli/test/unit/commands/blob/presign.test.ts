@@ -58,7 +58,7 @@ describe('blob presign', () => {
         validUntil: undefined,
       }
     );
-    expect(mockedOutput.print).toHaveBeenCalledWith(
+    expect(client.stdout.getFullOutput()).toBe(
       'https://blob.vercel-storage.com/presigned-url\n'
     );
     expect(client.telemetryEventStore).toHaveTelemetryEvents([

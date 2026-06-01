@@ -37,13 +37,11 @@ function parseOperations(
   return operations as DelegationOperation[];
 }
 
-function printSignedToken(result: blob.IssuedSignedToken) {
-  output.print(
-    `delegationToken=${result.delegationToken}
+function formatSignedToken(result: blob.IssuedSignedToken): string {
+  return `delegationToken=${result.delegationToken}
 clientSigningToken=${result.clientSigningToken}
 validUntil=${result.validUntil} (${new Date(result.validUntil).toISOString()})
-`
-  );
+`;
 }
 
 export default async function signedToken(
@@ -116,7 +114,7 @@ export default async function signedToken(
     if (asJson) {
       client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     } else {
-      printSignedToken(result);
+      client.stdout.write(formatSignedToken(result));
     }
     return 0;
   } catch (err) {

@@ -74,7 +74,7 @@ function writePresignOutput(params: {
       )}\n`
     );
   } else {
-    output.print(`${presignedUrl}\n`);
+    client.stdout.write(`${presignedUrl}\n`);
   }
 }
 

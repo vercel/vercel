@@ -45,8 +45,10 @@ describe('blob signed-token', () => {
       allowedContentTypes: undefined,
       maximumSizeInBytes: undefined,
     });
-    expect(mockedOutput.print).toHaveBeenCalledWith(
-      expect.stringContaining('delegationToken=delegation-token')
+    expect(client.stdout.getFullOutput()).toBe(
+      'delegationToken=delegation-token\n' +
+        'clientSigningToken=client-signing-token\n' +
+        'validUntil=1761938400000 (2025-10-31T19:20:00.000Z)\n'
     );
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'option:pathname', value: '[REDACTED]' },
