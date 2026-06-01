@@ -83,6 +83,21 @@ If `latest` points to the wrong version, run:
 
 This updates npm dist-tag `latest` without republishing.
 
+## Bad release
+
+If a bad version was published (e.g., a release with a critical bug), run:
+
+- Workflow: `Deprecate Bad Release` (`.github/workflows/deprecate-bad-release.yml`)
+- Inputs:
+  - `version`: The bad CLI version to deprecate (e.g., `54.7.0`)
+  - `target`: (optional) Version to point `latest` to. If omitted, only deprecation is performed.
+  - `message`: (optional) Deprecation reason shown to users. Defaults to a generic message.
+
+This workflow will:
+1. **Deprecate** the bad version on npm so users get a warning when installing it.
+2. **Rollback** the `latest` dist-tag to the previous (or specified) version.
+3. **Update** the GitHub Latest Release to point to the rollback target.
+
 ## Related workflows
 
 - Stable release: `.github/workflows/release.yml`

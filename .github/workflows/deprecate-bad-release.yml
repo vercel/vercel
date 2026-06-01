@@ -1,0 +1,131 @@
+name: Deprecate Bad Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Bad CLI version to deprecate (e.g., 54.7.0)'
+        required: true
+        type: string
+      message:
+        description: 'Deprecation reason shown to users when installing the bad version'
+        required: false
+        type: string
+        default: 'This version contains a critical issue. Please run "npm install -g vercel@latest" to upgrade.'
+      target:
+        description: 'Version to point the latest tag to. If omitted, only deprecation is performed.'
+        required: false
+        type: string
+
+jobs:
+  deprecate:
+    name: Deprecate Bad Release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch git tags
+        run: git fetch origin 'refs/tags/*:refs/tags/*'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate version format
+        run: |
+          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version must be in format X.Y.Z (e.g., 54.7.0)"
+            exit 1
+          fi
+
+      - name: Verify bad version exists on NPM
+        run: |
+          if ! npm view vercel@${{ inputs.version }} version &>/dev/null; then
+            echo "Error: vercel@${{ inputs.version }} does not exist on NPM"
+            npm view vercel versions --json | tail -20
+            exit 1
+          fi
+          echo "✓ Verified vercel@${{ inputs.version }} exists on NPM"
+
+      - name: Deprecate bad version on NPM
+        run: |
+          echo "Deprecating vercel@${{ inputs.version }}..."
+          npm deprecate vercel@${{ inputs.version }} "${{ inputs.message }}"
+          echo "✓ Deprecated vercel@${{ inputs.version }}"
+
+      - name: Validate target version format
+        if: inputs.target != ''
+        run: |
+          if ! [[ "${{ inputs.target }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Target version must be in format X.Y.Z"
+            exit 1
+          fi
+
+      - name: Verify target version exists on NPM
+        if: inputs.target != ''
+        run: |
+          if ! npm view vercel@${{ inputs.target }} version &>/dev/null; then
+            echo "Error: vercel@${{ inputs.target }} does not exist on NPM"
+            exit 1
+          fi
+          echo "✓ Verified target vercel@${{ inputs.target }} exists on NPM"
+
+      - name: Point latest tag to target
+        if: inputs.target != ''
+        run: |
+          echo "Setting vercel@${{ inputs.target }} as latest..."
+          npm dist-tag add vercel@${{ inputs.target }} latest
+          echo "✓ Set vercel@${{ inputs.target }} as latest dist-tag"
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+
+      - name: Update GitHub Latest Release
+        if: inputs.target != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const targetTag = 'vercel@${{ inputs.target }}';
+
+            const releases = await github.rest.repos.listReleases({ owner, repo, per_page: 30 });
+            const targetRelease = releases.data.find(r => r.tag_name === targetTag);
+
+            if (targetRelease) {
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: targetRelease.id,
+                make_latest: true,
+              });
+              console.log(`✓ Set ${targetTag} as the latest GitHub release`);
+            } else {
+              console.log(`Note: No GitHub release found for ${targetTag} — skipping`);
+            }
+
+      - name: Verify final state
+        run: |
+          echo "Current NPM dist-tags for vercel:"
+          npm dist-tag ls vercel
+          echo ""
+          echo "Deprecation status:"
+          npm view vercel@${{ inputs.version }} deprecate
+
+      - name: Summary
+        run: |
+          echo '## Deprecate Bad Release — Summary' >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo "- **Deprecated**: \`vercel@${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.target }}" ]; then
+            echo "- **Target latest**: \`vercel@${{ inputs.target }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Message**: ${{ inputs.message }}" >> $GITHUB_STEP_SUMMARY
