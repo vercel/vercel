@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const DEFAULT_MAX_REQUEST_BYTES = 3_500_000;
 const MULTIPART_PAYLOAD_OVERHEAD_BYTES = 2048;
@@ -634,7 +635,28 @@ async function main() {
   );
 }
 
-main().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  parseMaxRequestBytes,
+  splitAtTimestamp,
+  normalizeUploadPath,
+  getRunGroup,
+  getEvalGroup,
+  isResultsFile,
+  estimatePayloadPartBytes,
+  estimateFilePartBytes,
+  estimateFilesPartBytes,
+  estimateRequestBytes,
+  packFilesIntoChunks,
+  chunkFilesWithoutResults,
+  chunkEvalFilesByEstimatedRequestSize,
+  chunkRunGroupByEstimatedRequestSize,
+  groupFilesByRun,
+  groupFilesByEval,
+};
