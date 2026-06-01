@@ -284,42 +284,61 @@ async function estimateRequestBytes(payload, resultsDir, files) {
   );
 }
 
-async function chunkFilesWithoutResults({
+async function packFilesIntoChunks({
   files,
   resultsDir,
-  payload,
+  seedFiles,
+  baseBytes,
   maxRequestBytes,
 }) {
   const chunks = [];
-  const payloadBytes = estimatePayloadPartBytes(payload);
-  let currentChunk = [];
-  let currentBytes = payloadBytes;
+  let currentChunk = [...seedFiles];
+  let currentBytes = baseBytes;
 
   for (const fullPath of files) {
     const relativePath = getRelativePath(resultsDir, fullPath);
     const fileBytes = await estimateFilePartBytes(resultsDir, fullPath);
 
-    if (payloadBytes + fileBytes > maxRequestBytes) {
+    if (baseBytes + fileBytes > maxRequestBytes) {
+      const seedNote = seedFiles.length > 0 ? ' plus results files' : '';
       console.warn(
-        `Warning: ${relativePath} is approximately ${fileBytes} bytes before multipart framing and exceeds --max-request-bytes=${maxRequestBytes}; uploading it in its own request.`
+        `Warning: ${relativePath}${seedNote} is approximately ${baseBytes + fileBytes} bytes before multipart framing and exceeds --max-request-bytes=${maxRequestBytes}; uploading it in its own request.`
       );
     }
 
-    if (currentChunk.length > 0 && currentBytes + fileBytes > maxRequestBytes) {
+    if (
+      currentChunk.length > seedFiles.length &&
+      currentBytes + fileBytes > maxRequestBytes
+    ) {
       chunks.push(currentChunk);
-      currentChunk = [];
-      currentBytes = payloadBytes;
+      currentChunk = [...seedFiles];
+      currentBytes = baseBytes;
     }
 
     currentChunk.push(fullPath);
     currentBytes += fileBytes;
   }
 
-  if (currentChunk.length > 0) {
+  if (currentChunk.length > seedFiles.length) {
     chunks.push(currentChunk);
   }
 
   return chunks;
+}
+
+async function chunkFilesWithoutResults({
+  files,
+  resultsDir,
+  payload,
+  maxRequestBytes,
+}) {
+  return packFilesIntoChunks({
+    files,
+    resultsDir,
+    seedFiles: [],
+    baseBytes: estimatePayloadPartBytes(payload),
+    maxRequestBytes,
+  });
 }
 
 async function chunkEvalFilesByEstimatedRequestSize({
@@ -371,38 +390,13 @@ async function chunkEvalFilesByEstimatedRequestSize({
     return [sortedFiles];
   }
 
-  const chunks = [];
-  let currentChunk = [...resultsFiles];
-  let currentBytes = baseBytes;
-
-  for (const fullPath of artifactFiles) {
-    const relativePath = getRelativePath(resultsDir, fullPath);
-    const fileBytes = await estimateFilePartBytes(resultsDir, fullPath);
-
-    if (baseBytes + fileBytes > maxRequestBytes) {
-      console.warn(
-        `Warning: ${relativePath} plus results files is approximately ${baseBytes + fileBytes} bytes before multipart framing and exceeds --max-request-bytes=${maxRequestBytes}; uploading it in its own request.`
-      );
-    }
-
-    if (
-      currentChunk.length > resultsFiles.length &&
-      currentBytes + fileBytes > maxRequestBytes
-    ) {
-      chunks.push(currentChunk);
-      currentChunk = [...resultsFiles];
-      currentBytes = baseBytes;
-    }
-
-    currentChunk.push(fullPath);
-    currentBytes += fileBytes;
-  }
-
-  if (currentChunk.length > resultsFiles.length) {
-    chunks.push(currentChunk);
-  }
-
-  return chunks;
+  return packFilesIntoChunks({
+    files: artifactFiles,
+    resultsDir,
+    seedFiles: resultsFiles,
+    baseBytes,
+    maxRequestBytes,
+  });
 }
 
 async function chunkRunGroupByEstimatedRequestSize({
