@@ -622,7 +622,8 @@ export default class DevServer {
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {
       const featHandleMiss = true; // enable for zero config
-      const { projectSettings, cleanUrls, trailingSlash } = vercelConfig;
+      const { projectSettings, trailingSlash } = vercelConfig;
+      const cleanUrls = vercelConfig.cleanUrls !== false;
 
       const files = (await getFiles(this.cwd, {})).map(f =>
         relative(this.cwd, f)
@@ -2881,25 +2882,19 @@ async function shouldServe(
     ? requestPath.slice(0, -1)
     : requestPath;
 
-  if (
-    vercelConfig.cleanUrls &&
-    vercelConfig.trailingSlash &&
-    cleanSrc === trimmedPath
-  ) {
+  const cleanUrls = vercelConfig.cleanUrls !== false;
+
+  if (cleanUrls && vercelConfig.trailingSlash && cleanSrc === trimmedPath) {
     // Mimic fmeta-util and convert cleanUrls and trailingSlash
     return true;
   } else if (
-    vercelConfig.cleanUrls &&
+    cleanUrls &&
     !vercelConfig.trailingSlash &&
     cleanSrc === requestPath
   ) {
     // Mimic fmeta-util and convert cleanUrls
     return true;
-  } else if (
-    !vercelConfig.cleanUrls &&
-    vercelConfig.trailingSlash &&
-    src === trimmedPath
-  ) {
+  } else if (!cleanUrls && vercelConfig.trailingSlash && src === trimmedPath) {
     // Mimic fmeta-util and convert trailingSlash
     return true;
   } else if (typeof builder.shouldServe === 'function') {

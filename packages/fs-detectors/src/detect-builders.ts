@@ -894,7 +894,7 @@ function getApiRoute(
   const out = createRouteFromPath(
     fileName,
     Boolean(options.featHandleMiss),
-    Boolean(options.cleanUrls)
+    options.cleanUrls !== false
   );
 
   return {
@@ -1145,7 +1145,7 @@ function getRouteResult(
           .map(ext => ext.slice(1))
           .join('|')}))`;
 
-        if (options.cleanUrls) {
+        if (options.cleanUrls !== false) {
           redirectRoutes.push({
             src: `^/(api(?:.+)?)/index${extGroup}?/?$`,
             headers: { Location: options.trailingSlash ? '/$1/' : '/$1' },
@@ -1214,7 +1214,7 @@ function getRouteResult(
     errorRoutes.push({
       status: 404,
       src: '^(?!/api).*$',
-      dest: options.cleanUrls ? '/404' : '/404.html',
+      dest: options.cleanUrls !== false ? '/404' : '/404.html',
     });
   }
 

@@ -307,10 +307,8 @@ export function getTransformedRoutes(
   const { routes: userRoutes = null } = vercelConfig;
   let routes: Route[] | null = null;
 
-  if (typeof cleanUrls !== 'undefined') {
-    const normalized = normalizeRoutes(
-      convertCleanUrls(cleanUrls, trailingSlash)
-    );
+  if (cleanUrls !== false) {
+    const normalized = normalizeRoutes(convertCleanUrls(true, trailingSlash));
     if (normalized.error) {
       normalized.error.code = 'invalid_clean_urls';
       return { routes, error: normalized.error };

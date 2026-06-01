@@ -413,7 +413,7 @@ export async function executeBuild(
   }
 
   const { output: buildOutput } = result;
-  const { cleanUrls } = vercelConfig;
+  const cleanUrls = vercelConfig.cleanUrls !== false;
 
   // Mimic fmeta-util and perform file renaming
   for (const [originalPath, value] of Object.entries(buildOutput)) {

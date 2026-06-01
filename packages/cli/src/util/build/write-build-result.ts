@@ -307,7 +307,7 @@ async function writeBuildResultV2(args: {
         output,
         normalizedPath,
         overrides,
-        vercelConfig?.cleanUrls
+        vercelConfig?.cleanUrls !== false
       );
     } else if (isEdgeFunction(output)) {
       await writeEdgeFunction(
@@ -478,7 +478,7 @@ async function writeStaticFile(
   file: File,
   path: string,
   overrides: Record<string, PathOverride>,
-  cleanUrls = false
+  cleanUrls = true
 ) {
   let fsPath = path;
   let override: PathOverride | null = null;
