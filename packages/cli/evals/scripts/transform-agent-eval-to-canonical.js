@@ -177,9 +177,14 @@ function isTimestampSegment(segment) {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d+)?Z$/.test(segment);
 }
 
-function toDiscoverablePath(relativePath) {
+function splitAtTimestamp(relativePath) {
   const segments = relativePath.split('/');
   const timestampIndex = segments.findIndex(isTimestampSegment);
+  return { segments, timestampIndex };
+}
+
+function normalizeUploadPath(relativePath) {
+  const { segments, timestampIndex } = splitAtTimestamp(relativePath);
   if (timestampIndex <= 1) return relativePath;
 
   const modelSegments = segments.slice(1, timestampIndex);
@@ -193,15 +198,13 @@ function toDiscoverablePath(relativePath) {
 }
 
 function getRunGroup(relativePath) {
-  const segments = relativePath.split('/');
-  const timestampIndex = segments.findIndex(isTimestampSegment);
+  const { segments, timestampIndex } = splitAtTimestamp(relativePath);
   if (timestampIndex === -1) return 'ungrouped';
   return segments.slice(0, timestampIndex + 1).join('/');
 }
 
 function getEvalGroup(relativePath) {
-  const segments = relativePath.split('/');
-  const timestampIndex = segments.findIndex(isTimestampSegment);
+  const { segments, timestampIndex } = splitAtTimestamp(relativePath);
   if (timestampIndex === -1) return 'ungrouped';
 
   const runIndex = segments.findIndex(
@@ -214,7 +217,7 @@ function getEvalGroup(relativePath) {
   return segments.slice(0, -1).join('/');
 }
 
-function isDiscoveryFile(relativePath) {
+function isResultsFile(relativePath) {
   return (
     relativePath.endsWith('/summary.json') ||
     /\/run-\d+\/result\.json$/.test(relativePath)
@@ -274,7 +277,14 @@ async function estimateFilesPartBytes(resultsDir, files) {
   return total;
 }
 
-async function chunkFilesWithoutDiscovery({
+async function estimateRequestBytes(payload, resultsDir, files) {
+  return (
+    estimatePayloadPartBytes(payload) +
+    (await estimateFilesPartBytes(resultsDir, files))
+  );
+}
+
+async function chunkFilesWithoutResults({
   files,
   resultsDir,
   payload,
@@ -321,15 +331,15 @@ async function chunkEvalFilesByEstimatedRequestSize({
   const sortedFiles = [...files].sort((a, b) =>
     getRelativePath(resultsDir, a).localeCompare(getRelativePath(resultsDir, b))
   );
-  const discoveryFiles = sortedFiles.filter(fullPath =>
-    isDiscoveryFile(getRelativePath(resultsDir, fullPath))
+  const resultsFiles = sortedFiles.filter(fullPath =>
+    isResultsFile(getRelativePath(resultsDir, fullPath))
   );
   const artifactFiles = sortedFiles.filter(
-    fullPath => !isDiscoveryFile(getRelativePath(resultsDir, fullPath))
+    fullPath => !isResultsFile(getRelativePath(resultsDir, fullPath))
   );
 
-  if (discoveryFiles.length === 0) {
-    return chunkFilesWithoutDiscovery({
+  if (resultsFiles.length === 0) {
+    return chunkFilesWithoutResults({
       files: sortedFiles,
       resultsDir,
       payload,
@@ -338,33 +348,31 @@ async function chunkEvalFilesByEstimatedRequestSize({
   }
 
   if (artifactFiles.length === 0) {
-    return [discoveryFiles];
+    return [resultsFiles];
   }
 
   const payloadBytes = estimatePayloadPartBytes(payload);
-  const discoveryBytes = await estimateFilesPartBytes(
-    resultsDir,
-    discoveryFiles
-  );
-  const baseBytes = payloadBytes + discoveryBytes;
+  const resultsBytes = await estimateFilesPartBytes(resultsDir, resultsFiles);
+  const baseBytes = payloadBytes + resultsBytes;
 
   if (baseBytes > maxRequestBytes) {
     const evalGroup = getEvalGroup(
-      getRelativePath(resultsDir, discoveryFiles[0])
+      getRelativePath(resultsDir, resultsFiles[0])
     );
     console.warn(
-      `Warning: discovery files for ${evalGroup} are approximately ${discoveryBytes} bytes before multipart framing and exceed --max-request-bytes=${maxRequestBytes}.`
+      `Warning: results files for ${evalGroup} are approximately ${resultsBytes} bytes before multipart framing and exceed --max-request-bytes=${maxRequestBytes}.`
     );
   }
 
-  const allFilesBytes =
-    baseBytes + (await estimateFilesPartBytes(resultsDir, artifactFiles));
-  if (allFilesBytes <= maxRequestBytes) {
+  if (
+    (await estimateRequestBytes(payload, resultsDir, sortedFiles)) <=
+    maxRequestBytes
+  ) {
     return [sortedFiles];
   }
 
   const chunks = [];
-  let currentChunk = [...discoveryFiles];
+  let currentChunk = [...resultsFiles];
   let currentBytes = baseBytes;
 
   for (const fullPath of artifactFiles) {
@@ -373,16 +381,16 @@ async function chunkEvalFilesByEstimatedRequestSize({
 
     if (baseBytes + fileBytes > maxRequestBytes) {
       console.warn(
-        `Warning: ${relativePath} plus discovery files is approximately ${baseBytes + fileBytes} bytes before multipart framing and exceeds --max-request-bytes=${maxRequestBytes}; uploading it in its own discoverable request.`
+        `Warning: ${relativePath} plus results files is approximately ${baseBytes + fileBytes} bytes before multipart framing and exceeds --max-request-bytes=${maxRequestBytes}; uploading it in its own request.`
       );
     }
 
     if (
-      currentChunk.length > discoveryFiles.length &&
+      currentChunk.length > resultsFiles.length &&
       currentBytes + fileBytes > maxRequestBytes
     ) {
       chunks.push(currentChunk);
-      currentChunk = [...discoveryFiles];
+      currentChunk = [...resultsFiles];
       currentBytes = baseBytes;
     }
 
@@ -390,7 +398,7 @@ async function chunkEvalFilesByEstimatedRequestSize({
     currentBytes += fileBytes;
   }
 
-  if (currentChunk.length > discoveryFiles.length) {
+  if (currentChunk.length > resultsFiles.length) {
     chunks.push(currentChunk);
   }
 
@@ -403,10 +411,9 @@ async function chunkRunGroupByEstimatedRequestSize({
   payload,
   maxRequestBytes,
 }) {
-  const allFilesBytes =
-    estimatePayloadPartBytes(payload) +
-    (await estimateFilesPartBytes(resultsDir, files));
-  if (allFilesBytes <= maxRequestBytes) {
+  if (
+    (await estimateRequestBytes(payload, resultsDir, files)) <= maxRequestBytes
+  ) {
     return [files];
   }
 
@@ -439,7 +446,7 @@ async function uploadFileGroup({
 
   for (const fullPath of files) {
     const relativePath = getRelativePath(resultsDir, fullPath);
-    const uploadPath = toDiscoverablePath(relativePath);
+    const uploadPath = normalizeUploadPath(relativePath);
     const buffer = await readFile(fullPath);
     formData.append(
       'results_file',
