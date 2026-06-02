@@ -625,13 +625,6 @@ const experimentalServicesV2CommandSchema = {
   maxLength: 2048,
 };
 
-const experimentalServicesV2EnvSchema = {
-  type: 'object',
-  maxProperties: 1000,
-  additionalProperties: { type: 'string', maxLength: 65536 },
-  propertyNames: envVarNamesSchema,
-};
-
 const experimentalServicesV2BindingSchema = {
   type: 'object',
   additionalProperties: false,
@@ -680,7 +673,6 @@ const experimentalServicesV2ServiceConfigSchema = {
     devCommand: experimentalServicesV2CommandSchema,
     ignoreCommand: experimentalServicesV2CommandSchema,
     outputDirectory: experimentalServicesV2PathSchema,
-    env: experimentalServicesV2EnvSchema,
     bindings: experimentalServicesV2BindingsSchema,
     functions: functionsSchema,
     headers: headersSchema,

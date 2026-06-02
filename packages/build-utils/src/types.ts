@@ -1069,9 +1069,6 @@ export interface ExperimentalServiceV2Config {
   ignoreCommand?: string;
   outputDirectory?: string;
 
-  /** Literal environment variables for a service. */
-  env?: Record<string, string>;
-
   /** Caller-side bindings that grant this service access to another service. */
   bindings?: ExperimentalServiceV2Binding[];
 

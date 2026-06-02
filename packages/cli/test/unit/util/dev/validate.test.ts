@@ -32,7 +32,6 @@ describe('validateConfig', () => {
             root: 'backend/',
             runtime: 'python',
             entrypoint: 'main:app',
-            env: { LOG_LEVEL: 'info' },
           },
         },
       } satisfies Parameters<typeof validateConfig>[0]);
@@ -154,14 +153,12 @@ describe('validateConfig', () => {
       expect(error).not.toBeNull();
     });
 
-    it('should reject service-ref object env values', () => {
+    it('should reject the removed `env` field', () => {
       const error = validateConfig({
         experimentalServicesV2: {
           web: {
             root: '.',
-            env: {
-              API_URL: { type: 'service-ref', service: 'api' },
-            },
+            env: { LOG_LEVEL: 'info' },
           } as any,
         },
       });
