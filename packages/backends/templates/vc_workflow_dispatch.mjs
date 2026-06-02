@@ -21,11 +21,9 @@ const __vc_bundle_code = readFileSync(
 // Load the pre-bundled workflow runtime (CJS). This avoids depending on
 // node_modules being present in the lambda.
 const __vc_require = createRequire(import.meta.url);
-const {
-  createWorld,
-  setWorld,
-  workflowEntrypoint,
-} = __vc_require(join(__vc_dirname, '__VC_WORKFLOW_RUNTIME_PATH__'));
+const { createWorld, setWorld, workflowEntrypoint } = __vc_require(
+  join(__vc_dirname, '__VC_WORKFLOW_RUNTIME_PATH__')
+);
 
 // Initialise the workflow world (picks Vercel or local based on env).
 setWorld(createWorld());

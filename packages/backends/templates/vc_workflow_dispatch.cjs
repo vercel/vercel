@@ -18,11 +18,9 @@ const __vc_bundle_code = readFileSync(
 // Load the pre-bundled workflow runtime (CJS). This avoids depending on
 // node_modules being present in the lambda — the runtime and all its
 // dependencies are bundled at build time by rolldown.
-const {
-  createWorld,
-  setWorld,
-  workflowEntrypoint,
-} = require(join(__dirname, '__VC_WORKFLOW_RUNTIME_PATH__'));
+const { createWorld, setWorld, workflowEntrypoint } = require(
+  join(__dirname, '__VC_WORKFLOW_RUNTIME_PATH__')
+);
 
 setWorld(createWorld());
 const __vc_handler = workflowEntrypoint(__vc_bundle_code);
