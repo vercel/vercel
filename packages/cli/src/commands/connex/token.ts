@@ -22,12 +22,7 @@ type ActionableErrorCode =
   | 'user_authorization_required'
   | 'client_installation_required';
 
-/**
- * Token request params that must be honored by BOTH the `POST /connect/token`
- * body and the authorize/install recovery URL. Keeping them in one object
- * means a new flag is forwarded to both surfaces by construction — the
- * recovery URL can't silently drop a param the token request used.
- */
+/** Token params shared by the token request and the recovery URL. */
 interface TokenRequestParams {
   installationId?: string;
   scopes?: string[];
