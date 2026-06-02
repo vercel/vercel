@@ -65,11 +65,13 @@ export async function token(
     // it's reliably available here for authenticated callers.
     body.subject = { type: 'user', id: client.authConfig.userId };
   }
-  if (flags['--installation-id']) {
-    body.installationId = flags['--installation-id'];
+  const installationId = flags['--installation-id'];
+  const scopes = flags['--scopes'] ? parseScopes(flags['--scopes']) : undefined;
+  if (installationId) {
+    body.installationId = installationId;
   }
-  if (flags['--scopes']) {
-    body.scopes = parseScopes(flags['--scopes']);
+  if (scopes) {
+    body.scopes = scopes;
   }
 
   output.spinner('Fetching token...');
@@ -123,7 +125,10 @@ export async function token(
 
   if (!attemptRecovery) {
     const { requestCode } = generateRequestCode();
-    const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode);
+    const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode, {
+      scopes,
+      installationId,
+    });
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
@@ -147,7 +152,10 @@ export async function token(
   }
 
   const { verifier, requestCode } = generateRequestCode();
-  const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode);
+  const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode, {
+    scopes,
+    installationId,
+  });
 
   output.log(`Opening browser for ${actionLabel}...`);
   output.log(`If the browser doesn't open, visit:\n${actionUrl}`);
@@ -202,13 +210,21 @@ function buildActionUrl(
   code: ActionableErrorCode,
   clientId: string,
   teamId: string,
-  requestCode: string
+  requestCode: string,
+  options?: { scopes?: string[]; installationId?: string }
 ): string {
   const path = code === 'user_authorization_required' ? 'authorize' : 'install';
   const params = new URLSearchParams({
     teamId,
     request_code: requestCode,
   });
+
+  if (options?.scopes && options.scopes.length > 0) {
+    params.set('scopes', options.scopes.join(','));
+  }
+  if (options?.installationId) {
+    params.set('installationId', options.installationId);
+  }
   return `https://vercel.com/api/v1/connect/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }
 
