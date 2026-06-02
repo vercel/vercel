@@ -170,6 +170,13 @@ export async function connect(client: Client, argv: string[]) {
     return 1;
   }
 
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
+  }
+
   if (!skipConfirmation) {
     output.log(
       `The resource ${chalk.bold(targetedResource.name)} will be connected to project ${chalk.bold(projectName)} (environments: ${environments.join(', ')}).`
@@ -201,16 +208,22 @@ export async function connect(client: Client, argv: string[]) {
       );
       if (conflict) {
         const varName = conflict[1];
+        // `vc env rm` accepts at most one environment positional; emit a single-env
+        // form when exactly one was specified, otherwise the no-env form that prompts.
+        const envRmCmd =
+          environments.length === 1
+            ? `vercel env rm ${varName} ${environments[0]}`
+            : `vercel env rm ${varName}`;
         output.error(
           `Cannot connect: env var ${chalk.bold(varName)} already exists on project ${chalk.bold(projectName)} in one of the target environments (${environments.join(', ')}).`
         );
         if (prefix === undefined) {
           output.log(
-            `Re-run with \`--prefix <PREFIX>_\` to namespace the new variables, or remove the existing one with \`vercel env rm ${varName} ${environments.join(' ')}\`.`
+            `Re-run with \`--prefix <PREFIX>_\` to namespace the new variables, or remove the existing one with \`${envRmCmd}\`.`
           );
         } else {
           output.log(
-            `Prefix \`${prefix}\` did not avoid the collision. Try a different prefix or run \`vercel env rm ${varName} ${environments.join(' ')}\`.`
+            `Prefix \`${prefix}\` did not avoid the collision. Try a different prefix or run \`${envRmCmd}\`.`
           );
         }
         return 1;

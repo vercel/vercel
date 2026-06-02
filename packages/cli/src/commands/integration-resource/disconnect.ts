@@ -202,6 +202,13 @@ async function handleDisconnectProject(
     return 1;
   }
 
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
+  }
+
   if (
     !skipConfirmation &&
     !(await confirmDisconnectProject(client, resource, project))
@@ -257,6 +264,12 @@ export async function handleDisconnectAllProjects(
       },
       1
     );
+    throw new FailedError(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+  }
+
+  if (!skipConfirmation && !client.stdin.isTTY) {
     throw new FailedError(
       'Confirmation required. Use `--yes` to skip the confirmation prompt.'
     );

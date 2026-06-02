@@ -370,7 +370,7 @@ describe('integration-resource', () => {
             'Error: Cannot connect: env var SHOPIFY_STOREFRONT_ACCESS_TOKEN already exists on project connected-project'
           );
           await expect(client.stderr).toOutput(
-            'Re-run with `--prefix <PREFIX>_` to namespace the new variables, or remove the existing one with `vercel env rm SHOPIFY_STOREFRONT_ACCESS_TOKEN production preview development`.'
+            'Re-run with `--prefix <PREFIX>_` to namespace the new variables, or remove the existing one with `vercel env rm SHOPIFY_STOREFRONT_ACCESS_TOKEN`.'
           );
         });
 
