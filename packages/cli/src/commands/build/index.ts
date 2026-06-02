@@ -931,6 +931,7 @@ async function doBuild(
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   const workPathByBuilder = new Map<Builder, string>();
+  const serviceFileOverrides = new Map<Builder, Record<string, PathOverride>>();
   if (getHasDetectedServices()) {
     for (const service of detectedServices!) {
       serviceByBuilder.set(service.builder, service);
@@ -1449,9 +1450,6 @@ async function doBuild(
                 });
               }
             }
-            if (buildOutputConfig.overrides) {
-              overrides.push(buildOutputConfig.overrides);
-            }
             if (
               getHasDetectedServices() &&
               service &&
@@ -1502,7 +1500,7 @@ async function doBuild(
 
         if (service && nestServiceOutput) {
           const override = await writeBuildResultPromise;
-          if (override) overrides.push(override);
+          if (override) serviceFileOverrides.set(build, override);
         } else {
           // Start flushing the file outputs to the filesystem asynchronously
           ops.push(
@@ -1810,13 +1808,21 @@ async function doBuild(
       }
     }
 
-    if (existingConfig.overrides) {
+    if (existingConfig.overrides && !nestServiceOutput) {
       overrides.push(existingConfig.overrides);
     }
   }
 
+  const topLevelBuildResults = nestServiceOutput
+    ? new Map(
+        Array.from(buildResults.entries()).filter(
+          ([build]) => !serviceByBuilder.has(build)
+        )
+      )
+    : buildResults;
+
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
-    buildResults.entries()
+    topLevelBuildResults.entries()
   )
     .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
     .map(b => {
@@ -1860,15 +1866,18 @@ async function doBuild(
     });
   }
 
-  const mergedImages = mergeImages(localConfig.images, buildResults.values());
+  const mergedImages = mergeImages(
+    localConfig.images,
+    topLevelBuildResults.values()
+  );
   const mergedCrons = mergeCrons(
     [...(localConfig.crons || []), ...synthesizedServiceCrons],
-    buildResults.values()
+    topLevelBuildResults.values()
   );
-  const mergedWildcard = mergeWildcard(buildResults.values());
+  const mergedWildcard = mergeWildcard(topLevelBuildResults.values());
   const mergedDeploymentId = await mergeDeploymentId(
     existingConfig?.deploymentId,
-    buildResults.values(),
+    topLevelBuildResults.values(),
     workPath
   );
 
@@ -1891,10 +1900,18 @@ async function doBuild(
     }
   }
 
+  const topLevelBuildResultOverrides = Array.from(topLevelBuildResults.values())
+    .map(result => ('overrides' in result ? result.overrides : undefined))
+    .filter((value): value is Record<string, PathOverride> => Boolean(value));
   const mergedOverrides: Record<string, PathOverride> =
-    overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
+    overrides.length > 0 || topLevelBuildResultOverrides.length > 0
+      ? Object.assign({}, ...overrides, ...topLevelBuildResultOverrides)
+      : undefined;
 
-  const framework = await getFramework(workPath, buildResults);
+  const framework =
+    topLevelBuildResults.size > 0
+      ? await getFramework(workPath, topLevelBuildResults)
+      : undefined;
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
@@ -1917,7 +1934,12 @@ async function doBuild(
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
   if (nestServiceOutput) {
-    await writeServiceConfigs(outputDir, buildResults, serviceByBuilder);
+    await writeServiceConfigs(
+      outputDir,
+      buildResults,
+      serviceByBuilder,
+      serviceFileOverrides
+    );
   }
 
   await writeFlagsJSON(buildResults.values(), outputDir);
@@ -2303,11 +2325,16 @@ function mergeWildcard(
 async function writeServiceConfigs(
   outputDir: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
-  serviceByBuilder: Map<Builder, Service>
+  serviceByBuilder: Map<Builder, Service>,
+  serviceFileOverrides: Map<Builder, Record<string, PathOverride>>
 ) {
   const serviceResults = new Map<
     string,
     Array<BuildResult | BuildOutputConfig>
+  >();
+  const serviceOverrides = new Map<
+    string,
+    Array<Record<string, PathOverride>>
   >();
 
   for (const [build, buildResult] of buildResults) {
@@ -2317,6 +2344,13 @@ async function writeServiceConfigs(
     const results = serviceResults.get(service.name) || [];
     results.push(buildResult);
     serviceResults.set(service.name, results);
+
+    const fileOverrides = serviceFileOverrides.get(build);
+    if (fileOverrides) {
+      const overrides = serviceOverrides.get(service.name) || [];
+      overrides.push(fileOverrides);
+      serviceOverrides.set(service.name, overrides);
+    }
   }
 
   await Promise.all(
@@ -2335,11 +2369,14 @@ async function writeServiceConfigs(
       const routes = results.flatMap(result =>
         'routes' in result && Array.isArray(result.routes) ? result.routes : []
       );
-      const overrides = results
-        .map(result => ('overrides' in result ? result.overrides : undefined))
-        .filter((value): value is Record<string, PathOverride> =>
-          Boolean(value)
-        );
+      const overrides = [
+        ...results
+          .map(result => ('overrides' in result ? result.overrides : undefined))
+          .filter((value): value is Record<string, PathOverride> =>
+            Boolean(value)
+          ),
+        ...(serviceOverrides.get(serviceName) || []),
+      ];
       const framework = results.find(
         (result): result is BuildOutputConfig =>
           'framework' in result && Boolean(result.framework)
