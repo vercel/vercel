@@ -22,6 +22,17 @@ type ActionableErrorCode =
   | 'user_authorization_required'
   | 'client_installation_required';
 
+/**
+ * Token request params that must be honored by BOTH the `POST /connect/token`
+ * body and the authorize/install recovery URL. Keeping them in one object
+ * means a new flag is forwarded to both surfaces by construction — the
+ * recovery URL can't silently drop a param the token request used.
+ */
+interface TokenRequestParams {
+  installationId?: string;
+  scopes?: string[];
+}
+
 export async function token(
   client: Client,
   args: string[],
@@ -57,21 +68,23 @@ export async function token(
 
   await selectConnexTeam(client, 'Select the team for this token request');
 
-  const body: Record<string, unknown> = {};
+  const tokenParams: TokenRequestParams = {};
+  if (flags['--installation-id']) {
+    tokenParams.installationId = flags['--installation-id'];
+  }
+  if (flags['--scopes']) {
+    tokenParams.scopes = parseScopes(flags['--scopes']);
+  }
+
+  // Spread token params into the body; `subject` is body-only (the
+  // authorize/install endpoints derive the subject from the caller).
+  const body: Record<string, unknown> = { ...tokenParams };
   if (subject === 'app') {
     body.subject = { type: 'app' };
   } else if (subject === 'user') {
     // selectConnexTeam → selectOrg → getUser populates authConfig.userId, so
     // it's reliably available here for authenticated callers.
     body.subject = { type: 'user', id: client.authConfig.userId };
-  }
-  const installationId = flags['--installation-id'];
-  const scopes = flags['--scopes'] ? parseScopes(flags['--scopes']) : undefined;
-  if (installationId) {
-    body.installationId = installationId;
-  }
-  if (scopes) {
-    body.scopes = scopes;
   }
 
   output.spinner('Fetching token...');
@@ -125,10 +138,13 @@ export async function token(
 
   if (!attemptRecovery) {
     const { requestCode } = generateRequestCode();
-    const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode, {
-      scopes,
-      installationId,
-    });
+    const actionUrl = buildActionUrl(
+      errorCode,
+      clientId,
+      teamId,
+      requestCode,
+      tokenParams
+    );
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
@@ -152,10 +168,13 @@ export async function token(
   }
 
   const { verifier, requestCode } = generateRequestCode();
-  const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode, {
-    scopes,
-    installationId,
-  });
+  const actionUrl = buildActionUrl(
+    errorCode,
+    clientId,
+    teamId,
+    requestCode,
+    tokenParams
+  );
 
   output.log(`Opening browser for ${actionLabel}...`);
   output.log(`If the browser doesn't open, visit:\n${actionUrl}`);
@@ -211,7 +230,7 @@ function buildActionUrl(
   clientId: string,
   teamId: string,
   requestCode: string,
-  options?: { scopes?: string[]; installationId?: string }
+  tokenParams: TokenRequestParams
 ): string {
   const path = code === 'user_authorization_required' ? 'authorize' : 'install';
   const params = new URLSearchParams({
@@ -219,11 +238,15 @@ function buildActionUrl(
     request_code: requestCode,
   });
 
-  if (options?.scopes && options.scopes.length > 0) {
-    params.set('scopes', options.scopes.join(','));
-  }
-  if (options?.installationId) {
-    params.set('installationId', options.installationId);
+  // Merge the same token params the POST body carried so the consent flow
+  // grants what the user asked for. Array values (e.g. scopes) are
+  // comma-joined; the authorize/install endpoints split them via
+  // parseListParam. The query-param names match the body field names.
+  for (const [key, value] of Object.entries(tokenParams)) {
+    if (value === undefined) {
+      continue;
+    }
+    params.set(key, Array.isArray(value) ? value.join(',') : value);
   }
   return `https://vercel.com/api/v1/connect/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }

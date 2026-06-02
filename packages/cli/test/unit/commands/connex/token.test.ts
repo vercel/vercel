@@ -249,10 +249,11 @@ describe('connex token', () => {
 
     const exitCode = await connect(client);
 
-    // scopes are comma-joined; URLSearchParams encodes the colon as %3A
-    // and the comma as %2C. installationId follows scopes in the query string.
+    // Params follow tokenParams insertion order (installationId, then
+    // scopes); query-param order is not semantically significant. scopes are
+    // comma-joined; URLSearchParams encodes the colon as %3A and comma as %2C.
     await expect(client.stderr).toOutput(
-      'scopes=chat%3Awrite%2Cchannels%3Aread&installationId=inst_42'
+      'installationId=inst_42&scopes=chat%3Awrite%2Cchannels%3Aread'
     );
     expect(exitCode).toBe(1);
   });
