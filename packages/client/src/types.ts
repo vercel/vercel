@@ -8,6 +8,7 @@ import type {
   Services,
   ExperimentalServices,
   ExperimentalServiceGroups,
+  ExperimentalServicesV2,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -199,6 +200,10 @@ export interface VercelConfig {
    * @experimental This feature is experimental and may change.
    */
   experimentalServiceGroups?: ExperimentalServiceGroups;
+  /**
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalServicesV2?: ExperimentalServicesV2;
 }
 
 export interface GitMetadata {

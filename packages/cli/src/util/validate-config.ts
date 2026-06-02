@@ -613,6 +613,86 @@ const experimentalServiceGroupsSchema = {
   },
 };
 
+const experimentalServicesV2PathSchema = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 512,
+};
+
+const experimentalServicesV2CommandSchema = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 2048,
+};
+
+const experimentalServicesV2BindingSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'service', 'format', 'env'],
+  properties: {
+    type: { const: 'service' },
+    service: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 64,
+      pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    },
+    format: { const: 'url' },
+    env: {
+      type: 'string',
+      ...envVarNamesSchema,
+    },
+  },
+};
+
+const experimentalServicesV2BindingsSchema = {
+  type: 'array',
+  maxItems: 100,
+  items: experimentalServicesV2BindingSchema,
+};
+
+const experimentalServicesV2ServiceConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['root'],
+  properties: {
+    root: experimentalServicesV2PathSchema,
+    framework: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    runtime: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    entrypoint: experimentalServicesV2PathSchema,
+    installCommand: experimentalServicesV2CommandSchema,
+    buildCommand: experimentalServicesV2CommandSchema,
+    devCommand: experimentalServicesV2CommandSchema,
+    ignoreCommand: experimentalServicesV2CommandSchema,
+    outputDirectory: experimentalServicesV2PathSchema,
+    bindings: experimentalServicesV2BindingsSchema,
+    functions: functionsSchema,
+    headers: headersSchema,
+    redirects: redirectsSchema,
+    rewrites: rewritesSchema,
+    routes: routesSchema,
+    cleanUrls: cleanUrlsSchema,
+    trailingSlash: trailingSlashSchema,
+  },
+};
+
+const experimentalServicesV2Schema = {
+  type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
+  additionalProperties: experimentalServicesV2ServiceConfigSchema,
+};
+
 const vercelConfigSchema = {
   type: 'object',
   // These are not all possibilities because `vc dev`
@@ -633,6 +713,7 @@ const vercelConfigSchema = {
     services: servicesSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,
+    experimentalServicesV2: experimentalServicesV2Schema,
   },
 };
 
@@ -712,6 +793,88 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       message:
         'The `experimentalServiceGroups` property requires `experimentalServices` to be defined. Service groups reference services by name.',
     });
+  }
+
+  const hasExperimentalServicesV2 = Boolean(config.experimentalServicesV2);
+
+  if (hasExperimentalServicesV2 && hasServices) {
+    return new NowBuildError({
+      code: 'EXPERIMENTAL_SERVICES_V2_AND_SERVICES',
+      message:
+        'The `experimentalServicesV2` property cannot be used in conjunction with the `services` property. Please use only one services configuration.',
+    });
+  }
+
+  if (hasExperimentalServicesV2 && hasExperimentalServices) {
+    return new NowBuildError({
+      code: 'EXPERIMENTAL_SERVICES_V2_AND_EXPERIMENTAL_SERVICES',
+      message:
+        'The `experimentalServicesV2` property cannot be used in conjunction with the `experimentalServices` property. Please use only one services configuration.',
+    });
+  }
+
+  if (hasExperimentalServicesV2 && config.builds) {
+    return new NowBuildError({
+      code: 'EXPERIMENTAL_SERVICES_V2_AND_BUILDS',
+      message:
+        'The `experimentalServicesV2` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+    });
+  }
+
+  // with `experimentalServicesV2` some fields could be present only in services declaration
+  if (hasExperimentalServicesV2) {
+    const ambiguousTopLevel: string[] = [];
+    if (config.functions != null) {
+      ambiguousTopLevel.push('functions');
+    }
+    if (config.installCommand != null) {
+      ambiguousTopLevel.push('installCommand');
+    }
+    if (config.buildCommand != null) {
+      ambiguousTopLevel.push('buildCommand');
+    }
+    if (config.devCommand != null) {
+      ambiguousTopLevel.push('devCommand');
+    }
+    if (config.ignoreCommand != null) {
+      ambiguousTopLevel.push('ignoreCommand');
+    }
+    if (config.outputDirectory != null) {
+      ambiguousTopLevel.push('outputDirectory');
+    }
+    if (config.framework != null) {
+      ambiguousTopLevel.push('framework');
+    }
+
+    if (ambiguousTopLevel.length > 0) {
+      const count = ambiguousTopLevel.length;
+      const fields = ambiguousTopLevel.map(field => `\`${field}\``).join(', ');
+      return new NowBuildError({
+        code: 'EXPERIMENTAL_SERVICES_V2_AND_TOP_LEVEL_BUILD_SETTINGS',
+        message:
+          `The top-level ${count > 1 ? 'properties' : 'property'} ${fields} cannot be used with \`experimentalServicesV2\` ` +
+          `because the owning service is ambiguous. ` +
+          `Move ${count > 1 ? 'them' : 'it'} under the relevant service in \`experimentalServicesV2\`.`,
+      });
+    }
+  }
+
+  if (config.experimentalServicesV2) {
+    const serviceNames = new Set(Object.keys(config.experimentalServicesV2));
+    for (const [serviceName, serviceConfig] of Object.entries(
+      config.experimentalServicesV2
+    )) {
+      for (const binding of serviceConfig.bindings ?? []) {
+        if (!serviceNames.has(binding.service)) {
+          return new NowBuildError({
+            code: 'EXPERIMENTAL_SERVICES_V2_BINDING_UNKNOWN_SERVICE',
+            message:
+              `Service "${serviceName}" declares a binding to unknown service "${binding.service}". ` +
+              `Add "${binding.service}" to \`experimentalServicesV2\` or fix the binding.`,
+          });
+        }
+      }
+    }
   }
 
   return null;
