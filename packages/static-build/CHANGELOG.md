@@ -1,5 +1,43 @@
 # @vercel/static-build
 
+## 2.9.34
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.11
+
+## 2.9.33
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.10
+
+## 2.9.32
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+  - @vercel/gatsby-plugin-vercel-builder@2.2.9
+
+## 2.9.31
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.8
+
+## 2.9.30
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.7
+
+## 2.9.29
+
+### Patch Changes
+
+- 23eee91: Revert "[static-build] Support Vite Environments API for SSR projects (#16354)"
+
 ## 2.9.28
 
 ### Patch Changes

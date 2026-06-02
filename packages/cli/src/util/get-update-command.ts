@@ -2,6 +2,9 @@ import { readFile, realpath } from 'fs-extra';
 import { sep, dirname, join, resolve } from 'path';
 import { scanParentDirs } from '@vercel/build-utils';
 import { packageName } from './pkg-name';
+import { isNativeBinaryInstall } from './native-install';
+
+const nativePackageName = '@vercel/vc-native';
 
 async function getConfigPrefix() {
   const paths = [
@@ -80,7 +83,8 @@ export async function isGlobal() {
 }
 
 export default async function getUpdateCommand(): Promise<string> {
-  const pkgAndVersion = `${packageName}@latest`;
+  const nativeInstall = isNativeBinaryInstall();
+  const pkgAndVersion = `${nativeInstall ? nativePackageName : packageName}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);
   let { cliType, lockfilePath } = await scanParentDirs(
@@ -101,5 +105,7 @@ export default async function getUpdateCommand(): Promise<string> {
     }
   }
 
-  return `${cliType} ${install} ${pkgAndVersion}`;
+  const force = nativeInstall && cliType === 'npm' ? ' --force' : '';
+
+  return `${cliType} ${install} ${pkgAndVersion}${force}`;
 }

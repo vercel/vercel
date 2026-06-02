@@ -3,11 +3,53 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
 import env from '../../../../src/commands/env';
+import { getAcrValuesFromWWWAuthenticate } from '../../../../src/commands/env/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
+
+vi.mock('../../../../src/commands/login/future', async importOriginal => ({
+  ...(await importOriginal<
+    typeof import('../../../../src/commands/login/future')
+  >()),
+  performDeviceCodeFlow: vi.fn(),
+}));
+
+describe('getAcrValuesFromWWWAuthenticate', () => {
+  it.each([
+    [undefined, undefined],
+    ['', undefined],
+    ['Basic realm="Vercel"', undefined],
+    ['Bearer error="insufficient_user_authentication"', undefined],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"',
+      'urn:vercel:loa:sudo',
+    ],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values="foo bar"',
+      'foo bar',
+    ],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values=urn:vercel:loa:sudo',
+      'urn:vercel:loa:sudo',
+    ],
+    [
+      'Digest realm="api", Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"',
+      'urn:vercel:loa:sudo',
+    ],
+    ['Bearer acr_values="urn:vercel:loa:\\"sudo\\""', 'urn:vercel:loa:"sudo"'],
+    [
+      'Bearer acr_values="urn:first", error="insufficient_user_authentication", acr_values="urn:second"',
+      'urn:first',
+    ],
+    ['Bearer error="insufficient_user_authentication", acr_values=""', ''],
+  ])('parses %s as %s', (header, expected) => {
+    expect(getAcrValuesFromWWWAuthenticate(header)).toBe(expected);
+  });
+});
 
 describe('env pull', () => {
   describe('--help', () => {
@@ -69,6 +111,66 @@ describe('env pull', () => {
         value: 'TRUE',
       },
     ]);
+  });
+
+  it('should retry after fresh authentication when sensitive env vars require a challenge', async () => {
+    const project = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+    let pullRequests = 0;
+
+    useUser();
+    useTeams('team_dummy');
+    client.scenario.get(
+      `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
+      (_req, res, next) => {
+        pullRequests += 1;
+        if (pullRequests === 1) {
+          res
+            .status(403)
+            .set(
+              'WWW-Authenticate',
+              'Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"'
+            )
+            .json({
+              code: 'challenge_required',
+              message: 'Challenge required',
+            });
+          return;
+        }
+        next?.();
+      }
+    );
+    useProject(project);
+
+    vi.mocked(performDeviceCodeFlow).mockResolvedValueOnce({
+      access_token: 'vca_new',
+      expires_in: 3600,
+      refresh_token: 'vcr_new',
+    });
+
+    client.authConfig.refreshToken = 'vcr_old';
+    client.cwd = setupUnitFixture('vercel-env-pull');
+    client.setArgv('env', 'pull', '--yes');
+
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Sensitive Environment Variables require fresh authentication.'
+    );
+    await expect(client.stderr).toOutput(
+      'Created .env.local file and added it to .gitignore'
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(performDeviceCodeFlow).toHaveBeenCalledWith(client, {
+      refreshToken: 'vcr_old',
+      acrValues: 'urn:vercel:loa:sudo',
+    });
+    expect(pullRequests).toBe(2);
+    expect(client.authConfig.token).toBe('vca_new');
+    expect(client.authConfig.refreshToken).toBe('vcr_old');
   });
 
   it('should handle pulling from Preview env vars', async () => {
@@ -325,6 +427,8 @@ describe('env pull', () => {
       client.setArgv('env', 'add', 'NEW_VAR');
       const addPromise = env(client);
 
+      await expect(client.stderr).toOutput('Is the value a sensitive secret?');
+      client.stdin.write('n\n');
       await expect(client.stderr).toOutput("What's the value of NEW_VAR?");
       client.stdin.write('testvalue\n');
 

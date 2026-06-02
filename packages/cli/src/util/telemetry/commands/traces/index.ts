@@ -29,4 +29,19 @@ export class TracesTelemetryClient
       });
     }
   }
+
+  trackCliFlagOpen(open: boolean | undefined) {
+    if (open) {
+      this.trackCliFlag('open');
+    }
+  }
+
+  trackCliOptionView(view: string | undefined) {
+    if (view) {
+      this.trackCliOption({
+        option: 'view',
+        value: view,
+      });
+    }
+  }
 }

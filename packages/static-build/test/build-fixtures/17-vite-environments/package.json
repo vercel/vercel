@@ -1,7 +1,0 @@
-{
-  "name": "17-vite-environments",
-  "private": true,
-  "scripts": {
-    "build": "node build.js"
-  }
-}

@@ -1,6 +1,6 @@
 import type { Route } from '@vercel/routing-utils';
-import type { Builder, ExperimentalServices } from '@vercel/build-utils';
-import type { ResolvedService } from './types';
+import type { Builder } from '@vercel/build-utils';
+import type { ConfiguredServices, ResolvedService } from './types';
 import { detectServices } from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
 
@@ -13,7 +13,8 @@ export interface ErrorResponse {
 
 export interface GetServicesBuildersOptions {
   workPath?: string;
-  configuredServices?: ExperimentalServices;
+  configuredServices?: ConfiguredServices;
+  configuredServicesType?: 'services' | 'experimentalServices';
   projectFramework?: string | null;
 }
 
@@ -45,7 +46,12 @@ function isExperimentalServicesAutoDetectionEnabled(): boolean {
 export async function getServicesBuilders(
   options: GetServicesBuildersOptions
 ): Promise<ServicesBuildersResult> {
-  const { workPath, configuredServices, projectFramework } = options;
+  const {
+    workPath,
+    configuredServices,
+    configuredServicesType,
+    projectFramework,
+  } = options;
   const hasServiceDefinitions =
     configuredServices != null && Object.keys(configuredServices).length > 0;
 
@@ -93,7 +99,11 @@ export async function getServicesBuilders(
   }
 
   const fs = new LocalFileSystemDetector(workPath);
-  const result = await detectServices({ fs });
+  const result = await detectServices({
+    fs,
+    configuredServices,
+    configuredServicesType,
+  });
 
   // Transform warnings to ErrorResponse format
   const warningResponses: ErrorResponse[] = result.warnings.map(w => ({

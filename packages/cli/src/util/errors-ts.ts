@@ -19,6 +19,7 @@ export class APIError extends Error {
   slug?: string;
   action?: string;
   retryAfterMs?: number | 'never';
+  wwwAuthenticate?: string;
   [key: string]: any;
 
   constructor(message: string, response: Response, body?: object) {
@@ -26,6 +27,8 @@ export class APIError extends Error {
     this.message = `${message} (${response.status})`;
     this.status = response.status;
     this.serverMessage = message;
+    this.wwwAuthenticate =
+      response.headers.get('WWW-Authenticate') ?? undefined;
 
     if (body) {
       for (const field of Object.keys(body)) {

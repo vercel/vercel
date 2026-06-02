@@ -753,7 +753,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
 
 exports[`help command > connex help output snapshots > connex attach subcommand > connex attach subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect attach client [options]
+  ▲ vercel connect attach connector [options]
 
   Attach a Vercel project to a connector for one or more environments                                                   
 
@@ -872,7 +872,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
 exports[`help command > connex help output snapshots > connex detach subcommand > connex detach subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect detach client [options]
+  ▲ vercel connect detach connector [options]
 
   Detach a Vercel project from a connector                                                                              
 
@@ -924,18 +924,21 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create  type    Create a new connector                                
-  update  id      Update connector branding (icon and colors)           
-  list            List connectors linked to the current project (falls  
-                  back to every connector in the team when no project is
-                  linked or when --all-projects is set)                 
-  token   id      Get a token for a connector (accepts a connector ID   
-                  like scl_abc or a UID like slack/my-bot)              
-  attach  client  Attach a Vercel project to a connector for one or more
-                  environments                                          
-  detach  client  Detach a Vercel project from a connector              
-  remove  client  Delete a connector                                    
-  open    id      Open a connector in the Vercel dashboard              
+  create         type       Create a new connector                      
+  update         id         Update connector branding (icon and colors) 
+  list                      List connectors linked to the current       
+                            project (falls back to every connector in   
+                            the team when no project is linked or when  
+                            --all-projects is set)                      
+  token          id         Get a token for a connector (accepts a      
+                            connector ID like scl_abc or a UID like     
+                            slack/my-bot)                               
+  attach         connector  Attach a Vercel project to a connector for  
+                            one or more environments                    
+  detach         connector  Detach a Vercel project from a connector    
+  remove         connector  Delete a connector                          
+  revoke-tokens  connector  Revoke tokens issued from a connector       
+  open           id         Open a connector in the Vercel dashboard    
 
 
   Global Options:
@@ -992,6 +995,9 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
        --limit <COUNT>    Number of connectors to return per page                                                       
        --next <CURSOR>    Cursor for the next page of results                                                           
+       --search <TEXT>    Search connectors by name or UID                                                              
+       --service <NAME>   Filter by service name (e.g. slack, mcp.linear.app). Repeatable.                              
+       --type <TYPE>      Filter by connector type (slack, github, oauth, custom). Repeatable.                          
 
 
   Global Options:
@@ -1017,6 +1023,26 @@ exports[`help command > connex help output snapshots > connex list subcommand > 
   - List every connector in the team
 
     $ vercel connect list --all-projects
+
+  - Filter by connector type
+
+    $ vercel connect list --type slack
+
+  - Filter by multiple types
+
+    $ vercel connect list --type oauth --type github
+
+  - Filter by service name
+
+    $ vercel connect list --service mcp.linear.app
+
+  - Search by text
+
+    $ vercel connect list --search linear
+
+  - Combine filters
+
+    $ vercel connect list --type oauth --search prod
 
   - Limit the number of results
 
@@ -1975,6 +2001,48 @@ exports[`help command > domains help output snapshots > domains buy help output 
 "
 `;
 
+exports[`help command > domains help output snapshots > domains check help output snapshots > domains check help column width 120 1`] = `
+"
+  ▲ vercel domains check domain ... [options]
+
+  Check if a domain is available to buy                                                                                 
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Check if a domain is available
+
+    $ vercel domains check example.com
+
+  - Check availability for multiple domains
+
+    $ vercel domains check one.com two.com three.com
+
+  - JSON output
+
+    $ vercel domains check example.com --format json
+
+"
+`;
+
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
   ▲ vercel domains [command]
@@ -2010,6 +2078,13 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    new 
                                    dom…
                                    name
+  check        domain              Che…
+                                   if a
+                                   dom…
+                                   is  
+                                   ava…
+                                   to  
+                                   buy 
   move         domain destination  Move
                                    own…
                                    of a
@@ -2024,7 +2099,9 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    pri…
                                    quo…
                                    for 
-                                   a   
+                                   one 
+                                   or  
+                                   more
                                    dom…
   transfer-in  domain              Tra…
                                    in a
@@ -2107,9 +2184,11 @@ exports[`help command > domains help output snapshots > domains help column widt
   add          domain project      Add a domain name that you already own to a 
                                    Vercel Team                                 
   buy          domain              Purchase a new domain name                  
+  check        domain              Check if a domain is available to buy       
   move         domain destination  Move ownership of a domain name to another  
                                    Vercel Team                                 
-  price        domain              Show registrar price quote for a domain     
+  price        domain              Show registrar price quotes for one or more 
+                                   domains                                     
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
@@ -2146,8 +2225,9 @@ exports[`help command > domains help output snapshots > domains help column widt
   inspect      domain              Displays information related to a domain                                            
   add          domain project      Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
+  check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
-  price        domain              Show registrar price quote for a domain                                             
+  price        domain              Show registrar price quotes for one or more domains                                 
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
@@ -2258,9 +2338,9 @@ exports[`help command > domains help output snapshots > domains move help output
 
 exports[`help command > domains help output snapshots > domains price help output snapshots > domains price help column width 120 1`] = `
 "
-  ▲ vercel domains price domain [options]
+  ▲ vercel domains price domain ... [options]
 
-  Show registrar price quote for a domain                                                                               
+  Show registrar price quotes for one or more domains                                                                   
 
   Options:
 
@@ -2286,6 +2366,10 @@ exports[`help command > domains help output snapshots > domains price help outpu
   - Price quote for a domain
 
     $ vercel domains price example.com
+
+  - Price quotes for multiple domains
+
+    $ vercel domains price one.com two.com three.com
 
   - JSON output
 

@@ -163,6 +163,32 @@ export const listSubcommand = {
       deprecated: false,
       description: 'Cursor for the next page of results',
     },
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Search connectors by name or UID',
+    },
+    {
+      name: 'service',
+      shorthand: null,
+      type: [String],
+      argument: 'NAME',
+      deprecated: false,
+      description:
+        'Filter by service name (e.g. slack, mcp.linear.app). Repeatable.',
+    },
+    {
+      name: 'type',
+      shorthand: null,
+      type: [String],
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Filter by connector type (slack, github, oauth, custom). Repeatable.',
+    },
     formatOption,
   ],
   examples: [
@@ -173,6 +199,26 @@ export const listSubcommand = {
     {
       name: 'List every connector in the team',
       value: `${packageName} connect list --all-projects`,
+    },
+    {
+      name: 'Filter by connector type',
+      value: `${packageName} connect list --type slack`,
+    },
+    {
+      name: 'Filter by multiple types',
+      value: `${packageName} connect list --type oauth --type github`,
+    },
+    {
+      name: 'Filter by service name',
+      value: `${packageName} connect list --service mcp.linear.app`,
+    },
+    {
+      name: 'Search by text',
+      value: `${packageName} connect list --search linear`,
+    },
+    {
+      name: 'Combine filters',
+      value: `${packageName} connect list --type oauth --search prod`,
     },
     {
       name: 'Limit the number of results',
@@ -195,7 +241,7 @@ export const removeSubcommand = {
   description: 'Delete a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -310,6 +356,62 @@ export const tokenSubcommand = {
   ],
 } as const;
 
+export const revokeTokensSubcommand = {
+  name: 'revoke-tokens',
+  aliases: [],
+  description: 'Revoke tokens issued from a connector',
+  arguments: [
+    {
+      name: 'connector',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'my-tokens',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Revoke only your own tokens for this connector',
+    },
+    {
+      name: 'all-tokens',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Revoke every token for all users and installations. Requires team owner or member permissions.',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Interactively select which tokens to revoke',
+      value: `${packageName} connect revoke-tokens scl_abc123`,
+    },
+    {
+      name: 'Revoke only your own tokens',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens`,
+    },
+    {
+      name: 'Revoke all tokens for all users',
+      value: `${packageName} connect revoke-tokens scl_abc123 --all-tokens`,
+    },
+    {
+      name: 'Skip the confirmation prompt',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --format=json`,
+    },
+  ],
+} as const;
+
 export const openSubcommand = {
   name: 'open',
   aliases: [],
@@ -344,7 +446,7 @@ export const attachSubcommand = {
     'Attach a Vercel project to a connector for one or more environments',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -429,7 +531,7 @@ export const detachSubcommand = {
   description: 'Detach a Vercel project from a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -476,6 +578,7 @@ export const connexCommand = {
     attachSubcommand,
     detachSubcommand,
     removeSubcommand,
+    revokeTokensSubcommand,
     openSubcommand,
   ],
   examples: [
