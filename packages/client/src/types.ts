@@ -5,7 +5,6 @@ import type {
   Images,
   ProjectSettings,
   Cron,
-  Services,
   ExperimentalServices,
   ExperimentalServiceGroups,
   ExperimentalServicesV2,
@@ -191,7 +190,6 @@ export interface VercelConfig {
    * This file will be included in prebuilt deployments.
    */
   bulkRedirectsPath?: string | null;
-  services?: Services;
   /**
    * @experimental This feature is experimental and may change.
    */

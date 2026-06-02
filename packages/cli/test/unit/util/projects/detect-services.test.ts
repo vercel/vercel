@@ -12,13 +12,11 @@ import {
 
 describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-  const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
   const originalTomlEnv = process.env.VERCEL_TOML_CONFIG_ENABLED;
   let tempDir: string;
 
   beforeEach(async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
-    process.env.VERCEL_USE_SERVICES = '1';
     process.env.VERCEL_TOML_CONFIG_ENABLED = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
@@ -29,11 +27,6 @@ describe('tryDetectServices()', () => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     } else {
       process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
-    }
-    if (originalServicesEnv === undefined) {
-      delete process.env.VERCEL_USE_SERVICES;
-    } else {
-      process.env.VERCEL_USE_SERVICES = originalServicesEnv;
     }
     if (originalTomlEnv === undefined) {
       delete process.env.VERCEL_TOML_CONFIG_ENABLED;
@@ -73,7 +66,7 @@ describe('tryDetectServices()', () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
-        services: {
+        experimentalServices: {
           frontend: { framework: 'nextjs', mount: '/' },
           backend: { entrypoint: 'api/index.py', mount: '/api' },
         },
@@ -103,11 +96,11 @@ describe('tryDetectServices()', () => {
     await mkdir(join(tempDir, 'api'), { recursive: true });
     await writeFile(
       join(tempDir, 'vercel.toml'),
-      `[services.frontend]
+      `[experimentalServices.frontend]
 framework = "nextjs"
 mount = "/"
 
-[services.backend]
+[experimentalServices.backend]
 entrypoint = "api/index.py"
 mount = "/api"`
     );
@@ -135,7 +128,7 @@ mount = "/api"`
     await writeFile(
       join(tempDir, 'vercel.json'),
       JSON.stringify({
-        services: {
+        experimentalServices: {
           // Missing mount for web service
           'invalid-service': { entrypoint: 'index.ts' },
         },
@@ -366,12 +359,12 @@ mount = "/api"`
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     });
 
-    it('should return services when vercel.json has services', async () => {
+    it('should return services when vercel.json has experimentalServices', async () => {
       await mkdir(join(tempDir, 'api'), { recursive: true });
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          services: {
+          experimentalServices: {
             frontend: { framework: 'nextjs', mount: '/' },
             backend: { entrypoint: 'api/index.py', mount: '/api' },
           },
@@ -408,11 +401,11 @@ mount = "/api"`
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     });
 
-    it('should return true when vercel.json has services', async () => {
+    it('should return true when vercel.json has experimentalServices', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
         JSON.stringify({
-          services: {
+          experimentalServices: {
             frontend: { framework: 'nextjs', mount: '/' },
           },
         })
@@ -439,11 +432,11 @@ mount = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
     });
 
-    it('should return true when vercel.ts has services', async () => {
+    it('should return true when vercel.ts has experimentalServices', async () => {
       await writeFile(
         join(tempDir, 'vercel.ts'),
         `export default {
-          services: {
+          experimentalServices: {
             frontend: { framework: 'nextjs', mount: '/' },
           },
         };`
@@ -452,10 +445,10 @@ mount = "/api"`
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
     });
 
-    it('should return true when vercel.toml has services', async () => {
+    it('should return true when vercel.toml has experimentalServices', async () => {
       await writeFile(
         join(tempDir, 'vercel.toml'),
-        `[services.frontend]
+        `[experimentalServices.frontend]
 framework = "nextjs"
 mount = "/"`
       );

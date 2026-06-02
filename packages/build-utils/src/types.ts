@@ -973,56 +973,6 @@ export interface ExperimentalServiceConfig {
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 
 /**
- * Public configuration for a service in vercel.json.
- */
-export interface ServiceConfig {
-  type?: ServiceType;
-  trigger?: JobTrigger;
-  /**
-   * Path to the service's root directory relative to the project root.
-   * Should contain a manifest file (package.json, pyproject.toml, etc.).
-   * Defaults to ".".
-   */
-  root?: string;
-  /**
-   * Service entrypoint, relative to the service root directory.
-   * Can be either a file path (runtime entrypoint) or a directory path
-   * (service workspace for framework-based services).
-   */
-  entrypoint?: string;
-
-  /** Framework to use */
-  framework?: string;
-  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
-  runtime?: string;
-
-  buildCommand?: string;
-  preDeployCommand?: string;
-
-  /** Lambda config */
-  memory?: number;
-  maxDuration?: MaxDuration;
-  includeFiles?: string | string[];
-  excludeFiles?: string | string[];
-
-  /* Web service config */
-  /** Preferred routing config for route paths. */
-  mount?: string | ServiceMount;
-
-  /* Scheduled job config */
-  /** Cron schedule expression(s) (e.g., "0 0 * * *") */
-  schedule?: string | string[];
-
-  /* Queue-triggered job config */
-  topics?: ServiceTopics;
-}
-
-/**
- * Map of service name to public service configuration.
- */
-export type Services = Record<string, ServiceConfig>;
-
-/**
  * Map of service group name to array of service names belonging to that group.
  * @experimental This feature is experimental and may change.
  * @example
