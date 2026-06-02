@@ -1433,6 +1433,17 @@ async function doBuild(
               ) {
                 buildOutputConfig.experimentalServices =
                   outputConfig.experimentalServices;
+              }
+              if (
+                hasNonEmptyObject(outputConfig?.services) &&
+                !hasNonEmptyObject(buildOutputConfig.services)
+              ) {
+                buildOutputConfig.services = outputConfig.services;
+              }
+              if (
+                hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
+                hasNonEmptyObject(buildOutputConfig.services)
+              ) {
                 await fs.writeJSON(buildOutputConfigPath, buildOutputConfig, {
                   spaces: 2,
                 });
