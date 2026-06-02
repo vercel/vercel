@@ -55,9 +55,14 @@ jobs:
           echo "✓ Verified vercel@${{ inputs.version }} exists on NPM"
 
       - name: Deprecate bad version on NPM
+        env:
+          MESSAGE: ${{ inputs.message }}
+          NPM_CONFIG_PROVENANCE: 'true'
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
         run: |
           echo "Deprecating vercel@${{ inputs.version }}..."
-          npm deprecate vercel@${{ inputs.version }} "${{ inputs.message }}"
+          npm deprecate vercel@${{ inputs.version }} "$MESSAGE"
           echo "✓ Deprecated vercel@${{ inputs.version }}"
 
       - name: Validate target version format
@@ -118,7 +123,7 @@ jobs:
           npm dist-tag ls vercel
           echo ""
           echo "Deprecation status:"
-          npm view vercel@${{ inputs.version }} deprecate
+          npm view vercel@${{ inputs.version }} deprecated
 
       - name: Summary
         run: |
