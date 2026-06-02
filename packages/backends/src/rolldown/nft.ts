@@ -1,7 +1,7 @@
 import type { BuildOptions, Files } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { existsSync } from 'node:fs';
-import { readFile, lstat, stat } from 'node:fs/promises';
+import { readFile, lstat, stat, readlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNativeError } from 'node:util/types';
 import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
@@ -15,11 +15,26 @@ export const nft = async (
     files: Files;
     span: Span;
     conditions?: string[];
+    traceFiles?: boolean;
   }
 ) => {
   const nftSpan = args.span.child('vc.builder.backends.nft');
 
   const runNft = async () => {
+    const virtualFiles = new Map<string, string | Buffer>();
+    if (args.traceFiles) {
+      for (const [relPath, file] of Object.entries(args.files)) {
+        if (!isJsLikeExtension(relPath) || file.type !== 'FileBlob') continue;
+
+        virtualFiles.set(
+          join(args.repoRootPath, relPath),
+          typeof file.data === 'string'
+            ? file.data
+            : Buffer.from(new Uint8Array(file.data))
+        );
+      }
+    }
+
     const ignorePatterns = [
       ...(args.ignoreNodeModules ? ['**/node_modules/**'] : []),
       ...(args.ignore
@@ -28,9 +43,12 @@ export const nft = async (
           : [args.ignore]
         : []),
     ];
-    const traceRoots = Array.from(args.localBuildFiles).filter(p =>
-      existsSync(p)
-    );
+    const traceRoots = [
+      ...Array.from(args.localBuildFiles).filter(
+        p => existsSync(p) || virtualFiles.has(p)
+      ),
+      ...virtualFiles.keys(),
+    ];
     const nftResult = await nodeFileTrace(traceRoots, {
       base: args.repoRootPath,
       processCwd: args.workPath,
@@ -38,7 +56,45 @@ export const nft = async (
       mixedModules: true,
       conditions: args.conditions,
       ignore: ignorePatterns.length > 0 ? ignorePatterns : undefined,
+      async stat(fsPath) {
+        if (virtualFiles.has(fsPath)) {
+          return createVirtualFileStat(virtualFiles.get(fsPath)!);
+        }
+
+        try {
+          return await stat(fsPath);
+        } catch (error: unknown) {
+          if (
+            isNativeError(error) &&
+            'code' in error &&
+            (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+          ) {
+            return null;
+          }
+          throw error;
+        }
+      },
+      async readlink(fsPath) {
+        if (virtualFiles.has(fsPath)) return null;
+
+        try {
+          return await readlink(fsPath);
+        } catch (error: unknown) {
+          if (
+            isNativeError(error) &&
+            'code' in error &&
+            (error.code === 'EINVAL' ||
+              error.code === 'ENOENT' ||
+              error.code === 'ENOTDIR')
+          ) {
+            return null;
+          }
+          throw error;
+        }
+      },
       async readFile(fsPath) {
+        if (virtualFiles.has(fsPath)) return virtualFiles.get(fsPath)!;
+
         try {
           let source: string | Buffer = await readFile(fsPath);
 
@@ -63,6 +119,8 @@ export const nft = async (
     });
     for (const file of nftResult.fileList) {
       const absolutePath = join(args.repoRootPath, file);
+      if (virtualFiles.has(absolutePath)) continue;
+
       let stats;
       try {
         stats = await lstat(absolutePath);
@@ -108,6 +166,57 @@ export const nft = async (
 
   await nftSpan.trace(runNft);
 };
+
+const JS_LIKE_EXTENSIONS = new Set([
+  '.js',
+  '.cjs',
+  '.mjs',
+  '.ts',
+  '.cts',
+  '.mts',
+  '.tsx',
+  '.jsx',
+  '.json',
+  '.node',
+]);
+
+const isJsLikeExtension = (path: string) => {
+  const dot = path.lastIndexOf('.');
+  if (dot === -1) return false;
+  return JS_LIKE_EXTENSIONS.has(path.slice(dot).toLowerCase());
+};
+
+const createVirtualFileStat = (data: string | Buffer) => {
+  const now = new Date();
+  return {
+    isFile: () => true,
+    isDirectory: () => false,
+    isBlockDevice: () => false,
+    isCharacterDevice: () => false,
+    isSymbolicLink: () => false,
+    isFIFO: () => false,
+    isSocket: () => false,
+    dev: 0,
+    ino: 0,
+    mode: 0o100644,
+    nlink: 1,
+    uid: 0,
+    gid: 0,
+    rdev: 0,
+    size: typeof data === 'string' ? Buffer.byteLength(data) : data.length,
+    blksize: 4096,
+    blocks: 1,
+    atimeMs: now.getTime(),
+    mtimeMs: now.getTime(),
+    ctimeMs: now.getTime(),
+    birthtimeMs: now.getTime(),
+    atime: now,
+    mtime: now,
+    ctime: now,
+    birthtime: now,
+  };
+};
+
 const isTypeScriptFile = (fsPath: string) => {
   if (
     fsPath.endsWith('.d.ts') ||

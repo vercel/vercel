@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { delimiter, dirname, join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
 import {
@@ -209,60 +208,17 @@ export const build: BuildV2 = async args => {
     const handler = userBuildResult?.handler || rolldownResult.handler;
     const nftWorkPath = userBuildResult?.outputDir || args.workPath;
 
-    let nftLocalBuildFiles: Set<string> = localBuildFiles;
-    const materialized: string[] = [];
-
-    if (process.env.VERCEL_BACKENDS_NFT_CJS_TRACE_ROOTS === '1') {
-      // NFT picks the `require` vs `import` exports condition based on how the
-      // parent file parses. Tracing only from TS sources (ESM `import`) misses
-      // the CJS branch of packages whose conditional exports point at different
-      // files (e.g. @planetscale/database -> dist/index.js for import,
-      // dist/cjs/index.js for require). Tracing only from the rolldown output
-      // loses pnpm's package-level symlink walk-up paths (the shim chunks live
-      // under `_virtual/`, where `node_modules` lookups can't reach
-      // `packages/<pkg>/node_modules/<dep>`).
-      //
-      // Trace from both: TS sources keep pnpm resolution working; rolldown
-      // output chunks (materialized to disk so NFT can read them) cover the
-      // correct exports condition for CJS bundles. Overlap is deduped by NFT.
-      const repoBase = args.repoRootPath || args.workPath;
-      const traceRoots = new Set<string>(localBuildFiles);
-      for (const [relPath, file] of Object.entries(files)) {
-        if (!isJsLikeExtension(relPath)) continue;
-        if (file.type === 'FileBlob') {
-          const abs = join(repoBase, relPath);
-          if (!existsSync(abs)) {
-            await mkdir(dirname(abs), { recursive: true });
-            await writeFile(
-              abs,
-              typeof file.data === 'string'
-                ? file.data
-                : new Uint8Array(file.data)
-            );
-            materialized.push(abs);
-          }
-          traceRoots.add(abs);
-        } else if (file.type === 'FileFsRef') {
-          traceRoots.add(file.fsPath);
-        }
-      }
-      nftLocalBuildFiles = traceRoots;
-    }
-
-    try {
-      await nft({
-        ...args,
-        workPath: nftWorkPath,
-        localBuildFiles: nftLocalBuildFiles,
-        files,
-        ignoreNodeModules: false,
-        ignore: args.config.excludeFiles,
-        conditions: isBun ? ['bun'] : undefined,
-        span: buildSpan,
-      });
-    } finally {
-      await Promise.all(materialized.map(p => rm(p, { force: true })));
-    }
+    await nft({
+      ...args,
+      workPath: nftWorkPath,
+      localBuildFiles,
+      files,
+      ignoreNodeModules: false,
+      ignore: args.config.excludeFiles,
+      conditions: isBun ? ['bun'] : undefined,
+      traceFiles: true,
+      span: buildSpan,
+    });
 
     try {
       await generateProjectManifest({
@@ -432,25 +388,6 @@ export const build: BuildV2 = async args => {
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
-};
-
-const JS_LIKE_EXTENSIONS = new Set([
-  '.js',
-  '.cjs',
-  '.mjs',
-  '.ts',
-  '.cts',
-  '.mts',
-  '.tsx',
-  '.jsx',
-  '.json',
-  '.node',
-]);
-
-const isJsLikeExtension = (path: string) => {
-  const dot = path.lastIndexOf('.');
-  if (dot === -1) return false;
-  return JS_LIKE_EXTENSIONS.has(path.slice(dot).toLowerCase());
 };
 
 const normalizeArray = (value: any) =>
