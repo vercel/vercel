@@ -62,9 +62,12 @@ import {
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
+  getOwnershipGuard,
   getTransformedRoutes,
   mergeRoutes,
+  normalizeRoutePrefix,
   sourceToRegex,
+  scopeRouteSourceToOwnership,
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
@@ -821,10 +824,14 @@ async function doBuild(
       newRoutes: detectedHostRewriteRoutes ?? null,
       phase: null,
     });
+    const detectedServiceRewriteRoutes =
+      nestServiceOutput && detectedServices
+        ? generateNestedServiceRoutes(detectedServices)
+        : detectedBuilders.rewriteRoutes;
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
-        newRoutes: detectedBuilders.rewriteRoutes,
+        newRoutes: detectedServiceRewriteRoutes,
         phase: 'filesystem',
       })
     );
@@ -833,8 +840,10 @@ async function doBuild(
       newRoutes: detectedBuilders.errorRoutes,
       phase: 'error',
     });
-    zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
-    zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
+    if (!nestServiceOutput) {
+      zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+      zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
+    }
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
@@ -1566,19 +1575,24 @@ async function doBuild(
         : null,
       phase: null,
     });
-    zeroConfigRoutes.push(
-      ...appendRoutesToPhase({
-        routes: [],
-        newRoutes: [
+    const serviceRewriteRoutes = nestServiceOutput
+      ? generateNestedServiceRoutes(services)
+      : [
           ...serviceRoutes.rewrites,
           ...serviceRoutes.workers,
           ...serviceRoutes.crons,
-        ],
+        ];
+    zeroConfigRoutes.push(
+      ...appendRoutesToPhase({
+        routes: [],
+        newRoutes: serviceRewriteRoutes,
         phase: 'filesystem',
       })
     );
-    zeroConfigRoutes.push(...serviceRoutes.defaults);
-    zeroConfigFallbackRoutes.push(...serviceRoutes.fallbacks);
+    if (!nestServiceOutput) {
+      zeroConfigRoutes.push(...serviceRoutes.defaults);
+      zeroConfigFallbackRoutes.push(...serviceRoutes.fallbacks);
+    }
   };
 
   await runBuilders(builds);
@@ -2538,6 +2552,35 @@ function getServicesMergeEntrypoint(
   const normalized = normalizeServiceRoutePrefix(routePrefix);
   const sortKey = String(10000 - normalized.length).padStart(5, '0');
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
+}
+
+function generateNestedServiceRoutes(services: Service[]): Route[] {
+  const sortedWebServices = services
+    .filter(
+      (service): service is Service & { routePrefix: string } =>
+        service.type === 'web' && typeof service.routePrefix === 'string'
+    )
+    .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
+
+  const allWebPrefixes = Array.from(
+    new Set(
+      sortedWebServices.map(service =>
+        normalizeRoutePrefix(service.routePrefix)
+      )
+    )
+  );
+
+  return sortedWebServices.map(service => {
+    const ownershipGuard = getOwnershipGuard(
+      service.routePrefix,
+      allWebPrefixes
+    );
+
+    return {
+      src: scopeRouteSourceToOwnership('^/(.*)$', ownershipGuard),
+      dest: `/services/${service.name}/$1`,
+    };
+  });
 }
 
 function attachQueueServiceTrigger(

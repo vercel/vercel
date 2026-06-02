@@ -1364,11 +1364,22 @@ test('[vc build] should nest services emitted by latest Next.js config output', 
   );
   expect(config.routes).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({
-        src: expect.stringContaining('/api(?:/|$)'),
-      }),
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '^(?=/api(?:/|$))(?:/(.*)$)',
+        dest: '/services/nitro-api/$1',
+      },
+      {
+        src: '^(?!/api(?:/|$))(?:/(.*)$)',
+        dest: '/services/web/$1',
+      },
     ])
   );
+  expect(config.images).toBeUndefined();
+  expect(config.overrides).toBeUndefined();
+  expect(config.framework).toBeUndefined();
 
   expect(await fs.pathExists(path.join(outputDirectory, 'static'))).toBe(false);
   expect(await fs.pathExists(path.join(outputDirectory, 'functions'))).toBe(

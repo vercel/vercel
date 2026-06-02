@@ -2686,6 +2686,21 @@ createServer((_req, res) => {
       'backend',
       'ui',
     ]);
+    expect(config.routes).toEqual(
+      expect.arrayContaining([
+        {
+          handle: 'filesystem',
+        },
+        {
+          src: '^(?=/backend(?:/|$))(?:/(.*)$)',
+          dest: '/services/backend/$1',
+        },
+        {
+          src: '^(?!/backend(?:/|$))(?:/(.*)$)',
+          dest: '/services/ui/$1',
+        },
+      ])
+    );
     expect(
       await fs.pathExists(
         join(output, 'services/ui/functions/_svc/ui/index.func/.vc-config.json')
@@ -2877,6 +2892,17 @@ writeFileSync(
       }),
     ]);
     expect(config.experimentalServices).toBeUndefined();
+    expect(config.routes).toEqual(
+      expect.arrayContaining([
+        {
+          handle: 'filesystem',
+        },
+        {
+          src: '^/(.*)$',
+          dest: '/services/ui/$1',
+        },
+      ])
+    );
     expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
     expect(await fs.pathExists(join(output, 'services/ui/config.json'))).toBe(
       true
