@@ -1,7 +1,7 @@
 // Runtime workflow dispatcher (CJS). Generated into a Vercel workflow job
 // service lambda by `applyWorkflowDispatch` in @vercel/backends. Reads the
 // pre-built workflow bundle, initialises the workflow world, and serves the
-// queue handler returned by `workflowEntrypoint`.
+// queue handler returned by `workflowEntrypoint` and `stepEntrypoint`.
 //
 // Placeholders replaced at build time:
 //   __VC_WORKFLOW_BUNDLE_PATH__  – relative path to the CJS bundle file
@@ -15,19 +15,24 @@ const __vc_bundle_code = readFileSync(
 );
 
 // `workflow/runtime` is ESM-only. Use a dynamic import (supported in CJS
-// since Node 14) and cache the handler promise so it resolves once.
-let __vc_handler_promise;
+// since Node 14) and cache the handlers promise so it resolves once.
+let __vc_handlers_promise;
 
-function getHandler() {
-  if (!__vc_handler_promise) {
-    __vc_handler_promise = import('workflow/runtime').then(
-      ({ createWorld, setWorld, workflowEntrypoint }) => {
+function getHandlers() {
+  if (!__vc_handlers_promise) {
+    __vc_handlers_promise = import('workflow/runtime').then(
+      ({ createWorld, setWorld, workflowEntrypoint, stepEntrypoint }) => {
         setWorld(createWorld());
-        return workflowEntrypoint(__vc_bundle_code);
-      },
+        // workflowEntrypoint evaluates the bundle code in a VM context,
+        // registering both workflow and step functions. Must be called
+        // before stepEntrypoint is used.
+        const workflowHandler = workflowEntrypoint(__vc_bundle_code);
+        const stepHandler = stepEntrypoint;
+        return { workflowHandler, stepHandler };
+      }
     );
   }
-  return __vc_handler_promise;
+  return __vc_handlers_promise;
 }
 
 /**
@@ -36,7 +41,7 @@ function getHandler() {
  */
 module.exports = async function vcWorkflowDispatch(req, res) {
   try {
-    const handler = await getHandler();
+    const { workflowHandler, stepHandler } = await getHandlers();
 
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host || 'localhost';
@@ -58,7 +63,7 @@ module.exports = async function vcWorkflowDispatch(req, res) {
         headers[key] = Array.isArray(value) ? value.join(', ') : value;
     }
 
-    const webReq = new Request(url.href, {
+    const reqInit = {
       method: req.method,
       headers: headers,
       body:
@@ -66,8 +71,15 @@ module.exports = async function vcWorkflowDispatch(req, res) {
           ? body
           : undefined,
       duplex: 'half',
-    });
+    };
 
+    // Route to the appropriate handler based on URL path.
+    // The platform sends workflow messages to /flow and step messages to /step.
+    const handler = url.pathname.endsWith('/step')
+      ? stepHandler
+      : workflowHandler;
+
+    const webReq = new Request(url.href, reqInit);
     const webRes = await handler(webReq);
 
     res.statusCode = webRes.status;

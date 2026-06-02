@@ -1,7 +1,7 @@
 // Runtime workflow dispatcher (ESM). Generated into a Vercel workflow job
 // service lambda by `applyWorkflowDispatch` in @vercel/backends. Reads the
 // pre-built workflow bundle, initialises the workflow world, and serves the
-// queue handler returned by `workflowEntrypoint`.
+// queue handler returned by `workflowEntrypoint` and `stepEntrypoint`.
 //
 // Placeholders replaced at build time:
 //   __VC_WORKFLOW_BUNDLE_PATH__  – relative path to the CJS bundle file
@@ -9,20 +9,27 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createWorld, setWorld, workflowEntrypoint } from 'workflow/runtime';
+import {
+  createWorld,
+  setWorld,
+  workflowEntrypoint,
+  stepEntrypoint,
+} from 'workflow/runtime';
 
 const __vc_dirname = dirname(fileURLToPath(import.meta.url));
 const __vc_bundle_code = readFileSync(
   join(__vc_dirname, '__VC_WORKFLOW_BUNDLE_PATH__'),
-  'utf-8',
+  'utf-8'
 );
 
 // Initialise the workflow world (picks Vercel or local based on env).
 setWorld(createWorld());
 
-// `workflowEntrypoint` evaluates the bundle in a VM context and returns a
-// Web-API-style handler: (Request) => Promise<Response>.
-const __vc_handler = workflowEntrypoint(__vc_bundle_code);
+// `workflowEntrypoint` evaluates the bundle in a VM context, registering
+// both workflow and step functions. Must be called before stepEntrypoint
+// is used.
+const __vc_workflow_handler = workflowEntrypoint(__vc_bundle_code);
+const __vc_step_handler = stepEntrypoint;
 
 /**
  * Adapt the Web API handler to the Node.js (req, res) signature expected by
@@ -47,19 +54,24 @@ export default async function vcWorkflowDispatch(req, res) {
         headers[key] = Array.isArray(value) ? value.join(', ') : value;
     }
 
-    const webReq = new Request(url.href, {
+    const reqInit = {
       method: req.method,
       headers,
       body:
         body && req.method !== 'GET' && req.method !== 'HEAD'
           ? body
           : undefined,
-      // Node 18+ requires duplex for streams; a Buffer is fine without it,
-      // but set it defensively.
       duplex: 'half',
-    });
+    };
 
-    const webRes = await __vc_handler(webReq);
+    // Route to the appropriate handler based on URL path.
+    // The platform sends workflow messages to /flow and step messages to /step.
+    const handler = url.pathname.endsWith('/step')
+      ? __vc_step_handler
+      : __vc_workflow_handler;
+
+    const webReq = new Request(url.href, reqInit);
+    const webRes = await handler(webReq);
 
     res.statusCode = webRes.status;
     for (const [key, value] of webRes.headers.entries()) {
