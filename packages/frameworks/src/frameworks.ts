@@ -1946,6 +1946,47 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'TanStack Start + Lovable',
+    slug: 'tanstack-start-lovable',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/tanstack-start.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/tanstack-start-dark.svg',
+    tagline:
+      'Full-stack Framework powered by TanStack Router for React and Solid, with Lovable.',
+    description:
+      'Full-document SSR, Streaming, Server Functions, bundling and more, powered by TanStack Router and Vite - Deployed via Lovable.',
+    website: 'https://tanstack.com/start',
+    supersedes: ['tanstack-start'],
+    detectors: {
+      every: [
+        { matchPackage: '@tanstack/router-plugin' },
+        { matchPackage: '@lovable.dev/vite-tanstack-config' },
+      ],
+      some: [
+        { matchPackage: '@tanstack/react-start' },
+        { matchPackage: '@tanstack/solid-start' },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vite build`',
+        value: 'vite build',
+      },
+      devCommand: {
+        placeholder: 'vite',
+        value: 'vite --port $PORT',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'VitePress',
     slug: 'vitepress',
     demo: 'https://vitepress-starter-template.vercel.app',
