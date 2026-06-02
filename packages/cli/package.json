@@ -45,6 +45,7 @@
     "@vercel/backends": "workspace:*",
     "@vercel/blob": "2.4.0",
     "@vercel/build-utils": "workspace:*",
+    "@vercel/cli-auth": "workspace:*",
     "@vercel/cli-config": "workspace:*",
     "@vercel/detect-agent": "workspace:*",
     "@vercel/elysia": "workspace:*",
