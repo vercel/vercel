@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { delimiter, join } from 'node:path';
 import { downloadInstallAndBundle } from './utils.js';
 import { generateProjectManifest } from './diagnostics.js';
@@ -223,6 +224,19 @@ export const build: BuildV2 = async args => {
         ? userBuildResult?.localBuildFiles
         : rolldownResult.localBuildFiles;
 
+    // For workflow services the dispatch shim imports `workflow/runtime`
+    // which is not referenced by the user's entrypoint. Add it as an
+    // extra nft trace root so its dependencies end up in the lambda.
+    if (isWorkflowService) {
+      try {
+        const userRequire = createRequire(join(args.workPath, 'package.json'));
+        const runtimePath = userRequire.resolve('workflow/runtime');
+        localBuildFiles.add(runtimePath);
+      } catch {
+        debug('Could not resolve workflow/runtime for nft tracing');
+      }
+    }
+
     const files = userBuildResult?.files || rolldownResult.files;
     const handler = userBuildResult?.handler || rolldownResult.handler;
     const nftWorkPath = userBuildResult?.outputDir || args.workPath;
@@ -303,7 +317,6 @@ export const build: BuildV2 = async args => {
         handler,
         workPath: nftWorkPath,
         workflowBundlePath: workflowBundle.bundlePath,
-        runtimeBundlePath: workflowBundle.runtimeBundlePath,
       });
       lambdaFiles = dispatched.files;
       lambdaHandler = dispatched.handler;

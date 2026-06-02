@@ -22,12 +22,11 @@ const CJS_TEMPLATE = readFileSync(
 );
 
 const BUNDLE_PATH_PLACEHOLDER = /['"]__VC_WORKFLOW_BUNDLE_PATH__['"]/g;
-const RUNTIME_PATH_PLACEHOLDER = /['"]__VC_WORKFLOW_RUNTIME_PATH__['"]/g;
 
 /**
  * Wrap a workflow service with a dispatcher shim that:
  *   - reads the pre-built workflow bundle (a CJS string for VM execution)
- *   - loads the pre-bundled workflow runtime via require()
+ *   - initialises the workflow world via `createWorld` / `setWorld`
  *   - calls `workflowEntrypoint(bundleCode)` to get a Web API handler
  *   - adapts it to the Node.js `(req, res)` signature the lambda expects
  *
@@ -40,8 +39,6 @@ export async function applyWorkflowDispatch(args: {
   workPath: string;
   /** Relative path to the workflow bundle file inside the lambda files map. */
   workflowBundlePath: string;
-  /** Relative path to the bundled workflow runtime file. */
-  runtimeBundlePath?: string;
 }): Promise<{ files: Files; handler: string }> {
   const { format, extension } = await resolveShimFormat(args);
 
@@ -60,17 +57,11 @@ export async function applyWorkflowDispatch(args: {
       ? args.workflowBundlePath
       : posix.relative(dispatchDir, args.workflowBundlePath);
 
-  // Compute the relative path from the dispatch shim to the runtime bundle.
-  const runtimePath = args.runtimeBundlePath || 'workflow/runtime';
-  const runtimeRelative =
-    args.runtimeBundlePath && dispatchDir !== '.'
-      ? posix.relative(dispatchDir, args.runtimeBundlePath)
-      : runtimePath;
-
   const template = format === 'esm' ? ESM_TEMPLATE : CJS_TEMPLATE;
-  const dispatchSource = template
-    .replace(BUNDLE_PATH_PLACEHOLDER, JSON.stringify(bundleRelative))
-    .replace(RUNTIME_PATH_PLACEHOLDER, JSON.stringify(runtimeRelative));
+  const dispatchSource = template.replace(
+    BUNDLE_PATH_PLACEHOLDER,
+    JSON.stringify(bundleRelative)
+  );
 
   return {
     handler: dispatchHandler,
