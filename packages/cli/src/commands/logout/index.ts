@@ -1,8 +1,5 @@
 import { printError } from '../../util/error';
-import {
-  writeToConfigFile,
-  writeToAuthConfigFile,
-} from '../../util/config/files';
+import { persistAuthConfig, writeToConfigFile } from '../../util/config/files';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
@@ -81,8 +78,10 @@ export default async function logout(client: Client): Promise<number> {
   delete authConfig.userId;
 
   try {
-    writeToConfigFile(config);
-    writeToAuthConfigFile(authConfig);
+    if (!authConfig.skipWrite) {
+      writeToConfigFile(config);
+      persistAuthConfig(authConfig, config);
+    }
     output.debug('Configuration has been deleted');
   } catch (err: unknown) {
     output.debug(errorToString(err));

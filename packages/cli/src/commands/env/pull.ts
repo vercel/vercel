@@ -340,7 +340,7 @@ async function pullEnvRecordsForEnvPull(
       userId: undefined,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     });
-    client.writeToAuthConfigFile();
+    client.persistAuthConfig();
 
     output.spinner('Downloading');
     return await pullEnvRecords(client, pullId, source, options);
