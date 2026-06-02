@@ -11,6 +11,7 @@ import {
   debug,
   getNodeVersion,
   getLambdaOptionsFromFunction,
+  isWorkflowTriggeredService,
   Span,
   type PrepareCache,
   type BuildV2,
@@ -22,6 +23,8 @@ import { findEntrypointWithHintOrThrow } from './find-entrypoint.js';
 import { applyServiceVcInit } from './service-vc-init.js';
 import { applyCronDispatch } from './cron-dispatch.js';
 import { buildCronRouteTable, getServiceCrons } from './crons.js';
+import { applyWorkflowDispatch } from './workflow-dispatch.js';
+import { buildWorkflowBundle } from './workflow-bundle.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
@@ -104,6 +107,19 @@ export const build: BuildV2 = async args => {
       entrypoint,
     });
     const isCronService = cronEntries !== undefined;
+    const isWorkflowService =
+      !!args.service && isWorkflowTriggeredService(args.service);
+
+    // Build the workflow bundle (a single CJS file for VM execution) when
+    // the service is workflow-triggered. This is separate from the normal
+    // rolldown build which produces the lambda handler.
+    const workflowBundlePromise = isWorkflowService
+      ? buildWorkflowBundle({
+          entrypoint,
+          workPath: args.workPath,
+          repoRootPath: args.repoRootPath || args.workPath,
+        })
+      : undefined;
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
@@ -146,16 +162,19 @@ export const build: BuildV2 = async args => {
     const rolldownResult = await rolldown({
       ...args,
       span: buildSpan,
-      // Cron-service users may have just an entrypoint and a
-      // vercel.json with no package.json. Default `.js` to CJS so the
+      // Cron- and workflow-service users may have just an entrypoint and
+      // a vercel.json with no package.json. Default `.js` to CJS so the
       // bundle step can resolve the format like Node would at runtime.
-      defaultFormat: isCronService ? 'cjs' : undefined,
+      defaultFormat: isCronService || isWorkflowService ? 'cjs' : undefined,
     });
 
     // Only hono's introspection is supported for now.
-    // Cron services should have no public routes, so introspection is skipped.
+    // Cron and workflow services should have no public routes, so
+    // introspection is skipped.
     const introspectionPromise =
-      !isCronService && rolldownResult.framework.slug === 'hono'
+      !isCronService &&
+      !isWorkflowService &&
+      rolldownResult.framework.slug === 'hono'
         ? introspection({
             ...args,
             span: buildSpan,
@@ -264,6 +283,19 @@ export const build: BuildV2 = async args => {
       });
       lambdaFiles = dispatched.files;
       lambdaHandler = dispatched.handler;
+    } else if (isWorkflowService && workflowBundlePromise) {
+      const workflowBundle = await workflowBundlePromise;
+      // Merge the workflow bundle file into the lambda files.
+      const mergedFiles = { ...files, ...workflowBundle.files };
+      const dispatched = await applyWorkflowDispatch({
+        files: mergedFiles,
+        handler,
+        workPath: nftWorkPath,
+        workflowBundlePath: workflowBundle.bundlePath,
+        runtimeBundlePath: workflowBundle.runtimeBundlePath,
+      });
+      lambdaFiles = dispatched.files;
+      lambdaHandler = dispatched.handler;
     } else if (shouldStripServiceRoutePrefix) {
       const shimmedLambda = await applyServiceVcInit({
         files,
@@ -323,19 +355,21 @@ export const build: BuildV2 = async args => {
     };
 
     // Build routes: filesystem handler, then introspected routes, then catch-all.
-    // Cron services only respond at their internal cron path (`_svc/{name}/crons/...`),
-    // which the CLI services pipeline rewrites to `_svc/{name}/index` independently
-    // of this builder.
-    const routes = isCronService
-      ? [{ handle: 'filesystem' }]
-      : [
-          { handle: 'filesystem' },
-          ...introspectionResult.routes.map(remapRouteDestination),
-          {
-            src: getServiceCatchallSource(serviceRoutePrefix),
-            dest: internalServiceFunctionPath ?? '/',
-          },
-        ];
+    // Cron and workflow services only respond at their internal service path
+    // (`_svc/{name}/crons/...` or `_svc/{name}/workers/...`), which the CLI
+    // services pipeline rewrites to `_svc/{name}/index` independently of
+    // this builder.
+    const routes =
+      isCronService || isWorkflowService
+        ? [{ handle: 'filesystem' }]
+        : [
+            { handle: 'filesystem' },
+            ...introspectionResult.routes.map(remapRouteDestination),
+            {
+              src: getServiceCatchallSource(serviceRoutePrefix),
+              dest: internalServiceFunctionPath ?? '/',
+            },
+          ];
 
     const output: Record<string, Lambda> = internalServiceOutputPath
       ? { [internalServiceOutputPath]: lambda }
