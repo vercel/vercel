@@ -1,5 +1,47 @@
 # vercel
 
+## 54.7.1
+
+### Patch Changes
+
+- 1180675: Revert "[flags] fix dep detection for build embedding (#16242)"
+- Updated dependencies [1180675]
+  - @vercel/build-utils@13.26.5
+  - @vercel/backends@0.8.4
+  - @vercel/elysia@0.1.85
+  - @vercel/express@0.1.95
+  - @vercel/fastify@0.1.88
+  - @vercel/go@3.8.0
+  - @vercel/h3@0.1.94
+  - @vercel/hono@0.2.88
+  - @vercel/hydrogen@1.3.8
+  - @vercel/koa@0.1.68
+  - @vercel/nestjs@0.2.89
+  - @vercel/next@4.17.5
+  - @vercel/node@5.8.9
+  - @vercel/python@6.44.0
+  - @vercel/redwood@2.4.15
+  - @vercel/remix-builder@5.8.5
+  - @vercel/ruby@2.4.0
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.9.34
+
+## 54.7.0
+
+### Minor Changes
+
+- 0b4e1ef: Add `vercel connect revoke-tokens` subcommand to revoke tokens issued from a connector.
+
+### Patch Changes
+
+- ba6e7c6: Internal: fix `_deploy` eval grader passing `--token ""` in the Docker sandbox where `VERCEL_TOKEN` isn't in process env. Only pass `--token` when set; CLI falls back to `auth.json` otherwise.
+- 92988c2: Handle sensitive Environment Variable pull challenges in the CLI.
+- 3986bb0: Stop retrying intentionally aborted requests so the CLI exits promptly after a deployment is ready.
+- 64f5484: Allow SAML re-authentication to use device-code flow in non-TTY sessions.
+- 97fdbbe: [flags] fix dep detection for build embedding
+- Updated dependencies [2d918b8]
+  - @vercel/remix-builder@5.8.5
+
 ## 54.6.1
 
 ### Patch Changes

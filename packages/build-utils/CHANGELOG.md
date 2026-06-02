@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.26.5
+
+### Patch Changes
+
+- 1180675: Revert "[flags] fix dep detection for build embedding (#16242)"
+
 ## 13.26.4
 
 ### Patch Changes

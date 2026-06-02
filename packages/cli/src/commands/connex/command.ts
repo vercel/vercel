@@ -241,7 +241,7 @@ export const removeSubcommand = {
   description: 'Delete a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -446,7 +446,7 @@ export const attachSubcommand = {
     'Attach a Vercel project to a connector for one or more environments',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],
@@ -531,7 +531,7 @@ export const detachSubcommand = {
   description: 'Detach a Vercel project from a connector',
   arguments: [
     {
-      name: 'client',
+      name: 'connector',
       required: true,
     },
   ],

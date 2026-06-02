@@ -753,7 +753,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
 
 exports[`help command > connex help output snapshots > connex attach subcommand > connex attach subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect attach client [options]
+  ▲ vercel connect attach connector [options]
 
   Attach a Vercel project to a connector for one or more environments                                                   
 
@@ -872,7 +872,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
 exports[`help command > connex help output snapshots > connex detach subcommand > connex detach subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect detach client [options]
+  ▲ vercel connect detach connector [options]
 
   Detach a Vercel project from a connector                                                                              
 
@@ -933,10 +933,10 @@ exports[`help command > connex help output snapshots > connex help column width 
   token          id         Get a token for a connector (accepts a      
                             connector ID like scl_abc or a UID like     
                             slack/my-bot)                               
-  attach         client     Attach a Vercel project to a connector for  
+  attach         connector  Attach a Vercel project to a connector for  
                             one or more environments                    
-  detach         client     Detach a Vercel project from a connector    
-  remove         client     Delete a connector                          
+  detach         connector  Detach a Vercel project from a connector    
+  remove         connector  Delete a connector                          
   revoke-tokens  connector  Revoke tokens issued from a connector       
   open           id         Open a connector in the Vercel dashboard    
 
