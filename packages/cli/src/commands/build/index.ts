@@ -37,6 +37,7 @@ import {
   glob,
   type ExperimentalService,
   isExperimentalService,
+  type Service,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getServiceQueueTopicConfigs,
@@ -80,6 +81,7 @@ import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ow
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
+  relocateRootBuildOutputToService,
   writeBuildResult,
   isLambda,
   type PathOverride,
@@ -162,7 +164,7 @@ interface BuildOutputConfig {
   };
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
-  services?: ExperimentalService[];
+  services?: Service[];
   deploymentId?: string;
 }
 
@@ -745,6 +747,10 @@ async function doBuild(
   const hasExperimentalServicesConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
+  const hasServicesConfiguredInVercelConfig = hasNonEmptyObject(
+    localConfig.services
+  );
+  let nestServiceOutput = hasServicesConfiguredInVercelConfig;
   let detectedExperimentalServicesConfig: ExperimentalServices | undefined;
   let isZeroConfig = false;
 
@@ -923,7 +929,8 @@ async function doBuild(
   const getHasQueueServices = () =>
     getHasDetectedServices() && detectedServices!.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
-  const serviceByBuilder = new Map<Builder, ExperimentalService>();
+  const serviceByBuilder = new Map<Builder, Service>();
+  const workPathByBuilder = new Map<Builder, string>();
   if (getHasDetectedServices()) {
     for (const service of detectedServices!) {
       serviceByBuilder.set(service.builder, service);
@@ -991,6 +998,7 @@ async function doBuild(
               `entrypoint "${buildEntrypoint}" (original: "${build.src}")`
           );
         }
+        workPathByBuilder.set(build, buildWorkPath);
 
         // Set VERCEL_PROJECT_SETTINGS_* env vars.
         // For services: use service-specific values instead of project-level settings
@@ -1409,7 +1417,10 @@ async function doBuild(
           }
 
           if (buildOutputConfig) {
-            if (!hasExperimentalServicesConfiguredInVercelConfig) {
+            if (
+              !hasExperimentalServicesConfiguredInVercelConfig &&
+              !hasServicesConfiguredInVercelConfig
+            ) {
               const outputConfigPath = join(outputDir, 'config.json');
               const outputConfig =
                 await readJSONFile<BuildOutputConfig>(outputConfigPath);
@@ -1457,34 +1468,41 @@ async function doBuild(
             : 1;
         }
 
-        // Start flushing the file outputs to the filesystem asynchronously
-        ops.push(
-          builderSpan
-            .child('vc.builder.writeBuildResult', {
-              buildOutputLength: String(buildOutputLength),
+        const writeBuildResultPromise = builderSpan
+          .child('vc.builder.writeBuildResult', {
+            buildOutputLength: String(buildOutputLength),
+          })
+          .trace<Record<string, PathOverride> | undefined | void>(() =>
+            writeBuildResult({
+              repoRootPath,
+              outputDir,
+              buildResult: rawBuildResult,
+              build,
+              builder,
+              builderPkg,
+              vercelConfig: localConfig,
+              standalone,
+              workPath: buildWorkPath,
+              service,
+              nestServiceOutput,
+              stripServiceRoutePrefix,
             })
-            .trace<Record<string, PathOverride> | undefined | void>(() =>
-              writeBuildResult({
-                repoRootPath,
-                outputDir,
-                buildResult: rawBuildResult,
-                build,
-                builder,
-                builderPkg,
-                vercelConfig: localConfig,
-                standalone,
-                workPath: buildWorkPath,
-                service,
-                stripServiceRoutePrefix,
-              })
-            )
-            .then(
+          );
+
+        if (service && nestServiceOutput) {
+          const override = await writeBuildResultPromise;
+          if (override) overrides.push(override);
+        } else {
+          // Start flushing the file outputs to the filesystem asynchronously
+          ops.push(
+            writeBuildResultPromise.then(
               (override: Record<string, PathOverride> | undefined | void) => {
                 if (override) overrides.push(override);
               },
               (err: Error) => err
             )
-        );
+          );
+        }
       } catch (err: any) {
         const buildJsonBuild = buildsJsonBuilds.get(build);
         if (buildJsonBuild) {
@@ -1557,7 +1575,10 @@ async function doBuild(
   await runBuilders(builds);
   await flushOps();
 
-  if (!hasExperimentalServicesConfiguredInVercelConfig) {
+  if (
+    !hasExperimentalServicesConfiguredInVercelConfig &&
+    !hasServicesConfiguredInVercelConfig
+  ) {
     const generatedConfigPath = join(outputDir, 'config.json');
     const generatedConfig =
       await readJSONFile<BuildOutputConfig>(generatedConfigPath);
@@ -1565,14 +1586,28 @@ async function doBuild(
       throw generatedConfig;
     }
 
-    if (hasNonEmptyObject(generatedConfig?.experimentalServices)) {
-      detectedExperimentalServicesConfig = generatedConfig.experimentalServices;
+    const generatedServicesConfig = hasNonEmptyObject(generatedConfig?.services)
+      ? (generatedConfig.services as Services)
+      : undefined;
+    const generatedExperimentalServicesConfig = hasNonEmptyObject(
+      generatedConfig?.experimentalServices
+    )
+      ? generatedConfig.experimentalServices
+      : undefined;
+
+    if (generatedServicesConfig || generatedExperimentalServicesConfig) {
+      if (generatedServicesConfig) {
+        nestServiceOutput = true;
+      }
+      detectedExperimentalServicesConfig = generatedExperimentalServicesConfig;
       const generatedBuilders = await span
         .child('vc.detectGeneratedServices')
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
-            experimentalServices: generatedConfig.experimentalServices,
+            ...(generatedServicesConfig
+              ? { services: generatedServicesConfig }
+              : { experimentalServices: generatedExperimentalServicesConfig }),
             projectSettings,
             ignoreBuildScript: true,
             featHandleMiss: true,
@@ -1612,11 +1647,24 @@ async function doBuild(
 
       const buildsToRun: Builder[] = [];
       const seenBuildsToRun = new Set<string>();
+      const relocatedGeneratedServiceBuilds = new Set<Builder>();
       for (const service of detectedServices || []) {
         serviceByBuilder.set(service.builder, service);
         const alreadyExecutedBuild = getAlreadyExecutedBuild(service.builder);
         if (alreadyExecutedBuild) {
           serviceByBuilder.set(alreadyExecutedBuild, service);
+          if (
+            generatedServicesConfig &&
+            nestServiceOutput &&
+            !relocatedGeneratedServiceBuilds.has(alreadyExecutedBuild)
+          ) {
+            await relocateRootBuildOutputToService({
+              outputDir,
+              service,
+              workPath: workPathByBuilder.get(alreadyExecutedBuild) ?? workPath,
+            });
+            relocatedGeneratedServiceBuilds.add(alreadyExecutedBuild);
+          }
           continue;
         }
         const serviceBuilderIdentity = getBuilderIdentity(service.builder);
@@ -1857,6 +1905,9 @@ async function doBuild(
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
+  if (nestServiceOutput) {
+    await writeServiceConfigs(outputDir, buildResults, serviceByBuilder);
+  }
 
   await writeFlagsJSON(buildResults.values(), outputDir);
   collectSpan.stop();
@@ -2236,6 +2287,72 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+async function writeServiceConfigs(
+  outputDir: string,
+  buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
+  serviceByBuilder: Map<Builder, Service>
+) {
+  const serviceResults = new Map<
+    string,
+    Array<BuildResult | BuildOutputConfig>
+  >();
+
+  for (const [build, buildResult] of buildResults) {
+    const service = serviceByBuilder.get(build);
+    if (!service) continue;
+
+    const results = serviceResults.get(service.name) || [];
+    results.push(buildResult);
+    serviceResults.set(service.name, results);
+  }
+
+  await Promise.all(
+    Array.from(serviceResults.entries()).map(async ([serviceName, results]) => {
+      const configPath = join(
+        outputDir,
+        'services',
+        serviceName,
+        'config.json'
+      );
+      const existingConfig = await readJSONFile<BuildOutputConfig>(configPath);
+      if (existingConfig instanceof CantParseJSONFile) {
+        throw existingConfig;
+      }
+
+      const routes = results.flatMap(result =>
+        'routes' in result && Array.isArray(result.routes) ? result.routes : []
+      );
+      const overrides = results
+        .map(result => ('overrides' in result ? result.overrides : undefined))
+        .filter((value): value is Record<string, PathOverride> =>
+          Boolean(value)
+        );
+      const framework = results.find(
+        (result): result is BuildOutputConfig =>
+          'framework' in result && Boolean(result.framework)
+      )?.framework;
+
+      const config: BuildOutputConfig = {
+        ...existingConfig,
+        version: 3,
+        routes: routes.length > 0 ? routes : existingConfig?.routes,
+        images: mergeImages(existingConfig?.images, results),
+        wildcard: mergeWildcard(results) || existingConfig?.wildcard,
+        overrides:
+          overrides.length > 0
+            ? Object.assign({}, existingConfig?.overrides, ...overrides)
+            : existingConfig?.overrides,
+        framework: framework || existingConfig?.framework,
+        crons: mergeCrons(existingConfig?.crons, results),
+        services: undefined,
+        experimentalServices: undefined,
+      };
+
+      await fs.writeJSON(configPath, config, { spaces: 2 });
+    })
+  );
 }
 
 async function mergeDeploymentId(

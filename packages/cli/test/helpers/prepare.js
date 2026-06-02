@@ -539,6 +539,10 @@ const experimentalServices = {
 function writeExperimentalServicesConfig(projectDir) {
   const outputDir = path.join(projectDir, '.vercel', 'output');
   const configPath = path.join(outputDir, 'config.json');
+  const servicesConfigKey =
+    process.env.NEXT_GENERATED_SERVICES_CONFIG_KEY === 'services'
+      ? 'services'
+      : 'experimentalServices';
   let config = { version: 3 };
   try {
     config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -555,7 +559,7 @@ function writeExperimentalServicesConfig(projectDir) {
       {
         ...config,
         version: 3,
-        experimentalServices,
+        [servicesConfigKey]: experimentalServices,
       },
       null,
       2

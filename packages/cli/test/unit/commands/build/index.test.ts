@@ -2623,6 +2623,91 @@ fs.writeFileSync(
     ]);
   });
 
+  it('should nest vercel.json services outputs under service directories', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+    });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        ui: {
+          type: 'web',
+          root: '.',
+          entrypoint: 'ui.js',
+          runtime: 'node',
+          mount: '/',
+        },
+        backend: {
+          type: 'web',
+          root: '.',
+          entrypoint: 'backend.js',
+          runtime: 'node',
+          mount: '/backend',
+        },
+      },
+    });
+    const server = `
+const { createServer } = require('node:http');
+
+createServer((_req, res) => {
+  res.statusCode = 200;
+  res.end('ok');
+}).listen(3000);
+`;
+    await fs.outputFile(join(cwd, 'ui.js'), server);
+    await fs.outputFile(join(cwd, 'backend.js'), server);
+
+    const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
+    process.env.VERCEL_USE_SERVICES = '1';
+    try {
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+    } finally {
+      if (originalServicesEnv === undefined) {
+        delete process.env.VERCEL_USE_SERVICES;
+      } else {
+        process.env.VERCEL_USE_SERVICES = originalServicesEnv;
+      }
+    }
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services.map((s: any) => s.name).sort()).toEqual([
+      'backend',
+      'ui',
+    ]);
+    expect(
+      await fs.pathExists(
+        join(output, 'services/ui/functions/_svc/ui/index.func/.vc-config.json')
+      )
+    ).toBe(true);
+    expect(
+      await fs.pathExists(
+        join(
+          output,
+          'services/backend/functions/_svc/backend/index.func/.vc-config.json'
+        )
+      )
+    ).toBe(true);
+    expect(await fs.pathExists(join(output, 'services/ui/config.json'))).toBe(
+      true
+    );
+    expect(
+      await fs.pathExists(join(output, 'services/backend/config.json'))
+    ).toBe(true);
+    expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
+  });
+
   it('should build experimentalServices discovered from generated Build Output config', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');
@@ -2715,6 +2800,92 @@ createServer((_req, res) => {
         join(output, 'functions/_svc/processor/index.func/.vc-config.json')
       )
     ).toBe(true);
+  });
+
+  it('should build services discovered from generated Build Output config into service directories', async () => {
+    const cwd = await getWriteableDirectory();
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+      },
+    });
+    await fs.writeJSON(join(cwd, 'package.json'), {
+      private: true,
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(cwd, 'build.mjs'),
+      `
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const countPath = join(process.cwd(), 'build-count.txt');
+const count = existsSync(countPath) ? Number(readFileSync(countPath, 'utf8')) : 0;
+writeFileSync(countPath, String(count + 1));
+
+const outputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(outputDir, { recursive: true });
+const staticDir = join(outputDir, 'static');
+mkdirSync(staticDir, { recursive: true });
+writeFileSync(join(staticDir, 'index.html'), 'root output');
+writeFileSync(
+  join(outputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    routes: [{ handle: 'filesystem' }],
+    services: {
+      ui: {
+        type: 'web',
+        root: '.',
+        entrypoint: 'package.json',
+        builder: '@vercel/static-build',
+        mount: '/'
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+
+    const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
+    process.env.VERCEL_USE_SERVICES = '1';
+    try {
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+    } finally {
+      if (originalServicesEnv === undefined) {
+        delete process.env.VERCEL_USE_SERVICES;
+      } else {
+        process.env.VERCEL_USE_SERVICES = originalServicesEnv;
+      }
+    }
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toEqual([
+      expect.objectContaining({
+        name: 'ui',
+        type: 'web',
+        routePrefix: '/',
+      }),
+    ]);
+    expect(config.experimentalServices).toBeUndefined();
+    expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
+    expect(await fs.pathExists(join(output, 'services/ui/config.json'))).toBe(
+      true
+    );
+    expect(
+      await fs.readFile(join(output, 'services/ui/static/index.html'), 'utf8')
+    ).toBe('root output');
+    expect(await fs.pathExists(join(output, 'static'))).toBe(false);
+    expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
   });
 
   it('should ignore generated experimentalServices when vercel.json configures experimentalServices', async () => {
