@@ -1365,7 +1365,7 @@ test('[vc build] should nest services emitted by latest Next.js config output', 
   expect(config.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        dest: expect.stringContaining('/_svc/nitro-api'),
+        src: expect.stringContaining('/api(?:/|$)'),
       }),
     ])
   );
