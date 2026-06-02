@@ -69,12 +69,17 @@ function mockStores(stores: Resource[]) {
   });
 }
 
-function mockStoresSequence(sequences: Resource[][]) {
+/**
+ * Mocks the per-store endpoint (`GET /v1/storage/stores/:id`) that the poll
+ * loop hits. Returns each resource in `sequence` on successive calls, sticking
+ * on the last one once exhausted.
+ */
+function mockResourceSequence(sequence: Resource[]) {
   let index = 0;
-  client.scenario.get('/:version/storage/stores', (_req, res) => {
-    const stores = sequences[Math.min(index, sequences.length - 1)];
+  client.scenario.get('/:version/storage/stores/:rid', (_req, res) => {
+    const store = sequence[Math.min(index, sequence.length - 1)];
     index++;
-    res.json({ stores });
+    res.json({ store });
   });
 }
 
@@ -115,10 +120,8 @@ describe('integration-resource claim', () => {
 
   describe('happy path (TTY)', () => {
     it('claims a sandbox resource by name and polls to completion', async () => {
-      mockStoresSequence([
-        [SANDBOX_RESOURCE, OWNED_RESOURCE], // initial fetch (find target)
-        [LINKED_RESOURCE, OWNED_RESOURCE], // first poll iteration: linked!
-      ]);
+      mockStores([SANDBOX_RESOURCE, OWNED_RESOURCE]); // initial fetch (find target)
+      mockResourceSequence([LINKED_RESOURCE]); // poll: linked on first tick
       mockClaimUrl();
 
       client.setArgv('integration-resource', 'claim', 'my-stripe');
@@ -136,7 +139,8 @@ describe('integration-resource claim', () => {
     }, 30000);
 
     it('--format=json writes claimed status to stdout', async () => {
-      mockStoresSequence([[SANDBOX_RESOURCE], [LINKED_RESOURCE]]);
+      mockStores([SANDBOX_RESOURCE]);
+      mockResourceSequence([LINKED_RESOURCE]);
       mockClaimUrl('https://stripe.com/claim/abc');
 
       client.setArgv(
@@ -156,23 +160,28 @@ describe('integration-resource claim', () => {
       });
     }, 30000);
 
-    it('--no-wait prints URL and exits 0 without polling', async () => {
+    it('--no-wait prints URL and exits 0 without polling or opening a browser', async () => {
       mockStores([SANDBOX_RESOURCE]);
       mockClaimUrl('https://stripe.com/claim/xyz');
 
       client.setArgv('integration-resource', 'claim', 'my-stripe', '--no-wait');
-      const exitCode = await integrationResourceCommand(client);
-      expect(exitCode).toEqual(0);
-      expect(openMock).toHaveBeenCalledWith('https://stripe.com/claim/xyz');
+      const exitCodePromise = integrationResourceCommand(client);
+
+      // URL is printed so the user can claim manually.
+      await expect(client.stderr).toOutput(
+        'Visit this URL to claim my-stripe: https://stripe.com/claim/xyz'
+      );
+
+      expect(await exitCodePromise).toEqual(0);
+      // --no-wait is for "give me the URL, I'll handle it" — don't auto-open.
+      expect(openMock).not.toHaveBeenCalled();
     });
   });
 
   describe('picker (no arg, TTY)', () => {
     it('shows picker when 2+ sandbox resources exist', async () => {
-      mockStoresSequence([
-        [SANDBOX_RESOURCE, SECOND_SANDBOX_RESOURCE, OWNED_RESOURCE],
-        [LINKED_RESOURCE, SECOND_SANDBOX_RESOURCE, OWNED_RESOURCE],
-      ]);
+      mockStores([SANDBOX_RESOURCE, SECOND_SANDBOX_RESOURCE, OWNED_RESOURCE]);
+      mockResourceSequence([LINKED_RESOURCE]);
       mockClaimUrl();
 
       client.setArgv('integration-resource', 'claim');
@@ -191,11 +200,25 @@ describe('integration-resource claim', () => {
       expect(await exitCodePromise).toEqual(0);
     }, 30000);
 
+    it('skips confirm when --yes is passed with exactly 1 sandbox resource', async () => {
+      mockStores([SANDBOX_RESOURCE, OWNED_RESOURCE]);
+      mockResourceSequence([LINKED_RESOURCE]);
+      mockClaimUrl();
+
+      client.setArgv('integration-resource', 'claim', '--yes');
+      const exitCodePromise = integrationResourceCommand(client);
+
+      // No "Claim my-stripe?" prompt should appear; goes straight to claim.
+      await expect(client.stderr).toOutput(
+        'Opening browser to claim my-stripe'
+      );
+
+      expect(await exitCodePromise).toEqual(0);
+    }, 30000);
+
     it('shows confirm when exactly 1 sandbox resource exists', async () => {
-      mockStoresSequence([
-        [SANDBOX_RESOURCE, OWNED_RESOURCE],
-        [LINKED_RESOURCE, OWNED_RESOURCE],
-      ]);
+      mockStores([SANDBOX_RESOURCE, OWNED_RESOURCE]);
+      mockResourceSequence([LINKED_RESOURCE]);
       mockClaimUrl();
 
       client.setArgv('integration-resource', 'claim');
@@ -254,6 +277,9 @@ describe('integration-resource claim', () => {
       });
       expect(payload.next?.[0]?.command).toContain('integration list');
       expect(exitSpy).toHaveBeenCalledWith(1);
+      // The browser must not be opened in non-interactive mode — AI agents
+      // and CI have no way to interact with it.
+      expect(openMock).not.toHaveBeenCalled();
       exitSpy.mockRestore();
     });
 
@@ -294,18 +320,18 @@ describe('integration-resource claim', () => {
       expect(await exitCodePromise).toEqual(1);
     });
 
-    it('errors cleanly when target is not a sandbox resource', async () => {
+    it('errors cleanly when target is already claimed (ownership: owned)', async () => {
       mockStores([OWNED_RESOURCE]);
 
       client.setArgv('integration-resource', 'claim', 'prod-postgres');
       const exitCodePromise = integrationResourceCommand(client);
       await expect(client.stderr).toOutput(
-        "'prod-postgres' is not a sandbox resource and cannot be claimed"
+        "'prod-postgres' can no longer be claimed (already claimed)"
       );
       expect(await exitCodePromise).toEqual(1);
     });
 
-    it('maps API 400 not-a-sandbox to a clean error', async () => {
+    it('maps API 400 not-a-sandbox to a clean "already claimed" error', async () => {
       mockStores([SANDBOX_RESOURCE]);
       mockClaimUrl(undefined, {
         status: 400,
@@ -315,7 +341,7 @@ describe('integration-resource claim', () => {
       client.setArgv('integration-resource', 'claim', 'my-stripe');
       const exitCodePromise = integrationResourceCommand(client);
       await expect(client.stderr).toOutput(
-        "Error: 'my-stripe' is not a sandbox resource and cannot be claimed."
+        "Error: 'my-stripe' can no longer be claimed (likely already claimed)."
       );
       expect(await exitCodePromise).toEqual(1);
     });

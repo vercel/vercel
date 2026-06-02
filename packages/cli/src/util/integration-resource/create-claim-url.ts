@@ -1,5 +1,6 @@
 import { isAPIError } from '../errors-ts';
 import type Client from '../client';
+import { packageName } from '../pkg-name';
 import type { Resource } from './types';
 
 export class ClaimUrlError extends Error {
@@ -98,7 +99,7 @@ function mapClaimUrlError(error: unknown, resource: Resource): ClaimUrlError {
       messageLower.includes('ownership')
     ) {
       return new ClaimUrlError(
-        `'${resource.name}' is not a sandbox resource and cannot be claimed.`,
+        `'${resource.name}' can no longer be claimed (likely already claimed). Run \`${packageName} integration list\` to refresh.`,
         'not_sandbox',
         status
       );

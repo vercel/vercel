@@ -115,18 +115,22 @@ export async function claim(client: Client, argv: string[]) {
 
     if (sandboxResources.length === 1) {
       const only = sandboxResources[0];
-      const productLabel = only.product?.name
-        ? ` (${only.product.name} sandbox)`
-        : '';
-      const confirmed = await client.input.confirm(
-        `Claim ${chalk.bold(only.name)}${productLabel}?`,
-        true
-      );
-      if (!confirmed) {
-        output.log('Canceled');
-        return 0;
+      if (skipConfirmation) {
+        targetResource = only;
+      } else {
+        const productLabel = only.product?.name
+          ? ` (${only.product.name} sandbox)`
+          : '';
+        const confirmed = await client.input.confirm(
+          `Claim ${chalk.bold(only.name)}${productLabel}?`,
+          true
+        );
+        if (!confirmed) {
+          output.log('Canceled');
+          return 0;
+        }
+        targetResource = only;
       }
-      targetResource = only;
     } else {
       const choice = await client.input.select({
         message: 'Which sandbox resource would you like to claim?',
@@ -170,10 +174,17 @@ export async function runClaimForResource(
   const { asJson, noWait, suppressActionRequired } = options;
 
   // Defensive: if the user named a non-sandbox resource, surface a clean error
-  // without hitting the API.
+  // without hitting the API. Distinguish "already claimed" (was a sandbox,
+  // now isn't) from "never was a sandbox" (wrong resource type entirely) so
+  // the message is actionable.
   if (!isSandboxResource(targetResource)) {
+    const alreadyClaimed =
+      targetResource.ownership === 'owned' ||
+      targetResource.ownership === 'linked';
     output.error(
-      `'${targetResource.name}' is not a sandbox resource and cannot be claimed.`
+      alreadyClaimed
+        ? `'${targetResource.name}' can no longer be claimed (already claimed). Run \`${packageName} integration list\` to refresh.`
+        : `'${targetResource.name}' is not a sandbox resource and cannot be claimed.`
     );
     return 1;
   }
@@ -197,21 +208,16 @@ export async function runClaimForResource(
   }
   output.stopSpinner();
 
-  output.log(`Opening browser to claim ${chalk.bold(targetResource.name)}…`);
-  output.log(`Visit this URL if the browser does not open: ${claimUrl}`);
-
-  open(claimUrl).catch((err: unknown) =>
-    output.debug(`Failed to open browser: ${err}`)
-  );
-
   // Non-interactive mode: emit structured action_required payload and exit 1.
+  // Done before any browser open so AI agents / CI don't spawn a browser
+  // they have no way to interact with.
   if (!suppressActionRequired && shouldEmitNonInteractiveCommandError(client)) {
     outputActionRequired(
       client,
       {
         status: 'action_required',
         reason: AGENT_REASON.INTEGRATION_SANDBOX_CLAIM_REQUIRED,
-        message: `Claim "${targetResource.name}" in your browser to finish provisioning. A browser window was opened (or open verification_uri manually). This command does not wait for the claim in non-interactive mode.`,
+        message: `Claim "${targetResource.name}" in your browser to finish provisioning. Open verification_uri to start. This command does not wait for the claim in non-interactive mode.`,
         verification_uri: claimUrl,
         userActionRequired: true,
         hint: `Open verification_uri in a browser, complete the provider's claim flow, then run \`${packageName} integration list\` to confirm \`ownership\` flipped from sandbox to linked.`,
@@ -231,10 +237,10 @@ export async function runClaimForResource(
     );
   }
 
-  // --no-wait: print the URL (and optional JSON) and exit 0 without polling.
+  // --no-wait: print the URL (and optional JSON) and exit 0 without polling
+  // or opening a browser — caller asked for the URL only.
   if (noWait) {
     if (asJson) {
-      output.stopSpinner();
       const json: ClaimJsonOutput = {
         resource: { id: targetResource.id, name: targetResource.name },
         claimUrl,
@@ -243,13 +249,17 @@ export async function runClaimForResource(
       client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
     } else {
       output.log(
+        `Visit this URL to claim ${chalk.bold(targetResource.name)}: ${claimUrl}`
+      );
+      output.log(
         `Re-run \`${packageName} integration list\` after claiming to verify.`
       );
     }
     return 0;
   }
 
-  // Non-TTY without --no-wait: don't poll (no human to watch).
+  // Non-TTY without --no-wait: don't poll (no human to watch) and don't open
+  // a browser (no desktop session to receive focus).
   if (!client.stdin.isTTY) {
     if (asJson) {
       const json: ClaimJsonOutput = {
@@ -260,16 +270,32 @@ export async function runClaimForResource(
       client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
     } else {
       output.log(
+        `Visit this URL to claim ${chalk.bold(targetResource.name)}: ${claimUrl}`
+      );
+      output.log(
         `Re-run \`${packageName} integration list\` after claiming to verify.`
       );
     }
     return suppressActionRequired ? 0 : 1;
   }
 
-  // TTY: poll for completion.
-  const updated = await pollForClaim(client, targetResource.id);
+  // TTY interactive: open browser and poll for completion.
+  output.log(`Opening browser to claim ${chalk.bold(targetResource.name)}…`);
+  output.log(`Visit this URL if the browser does not open: ${claimUrl}`);
+  try {
+    await open(claimUrl);
+  } catch (err) {
+    output.debug(`Failed to open browser: ${err}`);
+  }
 
-  if (!updated) {
+  const result = await pollForClaim(client, targetResource.id);
+
+  if (result.status === 'cancelled') {
+    // POSIX SIGINT exit convention (128 + signal number).
+    return 130;
+  }
+
+  if (result.status === 'timeout') {
     if (asJson) {
       const json: ClaimJsonOutput = {
         resource: { id: targetResource.id, name: targetResource.name },
@@ -281,9 +307,11 @@ export async function runClaimForResource(
     return 1;
   }
 
+  const claimed = result.resource;
+
   if (asJson) {
     const json: ClaimJsonOutput = {
-      resource: { id: updated.id, name: updated.name },
+      resource: { id: claimed.id, name: claimed.name },
       claimUrl,
       status: 'claimed',
     };
@@ -291,6 +319,6 @@ export async function runClaimForResource(
     return 0;
   }
 
-  output.success(`Claimed ${chalk.bold(updated.name)}.`);
+  output.success(`Claimed ${chalk.bold(claimed.name)}.`);
   return 0;
 }

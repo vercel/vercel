@@ -1,8 +1,8 @@
-import readline from 'node:readline';
+import ms from 'ms';
 import output from '../../output-manager';
 import sleep from '../sleep';
 import type Client from '../client';
-import { getResources } from './get-resources';
+import { getResource } from './get-resource';
 import type { Resource } from './types';
 
 const POLL_INTERVAL_MS = 2000;
@@ -17,43 +17,60 @@ export interface PollForClaimOptions {
 }
 
 /**
- * Polls `getResources()` waiting for the named resource's `ownership` to flip
- * from `'sandbox'` to `'linked'`. Returns the updated resource on success,
- * or `null` on timeout. Handles SIGINT by printing a "still in progress" hint
- * and exiting with code 130 (POSIX 128 + SIGINT).
+ * Discriminated result so callers can map each outcome to an exit code
+ * without `pollForClaim` calling `process.exit` itself (keeps the helper
+ * testable and free of side effects on the process).
+ */
+export type PollForClaimResult =
+  | { status: 'claimed'; resource: Resource }
+  | { status: 'timeout' }
+  | { status: 'cancelled' };
+
+/**
+ * Polls the per-store endpoint waiting for the resource's `ownership` to flip
+ * away from `'sandbox'`. Stripe transitions to `'linked'`, Shopify to `'owned'`
+ * — anything that's no longer `'sandbox'` counts as claimed. The per-store
+ * endpoint does a live partner fetch, so it returns fresh `ownership` even
+ * when the partner's webhook to Vercel hasn't fired (the list endpoint reads
+ * stale DB data and would never see Shopify claims propagate).
+ *
+ * On SIGINT, returns `{ status: 'cancelled' }` after printing the
+ * still-in-progress hint — the caller decides the exit code (typically 130).
  */
 export async function pollForClaim(
   client: Client,
   resourceId: string,
   options: PollForClaimOptions = {}
-): Promise<Resource | null> {
+): Promise<PollForClaimResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const rl = readline
-    .createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    })
-    .on('SIGINT', () => {
-      output.stopSpinner();
-      output.print('\n');
-      output.log(SANDBOX_CLAIM_IN_PROGRESS_MSG);
-      process.exit(130);
-    });
+  let cancelled = false;
+  let resolveCancelled: (() => void) | undefined;
+  const cancelledSignal = new Promise<void>(resolve => {
+    resolveCancelled = resolve;
+  });
+  const onSigint = () => {
+    cancelled = true;
+    resolveCancelled?.();
+  };
+  process.on('SIGINT', onSigint);
 
   try {
     output.spinner('Waiting for claim to complete in browser...');
 
     const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-      await sleep(POLL_INTERVAL_MS);
+    while (Date.now() < deadline && !cancelled) {
+      // Race the sleep against the cancel signal so Ctrl-C mid-sleep
+      // breaks out of the loop immediately instead of waiting up to
+      // POLL_INTERVAL_MS for the next iteration check.
+      await Promise.race([sleep(POLL_INTERVAL_MS), cancelledSignal]);
+      if (cancelled) break;
 
       try {
-        const resources = await getResources(client);
-        const updated = resources.find(r => r.id === resourceId);
-        if (updated && updated.ownership === 'linked') {
+        const updated = await getResource(client, resourceId);
+        if (updated.ownership !== 'sandbox') {
           output.stopSpinner();
-          return updated;
+          return { status: 'claimed', resource: updated };
         }
       } catch (error) {
         output.debug(`Polling error (will retry): ${error}`);
@@ -61,10 +78,19 @@ export async function pollForClaim(
     }
 
     output.stopSpinner();
-    output.error('Claim did not complete within 5 minutes.');
+
+    if (cancelled) {
+      output.print('\n');
+      output.log(SANDBOX_CLAIM_IN_PROGRESS_MSG);
+      return { status: 'cancelled' };
+    }
+
+    output.error(
+      `Claim did not complete within ${ms(timeoutMs, { long: true })}.`
+    );
     output.log(SANDBOX_CLAIM_IN_PROGRESS_MSG);
-    return null;
+    return { status: 'timeout' };
   } finally {
-    rl.close();
+    process.off('SIGINT', onSigint);
   }
 }
