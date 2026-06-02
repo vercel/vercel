@@ -168,6 +168,9 @@ export async function buildWorkflowBundle(args: {
         entryFileNames: WORKFLOW_RUNTIME_FILENAME,
         exports: 'named',
         sourcemap: 'inline',
+        // Inline dynamic imports to produce a single file and avoid
+        // code-split chunks that would be missing from the lambda.
+        inlineDynamicImports: true,
       },
     });
 
