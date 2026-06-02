@@ -1,4 +1,4 @@
-import { isPackageInstalled } from '@vercel/build-utils';
+import { getInstalledPackageVersion } from '@vercel/build-utils';
 
 function isFlagsEmbedOption(
   input: string | undefined
@@ -31,10 +31,12 @@ export async function shouldEmbedFlagsDefinitions(
     return true;
   }
 
-  const hasVercelFlags = await isPackageInstalled('@flags-sdk/vercel', cwd);
-  const hasFlagsCore = await isPackageInstalled('@vercel/flags-core', cwd);
+  const vercelFlagsVersion =
+    await getInstalledPackageVersion('@flags-sdk/vercel');
+  const vercelFlagsCoreVersion =
+    await getInstalledPackageVersion('@vercel/flags-core');
 
-  if (hasVercelFlags || hasFlagsCore) {
+  if (vercelFlagsVersion || vercelFlagsCoreVersion) {
     return true;
   }
 

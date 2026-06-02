@@ -37,7 +37,7 @@ export async function remove(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connect remove <client>'
+      'Missing connector ID or UID. Usage: vercel connect remove <connector>'
     );
     return 1;
   }

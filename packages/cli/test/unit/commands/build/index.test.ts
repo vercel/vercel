@@ -1863,13 +1863,17 @@ createServer((_req, res) => {
   });
 
   describe('flags-definitions', () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
-
-    const findDefinitionsDir = (dir: string) =>
-      join(dir, 'node_modules', '@vercel', 'flags-definitions');
+    const definitionsDir = join(
+      fixture('static'),
+      'node_modules',
+      '@vercel',
+      'flags-definitions'
+    );
 
     beforeEach(() => {
-      fetchSpy.mockImplementation(async input => {
+      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
         const url = typeof input === 'string' ? input : input.toString();
         if (url === 'https://flags.vercel.com/v1/datafile') {
           return new Response(JSON.stringify({ flags: [] }), {
@@ -1879,28 +1883,23 @@ createServer((_req, res) => {
         }
         throw new Error(`Unexpected fetch call: ${url}`);
       });
+
+      fs.removeSync(definitionsDir);
     });
 
     afterEach(() => {
-      vi.resetAllMocks();
+      fs.removeSync(definitionsDir);
+      vi.restoreAllMocks();
       vi.unstubAllEnvs();
     });
 
-    afterAll(() => {
-      vi.restoreAllMocks();
-    });
-
-    it('should emit flags-definitions module with SDK key', async () => {
-      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
-
+    it('should emit flags-definitions module by default', async () => {
       client.cwd = fixture('static');
-      const definitionsDir = findDefinitionsDir(client.cwd);
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
       expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
@@ -1911,127 +1910,42 @@ createServer((_req, res) => {
         'utf8'
       );
       expect(indexJs).toContain('export function get(hashedSdkKey)');
-
-      fs.removeSync(definitionsDir);
     });
 
-    it('should not emit flags-definitions module without SDK key and flags dependencies', async () => {
-      client.cwd = fixture('static');
-      const definitionsDir = findDefinitionsDir(client.cwd);
-      client.setArgv('build', '--yes');
-
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(0);
-
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
-      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
-    });
-
-    it('should not emit flags-definitions module with SDK key when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
-      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+    it('should not emit flags-definitions module when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
       vi.stubEnv('VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING', '1');
 
       client.cwd = fixture('with-vercel-flags');
-      const definitionsDir = findDefinitionsDir(client.cwd);
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
-    it('should emit flags-definitions module with SDK key when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
-      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
+    it('should emit flags-definitions module when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
       vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-on');
 
       client.cwd = fixture('static');
-      const definitionsDir = findDefinitionsDir(client.cwd);
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).toHaveBeenCalledOnce();
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
 
-    it('should not emit flags-definitions module with SDK key when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
-      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
-      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-off');
-
-      client.cwd = fixture('static');
-      const definitionsDir = findDefinitionsDir(client.cwd);
-      client.setArgv('build', '--yes');
-
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(0);
-
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
-      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
-    });
-
-    // biome-ignore lint/suspicious/noSkippedTests:  until we upgraded the flags script to support oidc
-    it.skip('should emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
-      vi.stubEnv(
-        'VERCEL_OIDC_TOKEN',
-        'faketoken.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm9qZWN0X2lkIjoicHJvamVjdF9pZCJ9.signature'
-      );
-      vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-on');
-
-      client.cwd = fixture('with-vercel-flags');
-      const definitionsDir = findDefinitionsDir(client.cwd);
-      client.setArgv('build', '--yes');
-
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(0);
-
-      expect(fetchSpy).toHaveBeenCalledOnce();
-      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
-    });
-
-    it('should not emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
-      vi.stubEnv(
-        'VERCEL_OIDC_TOKEN',
-        'faketoken.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm9qZWN0X2lkIjoicHJvamVjdF9pZCJ9.signature'
-      );
+    it('should not emit flags-definitions module when VERCEL_FLAGS_EMBED_DEFINITIONS=force-off', async () => {
       vi.stubEnv('VERCEL_FLAGS_EMBED_DEFINITIONS', 'force-off');
 
       client.cwd = fixture('with-vercel-flags');
-      const definitionsDir = findDefinitionsDir(client.cwd);
       client.setArgv('build', '--yes');
 
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      expect(fetchSpy).not.toHaveBeenCalledOnce();
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
-    });
-
-    // biome-ignore lint/suspicious/noSkippedTests:  until we upgraded the flags script to support oidc
-    it.skip('should emit flags-definitions module with OIDC and flags dependencies', async () => {
-      vi.stubEnv('FLAGS', undefined);
-      vi.stubEnv(
-        'VERCEL_OIDC_TOKEN',
-        'faketoken.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm9qZWN0X2lkIjoicHJvamVjdF9pZCJ9.signature'
-      );
-
-      client.cwd = fixture('with-vercel-flags');
-      const definitionsDir = findDefinitionsDir(client.cwd);
-      client.setArgv('build', '--yes');
-
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(0);
-
-      expect(fetchSpy).toHaveBeenCalledOnce();
-      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
-
-      fs.removeSync(definitionsDir);
     });
   });
 

@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.2.88
+
+### Patch Changes
+
+- @vercel/node@5.8.9
+
 ## 0.2.87
 
 ### Patch Changes
