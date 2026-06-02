@@ -19,6 +19,107 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
+
+const getNextGeneratedNitroServiceFixture = servicesConfigKey => ({
+  '.vercel/project.json': JSON.stringify({
+    orgId: '.',
+    projectId: '.',
+    settings: {
+      framework: 'nextjs',
+    },
+  }),
+  'package.json': JSON.stringify({
+    private: true,
+    scripts: {
+      build: 'next build',
+    },
+    dependencies: {
+      next: 'latest',
+      react: 'latest',
+      'react-dom': 'latest',
+    },
+  }),
+  'pages/index.js':
+    'export default function Home() { return <p>Latest Next.js app</p>; }',
+  'next.config.js': `
+const fs = require('node:fs');
+const path = require('node:path');
+
+const experimentalServices = {
+  web: {
+    type: 'web',
+    root: '.',
+    entrypoint: 'package.json',
+    framework: 'nextjs',
+    mount: '/',
+  },
+  'nitro-api': {
+    type: 'web',
+    root: 'nitro',
+    entrypoint: 'package.json',
+    framework: 'nitro',
+    mount: '/api',
+  },
+};
+
+function writeExperimentalServicesConfig(projectDir) {
+  const outputDir = path.join(projectDir, '.vercel', 'output');
+  const configPath = path.join(outputDir, 'config.json');
+  let config = { version: 3 };
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    configPath,
+    JSON.stringify(
+      {
+        ...config,
+        version: 3,
+        ${JSON.stringify(servicesConfigKey)}: experimentalServices,
+      },
+      null,
+      2
+    )
+  );
+}
+
+writeExperimentalServicesConfig(__dirname);
+
+module.exports = {};
+`,
+  'nitro/package.json': JSON.stringify({
+    private: true,
+    scripts: {
+      build: 'nitro build',
+      dev: 'nitro dev',
+      prepare: 'nitro prepare',
+      preview: 'node .output/server/index.mjs',
+    },
+    devDependencies: {
+      nitropack: 'latest',
+    },
+  }),
+  'nitro/.npmrc': 'shamefully-hoist=true\nstrict-peer-dependencies=false\n',
+  'nitro/nitro.config.ts': `
+export default defineNitroConfig({
+  preset: 'vercel',
+  compatibilityDate: '2026-05-27',
+  srcDir: 'server'
+});
+`,
+  'nitro/server/routes/index.ts': `
+export default defineEventHandler(() => {
+  return 'nitro ok';
+});
+`,
+});
+
 module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
   const spec = {
     'static-single-file': {
@@ -494,109 +595,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'vc-build-next-generated-nitro-service': {
-      '.vercel/project.json': JSON.stringify({
-        orgId: '.',
-        projectId: '.',
-        settings: {
-          framework: 'nextjs',
-        },
-      }),
-      'package.json': JSON.stringify({
-        private: true,
-        scripts: {
-          build: 'next build',
-        },
-        dependencies: {
-          next: 'latest',
-          react: 'latest',
-          'react-dom': 'latest',
-        },
-      }),
-      'pages/index.js':
-        'export default function Home() { return <p>Latest Next.js app</p>; }',
-      'next.config.js': `
-const fs = require('node:fs');
-const path = require('node:path');
-
-const experimentalServices = {
-  web: {
-    type: 'web',
-    root: '.',
-    entrypoint: 'package.json',
-    framework: 'nextjs',
-    mount: '/',
-  },
-  'nitro-api': {
-    type: 'web',
-    root: 'nitro',
-    entrypoint: 'package.json',
-    framework: 'nitro',
-    mount: '/api',
-  },
-};
-
-function writeExperimentalServicesConfig(projectDir) {
-  const outputDir = path.join(projectDir, '.vercel', 'output');
-  const configPath = path.join(outputDir, 'config.json');
-  const servicesConfigKey =
-    process.env.NEXT_GENERATED_SERVICES_CONFIG_KEY === 'services'
-      ? 'services'
-      : 'experimentalServices';
-  let config = { version: 3 };
-  try {
-    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  } catch (error) {
-    if (error.code !== 'ENOENT') {
-      throw error;
-    }
-  }
-
-  fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(
-    configPath,
-    JSON.stringify(
-      {
-        ...config,
-        version: 3,
-        [servicesConfigKey]: experimentalServices,
-      },
-      null,
-      2
-    )
-  );
-}
-
-writeExperimentalServicesConfig(__dirname);
-
-module.exports = {};
-`,
-      'nitro/package.json': JSON.stringify({
-        private: true,
-        scripts: {
-          build: 'nitro build',
-          dev: 'nitro dev',
-          prepare: 'nitro prepare',
-          preview: 'node .output/server/index.mjs',
-        },
-        devDependencies: {
-          nitropack: 'latest',
-        },
-      }),
-      'nitro/.npmrc': 'shamefully-hoist=true\nstrict-peer-dependencies=false\n',
-      'nitro/nitro.config.ts': `
-export default defineNitroConfig({
-  preset: 'vercel',
-  compatibilityDate: '2026-05-27',
-  srcDir: 'server'
-});
-`,
-      'nitro/server/routes/index.ts': `
-export default defineEventHandler(() => {
-  return 'nitro ok';
-});
-`,
-    },
+    'vc-build-next-generated-nitro-service':
+      getNextGeneratedNitroServiceFixture('experimentalServices'),
+    'vc-build-next-generated-services-nitro-service':
+      getNextGeneratedNitroServiceFixture('services'),
     'vercel-json-configuration-overrides': {
       'vercel.json': '{}',
       'package.json': '{}',

@@ -1330,13 +1330,12 @@ test('[vc build] should build experimentalServices emitted by latest Next.js con
 
 test('[vc build] should nest services emitted by latest Next.js config output', async () => {
   const directory = await setupE2EFixture(
-    'vc-build-next-generated-nitro-service'
+    'vc-build-next-generated-services-nitro-service'
   );
   const output = await execCli(binaryPath, ['build'], {
     cwd: directory,
     env: {
       NEXT_ENABLE_ADAPTER: '1',
-      NEXT_GENERATED_SERVICES_CONFIG_KEY: 'services',
       NEXT_TELEMETRY_DISABLED: '1',
       VERCEL_USE_SERVICES: '1',
     },
