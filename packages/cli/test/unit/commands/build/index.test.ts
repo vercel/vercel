@@ -2687,19 +2687,8 @@ writeFileSync(
 `
     );
 
-    const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
-    process.env.VERCEL_USE_SERVICES = '1';
-    let exitCode;
-    try {
-      client.cwd = cwd;
-      exitCode = await build(client);
-    } finally {
-      if (originalServicesEnv === undefined) {
-        delete process.env.VERCEL_USE_SERVICES;
-      } else {
-        process.env.VERCEL_USE_SERVICES = originalServicesEnv;
-      }
-    }
+    client.cwd = cwd;
+    const exitCode = await build(client);
     expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
