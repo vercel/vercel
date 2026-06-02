@@ -68,7 +68,11 @@ export async function pollForClaim(
 
       try {
         const updated = await getResource(client, resourceId);
-        if (updated.ownership !== 'sandbox') {
+        // Require an explicit non-sandbox ownership value before declaring
+        // claimed. The truthiness guard keeps us polling when a partner
+        // fetch transiently returns a resource without an `ownership` field,
+        // rather than misreporting that as success.
+        if (updated.ownership && updated.ownership !== 'sandbox') {
           output.stopSpinner();
           return { status: 'claimed', resource: updated };
         }

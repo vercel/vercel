@@ -138,6 +138,30 @@ describe('integration-resource claim', () => {
       );
     }, 30000);
 
+    it('keeps polling when partner fetch returns undefined ownership, succeeds once a real value arrives', async () => {
+      // Simulates a transient partner-fetch response where `ownership` is
+      // dropped. The poll must NOT treat this as a successful claim — it
+      // should keep going until a definite non-sandbox value comes back.
+      const RESOURCE_WITHOUT_OWNERSHIP: Resource = {
+        ...SANDBOX_RESOURCE,
+        ownership: undefined,
+      };
+      mockStores([SANDBOX_RESOURCE]);
+      mockResourceSequence([
+        RESOURCE_WITHOUT_OWNERSHIP, // first poll tick: ownership missing
+        LINKED_RESOURCE, // second tick: real claim arrives
+      ]);
+      mockClaimUrl();
+
+      client.setArgv('integration-resource', 'claim', 'my-stripe');
+      const exitCodePromise = integrationResourceCommand(client);
+
+      // Two poll ticks needed (~4s with the 2s poll interval), so bump the
+      // toOutput timeout past its 3s default.
+      await expect(client.stderr).toOutput('Success! Claimed my-stripe', 7000);
+      expect(await exitCodePromise).toEqual(0);
+    }, 30000);
+
     it('--format=json writes claimed status to stdout', async () => {
       mockStores([SANDBOX_RESOURCE]);
       mockResourceSequence([LINKED_RESOURCE]);
