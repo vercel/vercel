@@ -1,0 +1,23 @@
+{
+  "name": "@repro/data",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint --type-aware --type-check",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@adobe/fetch": "^4.3.0",
+    "@planetscale/database": "^1.20.1",
+    "@repro/shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}

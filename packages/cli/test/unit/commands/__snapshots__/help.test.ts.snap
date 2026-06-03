@@ -3723,6 +3723,7 @@ exports[`help command > integration help output snapshots > integration help col
                                   di…
                                   re…
                                   cr…
+                                  cl…
   update         integration      Up…
                                   a  
                                   ma…
@@ -3921,7 +3922,7 @@ exports[`help command > integration help output snapshots > integration help col
                                   resource's dashboard via SSO               
   resource                        Manage marketplace integration resources   
                                   (connect, disconnect, remove,              
-                                  create-threshold)                          
+                                  create-threshold, claim)                   
   update         integration      Update a marketplace integration           
                                   installation (billing plan or which        
                                   projects can access it). Install, remove,  
@@ -3992,7 +3993,7 @@ exports[`help command > integration help output snapshots > integration help col
   list           [project]        List resources from marketplace integrations for the current project               
   open           name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                  
   resource                        Manage marketplace integration resources (connect, disconnect, remove,             
-                                  create-threshold)                                                                  
+                                  create-threshold, claim)                                                           
   update         integration      Update a marketplace integration installation (billing plan or which projects can  
                                   access it). Install, remove, and connect flows are separate (integration add,      
                                   integration remove, integration-resource, env pull, etc.) — not part of update.    

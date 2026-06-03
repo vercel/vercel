@@ -1,0 +1,21 @@
+{
+  "name": "@repro/api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "lint": "oxlint --type-aware --type-check",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules tsconfig.tsbuildinfo .vercel"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.0",
+    "@repro/data": "workspace:^",
+    "@repro/shared": "workspace:^",
+    "elysia": "^1.4.28"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "typescript": "^5.7.2"
+  }
+}
