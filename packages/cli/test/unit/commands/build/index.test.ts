@@ -2828,6 +2828,9 @@ createServer((_req, res) => {
         build: 'node build.mjs',
       },
     });
+    await fs.writeJSON(join(cwd, 'vercel.json'), {
+      rewrites: [{ source: '/docs/(.*)', destination: '/$1' }],
+    });
     await fs.outputFile(
       join(cwd, 'build.mjs'),
       `
@@ -2875,7 +2878,17 @@ writeFileSync(
         rewrites: [{ source: '/(.*)', destination: '/$1' }],
       }),
     });
-    expect(config.routes).toEqual([{ handle: 'filesystem' }]);
+    expect(config.routes).toEqual(
+      expect.arrayContaining([
+        { handle: 'filesystem' },
+        expect.objectContaining({ dest: '/$1', check: true }),
+      ])
+    );
+    expect(
+      config.routes.filter(
+        (route: { handle?: string }) => route.handle === 'filesystem'
+      )
+    ).toHaveLength(1);
     expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
     const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
     expect(uiConfig.routes).toEqual(
@@ -2884,6 +2897,11 @@ writeFileSync(
         expect.objectContaining({ dest: '/$1', check: true }),
       ])
     );
+    expect(
+      uiConfig.routes.filter(
+        (route: { handle?: string }) => route.handle === 'filesystem'
+      )
+    ).toHaveLength(1);
     expect(
       await fs.readFile(join(output, 'services/ui/static/index.html'), 'utf8')
     ).toBe('root output');

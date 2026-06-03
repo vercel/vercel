@@ -1391,6 +1391,11 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
     ])
   );
   expect(
+    webConfig.routes.filter(
+      (route: { handle?: string }) => route.handle === 'filesystem'
+    )
+  ).toHaveLength(1);
+  expect(
     await fs.pathExists(path.join(webOutputDirectory, 'static/index.html'))
   ).toBe(true);
   const nextBuildManifestPaths = await findFilesNamed(
@@ -1412,6 +1417,11 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
       expect.objectContaining({ dest: '/$1', check: true }),
     ])
   );
+  expect(
+    nitroConfig.routes.filter(
+      (route: { handle?: string }) => route.handle === 'filesystem'
+    )
+  ).toHaveLength(1);
 
   const functionsDirectory = path.join(nitroOutputDirectory, 'functions');
   const nitroChunkPaths = await findFilesNamed(functionsDirectory, 'nitro.mjs');

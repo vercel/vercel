@@ -1955,21 +1955,19 @@ async function doBuild(
     topLevelBuildResults.size > 0
       ? await getFramework(workPath, topLevelBuildResults)
       : undefined;
-  const explicitRootRoutes = [
-    ...(routesResult.routes ?? []),
-    ...(detectedExperimentalServicesV2RootRoutes ?? []),
-    ...(existingConfig?.routes ?? []),
-  ];
+  const explicitRootRoutes = mergeBuildOutputRouteTables({
+    userRoutes: routesResult.routes,
+    routeTables: [
+      detectedExperimentalServicesV2RootRoutes,
+      existingConfig?.routes,
+    ],
+  });
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: nestServiceOutput
-      ? explicitRootRoutes.length > 0
-        ? explicitRootRoutes
-        : undefined
-      : mergedRoutes,
+    routes: nestServiceOutput ? explicitRootRoutes : mergedRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
@@ -2380,6 +2378,52 @@ function mergeWildcard(
   return wildcard;
 }
 
+type BuildOutputRoutes = NonNullable<BuildOutputConfig['routes']>;
+
+function mergeBuildOutputRouteTables({
+  userRoutes,
+  routeTables,
+}: {
+  userRoutes?: BuildOutputConfig['routes'] | null;
+  routeTables: Array<BuildOutputConfig['routes'] | undefined>;
+}): BuildOutputConfig['routes'] | undefined {
+  const routes = Array.isArray(userRoutes) ? userRoutes : undefined;
+  const builds: MergeRoutesProps['builds'] = routeTables
+    .filter(
+      (routeTable): routeTable is BuildOutputRoutes =>
+        Array.isArray(routeTable) && routeTable.length > 0
+    )
+    .map((routeTable, index) => ({
+      use: `@vercel/build-output-route-table-${String(index).padStart(5, '0')}`,
+      entrypoint: `route-table:${String(index).padStart(5, '0')}`,
+      routes: routeTable,
+    }));
+
+  if (!routes?.length && builds.length === 0) {
+    return undefined;
+  }
+
+  const mergedRoutes = mergeRoutes({ userRoutes: routes, builds });
+  if (mergedRoutes.length > 0) {
+    return mergedRoutes;
+  }
+
+  const routeHandles = new Set<string>();
+  for (const routeTable of [routes, ...routeTables]) {
+    if (!Array.isArray(routeTable)) continue;
+    for (const route of routeTable) {
+      const handle = (route as { handle?: unknown }).handle;
+      if (typeof handle === 'string') {
+        routeHandles.add(handle);
+      }
+    }
+  }
+
+  return routeHandles.size > 0
+    ? Array.from(routeHandles, handle => ({ handle }) as Route)
+    : undefined;
+}
+
 async function writeServiceConfigs(
   outputDir: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
@@ -2444,13 +2488,15 @@ async function writeServiceConfigs(
           'framework' in result && Boolean(result.framework)
       )?.framework;
 
+      const mergedRoutes = mergeBuildOutputRouteTables({
+        userRoutes: configuredRoutes,
+        routeTables: [routes, existingConfig?.routes],
+      });
+
       const config: BuildOutputConfig = {
         ...existingConfig,
         version: 3,
-        routes:
-          configuredRoutes.length > 0 || routes.length > 0
-            ? [...configuredRoutes, ...routes]
-            : existingConfig?.routes,
+        routes: mergedRoutes,
         images: mergeImages(existingConfig?.images, results),
         wildcard: mergeWildcard(results) || existingConfig?.wildcard,
         overrides:
