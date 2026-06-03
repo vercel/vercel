@@ -64,10 +64,12 @@ import {
 import {
   appendRoutesToPhase,
   getTransformedRoutes,
+  isHandler,
   mergeRoutes,
   sourceToRegex,
   type MergeRoutesProps,
   type Route,
+  type HandleValue,
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
@@ -1955,13 +1957,11 @@ async function doBuild(
     topLevelBuildResults.size > 0
       ? await getFramework(workPath, topLevelBuildResults)
       : undefined;
-  const explicitRootRoutes = mergeBuildOutputRouteTables({
-    userRoutes: routesResult.routes,
-    routeTables: [
-      detectedExperimentalServicesV2RootRoutes,
-      existingConfig?.routes,
-    ],
-  });
+  const explicitRootRoutes = appendBuildOutputRouteTables(
+    routesResult.routes,
+    detectedExperimentalServicesV2RootRoutes,
+    existingConfig?.routes
+  );
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
@@ -2378,50 +2378,37 @@ function mergeWildcard(
   return wildcard;
 }
 
-type BuildOutputRoutes = NonNullable<BuildOutputConfig['routes']>;
+function appendBuildOutputRouteTables(
+  ...routeTables: Array<BuildOutputConfig['routes'] | null | undefined>
+): BuildOutputConfig['routes'] | undefined {
+  let routes: Route[] = [];
+  for (const routeTable of routeTables) {
+    if (!Array.isArray(routeTable) || routeTable.length === 0) continue;
 
-function mergeBuildOutputRouteTables({
-  userRoutes,
-  routeTables,
-}: {
-  userRoutes?: BuildOutputConfig['routes'] | null;
-  routeTables: Array<BuildOutputConfig['routes'] | undefined>;
-}): BuildOutputConfig['routes'] | undefined {
-  const routes = Array.isArray(userRoutes) ? userRoutes : undefined;
-  const builds: MergeRoutesProps['builds'] = routeTables
-    .filter(
-      (routeTable): routeTable is BuildOutputRoutes =>
-        Array.isArray(routeTable) && routeTable.length > 0
-    )
-    .map((routeTable, index) => ({
-      use: `@vercel/build-output-route-table-${String(index).padStart(5, '0')}`,
-      entrypoint: `route-table:${String(index).padStart(5, '0')}`,
-      routes: routeTable,
-    }));
+    let phase: HandleValue | null = null;
+    let phaseRoutes: Route[] = [];
+    const flushPhase = () => {
+      if (phaseRoutes.length === 0) return;
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: phaseRoutes,
+        phase,
+      });
+      phaseRoutes = [];
+    };
 
-  if (!routes?.length && builds.length === 0) {
-    return undefined;
-  }
-
-  const mergedRoutes = mergeRoutes({ userRoutes: routes, builds });
-  if (mergedRoutes.length > 0) {
-    return mergedRoutes;
-  }
-
-  const routeHandles = new Set<string>();
-  for (const routeTable of [routes, ...routeTables]) {
-    if (!Array.isArray(routeTable)) continue;
     for (const route of routeTable) {
-      const handle = (route as { handle?: unknown }).handle;
-      if (typeof handle === 'string') {
-        routeHandles.add(handle);
+      if (isHandler(route)) {
+        flushPhase();
+        phase = route.handle;
+      } else {
+        phaseRoutes.push(route);
       }
     }
+    flushPhase();
   }
 
-  return routeHandles.size > 0
-    ? Array.from(routeHandles, handle => ({ handle }) as Route)
-    : undefined;
+  return routes.length > 0 ? routes : undefined;
 }
 
 async function writeServiceConfigs(
@@ -2488,10 +2475,11 @@ async function writeServiceConfigs(
           'framework' in result && Boolean(result.framework)
       )?.framework;
 
-      const mergedRoutes = mergeBuildOutputRouteTables({
-        userRoutes: configuredRoutes,
-        routeTables: [routes, existingConfig?.routes],
-      });
+      const mergedRoutes = appendBuildOutputRouteTables(
+        configuredRoutes,
+        routes,
+        existingConfig?.routes
+      );
 
       const config: BuildOutputConfig = {
         ...existingConfig,

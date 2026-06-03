@@ -2850,7 +2850,7 @@ writeFileSync(
   join(outputDir, 'config.json'),
   JSON.stringify({
     version: 3,
-    routes: [{ handle: 'filesystem' }],
+    routes: [{ src: '/ui/(.*)', service: 'ui' }],
     experimentalServicesV2: {
       ui: {
         root: '.',
@@ -2881,6 +2881,7 @@ writeFileSync(
     expect(config.routes).toEqual(
       expect.arrayContaining([
         { handle: 'filesystem' },
+        { src: '/ui/(.*)', service: 'ui' },
         expect.objectContaining({ dest: '/$1', check: true }),
       ])
     );
