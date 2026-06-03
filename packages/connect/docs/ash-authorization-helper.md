@@ -113,7 +113,11 @@ import {
   type TokenResult,
 } from "experimental-ash/connections";
 
-import type { ConnectOptions, ConnectTokenParams } from "./token.js";
+import type {
+  ConnectOptions,
+  ConnectTokenParams,
+  ConnectTokenSubject,
+} from "./token.js";
 
 /**
  * State journaled by Ash between `startAuthorization` and
@@ -157,6 +161,14 @@ export interface AshAuthorizationOptions {
    * from the principal; any other field is passed through verbatim.
    */
   readonly tokenParams?: Omit<ConnectTokenParams, "subject">;
+
+  /**
+   * Override how Ash's framework-resolved principal is mapped to a
+   * Vercel Connect token subject.
+   */
+  readonly principalToSubject?: (
+    principal: ConnectionPrincipal
+  ) => ConnectTokenSubject | Promise<ConnectTokenSubject>;
 
   /**
    * Forwarded to `@vercel/connect`. Primarily for tests that inject
@@ -298,6 +310,22 @@ authorization: connect({
 ```
 
 Same pattern for `resources`, `installationId`, and `authorizationDetails`.
+
+### Custom subject mapping
+
+By default, app principals map to `{ type: "app" }` and user principals map to
+`{ type: "user", id, issuer }`. Use `principalToSubject` when a connector needs
+a different subject shape:
+
+```ts
+authorization: connect({
+  connector: process.env.CONNECTOR_OAUTH!,
+  principalToSubject: principal => ({
+    type: "jwt-bearer",
+    sub: principal.type === "user" ? principal.id : "app",
+  }),
+}),
+```
 
 ### Custom error translation
 

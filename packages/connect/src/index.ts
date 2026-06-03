@@ -9,6 +9,7 @@ export {
   type ConnectOptions,
   type ConnectTokenParams,
   type ConnectTokenResponse,
+  type ConnectTokenSubject,
   type ConnectVendorErrorPayload,
 } from './token.js';
 
