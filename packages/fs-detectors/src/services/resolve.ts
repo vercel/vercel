@@ -3,9 +3,7 @@ import type {
   EnvVars,
   ExperimentalService,
   ConfiguredServices,
-  ConfiguredServicesType,
   ExperimentalServiceConfig,
-  ExperimentalServiceV2Config,
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
@@ -210,30 +208,6 @@ interface ResolveConfiguredServiceOptions {
 
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
-  configuredServicesType?: ConfiguredServicesType;
-}
-
-function normalizeServiceConfigForResolution({
-  config,
-  configuredServicesType,
-}: {
-  config: ExperimentalServiceConfig | ExperimentalServiceV2Config;
-  configuredServicesType?: ConfiguredServicesType;
-}): ExperimentalServiceConfig {
-  if (configuredServicesType !== 'experimentalServicesV2') {
-    return config as ExperimentalServiceConfig;
-  }
-
-  const v2Config = config as ExperimentalServiceV2Config;
-  return {
-    type: 'web',
-    root: v2Config.root,
-    framework: v2Config.framework,
-    runtime: v2Config.runtime,
-    entrypoint: v2Config.entrypoint,
-    installCommand: v2Config.installCommand,
-    buildCommand: v2Config.buildCommand,
-  };
 }
 
 function toWorkspaceRelativeEntrypoint(
@@ -514,12 +488,7 @@ export function validateServiceConfig(
     };
   }
 
-  if (
-    options.configuredServicesType !== 'experimentalServicesV2' &&
-    serviceType === 'web' &&
-    !hasRoutePrefix &&
-    !hasSubdomain
-  ) {
+  if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
       message: `Web service "${name}" must specify at least one of "mount", "routePrefix", or "subdomain".`,
@@ -1001,10 +970,7 @@ export async function resolveAllConfiguredServices(
   const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
-    const serviceConfig = normalizeServiceConfigForResolution({
-      config: services[name],
-      configuredServicesType: options.configuredServicesType,
-    });
+    const serviceConfig = services[name] as ExperimentalServiceConfig;
 
     const validationError = validateServiceConfig(name, serviceConfig, options);
     if (validationError) {

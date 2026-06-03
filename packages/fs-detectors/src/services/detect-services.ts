@@ -195,9 +195,6 @@ export async function detectServices(
   const configuredServices = hasProvidedConfiguredServices
     ? providedConfiguredServices
     : vercelConfig?.experimentalServices;
-  const configuredServicesType = hasProvidedConfiguredServices
-    ? (providedConfiguredServicesType ?? 'experimentalServices')
-    : 'experimentalServices';
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -246,10 +243,7 @@ export async function detectServices(
   const result = await resolveAllConfiguredServices(
     configuredServices,
     scopedFs,
-    'configured',
-    {
-      configuredServicesType,
-    }
+    'configured'
   );
 
   // Generate routes
@@ -259,7 +253,7 @@ export async function detectServices(
     services: result.services,
     source: 'configured',
     // experimentalServices uses the legacy `{NAME}_URL` injection.
-    useImplicitEnvInjection: configuredServicesType === 'experimentalServices',
+    useImplicitEnvInjection: true,
     routes,
     errors: result.errors,
     warnings: [],
