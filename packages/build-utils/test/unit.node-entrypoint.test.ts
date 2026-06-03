@@ -275,6 +275,18 @@ describe('isNodeEntrypoint()', () => {
         )
       ).toBe(false);
     });
+
+    it('handler-like text inside a string literal is not a false positive', async () => {
+      expect(
+        await check(
+          [
+            'export function docs() {',
+            '  return "set module.exports = handler or call app.listen(3000)";',
+            '}',
+          ].join('\n')
+        )
+      ).toBe(false);
+    });
   });
 
   describe('returns false for non-entrypoints', () => {

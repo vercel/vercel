@@ -48,19 +48,20 @@ const NON_EXPORT_HANDLER_PATTERNS = [
 ];
 
 /**
- * Strip `//` line comments and `/* *​/` block comments from source code.
+ * Blank out comments and string/template literals, leaving only code structure
+ * for {@link NON_EXPORT_HANDLER_PATTERNS} to match against.
  *
- * The matcher consumes string and template literals as whole tokens *before*
- * it can interpret their contents, so a `/*` or `//` sequence inside a literal
- * (e.g. the `*​/*` in an `Accept: *​/*` header) is copied verbatim and never
- * mistaken for the start of a comment. Only comments found in real code
- * position are removed; they are replaced with a single space to preserve the
- * token boundaries downstream patterns rely on.
+ * Comments and literals are matched by one alternation, so a literal is always
+ * consumed as a single token *before* the engine can look inside it — a `/*` or
+ * `//` sequence within a string (e.g. the `*​/*` in an `Accept: *​/*` header) is
+ * therefore never mistaken for the start of a comment. Literals are blanked
+ * rather than preserved so their contents can't be misread as code either (e.g.
+ * the literal text `"module.exports ="` inside a string).
  */
-function stripComments(content: string): string {
-  const TOKEN =
+function stripCommentsAndLiterals(content: string): string {
+  const COMMENT_OR_LITERAL =
     /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`/g;
-  return content.replace(TOKEN, match => (match[0] === '/' ? ' ' : match));
+  return content.replace(COMMENT_OR_LITERAL, ' ');
 }
 
 /**
@@ -135,7 +136,7 @@ export async function isNodeEntrypoint(
     // inconclusive — don't risk filtering out a real entrypoint.
     if (esmUnparsed) return true;
 
-    const code = stripComments(content);
+    const code = stripCommentsAndLiterals(content);
     return NON_EXPORT_HANDLER_PATTERNS.some(pattern => pattern.test(code));
   } catch (err) {
     debug(`Failed to check Node.js entrypoint: ${err}`);
