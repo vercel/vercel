@@ -220,6 +220,52 @@ export const createThresholdSubcommand = {
   ],
 } as const;
 
+export const claimSubcommand = {
+  name: 'claim',
+  aliases: [],
+  description:
+    'Claim a sandbox marketplace resource (e.g. Stripe, Shopify) by opening the provider claim URL in your browser',
+  arguments: [
+    {
+      name: 'resource',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when claiming a single sandbox resource',
+    },
+    {
+      name: 'no-wait',
+      description:
+        'Print the claim URL and exit without polling for completion',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Claim a sandbox resource by name',
+      value: [
+        `${packageName} integration-resource claim <resource>`,
+        `${packageName} integration-resource claim my-stripe`,
+      ],
+    },
+    {
+      name: 'Pick a sandbox resource interactively (current team)',
+      value: `${packageName} integration-resource claim`,
+    },
+    {
+      name: 'Print the claim URL as JSON without waiting',
+      value: `${packageName} integration-resource claim my-stripe --format=json --no-wait`,
+    },
+  ],
+} as const;
+
 export const integrationResourceCommand = {
   name: 'integration-resource',
   aliases: ['ir'],
@@ -232,6 +278,7 @@ export const integrationResourceCommand = {
     createThresholdSubcommand,
     disconnectSubcommand,
     removeSubcommand,
+    claimSubcommand,
   ],
   examples: [],
 } as const;

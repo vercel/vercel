@@ -86,6 +86,22 @@ export const addSubcommand = {
       description:
         'Installation ID to use when multiple installations exist for the integration',
     },
+    {
+      name: 'claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox (e.g. Stripe, Shopify), claim it immediately without prompting',
+    },
+    {
+      name: 'no-claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox, skip the offer to claim it (only print a hint)',
+    },
     formatOption,
   ],
   examples: [
