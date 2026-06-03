@@ -1,0 +1,16 @@
+packages:
+  - 'packages/*'
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+nodeLinker: isolated
+publicHoistPattern:
+  # The crux of the repro: drizzle-orm and @adobe/fetch hoist to the root, but
+  # @planetscale/database does NOT (it's a peerDep of the patched drizzle-orm).
+  # That asymmetry is what triggers the missing-dependency bug being tested.
+  - '@planetscale/database'
+  - '@adobe/fetch'
+  - 'drizzle-orm'
+strictPeerDependencies: false
+patchedDependencies:
+  drizzle-orm@0.40.1: patches/drizzle-orm@0.40.1.patch

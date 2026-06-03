@@ -1,0 +1,149 @@
+diff --git a/mysql-core/indexes.cjs b/mysql-core/indexes.cjs
+index bef9affe0cd24797e8c2256b5c42a712bbdde992..86b9e059e841fcb0bbb0d83e42d2b4a01083a388 100644
+--- a/mysql-core/indexes.cjs
++++ b/mysql-core/indexes.cjs
+@@ -22,29 +22,32 @@ __export(indexes_exports, {
+   IndexBuilder: () => IndexBuilder,
+   IndexBuilderOn: () => IndexBuilderOn,
+   index: () => index,
+-  uniqueIndex: () => uniqueIndex
++  uniqueIndex: () => uniqueIndex,
++  fulltextIndex: () => fulltextIndex
+ });
+ module.exports = __toCommonJS(indexes_exports);
+ var import_entity = require("../entity.cjs");
+ class IndexBuilderOn {
+-  constructor(name, unique) {
++  constructor(name, unique,fulltext) {
+     this.name = name;
+     this.unique = unique;
++    this.fulltext = fulltext;
+   }
+   static [import_entity.entityKind] = "MySqlIndexBuilderOn";
+   on(...columns) {
+-    return new IndexBuilder(this.name, columns, this.unique);
++    return new IndexBuilder(this.name, columns, this.unique, this.fulltext);
+   }
+ }
+ class IndexBuilder {
+   static [import_entity.entityKind] = "MySqlIndexBuilder";
+   /** @internal */
+   config;
+-  constructor(name, columns, unique) {
++  constructor(name, columns, unique, fulltext) {
+     this.config = {
+       name,
+       columns,
+-      unique
++      unique,
++      fulltext
+     };
+   }
+   using(using) {
+@@ -77,12 +80,16 @@ function index(name) {
+ function uniqueIndex(name) {
+   return new IndexBuilderOn(name, true);
+ }
++function fulltextIndex(name) {
++  return new IndexBuilderOn(name, false, true);
++}
+ // Annotate the CommonJS export names for ESM import in node:
+ 0 && (module.exports = {
+   Index,
+   IndexBuilder,
+   IndexBuilderOn,
+   index,
+-  uniqueIndex
++  uniqueIndex,
++  fulltextIndex
+ });
+ //# sourceMappingURL=indexes.cjs.map
+\ No newline at end of file
+diff --git a/mysql-core/indexes.d.ts b/mysql-core/indexes.d.ts
+index 987a8e012dac2ee79a0bffb462d9d272f598bd4e..906943721d419d76ed5dc4e77694cce827664c38 100644
+--- a/mysql-core/indexes.d.ts
++++ b/mysql-core/indexes.d.ts
+@@ -56,4 +56,5 @@ export type GetColumnsTableName<TColumns> = TColumns extends AnyMySqlColumn<{
+ }>[] ? TTableName : never;
+ export declare function index(name: string): IndexBuilderOn;
+ export declare function uniqueIndex(name: string): IndexBuilderOn;
++export declare function fulltextIndex(name: string): IndexBuilderOn;
+ export {};
+diff --git a/mysql-core/indexes.js b/mysql-core/indexes.js
+index 18df3c9bad73d60a766b0ea2d7800a504ba5c074..b7049cb739c43e338335e42953d630b8ec70c1a8 100644
+--- a/mysql-core/indexes.js
++++ b/mysql-core/indexes.js
+@@ -1,23 +1,25 @@
+ import { entityKind } from "../entity.js";
+ class IndexBuilderOn {
+-  constructor(name, unique) {
++  constructor(name, unique, fulltext) {
+     this.name = name;
+     this.unique = unique;
++    this.fulltext = fulltext;
+   }
+   static [entityKind] = "MySqlIndexBuilderOn";
+   on(...columns) {
+-    return new IndexBuilder(this.name, columns, this.unique);
++    return new IndexBuilder(this.name, columns, this.unique, this.fulltext);
+   }
+ }
+ class IndexBuilder {
+   static [entityKind] = "MySqlIndexBuilder";
+   /** @internal */
+   config;
+-  constructor(name, columns, unique) {
++  constructor(name, columns, unique, fulltext) {
+     this.config = {
+       name,
+       columns,
+-      unique
++      unique,
++      fulltext
+     };
+   }
+   using(using) {
+@@ -50,11 +52,15 @@ function index(name) {
+ function uniqueIndex(name) {
+   return new IndexBuilderOn(name, true);
+ }
++function fulltextIndex(name) {
++  return new IndexBuilderOn(name, false, true);
++}
+ export {
+   Index,
+   IndexBuilder,
+   IndexBuilderOn,
+   index,
+-  uniqueIndex
++  uniqueIndex,
++  fulltextIndex
+ };
+ //# sourceMappingURL=indexes.js.map
+\ No newline at end of file
+diff --git a/mysql-core/primary-keys.cjs b/mysql-core/primary-keys.cjs
+index 2da5d8735961ca8fe78a0e4453f0a6c37382a719..9a9e7fc701567aeb8ad334bd9570a5017596050b 100644
+--- a/mysql-core/primary-keys.cjs
++++ b/mysql-core/primary-keys.cjs
+@@ -56,7 +56,7 @@ class PrimaryKey {
+   columns;
+   name;
+   getName() {
+-    return this.name ?? `${this.table[import_table.MySqlTable.Symbol.Name]}_${this.columns.map((column) => column.name).join("_")}_pk`;
++    return this.name ?? `${this.table[import_table.MySqlTable.Symbol.Name]}_${this.columns.map((column) => column.name).join("_")}`;
+   }
+ }
+ // Annotate the CommonJS export names for ESM import in node:
+diff --git a/mysql-core/primary-keys.js b/mysql-core/primary-keys.js
+index 3270119f56d61180a8b3ddaa638cf2958857ec84..f5bb55fc81fdf39c0057149fc6ab9559c2618306 100644
+--- a/mysql-core/primary-keys.js
++++ b/mysql-core/primary-keys.js
+@@ -31,7 +31,7 @@ class PrimaryKey {
+   columns;
+   name;
+   getName() {
+-    return this.name ?? `${this.table[MySqlTable.Symbol.Name]}_${this.columns.map((column) => column.name).join("_")}_pk`;
++    return this.name ?? `${this.table[MySqlTable.Symbol.Name]}_${this.columns.map((column) => column.name).join("_")}`;
+   }
+ }
+ export {

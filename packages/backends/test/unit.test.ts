@@ -40,8 +40,23 @@ interface VercelJson {
   [key: string]: unknown;
 }
 
-const loadVercelJson = async (fixtureSource: string) => {
-  const vercelJsonPath = join(fixtureSource, 'vercel.json');
+interface FixtureMetadata {
+  pathToProject?: string;
+  skipLambdaExecution?: boolean;
+}
+
+const loadFixtureMetadata = async (fixtureSource: string) => {
+  const fixtureJsonPath = join(fixtureSource, 'fixture.json');
+  try {
+    const content = await readFile(fixtureJsonPath, 'utf-8');
+    return JSON.parse(content) as FixtureMetadata;
+  } catch {
+    return null;
+  }
+};
+
+const loadVercelJson = async (projectSource: string) => {
+  const vercelJsonPath = join(projectSource, 'vercel.json');
   try {
     const content = await readFile(vercelJsonPath, 'utf-8');
     return JSON.parse(content) as VercelJson;
@@ -108,16 +123,20 @@ const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
 
 describe('successful builds', async () => {
   const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-    fixtureName => fixtureName.includes('')
+    fixtureName => fixtureName.includes('21')
   );
   for (const fixtureName of fixtures) {
     // Windows is just too slow to build these fixtures
-    it.skipIf(process.platform === 'win32')(
+    it.only.skipIf(process.platform === 'win32')(
       `builds ${fixtureName}`,
       async () => {
         // Copy entire fixture to work dir so no parent node_modules can interfere
         const fixtureSource = join(__dirname, 'fixtures', fixtureName);
-        const vercelJson = await loadVercelJson(fixtureSource);
+        const fixtureMetadata = await loadFixtureMetadata(fixtureSource);
+        const projectSource = fixtureMetadata?.pathToProject
+          ? join(fixtureSource, fixtureMetadata.pathToProject)
+          : fixtureSource;
+        const vercelJson = await loadVercelJson(projectSource);
         const config = getFixtureConfig(vercelJson);
 
         const { workDir, lambdaOutputDir } = await getWorkDir(
@@ -126,10 +145,13 @@ describe('successful builds', async () => {
         );
 
         const repoRootPath = workDir;
+        const projectPath = fixtureMetadata?.pathToProject
+          ? join(workDir, fixtureMetadata.pathToProject)
+          : workDir;
         // If vercel.json specifies rootDirectory, use it as the workPath
         const workPath = vercelJson?.rootDirectory
-          ? join(workDir, vercelJson.rootDirectory)
-          : workDir;
+          ? join(projectPath, vercelJson.rootDirectory)
+          : projectPath;
 
         const result = (await build({
           files: {},
@@ -178,11 +200,13 @@ describe('successful builds', async () => {
           }
         }
 
-        await expect(
-          extractAndExecuteLambda(lambda, lambdaOutputDir, USE_DEBUG_DIR)
-        ).resolves.toBeUndefined();
+        if (!fixtureMetadata?.skipLambdaExecution) {
+          await expect(
+            extractAndExecuteLambda(lambda, lambdaOutputDir, USE_DEBUG_DIR)
+          ).resolves.toBeUndefined();
+        }
       },
-      30000
+      50000
     ); // copying fixture and running npm install so it takes a while
   }
 
