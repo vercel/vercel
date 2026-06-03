@@ -214,13 +214,9 @@ interface ResolveAllConfiguredServicesOptions {
 }
 
 function normalizeServiceConfigForResolution({
-  name,
-  index,
   config,
   configuredServicesType,
 }: {
-  name: string;
-  index: number;
   config: ExperimentalServiceConfig | ExperimentalServiceV2Config;
   configuredServicesType?: ConfiguredServicesType;
 }): ExperimentalServiceConfig {
@@ -237,7 +233,6 @@ function normalizeServiceConfigForResolution({
     entrypoint: v2Config.entrypoint,
     installCommand: v2Config.installCommand,
     buildCommand: v2Config.buildCommand,
-    routePrefix: index === 0 ? '/' : `/_/${name}`,
   };
 }
 
@@ -519,7 +514,12 @@ export function validateServiceConfig(
     };
   }
 
-  if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
+  if (
+    options.configuredServicesType !== 'experimentalServicesV2' &&
+    serviceType === 'web' &&
+    !hasRoutePrefix &&
+    !hasSubdomain
+  ) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
       message: `Web service "${name}" must specify at least one of "mount", "routePrefix", or "subdomain".`,
@@ -1000,10 +1000,8 @@ export async function resolveAllConfiguredServices(
   const errors: ServiceDetectionError[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
-  for (const [index, name] of Object.keys(services).entries()) {
+  for (const name of Object.keys(services)) {
     const serviceConfig = normalizeServiceConfigForResolution({
-      name,
-      index,
       config: services[name],
       configuredServicesType: options.configuredServicesType,
     });

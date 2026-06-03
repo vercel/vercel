@@ -191,13 +191,17 @@ describe('Test `detectBuilders`', () => {
       expect.arrayContaining([
         expect.objectContaining({
           name: 'web',
-          routePrefix: '/',
         }),
         expect.objectContaining({
           name: 'api',
-          routePrefix: '/_/api',
         }),
       ])
+    );
+    expect(services?.find(service => service.name === 'web')?.routePrefix).toBe(
+      undefined
+    );
+    expect(services?.find(service => service.name === 'api')?.routePrefix).toBe(
+      undefined
     );
     expect(builders).toEqual(
       expect.arrayContaining([
