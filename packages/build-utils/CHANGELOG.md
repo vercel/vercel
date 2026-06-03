@@ -1,5 +1,12 @@
 # @vercel/build-utils
 
+## 13.26.6
+
+### Patch Changes
+
+- 3019788: [services] Remove the `services` field from `vercel.json` and the `VERCEL_USE_SERVICES` gate.
+- fe893ec: [services] Add `experimentalServicesV2` field to `vercel.json` implementing the new schema for services.
+
 ## 13.26.5
 
 ### Patch Changes
