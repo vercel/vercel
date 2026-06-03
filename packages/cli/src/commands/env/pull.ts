@@ -30,6 +30,7 @@ import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
 import { isAPIError } from '../../util/errors-ts';
 import { performDeviceCodeFlow } from '../login/future';
+import { stepUpWithBiometrics } from '../../util/biometric/step-up';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -219,6 +220,20 @@ export async function envPullCommandLogic(
       output.log('Canceled');
       return;
     }
+  }
+
+  // DEMO ONLY (gated by VERCEL_BIOMETRIC_DEMO): preview the Touch ID step-up UX
+  // before the API endpoints exist. This forces a local biometric prompt and
+  // verifies the signature locally — it is NOT the real server-verified flow
+  // and must never ship enabled by default.
+  if (process.env.VERCEL_BIOMETRIC_DEMO) {
+    output.log('Pulling environment variables requires fresh authentication.');
+    const stepUp = await stepUpWithBiometrics(client);
+    if (!stepUp.ok) {
+      output.error(`Biometric authentication failed: ${stepUp.message}`);
+      return;
+    }
+    output.success('Biometric authentication verified.');
   }
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
