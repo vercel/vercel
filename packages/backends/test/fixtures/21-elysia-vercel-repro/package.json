@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@11.0.4",
-  "pnpm": {
-    "patchedDependencies": {
-      "drizzle-orm@0.40.1": "patches/drizzle-orm@0.40.1.patch"
-    }
-  },
   "engines": {
     "node": ">=22"
   }

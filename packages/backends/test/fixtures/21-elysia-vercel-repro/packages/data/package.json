@@ -14,8 +14,7 @@
   "dependencies": {
     "@adobe/fetch": "^4.3.0",
     "@planetscale/database": "^1.20.1",
-    "@repro/shared": "workspace:^",
-    "drizzle-orm": "0.40.1"
+    "@repro/shared": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
