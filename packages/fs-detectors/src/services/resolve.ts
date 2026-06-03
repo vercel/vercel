@@ -213,44 +213,6 @@ interface ResolveAllConfiguredServicesOptions {
   configuredServicesType?: ConfiguredServicesType;
 }
 
-function inferExperimentalServicesV2RoutePrefix(
-  config: ExperimentalServiceV2Config
-): string | undefined {
-  const sources = [
-    ...(config.routes ?? []).map(route => route.src),
-    ...(config.headers ?? []).map(header => header.source),
-    ...(config.redirects ?? []).map(redirect => redirect.source),
-    ...(config.rewrites ?? []).map(rewrite => rewrite.source),
-  ].filter((source): source is string => typeof source === 'string');
-
-  for (const source of sources) {
-    const routePrefix = inferRoutePrefixFromSource(source);
-    if (routePrefix) {
-      return routePrefix;
-    }
-  }
-
-  return undefined;
-}
-
-function inferRoutePrefixFromSource(source: string): string | undefined {
-  if (
-    source === '/' ||
-    source === '/(.*)' ||
-    source === '^/(.*)$' ||
-    source === '^/.*$'
-  ) {
-    return '/';
-  }
-
-  const match = source.match(/^\^?\/([A-Za-z0-9_-]+)/);
-  if (!match) {
-    return undefined;
-  }
-
-  return `/${match[1]}`;
-}
-
 function normalizeServiceConfigForResolution({
   name,
   index,
@@ -275,9 +237,7 @@ function normalizeServiceConfigForResolution({
     entrypoint: v2Config.entrypoint,
     installCommand: v2Config.installCommand,
     buildCommand: v2Config.buildCommand,
-    routePrefix:
-      inferExperimentalServicesV2RoutePrefix(v2Config) ??
-      (index === 0 ? '/' : `/_/${name}`),
+    routePrefix: index === 0 ? '/' : `/_/${name}`,
   };
 }
 
