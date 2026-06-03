@@ -1358,21 +1358,7 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
       rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
     }),
   });
-  expect(config.routes).toEqual(
-    expect.arrayContaining([
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '^(?=/api(?:/|$))(?:/(.*)$)',
-        dest: '/services/nitro-api/$1',
-      },
-      {
-        src: '^(?!/api(?:/|$))(?:/(.*)$)',
-        dest: '/services/web/$1',
-      },
-    ])
-  );
+  expect(config.routes).toBeUndefined();
   expect(config.images).toBeUndefined();
   expect(config.overrides).toBeUndefined();
   expect(config.framework).toBeUndefined();
@@ -1389,6 +1375,12 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
   expect(webConfig.services).toBeUndefined();
   expect(webConfig.experimentalServices).toBeUndefined();
   expect(webConfig.experimentalServicesV2).toBeUndefined();
+  expect(webConfig.routes).toEqual(
+    expect.arrayContaining([
+      { handle: 'filesystem' },
+      expect.objectContaining({ dest: '/$1', check: true }),
+    ])
+  );
   expect(
     await fs.pathExists(path.join(webOutputDirectory, 'static/index.html'))
   ).toBe(true);
@@ -1405,6 +1397,12 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
   expect(nitroConfig.services).toBeUndefined();
   expect(nitroConfig.experimentalServices).toBeUndefined();
   expect(nitroConfig.experimentalServicesV2).toBeUndefined();
+  expect(nitroConfig.routes).toEqual(
+    expect.arrayContaining([
+      { handle: 'filesystem' },
+      expect.objectContaining({ dest: '/$1', check: true }),
+    ])
+  );
 
   const functionsDirectory = path.join(nitroOutputDirectory, 'functions');
   const nitroChunkPaths = await findFilesNamed(functionsDirectory, 'nitro.mjs');

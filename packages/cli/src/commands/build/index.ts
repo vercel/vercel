@@ -63,12 +63,9 @@ import {
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
-  getOwnershipGuard,
   getTransformedRoutes,
   mergeRoutes,
-  normalizeRoutePrefix,
   sourceToRegex,
-  scopeRouteSourceToOwnership,
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
@@ -839,10 +836,9 @@ async function doBuild(
       newRoutes: detectedHostRewriteRoutes ?? null,
       phase: null,
     });
-    const detectedServiceRewriteRoutes =
-      nestServiceOutput && detectedServices
-        ? generateNestedServiceRoutes(detectedServices)
-        : detectedBuilders.rewriteRoutes;
+    const detectedServiceRewriteRoutes = nestServiceOutput
+      ? []
+      : detectedBuilders.rewriteRoutes;
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
@@ -1592,7 +1588,7 @@ async function doBuild(
       phase: null,
     });
     const serviceRewriteRoutes = nestServiceOutput
-      ? generateNestedServiceRoutes(services)
+      ? []
       : [
           ...serviceRoutes.rewrites,
           ...serviceRoutes.workers,
@@ -1956,7 +1952,7 @@ async function doBuild(
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: mergedRoutes,
+    routes: nestServiceOutput ? undefined : mergedRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
@@ -1982,7 +1978,8 @@ async function doBuild(
       outputDir,
       buildResults,
       serviceByBuilder,
-      serviceFileOverrides
+      serviceFileOverrides,
+      detectedExperimentalServicesV2Config
     );
   }
 
@@ -2370,7 +2367,8 @@ async function writeServiceConfigs(
   outputDir: string,
   buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
   serviceByBuilder: Map<Builder, Service>,
-  serviceFileOverrides: Map<Builder, Record<string, PathOverride>>
+  serviceFileOverrides: Map<Builder, Record<string, PathOverride>>,
+  experimentalServicesV2?: ExperimentalServicesV2
 ) {
   const serviceResults = new Map<
     string,
@@ -2413,6 +2411,9 @@ async function writeServiceConfigs(
       const routes = results.flatMap(result =>
         'routes' in result && Array.isArray(result.routes) ? result.routes : []
       );
+      const configuredRoutes = experimentalServicesV2?.[serviceName]
+        ? getExperimentalServicesV2Routes(experimentalServicesV2[serviceName])
+        : [];
       const overrides = [
         ...results
           .map(result => ('overrides' in result ? result.overrides : undefined))
@@ -2429,7 +2430,10 @@ async function writeServiceConfigs(
       const config: BuildOutputConfig = {
         ...existingConfig,
         version: 3,
-        routes: routes.length > 0 ? routes : existingConfig?.routes,
+        routes:
+          configuredRoutes.length > 0 || routes.length > 0
+            ? [...configuredRoutes, ...routes]
+            : existingConfig?.routes,
         images: mergeImages(existingConfig?.images, results),
         wildcard: mergeWildcard(results) || existingConfig?.wildcard,
         overrides:
@@ -2446,6 +2450,24 @@ async function writeServiceConfigs(
       await fs.writeJSON(configPath, config, { spaces: 2 });
     })
   );
+}
+
+function getExperimentalServicesV2Routes(
+  serviceConfig: ExperimentalServicesV2[string]
+): Route[] {
+  const routesResult = getTransformedRoutes({
+    routes: serviceConfig.routes,
+    cleanUrls: serviceConfig.cleanUrls,
+    trailingSlash: serviceConfig.trailingSlash,
+    headers: serviceConfig.headers,
+    redirects: serviceConfig.redirects,
+    rewrites: serviceConfig.rewrites,
+  });
+  if (routesResult.error) {
+    throw routesResult.error;
+  }
+
+  return routesResult.routes ?? [];
 }
 
 function getGeneratedExperimentalServicesConfig(
@@ -2613,38 +2635,6 @@ function getServicesMergeEntrypoint(
   const normalized = normalizeServiceRoutePrefix(routePrefix);
   const sortKey = String(10000 - normalized.length).padStart(5, '0');
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
-}
-
-function generateNestedServiceRoutes(services: Service[]): Route[] {
-  const sortedWebServices = services
-    .filter(
-      (service): service is Service & { routePrefix: string } =>
-        service.type === 'web' && typeof service.routePrefix === 'string'
-    )
-    .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
-
-  const allWebPrefixes = Array.from(
-    new Set(
-      sortedWebServices.map(service =>
-        normalizeRoutePrefix(service.routePrefix)
-      )
-    )
-  );
-
-  return sortedWebServices.map(service => {
-    const ownershipGuard = getOwnershipGuard(
-      service.routePrefix,
-      allWebPrefixes
-    );
-
-    return {
-      src: scopeRouteSourceToOwnership('^/(.*)$', ownershipGuard),
-      // Temporary routing shim: these `/services/<name>` destinations are
-      // written into `.vercel/output/config.json` until the Build Output API
-      // has a first-class service route primitive.
-      dest: `/services/${service.name}/$1`,
-    };
-  });
 }
 
 function attachQueueServiceTrigger(

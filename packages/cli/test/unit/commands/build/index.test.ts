@@ -2683,21 +2683,7 @@ createServer((_req, res) => {
         rewrites: [{ source: '/(.*)', destination: '/$1' }],
       }),
     });
-    expect(config.routes).toEqual(
-      expect.arrayContaining([
-        {
-          handle: 'filesystem',
-        },
-        {
-          src: '^(?=/backend(?:/|$))(?:/(.*)$)',
-          dest: '/services/backend/$1',
-        },
-        {
-          src: '^(?!/backend(?:/|$))(?:/(.*)$)',
-          dest: '/services/ui/$1',
-        },
-      ])
-    );
+    expect(config.routes).toBeUndefined();
     expect(
       await fs.pathExists(
         join(output, 'services/ui/functions/_svc/ui/index.func/.vc-config.json')
@@ -2711,12 +2697,22 @@ createServer((_req, res) => {
         )
       )
     ).toBe(true);
-    expect(await fs.pathExists(join(output, 'services/ui/config.json'))).toBe(
-      true
+    const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
+    expect(uiConfig.routes).toEqual(
+      expect.arrayContaining([
+        { handle: 'filesystem' },
+        expect.objectContaining({ dest: '/$1', check: true }),
+      ])
     );
-    expect(
-      await fs.pathExists(join(output, 'services/backend/config.json'))
-    ).toBe(true);
+    const backendConfig = await fs.readJSON(
+      join(output, 'services/backend/config.json')
+    );
+    expect(backendConfig.routes).toEqual(
+      expect.arrayContaining([
+        { handle: 'filesystem' },
+        expect.objectContaining({ dest: '/$1', check: true }),
+      ])
+    );
     expect(await fs.pathExists(join(output, 'functions'))).toBe(false);
   });
 
@@ -2879,20 +2875,14 @@ writeFileSync(
         rewrites: [{ source: '/(.*)', destination: '/$1' }],
       }),
     });
-    expect(config.routes).toEqual(
-      expect.arrayContaining([
-        {
-          handle: 'filesystem',
-        },
-        {
-          src: '^/(.*)$',
-          dest: '/services/ui/$1',
-        },
-      ])
-    );
+    expect(config.routes).toBeUndefined();
     expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
-    expect(await fs.pathExists(join(output, 'services/ui/config.json'))).toBe(
-      true
+    const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
+    expect(uiConfig.routes).toEqual(
+      expect.arrayContaining([
+        { handle: 'filesystem' },
+        expect.objectContaining({ dest: '/$1', check: true }),
+      ])
     );
     expect(
       await fs.readFile(join(output, 'services/ui/static/index.html'), 'utf8')
