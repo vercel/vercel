@@ -195,7 +195,7 @@ describe('Test `detectBuilders`', () => {
         }),
         expect.objectContaining({
           name: 'api',
-          routePrefix: '/api',
+          routePrefix: '/_/api',
         }),
       ])
     );
