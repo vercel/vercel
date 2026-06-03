@@ -52,7 +52,7 @@ export const removeSubcommand = {
 export const disconnectSubcommand = {
   name: 'disconnect',
   aliases: [],
-  description: 'Disconnect a resource from a project, or the current project',
+  description: 'Disconnect a marketplace resource from a project',
   arguments: [
     {
       name: 'resource',
@@ -107,6 +107,78 @@ export const disconnectSubcommand = {
   ],
 } as const;
 
+export const connectSubcommand = {
+  name: 'connect',
+  aliases: [],
+  description: 'Connect a marketplace resource to a project',
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: [String],
+      argument: 'ENV',
+      deprecated: false,
+      description:
+        'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
+    },
+    {
+      name: 'prefix',
+      shorthand: null,
+      type: String,
+      argument: 'PREFIX',
+      deprecated: false,
+      description:
+        'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when connecting a resource',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Connect a resource to the current project',
+      value: [
+        `${packageName} integration resource connect <resource>`,
+        `${packageName} integration resource connect my-acme-resource`,
+      ],
+    },
+    {
+      name: 'Connect a resource to a specified project',
+      value: [
+        `${packageName} integration resource connect <resource> <project>`,
+        `${packageName} integration resource connect my-acme-resource my-project`,
+      ],
+    },
+    {
+      name: 'Connect only to specific environments',
+      value: [
+        `${packageName} integration resource connect my-acme-resource -e production`,
+        `${packageName} integration resource connect my-acme-resource -e production -e preview`,
+      ],
+    },
+    {
+      name: 'Connect with a prefix for environment variable names',
+      value: `${packageName} integration resource connect my-acme-resource --prefix NEON2_`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration resource connect my-acme-resource --format=json --yes`,
+    },
+  ],
+} as const;
+
 export const createThresholdSubcommand = {
   name: 'create-threshold',
   aliases: [],
@@ -151,10 +223,12 @@ export const createThresholdSubcommand = {
 export const integrationResourceCommand = {
   name: 'integration-resource',
   aliases: ['ir'],
-  description: 'Manage marketplace integration resources',
+  description:
+    'Manage marketplace integration resources (alias for `vercel integration resource`)',
   options: [],
   arguments: [],
   subcommands: [
+    connectSubcommand,
     createThresholdSubcommand,
     disconnectSubcommand,
     removeSubcommand,

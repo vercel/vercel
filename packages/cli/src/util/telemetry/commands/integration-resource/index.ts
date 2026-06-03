@@ -26,4 +26,11 @@ export class IntegrationResourceTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandConnect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'connect',
+      value: actual,
+    });
+  }
 }
