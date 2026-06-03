@@ -856,6 +856,34 @@ export async function* findDirs(
 }
 
 /**
+ * Re-anchors a Lambda file key that escapes the function root back inside it.
+ *
+ * When `vc build` runs from a monorepo subdirectory without a Root Directory
+ * setting, the repo root is detected as the app directory while dependencies
+ * are hoisted to the actual monorepo root above it. Builders then emit Lambda
+ * file keys that climb out of the function root, e.g.
+ * `../../node_modules/.pnpm/next@.../next/dist/.../server.runtime.prod.js`.
+ *
+ * Such keys cannot be used as zip entry names (`yazl` rejects any path
+ * containing a `..` segment with "invalid relative path"), and they would not
+ * resolve at runtime since nothing exists above a deployed function's root.
+ * Stripping the leading `..` segments anchors the file inside the function
+ * (e.g. `node_modules/.pnpm/.../server.runtime.prod.js`), matching the layout
+ * a root-level build produces. Relative paths between these files (such as the
+ * symlinks inside the pnpm store) are unaffected because every escaping key
+ * shares the same leading prefix and is re-anchored consistently.
+ */
+function stripParentSegments(path: string): string {
+  const normalized = normalizePath(path);
+  const segments = normalized.split('/');
+  let i = 0;
+  while (i < segments.length && segments[i] === '..') {
+    i++;
+  }
+  return segments.slice(i).join('/');
+}
+
+/**
  * Removes the `FileFsRef` instances from the `Files` object
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
@@ -880,9 +908,15 @@ export function filesWithoutFsRefs(
         if (isExternalSymlink(file)) {
           continue;
         }
-        shared[path] = file;
-        filePathMap[normalizePath(path)] = normalizePath(
-          relative(repoRootPath, join(sharedDest, path))
+        // A standalone function must be self-contained, so any remaining file
+        // whose key escapes the function root (e.g. `../../node_modules/...`,
+        // produced when building from a monorepo subdirectory) is re-anchored
+        // inside the function. The shared bytes are placed under the same
+        // anchored key so the recorded `filePathMap` value points at them.
+        const funcPath = stripParentSegments(path);
+        shared[funcPath] = file;
+        filePathMap[funcPath] = normalizePath(
+          relative(repoRootPath, join(sharedDest, funcPath))
         );
       } else {
         filePathMap[normalizePath(path)] = normalizePath(
