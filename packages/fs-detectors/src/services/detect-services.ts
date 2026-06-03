@@ -139,7 +139,7 @@ export async function detectServices(
     workPath,
     detectEntrypoint,
     configuredServices: providedConfiguredServices,
-    configuredServicesType,
+    configuredServicesType: providedConfiguredServicesType,
   } = options;
 
   // Scope filesystem to workPath if provided
@@ -167,7 +167,7 @@ export async function detectServices(
   // `experimentalServicesV2` dispatch
   const experimentalServicesV2 =
     hasProvidedConfiguredServices &&
-    configuredServicesType === 'experimentalServicesV2'
+    providedConfiguredServicesType === 'experimentalServicesV2'
       ? (providedConfiguredServices as ExperimentalServicesV2)
       : hasProvidedConfiguredServices
         ? undefined
@@ -195,6 +195,9 @@ export async function detectServices(
   const configuredServices = hasProvidedConfiguredServices
     ? providedConfiguredServices
     : vercelConfig?.experimentalServices;
+  const configuredServicesType = hasProvidedConfiguredServices
+    ? (providedConfiguredServicesType ?? 'experimentalServices')
+    : 'experimentalServices';
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -243,7 +246,10 @@ export async function detectServices(
   const result = await resolveAllConfiguredServices(
     configuredServices,
     scopedFs,
-    'configured'
+    'configured',
+    {
+      configuredServicesType,
+    }
   );
 
   // Generate routes
@@ -253,7 +259,7 @@ export async function detectServices(
     services: result.services,
     source: 'configured',
     // experimentalServices uses the legacy `{NAME}_URL` injection.
-    useImplicitEnvInjection: true,
+    useImplicitEnvInjection: configuredServicesType === 'experimentalServices',
     routes,
     errors: result.errors,
     warnings: [],

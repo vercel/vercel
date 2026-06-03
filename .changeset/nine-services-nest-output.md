@@ -1,5 +1,6 @@
 ---
 '@vercel/next': patch
+'@vercel/fs-detectors': patch
 'vercel': patch
 ---
 

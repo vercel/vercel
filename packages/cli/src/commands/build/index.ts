@@ -146,21 +146,6 @@ function buildCommandWithGlobalFlags(
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
-interface ExperimentalServiceV2Config {
-  root: string;
-  framework?: string;
-  runtime?: string;
-  entrypoint?: string;
-  installCommand?: string;
-  buildCommand?: string;
-  headers?: Array<{ source?: string }>;
-  redirects?: Array<{ source?: string }>;
-  rewrites?: Array<{ source?: string }>;
-  routes?: Array<{ src?: string }>;
-}
-
-type ExperimentalServicesV2 = Record<string, ExperimentalServiceV2Config>;
-
 interface SerializedBuilder extends Builder {
   error?: any;
   require?: string;
@@ -195,70 +180,6 @@ function hasNonEmptyObject(value: unknown): value is Record<string, unknown> {
     !Array.isArray(value) &&
     Object.keys(value).length > 0
   );
-}
-
-function experimentalServicesV2ToExperimentalServices(
-  services: ExperimentalServicesV2
-): ExperimentalServices {
-  const entries = Object.entries(services);
-  return Object.fromEntries(
-    entries.map(([name, config], index) => {
-      const routePrefix =
-        inferExperimentalServicesV2RoutePrefix(config) ??
-        (index === 0 ? '/' : `/_/${name}`);
-      return [
-        name,
-        {
-          type: 'web',
-          root: config.root,
-          framework: config.framework,
-          runtime: config.runtime,
-          entrypoint: config.entrypoint,
-          installCommand: config.installCommand,
-          buildCommand: config.buildCommand,
-          routePrefix,
-        },
-      ];
-    })
-  );
-}
-
-function inferExperimentalServicesV2RoutePrefix(
-  config: ExperimentalServiceV2Config
-): string | undefined {
-  const sources = [
-    ...(config.routes ?? []).map(route => route.src),
-    ...(config.headers ?? []).map(header => header.source),
-    ...(config.redirects ?? []).map(redirect => redirect.source),
-    ...(config.rewrites ?? []).map(rewrite => rewrite.source),
-  ].filter((source): source is string => typeof source === 'string');
-
-  for (const source of sources) {
-    const routePrefix = inferRoutePrefixFromSource(source);
-    if (routePrefix) {
-      return routePrefix;
-    }
-  }
-
-  return undefined;
-}
-
-function inferRoutePrefixFromSource(source: string): string | undefined {
-  if (
-    source === '/' ||
-    source === '/(.*)' ||
-    source === '^/(.*)$' ||
-    source === '^/.*$'
-  ) {
-    return '/';
-  }
-
-  const match = source.match(/^\^?\/([A-Za-z0-9_-]+)/);
-  if (!match) {
-    return undefined;
-  }
-
-  return `/${match[1]}`;
 }
 
 /**
@@ -862,9 +783,7 @@ async function doBuild(
       detectBuilders(files, pkg, {
         ...localConfig,
         ...(detectedExperimentalServicesV2FromConfig && {
-          experimentalServices: experimentalServicesV2ToExperimentalServices(
-            detectedExperimentalServicesV2FromConfig
-          ),
+          experimentalServicesV2: detectedExperimentalServicesV2FromConfig,
         }),
         projectSettings,
         ignoreBuildScript: true,
@@ -1732,11 +1651,11 @@ async function doBuild(
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
-            experimentalServices: generatedExperimentalServicesV2Config
-              ? experimentalServicesV2ToExperimentalServices(
-                  generatedExperimentalServicesV2Config
-                )
-              : generatedExperimentalServicesConfig,
+            ...(generatedExperimentalServicesV2Config
+              ? {
+                  experimentalServicesV2: generatedExperimentalServicesV2Config,
+                }
+              : { experimentalServices: generatedExperimentalServicesConfig }),
             projectSettings,
             ignoreBuildScript: true,
             featHandleMiss: true,
@@ -2530,7 +2449,7 @@ async function writeServiceConfigs(
 }
 
 function getGeneratedExperimentalServicesConfig(
-  buildResults: Iterable<BuildResult | BuildOutputConfig | undefined>
+  buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServices | undefined {
   for (const result of buildResults) {
     if (
@@ -2545,7 +2464,7 @@ function getGeneratedExperimentalServicesConfig(
 }
 
 function getGeneratedExperimentalServicesV2Config(
-  buildResults: Iterable<BuildResult | BuildOutputConfig | undefined>
+  buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServicesV2 | undefined {
   for (const result of buildResults) {
     if (

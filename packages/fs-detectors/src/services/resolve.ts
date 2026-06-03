@@ -3,7 +3,9 @@ import type {
   EnvVars,
   ExperimentalService,
   ConfiguredServices,
+  ConfiguredServicesType,
   ExperimentalServiceConfig,
+  ExperimentalServiceV2Config,
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
@@ -208,7 +210,77 @@ interface ResolveConfiguredServiceOptions {
 
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
+  configuredServicesType?: ConfiguredServicesType;
 }
+
+function inferExperimentalServicesV2RoutePrefix(
+  config: ExperimentalServiceV2Config
+): string | undefined {
+  const sources = [
+    ...(config.routes ?? []).map(route => route.src),
+    ...(config.headers ?? []).map(header => header.source),
+    ...(config.redirects ?? []).map(redirect => redirect.source),
+    ...(config.rewrites ?? []).map(rewrite => rewrite.source),
+  ].filter((source): source is string => typeof source === 'string');
+
+  for (const source of sources) {
+    const routePrefix = inferRoutePrefixFromSource(source);
+    if (routePrefix) {
+      return routePrefix;
+    }
+  }
+
+  return undefined;
+}
+
+function inferRoutePrefixFromSource(source: string): string | undefined {
+  if (
+    source === '/' ||
+    source === '/(.*)' ||
+    source === '^/(.*)$' ||
+    source === '^/.*$'
+  ) {
+    return '/';
+  }
+
+  const match = source.match(/^\^?\/([A-Za-z0-9_-]+)/);
+  if (!match) {
+    return undefined;
+  }
+
+  return `/${match[1]}`;
+}
+
+function normalizeServiceConfigForResolution({
+  name,
+  index,
+  config,
+  configuredServicesType,
+}: {
+  name: string;
+  index: number;
+  config: ExperimentalServiceConfig | ExperimentalServiceV2Config;
+  configuredServicesType?: ConfiguredServicesType;
+}): ExperimentalServiceConfig {
+  if (configuredServicesType !== 'experimentalServicesV2') {
+    return config as ExperimentalServiceConfig;
+  }
+
+  const v2Config = config as ExperimentalServiceV2Config;
+  return {
+    type: 'web',
+    root: v2Config.root,
+    framework: v2Config.framework,
+    runtime: v2Config.runtime,
+    entrypoint: v2Config.entrypoint,
+    installCommand: v2Config.installCommand,
+    buildCommand: v2Config.buildCommand,
+    routePrefix:
+      inferExperimentalServicesV2RoutePrefix(v2Config) ??
+      (index === 0 ? '/' : `/_/${name}`),
+  };
+}
+
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -968,8 +1040,13 @@ export async function resolveAllConfiguredServices(
   const errors: ServiceDetectionError[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
-  for (const name of Object.keys(services)) {
-    const serviceConfig = services[name];
+  for (const [index, name] of Object.keys(services).entries()) {
+    const serviceConfig = normalizeServiceConfigForResolution({
+      name,
+      index,
+      config: services[name],
+      configuredServicesType: options.configuredServicesType,
+    });
 
     const validationError = validateServiceConfig(name, serviceConfig, options);
     if (validationError) {
