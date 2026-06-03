@@ -4,9 +4,6 @@
   "private": true,
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.29.3",
-  "engines": {
-    "pnpm": "10"
-  },
   "devDependencies": {
     "@biomejs/biome": "2.4.4",
     "@changesets/cli": "2.27.8",
