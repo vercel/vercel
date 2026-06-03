@@ -808,18 +808,20 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json. Only `experimentalServices`
-    // flows is supported right now.
-    detectedServices = detectedBuilders.services?.filter(isExperimentalService);
+    // Capture detected services for the config.json and service build nesting.
+    detectedServices = detectedBuilders.services;
 
     // Legacy URL injection for `experimentalServices`.
+    const detectedExperimentalServices = detectedServices?.filter(
+      isExperimentalService
+    );
     if (
       detectedBuilders.useImplicitEnvInjection &&
-      detectedServices &&
-      detectedServices.length > 0
+      detectedExperimentalServices &&
+      detectedExperimentalServices.length > 0
     ) {
       const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
-        services: detectedServices,
+        services: detectedExperimentalServices,
         frameworkList,
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
@@ -945,14 +947,15 @@ async function doBuild(
     workspace: string;
     key: string;
     manifest: Record<string, unknown>;
-    service?: ExperimentalService;
+    service?: Service;
     builderUse: string;
   }> = [];
 
   const getHasDetectedServices = () =>
     detectedServices !== undefined && detectedServices.length > 0;
   const getHasQueueServices = () =>
-    getHasDetectedServices() && detectedServices!.some(isQueueBackedService);
+    getHasDetectedServices() &&
+    detectedServices!.filter(isExperimentalService).some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
   const serviceByBuilder = new Map<Builder, Service>();
   const workPathByBuilder = new Map<Builder, string>();
@@ -993,16 +996,24 @@ async function doBuild(
         const service = getHasDetectedServices()
           ? serviceByBuilder.get(build)
           : undefined;
+        const experimentalService =
+          service && isExperimentalService(service) ? service : undefined;
+        const serviceWorkspace = service
+          ? isExperimentalService(service)
+            ? service.workspace
+            : service.root
+          : undefined;
         const stripServiceRoutePrefix =
-          !!service?.routePrefix && service.routePrefix !== '/';
+          !!experimentalService?.routePrefix &&
+          experimentalService.routePrefix !== '/';
 
         let buildWorkPath = workPath;
         let buildEntrypoint = build.src;
         let buildFiles: Files = filesMap;
 
-        if (service && service.workspace !== '.') {
-          const wsPrefix = service.workspace + '/';
-          buildWorkPath = join(workPath, service.workspace);
+        if (service && serviceWorkspace && serviceWorkspace !== '.') {
+          const wsPrefix = serviceWorkspace + '/';
+          buildWorkPath = join(workPath, serviceWorkspace);
 
           // Strip workspace prefix from entrypoint:
           // e.g., "frontend/package.json" → "package.json"
@@ -1084,7 +1095,8 @@ async function doBuild(
               },
               installCommand: service.installCommand ?? undefined,
               buildCommand: service.buildCommand ?? undefined,
-              preDeployCommand: service.preDeployCommand ?? undefined,
+              preDeployCommand:
+                experimentalService?.preDeployCommand ?? undefined,
               framework: builderFramework,
               nodeVersion: projectSettings.nodeVersion,
               bunVersion: localConfig.bunVersion ?? undefined,
@@ -1118,8 +1130,8 @@ async function doBuild(
         });
 
         const serviceRoutePrefix = build.config?.routePrefix;
-        const serviceWorkspace = build.config?.workspace;
-        const preDeployCmd = service?.preDeployCommand?.trim();
+        const serviceConfigWorkspace = build.config?.workspace;
+        const preDeployCmd = experimentalService?.preDeployCommand?.trim();
 
         const preDeployEntry =
           preDeployCmd && service
@@ -1148,17 +1160,23 @@ async function doBuild(
             ? {
                 service: {
                   name: service.name,
-                  type: service.type,
-                  trigger: service.trigger,
+                  ...(experimentalService
+                    ? {
+                        type: experimentalService.type,
+                        trigger: experimentalService.trigger,
+                      }
+                    : undefined),
                   routePrefix:
                     typeof serviceRoutePrefix === 'string'
                       ? serviceRoutePrefix
                       : undefined,
                   workspace:
-                    typeof serviceWorkspace === 'string'
-                      ? serviceWorkspace
-                      : undefined,
-                  schedule: service.schedule,
+                    typeof serviceConfigWorkspace === 'string'
+                      ? serviceConfigWorkspace
+                      : serviceWorkspace,
+                  ...(experimentalService
+                    ? { schedule: experimentalService.schedule }
+                    : undefined),
                 },
               }
             : undefined),
@@ -1173,11 +1191,11 @@ async function doBuild(
         // User-defined env takes precedence and won't be overwritten. The env will be cleared
         // after the build is complete
         const restoreEnv = new Map<string, string | undefined>();
-        if (detectedServices && service?.env) {
+        if (detectedServices && experimentalService?.env) {
           const perServiceEnv = getServiceUrlEnvVars({
-            requestedEnv: service.env,
-            consumerService: service,
-            services: detectedServices,
+            requestedEnv: experimentalService.env,
+            consumerService: experimentalService,
+            services: detectedServices.filter(isExperimentalService),
             frameworkList,
             currentEnv: process.env,
             deploymentUrl: process.env.VERCEL_URL,
@@ -1241,8 +1259,8 @@ async function doBuild(
               });
             if (builderDiagnostics) {
               const prefix =
-                service && service.workspace !== '.'
-                  ? service.workspace + '/' + builderPkg.name + '/'
+                service && serviceWorkspace && serviceWorkspace !== '.'
+                  ? serviceWorkspace + '/' + builderPkg.name + '/'
                   : '';
               for (const [key, value] of Object.entries(builderDiagnostics)) {
                 const fullKey = prefix + key;
@@ -1263,8 +1281,8 @@ async function doBuild(
                       );
                     } else {
                       const workspace =
-                        service && service.workspace !== '.'
-                          ? service.workspace
+                        service && serviceWorkspace && serviceWorkspace !== '.'
+                          ? serviceWorkspace
                           : '.';
                       packageManifests.push({
                         workspace,
@@ -1377,43 +1395,48 @@ async function doBuild(
         if (
           getHasDetectedServices() &&
           service &&
+          experimentalService &&
           'routes' in buildResult &&
           Array.isArray(buildResult.routes) &&
           detectedServices
         ) {
           buildResult.routes = scopeRoutesToServiceOwnership({
             routes: buildResult.routes as Route[],
-            owner: service,
-            allServices: detectedServices,
+            owner: experimentalService,
+            allServices: detectedServices.filter(isExperimentalService),
           });
         }
 
         if (
-          service &&
-          isQueueBackedService(service) &&
+          experimentalService &&
+          isQueueBackedService(experimentalService) &&
           'output' in buildResult
         ) {
-          attachQueueServiceTrigger(buildResult.output, service);
+          attachQueueServiceTrigger(buildResult.output, experimentalService);
         }
 
         if (
-          service &&
-          isScheduleTriggeredService(service) &&
+          experimentalService &&
+          isScheduleTriggeredService(experimentalService) &&
           !('crons' in buildResult && buildResult.crons?.length)
         ) {
-          const staticSchedules = getStaticServiceSchedules(service.schedule);
+          const staticSchedules = getStaticServiceSchedules(
+            experimentalService.schedule
+          );
           if (
-            typeof service.runtime === 'string' &&
+            typeof experimentalService.runtime === 'string' &&
             staticSchedules.length > 0
           ) {
             const cronEntrypoint =
-              service.entrypoint || service.builder.src || 'index';
+              experimentalService.entrypoint ||
+              experimentalService.builder.src ||
+              'index';
             for (const schedule of staticSchedules) {
               synthesizedServiceCrons.push({
                 path: getInternalServiceCronPath(
-                  service.name,
+                  experimentalService.name,
                   cronEntrypoint,
-                  service.handlerFunction || 'cron'
+                  experimentalService.handlerFunction || 'cron'
                 ),
                 schedule,
               });
@@ -1421,7 +1444,7 @@ async function doBuild(
           } else {
             throw new NowBuildError({
               code: 'CRON_SERVICE_NO_CRONS',
-              message: `Scheduled service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
+              message: `Scheduled service "${experimentalService.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
             });
           }
         }
@@ -1479,13 +1502,14 @@ async function doBuild(
             if (
               getHasDetectedServices() &&
               service &&
+              experimentalService &&
               Array.isArray(buildOutputConfig.routes) &&
               detectedServices
             ) {
               buildOutputConfig.routes = scopeRoutesToServiceOwnership({
                 routes: buildOutputConfig.routes as Route[],
-                owner: service,
-                allServices: detectedServices,
+                owner: experimentalService,
+                allServices: detectedServices.filter(isExperimentalService),
               });
             }
             mergedBuildResult = buildOutputConfig;
@@ -1677,18 +1701,27 @@ async function doBuild(
         output.warn(w.message, null, w.link, w.action || 'Learn More');
       }
 
-      detectedServices = generatedBuilders.services?.filter(
-        isExperimentalService
-      );
+      detectedServices = generatedBuilders.services;
       if (!detectedServices || detectedServices.length === 0) {
         detectedServices = undefined;
       } else {
-        appendServiceRoutes(detectedServices);
+        const detectedExperimentalServices = detectedServices.filter(
+          isExperimentalService
+        );
+        if (detectedExperimentalServices.length > 0) {
+          appendServiceRoutes(detectedExperimentalServices);
+        }
       }
 
-      if (detectedServices && generatedBuilders.useImplicitEnvInjection) {
+      const detectedExperimentalServices = detectedServices?.filter(
+        isExperimentalService
+      );
+      if (
+        detectedExperimentalServices &&
+        generatedBuilders.useImplicitEnvInjection
+      ) {
         const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
-          services: detectedServices,
+          services: detectedExperimentalServices,
           frameworkList,
           currentEnv: process.env,
           deploymentUrl: process.env.VERCEL_URL,
@@ -1768,8 +1801,12 @@ async function doBuild(
         builder: builderUse,
         framework: service?.framework,
         serviceName: service?.name,
-        serviceType: service?.type,
-        routePrefix: service?.routePrefix,
+        serviceType:
+          service && isExperimentalService(service) ? service.type : undefined,
+        routePrefix:
+          service && isExperimentalService(service)
+            ? service.routePrefix
+            : undefined,
       };
     }
     if (Object.keys(projectManifest).length > 0) {
@@ -1879,6 +1916,7 @@ async function doBuild(
         const service = serviceByBuilder.get(build);
         if (
           service &&
+          isExperimentalService(service) &&
           service.type === 'web' &&
           typeof service.routePrefix === 'string'
         ) {

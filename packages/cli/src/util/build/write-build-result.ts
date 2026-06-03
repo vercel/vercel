@@ -32,7 +32,9 @@ import {
   type TriggerEvent,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
+  type ExperimentalService,
   type Service,
+  isExperimentalService,
   isExternalSymlink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
@@ -265,7 +267,11 @@ async function writeBuildResultV2(args: {
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
-      injectServiceEnvVars(output, service, stripServiceRoutePrefix);
+      injectServiceEnvVars(
+        output,
+        service && isExperimentalService(service) ? service : undefined,
+        stripServiceRoutePrefix
+      );
       await writeLambda(
         repoRootPath,
         outputDir,
@@ -476,7 +482,11 @@ async function writeBuildResultV3(args: {
             : src
         );
   if (isLambda(output)) {
-    injectServiceEnvVars(output, service, stripServiceRoutePrefix);
+    injectServiceEnvVars(
+      output,
+      service && isExperimentalService(service) ? service : undefined,
+      stripServiceRoutePrefix
+    );
     await writeLambda(
       repoRootPath,
       outputDir,
