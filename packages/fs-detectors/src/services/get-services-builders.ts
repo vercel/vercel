@@ -14,7 +14,7 @@ export interface ErrorResponse {
 export interface GetServicesBuildersOptions {
   workPath?: string;
   configuredServices?: ConfiguredServices;
-  configuredServicesType?: 'services' | 'experimentalServices';
+  configuredServicesType?: 'experimentalServices';
   projectFramework?: string | null;
 }
 
@@ -134,8 +134,9 @@ export async function getServicesBuilders(
       builders: null,
       errors: [
         {
-          code: 'NO_SERVICES_CONFIGURED',
-          message: 'No services configured. Add `services` to vercel.json.',
+          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
         },
       ],
       warnings: warningResponses,

@@ -617,7 +617,6 @@ export default class DevServer {
 
     // no builds -> zero config
     if (
-      !vercelConfig.services &&
       !vercelConfig.experimentalServices &&
       (!vercelConfig.builds || vercelConfig.builds.length === 0)
     ) {

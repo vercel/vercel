@@ -6,8 +6,6 @@ import type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
-  ServiceConfig,
-  Services,
   ServiceRuntime,
   ServiceType,
   ServiceRefEnvVar,
@@ -23,8 +21,6 @@ export type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
-  ServiceConfig,
-  Services,
   ServiceRuntime,
   ServiceType,
   ServiceRefEnvVar,
@@ -40,7 +36,7 @@ export type ResolvedService = Service;
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
   configuredServices?: ConfiguredServices;
-  configuredServicesType?: 'services' | 'experimentalServices';
+  configuredServicesType?: 'experimentalServices';
   /**
    * Working directory path (relative to fs root).
    * If provided, vercel.json is read from this path.
@@ -75,7 +71,7 @@ export interface ServicesRoutes {
   workers: Route[];
 }
 
-export type ConfiguredServices = Services | ExperimentalServices;
+export type ConfiguredServices = ExperimentalServices;
 export type InferredServicesConfig = ExperimentalServices;
 
 export interface ResolvedServicesResult {
@@ -97,7 +93,7 @@ export interface InferredServicesResult {
 export interface DetectServicesResult extends ResolvedServicesResult {
   /**
    * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (`vercel.json#services` or legacy `experimentalServices`)
+   * - `configured`: loaded from explicit project configuration (`vercel.json#experimentalServices`)
    * - `auto-detected`: inferred from project structure
    */
   // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.

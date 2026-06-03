@@ -133,7 +133,6 @@ export async function detectServices(
     workPath,
     detectEntrypoint,
     configuredServices: providedConfiguredServices,
-    configuredServicesType,
   } = options;
 
   // Scope filesystem to workPath if provided
@@ -157,16 +156,9 @@ export async function detectServices(
   const hasProvidedConfiguredServices =
     providedConfiguredServices &&
     Object.keys(providedConfiguredServices).length > 0;
-  const hasNonEmptyPublicServicesConfig =
-    (hasProvidedConfiguredServices && configuredServicesType === 'services') ||
-    (!hasProvidedConfiguredServices &&
-      vercelConfig?.services &&
-      Object.keys(vercelConfig.services).length > 0);
   const configuredServices = hasProvidedConfiguredServices
     ? providedConfiguredServices
-    : hasNonEmptyPublicServicesConfig
-      ? vercelConfig?.services
-      : vercelConfig?.experimentalServices;
+    : vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
@@ -202,8 +194,9 @@ export async function detectServices(
       routes: emptyRoutes(),
       errors: [
         {
-          code: 'NO_SERVICES_CONFIGURED',
-          message: 'No services configured. Add `services` to vercel.json.',
+          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
         },
       ],
       warnings: [],
@@ -214,12 +207,7 @@ export async function detectServices(
   const result = await resolveAllConfiguredServices(
     configuredServices,
     scopedFs,
-    'configured',
-    {
-      requireFileEntrypointForBackendRuntimes: Boolean(
-        hasNonEmptyPublicServicesConfig
-      ),
-    }
+    'configured'
   );
 
   // Generate routes
@@ -228,9 +216,8 @@ export async function detectServices(
   return withResolvedResult({
     services: result.services,
     source: 'configured',
-    // GA `services` opts into explicit `env`; experimentalServices keeps
-    // the legacy `{NAME}_URL` injection.
-    useImplicitEnvInjection: !hasNonEmptyPublicServicesConfig,
+    // experimentalServices uses the legacy `{NAME}_URL` injection.
+    useImplicitEnvInjection: true,
     routes,
     errors: result.errors,
     warnings: [],

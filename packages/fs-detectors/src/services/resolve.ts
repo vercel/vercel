@@ -4,7 +4,6 @@ import type {
   Service,
   ConfiguredServices,
   ExperimentalServiceConfig,
-  ServiceConfig,
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
@@ -66,8 +65,7 @@ const ENTRYPOINT_REQUIRED_RUNTIMES = new Set<ServiceRuntime>([
   'go',
 ]);
 
-type ConfiguredServiceConfig = (ServiceConfig | ExperimentalServiceConfig) &
-  Partial<ExperimentalServiceConfig>;
+type ConfiguredServiceConfig = ExperimentalServiceConfig;
 
 interface ResolvedEntrypointPath {
   normalized: string;
