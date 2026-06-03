@@ -81,6 +81,17 @@ const servicesConfig = {
   },
 };
 
+const serviceRoutes = [
+  {
+    src: '/api/(.*)',
+    service: 'nitro-api',
+  },
+  {
+    src: '/(.*)',
+    service: 'web',
+  },
+];
+
 const outputDir = path.join(process.cwd(), '.vercel', 'output');
 const configPath = path.join(outputDir, 'config.json');
 let config = { version: 3 };
@@ -99,6 +110,7 @@ fs.writeFileSync(
     {
       ...config,
       version: 3,
+      routes: serviceRoutes,
       experimentalServicesV2: servicesConfig,
     },
     null,

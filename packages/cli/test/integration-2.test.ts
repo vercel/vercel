@@ -1358,7 +1358,16 @@ test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js co
       rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
     }),
   });
-  expect(config.routes).toBeUndefined();
+  expect(config.routes).toEqual([
+    {
+      src: '/api/(.*)',
+      service: 'nitro-api',
+    },
+    {
+      src: '/(.*)',
+      service: 'web',
+    },
+  ]);
   expect(config.images).toBeUndefined();
   expect(config.overrides).toBeUndefined();
   expect(config.framework).toBeUndefined();

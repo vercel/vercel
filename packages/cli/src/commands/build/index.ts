@@ -764,6 +764,9 @@ async function doBuild(
   let detectedExperimentalServicesConfig: ExperimentalServices | undefined;
   let detectedExperimentalServicesV2Config: ExperimentalServicesV2 | undefined =
     detectedExperimentalServicesV2FromConfig;
+  let detectedExperimentalServicesV2RootRoutes:
+    | BuildOutputConfig['routes']
+    | undefined;
   let isZeroConfig = false;
 
   if (builds.length > 0) {
@@ -1642,6 +1645,11 @@ async function doBuild(
       detectedExperimentalServicesConfig = generatedExperimentalServicesConfig;
       detectedExperimentalServicesV2Config =
         generatedExperimentalServicesV2Config;
+      detectedExperimentalServicesV2RootRoutes =
+        generatedExperimentalServicesV2Config &&
+        Array.isArray(generatedConfig?.routes)
+          ? generatedConfig.routes
+          : undefined;
       const generatedBuilders = await span
         .child('vc.detectGeneratedServices')
         .trace(() =>
@@ -1947,12 +1955,21 @@ async function doBuild(
     topLevelBuildResults.size > 0
       ? await getFramework(workPath, topLevelBuildResults)
       : undefined;
+  const explicitRootRoutes = [
+    ...(routesResult.routes ?? []),
+    ...(detectedExperimentalServicesV2RootRoutes ?? []),
+    ...(existingConfig?.routes ?? []),
+  ];
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: nestServiceOutput ? undefined : mergedRoutes,
+    routes: nestServiceOutput
+      ? explicitRootRoutes.length > 0
+        ? explicitRootRoutes
+        : undefined
+      : mergedRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,

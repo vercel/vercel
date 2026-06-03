@@ -2875,7 +2875,7 @@ writeFileSync(
         rewrites: [{ source: '/(.*)', destination: '/$1' }],
       }),
     });
-    expect(config.routes).toBeUndefined();
+    expect(config.routes).toEqual([{ handle: 'filesystem' }]);
     expect(await fs.readFile(join(cwd, 'build-count.txt'), 'utf8')).toBe('1');
     const uiConfig = await fs.readJSON(join(output, 'services/ui/config.json'));
     expect(uiConfig.routes).toEqual(
