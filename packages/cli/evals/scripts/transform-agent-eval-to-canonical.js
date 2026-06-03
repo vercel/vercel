@@ -160,9 +160,28 @@ function isTimestampSegment(segment) {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d+)?Z$/.test(segment);
 }
 
-function getRunGroup(relativePath) {
+function splitAtTimestamp(relativePath) {
   const segments = relativePath.split('/');
   const timestampIndex = segments.findIndex(isTimestampSegment);
+  return { segments, timestampIndex };
+}
+
+function normalizeUploadPath(relativePath) {
+  const { segments, timestampIndex } = splitAtTimestamp(relativePath);
+  if (timestampIndex <= 1) return relativePath;
+
+  const modelSegments = segments.slice(1, timestampIndex);
+  if (modelSegments.length <= 1) return relativePath;
+
+  return [
+    segments[0],
+    modelSegments.join('-'),
+    ...segments.slice(timestampIndex),
+  ].join('/');
+}
+
+function getRunGroup(relativePath) {
+  const { segments, timestampIndex } = splitAtTimestamp(relativePath);
   if (timestampIndex === -1) return 'ungrouped';
   return segments.slice(0, timestampIndex + 1).join('/');
 }
@@ -197,10 +216,11 @@ async function uploadFileGroup({
     const relativePath = path
       .relative(resultsDir, fullPath)
       .replace(/\\/g, '/');
+    const uploadPath = normalizeUploadPath(relativePath);
     const buffer = await readFile(fullPath);
     formData.append(
       'results_file',
-      new File([buffer], relativePath, {
+      new File([buffer], uploadPath, {
         type: contentTypeFor(relativePath),
       })
     );
@@ -361,4 +381,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
 }
 
-export { isRawTranscriptFile, shouldUploadFile };
+export {
+  isRawTranscriptFile,
+  shouldUploadFile,
+  splitAtTimestamp,
+  normalizeUploadPath,
+  getRunGroup,
+};
