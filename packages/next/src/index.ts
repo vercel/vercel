@@ -579,56 +579,17 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   let buildOutputVersion: undefined | number;
-  let buildOutputConfig:
-    | (Record<string, unknown> & {
-        version?: number;
-        experimentalServices?: unknown;
-        experimentalServicesV2?: unknown;
-      })
-    | undefined;
-  const buildOutputConfigPath = path.join(
-    entryPath,
-    outputDirectory,
-    'output/config.json'
-  );
 
   try {
-    const data = (await readJSON(buildOutputConfigPath)) as NonNullable<
-      typeof buildOutputConfig
-    >;
-    buildOutputConfig = data;
+    const data = await readJSON(
+      path.join(entryPath, outputDirectory, 'output/config.json')
+    );
     buildOutputVersion = data.version;
   } catch (_) {
     // tolerate for older versions
   }
 
-  if (buildOutputVersion && buildOutputConfig) {
-    try {
-      const generatedConfig = await readJSON(
-        path.join(entryPath, '.vercel/output/config.json')
-      );
-      if (
-        generatedConfig.experimentalServices &&
-        !buildOutputConfig.experimentalServices
-      ) {
-        buildOutputConfig.experimentalServices =
-          generatedConfig.experimentalServices;
-      }
-      if (
-        generatedConfig.experimentalServicesV2 &&
-        !buildOutputConfig.experimentalServicesV2
-      ) {
-        buildOutputConfig.experimentalServicesV2 =
-          generatedConfig.experimentalServicesV2;
-      }
-      await writeFile(
-        buildOutputConfigPath,
-        JSON.stringify(buildOutputConfig, null, 2)
-      );
-    } catch (_) {
-      // tolerate missing generated Build Output configs
-    }
-
+  if (buildOutputVersion) {
     // Files generated into public/ after `next build` (e.g. service workers
     // from Serwist) won't be in .vercel/output/static/ yet because Next.js
     // only copies public/ at build-start.  Sync any missing files now so
@@ -1078,31 +1039,9 @@ export const build: BuildV2 = async buildOptions => {
       'Notice: detected `next export`, this de-opts some Next.js features\nSee more info: https://nextjs.org/docs/advanced-features/static-html-export'
     );
 
-    let generatedExperimentalServices: unknown;
-    let generatedExperimentalServicesV2: unknown;
-    for (const configPath of [
-      path.join(entryPath, outputDirectory, 'output/config.json'),
-      path.join(entryPath, '.vercel/output/config.json'),
-    ]) {
-      try {
-        const generatedConfig = await readJSON(configPath);
-        generatedExperimentalServices ??= generatedConfig.experimentalServices;
-        generatedExperimentalServicesV2 ??=
-          generatedConfig.experimentalServicesV2;
-      } catch (_) {
-        // tolerate missing generated Build Output configs
-      }
-    }
-
     return {
       output,
       images: getImagesConfig(imagesManifest),
-      ...(generatedExperimentalServices
-        ? { experimentalServices: generatedExperimentalServices }
-        : {}),
-      ...(generatedExperimentalServicesV2
-        ? { experimentalServicesV2: generatedExperimentalServicesV2 }
-        : {}),
       routes: [
         ...privateOutputs.routes,
 
@@ -2607,21 +2546,6 @@ export const build: BuildV2 = async buildOptions => {
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const { i18n } = routesManifest || {};
-  let generatedExperimentalServices: unknown;
-  let generatedExperimentalServicesV2: unknown;
-  for (const configPath of [
-    path.join(entryPath, outputDirectory, 'output/config.json'),
-    path.join(entryPath, '.vercel/output/config.json'),
-  ]) {
-    try {
-      const generatedConfig = await readJSON(configPath);
-      generatedExperimentalServices ??= generatedConfig.experimentalServices;
-      generatedExperimentalServicesV2 ??=
-        generatedConfig.experimentalServicesV2;
-    } catch (_) {
-      // tolerate missing generated Build Output configs
-    }
-  }
 
   return {
     output: {
@@ -2636,12 +2560,6 @@ export const build: BuildV2 = async buildOptions => {
     },
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
-    ...(generatedExperimentalServices
-      ? { experimentalServices: generatedExperimentalServices }
-      : {}),
-    ...(generatedExperimentalServicesV2
-      ? { experimentalServicesV2: generatedExperimentalServicesV2 }
-      : {}),
     /*
       Desired routes order
       - Runtime headers
