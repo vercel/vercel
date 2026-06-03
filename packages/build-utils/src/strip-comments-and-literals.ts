@@ -1,11 +1,14 @@
 // Each pattern matches one "thing to neutralize" as a single token. They are
 // kept separate (and individually commented) so the combined matcher below is
 // readable; `COMMENT_OR_LITERAL` is exactly their `|`-joined alternation.
-const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//; //        a /* ... */ block comment
-const LINE_COMMENT = /\/\/[^\n]*/; //               a // ... line comment
-const DOUBLE_QUOTED = /"(?:\\.|[^"\\])*"/; //        a "..." string (\\. skips escapes)
-const SINGLE_QUOTED = /'(?:\\.|[^'\\])*'/; //        a '...' string
-const TEMPLATE_LITERAL = /`(?:\\.|[^`\\])*`/; //     a `...` template literal
+// `\\[\s\S]` (backslash + any char, incl. a newline) skips escapes — including
+// `\`-newline line continuations — so a quote/comment sequence right after an
+// escape can't end the literal early.
+const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//; //             a /* ... */ block comment
+const LINE_COMMENT = /\/\/[^\n]*/; //                    a // ... line comment
+const DOUBLE_QUOTED = /"(?:\\[\s\S]|[^"\\])*"/; //       a "..." string
+const SINGLE_QUOTED = /'(?:\\[\s\S]|[^'\\])*'/; //       a '...' string
+const TEMPLATE_LITERAL = /`(?:\\[\s\S]|[^`\\])*`/; //    a `...` template literal
 
 const COMMENT_OR_LITERAL = new RegExp(
   [BLOCK_COMMENT, LINE_COMMENT, DOUBLE_QUOTED, SINGLE_QUOTED, TEMPLATE_LITERAL]

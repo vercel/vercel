@@ -49,4 +49,28 @@ describe('stripCommentsAndLiterals()', () => {
       'const s =  ; x'
     );
   });
+
+  // Multi-line forms: each construct must be consumed across newlines.
+
+  it('removes a multi-line block comment', () => {
+    expect(stripCommentsAndLiterals('a /* l1\nl2\nl3 */ b')).toBe('a   b');
+  });
+
+  it('consumes a multi-line template literal as one token', () => {
+    expect(stripCommentsAndLiterals('x = `l1\nl2\nl3`; y')).toBe('x =  ; y');
+  });
+
+  it('does not let a multi-line template (with */) leak as code', () => {
+    expect(
+      stripCommentsAndLiterals('const t = `oops */\nmodule.exports = x`;\ny')
+    ).toBe('const t =  ;\ny');
+  });
+
+  it('consumes a backslash line-continued string as one token', () => {
+    // The `\`-newline is a line continuation, so the string spans both lines
+    // and the `/*` inside it never starts a comment that swallows later code.
+    expect(
+      stripCommentsAndLiterals('const x = "l1 /* \\\nl2"; module.exports = h;')
+    ).toBe('const x =  ; module.exports = h;');
+  });
 });
