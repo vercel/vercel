@@ -1,6 +1,7 @@
 import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import {
+  claimSubcommand,
   connectSubcommand,
   createThresholdSubcommand,
   disconnectSubcommand,
@@ -587,7 +588,7 @@ export const resourceSubcommand = {
   name: 'resource',
   aliases: [],
   description:
-    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold)',
+    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold, claim)',
   options: [],
   arguments: [],
   subcommands: [
@@ -595,6 +596,7 @@ export const resourceSubcommand = {
     createThresholdSubcommand,
     disconnectSubcommand,
     resourceRemoveSubcommand,
+    claimSubcommand,
   ],
   examples: [
     {
