@@ -333,8 +333,8 @@ describe('connex list', () => {
       const stdout = client.stdout.getFullOutput();
       const parsed = JSON.parse(stdout.trim());
       expect(parsed.cursor).toBe('next-page');
-      expect(parsed.clients).toHaveLength(1);
-      const [first] = parsed.clients;
+      expect(parsed.connectors).toHaveLength(1);
+      const [first] = parsed.connectors;
       expect(Object.keys(first)[0]).toBe('uid');
       expect(first.uid).toBe('oauth/my-client');
       expect(first.projects).toEqual([{ id: 'proj_1', name: 'web' }]);
@@ -539,8 +539,8 @@ describe('connex list', () => {
     expect(exitCode).toBe(0);
     const stdout = client.stdout.getFullOutput();
     const parsed = JSON.parse(stdout.trim());
-    expect(parsed.clients).toHaveLength(1);
-    const [first] = parsed.clients;
+    expect(parsed.connectors).toHaveLength(1);
+    const [first] = parsed.connectors;
     expect(first.uid).toBe('oauth/my-client');
     expect(first).not.toHaveProperty('projects');
     expect(first).not.toHaveProperty('hasMoreProjects');
@@ -584,8 +584,8 @@ describe('connex list', () => {
     expect(exitCode).toBe(0);
     const stdout = client.stdout.getFullOutput();
     const parsed = JSON.parse(stdout.trim());
-    expect(parsed.clients).toHaveLength(2);
-    const [branded, plain] = parsed.clients;
+    expect(parsed.connectors).toHaveLength(2);
+    const [branded, plain] = parsed.connectors;
     expect(branded.icon).toBe('sha1abcdef');
     expect(branded.backgroundColor).toBe('#1a2b3c');
     expect(branded.accentColor).toBe('#ff0066');

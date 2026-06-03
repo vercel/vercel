@@ -91,7 +91,7 @@ describe('integration-resource', () => {
         await expect(exitCodePromise).resolves.toEqual(0);
       });
 
-      it('exits gracefully when no connected project is found to disconnect from a resource', async () => {
+      it('errors when the project is not connected to the resource', async () => {
         useResources();
         const resource = 'store-acme-no-projects';
         const project = 'connected-project';
@@ -101,10 +101,13 @@ describe('integration-resource', () => {
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
-          `> Could not find project ${project} connected to resource ${resource}.`
+          `Error: Project ${project} is not connected to resource ${resource}.`
+        );
+        await expect(client.stderr).toOutput(
+          'Run `vercel integration list` to see which projects are connected to each resource.'
         );
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       it('disconnects the resource from the current project when no project specified', async () => {

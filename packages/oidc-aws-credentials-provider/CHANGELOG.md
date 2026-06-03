@@ -1,5 +1,12 @@
 # @vercel/oidc
 
+## 3.1.3
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/oidc@3.6.0
+
 ## 3.1.2
 
 ### Patch Changes

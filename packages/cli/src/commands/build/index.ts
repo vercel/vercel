@@ -784,9 +784,7 @@ async function doBuild(
     // Capture detected services for the config.json
     detectedServices = detectedBuilders.services;
 
-    // Legacy URL injection for `experimentalServices`. The `services` field
-    // opts out of this and uses explicit per-service
-    // `env` declarations (handled inside the builder loop below).
+    // Legacy URL injection for `experimentalServices`.
     if (
       detectedBuilders.useImplicitEnvInjection &&
       detectedServices &&
@@ -1572,7 +1570,6 @@ async function doBuild(
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
-            services: undefined,
             experimentalServices: generatedConfig.experimentalServices,
             projectSettings,
             ignoreBuildScript: true,

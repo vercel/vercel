@@ -8,7 +8,6 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
-  Services,
   ExperimentalServices,
   ProjectSettings,
   Service,
@@ -65,7 +64,6 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
-  services?: Services;
   experimentalServices?: ExperimentalServices;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
@@ -143,11 +141,10 @@ export async function detectBuilders(
   services?: Service[];
   useImplicitEnvInjection?: boolean;
 }> {
-  const { services, experimentalServices, projectSettings = {} } = options;
+  const { experimentalServices, projectSettings = {} } = options;
   const { framework } = projectSettings;
-  const configuredServices = services ?? experimentalServices;
-  const configuredServicesType =
-    services != null ? 'services' : 'experimentalServices';
+  const configuredServices = experimentalServices;
+  const configuredServicesType = 'experimentalServices';
   const hasServicesConfig =
     configuredServices != null && typeof configuredServices === 'object';
 

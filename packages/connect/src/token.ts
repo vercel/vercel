@@ -1,4 +1,5 @@
 import { getVercelOidcToken } from '@vercel/oidc';
+import type { ConnectAuthorizationDetail } from './authorization-details.js';
 
 export interface ConnectTokenParams {
   subject: { type: 'app' } | { type: 'user'; id: string; issuer?: string };
@@ -6,7 +7,7 @@ export interface ConnectTokenParams {
   audience?: string[];
   scopes?: string[];
   resources?: string[];
-  authorizationDetails?: Array<{ type: string } & Record<string, unknown>>;
+  authorizationDetails?: ConnectAuthorizationDetail[];
 
   /**
    * Buffer time in milliseconds before token expiration to consider it invalid.

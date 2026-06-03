@@ -14,7 +14,6 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,
   ExperimentalServices,
-  Services,
   ServiceDetectionError,
   ServiceDetectionWarning,
   ResolvedService,
@@ -49,27 +48,6 @@ export async function hasFile(
   } catch {
     return false;
   }
-}
-
-export function isPublicServicesEnabled(): boolean {
-  return (
-    process.env.VERCEL_USE_SERVICES === '1' ||
-    process.env.VERCEL_USE_SERVICES?.toLowerCase() === 'true'
-  );
-}
-
-export function validateServicesConfigGate(
-  config: { services?: Services } | null | undefined
-): ServiceDetectionError | null {
-  if (config?.services !== undefined && !isPublicServicesEnabled()) {
-    return {
-      code: 'INVALID_VERCEL_CONFIG',
-      message:
-        'Invalid vercel.json - should NOT have additional property `services`. Please remove it.',
-    };
-  }
-
-  return null;
 }
 
 /**
@@ -227,7 +205,6 @@ export function inferServiceRuntime(config: {
 
 export interface ReadVercelConfigResult {
   config: {
-    services?: Services;
     experimentalServices?: ExperimentalServices;
   } | null;
   error: ServiceDetectionError | null;
@@ -245,10 +222,6 @@ export async function readVercelConfig(
     try {
       const content = await fs.readFile('vercel.json');
       const config = JSON.parse(content.toString());
-      const gateError = validateServicesConfigGate(config);
-      if (gateError) {
-        return { config: null, error: gateError };
-      }
       return { config, error: null };
     } catch {
       return {
@@ -270,10 +243,6 @@ export async function readVercelConfig(
       const { parse: tomlParse } = await import('smol-toml');
       const content = await fs.readFile('vercel.toml');
       const config = tomlParse(content.toString());
-      const gateError = validateServicesConfigGate(config);
-      if (gateError) {
-        return { config: null, error: gateError };
-      }
       return { config: config as any, error: null };
     } catch {
       return {
