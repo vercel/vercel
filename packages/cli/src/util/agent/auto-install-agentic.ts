@@ -122,15 +122,7 @@ async function getPluginTargets(agentName?: string): Promise<string[]> {
   if (targetForAgent) {
     return [targetForAgent];
   }
-  if (agentName) {
-    return [];
-  }
-  const home = homedir();
-  const targets: string[] = [];
-  if (await fileExists(join(home, '.claude'))) {
-    targets.push('claude-code');
-  }
-  return targets;
+  return [];
 }
 
 async function readClaudeInstalledPluginsFromRegistry(): Promise<
@@ -677,7 +669,7 @@ export async function showPluginTipIfNeeded(client: Client): Promise<void> {
     const prefs = await readPrefs(client);
     if (prefs.pluginDeclined) return;
 
-    const targets = await getPluginTargets();
+    const targets = await getPluginTargets(client.agentName);
     for (const target of targets) {
       if (!(await isPluginInstalledForTarget(target))) {
         output.log(

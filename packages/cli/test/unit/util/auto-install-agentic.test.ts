@@ -1,7 +1,7 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
   autoInstallVercelPlugin,
@@ -249,6 +249,31 @@ describe('autoInstallVercelPlugin', () => {
       await expect(autoInstallVercelPlugin(client)).resolves.toBeUndefined();
     } finally {
       await rm(configDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not prompt when no supported agent is detected even if ~/.claude exists', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
+    const fakeHome = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-home-'));
+    await mkdir(join(fakeHome, '.claude'), { recursive: true });
+    const originalHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+    const confirmSpy = vi
+      .spyOn(client.input, 'confirm')
+      .mockResolvedValue(false);
+
+    try {
+      client.reset();
+      client.setArgv('--global-config', configDir);
+      client.agentName = undefined;
+
+      await expect(autoInstallVercelPlugin(client)).resolves.toBeUndefined();
+      expect(confirmSpy).not.toHaveBeenCalled();
+    } finally {
+      confirmSpy.mockRestore();
+      process.env.HOME = originalHome;
+      await rm(configDir, { recursive: true, force: true });
+      await rm(fakeHome, { recursive: true, force: true });
     }
   });
 });
