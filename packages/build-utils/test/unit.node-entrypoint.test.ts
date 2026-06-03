@@ -177,6 +177,72 @@ describe('isNodeEntrypoint()', () => {
     });
   });
 
+  describe('string- and regex-aware comment stripping', () => {
+    // Regression for PIPE-6655: a string literal containing `*/*` (e.g. an
+    // Accept header) followed by a real block comment after the handler export
+    // caused the naive comment stripper to treat the `/*` inside the string as
+    // the start of a block comment and delete everything up to the real `*/`,
+    // swallowing the export and dropping the function from the build manifest.
+    it('Accept header string with */* before a later block comment', async () => {
+      const content = [
+        'const headers = {',
+        "  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',",
+        '};',
+        '',
+        'export async function GET(request) {',
+        '  /* fall through to puppeteer */',
+        '  return new Response(JSON.stringify({ error: "bad request" }), { status: 400 });',
+        '}',
+      ].join('\n');
+      expect(await check(content)).toBe(true);
+    });
+
+    it('module.exports with */* string and a trailing block comment', async () => {
+      const content = [
+        "const accept = '*/*';",
+        'module.exports = async (req, res) => {',
+        '  res.statusCode = 400;',
+        '  res.end(accept);',
+        '};',
+        '/* helper notes below */',
+      ].join('\n');
+      expect(await check(content)).toBe(true);
+    });
+
+    it('export default with /* inside a single-quoted string', async () => {
+      const content = [
+        "const pattern = '/* not a comment */';",
+        'export default function handler(req, res) { res.end(pattern); }',
+      ].join('\n');
+      expect(await check(content)).toBe(true);
+    });
+
+    it('export inside a template literal context is detected', async () => {
+      const content = [
+        'const msg = `value with */* sequence`;',
+        'export function POST(request) { return new Response(msg); }',
+      ].join('\n');
+      expect(await check(content)).toBe(true);
+    });
+
+    it('regex literal containing */ does not hide the export', async () => {
+      const content = [
+        'const re = /foo\\/*bar/;',
+        'export function GET(request) { return new Response(String(re)); }',
+      ].join('\n');
+      expect(await check(content)).toBe(true);
+    });
+
+    it('still strips genuine block comments wrapping an export', async () => {
+      const content = [
+        "const accept = '*/*';",
+        '/* export default function handler(req, res) { res.end(accept); } */',
+        'export function helper() { return accept; }',
+      ].join('\n');
+      expect(await check(content)).toBe(false);
+    });
+  });
+
   describe('returns false for non-entrypoints', () => {
     it('empty file', async () => {
       expect(await check('')).toBe(false);
