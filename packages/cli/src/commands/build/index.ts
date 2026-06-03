@@ -757,15 +757,18 @@ async function doBuild(
   const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfigWithServicesV2.experimentalServicesV2
   );
-  const detectedExperimentalServicesV2FromConfig =
+  const configuredExperimentalServicesV2 =
     hasExperimentalServicesV2ConfiguredInVercelConfig &&
     localConfigWithServicesV2.experimentalServicesV2
       ? localConfigWithServicesV2.experimentalServicesV2
       : undefined;
-  let nestServiceOutput = hasExperimentalServicesV2ConfiguredInVercelConfig;
-  let detectedExperimentalServicesConfig: ExperimentalServices | undefined;
+  let nestExperimentalServicesV2Output =
+    hasExperimentalServicesV2ConfiguredInVercelConfig;
+  let detectedLegacyExperimentalServicesConfig:
+    | ExperimentalServices
+    | undefined;
   let detectedExperimentalServicesV2Config: ExperimentalServicesV2 | undefined =
-    detectedExperimentalServicesV2FromConfig;
+    configuredExperimentalServicesV2;
   let detectedExperimentalServicesV2RootRoutes:
     | BuildOutputConfig['routes']
     | undefined;
@@ -784,8 +787,8 @@ async function doBuild(
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuilders(files, pkg, {
         ...localConfig,
-        ...(detectedExperimentalServicesV2FromConfig && {
-          experimentalServicesV2: detectedExperimentalServicesV2FromConfig,
+        ...(configuredExperimentalServicesV2 && {
+          experimentalServicesV2: configuredExperimentalServicesV2,
         }),
         projectSettings,
         ignoreBuildScript: true,
@@ -812,16 +815,16 @@ async function doBuild(
     detectedServices = detectedBuilders.services;
 
     // Legacy URL injection for `experimentalServices`.
-    const detectedExperimentalServices = detectedServices?.filter(
+    const detectedLegacyExperimentalServices = detectedServices?.filter(
       isExperimentalService
     );
     if (
       detectedBuilders.useImplicitEnvInjection &&
-      detectedExperimentalServices &&
-      detectedExperimentalServices.length > 0
+      detectedLegacyExperimentalServices &&
+      detectedLegacyExperimentalServices.length > 0
     ) {
       const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
-        services: detectedExperimentalServices,
+        services: detectedLegacyExperimentalServices,
         frameworkList,
         currentEnv: process.env,
         deploymentUrl: process.env.VERCEL_URL,
@@ -843,7 +846,7 @@ async function doBuild(
       newRoutes: detectedHostRewriteRoutes ?? null,
       phase: null,
     });
-    const detectedServiceRewriteRoutes = nestServiceOutput
+    const detectedServiceRewriteRoutes = nestExperimentalServicesV2Output
       ? []
       : detectedBuilders.rewriteRoutes;
     zeroConfigRoutes.push(
@@ -858,7 +861,7 @@ async function doBuild(
       newRoutes: detectedBuilders.errorRoutes,
       phase: 'error',
     });
-    if (!nestServiceOutput) {
+    if (!nestExperimentalServicesV2Output) {
       zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
       zeroConfigFallbackRoutes = detectedBuilders.fallbackRoutes || [];
     }
@@ -996,7 +999,7 @@ async function doBuild(
         const service = getHasDetectedServices()
           ? serviceByBuilder.get(build)
           : undefined;
-        const experimentalService =
+        const legacyExperimentalService =
           service && isExperimentalService(service) ? service : undefined;
         const serviceWorkspace = service
           ? isExperimentalService(service)
@@ -1004,8 +1007,8 @@ async function doBuild(
             : service.root
           : undefined;
         const stripServiceRoutePrefix =
-          !!experimentalService?.routePrefix &&
-          experimentalService.routePrefix !== '/';
+          !!legacyExperimentalService?.routePrefix &&
+          legacyExperimentalService.routePrefix !== '/';
 
         let buildWorkPath = workPath;
         let buildEntrypoint = build.src;
@@ -1096,7 +1099,7 @@ async function doBuild(
               installCommand: service.installCommand ?? undefined,
               buildCommand: service.buildCommand ?? undefined,
               preDeployCommand:
-                experimentalService?.preDeployCommand ?? undefined,
+                legacyExperimentalService?.preDeployCommand ?? undefined,
               framework: builderFramework,
               nodeVersion: projectSettings.nodeVersion,
               bunVersion: localConfig.bunVersion ?? undefined,
@@ -1131,7 +1134,8 @@ async function doBuild(
 
         const serviceRoutePrefix = build.config?.routePrefix;
         const serviceConfigWorkspace = build.config?.workspace;
-        const preDeployCmd = experimentalService?.preDeployCommand?.trim();
+        const preDeployCmd =
+          legacyExperimentalService?.preDeployCommand?.trim();
 
         const preDeployEntry =
           preDeployCmd && service
@@ -1160,10 +1164,10 @@ async function doBuild(
             ? {
                 service: {
                   name: service.name,
-                  ...(experimentalService
+                  ...(legacyExperimentalService
                     ? {
-                        type: experimentalService.type,
-                        trigger: experimentalService.trigger,
+                        type: legacyExperimentalService.type,
+                        trigger: legacyExperimentalService.trigger,
                       }
                     : undefined),
                   routePrefix:
@@ -1174,8 +1178,8 @@ async function doBuild(
                     typeof serviceConfigWorkspace === 'string'
                       ? serviceConfigWorkspace
                       : serviceWorkspace,
-                  ...(experimentalService
-                    ? { schedule: experimentalService.schedule }
+                  ...(legacyExperimentalService
+                    ? { schedule: legacyExperimentalService.schedule }
                     : undefined),
                 },
               }
@@ -1191,10 +1195,10 @@ async function doBuild(
         // User-defined env takes precedence and won't be overwritten. The env will be cleared
         // after the build is complete
         const restoreEnv = new Map<string, string | undefined>();
-        if (detectedServices && experimentalService?.env) {
+        if (detectedServices && legacyExperimentalService?.env) {
           const perServiceEnv = getServiceUrlEnvVars({
-            requestedEnv: experimentalService.env,
-            consumerService: experimentalService,
+            requestedEnv: legacyExperimentalService.env,
+            consumerService: legacyExperimentalService,
             services: detectedServices.filter(isExperimentalService),
             frameworkList,
             currentEnv: process.env,
@@ -1395,48 +1399,51 @@ async function doBuild(
         if (
           getHasDetectedServices() &&
           service &&
-          experimentalService &&
+          legacyExperimentalService &&
           'routes' in buildResult &&
           Array.isArray(buildResult.routes) &&
           detectedServices
         ) {
           buildResult.routes = scopeRoutesToServiceOwnership({
             routes: buildResult.routes as Route[],
-            owner: experimentalService,
+            owner: legacyExperimentalService,
             allServices: detectedServices.filter(isExperimentalService),
           });
         }
 
         if (
-          experimentalService &&
-          isQueueBackedService(experimentalService) &&
+          legacyExperimentalService &&
+          isQueueBackedService(legacyExperimentalService) &&
           'output' in buildResult
         ) {
-          attachQueueServiceTrigger(buildResult.output, experimentalService);
+          attachQueueServiceTrigger(
+            buildResult.output,
+            legacyExperimentalService
+          );
         }
 
         if (
-          experimentalService &&
-          isScheduleTriggeredService(experimentalService) &&
+          legacyExperimentalService &&
+          isScheduleTriggeredService(legacyExperimentalService) &&
           !('crons' in buildResult && buildResult.crons?.length)
         ) {
           const staticSchedules = getStaticServiceSchedules(
-            experimentalService.schedule
+            legacyExperimentalService.schedule
           );
           if (
-            typeof experimentalService.runtime === 'string' &&
+            typeof legacyExperimentalService.runtime === 'string' &&
             staticSchedules.length > 0
           ) {
             const cronEntrypoint =
-              experimentalService.entrypoint ||
-              experimentalService.builder.src ||
+              legacyExperimentalService.entrypoint ||
+              legacyExperimentalService.builder.src ||
               'index';
             for (const schedule of staticSchedules) {
               synthesizedServiceCrons.push({
                 path: getInternalServiceCronPath(
-                  experimentalService.name,
+                  legacyExperimentalService.name,
                   cronEntrypoint,
-                  experimentalService.handlerFunction || 'cron'
+                  legacyExperimentalService.handlerFunction || 'cron'
                 ),
                 schedule,
               });
@@ -1444,7 +1451,7 @@ async function doBuild(
           } else {
             throw new NowBuildError({
               code: 'CRON_SERVICE_NO_CRONS',
-              message: `Scheduled service "${experimentalService.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
+              message: `Scheduled service "${legacyExperimentalService.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support scheduled services.`,
             });
           }
         }
@@ -1502,13 +1509,13 @@ async function doBuild(
             if (
               getHasDetectedServices() &&
               service &&
-              experimentalService &&
+              legacyExperimentalService &&
               Array.isArray(buildOutputConfig.routes) &&
               detectedServices
             ) {
               buildOutputConfig.routes = scopeRoutesToServiceOwnership({
                 routes: buildOutputConfig.routes as Route[],
-                owner: experimentalService,
+                owner: legacyExperimentalService,
                 allServices: detectedServices.filter(isExperimentalService),
               });
             }
@@ -1543,12 +1550,12 @@ async function doBuild(
               standalone,
               workPath: buildWorkPath,
               service,
-              nestServiceOutput,
+              nestServiceOutput: nestExperimentalServicesV2Output,
               stripServiceRoutePrefix,
             })
           );
 
-        if (service && nestServiceOutput) {
+        if (service && nestExperimentalServicesV2Output) {
           const override = await writeBuildResultPromise;
           if (override) serviceFileOverrides.set(build, override);
         } else {
@@ -1607,7 +1614,9 @@ async function doBuild(
     );
   };
 
-  const appendServiceRoutes = (services: ExperimentalService[]) => {
+  const appendLegacyExperimentalServiceRoutes = (
+    services: ExperimentalService[]
+  ) => {
     const serviceRoutes = generateServicesRoutes(services);
     zeroConfigRoutes = appendRoutesToPhase({
       routes: zeroConfigRoutes,
@@ -1616,7 +1625,7 @@ async function doBuild(
         : null,
       phase: null,
     });
-    const serviceRewriteRoutes = nestServiceOutput
+    const serviceRewriteRoutes = nestExperimentalServicesV2Output
       ? []
       : [
           ...serviceRoutes.rewrites,
@@ -1630,7 +1639,7 @@ async function doBuild(
         phase: 'filesystem',
       })
     );
-    if (!nestServiceOutput) {
+    if (!nestExperimentalServicesV2Output) {
       zeroConfigRoutes.push(...serviceRoutes.defaults);
       zeroConfigFallbackRoutes.push(...serviceRoutes.fallbacks);
     }
@@ -1655,7 +1664,7 @@ async function doBuild(
         generatedConfig,
         ...buildResults.values(),
       ]);
-    const generatedExperimentalServicesConfig =
+    const generatedLegacyExperimentalServicesConfig =
       getGeneratedExperimentalServicesConfig([
         generatedConfig,
         ...buildResults.values(),
@@ -1663,12 +1672,13 @@ async function doBuild(
 
     if (
       generatedExperimentalServicesV2Config ||
-      generatedExperimentalServicesConfig
+      generatedLegacyExperimentalServicesConfig
     ) {
       if (generatedExperimentalServicesV2Config) {
-        nestServiceOutput = true;
+        nestExperimentalServicesV2Output = true;
       }
-      detectedExperimentalServicesConfig = generatedExperimentalServicesConfig;
+      detectedLegacyExperimentalServicesConfig =
+        generatedLegacyExperimentalServicesConfig;
       detectedExperimentalServicesV2Config =
         generatedExperimentalServicesV2Config;
       detectedExperimentalServicesV2RootRoutes =
@@ -1685,7 +1695,10 @@ async function doBuild(
               ? {
                   experimentalServicesV2: generatedExperimentalServicesV2Config,
                 }
-              : { experimentalServices: generatedExperimentalServicesConfig }),
+              : {
+                  experimentalServices:
+                    generatedLegacyExperimentalServicesConfig,
+                }),
             projectSettings,
             ignoreBuildScript: true,
             featHandleMiss: true,
@@ -1705,23 +1718,25 @@ async function doBuild(
       if (!detectedServices || detectedServices.length === 0) {
         detectedServices = undefined;
       } else {
-        const detectedExperimentalServices = detectedServices.filter(
+        const detectedLegacyExperimentalServices = detectedServices.filter(
           isExperimentalService
         );
-        if (detectedExperimentalServices.length > 0) {
-          appendServiceRoutes(detectedExperimentalServices);
+        if (detectedLegacyExperimentalServices.length > 0) {
+          appendLegacyExperimentalServiceRoutes(
+            detectedLegacyExperimentalServices
+          );
         }
       }
 
-      const detectedExperimentalServices = detectedServices?.filter(
+      const detectedLegacyExperimentalServices = detectedServices?.filter(
         isExperimentalService
       );
       if (
-        detectedExperimentalServices &&
+        detectedLegacyExperimentalServices &&
         generatedBuilders.useImplicitEnvInjection
       ) {
         const serviceUrlEnvVars = getExperimentalServiceUrlEnvVars({
-          services: detectedExperimentalServices,
+          services: detectedLegacyExperimentalServices,
           frameworkList,
           currentEnv: process.env,
           deploymentUrl: process.env.VERCEL_URL,
@@ -1742,7 +1757,7 @@ async function doBuild(
           serviceByBuilder.set(alreadyExecutedBuild, service);
           if (
             generatedExperimentalServicesV2Config &&
-            nestServiceOutput &&
+            nestExperimentalServicesV2Output &&
             !relocatedGeneratedServiceBuilds.has(alreadyExecutedBuild)
           ) {
             await relocateRootBuildOutputToService({
@@ -1890,12 +1905,12 @@ async function doBuild(
       }
     }
 
-    if (existingConfig.overrides && !nestServiceOutput) {
+    if (existingConfig.overrides && !nestExperimentalServicesV2Output) {
       overrides.push(existingConfig.overrides);
     }
   }
 
-  const topLevelBuildResults = nestServiceOutput
+  const topLevelBuildResults = nestExperimentalServicesV2Output
     ? new Map(
         Array.from(buildResults.entries()).filter(
           ([build]) => !serviceByBuilder.has(build)
@@ -2005,28 +2020,30 @@ async function doBuild(
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
     version: 3,
-    routes: nestServiceOutput ? explicitRootRoutes : mergedRoutes,
+    routes: nestExperimentalServicesV2Output
+      ? explicitRootRoutes
+      : mergedRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
-    ...(detectedExperimentalServicesConfig &&
-      Object.keys(detectedExperimentalServicesConfig).length > 0 && {
-        experimentalServices: detectedExperimentalServicesConfig,
+    ...(detectedLegacyExperimentalServicesConfig &&
+      Object.keys(detectedLegacyExperimentalServicesConfig).length > 0 && {
+        experimentalServices: detectedLegacyExperimentalServicesConfig,
       }),
     ...(detectedExperimentalServicesV2Config &&
       Object.keys(detectedExperimentalServicesV2Config).length > 0 && {
         experimentalServicesV2: detectedExperimentalServicesV2Config,
       }),
-    ...(!detectedExperimentalServicesConfig &&
+    ...(!detectedLegacyExperimentalServicesConfig &&
       !detectedExperimentalServicesV2Config &&
       detectedServices &&
       detectedServices.length > 0 && { services: detectedServices }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
-  if (nestServiceOutput) {
+  if (nestExperimentalServicesV2Output) {
     await writeServiceConfigs(
       outputDir,
       buildResults,
