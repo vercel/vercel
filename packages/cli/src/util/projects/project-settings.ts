@@ -9,6 +9,7 @@ import { isErrnoException, isError } from '@vercel/error-utils';
 export type ProjectLinkAndSettings = Partial<ProjectLink> & {
   settings: {
     createdAt: Project['createdAt'];
+    cleanUrlsByDefault?: Project['cleanUrlsByDefault'];
     installCommand: Project['installCommand'];
     buildCommand: Project['buildCommand'];
     devCommand: Project['devCommand'];
@@ -46,6 +47,7 @@ export async function writeProjectSettings(
     projectName: isRepoLinked ? undefined : project.name,
     settings: {
       createdAt: project.createdAt,
+      cleanUrlsByDefault: project.cleanUrlsByDefault,
       framework: project.framework,
       devCommand: project.devCommand,
       installCommand: project.installCommand,

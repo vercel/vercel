@@ -255,6 +255,7 @@ describe('normalizeRoutes', () => {
 
   test('getTransformedRoutes accepts routes with source alias', () => {
     const { error, routes } = getTransformedRoutes({
+      cleanUrls: false,
       routes: [
         { source: '/about', destination: '/about.html' },
         { src: '/blog', dest: '/blog.html' },
@@ -1078,11 +1079,66 @@ describe('normalizeRoutes', () => {
 
 describe('getTransformedRoutes', () => {
   test('should normalize vercelConfig.routes', () => {
-    const vercelConfig = { routes: [{ src: '/page', dest: '/page.html' }] };
+    const vercelConfig = {
+      cleanUrls: false,
+      routes: [{ src: '/page', dest: '/page.html' }],
+    };
     const actual = getTransformedRoutes(vercelConfig);
     const expected = normalizeRoutes(vercelConfig.routes);
     assert.deepEqual(actual, expected);
     assertValid(actual.routes);
+  });
+
+  test('should enable cleanUrls by default when project setting is enabled', () => {
+    const vercelConfig = {
+      cleanUrlsByDefault: true,
+      routes: null,
+    };
+    // @ts-expect-error intentionally passing invalid `routes: null` here
+    const actual = getTransformedRoutes(vercelConfig);
+    assert.equal(actual.error, null);
+    assert.notEqual(actual.routes, null);
+    if (actual.routes) {
+      assert.ok(
+        actual.routes.some(
+          r => !isHandler(r) && (r as any).src === '^/(.*)\\.html/?$'
+        ),
+        'cleanUrls redirect routes should be present by default'
+      );
+    }
+    assertValid(actual.routes);
+  });
+
+  test('should not enable cleanUrls by default without project setting', () => {
+    const vercelConfig = {
+      routes: null,
+    };
+    // @ts-expect-error intentionally passing invalid `routes: null` here
+    const actual = getTransformedRoutes(vercelConfig);
+    assert.equal(actual.error, null);
+    assert.equal(actual.routes, null);
+  });
+
+  test('should not enable cleanUrls by default when project setting is null', () => {
+    const vercelConfig = {
+      cleanUrlsByDefault: null,
+      routes: null,
+    };
+    // @ts-expect-error intentionally passing invalid `routes: null` here
+    const actual = getTransformedRoutes(vercelConfig);
+    assert.equal(actual.error, null);
+    assert.equal(actual.routes, null);
+  });
+
+  test('should not enable cleanUrls by default when project setting is false', () => {
+    const vercelConfig = {
+      cleanUrlsByDefault: false,
+      routes: null,
+    };
+    // @ts-expect-error intentionally passing invalid `routes: null` here
+    const actual = getTransformedRoutes(vercelConfig);
+    assert.equal(actual.error, null);
+    assert.equal(actual.routes, null);
   });
 
   test('should not error when routes is null and cleanUrls is true', () => {
@@ -1427,8 +1483,8 @@ describe('getTransformedRoutes', () => {
     assertValid(vercelConfig.trailingSlashSchema, trailingSlashSchema);
   });
 
-  test('should return null routes if no transformations are performed', () => {
-    const vercelConfig = { routes: null };
+  test('should return null routes when transformations are disabled', () => {
+    const vercelConfig = { cleanUrls: false, routes: null };
     // @ts-expect-error intentionally passing invalid `routes: null`
     const { routes } = getTransformedRoutes(vercelConfig);
     assert.equal(routes, null);
@@ -1436,6 +1492,7 @@ describe('getTransformedRoutes', () => {
 
   test('should error when segment is defined in `destination` but not `source`', () => {
     const vercelConfig = {
+      cleanUrls: false,
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1455,6 +1512,7 @@ describe('getTransformedRoutes', () => {
 
   test('should error when segment is defined in HTTPS `destination` but not `source`', () => {
     const vercelConfig = {
+      cleanUrls: false,
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1474,6 +1532,7 @@ describe('getTransformedRoutes', () => {
 
   test('should error when segment is defined in `destination` query string but not `source`', () => {
     const vercelConfig = {
+      cleanUrls: false,
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1493,6 +1552,7 @@ describe('getTransformedRoutes', () => {
 
   test('should error when segment is defined in HTTPS `destination` query string but not `source`', () => {
     const vercelConfig = {
+      cleanUrls: false,
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1512,6 +1572,7 @@ describe('getTransformedRoutes', () => {
 
   test('should work with content-security-policy header containing URL', () => {
     const vercelConfig = {
+      cleanUrls: false,
       headers: [
         {
           source: '/(.*)',

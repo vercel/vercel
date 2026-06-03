@@ -135,6 +135,7 @@ export type NormalizedRoutes = {
 export interface GetRoutesProps {
   routes?: RouteInput[];
   cleanUrls?: boolean;
+  cleanUrlsByDefault?: boolean | null;
   rewrites?: Rewrite[];
   redirects?: Redirect[];
   headers?: Header[];

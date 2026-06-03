@@ -39,6 +39,7 @@ import type {
   BuiltLambda,
 } from './types';
 import { normalizeRoutes, type Route } from '@vercel/routing-utils';
+import { shouldUseCleanUrls } from '../clean-urls';
 import getUpdateCommand from '../get-update-command';
 import { getTitleName } from '../pkg-name';
 import { importBuilders } from '../build/import-builders';
@@ -413,7 +414,10 @@ export async function executeBuild(
   }
 
   const { output: buildOutput } = result;
-  const { cleanUrls } = vercelConfig;
+  const cleanUrls = shouldUseCleanUrls(
+    vercelConfig.cleanUrls,
+    vercelConfig.cleanUrlsByDefault
+  );
 
   // Mimic fmeta-util and perform file renaming
   for (const [originalPath, value] of Object.entries(buildOutput)) {

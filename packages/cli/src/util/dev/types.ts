@@ -23,6 +23,7 @@ export { VercelConfig };
 
 export interface DevServerOptions {
   projectSettings?: ProjectSettings;
+  cleanUrlsByDefault?: boolean | null;
   envValues?: Record<string, string>;
   repoRoot?: string;
   services?: ResolvedService[];

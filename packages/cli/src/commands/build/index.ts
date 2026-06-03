@@ -723,7 +723,10 @@ async function doBuild(
     normalizePath(relative(workPath, f))
   );
 
-  const routesResult = getTransformedRoutes(localConfig);
+  const routesResult = getTransformedRoutes({
+    ...localConfig,
+    cleanUrlsByDefault: project.settings.cleanUrlsByDefault,
+  });
   if (routesResult.error) {
     throw routesResult.error;
   }
@@ -761,6 +764,7 @@ async function doBuild(
       detectBuilders(files, pkg, {
         ...localConfig,
         projectSettings,
+        cleanUrlsByDefault: project.settings.cleanUrlsByDefault,
         ignoreBuildScript: true,
         featHandleMiss: true,
         workPath,
@@ -1469,7 +1473,10 @@ async function doBuild(
                 build,
                 builder,
                 builderPkg,
-                vercelConfig: localConfig,
+                vercelConfig: {
+                  ...localConfig,
+                  cleanUrlsByDefault: project.settings.cleanUrlsByDefault,
+                },
                 standalone,
                 workPath: buildWorkPath,
                 service,
