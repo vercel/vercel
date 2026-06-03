@@ -175,6 +175,106 @@ describe('isNodeEntrypoint()', () => {
         ).toBe(true);
       }
     });
+
+    it('Express app that calls .listen()', async () => {
+      expect(
+        await check(
+          'const express = require("express");\nconst app = express();\napp.get("/", (req, res) => res.end("ok"));\napp.listen(3000);'
+        )
+      ).toBe(true);
+    });
+
+    it('TSX default export whose body returns JSX', async () => {
+      expect(
+        await check(
+          'export default function Page() { return <div className="x">hi</div>; }'
+        )
+      ).toBe(true);
+    });
+  });
+
+  // Regression: entrypoint detection must not treat comment-like sequences
+  // (`/*`, `//`, `*/`) that appear inside string, template, or regex literals
+  // as real comments. For example, the `*/*` in an `Accept` header contains a
+  // `/*` that, if read as a block-comment start, deletes everything up to the
+  // next `*/` and swallows the handler export — dropping the function from the
+  // build entirely.
+  describe('is not fooled by comment-like sequences in literals', () => {
+    it('Accept header */* before a later block comment', async () => {
+      expect(
+        await check(
+          [
+            'const ACCEPT =',
+            "  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';",
+            '',
+            'export async function GET() {',
+            "  return new Response('Hello from IG!', {",
+            "    headers: { 'Accept': ACCEPT },",
+            '  }); /* done */',
+            '}',
+          ].join('\n')
+        )
+      ).toBe(true);
+    });
+
+    it('module.exports handler with */* string and trailing block comment', async () => {
+      expect(
+        await check(
+          [
+            "const accept = '*/*';",
+            'module.exports = async (req, res) => {',
+            '  res.end(accept);',
+            '};',
+            '/* helper notes below */',
+          ].join('\n')
+        )
+      ).toBe(true);
+    });
+
+    it('export default with /* inside a string literal', async () => {
+      expect(
+        await check(
+          [
+            "const pattern = '/* not a comment */';",
+            'export default function handler(req, res) { res.end(pattern); }',
+          ].join('\n')
+        )
+      ).toBe(true);
+    });
+
+    it('export alongside a */* sequence in a template literal', async () => {
+      expect(
+        await check(
+          [
+            'const msg = `value with */* sequence`;',
+            'export function POST(request) { return new Response(msg); }',
+          ].join('\n')
+        )
+      ).toBe(true);
+    });
+
+    it('export alongside a regex literal containing */', async () => {
+      expect(
+        await check(
+          [
+            'const re = /foo\\/*bar/;',
+            'export function GET(request) { return new Response(String(re)); }',
+          ].join('\n')
+        )
+      ).toBe(true);
+    });
+
+    it('still strips a genuine block comment wrapping an export', async () => {
+      expect(
+        await check(
+          [
+            "const accept = '*/*';",
+            '/* export default function handler(req, res) { res.end(accept); } */',
+            'export function helper() { return accept; }',
+          ].join('\n')
+        )
+      ).toBe(false);
+    });
   });
 
   describe('returns false for non-entrypoints', () => {
