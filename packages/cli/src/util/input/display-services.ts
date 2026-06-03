@@ -1,5 +1,8 @@
 import { frameworkList } from '@vercel/frameworks';
-import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
+import type {
+  ExperimentalService,
+  ServiceDetectionError,
+} from '@vercel/fs-detectors';
 import {
   getServiceQueueTopics,
   isQueueTriggeredService,
@@ -75,7 +78,9 @@ const jobTriggerLabels: Record<string, string> = {
   workflow: 'Job/Workflow',
 };
 
-function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
+function getServiceDescriptionInfo(
+  service: ExperimentalService
+): ServiceDescriptionInfo {
   if (
     service.type === 'worker' ||
     service.type === 'job' ||
@@ -113,7 +118,7 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
   return { label: 'unknown', colorFn: chalk.dim };
 }
 
-function getServiceTarget(service: Service): string {
+function getServiceTarget(service: ExperimentalService): string {
   if (isScheduleTriggeredService(service)) {
     return `schedule: ${service.schedule ?? 'none'}`;
   }
@@ -140,7 +145,7 @@ function getServiceTarget(service: Service): string {
  *   cleanup           [node]      →  schedule: 0 0 * * *
  *   processor         [node]      →  topics: jobs
  */
-export function displayDetectedServices(services: Service[]): void {
+export function displayDetectedServices(services: ExperimentalService[]): void {
   output.print(`Detected services:\n`);
 
   const outputOrder: Record<string, number> = {

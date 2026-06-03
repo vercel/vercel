@@ -1,7 +1,7 @@
 import { posix as posixPath } from 'path';
 import type {
   EnvVars,
-  Service,
+  ExperimentalService,
   ConfiguredServices,
   ExperimentalServiceConfig,
   ServiceDetectionError,
@@ -44,7 +44,7 @@ const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 const PYTHON_MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
 
-function parsePyModuleAttrEntrypoint(entrypoint: string): {
+export function parsePyModuleAttrEntrypoint(entrypoint: string): {
   attrName: string;
   filePath: string;
 } | null {
@@ -72,7 +72,7 @@ interface ResolvedEntrypointPath {
   isDirectory: boolean;
 }
 
-async function getServiceFs(
+export async function getServiceFs(
   fs: DetectorFilesystem,
   serviceName: string,
   root?: string
@@ -161,7 +161,7 @@ function validateBackendFileEntrypoint(
   };
 }
 
-async function resolveEntrypointPath({
+export async function resolveEntrypointPath({
   fs,
   serviceName,
   entrypoint,
@@ -231,7 +231,7 @@ function toWorkspaceRelativeEntrypoint(
   return relativeEntrypoint;
 }
 
-async function inferWorkspaceFromNearestManifest({
+export async function inferWorkspaceFromNearestManifest({
   fs,
   entrypoint,
   runtime,
@@ -277,7 +277,7 @@ async function inferWorkspaceFromNearestManifest({
   return undefined;
 }
 
-async function detectFrameworkFromWorkspace({
+export async function detectFrameworkFromWorkspace({
   fs,
   workspace,
   serviceName,
@@ -718,7 +718,7 @@ export function validateServiceEntrypoint(
  */
 export async function resolveConfiguredService(
   options: ResolveConfiguredServiceOptions
-): Promise<Service> {
+): Promise<ExperimentalService> {
   const {
     name,
     config,
@@ -924,6 +924,7 @@ export async function resolveConfiguredService(
   }
 
   return {
+    schema: 'experimentalServices',
     name,
     type,
     trigger,
@@ -960,10 +961,10 @@ export async function resolveAllConfiguredServices(
   routePrefixSource: RoutePrefixSource = 'configured',
   options: ResolveAllConfiguredServicesOptions = {}
 ): Promise<{
-  services: Service[];
+  services: ExperimentalService[];
   errors: ServiceDetectionError[];
 }> {
-  const resolved: Service[] = [];
+  const resolved: ExperimentalService[] = [];
   const errors: ServiceDetectionError[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
@@ -1136,7 +1137,7 @@ export async function resolveAllConfiguredServices(
 function validateEnvRefs(
   env: EnvVars,
   serviceName: string,
-  servicesByName: Map<string, Service>,
+  servicesByName: Map<string, ExperimentalService>,
   errors: ServiceDetectionError[]
 ): void {
   const pathPrefix = `Service "${serviceName}" env`;

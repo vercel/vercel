@@ -6,6 +6,11 @@ import type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ExperimentalService,
+  ExperimentalServiceV2,
   ServiceRuntime,
   ServiceType,
   ServiceRefEnvVar,
@@ -21,6 +26,11 @@ export type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ExperimentalServices,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ExperimentalService,
+  ExperimentalServiceV2,
   ServiceRuntime,
   ServiceType,
   ServiceRefEnvVar,
@@ -36,7 +46,7 @@ export type ResolvedService = Service;
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
   configuredServices?: ConfiguredServices;
-  configuredServicesType?: 'experimentalServices';
+  configuredServicesType?: ConfiguredServicesType;
   /**
    * Working directory path (relative to fs root).
    * If provided, vercel.json is read from this path.
@@ -71,7 +81,10 @@ export interface ServicesRoutes {
   workers: Route[];
 }
 
-export type ConfiguredServices = ExperimentalServices;
+export type ConfiguredServicesType =
+  | 'experimentalServices'
+  | 'experimentalServicesV2';
+export type ConfiguredServices = ExperimentalServices | ExperimentalServicesV2;
 export type InferredServicesConfig = ExperimentalServices;
 
 export interface ResolvedServicesResult {
@@ -86,7 +99,8 @@ export interface ResolvedServicesResult {
 export interface InferredServicesResult {
   source: 'layout' | 'procfile' | 'railway' | 'render';
   config: InferredServicesConfig;
-  services: Service[];
+  // Inferred services are always produced from `experimentalServices` so far, so no V2
+  services: ExperimentalService[];
   warnings: ServiceDetectionWarning[];
 }
 
