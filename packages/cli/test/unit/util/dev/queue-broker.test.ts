@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { Service } from '@vercel/fs-detectors';
+import type { ExperimentalService } from '@vercel/fs-detectors';
 import {
   QueueBroker,
   topicPatternToRegex,
@@ -19,15 +19,16 @@ const mockFetch = vi.mocked(nodeFetch);
 function makeWorkerService(
   name: string,
   topics: string[] = ['default']
-): Service {
+): ExperimentalService {
   return {
+    schema: 'experimentalServices',
     name,
     type: 'worker',
     consumer: name,
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
     topics,
-  } as Service;
+  } as ExperimentalService;
 }
 
 function makeQueueJobService(
@@ -37,25 +38,27 @@ function makeQueueJobService(
     retryAfterSeconds?: number;
     initialDelaySeconds?: number;
   }>
-): Service {
+): ExperimentalService {
   return {
+    schema: 'experimentalServices',
     name,
     type: 'job',
     trigger: 'queue',
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
     topics,
-  } as Service;
+  } as ExperimentalService;
 }
 
-function makeWebService(name: string): Service {
+function makeWebService(name: string): ExperimentalService {
   return {
+    schema: 'experimentalServices',
     name,
     type: 'web',
     routePrefix: '/',
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
-  } as Service;
+  } as ExperimentalService;
 }
 
 /** Extract headers from a specific mockFetch call (defaults to the last one). */

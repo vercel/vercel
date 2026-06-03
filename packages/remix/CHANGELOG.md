@@ -1,5 +1,20 @@
 # @vercel/remix-builder
 
+## 5.8.6
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/error-utils@2.2.0
+
+## 5.8.5
+
+### Patch Changes
+
+- 2d918b8: Fix React Router `/__manifest` returning prerendered HTML when the root route is statically generated.
+
+  When `prerender()` emitted static HTML for the index route, the SSR function was removed from the catch-all target, so runtime-only paths like `/__manifest` fell through to the prerendered `index.html`. The builder now keeps the index SSR function for the catch-all, adds an explicit `/` → `/index.html` prerender rewrite, and skips overwriting prerendered `.data` artifacts.
+
 ## 5.8.4
 
 ### Patch Changes

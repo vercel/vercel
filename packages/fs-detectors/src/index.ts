@@ -9,6 +9,15 @@ export {
   detectServices,
   generateServicesRoutes,
 } from './services/detect-services';
+export {
+  resolveAllConfiguredServicesV2,
+  resolveConfiguredServiceV2,
+  validateServiceConfigV2,
+} from './services/resolve-v2';
+export {
+  isExperimentalService,
+  isExperimentalServiceV2,
+} from '@vercel/build-utils';
 export { autoDetectServices } from './services/auto-detect';
 export type {
   AutoDetectOptions,
@@ -34,6 +43,11 @@ export type {
   InferredServicesResult,
   ResolvedService,
   Service,
+  ExperimentalService,
+  ExperimentalServiceV2,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
   ServicesRoutes,
   ServiceDetectionError,
 } from './services/types';

@@ -1,15 +1,198 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
-  const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
+  describe('experimentalServicesV2', () => {
+    it('should not error with a valid config', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          my_frontend: {
+            root: 'frontend/',
+            framework: 'nextjs',
+            bindings: [
+              {
+                type: 'service',
+                service: 'my_backend',
+                format: 'url',
+                env: 'BACKEND_URL',
+              },
+            ],
+          },
+          my_backend: {
+            root: 'backend/',
+            runtime: 'python',
+            entrypoint: 'main:app',
+          },
+        },
+      } satisfies Parameters<typeof validateConfig>[0]);
+      expect(error).toBeNull();
+    });
 
-  afterEach(() => {
-    if (originalServicesEnv === undefined) {
-      delete process.env.VERCEL_USE_SERVICES;
-    } else {
-      process.env.VERCEL_USE_SERVICES = originalServicesEnv;
-    }
+    it('should not error with a service-local route table and functions', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          web: {
+            root: '.',
+            headers: [{ source: '/', headers: [{ key: 'x-id', value: '1' }] }],
+            redirects: [{ source: '/old', destination: '/new' }],
+            rewrites: [{ source: '/a', destination: '/b' }],
+            cleanUrls: true,
+            trailingSlash: false,
+            functions: { 'api/*.ts': { memory: 256, maxDuration: 10 } },
+          },
+        },
+      });
+      expect(error).toBeNull();
+    });
+
+    it('should accept per-service build overrides', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          api: {
+            root: 'api/',
+            installCommand: 'pnpm install',
+            buildCommand: 'pnpm build',
+            devCommand: 'pnpm dev',
+            ignoreCommand: 'echo test',
+            outputDirectory: 'dist',
+          },
+        },
+      });
+      expect(error).toBeNull();
+    });
+
+    it('should require root', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          api: { framework: 'nextjs' } as any,
+        },
+      });
+      expect(error?.message).toContain('missing required property `root`');
+    });
+
+    it.each([
+      ['type', { type: 'web' }],
+      ['trigger', { trigger: 'schedule' }],
+      ['mount', { mount: '/api' }],
+      ['routePrefix', { routePrefix: '/api' }],
+      ['subdomain', { subdomain: 'api' }],
+      ['schedule', { schedule: '0 0 * * *' }],
+      ['topics', { topics: ['orders'] }],
+      ['memory', { memory: 1024 }],
+      ['maxDuration', { maxDuration: 10 }],
+      ['includeFiles', { includeFiles: 'config/*.json' }],
+      ['excludeFiles', { excludeFiles: 'fixtures/**' }],
+      ['workspace', { workspace: '.' }],
+      ['builder', { builder: '@vercel/node' }],
+      ['preDeployCommand', { preDeployCommand: 'pnpm migrate' }],
+      ['consumer', { consumer: 'group' }],
+    ])('should reject removed service field %s', (_, serviceConfig) => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          api: { root: '.', ...serviceConfig } as any,
+        },
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('should reject a binding to an unknown service', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          web: {
+            root: '.',
+            bindings: [
+              {
+                type: 'service',
+                service: 'ghost',
+                format: 'url',
+                env: 'GHOST_URL',
+              },
+            ],
+          },
+        },
+      });
+      expect(error?.code).toBe(
+        'EXPERIMENTAL_SERVICES_V2_BINDING_UNKNOWN_SERVICE'
+      );
+    });
+
+    it('should reject a binding missing a required field', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          web: { root: '.' },
+          api: {
+            root: 'api/',
+            bindings: [
+              { type: 'service', service: 'web', format: 'url' } as any,
+            ],
+          },
+        },
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it.each([
+      ['type', { type: 'queue', service: 'web', format: 'url', env: 'X' }],
+      ['format', { type: 'service', service: 'web', format: 'grpc', env: 'X' }],
+    ])('should reject a binding with invalid %s', (_, binding) => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          web: { root: '.', bindings: [binding] } as any,
+        },
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('should reject the removed `env` field', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          web: {
+            root: '.',
+            env: { LOG_LEVEL: 'info' },
+          } as any,
+        },
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it.each([
+      ['functions', { functions: { 'api/*.ts': { memory: 128 } } }],
+      ['installCommand', { installCommand: 'pnpm install' }],
+      ['buildCommand', { buildCommand: 'pnpm build' }],
+      ['devCommand', { devCommand: 'pnpm dev' }],
+      ['ignoreCommand', { ignoreCommand: 'exit 0' }],
+      ['outputDirectory', { outputDirectory: 'dist' }],
+      ['framework', { framework: 'nextjs' }],
+    ])('should reject top-level %s in experimentalServicesV2 mode', (_, topLevel) => {
+      const error = validateConfig({
+        experimentalServicesV2: { web: { root: '.' } },
+        ...topLevel,
+      } as any);
+      expect(error).not.toBeNull();
+    });
+
+    it('should report all confusing top-level fields at once', () => {
+      const error = validateConfig({
+        experimentalServicesV2: { web: { root: '.' } },
+        framework: 'nextjs',
+        outputDirectory: 'dist',
+      } as any);
+      expect(error?.code).toBe(
+        'EXPERIMENTAL_SERVICES_V2_AND_TOP_LEVEL_BUILD_SETTINGS'
+      );
+      expect(error?.message).toContain('`framework`');
+      expect(error?.message).toContain('`outputDirectory`');
+    });
+
+    it('should reject experimentalServicesV2 together with experimentalServices', () => {
+      const error = validateConfig({
+        experimentalServices: { api: { entrypoint: 'api/index.ts' } },
+        experimentalServicesV2: { web: { root: '.' } },
+      });
+      expect(error?.code).toBe(
+        'EXPERIMENTAL_SERVICES_V2_AND_EXPERIMENTAL_SERVICES'
+      );
+    });
   });
 
   it('should not error with empty config', async () => {
@@ -71,164 +254,62 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
-  it('should not error with services mount config', async () => {
-    process.env.VERCEL_USE_SERVICES = '1';
-    const config = {
+  it('should ignore the removed `services` property', () => {
+    // The CLI config schema is `additionalProperties: true`,
+    // so the error would come from the API
+    const error = validateConfig({
       services: {
         frontend: {
-          type: 'web',
-          root: '.',
           framework: 'nextjs',
           mount: '/',
         },
-        api: {
-          type: 'web',
-          root: 'api',
-          entrypoint: 'index.ts',
-          mount: {
-            path: '/api',
-          },
-        },
       },
-    } satisfies Parameters<typeof validateConfig>[0];
-    const error = validateConfig(config);
+    } as any);
     expect(error).toBeNull();
   });
 
-  it('should require type in services config', () => {
-    process.env.VERCEL_USE_SERVICES = '1';
+  it('should not error with experimentalServices static schedule arrays', () => {
     const error = validateConfig({
-      services: {
-        api: {
-          root: '.',
-          entrypoint: 'api/index.ts',
-          mount: '/api',
-        } as any,
-      },
-    });
-    expect(error?.message).toContain('missing required property `type`');
-  });
-
-  it('should require root in services config', () => {
-    process.env.VERCEL_USE_SERVICES = '1';
-    const error = validateConfig({
-      services: {
-        api: {
-          type: 'web',
-          entrypoint: 'api/index.ts',
-          mount: '/api',
-        } as any,
-      },
-    });
-    expect(error?.message).toContain('missing required property `root`');
-  });
-
-  it('should reject services when VERCEL_USE_SERVICES is not set', async () => {
-    delete process.env.VERCEL_USE_SERVICES;
-    const error = validateConfig({
-      services: {
-        frontend: {
-          framework: 'nextjs',
-          mount: '/',
-        },
-      },
-    });
-    expect(error?.message).toEqual(
-      'Invalid vercel.json - should NOT have additional property `services`. Please remove it.'
-    );
-  });
-
-  it.each([
-    ['routePrefix', { routePrefix: '/api' }],
-    ['subdomain', { subdomain: 'api' }],
-    ['builder', { builder: '@vercel/node' }],
-    ['installCommand', { installCommand: 'pnpm install' }],
-    ['worker service', { type: 'worker' }],
-    ['mount.subdomain', { mount: { subdomain: 'api' } }],
-  ])('should reject deprecated services config field %s', (_, serviceConfig) => {
-    process.env.VERCEL_USE_SERVICES = '1';
-    const error = validateConfig({
-      services: {
-        api: {
-          type: 'web',
-          root: '.',
-          entrypoint: 'api/index.ts',
-          ...serviceConfig,
-        } as any,
-      },
-    });
-    expect(error).not.toBeNull();
-  });
-
-  it('should reject services and experimentalServices together', () => {
-    process.env.VERCEL_USE_SERVICES = '1';
-    const error = validateConfig({
-      services: {
-        api: {
-          type: 'web',
-          root: '.',
-          entrypoint: 'api/index.ts',
-          mount: '/api',
-        },
-      },
       experimentalServices: {
-        legacy: {
-          entrypoint: 'legacy/index.ts',
-          routePrefix: '/legacy',
-        },
-      },
-    });
-    expect(error?.code).toBe('SERVICES_AND_EXPERIMENTAL_SERVICES');
-  });
-
-  it('should not error with public service static schedule arrays', () => {
-    process.env.VERCEL_USE_SERVICES = '1';
-    const error = validateConfig({
-      services: {
         cleanup: {
           type: 'job',
-          root: '.',
           trigger: 'schedule',
           runtime: 'python',
           entrypoint: 'jobs/cleanup.py',
           schedule: ['0 0 * * *', '0 12 * * *'],
         },
       },
-    });
+    } satisfies Parameters<typeof validateConfig>[0]);
     expect(error).toBeNull();
   });
 
-  it('should reject dynamic schedules inside public service schedule arrays', () => {
-    process.env.VERCEL_USE_SERVICES = '1';
+  it('should reject dynamic schedules inside experimentalServices schedule arrays', () => {
     const error = validateConfig({
-      services: {
+      experimentalServices: {
         cleanup: {
           type: 'job',
-          root: '.',
           trigger: 'schedule',
           runtime: 'python',
           entrypoint: 'jobs/cleanup.py',
           schedule: ['<dynamic>'],
         },
       },
-    });
+    } satisfies Parameters<typeof validateConfig>[0]);
     expect(error).not.toBeNull();
   });
 
-  it('should not error with public service dynamic schedule string', () => {
-    process.env.VERCEL_USE_SERVICES = '1';
+  it('should not error with experimentalServices dynamic schedule string', () => {
     const error = validateConfig({
-      services: {
+      experimentalServices: {
         cleanup: {
           type: 'job',
-          root: '.',
           trigger: 'schedule',
           runtime: 'python',
           entrypoint: 'jobs/cleanup.py',
           schedule: '<dynamic>',
         },
       },
-    });
+    } satisfies Parameters<typeof validateConfig>[0]);
     expect(error).toBeNull();
   });
 
