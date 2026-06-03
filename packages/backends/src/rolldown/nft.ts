@@ -2,7 +2,7 @@ import type { BuildOptions, Files } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { existsSync } from 'node:fs';
 import { readFile, lstat, stat, readlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { isNativeError } from 'node:util/types';
 import { FileFsRef, FileBlob, type Span } from '@vercel/build-utils';
 import { transform } from 'oxc-transform';
@@ -134,7 +134,10 @@ export const nft = async (
         }
         throw error;
       }
-      const outputPath = file;
+      // Lambda `files` map keys are always forward-slash separated,
+      // regardless of the build host OS. NFT returns paths using the host
+      // separator (backslashes on Windows), so normalize to POSIX.
+      const outputPath = file.split(sep).join('/');
 
       if (args.localBuildFiles.has(join(args.repoRootPath, outputPath))) {
         continue;
