@@ -33,19 +33,21 @@ const HANDLER_EXPORTS = new Set([
 ]);
 
 /**
- * The two remaining handler shapes that are not expressible as a named export,
- * so the module lexers below cannot surface them:
- * - `module.exports = <fn>`: resolved at runtime via `typeof listener === 'function'`
- * - a server that calls `.listen()` (`http.createServer().listen()`, an Express
- *   `app.listen()`, Fastify, etc.): `@vercel/node` stubs `.listen()` on import to
- *   capture the server instance.
- *
- * These are matched against comment-stripped source so commented-out code does
- * not count as a handler.
+ * Handler shapes the ES/CJS lexers don't surface as a recognized export, so we
+ * detect them textually against comment-stripped source (so commented-out code
+ * doesn't count). Each maps to a shape `@vercel/node` resolves at runtime:
+ * - `module.exports = <fn>` — resolved via `typeof listener === 'function'`.
+ * - a server that calls `.listen()` — `@vercel/node` stubs `.listen()` on import
+ *   to capture the server (`http.createServer().listen()`, Express/Fastify, …).
+ * - `export = <fn>` (TS export-assignment) — compiles to `module.exports = <fn>`.
+ * - `export * from '…'` — re-exports another module's handlers (e.g. `GET`); the
+ *   lexer can't follow the re-export, so treat it as a possible entrypoint.
  */
-const NON_EXPORT_HANDLER_PATTERNS = [
+const EXTRA_HANDLER_PATTERNS = [
   /\bmodule\.exports\s*=(?!=)/,
   /\.listen\s*\(/,
+  /\bexport\s*=(?!=)/,
+  /\bexport\s*\*\s*from\b/,
 ];
 
 /**
@@ -121,7 +123,7 @@ export async function isNodeEntrypoint(
     if (esmUnparsed) return true;
 
     const code = stripCommentsAndLiterals(content);
-    return NON_EXPORT_HANDLER_PATTERNS.some(pattern => pattern.test(code));
+    return EXTRA_HANDLER_PATTERNS.some(pattern => pattern.test(code));
   } catch (err) {
     debug(`Failed to check Node.js entrypoint: ${err}`);
     return true;
