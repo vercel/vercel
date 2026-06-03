@@ -73,4 +73,25 @@ describe('stripCommentsAndLiterals()', () => {
       stripCommentsAndLiterals('const x = "l1 /* \\\nl2"; module.exports = h;')
     ).toBe('const x =  ; module.exports = h;');
   });
+
+  // Malformed (unterminated) input: the literal/comment runs to end-of-input in
+  // a single pass rather than failing and re-scanning (see the O(n^2) note in
+  // the implementation). Valid code is unaffected.
+
+  it('consumes an unterminated string to end of input', () => {
+    expect(stripCommentsAndLiterals('a = "unterminated')).toBe('a =  ');
+  });
+
+  it('consumes an unterminated block comment to end of input', () => {
+    expect(stripCommentsAndLiterals('a /* unterminated\nmore')).toBe('a  ');
+  });
+
+  it('stays linear on pathological input (no catastrophic backtracking)', () => {
+    // A 200k-char run of escaped quotes is the worst case for a naive
+    // string matcher. Must complete in well under a second.
+    const pathological = '"\\'.repeat(100_000);
+    const start = performance.now();
+    stripCommentsAndLiterals(pathological);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
 });

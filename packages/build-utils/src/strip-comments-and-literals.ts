@@ -1,14 +1,22 @@
 // Each pattern matches one "thing to neutralize" as a single token. They are
 // kept separate (and individually commented) so the combined matcher below is
 // readable; `COMMENT_OR_LITERAL` is exactly their `|`-joined alternation.
-// `\\[\s\S]` (backslash + any char, incl. a newline) skips escapes — including
-// `\`-newline line continuations — so a quote/comment sequence right after an
-// escape can't end the literal early.
-const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//; //             a /* ... */ block comment
-const LINE_COMMENT = /\/\/[^\n]*/; //                    a // ... line comment
-const DOUBLE_QUOTED = /"(?:\\[\s\S]|[^"\\])*"/; //       a "..." string
-const SINGLE_QUOTED = /'(?:\\[\s\S]|[^'\\])*'/; //       a '...' string
-const TEMPLATE_LITERAL = /`(?:\\[\s\S]|[^`\\])*`/; //    a `...` template literal
+//
+// Two non-obvious details, both so a token never *fails* to match:
+//   * `\\[\s\S]` (backslash + ANY char, incl. a newline) skips escapes —
+//     including `\`-newline line continuations — so a quote right after an
+//     escape doesn't end the literal early.
+//   * The closing delimiter is optional (`"?`, `'?`, `` `? ``, and `\*\/|$` for
+//     block comments). On valid code every literal is terminated, so the greedy
+//     match still takes the real closing delimiter — behavior is unchanged. But
+//     an *unterminated* literal (malformed input) then matches in one pass to
+//     end-of-input instead of failing; without this, each later quote restarts
+//     a scan-to-EOF that fails, which is O(n^2) on a run of escaped quotes.
+const BLOCK_COMMENT = /\/\*[\s\S]*?(?:\*\/|$)/; //        a /* ... */ block comment
+const LINE_COMMENT = /\/\/[^\n]*/; //                     a // ... line comment
+const DOUBLE_QUOTED = /"(?:\\[\s\S]|[^"\\])*"?/; //       a "..." string
+const SINGLE_QUOTED = /'(?:\\[\s\S]|[^'\\])*'?/; //       a '...' string
+const TEMPLATE_LITERAL = /`(?:\\[\s\S]|[^`\\])*`?/; //    a `...` template literal
 
 const COMMENT_OR_LITERAL = new RegExp(
   [BLOCK_COMMENT, LINE_COMMENT, DOUBLE_QUOTED, SINGLE_QUOTED, TEMPLATE_LITERAL]
