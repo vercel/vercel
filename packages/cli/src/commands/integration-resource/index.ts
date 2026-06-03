@@ -108,12 +108,12 @@ export async function dispatchResourceSubcommand(
     }
     case 'claim': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
+        telemetry.trackCliFlagHelp(options.helpBreadcrumb, subcommandOriginal);
         printHelp(claimSubcommand);
         return 0;
       }
       telemetry.trackCliSubcommandClaim(subcommandOriginal);
-      return claim(client, subArgs);
+      return claim(client, innerArgs);
     }
     default: {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
