@@ -446,9 +446,10 @@ async function linkCrossTeamMatches({
   });
 
   const selected = await client.input.select<CrossTeamMatch | null>({
-    message: currentTeamSlug
-      ? `No matching project found under ${currentTeamSlug}. Found matching projects in other teams. Which one do you want to link?`
-      : 'Found matching projects across teams. Which one do you want to link?',
+    message:
+      currentTeamSlug && !currentTeamMatch
+        ? `No matching project found under ${currentTeamSlug}. Found matching projects in other teams. Which one do you want to link?`
+        : 'Found matching projects across teams. Which one do you want to link?',
     choices,
     default: currentTeamMatch ?? undefined,
   });
@@ -556,11 +557,15 @@ export default async function setupAndLink(
           gitProjectName,
           onSearchPhase: phase => {
             if (phase === 'current-team') {
-              setSearchSpinner('Searching current team for existing projects…');
+              setSearchSpinner(
+                'Searching for existing projects in the current team…'
+              );
             } else if (phase === 'other-teams') {
-              setSearchSpinner('Searching other teams for existing projects…');
+              setSearchSpinner(
+                'Searching for existing projects in other teams…'
+              );
             } else {
-              setSearchSpinner('Searching teams for existing projects…');
+              setSearchSpinner('Searching for existing projects…');
             }
           },
         }
@@ -578,6 +583,47 @@ export default async function setupAndLink(
       if (searchSpinnerActive) {
         output.stopSpinner();
       }
+    }
+
+    // In interactive mode, surface matches from every team in a single prompt so
+    // the user can see the full picture (and keep the current team as the
+    // default) instead of being asked about the current-team match in isolation.
+    // In autoConfirm / nonInteractive mode we keep the progressive behavior: a
+    // current-team match wins immediately without waiting on the slower
+    // other-team search.
+    const shouldMergeOtherTeamMatches =
+      !autoConfirm && !nonInteractive && Boolean(otherTeamSearch);
+
+    if (shouldMergeOtherTeamMatches && otherTeamSearch) {
+      output.spinner('Searching for existing projects in other teams…', 1000);
+      let otherTeamResult:
+        | {
+            matches: CrossTeamMatch[];
+            searchedTeamSlugs: string[];
+          }
+        | undefined;
+      try {
+        otherTeamResult = await otherTeamSearch;
+      } finally {
+        output.stopSpinner();
+      }
+
+      if (otherTeamResult.searchedTeamSlugs.length > 0) {
+        searchedTeamSlugs.push(...otherTeamResult.searchedTeamSlugs);
+      }
+
+      const seenMatchIds = new Set(
+        crossTeamMatches.map(match => match.project.id)
+      );
+      for (const match of otherTeamResult.matches) {
+        if (match.project.id && !seenMatchIds.has(match.project.id)) {
+          seenMatchIds.add(match.project.id);
+          crossTeamMatches.push(match);
+        }
+      }
+      // The other-team search has been folded into `crossTeamMatches`, so the
+      // fallback handling below has nothing left to do.
+      otherTeamSearch = undefined;
     }
 
     if (crossTeamMatches.length > 0 && !autoConfirm && !nonInteractive) {
@@ -603,7 +649,7 @@ export default async function setupAndLink(
     }
 
     if (otherTeamSearch) {
-      output.spinner('Searching other teams for existing projects…', 1000);
+      output.spinner('Searching for existing projects in other teams…', 1000);
       let otherTeamResult:
         | {
             matches: CrossTeamMatch[];
