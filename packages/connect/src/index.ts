@@ -17,3 +17,5 @@ export {
   type ConnectAuthorizationOptions,
   type ConnectAuthorizationResponse,
 } from './authorization.js';
+
+export type { ConnectAuthorizationDetail } from './authorization-details.js';

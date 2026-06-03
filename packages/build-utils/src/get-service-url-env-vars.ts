@@ -1,4 +1,5 @@
 import type { EnvVars, Service } from './types';
+import { isExperimentalService } from './types';
 
 type Envs = { [key: string]: string | undefined };
 
@@ -92,7 +93,10 @@ export function getServiceUrlEnvVars(
   const baseUrl = origin || deploymentUrl;
   if (!baseUrl) return {};
 
-  const servicesByName = new Map(services.map(s => [s.name, s]));
+  // Implicit URL injection is a feature for `experimentalServices`, V2 services
+  // will use explicit `bindings` and have no `routePrefix`.
+  const v1Services = services.filter(isExperimentalService);
+  const servicesByName = new Map(v1Services.map(s => [s.name, s]));
   const consumerEnvPrefix = getFrameworkEnvPrefix(
     consumerService?.framework,
     frameworkList
@@ -156,20 +160,23 @@ export function getExperimentalServiceUrlEnvVars(
     return {};
   }
 
+  // Legacy implicit injection only applies to `experimentalServices`.
+  const v1Services = services.filter(isExperimentalService);
+
   const envVars: Record<string, string> = {};
 
   // Collect framework prefixes from any frontend services in the deployment,
   // so each web service gets a prefixed twin per framework (NEXT_PUBLIC_*,
   // VITE_*, …) for client-side use.
   const frameworkPrefixes = new Set<string>();
-  for (const service of services) {
+  for (const service of v1Services) {
     const prefix = getFrameworkEnvPrefix(service.framework, frameworkList);
     if (prefix) {
       frameworkPrefixes.add(prefix);
     }
   }
 
-  for (const service of services) {
+  for (const service of v1Services) {
     if (service.type !== 'web' || !service.routePrefix) {
       continue;
     }

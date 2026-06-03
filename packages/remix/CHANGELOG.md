@@ -1,5 +1,12 @@
 # @vercel/remix-builder
 
+## 5.8.6
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/error-utils@2.2.0
+
 ## 5.8.5
 
 ### Patch Changes
