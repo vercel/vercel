@@ -1,5 +1,8 @@
 import type { HasField, Route } from '@vercel/routing-utils';
-import { isScheduleTriggeredService } from '@vercel/build-utils';
+import {
+  isScheduleTriggeredService,
+  isExperimentalService,
+} from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -10,6 +13,8 @@ import type {
   DetectServicesOptions,
   DetectServicesResult,
   ExperimentalServices,
+  ExperimentalServicesV2,
+  ExperimentalService,
   InferredServicesConfig,
   InferredServicesResult,
   ResolvedServicesResult,
@@ -28,6 +33,7 @@ import {
 } from './utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { resolveAllConfiguredServices } from './resolve';
+import { resolveAllConfiguredServicesV2 } from './resolve-v2';
 import { autoDetectServices } from './auto-detect';
 import { detectRailwayServices } from './detect-railway';
 import { detectRenderServices } from './detect-render';
@@ -133,6 +139,7 @@ export async function detectServices(
     workPath,
     detectEntrypoint,
     configuredServices: providedConfiguredServices,
+    configuredServicesType,
   } = options;
 
   // Scope filesystem to workPath if provided
@@ -156,6 +163,35 @@ export async function detectServices(
   const hasProvidedConfiguredServices =
     providedConfiguredServices &&
     Object.keys(providedConfiguredServices).length > 0;
+
+  // `experimentalServicesV2` dispatch
+  const experimentalServicesV2 =
+    hasProvidedConfiguredServices &&
+    configuredServicesType === 'experimentalServicesV2'
+      ? (providedConfiguredServices as ExperimentalServicesV2)
+      : hasProvidedConfiguredServices
+        ? undefined
+        : vercelConfig?.experimentalServicesV2;
+  if (
+    experimentalServicesV2 &&
+    Object.keys(experimentalServicesV2).length > 0
+  ) {
+    const result = await resolveAllConfiguredServicesV2(
+      experimentalServicesV2,
+      scopedFs
+    );
+    return withResolvedResult({
+      services: result.services,
+      source: 'configured',
+      // V2 uses explicit `bindings`, so no implicit `{NAME}_URL` injection.
+      useImplicitEnvInjection: false,
+      // V2 routes are explicitly carried per-service to output them separately.
+      routes: emptyRoutes(),
+      errors: result.errors,
+      warnings: [],
+    });
+  }
+
   const configuredServices = hasProvidedConfiguredServices
     ? providedConfiguredServices
     : vercelConfig?.experimentalServices;
@@ -351,7 +387,11 @@ async function tryResolveInferred(
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
-export function generateServicesRoutes(services: Service[]): ServicesRoutes {
+export function generateServicesRoutes(allServices: Service[]): ServicesRoutes {
+  // Route generation only applies to `experimentalServices`, V2 carries
+  // its own per-service route tables to be applied later.
+  const services = allServices.filter(isExperimentalService);
+
   const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
@@ -363,7 +403,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
   // so more specific routes match before broader ones.
   const sortedWebServices = services
     .filter(
-      (s): s is Service & { routePrefix: string } =>
+      (s): s is ExperimentalService & { routePrefix: string } =>
         s.type === 'web' && typeof s.routePrefix === 'string'
     )
     .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
@@ -462,7 +502,7 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function getWebRoutePrefixes(services: Service[]): string[] {
+function getWebRoutePrefixes(services: ExperimentalService[]): string[] {
   const unique = new Set<string>();
   for (const service of services) {
     if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
@@ -493,7 +533,7 @@ function getExplicitHostPrefixNegativeLookahead(
   return `(?!(?:${explicitPrefixes.join('|')})(?:/|$))`;
 }
 
-function getHostCondition(service: Service): HasField | undefined {
+function getHostCondition(service: ExperimentalService): HasField | undefined {
   if (service.type !== 'web') {
     return undefined;
   }

@@ -610,7 +610,8 @@ export type EnvVar = ServiceRefEnvVar;
 
 export type EnvVars = Record<string, EnvVar>;
 
-export interface Service {
+export interface ExperimentalService {
+  schema: 'experimentalServices';
   name: string;
   type: ServiceType;
   trigger?: JobTrigger;
@@ -635,6 +636,49 @@ export interface Service {
   topics?: ServiceTopics;
   /* environment variables declared by the user to be injected into this service. */
   env?: EnvVars;
+}
+
+export interface ExperimentalServiceV2 {
+  schema: 'experimentalServicesV2';
+  name: string;
+  /** Path to the service root, relative to the project root. */
+  root: string;
+  framework?: string;
+  runtime?: string;
+  /** Resolved entrypoint, relative to the service root. */
+  entrypoint?: string;
+  /** Builder selected by the resolver. */
+  builder: Builder;
+  installCommand?: string;
+  buildCommand?: string;
+  devCommand?: string;
+  ignoreCommand?: string;
+  outputDirectory?: string;
+  /** Caller-side bindings to other services. */
+  bindings?: ExperimentalServiceV2Binding[];
+  /** Function configuration scoped to this service. */
+  functions?: BuilderFunctions;
+  /* Per-service route table. Applied only after top-level routing. */
+  headers?: Header[];
+  redirects?: Redirect[];
+  rewrites?: Rewrite[];
+  routes?: Route[];
+  cleanUrls?: boolean;
+  trailingSlash?: boolean;
+}
+
+export type Service = ExperimentalService | ExperimentalServiceV2;
+
+export function isExperimentalService(
+  service: Service
+): service is ExperimentalService {
+  return service.schema === 'experimentalServices';
+}
+
+export function isExperimentalServiceV2(
+  service: Service
+): service is ExperimentalServiceV2 {
+  return service.schema === 'experimentalServicesV2';
 }
 
 export function getServiceQueueTopicConfigs(config: {

@@ -32,7 +32,7 @@ import {
   type TriggerEvent,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
-  type Service,
+  type ExperimentalService,
   isExternalSymlink,
 } from '@vercel/build-utils';
 import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
@@ -73,7 +73,7 @@ export async function writeBuildResult(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
-  service?: Service;
+  service?: ExperimentalService;
   stripServiceRoutePrefix?: boolean;
 }) {
   const {
@@ -154,7 +154,7 @@ export interface PathOverride {
 
 function injectServiceEnvVars(
   lambda: Lambda,
-  service?: Service,
+  service?: ExperimentalService,
   stripServiceRoutePrefix: boolean = false
 ): void {
   if (service?.name) {
@@ -195,7 +195,7 @@ async function writeBuildResultV2(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
-  service?: Service;
+  service?: ExperimentalService;
   stripServiceRoutePrefix: boolean;
 }) {
   const {
@@ -342,7 +342,7 @@ async function writeBuildResultV3(args: {
   vercelConfig: VercelConfig | null;
   standalone: boolean;
   workPath: string;
-  service?: Service;
+  service?: ExperimentalService;
   stripServiceRoutePrefix: boolean;
 }) {
   const {

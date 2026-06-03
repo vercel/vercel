@@ -9,6 +9,7 @@ export {
   type ConnectOptions,
   type ConnectTokenParams,
   type ConnectTokenResponse,
+  type ConnectTokenSubject,
   type ConnectVendorErrorPayload,
 } from './token.js';
 
@@ -17,3 +18,5 @@ export {
   type ConnectAuthorizationOptions,
   type ConnectAuthorizationResponse,
 } from './authorization.js';
+
+export type { ConnectAuthorizationDetail } from './authorization-details.js';

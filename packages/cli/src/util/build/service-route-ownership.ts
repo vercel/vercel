@@ -3,19 +3,19 @@ import {
   normalizeRoutePrefix,
   scopeRouteSourceToOwnership,
 } from '@vercel/routing-utils';
-import type { Service } from '@vercel/build-utils';
+import type { ExperimentalService } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
 interface ScopeRoutesToServiceOwnershipOptions {
   routes: Route[];
-  owner: Service;
-  allServices: Service[];
+  owner: ExperimentalService;
+  allServices: ExperimentalService[];
 }
 function isWebServiceWithPrefix(
-  service: Service
-): service is Service & { type: 'web'; routePrefix: string } {
+  service: ExperimentalService
+): service is ExperimentalService & { type: 'web'; routePrefix: string } {
   return service.type === 'web' && typeof service.routePrefix === 'string';
 }
-function getWebRoutePrefixes(services: Service[]): string[] {
+function getWebRoutePrefixes(services: ExperimentalService[]): string[] {
   const unique = new Set<string>();
   for (const service of services) {
     if (!isWebServiceWithPrefix(service)) continue;

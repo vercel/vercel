@@ -1,12 +1,40 @@
 import { getVercelOidcToken } from '@vercel/oidc';
+import type { ConnectAuthorizationDetail } from './authorization-details.js';
+
+export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer';
+
+export type ConnectTokenSubject =
+  | ConnectAppTokenSubject
+  | ConnectUserTokenSubject
+  | ConnectJwtBearerTokenSubject;
+
+export interface ConnectAppTokenSubject {
+  type: 'app';
+}
+
+export interface ConnectUserTokenSubject {
+  type: 'user';
+  id: string;
+  issuer?: string;
+}
+
+export interface ConnectJwtBearerTokenSubject {
+  type: 'jwt-bearer';
+  sub: string;
+  /** Defaults to the connector's OAuth client id. */
+  iss?: string;
+  /** Defaults to the connector's OAuth token endpoint. */
+  aud?: string;
+  additionalClaims?: Record<string, unknown>;
+}
 
 export interface ConnectTokenParams {
-  subject: { type: 'app' } | { type: 'user'; id: string; issuer?: string };
+  subject: ConnectTokenSubject;
   installationId?: string;
   audience?: string[];
   scopes?: string[];
   resources?: string[];
-  authorizationDetails?: Array<{ type: string } & Record<string, unknown>>;
+  authorizationDetails?: ConnectAuthorizationDetail[];
 
   /**
    * Buffer time in milliseconds before token expiration to consider it invalid.
