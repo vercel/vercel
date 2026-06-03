@@ -8,6 +8,7 @@ import {
   parse as parseCjsExports,
 } from 'cjs-module-lexer';
 import debug from './debug';
+import { stripCommentsAndLiterals } from './strip-comments-and-literals';
 import type FileFsRef from './file-fs-ref';
 
 /**
@@ -46,23 +47,6 @@ const NON_EXPORT_HANDLER_PATTERNS = [
   /\bmodule\.exports\s*=(?!=)/,
   /\.listen\s*\(/,
 ];
-
-/**
- * Blank out comments and string/template literals, leaving only code structure
- * for {@link NON_EXPORT_HANDLER_PATTERNS} to match against.
- *
- * Comments and literals are matched by one alternation, so a literal is always
- * consumed as a single token *before* the engine can look inside it — a `/*` or
- * `//` sequence within a string (e.g. the `*​/*` in an `Accept: *​/*` header) is
- * therefore never mistaken for the start of a comment. Literals are blanked
- * rather than preserved so their contents can't be misread as code either (e.g.
- * the literal text `"module.exports ="` inside a string).
- */
-function stripCommentsAndLiterals(content: string): string {
-  const COMMENT_OR_LITERAL =
-    /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`/g;
-  return content.replace(COMMENT_OR_LITERAL, ' ');
-}
 
 /**
  * Collect the export names declared by a module using real ESM/CJS lexers.
