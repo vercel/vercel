@@ -122,8 +122,7 @@ const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
 };
 
 describe('successful builds', async () => {
-  const fixtures = (await readdir(join(__dirname, 'fixtures'))).filter(
-  );
+  const fixtures = await readdir(join(__dirname, 'fixtures'));
   for (const fixtureName of fixtures) {
     // Windows is just too slow to build these fixtures
     it.skipIf(process.platform === 'win32')(
