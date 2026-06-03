@@ -8,7 +8,7 @@ import {
   getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceWorkerPathPrefix,
-  type Service,
+  type ExperimentalService,
 } from '@vercel/fs-detectors';
 import type { Cron } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
@@ -148,7 +148,7 @@ interface ServiceDevProcess {
   crons?: Cron[];
 }
 
-function getServiceRoutePrefixes(service: Service): string[] {
+function getServiceRoutePrefixes(service: ExperimentalService): string[] {
   if (isQueueTriggeredService(service) || isWorkflowTriggeredService(service)) {
     return [getInternalServiceWorkerPathPrefix(service.name)];
   }
@@ -162,7 +162,7 @@ function getServiceRoutePrefixes(service: Service): string[] {
 }
 
 interface ServicesOrchestratorOptions {
-  services: Service[];
+  services: ExperimentalService[];
   cwd: string;
   repoRoot: string;
   env: NodeJS.ProcessEnv;
@@ -253,7 +253,7 @@ export class ServicesOrchestrator {
   private stopping = false;
   private exitBackstop: (() => void) | undefined;
 
-  private services: Service[];
+  private services: ExperimentalService[];
   private cwd: string;
   private repoRoot: string;
   private envFilesValues: NodeJS.ProcessEnv;
@@ -505,7 +505,7 @@ export class ServicesOrchestrator {
   }
 
   private async startService(
-    service: Service,
+    service: ExperimentalService,
     colorIndex: number
   ): Promise<ServiceDevProcess> {
     const workspacePath = path.join(this.cwd, service.workspace || '.');
@@ -605,7 +605,7 @@ export class ServicesOrchestrator {
   }
 
   private async tryStartWithBuilder(
-    service: Service,
+    service: ExperimentalService,
     builderSpec: string,
     workspacePath: string,
     env: NodeJS.ProcessEnv,
@@ -705,7 +705,7 @@ export class ServicesOrchestrator {
 
   // Adapted from DevServer
   private async startServiceWithDevCommand(
-    service: Service,
+    service: ExperimentalService,
     framework: Framework | undefined,
     workspacePath: string,
     env: NodeJS.ProcessEnv,

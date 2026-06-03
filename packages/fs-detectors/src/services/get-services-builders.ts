@@ -1,6 +1,10 @@
 import type { Route } from '@vercel/routing-utils';
 import type { Builder } from '@vercel/build-utils';
-import type { ConfiguredServices, ResolvedService } from './types';
+import type {
+  ConfiguredServices,
+  ConfiguredServicesType,
+  Service,
+} from './types';
 import { detectServices } from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
 
@@ -14,7 +18,7 @@ export interface ErrorResponse {
 export interface GetServicesBuildersOptions {
   workPath?: string;
   configuredServices?: ConfiguredServices;
-  configuredServicesType?: 'experimentalServices';
+  configuredServicesType?: ConfiguredServicesType;
   projectFramework?: string | null;
 }
 
@@ -28,7 +32,7 @@ export interface ServicesBuildersResult {
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  services?: ResolvedService[];
+  services?: Service[];
   useImplicitEnvInjection?: boolean;
 }
 

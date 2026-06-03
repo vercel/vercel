@@ -4,6 +4,8 @@ import type {
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
 import { join } from 'path';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import type { PackageJson } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -216,6 +218,56 @@ describe('Test `detectBuilders`', () => {
       } else {
         process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
       }
+    }
+  });
+
+  it('should build experimentalServicesV2 services configured inline', async () => {
+    // `detectBuilders` resolves services against a real filesystem (workPath).
+    // V2 isn't deployable yet, so build using a temp dir
+    const workPath = mkdtempSync(join(tmpdir(), 'vc-services-v2-'));
+    try {
+      mkdirSync(join(workPath, 'api'), { recursive: true });
+      writeFileSync(
+        join(workPath, 'api', 'package.json'),
+        JSON.stringify({ dependencies: { express: '4.0.0' } })
+      );
+      mkdirSync(join(workPath, 'web'), { recursive: true });
+      writeFileSync(
+        join(workPath, 'web', 'package.json'),
+        JSON.stringify({ dependencies: { next: 'latest' } })
+      );
+
+      const { builders, errors, services } = await detectBuilders(
+        [],
+        undefined,
+        {
+          experimentalServicesV2: {
+            api: { root: 'api', framework: 'express' },
+            web: { root: 'web', framework: 'nextjs' },
+          },
+          projectSettings: {
+            framework: null,
+          },
+          workPath,
+        }
+      );
+
+      expect(errors).toBeNull();
+      expect(services).toHaveLength(2);
+      expect(services?.every(s => s.schema === 'experimentalServicesV2')).toBe(
+        true
+      );
+      expect(builders).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            src: 'api/index.js',
+            use: '@vercel/backends',
+          }),
+          expect.objectContaining({ use: '@vercel/next' }),
+        ])
+      );
+    } finally {
+      rmSync(workPath, { recursive: true, force: true });
     }
   });
 

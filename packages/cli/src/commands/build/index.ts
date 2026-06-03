@@ -35,7 +35,8 @@ import {
   type Meta,
   type PackageJson,
   glob,
-  type Service,
+  type ExperimentalService,
+  isExperimentalService,
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getServiceQueueTopicConfigs,
@@ -161,7 +162,7 @@ interface BuildOutputConfig {
   };
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
-  services?: Service[];
+  services?: ExperimentalService[];
   deploymentId?: string;
 }
 
@@ -740,7 +741,7 @@ async function doBuild(
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
   let zeroConfigFallbackRoutes: Route[] = [];
-  let detectedServices: Service[] | undefined;
+  let detectedServices: ExperimentalService[] | undefined;
   const hasExperimentalServicesConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
@@ -781,8 +782,9 @@ async function doBuild(
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
-    // Capture detected services for the config.json
-    detectedServices = detectedBuilders.services;
+    // Capture detected services for the config.json. Only `experimentalServices`
+    // flows is supported right now.
+    detectedServices = detectedBuilders.services?.filter(isExperimentalService);
 
     // Legacy URL injection for `experimentalServices`.
     if (
@@ -912,7 +914,7 @@ async function doBuild(
     workspace: string;
     key: string;
     manifest: Record<string, unknown>;
-    service?: Service;
+    service?: ExperimentalService;
     builderUse: string;
   }> = [];
 
@@ -921,7 +923,7 @@ async function doBuild(
   const getHasQueueServices = () =>
     getHasDetectedServices() && detectedServices!.some(isQueueBackedService);
   const synthesizedServiceCrons: Cron[] = [];
-  const serviceByBuilder = new Map<Builder, Service>();
+  const serviceByBuilder = new Map<Builder, ExperimentalService>();
   if (getHasDetectedServices()) {
     for (const service of detectedServices!) {
       serviceByBuilder.set(service.builder, service);
@@ -1528,7 +1530,7 @@ async function doBuild(
     );
   };
 
-  const appendServiceRoutes = (services: Service[]) => {
+  const appendServiceRoutes = (services: ExperimentalService[]) => {
     const serviceRoutes = generateServicesRoutes(services);
     zeroConfigRoutes = appendRoutesToPhase({
       routes: zeroConfigRoutes,
@@ -1586,7 +1588,9 @@ async function doBuild(
         output.warn(w.message, null, w.link, w.action || 'Learn More');
       }
 
-      detectedServices = generatedBuilders.services;
+      detectedServices = generatedBuilders.services?.filter(
+        isExperimentalService
+      );
       if (!detectedServices || detectedServices.length === 0) {
         detectedServices = undefined;
       } else {
@@ -2361,7 +2365,7 @@ function normalizeServiceRoutePrefix(routePrefix: string): string {
  * output paths, or routing destinations.
  */
 function getServicesMergeEntrypoint(
-  service: Service,
+  service: ExperimentalService,
   buildSrc: string
 ): string {
   const routePrefix =
@@ -2373,7 +2377,7 @@ function getServicesMergeEntrypoint(
 
 function attachQueueServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
-  service: Service
+  service: ExperimentalService
 ): void {
   const topics = getServiceQueueTopicConfigs(service);
   const consumer = sanitizeConsumerName(
