@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { EventEmitter } from 'node:events';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
   autoInstallVercelPlugin,
@@ -12,6 +13,33 @@ import {
   getPluginTargetForAgent,
 } from '../../../src/util/agent/auto-install-agentic';
 import { client } from '../../mocks/client';
+
+const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }));
+vi.mock('node:child_process', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  return { ...actual, spawn: spawnMock };
+});
+
+function fakeSpawn(stdout: string, exitCode = 0) {
+  const child = new EventEmitter() as EventEmitter & {
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+  };
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  setImmediate(() => {
+    if (stdout) {
+      child.stdout.emit('data', Buffer.from(stdout));
+    }
+    child.emit('close', exitCode);
+  });
+  return child;
+}
+
+afterEach(() => {
+  spawnMock.mockReset();
+  vi.unstubAllGlobals();
+});
 
 describe('comparePluginVersions', () => {
   it('compares dot-separated versions', () => {
@@ -274,6 +302,36 @@ describe('autoInstallVercelPlugin', () => {
       process.env.HOME = originalHome;
       await rm(configDir, { recursive: true, force: true });
       await rm(fakeHome, { recursive: true, force: true });
+    }
+  });
+
+  it('prompts to install the plugin when running under a Claude agent', async () => {
+    const configDir = await mkdtemp(join(tmpdir(), 'vercel-cli-agent-prefs-'));
+    spawnMock.mockReturnValue(fakeSpawn('[]'));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ version: '0.999.0' }),
+      }))
+    );
+    const confirmSpy = vi
+      .spyOn(client.input, 'confirm')
+      .mockResolvedValue(false);
+
+    try {
+      client.reset();
+      client.setArgv('--global-config', configDir);
+      client.agentName = KNOWN_AGENTS.CLAUDE;
+
+      await expect(autoInstallVercelPlugin(client)).resolves.toBeUndefined();
+      expect(confirmSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Would you like to install it?'),
+        true
+      );
+    } finally {
+      confirmSpy.mockRestore();
+      await rm(configDir, { recursive: true, force: true });
     }
   });
 });
