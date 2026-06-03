@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function parseArgs(argv) {
   const args = {};
@@ -140,6 +141,10 @@ function contentTypeFor(relativePath) {
   return 'application/octet-stream';
 }
 
+function isRawTranscriptFile(relativePath) {
+  return /\/transcript-raw\.jsonl$/.test(relativePath);
+}
+
 function shouldUploadFile(relativePath, uploadArtifacts) {
   if (uploadArtifacts === 'results') {
     return (
@@ -148,7 +153,7 @@ function shouldUploadFile(relativePath, uploadArtifacts) {
     );
   }
 
-  return true;
+  return !isRawTranscriptFile(relativePath);
 }
 
 function isTimestampSegment(segment) {
@@ -349,7 +354,11 @@ async function main() {
   );
 }
 
-main().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+export { isRawTranscriptFile, shouldUploadFile };
