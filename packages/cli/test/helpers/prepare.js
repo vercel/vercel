@@ -31,7 +31,10 @@ const getNextGeneratedNitroServiceFixture = servicesConfigKey => ({
   'package.json': JSON.stringify({
     private: true,
     scripts: {
-      build: 'next build',
+      build:
+        servicesConfigKey === 'experimentalServicesV2'
+          ? 'next build && node write-experimental-services-v2.mjs'
+          : 'next build',
     },
     dependencies: {
       next: 'latest',
@@ -41,26 +44,106 @@ const getNextGeneratedNitroServiceFixture = servicesConfigKey => ({
   }),
   'pages/index.js':
     'export default function Home() { return <p>Latest Next.js app</p>; }',
+  ...(servicesConfigKey === 'experimentalServicesV2'
+    ? {
+        'vercel.json': JSON.stringify({
+          experimentalServicesV2: {
+            web: {
+              root: '.',
+              entrypoint: 'package.json',
+              framework: 'nextjs',
+              rewrites: [{ source: '/(.*)', destination: '/$1' }],
+            },
+            'nitro-api': {
+              root: 'nitro',
+              entrypoint: 'package.json',
+              framework: 'nitro',
+              rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+            },
+          },
+        }),
+        'write-experimental-services-v2.mjs': `
+import fs from 'node:fs';
+import path from 'node:path';
+
+const servicesConfig = {
+  web: {
+    root: '.',
+    entrypoint: 'package.json',
+    framework: 'nextjs',
+    rewrites: [{ source: '/(.*)', destination: '/$1' }],
+  },
+  'nitro-api': {
+    root: 'nitro',
+    entrypoint: 'package.json',
+    framework: 'nitro',
+    rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+  },
+};
+
+const outputDir = path.join(process.cwd(), '.vercel', 'output');
+const configPath = path.join(outputDir, 'config.json');
+let config = { version: 3 };
+try {
+  config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+} catch (error) {
+  if (error.code !== 'ENOENT') {
+    throw error;
+  }
+}
+
+fs.mkdirSync(outputDir, { recursive: true });
+fs.writeFileSync(
+  configPath,
+  JSON.stringify(
+    {
+      ...config,
+      version: 3,
+      experimentalServicesV2: servicesConfig,
+    },
+    null,
+    2
+  )
+);
+`,
+      }
+    : {}),
   'next.config.js': `
 const fs = require('node:fs');
 const path = require('node:path');
 
-const experimentalServices = {
-  web: {
-    type: 'web',
-    root: '.',
-    entrypoint: 'package.json',
-    framework: 'nextjs',
-    mount: '/',
-  },
-  'nitro-api': {
-    type: 'web',
-    root: 'nitro',
-    entrypoint: 'package.json',
-    framework: 'nitro',
-    mount: '/api',
-  },
-};
+const servicesConfig =
+  ${JSON.stringify(servicesConfigKey)} === 'experimentalServicesV2'
+    ? {
+        web: {
+          root: '.',
+          entrypoint: 'package.json',
+          framework: 'nextjs',
+          rewrites: [{ source: '/(.*)', destination: '/$1' }],
+        },
+        'nitro-api': {
+          root: 'nitro',
+          entrypoint: 'package.json',
+          framework: 'nitro',
+          rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+        },
+      }
+    : {
+        web: {
+          type: 'web',
+          root: '.',
+          entrypoint: 'package.json',
+          framework: 'nextjs',
+          mount: '/',
+        },
+        'nitro-api': {
+          type: 'web',
+          root: 'nitro',
+          entrypoint: 'package.json',
+          framework: 'nitro',
+          mount: '/api',
+        },
+      };
 
 function writeExperimentalServicesConfig(projectDir) {
   const outputDir = path.join(projectDir, '.vercel', 'output');
@@ -81,7 +164,7 @@ function writeExperimentalServicesConfig(projectDir) {
       {
         ...config,
         version: 3,
-        ${JSON.stringify(servicesConfigKey)}: experimentalServices,
+        ${JSON.stringify(servicesConfigKey)}: servicesConfig,
       },
       null,
       2
@@ -597,8 +680,8 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'vc-build-next-generated-nitro-service':
       getNextGeneratedNitroServiceFixture('experimentalServices'),
-    'vc-build-next-generated-services-nitro-service':
-      getNextGeneratedNitroServiceFixture('services'),
+    'vc-build-next-generated-experimental-services-v2-nitro-service':
+      getNextGeneratedNitroServiceFixture('experimentalServicesV2'),
     'vercel-json-configuration-overrides': {
       'vercel.json': '{}',
       'package.json': '{}',

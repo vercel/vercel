@@ -30,6 +30,7 @@ import {
   type Config,
   type Cron,
   type ExperimentalServices,
+  type ExperimentalServicesV2,
   type Files,
   type FlagDefinitions,
   type Meta,
@@ -145,6 +146,21 @@ function buildCommandWithGlobalFlags(
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
+interface ExperimentalServiceV2Config {
+  root: string;
+  framework?: string;
+  runtime?: string;
+  entrypoint?: string;
+  installCommand?: string;
+  buildCommand?: string;
+  headers?: Array<{ source?: string }>;
+  redirects?: Array<{ source?: string }>;
+  rewrites?: Array<{ source?: string }>;
+  routes?: Array<{ src?: string }>;
+}
+
+type ExperimentalServicesV2 = Record<string, ExperimentalServiceV2Config>;
+
 interface SerializedBuilder extends Builder {
   error?: any;
   require?: string;
@@ -167,6 +183,7 @@ interface BuildOutputConfig {
   };
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
+  experimentalServicesV2?: ExperimentalServicesV2;
   services?: Service[];
   deploymentId?: string;
 }
@@ -178,6 +195,70 @@ function hasNonEmptyObject(value: unknown): value is Record<string, unknown> {
     !Array.isArray(value) &&
     Object.keys(value).length > 0
   );
+}
+
+function experimentalServicesV2ToExperimentalServices(
+  services: ExperimentalServicesV2
+): ExperimentalServices {
+  const entries = Object.entries(services);
+  return Object.fromEntries(
+    entries.map(([name, config], index) => {
+      const routePrefix =
+        inferExperimentalServicesV2RoutePrefix(config) ??
+        (index === 0 ? '/' : `/_/${name}`);
+      return [
+        name,
+        {
+          type: 'web',
+          root: config.root,
+          framework: config.framework,
+          runtime: config.runtime,
+          entrypoint: config.entrypoint,
+          installCommand: config.installCommand,
+          buildCommand: config.buildCommand,
+          routePrefix,
+        },
+      ];
+    })
+  );
+}
+
+function inferExperimentalServicesV2RoutePrefix(
+  config: ExperimentalServiceV2Config
+): string | undefined {
+  const sources = [
+    ...(config.routes ?? []).map(route => route.src),
+    ...(config.headers ?? []).map(header => header.source),
+    ...(config.redirects ?? []).map(redirect => redirect.source),
+    ...(config.rewrites ?? []).map(rewrite => rewrite.source),
+  ].filter((source): source is string => typeof source === 'string');
+
+  for (const source of sources) {
+    const routePrefix = inferRoutePrefixFromSource(source);
+    if (routePrefix) {
+      return routePrefix;
+    }
+  }
+
+  return undefined;
+}
+
+function inferRoutePrefixFromSource(source: string): string | undefined {
+  if (
+    source === '/' ||
+    source === '/(.*)' ||
+    source === '^/(.*)$' ||
+    source === '^/.*$'
+  ) {
+    return '/';
+  }
+
+  const match = source.match(/^\^?\/([A-Za-z0-9_-]+)/);
+  if (!match) {
+    return undefined;
+  }
+
+  return `/${match[1]}`;
 }
 
 /**
@@ -746,15 +827,25 @@ async function doBuild(
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
   let zeroConfigFallbackRoutes: Route[] = [];
-  let detectedServices: ExperimentalService[] | undefined;
+  let detectedServices: Service[] | undefined;
+  const localConfigWithServicesV2 = localConfig as VercelConfig & {
+    experimentalServicesV2?: ExperimentalServicesV2;
+  };
   const hasExperimentalServicesConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
-  const hasServicesConfiguredInVercelConfig = hasNonEmptyObject(
-    localConfig.services
+  const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
+    localConfigWithServicesV2.experimentalServicesV2
   );
-  let nestServiceOutput = hasServicesConfiguredInVercelConfig;
+  const detectedExperimentalServicesV2FromConfig =
+    hasExperimentalServicesV2ConfiguredInVercelConfig &&
+    localConfigWithServicesV2.experimentalServicesV2
+      ? localConfigWithServicesV2.experimentalServicesV2
+      : undefined;
+  let nestServiceOutput = hasExperimentalServicesV2ConfiguredInVercelConfig;
   let detectedExperimentalServicesConfig: ExperimentalServices | undefined;
+  let detectedExperimentalServicesV2Config: ExperimentalServicesV2 | undefined =
+    detectedExperimentalServicesV2FromConfig;
   let isZeroConfig = false;
 
   if (builds.length > 0) {
@@ -770,6 +861,11 @@ async function doBuild(
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuilders(files, pkg, {
         ...localConfig,
+        ...(detectedExperimentalServicesV2FromConfig && {
+          experimentalServices: experimentalServicesV2ToExperimentalServices(
+            detectedExperimentalServicesV2FromConfig
+          ),
+        }),
         projectSettings,
         ignoreBuildScript: true,
         featHandleMiss: true,
@@ -1429,7 +1525,7 @@ async function doBuild(
           if (buildOutputConfig) {
             if (
               !hasExperimentalServicesConfiguredInVercelConfig &&
-              !hasServicesConfiguredInVercelConfig
+              !hasExperimentalServicesV2ConfiguredInVercelConfig
             ) {
               const outputConfigPath = join(outputDir, 'config.json');
               const outputConfig =
@@ -1445,14 +1541,15 @@ async function doBuild(
                   outputConfig.experimentalServices;
               }
               if (
-                hasNonEmptyObject(outputConfig?.services) &&
-                !hasNonEmptyObject(buildOutputConfig.services)
+                hasNonEmptyObject(outputConfig?.experimentalServicesV2) &&
+                !hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
               ) {
-                buildOutputConfig.services = outputConfig.services;
+                buildOutputConfig.experimentalServicesV2 =
+                  outputConfig.experimentalServicesV2;
               }
               if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
-                hasNonEmptyObject(buildOutputConfig.services)
+                hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
               ) {
                 await fs.writeJSON(buildOutputConfigPath, buildOutputConfig, {
                   spaces: 2,
@@ -1600,7 +1697,7 @@ async function doBuild(
 
   if (
     !hasExperimentalServicesConfiguredInVercelConfig &&
-    !hasServicesConfiguredInVercelConfig
+    !hasExperimentalServicesV2ConfiguredInVercelConfig
   ) {
     const generatedConfigPath = join(outputDir, 'config.json');
     const generatedConfig =
@@ -1609,28 +1706,37 @@ async function doBuild(
       throw generatedConfig;
     }
 
-    const generatedServicesConfig = hasNonEmptyObject(generatedConfig?.services)
-      ? (generatedConfig.services as Services)
-      : undefined;
-    const generatedExperimentalServicesConfig = hasNonEmptyObject(
-      generatedConfig?.experimentalServices
-    )
-      ? generatedConfig.experimentalServices
-      : undefined;
+    const generatedExperimentalServicesV2Config =
+      getGeneratedExperimentalServicesV2Config([
+        generatedConfig,
+        ...buildResults.values(),
+      ]);
+    const generatedExperimentalServicesConfig =
+      getGeneratedExperimentalServicesConfig([
+        generatedConfig,
+        ...buildResults.values(),
+      ]);
 
-    if (generatedServicesConfig || generatedExperimentalServicesConfig) {
-      if (generatedServicesConfig) {
+    if (
+      generatedExperimentalServicesV2Config ||
+      generatedExperimentalServicesConfig
+    ) {
+      if (generatedExperimentalServicesV2Config) {
         nestServiceOutput = true;
       }
       detectedExperimentalServicesConfig = generatedExperimentalServicesConfig;
+      detectedExperimentalServicesV2Config =
+        generatedExperimentalServicesV2Config;
       const generatedBuilders = await span
         .child('vc.detectGeneratedServices')
         .trace(() =>
           detectBuilders(files, pkg, {
             ...localConfig,
-            ...(generatedServicesConfig
-              ? { services: generatedServicesConfig }
-              : { experimentalServices: generatedExperimentalServicesConfig }),
+            experimentalServices: generatedExperimentalServicesV2Config
+              ? experimentalServicesV2ToExperimentalServices(
+                  generatedExperimentalServicesV2Config
+                )
+              : generatedExperimentalServicesConfig,
             projectSettings,
             ignoreBuildScript: true,
             featHandleMiss: true,
@@ -1677,7 +1783,7 @@ async function doBuild(
         if (alreadyExecutedBuild) {
           serviceByBuilder.set(alreadyExecutedBuild, service);
           if (
-            generatedServicesConfig &&
+            generatedExperimentalServicesV2Config &&
             nestServiceOutput &&
             !relocatedGeneratedServiceBuilds.has(alreadyExecutedBuild)
           ) {
@@ -1941,7 +2047,12 @@ async function doBuild(
       Object.keys(detectedExperimentalServicesConfig).length > 0 && {
         experimentalServices: detectedExperimentalServicesConfig,
       }),
+    ...(detectedExperimentalServicesV2Config &&
+      Object.keys(detectedExperimentalServicesV2Config).length > 0 && {
+        experimentalServicesV2: detectedExperimentalServicesV2Config,
+      }),
     ...(!detectedExperimentalServicesConfig &&
+      !detectedExperimentalServicesV2Config &&
       detectedServices &&
       detectedServices.length > 0 && { services: detectedServices }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
@@ -2410,11 +2521,42 @@ async function writeServiceConfigs(
         crons: mergeCrons(existingConfig?.crons, results),
         services: undefined,
         experimentalServices: undefined,
+        experimentalServicesV2: undefined,
       };
 
       await fs.writeJSON(configPath, config, { spaces: 2 });
     })
   );
+}
+
+function getGeneratedExperimentalServicesConfig(
+  buildResults: Iterable<BuildResult | BuildOutputConfig | undefined>
+): ExperimentalServices | undefined {
+  for (const result of buildResults) {
+    if (
+      result &&
+      'experimentalServices' in result &&
+      hasNonEmptyObject(result.experimentalServices)
+    ) {
+      return result.experimentalServices;
+    }
+  }
+  return undefined;
+}
+
+function getGeneratedExperimentalServicesV2Config(
+  buildResults: Iterable<BuildResult | BuildOutputConfig | undefined>
+): ExperimentalServicesV2 | undefined {
+  for (const result of buildResults) {
+    if (
+      result &&
+      'experimentalServicesV2' in result &&
+      hasNonEmptyObject(result.experimentalServicesV2)
+    ) {
+      return result.experimentalServicesV2;
+    }
+  }
+  return undefined;
 }
 
 async function mergeDeploymentId(
@@ -2578,6 +2720,9 @@ function generateNestedServiceRoutes(services: Service[]): Route[] {
 
     return {
       src: scopeRouteSourceToOwnership('^/(.*)$', ownershipGuard),
+      // Temporary routing shim: these `/services/<name>` destinations are
+      // written into `.vercel/output/config.json` until the Build Output API
+      // has a first-class service route primitive.
       dest: `/services/${service.name}/$1`,
     };
   });

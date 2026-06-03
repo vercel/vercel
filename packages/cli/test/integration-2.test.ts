@@ -1328,16 +1328,15 @@ test('[vc build] should build experimentalServices emitted by latest Next.js con
   );
 });
 
-test('[vc build] should nest services emitted by latest Next.js config output', async () => {
+test('[vc build] should nest experimentalServicesV2 emitted by latest Next.js config output', async () => {
   const directory = await setupE2EFixture(
-    'vc-build-next-generated-services-nitro-service'
+    'vc-build-next-generated-experimental-services-v2-nitro-service'
   );
   const output = await execCli(binaryPath, ['build'], {
     cwd: directory,
     env: {
       NEXT_ENABLE_ADAPTER: '1',
       NEXT_TELEMETRY_DISABLED: '1',
-      VERCEL_USE_SERVICES: '1',
     },
   });
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -1348,20 +1347,17 @@ test('[vc build] should nest services emitted by latest Next.js config output', 
   const outputDirectory = path.join(directory, '.vercel/output');
   const config = await fs.readJSON(path.join(outputDirectory, 'config.json'));
   expect(config.experimentalServices).toBeUndefined();
-  expect(config.services).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        name: 'web',
-        framework: 'nextjs',
-        routePrefix: '/',
-      }),
-      expect.objectContaining({
-        name: 'nitro-api',
-        framework: 'nitro',
-        routePrefix: '/api',
-      }),
-    ])
-  );
+  expect(config.services).toBeUndefined();
+  expect(config.experimentalServicesV2).toEqual({
+    web: expect.objectContaining({
+      framework: 'nextjs',
+      rewrites: [{ source: '/(.*)', destination: '/$1' }],
+    }),
+    'nitro-api': expect.objectContaining({
+      framework: 'nitro',
+      rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+    }),
+  });
   expect(config.routes).toEqual(
     expect.arrayContaining([
       {
@@ -1392,6 +1388,7 @@ test('[vc build] should nest services emitted by latest Next.js config output', 
   );
   expect(webConfig.services).toBeUndefined();
   expect(webConfig.experimentalServices).toBeUndefined();
+  expect(webConfig.experimentalServicesV2).toBeUndefined();
   expect(
     await fs.pathExists(path.join(webOutputDirectory, 'static/index.html'))
   ).toBe(true);
@@ -1407,6 +1404,7 @@ test('[vc build] should nest services emitted by latest Next.js config output', 
   );
   expect(nitroConfig.services).toBeUndefined();
   expect(nitroConfig.experimentalServices).toBeUndefined();
+  expect(nitroConfig.experimentalServicesV2).toBeUndefined();
 
   const functionsDirectory = path.join(nitroOutputDirectory, 'functions');
   const nitroChunkPaths = await findFilesNamed(functionsDirectory, 'nitro.mjs');

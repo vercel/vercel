@@ -2623,7 +2623,7 @@ fs.writeFileSync(
     ]);
   });
 
-  it('should nest vercel.json services outputs under service directories', async () => {
+  it('should nest vercel.json experimentalServicesV2 outputs under service directories', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -2639,20 +2639,18 @@ fs.writeFileSync(
       private: true,
     });
     await fs.writeJSON(join(cwd, 'vercel.json'), {
-      services: {
+      experimentalServicesV2: {
         ui: {
-          type: 'web',
           root: '.',
           entrypoint: 'ui.js',
           runtime: 'node',
-          mount: '/',
+          rewrites: [{ source: '/(.*)', destination: '/$1' }],
         },
         backend: {
-          type: 'web',
           root: '.',
           entrypoint: 'backend.js',
           runtime: 'node',
-          mount: '/backend',
+          rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
         },
       },
     });
@@ -2667,25 +2665,24 @@ createServer((_req, res) => {
     await fs.outputFile(join(cwd, 'ui.js'), server);
     await fs.outputFile(join(cwd, 'backend.js'), server);
 
-    const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
-    process.env.VERCEL_USE_SERVICES = '1';
-    try {
-      client.cwd = cwd;
-      const exitCode = await build(client);
-      expect(exitCode).toBe(0);
-    } finally {
-      if (originalServicesEnv === undefined) {
-        delete process.env.VERCEL_USE_SERVICES;
-      } else {
-        process.env.VERCEL_USE_SERVICES = originalServicesEnv;
-      }
-    }
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config.services.map((s: any) => s.name).sort()).toEqual([
-      'backend',
-      'ui',
-    ]);
+    expect(config.services).toBeUndefined();
+    expect(config.experimentalServicesV2).toEqual({
+      backend: expect.objectContaining({
+        root: '.',
+        runtime: 'node',
+        rewrites: [{ source: '/backend/(.*)', destination: '/$1' }],
+      }),
+      ui: expect.objectContaining({
+        root: '.',
+        runtime: 'node',
+        rewrites: [{ source: '/(.*)', destination: '/$1' }],
+      }),
+    });
     expect(config.routes).toEqual(
       expect.arrayContaining([
         {
@@ -2817,7 +2814,7 @@ createServer((_req, res) => {
     ).toBe(true);
   });
 
-  it('should build services discovered from generated Build Output config into service directories', async () => {
+  it('should build experimentalServicesV2 discovered from generated Build Output config into service directories', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');
     await fs.ensureDir(join(cwd, '.vercel'));
@@ -2855,13 +2852,12 @@ writeFileSync(
   JSON.stringify({
     version: 3,
     routes: [{ handle: 'filesystem' }],
-    services: {
+    experimentalServicesV2: {
       ui: {
-        type: 'web',
         root: '.',
         entrypoint: 'package.json',
-        builder: '@vercel/static-build',
-        mount: '/'
+        framework: 'vite',
+        rewrites: [{ source: '/(.*)', destination: '/$1' }]
       }
     }
   }, null, 2)
@@ -2869,29 +2865,20 @@ writeFileSync(
 `
     );
 
-    const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
-    process.env.VERCEL_USE_SERVICES = '1';
-    try {
-      client.cwd = cwd;
-      const exitCode = await build(client);
-      expect(exitCode).toBe(0);
-    } finally {
-      if (originalServicesEnv === undefined) {
-        delete process.env.VERCEL_USE_SERVICES;
-      } else {
-        process.env.VERCEL_USE_SERVICES = originalServicesEnv;
-      }
-    }
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config.services).toEqual([
-      expect.objectContaining({
-        name: 'ui',
-        type: 'web',
-        routePrefix: '/',
-      }),
-    ]);
+    expect(config.services).toBeUndefined();
     expect(config.experimentalServices).toBeUndefined();
+    expect(config.experimentalServicesV2).toEqual({
+      ui: expect.objectContaining({
+        root: '.',
+        framework: 'vite',
+        rewrites: [{ source: '/(.*)', destination: '/$1' }],
+      }),
+    });
     expect(config.routes).toEqual(
       expect.arrayContaining([
         {
