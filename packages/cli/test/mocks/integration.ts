@@ -787,6 +787,15 @@ const autoProvisionResponses: Record<
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
+  // A metadata step that names the unresolved required field, so the CLI can
+  // prompt for it and retry instead of falling back to the browser.
+  metadata_requires_region: {
+    kind: 'metadata',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    fields: [{ key: 'region' }],
+  },
   unknown: {
     kind: 'unknown',
     reason: 'unexpected_error',
@@ -1160,6 +1169,20 @@ export function useAutoProvision(opts?: {
       ) {
         res.status(201);
         res.json(autoProvisionResponses['provisioned']);
+        return;
+      }
+
+      // Simulate a server that needs a region it can't resolve on its own:
+      // return a metadata step until the request supplies `region`, then
+      // provision. Exercises the CLI's prompt-for-metadata + retry flow.
+      if (opts?.responseKey === 'metadata_requires_region') {
+        if (req.body.metadata?.region) {
+          res.status(201);
+          res.json(autoProvisionResponses['provisioned']);
+        } else {
+          res.status(422);
+          res.json(autoProvisionResponses['metadata_requires_region']);
+        }
         return;
       }
 

@@ -228,6 +228,12 @@ export interface AutoProvisionFallback {
   product: AutoProvisionProduct;
   installation?: { id: string };
   installations?: AutoProvisionInstallationInfo[];
+  /**
+   * On a `metadata` step, the required fields the server could not resolve on
+   * its own (e.g. an AWS `vercel-region` field). The CLI prompts for exactly
+   * these and retries instead of falling back to the browser.
+   */
+  fields?: { key: string; message?: string }[];
 }
 
 export type AutoProvisionResult =
