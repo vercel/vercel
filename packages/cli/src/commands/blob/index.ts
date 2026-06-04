@@ -9,12 +9,14 @@ import {
   delSubcommand,
   getSubcommand,
   listSubcommand,
+  presignSubcommand,
   putSubcommand,
   copySubcommand,
   createStoreSubcommand,
   deleteStoreSubcommand,
   getStoreInfoSubcommand,
   listStoresSubcommand,
+  signedTokenSubcommand,
   emptyStoreSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -30,6 +32,8 @@ import removeStore from './store-remove';
 import getStore from './store-get';
 import listStores from './store-list';
 import emptyStore from './store-empty';
+import presign from './presign';
+import signedToken from './signed-token';
 import { printError } from '../../util/error';
 import { findFlagValue, getBlobRWToken } from '../../util/blob/token';
 
@@ -39,6 +43,8 @@ const COMMAND_CONFIG = {
   get: getCommandAliases(getSubcommand),
   del: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
+  'signed-token': getCommandAliases(signedTokenSubcommand),
+  presign: getCommandAliases(presignSubcommand),
   'create-store': getCommandAliases(createStoreSubcommand),
   'delete-store': getCommandAliases(deleteStoreSubcommand),
   'get-store': getCommandAliases(getStoreInfoSubcommand),
@@ -165,6 +171,36 @@ export default async function main(client: Client) {
       }
 
       return copy(client, args, token);
+    case 'signed-token':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(signedTokenSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandSignedToken(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return signedToken(client, args, token);
+    case 'presign':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(presignSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandPresign(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return presign(client, args, token);
     case 'create-store':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
