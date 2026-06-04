@@ -42,6 +42,7 @@ import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
 import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
+import * as NitroCron from './utils/nitro';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
@@ -745,6 +746,13 @@ export const build: BuildV2 = async ({
         debug(`Executing "${buildCommand}"`);
       }
 
+      if (framework?.slug === 'nitro') {
+        const deps = { ...pkg?.dependencies, ...pkg?.devDependencies };
+        const nitroRuntime =
+          'nitropack' in deps ? 'nitropack/runtime' : 'nitro/runtime';
+        await NitroCron.injectNitroTasksRoute(workPath, nitroRuntime);
+      }
+
       try {
         const found =
           typeof buildCommand === 'string'
@@ -776,6 +784,9 @@ export const build: BuildV2 = async ({
         if (framework?.slug === 'gatsby') {
           GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
         }
+        if (framework?.slug === 'nitro') {
+          await NitroCron.cleanupNitroTasksRoute(workPath);
+        }
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
@@ -794,6 +805,13 @@ export const build: BuildV2 = async ({
       const buildOutputPathV3 =
         await BuildOutputV3.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV3) {
+        if (framework?.slug === 'nitro') {
+          await NitroCron.injectNitroCrons(
+            workPath,
+            outputDirPrefix,
+            buildOutputPathV3
+          );
+        }
         // Ensure that `vercel build` is being used for this Deployment
         return BuildOutputV3.createBuildOutput(
           meta,

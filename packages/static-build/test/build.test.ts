@@ -1,6 +1,8 @@
 import path from 'path';
+import { promises as fs } from 'fs';
 import { remove } from 'fs-extra';
 import { build } from '../src';
+import { detectNitroCrons, patchConfigJson } from '../src/utils/nitro';
 
 vi.setConfig({ testTimeout: 2 * 60 * 1000, hookTimeout: 2 * 60 * 1000 });
 
@@ -174,6 +176,82 @@ describe('build()', () => {
       }
       expect(err.message).toEqual(
         `Detected Build Output v3 from the "build" script, but it is not supported for \`vercel dev\`. Please set the Development Command in your Project Settings.`
+      );
+    });
+  });
+
+  describe('Nitro scheduled tasks', () => {
+    const fixture = path.join(__dirname, 'build-fixtures', '17-nitro-cron');
+
+    afterEach(async () => {
+      await remove(path.join(fixture, '.vercel'));
+    });
+
+    it('detectNitroCrons reads scheduledTasks from nitro.config.js', async () => {
+      const crons = await detectNitroCrons(fixture);
+      expect(crons).toEqual(
+        expect.arrayContaining([
+          { path: '/_nitro/tasks/db:cleanup', schedule: '* * * * *' },
+          { path: '/_nitro/tasks/cms:update', schedule: '*/2 * * * *' },
+        ])
+      );
+      expect(crons).toHaveLength(2);
+    });
+
+    it('detectNitroCrons returns empty array when no scheduledTasks', async () => {
+      const crons = await detectNitroCrons(
+        path.join(__dirname, 'build-fixtures', '09-build-output-v3')
+      );
+      expect(crons).toEqual([]);
+    });
+
+    it('patchConfigJson merges crons into existing config.json', async () => {
+      const tmpDir = path.join(fixture, '.vercel', 'output');
+      await fs.mkdir(tmpDir, { recursive: true });
+      await fs.writeFile(
+        path.join(tmpDir, 'config.json'),
+        JSON.stringify({ routes: [] })
+      );
+
+      await patchConfigJson(tmpDir, [
+        { path: '/_nitro/tasks/db:cleanup', schedule: '* * * * *' },
+      ]);
+
+      const result = JSON.parse(
+        await fs.readFile(path.join(tmpDir, 'config.json'), 'utf8')
+      );
+      expect(result.routes).toEqual([]);
+      expect(result.crons).toEqual([
+        { path: '/_nitro/tasks/db:cleanup', schedule: '* * * * *' },
+      ]);
+    });
+
+    it('build() injects Nitro crons into config.json for nitro framework', async () => {
+      const buildResult = await build({
+        files: {},
+        entrypoint: 'package.json',
+        repoRootPath: fixture,
+        workPath: fixture,
+        config: { zeroConfig: true },
+        meta: { skipDownload: true, cliVersion: '0.0.0' },
+      });
+
+      if (!('buildOutputVersion' in buildResult)) {
+        throw new Error('Expected Build Output v3 result');
+      }
+      expect(buildResult.buildOutputVersion).toBe(3);
+
+      const config = JSON.parse(
+        await fs.readFile(
+          path.join(buildResult.buildOutputPath, 'config.json'),
+          'utf8'
+        )
+      );
+      expect(config.crons).toEqual(
+        expect.arrayContaining([
+          { path: '/_nitro/tasks/db:cleanup', schedule: '* * * * *' },
+          { path: '/_nitro/tasks/cms:update', schedule: '*/2 * * * *' },
+        ])
       );
     });
   });
