@@ -1,5 +1,12 @@
 # @vercel/express
 
+## 0.1.98
+
+### Patch Changes
+
+- @vercel/cervel@0.1.15
+- @vercel/node@5.8.12
+
 ## 0.1.97
 
 ### Patch Changes
