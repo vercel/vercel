@@ -144,12 +144,12 @@ export async function detectBuilders(
   useImplicitEnvInjection?: boolean;
 }> {
   const {
-    experimentalServices,
+    experimentalServices: experimentalServicesV1,
     experimentalServicesV2,
     projectSettings = {},
   } = options;
   const { framework } = projectSettings;
-  const configuredServices = experimentalServicesV2 ?? experimentalServices;
+  const configuredServices = experimentalServicesV2 ?? experimentalServicesV1;
   const configuredServicesType = experimentalServicesV2
     ? 'experimentalServicesV2'
     : 'experimentalServices';

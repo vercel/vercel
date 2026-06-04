@@ -752,7 +752,7 @@ async function doBuild(
   const localConfigWithServicesV2 = localConfig as VercelConfig & {
     experimentalServicesV2?: ExperimentalServicesV2;
   };
-  const hasExperimentalServicesConfiguredInVercelConfig = hasNonEmptyObject(
+  const hasExperimentalServicesV1ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.experimentalServices
   );
   const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
@@ -765,9 +765,7 @@ async function doBuild(
       : undefined;
   let nestExperimentalServicesV2Output =
     hasExperimentalServicesV2ConfiguredInVercelConfig;
-  let detectedLegacyExperimentalServicesConfig:
-    | ExperimentalServices
-    | undefined;
+  let detectedExperimentalServicesV1Config: ExperimentalServices | undefined;
   let detectedExperimentalServicesV2Config: ExperimentalServicesV2 | undefined =
     configuredExperimentalServicesV2;
   let detectedExperimentalServicesV2RootRoutes:
@@ -1474,7 +1472,7 @@ async function doBuild(
 
           if (buildOutputConfig) {
             if (
-              !hasExperimentalServicesConfiguredInVercelConfig &&
+              !hasExperimentalServicesV1ConfiguredInVercelConfig &&
               !hasExperimentalServicesV2ConfiguredInVercelConfig
             ) {
               const outputConfigPath = join(outputDir, 'config.json');
@@ -1614,7 +1612,7 @@ async function doBuild(
     );
   };
 
-  const appendLegacyExperimentalServiceRoutes = (
+  const appendExperimentalServicesV1Routes = (
     services: ExperimentalService[]
   ) => {
     const serviceRoutes = generateServicesRoutes(services);
@@ -1649,7 +1647,7 @@ async function doBuild(
   await flushOps();
 
   if (
-    !hasExperimentalServicesConfiguredInVercelConfig &&
+    !hasExperimentalServicesV1ConfiguredInVercelConfig &&
     !hasExperimentalServicesV2ConfiguredInVercelConfig
   ) {
     const generatedConfigPath = join(outputDir, 'config.json');
@@ -1664,21 +1662,21 @@ async function doBuild(
         generatedConfig,
         ...buildResults.values(),
       ]);
-    const generatedLegacyExperimentalServicesConfig =
-      getGeneratedExperimentalServicesConfig([
+    const generatedExperimentalServicesV1Config =
+      getGeneratedExperimentalServicesV1Config([
         generatedConfig,
         ...buildResults.values(),
       ]);
 
     if (
       generatedExperimentalServicesV2Config ||
-      generatedLegacyExperimentalServicesConfig
+      generatedExperimentalServicesV1Config
     ) {
       if (generatedExperimentalServicesV2Config) {
         nestExperimentalServicesV2Output = true;
       }
-      detectedLegacyExperimentalServicesConfig =
-        generatedLegacyExperimentalServicesConfig;
+      detectedExperimentalServicesV1Config =
+        generatedExperimentalServicesV1Config;
       detectedExperimentalServicesV2Config =
         generatedExperimentalServicesV2Config;
       detectedExperimentalServicesV2RootRoutes =
@@ -1696,8 +1694,7 @@ async function doBuild(
                   experimentalServicesV2: generatedExperimentalServicesV2Config,
                 }
               : {
-                  experimentalServices:
-                    generatedLegacyExperimentalServicesConfig,
+                  experimentalServices: generatedExperimentalServicesV1Config,
                 }),
             projectSettings,
             ignoreBuildScript: true,
@@ -1723,7 +1720,7 @@ async function doBuild(
           isExperimentalService
         );
         if (detectedServices.length > 0) {
-          appendLegacyExperimentalServiceRoutes(detectedServices);
+          appendExperimentalServicesV1Routes(detectedServices);
         }
       }
 
@@ -2025,15 +2022,15 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
-    ...(detectedLegacyExperimentalServicesConfig &&
-      Object.keys(detectedLegacyExperimentalServicesConfig).length > 0 && {
-        experimentalServices: detectedLegacyExperimentalServicesConfig,
+    ...(detectedExperimentalServicesV1Config &&
+      Object.keys(detectedExperimentalServicesV1Config).length > 0 && {
+        experimentalServices: detectedExperimentalServicesV1Config,
       }),
     ...(detectedExperimentalServicesV2Config &&
       Object.keys(detectedExperimentalServicesV2Config).length > 0 && {
         experimentalServicesV2: detectedExperimentalServicesV2Config,
       }),
-    ...(!detectedLegacyExperimentalServicesConfig &&
+    ...(!detectedExperimentalServicesV1Config &&
       detectedServices &&
       detectedServices.length > 0 && { services: detectedServices }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
@@ -2572,7 +2569,7 @@ function getExperimentalServicesV2Routes(
   return routesResult.routes ?? [];
 }
 
-function getGeneratedExperimentalServicesConfig(
+function getGeneratedExperimentalServicesV1Config(
   buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServices | undefined {
   for (const result of buildResults) {

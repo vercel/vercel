@@ -192,18 +192,18 @@ export async function detectServices(
     });
   }
 
-  const configuredServices = hasProvidedConfiguredServices
-    ? providedConfiguredServices
+  const experimentalServicesV1 = hasProvidedConfiguredServices
+    ? (providedConfiguredServices as ExperimentalServices)
     : vercelConfig?.experimentalServices;
-  const hasConfiguredServices =
-    configuredServices && Object.keys(configuredServices).length > 0;
+  const hasExperimentalServicesV1 =
+    experimentalServicesV1 && Object.keys(experimentalServicesV1).length > 0;
 
   // Try auto-detection of services.
   // Priority: Railway > Render > Procfile > blessed layouts.
   // Any hard error (.errors) from detection will result into
   // exit from detection and return of the error
   // back to the user
-  if (!hasConfiguredServices) {
+  if (!hasExperimentalServicesV1) {
     const detectors: Array<{
       detect: (options: {
         fs: DetectorFilesystem;
@@ -241,7 +241,7 @@ export async function detectServices(
 
   // Resolve configured services from vercel.json
   const result = await resolveAllConfiguredServices(
-    configuredServices,
+    experimentalServicesV1,
     scopedFs,
     'configured'
   );
