@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
@@ -257,18 +257,31 @@ describe('autoInstallVercelPlugin', () => {
 describe('projectHasUsedClaudeCode', () => {
   let fakeHome: string;
   let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
 
   beforeEach(async () => {
     fakeHome = await mkdtemp(join(tmpdir(), 'vercel-cli-cc-home-'));
     await mkdir(join(fakeHome, '.claude', 'projects'), { recursive: true });
     originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
+    // os.homedir() reads HOME on POSIX and USERPROFILE on Windows.
     process.env.HOME = fakeHome;
+    process.env.USERPROFILE = fakeHome;
   });
 
   afterEach(async () => {
-    process.env.HOME = originalHome;
+    restoreEnv('HOME', originalHome);
+    restoreEnv('USERPROFILE', originalUserProfile);
     await rm(fakeHome, { recursive: true, force: true });
   });
+
+  function restoreEnv(key: string, value: string | undefined): void {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
 
   async function recordProject(projectPath: string): Promise<void> {
     await mkdir(
@@ -276,7 +289,7 @@ describe('projectHasUsedClaudeCode', () => {
         fakeHome,
         '.claude',
         'projects',
-        projectPath.replace(/[^A-Za-z0-9]/g, '-')
+        resolve(projectPath).replace(/[^A-Za-z0-9]/g, '-')
       ),
       { recursive: true }
     );
