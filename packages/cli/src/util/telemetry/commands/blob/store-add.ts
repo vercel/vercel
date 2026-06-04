@@ -33,6 +33,15 @@ export class BlobAddStoreTelemetryClient
     }
   }
 
+  trackCliOptionProject(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'project',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');
