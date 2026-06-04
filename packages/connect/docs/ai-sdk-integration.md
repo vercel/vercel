@@ -1,7 +1,7 @@
-# Native MCP and AI SDK integration for `@vercel/connect`
+# Native AI SDK integration for `@vercel/connect`
 
 **Status:** proposal
-**Target release:** `@vercel/connect@0.2` (subpaths: `@vercel/connect/mcp` in V1; `@vercel/connect/ai-sdk` in V2)
+**Target release:** `@vercel/connect@0.2` — primary subpath `@vercel/connect/ai-sdk` (the AI SDK audience is the headline), with `@vercel/connect/mcp` shipping alongside it in V1 as an accurate-to-scope home for non-AI-SDK MCP clients (Mastra, official MCP TS SDK, etc.). V2 extends `/ai-sdk` with HITL glue.
 **Prerequisites:** `@ai-sdk/mcp` shipped with `OAuthClientProvider` (already in `vercel/ai`, see [`packages/mcp/src/tool/oauth.ts`](https://github.com/vercel/ai/blob/main/packages/mcp/src/tool/oauth.ts)); `streamText`/`generateText` `toolApproval` configuration (added in AI SDK v7, see [`packages/ai/src/generate-text/stream-text.ts`](https://github.com/vercel/ai/blob/main/packages/ai/src/generate-text/stream-text.ts)); MCP-spec `OAuthClientProvider` interface (in [`modelcontextprotocol/typescript-sdk`](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/packages/client/src/client/auth.ts), which the AI SDK borrows from).
 
 ### AI SDK version compatibility
@@ -9,8 +9,8 @@
 | Phase | `ai` peer dep | `@ai-sdk/mcp` peer dep | Notes |
 | ----- | ------------- | ---------------------- | ----- |
 | V0 (docs)  | `^6 \|\| ^7` | `^1 \|\| ^2`           | Bearer-header pattern; just calls `getToken()` plus `createMCPClient({ transport: { headers } })`. Works on both v6 and v7. |
-| V1 (`/mcp` adapter) | `^6 \|\| ^7` | `^1 \|\| ^2` | `OAuthClientProvider` interface is MCP-spec and is exported by both `@ai-sdk/mcp@1.x` (paired with `ai@6`) and `@ai-sdk/mcp@2.x` (paired with `ai@7`). Single adapter implementation should satisfy both. |
-| V2 (`/ai-sdk` HITL) | `^7` only    | `^2` only              | `toolApproval` is a **v7-only primitive**. v6's per-tool `needsApproval` was deprecated in v7's migration guide. We don't attempt to backport. |
+| V1 (`/ai-sdk` + `/mcp` adapter) | `^6 \|\| ^7` | `^1 \|\| ^2` | `connectAuthProvider` ships at both subpaths in V1. `/ai-sdk` is the primary surface for the AI SDK audience; `/mcp` re-exports the same function for non-AI-SDK MCP clients. The `OAuthClientProvider` interface is identical between `@ai-sdk/mcp@1.x` (paired with `ai@6`) and `@ai-sdk/mcp@2.x` (paired with `ai@7`) — see verification subsection — so a single implementation satisfies both. |
+| V2 (`/ai-sdk` HITL) | `^7` only    | `^2` only              | `withConsentApproval` lands at `/ai-sdk` only — this layer is intentionally AI-SDK-specific. `toolApproval` is a **v7-only primitive**. v6's per-tool `needsApproval` was deprecated in v7's migration guide. We don't attempt to backport. |
 
 **v7 release status as of 2026-06-03:** `latest: 6.0.196`, `beta: 7.0.0-beta.116`, `canary: 7.0.0-canary.162`. v7 is in active beta but has not promoted to `latest`. V2 implicitly waits on v7 stable. V0 and V1 can ship today against v6 `latest` and forward-compat with v7 betas.
 
@@ -23,29 +23,34 @@ Two viable shapes for a Connect + AI SDK integration:
 
 The open question on the adapter shape has been interactivity — can the integration support an interactive consent flow when a tool call requires a user grant that hasn't been issued yet? The AI SDK ships `toolApproval` configuration on `streamText`/`generateText` (already in tree), which gives us the HITL primitive we need; this doc plans the work in three releasable slices that take advantage of it.
 
-## Scope: MCP-spec primitive, AI-SDK glue on top
+## Scope: AI SDK first, MCP-spec compatibility for free
 
-A subtle but important framing decision: the headline integration is "Connect tokens for MCP tools," not "Connect for the AI SDK." The MCP `OAuthClientProvider` interface is an MCP-spec contract — the AI SDK's `@ai-sdk/mcp` package borrows it from [`modelcontextprotocol/typescript-sdk`](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/packages/client/src/client/auth.ts), and other MCP clients (e.g. Mastra's `MCPOAuthClientProvider`) implement the same shape.
+The headline integration is **AI SDK**. That's the audience we're chasing: Next.js + AI SDK developers building agents who today have to glue OAuth + token storage + token refresh + MCP plumbing together by hand. Every doc, recipe, example, and import path in this plan is shaped around making *their* experience one-line.
 
-That means a single adapter implementation plugs into all of:
+The lucky shape of the problem is that the AI SDK's `@ai-sdk/mcp` package authenticates MCP servers through an MCP-spec `OAuthClientProvider` interface — borrowed from [`modelcontextprotocol/typescript-sdk`](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/packages/client/src/client/auth.ts) and shared with other MCP clients (Mastra's `MCPOAuthClientProvider`, the official MCP TS SDK's `Client.connect(transport)`, etc.). So the same adapter that powers the AI SDK integration **also** plugs into any other MCP client without a second implementation. That's a bonus, not the headline — but it's a real one, and we'd be silly to give up the naming that captures it.
 
-- AI SDK's `@ai-sdk/mcp` (`createMCPClient({ transport: { authProvider } })`)
-- The official MCP TS SDK (`Client.connect(transport)` with `authProvider`)
-- Mastra's MCP client and any other client built on the MCP spec
+### Subpath split
 
-So the V1 deliverable lives at `@vercel/connect/mcp`, not `@vercel/connect/ai-sdk`. The naming matters because subpaths are forever, and framing the primitive as MCP-spec doubles its addressable surface for free.
+| Subpath                       | Audience                                          | Ships  | What's there                                                                                                |
+| ----------------------------- | ------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| `@vercel/connect/ai-sdk`      | **AI SDK users (primary)**                        | V1     | `connectAuthProvider` + `ConsentRequiredError` + `ConsentChallenge` (re-exported from `/mcp`).               |
+| `@vercel/connect/ai-sdk`      | **AI SDK users (primary)**                        | V2     | Adds `withConsentApproval` for `toolApproval`-based HITL + future `<ConnectConsentBoundary>` React glue.    |
+| `@vercel/connect/mcp`         | Non-AI-SDK MCP clients (Mastra, official MCP SDK) | V1     | Canonical home for `connectAuthProvider`. Same function the `/ai-sdk` subpath re-exports.                    |
 
-The AI-SDK-specific glue — `withConsentApproval`, future React components — is a separate, thinner layer that lives at `@vercel/connect/ai-sdk` in V2.
+Every AI SDK doc, cookbook recipe, and example imports from `@vercel/connect/ai-sdk` — that's the only path AI SDK readers ever need to see. The `/mcp` subpath is a quiet second door for MCP-spec consumers; its existence is what lets "MCP is nice too" stay true without polluting the AI SDK surface.
+
+The split is essentially free at implementation time (one extra one-line re-export) and locks in audience-aligned naming. Subpaths are forever; doing this now avoids a future "should we have called it `/ai-sdk`?" rename.
 
 ### Use-case → entry-point map
 
 | Use case                                                                            | Entry point                                                       | When it ships |
 | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------- |
-| Any MCP client (AI SDK, official MCP SDK, Mastra) + `OAuthClientProvider`           | `connectAuthProvider` from `@vercel/connect/mcp`                  | V1            |
+| **AI SDK `createMCPClient` + `streamText`/`generateText`**                          | `connectAuthProvider` from `@vercel/connect/ai-sdk`               | V1            |
+| **AI SDK `streamText`/`generateText` HITL tool approval**                           | `withConsentApproval` from `@vercel/connect/ai-sdk`               | V2            |
 | AI SDK custom `tool({ execute })` that calls a provider API directly                | `getToken()` from `@vercel/connect` root — already there          | Today         |
+| React consent-prompt UI in an AI SDK chat                                           | `<ConnectConsentBoundary>` from `@vercel/connect/ai-sdk`          | V3 (deferred) |
+| Mastra / official MCP TS SDK / any other MCP client with an `OAuthClientProvider` slot | `connectAuthProvider` from `@vercel/connect/mcp` (same impl)   | V1            |
 | Server cron, webhook, background job needing a provider bearer token                | `getToken()` from `@vercel/connect` root — already there          | Today         |
-| AI SDK `streamText`/`generateText` HITL tool approval                               | `withConsentApproval` from `@vercel/connect/ai-sdk`               | V2            |
-| React consent-prompt UI                                                             | `<ConnectConsentBoundary>` from `@vercel/connect/ai-sdk`          | V3 (deferred) |
 | Bearer-token `fetch` wrapper that auto-translates consent errors                    | *No subpath* — root `getToken()` is enough; revisit if signal     | Deferred      |
 
 ### Interface drift between AI SDK and official MCP SDK
@@ -92,7 +97,7 @@ The `@vercel/connect` package already ships parallel adapters for adjacent ecosy
 
 The Better Auth and Auth.js adapters treat Connect as an **OAuth IdP** — users sign in *through* Connect, which acts as the upstream authorization server. That model lives at `@vercel/connect/betterauth` and `@vercel/connect/authjs`.
 
-This document is about the second model: **Connect as a per-user token broker for MCP servers**. The host app already knows who the user is (Clerk, NextAuth, custom), and the AI SDK needs a bearer token to put in the MCP `Authorization` header. That's what `@vercel/connect/mcp` would provide (with optional AI-SDK-specific glue at `@vercel/connect/ai-sdk` for tool-approval and React UI).
+This document is about the second model: **Connect as a per-user token broker for MCP servers, shaped around the AI SDK**. The host app already knows who the user is (Clerk, NextAuth, custom), and the AI SDK needs a bearer token to put in the MCP `Authorization` header. That's what `@vercel/connect/ai-sdk` provides (with the canonical `OAuthClientProvider` impl living at `@vercel/connect/mcp` so non-AI-SDK MCP clients get it too). The V2 layer at `@vercel/connect/ai-sdk` adds AI-SDK-specific glue for `toolApproval` and React UI.
 
 The two models compose — an app can use Better Auth to sign users in *and* this adapter to mint MCP bearer tokens for the same user.
 
@@ -169,8 +174,8 @@ On a flagged tool call, the SDK emits a tool-approval chunk through the stream a
 
 Two new subpath exports, split by audience:
 
-- **`@vercel/connect/mcp`** (V1): `connectAuthProvider` (implements MCP-spec `OAuthClientProvider` by delegating to `getToken` and `startAuthorization`) and the supporting `ConsentRequiredError` / `ConsentChallenge` types. MCP-spec; works with any MCP client.
-- **`@vercel/connect/ai-sdk`** (V2): `withConsentApproval` (auto-wraps tools with `toolApproval: 'user-approval'` for the AI SDK's HITL flow) and the eventual `<ConnectConsentBoundary>` React component. AI-SDK-specific.
+- **`@vercel/connect/ai-sdk`** (V1 primary surface, extended in V2): AI SDK developers' entry point. In V1, re-exports `connectAuthProvider` + `ConsentRequiredError` + `ConsentChallenge` so AI SDK users only need to know one import path. In V2, adds `withConsentApproval` (auto-wraps tools with `toolApproval: 'user-approval'` for the AI SDK's HITL flow) and eventually `<ConnectConsentBoundary>` (V3 React glue).
+- **`@vercel/connect/mcp`** (V1): canonical home for `connectAuthProvider` — implements MCP-spec `OAuthClientProvider` by delegating to `getToken` and `startAuthorization`. Same function the `/ai-sdk` subpath re-exports; exists at this path so MCP-only consumers (Mastra, official MCP TS SDK, etc.) can import from a name that accurately reflects what the function is.
 
 ## V0: Docs-only (ship now)
 
@@ -213,11 +218,14 @@ Limitations V0 doesn't address (these are why V1 exists):
 - Consent gating runs upfront; a tool call cannot trigger consent mid-stream.
 - The consumer writes the `try { … } catch (UserAuthorizationRequiredError)` boilerplate per integration.
 
-## V1: `@vercel/connect/mcp`
+## V1: `@vercel/connect/ai-sdk` (primary) + `@vercel/connect/mcp`
 
-A subpath export with one function, mirroring the shape of the existing `@vercel/connect/ash`, `/betterauth`, and `/authjs` subpaths.
+Two subpath exports backed by one implementation, mirroring the shape of the existing `@vercel/connect/ash`, `/betterauth`, and `/authjs` subpaths.
 
-The returned `OAuthClientProvider` works with any MCP client that consumes the MCP-spec interface — `@ai-sdk/mcp`, the official `@modelcontextprotocol/typescript-sdk`, Mastra's MCP client, etc. The AI SDK is the primary documented integration but not the only one.
+- **`@vercel/connect/ai-sdk`** is the only path AI SDK docs, recipes, and examples reference. It re-exports `connectAuthProvider`, `ConsentRequiredError`, and `ConsentChallenge` from `/mcp`.
+- **`@vercel/connect/mcp`** owns the canonical implementation. Its existence as a separately-named subpath is what lets Mastra, the official `@modelcontextprotocol/typescript-sdk`, and any other MCP-spec client import from an accurate path. AI SDK users never need to know `/mcp` exists.
+
+Same returned object in both cases — an `OAuthClientProvider` that works with any MCP client consuming the MCP-spec interface.
 
 ### Public API
 
@@ -266,7 +274,7 @@ export function connectAuthProvider(
 
 ```ts
 import { createMCPClient } from '@ai-sdk/mcp';
-import { connectAuthProvider, ConsentRequiredError } from '@vercel/connect/mcp';
+import { connectAuthProvider, ConsentRequiredError } from '@vercel/connect/ai-sdk';
 import { streamText, stepCountIs } from 'ai';
 import { redirect } from 'next/navigation';
 
@@ -346,7 +354,7 @@ Recommendation for the docs:
 
 ## V2: Interactive consent + tool approval (HITL)
 
-V2 introduces `@vercel/connect/ai-sdk` — a separate, thinner subpath for AI-SDK-specific glue. The MCP auth provider stays at `@vercel/connect/mcp` because nothing about it is AI-SDK-specific; `withConsentApproval` and the future React components live here because they're shaped around AI SDK's `toolApproval` configuration and chat UI primitives.
+V2 extends `@vercel/connect/ai-sdk` with AI-SDK-specific glue. The canonical `connectAuthProvider` impl stays at `@vercel/connect/mcp` (and is still re-exported from `/ai-sdk`); `withConsentApproval` and the future React components land here because they're shaped around AI SDK's `toolApproval` configuration and chat UI primitives — they have no meaning for non-AI-SDK MCP clients.
 
 The integration loses a lot of value if it can't gate sensitive actions interactively. AI SDK already ships the primitive — `toolApproval: { toolName: 'user-approval' }` on `streamText`/`generateText` — so the work here is just to integrate it ergonomically.
 
@@ -446,7 +454,7 @@ A short "Authentication" subsection (or extension of the existing one if there i
 
 - Static bearer in `headers` — for service-to-service tokens.
 - Custom `OAuthClientProvider` — for apps with existing OAuth infrastructure.
-- **`@vercel/connect/mcp`'s `connectAuthProvider`** — for apps using Vercel Connect to broker per-user OAuth grants. Single-paragraph mention + link to the cookbook recipe. Do *not* duplicate the recipe.
+- **`@vercel/connect/ai-sdk`'s `connectAuthProvider`** — for apps using Vercel Connect to broker per-user OAuth grants. Single-paragraph mention + link to the cookbook recipe. Do *not* duplicate the recipe. (The same function is also exported from `@vercel/connect/mcp` for non-AI-SDK MCP clients; the AI SDK page only mentions `/ai-sdk`.)
 
 This is the cross-link that turns the recipe from "hidden cookbook" into "discoverable from the canonical MCP reference."
 
@@ -454,7 +462,7 @@ This is the cross-link that turns the recipe from "hidden cookbook" into "discov
 
 A runnable example app mirroring the cookbook recipe end-to-end. Useful for:
 
-- Smoke-testing every release of `@vercel/connect/mcp` (and later `/ai-sdk`) against the latest `vercel/ai` `main`.
+- Smoke-testing every release of `@vercel/connect/ai-sdk` (and the underlying `/mcp` impl) against the latest `vercel/ai` `main`.
 - Letting readers `git clone` and run instead of copy-pasting from MDX.
 - Catching `OAuthClientProvider` interface drift early (if the AI SDK adds a method, the example fails to build).
 
@@ -483,16 +491,16 @@ This pattern is well-established in the repo (`examples/mcp/`, `examples/next-ag
 
 The artifacts span three repos. To avoid broken cross-links during rollout:
 
-| Repo                                    | What ships                                                                                                | Depends on                                                       |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `vercel/vercel` (`packages/connect`)    | `@vercel/connect/mcp` (V1) and `@vercel/connect/ai-sdk` (V2) subpath exports + Changeset                  | Nothing — independent                                            |
-| `vercel/vercel-front` (`vercel-docs`)   | `/docs/connect/guides/use-with-ai-sdk` + `/docs/connect/examples/ai-agent-with-linear`                    | Either the V0 bearer-header pattern (no SDK dep) or V1 published |
-| `vercel/ai` (`content/` + `examples/`)  | Cookbook recipe, MCP docs cross-link, example app                                                         | V1 published to npm                                              |
+| Repo                                    | What ships                                                                                                                              | Depends on                                                       |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `vercel/vercel` (`packages/connect`)    | V1: both `@vercel/connect/ai-sdk` (primary) and `@vercel/connect/mcp` subpath exports + Changeset. V2: extends `/ai-sdk` with HITL glue. | Nothing — independent                                            |
+| `vercel/vercel-front` (`vercel-docs`)   | `/docs/connect/guides/use-with-ai-sdk` + `/docs/connect/examples/ai-agent-with-linear`                                                  | Either the V0 bearer-header pattern (no SDK dep) or V1 published |
+| `vercel/ai` (`content/` + `examples/`)  | Cookbook recipe, MCP docs cross-link, example app                                                                                       | V1 published to npm                                              |
 
 Sequencing:
 
 1. **Land V0** in `vercel-docs` first — pure docs, no dependencies, ships the headline integration story today.
-2. **Land V1** (`@vercel/connect/mcp` subpath + Changeset) in `vercel/vercel` and publish to npm.
+2. **Land V1** (`@vercel/connect/ai-sdk` primary subpath + `@vercel/connect/mcp` canonical-impl subpath + Changeset) in `vercel/vercel` and publish to npm.
 3. **Update V0 guide** in `vercel-docs` to feature the `authProvider` variant as the recommended path; keep the V0 bearer-header pattern as a "minimal / no extra deps" fallback.
 4. **Open AI SDK PR** simultaneously: cookbook recipe + MCP docs cross-link + example app. Cookbook recipe is the discovery anchor; the rest are supporting.
 5. **Land V2** (`withConsentApproval` + HITL recipe additions) in a second round across `vercel/vercel` → `vercel-docs` → `vercel/ai`.
@@ -554,24 +562,25 @@ Each phase ships across all repos it touches in the same week to keep cross-link
 | `vercel/vercel-front` | `/docs/connect/examples/ai-agent-with-linear` (runnable Linear example using V0 pattern)                                   |
 | `vercel/ai`           | *(none — V0 lives in Connect docs only; SDK consumers can already do it without our blessing)*                             |
 
-### Phase V1 — `@vercel/connect/mcp` adapter
+### Phase V1 — `@vercel/connect/ai-sdk` (primary) + `@vercel/connect/mcp` adapter
 
-| Repo                  | Artifact                                                                                                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `vercel/vercel`       | `@vercel/connect/mcp` subpath export with `connectAuthProvider` + `ConsentRequiredError` + `ConsentChallenge` types        |
-| `vercel/vercel`       | Peer dependency on `@ai-sdk/mcp@^1 \|\| ^2` (covers AI SDK v6 + v7); Changeset; version bump to `@vercel/connect@0.2`     |
-| `vercel/vercel`       | TypeScript compatibility test verifying the adapter satisfies both AI SDK's and official MCP SDK's `OAuthClientProvider` shapes |
-| `vercel/vercel`       | Unit tests for `tokens()`, `redirectToAuthorization`, `invalidateCredentials`; integration tests against a mock MCP server |
-| `vercel/vercel-front` | Update `/docs/connect/guides/use-with-ai-sdk` to feature the `authProvider` variant as primary; keep V0 as minimal fallback|
-| `vercel/ai`           | Cookbook recipe `content/cookbook/01-next/74-mcp-tools-with-vercel-connect.mdx`                                            |
-| `vercel/ai`           | Cross-link addition in `content/docs/03-ai-sdk-core/17-mcp-apps.mdx` (Authentication subsection)                           |
-| `vercel/ai`           | Example app `examples/next-mcp-vercel-connect/` mirroring the recipe                                                       |
+| Repo                  | Artifact                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `vercel/vercel`       | `@vercel/connect/mcp` subpath export — canonical impl of `connectAuthProvider` + `ConsentRequiredError` + `ConsentChallenge` types                                       |
+| `vercel/vercel`       | `@vercel/connect/ai-sdk` subpath export — re-exports `connectAuthProvider`, `ConsentRequiredError`, `ConsentChallenge` from `/mcp`. Primary surface for AI SDK consumers. |
+| `vercel/vercel`       | Peer dependency on `@ai-sdk/mcp@^1 \|\| ^2` (covers AI SDK v6 + v7); Changeset; version bump to `@vercel/connect@0.2`                                                   |
+| `vercel/vercel`       | TypeScript compatibility test verifying the adapter satisfies both AI SDK's and official MCP SDK's `OAuthClientProvider` shapes                                          |
+| `vercel/vercel`       | Unit tests for `tokens()`, `redirectToAuthorization`, `invalidateCredentials`; integration tests against a mock MCP server                                               |
+| `vercel/vercel-front` | Update `/docs/connect/guides/use-with-ai-sdk` to feature the `authProvider` variant (importing from `@vercel/connect/ai-sdk`) as primary; keep V0 as minimal fallback    |
+| `vercel/ai`           | Cookbook recipe `content/cookbook/01-next/74-mcp-tools-with-vercel-connect.mdx` (imports from `@vercel/connect/ai-sdk`)                                                  |
+| `vercel/ai`           | Cross-link addition in `content/docs/03-ai-sdk-core/17-mcp-apps.mdx` (Authentication subsection, points at `@vercel/connect/ai-sdk`)                                     |
+| `vercel/ai`           | Example app `examples/next-mcp-vercel-connect/` mirroring the recipe                                                                                                     |
 
 ### Phase V2 — `withConsentApproval` + HITL polish
 
 | Repo                  | Artifact                                                                                                                   |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `vercel/vercel`       | New `@vercel/connect/ai-sdk` subpath: `withConsentApproval` helper with prefix/approve filtering + `approvalConfig` builder |
+| `vercel/vercel`       | Extend `@vercel/connect/ai-sdk` (already shipping in V1): add `withConsentApproval` helper with prefix/approve filtering + `approvalConfig` builder |
 | `vercel/vercel`       | Tests against `streamText({ toolApproval })` for approval and denial paths                                                 |
 | `vercel/vercel-front` | New page `/docs/connect/guides/handle-tool-approval` walking through the chat-turn-boundary pattern and function-timeout map |
 | `vercel/vercel-front` | Update Linear example to include an approval-gated tool call                                                                |
@@ -590,11 +599,15 @@ Each phase ships across all repos it touches in the same week to keep cross-link
 This integration is what makes Connect *concrete* for the AI SDK audience. Today, a Next.js + AI SDK developer building an agent has to assemble OAuth + token storage + token refresh + MCP plumbing from four libraries. With this adapter, the entire stack collapses to:
 
 ```ts
-authProvider: connectAuthProvider('oauth/linear', { subject: { type: 'user', id: userId } })
+import { connectAuthProvider } from '@vercel/connect/ai-sdk';
+
+authProvider: connectAuthProvider('oauth/linear', { subject: { type: 'user', id: userId } });
 ```
 
 That's the same "kill the boilerplate" win the AI SDK is known for, applied to OAuth — and it gives Connect a headline demo for the exact audience the AI SDK already owns.
 
-V0 (the docs-only path) costs essentially nothing and unblocks the audience today. V1 is the long-term ergonomic surface. V2 closes the interactive-flow gap by leaning on the AI SDK's existing `toolApproval` primitive, so we don't have to invent a new HITL mechanism.
+V0 (the docs-only path) costs essentially nothing and unblocks the AI SDK audience today. V1 is the long-term ergonomic surface, shipped at `@vercel/connect/ai-sdk` so the import path reflects the headline use case. V2 closes the interactive-flow gap by leaning on the AI SDK's existing `toolApproval` primitive, so we don't have to invent a new HITL mechanism.
 
-The `vercel/ai` content plan — cookbook recipe + MCP reference cross-link + example app — is what makes the integration discoverable from the AI SDK audience, not just from Connect's existing audience. Without that, V1's adapter ships into the void; with it, the integration shows up on the canonical surface where developers are already searching "ai sdk mcp oauth."
+The `vercel/ai` content plan — cookbook recipe + MCP reference cross-link + example app, all referencing `@vercel/connect/ai-sdk` — is what makes the integration discoverable from the AI SDK audience, not just from Connect's existing audience. Without that, V1's adapter ships into the void; with it, the integration shows up on the canonical surface where developers are already searching "ai sdk mcp oauth."
+
+The MCP-spec compatibility (`@vercel/connect/mcp`) is a real bonus on top: the same one-line collapse works for Mastra users and anyone else on the MCP-spec interface, with zero extra implementation work. We claim that surface without distracting from the AI SDK headline.
