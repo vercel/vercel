@@ -2,7 +2,17 @@
 
 **Status:** proposal
 **Target release:** `@vercel/connect@0.2` (subpaths: `@vercel/connect/mcp` in V1; `@vercel/connect/ai-sdk` in V2)
-**Prerequisites:** `@ai-sdk/mcp` shipped with `OAuthClientProvider` (already in `vercel/ai`, see [`packages/mcp/src/tool/oauth.ts`](https://github.com/vercel/ai/blob/main/packages/mcp/src/tool/oauth.ts)); `streamText`/`generateText` `toolApproval` configuration (already in `vercel/ai`, see [`packages/ai/src/generate-text/stream-text.ts`](https://github.com/vercel/ai/blob/main/packages/ai/src/generate-text/stream-text.ts)); MCP-spec `OAuthClientProvider` interface (in [`modelcontextprotocol/typescript-sdk`](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/packages/client/src/client/auth.ts), which the AI SDK borrows from).
+**Prerequisites:** `@ai-sdk/mcp` shipped with `OAuthClientProvider` (already in `vercel/ai`, see [`packages/mcp/src/tool/oauth.ts`](https://github.com/vercel/ai/blob/main/packages/mcp/src/tool/oauth.ts)); `streamText`/`generateText` `toolApproval` configuration (added in AI SDK v7, see [`packages/ai/src/generate-text/stream-text.ts`](https://github.com/vercel/ai/blob/main/packages/ai/src/generate-text/stream-text.ts)); MCP-spec `OAuthClientProvider` interface (in [`modelcontextprotocol/typescript-sdk`](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/packages/client/src/client/auth.ts), which the AI SDK borrows from).
+
+### AI SDK version compatibility
+
+| Phase | `ai` peer dep | `@ai-sdk/mcp` peer dep | Notes |
+| ----- | ------------- | ---------------------- | ----- |
+| V0 (docs)  | `^6 \|\| ^7` | `^1 \|\| ^2`           | Bearer-header pattern; just calls `getToken()` plus `createMCPClient({ transport: { headers } })`. Works on both v6 and v7. |
+| V1 (`/mcp` adapter) | `^6 \|\| ^7` | `^1 \|\| ^2` | `OAuthClientProvider` interface is MCP-spec and is exported by both `@ai-sdk/mcp@1.x` (paired with `ai@6`) and `@ai-sdk/mcp@2.x` (paired with `ai@7`). Single adapter implementation should satisfy both. |
+| V2 (`/ai-sdk` HITL) | `^7` only    | `^2` only              | `toolApproval` is a **v7-only primitive**. v6's per-tool `needsApproval` was deprecated in v7's migration guide. We don't attempt to backport. |
+
+**v7 release status as of 2026-06-03:** `latest: 6.0.196`, `beta: 7.0.0-beta.116`, `canary: 7.0.0-canary.162`. v7 is in active beta but has not promoted to `latest`. V2 implicitly waits on v7 stable. V0 and V1 can ship today against v6 `latest` and forward-compat with v7 betas.
 
 ## Background
 
@@ -531,7 +541,7 @@ Each phase ships across all repos it touches in the same week to keep cross-link
 | Repo                  | Artifact                                                                                                                   |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `vercel/vercel`       | `@vercel/connect/mcp` subpath export with `connectAuthProvider` + `ConsentRequiredError` + `ConsentChallenge` types        |
-| `vercel/vercel`       | Peer dependency on `@ai-sdk/mcp` (and optionally the official MCP TS SDK); Changeset; version bump to `@vercel/connect@0.2`|
+| `vercel/vercel`       | Peer dependency on `@ai-sdk/mcp@^1 \|\| ^2` (covers AI SDK v6 + v7); Changeset; version bump to `@vercel/connect@0.2`     |
 | `vercel/vercel`       | TypeScript compatibility test verifying the adapter satisfies both AI SDK's and official MCP SDK's `OAuthClientProvider` shapes |
 | `vercel/vercel`       | Unit tests for `tokens()`, `redirectToAuthorization`, `invalidateCredentials`; integration tests against a mock MCP server |
 | `vercel/vercel-front` | Update `/docs/connect/guides/use-with-ai-sdk` to feature the `authProvider` variant as primary; keep V0 as minimal fallback|
