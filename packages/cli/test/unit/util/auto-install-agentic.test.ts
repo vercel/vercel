@@ -1,7 +1,7 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { join, resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import {
   autoInstallVercelPlugin,
@@ -10,6 +10,7 @@ import {
   buildClaudePluginStatus,
   comparePluginVersions,
   getPluginTargetForAgent,
+  projectHasUsedClaudeCode,
 } from '../../../src/util/agent/auto-install-agentic';
 import { client } from '../../mocks/client';
 
@@ -250,5 +251,75 @@ describe('autoInstallVercelPlugin', () => {
     } finally {
       await rm(configDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('projectHasUsedClaudeCode', () => {
+  let fakeHome: string;
+  let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
+
+  beforeEach(async () => {
+    fakeHome = await mkdtemp(join(tmpdir(), 'vercel-cli-cc-home-'));
+    await mkdir(join(fakeHome, '.claude', 'projects'), { recursive: true });
+    originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
+    process.env.HOME = fakeHome;
+    process.env.USERPROFILE = fakeHome;
+  });
+
+  afterEach(async () => {
+    restoreEnv('HOME', originalHome);
+    restoreEnv('USERPROFILE', originalUserProfile);
+    await rm(fakeHome, { recursive: true, force: true });
+  });
+
+  function restoreEnv(key: string, value: string | undefined): void {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  async function recordProject(projectPath: string): Promise<void> {
+    await mkdir(
+      join(
+        fakeHome,
+        '.claude',
+        'projects',
+        resolve(projectPath).replace(/[^A-Za-z0-9]/g, '-')
+      ),
+      { recursive: true }
+    );
+  }
+
+  it('matches when cwd is exactly a recorded project', async () => {
+    await recordProject('/work/project-a');
+    expect(await projectHasUsedClaudeCode('/work/project-a')).toBe(true);
+  });
+
+  it('matches a parent directory (walk-up, no git required)', async () => {
+    await recordProject('/work/project-b');
+    expect(
+      await projectHasUsedClaudeCode('/work/project-b/packages/app/src')
+    ).toBe(true);
+  });
+
+  it('does not match when no ancestor has Claude Code history', async () => {
+    await recordProject('/work/project-b');
+    expect(await projectHasUsedClaudeCode('/work/project-c/sub')).toBe(false);
+  });
+
+  it('does not match a descendant of cwd (only walks up)', async () => {
+    await recordProject('/work/project-d/child');
+    expect(await projectHasUsedClaudeCode('/work/project-d')).toBe(false);
+  });
+
+  it('does not match the home directory itself', async () => {
+    await recordProject(fakeHome);
+    expect(await projectHasUsedClaudeCode(join(fakeHome, 'x', 'deep'))).toBe(
+      false
+    );
   });
 });
