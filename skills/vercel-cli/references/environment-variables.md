@@ -23,14 +23,17 @@ If CLI output does not include required metadata, use `vercel api` after checkin
 ## Managing Env Vars
 
 ```bash
-vercel env add API_KEY production              # add to production
-vercel env ls                                  # list all
-vercel env update API_KEY production           # update value
-vercel env rm API_KEY preview                  # remove from preview
-echo "secret" | vercel env add TOKEN production  # pipe value from stdin
+vercel env add API_KEY production                              # interactive prompt for value
+vercel env add API_KEY production --value "secret" --yes       # non-interactive
+echo "secret" | vercel env add TOKEN production --yes          # pipe value from stdin
+vercel env ls                                                  # list all
+vercel env update API_KEY production --value "new-secret" --yes  # non-interactive update
+vercel env rm API_KEY preview --yes                            # remove from preview
 ```
 
 Note: `environment` is a **positional argument**, not a flag.
+
+In non-interactive / agent mode, `env add` and `env update` require the value via `--value` or stdin. Without one of these, the command exits with an `action_required` payload asking you to re-run with `--value <value> --yes`.
 
 ## Pulling Locally
 

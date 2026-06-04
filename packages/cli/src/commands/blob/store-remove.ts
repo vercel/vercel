@@ -2,7 +2,7 @@ import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { removeStoreSubcommand } from './command';
+import { deleteStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getLinkedProject } from '../../util/projects/link';
 import { getStoreIdFromAuth, type BlobRWToken } from '../../util/blob/token';
@@ -18,7 +18,7 @@ export default async function removeStore(
   rwToken: BlobRWToken
 ): Promise<number> {
   const flagsSpecification = getFlagsSpecification(
-    removeStoreSubcommand.options
+    deleteStoreSubcommand.options
   );
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;

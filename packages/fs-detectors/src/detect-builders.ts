@@ -9,9 +9,9 @@ import type {
   Config,
   BuilderFunctions,
   ExperimentalServices,
+  ExperimentalServicesV2,
   ProjectSettings,
   Service,
-  ExperimentalServicesV2,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
@@ -144,15 +144,15 @@ export async function detectBuilders(
   useImplicitEnvInjection?: boolean;
 }> {
   const {
-    experimentalServices,
+    experimentalServices: experimentalServicesV1,
     experimentalServicesV2,
     projectSettings = {},
   } = options;
   const { framework } = projectSettings;
-  const configuredServices = experimentalServices ?? experimentalServicesV2;
-  const configuredServicesType = experimentalServices
-    ? 'experimentalServices'
-    : 'experimentalServicesV2';
+  const configuredServices = experimentalServicesV2 ?? experimentalServicesV1;
+  const configuredServicesType = experimentalServicesV2
+    ? 'experimentalServicesV2'
+    : 'experimentalServices';
   const hasServicesConfig =
     configuredServices != null && typeof configuredServices === 'object';
 
