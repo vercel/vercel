@@ -8,8 +8,8 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
-  Services,
   ExperimentalServices,
+  ExperimentalServicesV2,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
@@ -65,8 +65,8 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
-  services?: Services;
   experimentalServices?: ExperimentalServices;
+  experimentalServicesV2?: ExperimentalServicesV2;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -143,11 +143,16 @@ export async function detectBuilders(
   services?: Service[];
   useImplicitEnvInjection?: boolean;
 }> {
-  const { services, experimentalServices, projectSettings = {} } = options;
+  const {
+    experimentalServices: experimentalServicesV1,
+    experimentalServicesV2,
+    projectSettings = {},
+  } = options;
   const { framework } = projectSettings;
-  const configuredServices = services ?? experimentalServices;
-  const configuredServicesType =
-    services != null ? 'services' : 'experimentalServices';
+  const configuredServices = experimentalServicesV2 ?? experimentalServicesV1;
+  const configuredServicesType = experimentalServicesV2
+    ? 'experimentalServicesV2'
+    : 'experimentalServices';
   const hasServicesConfig =
     configuredServices != null && typeof configuredServices === 'object';
 

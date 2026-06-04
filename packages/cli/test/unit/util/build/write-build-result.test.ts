@@ -88,4 +88,43 @@ describe('filesWithoutFsRefs()', () => {
 
     await fs.remove(root);
   });
+
+  it('re-anchors standalone keys that escape the function root', async () => {
+    // Mirrors a `vc build --standalone` from a monorepo subdirectory: the
+    // repo root is detected as the app dir while dependencies are hoisted two
+    // levels up, so the builder emits keys like `../../node_modules/...`.
+    const repoRootPath = join(__dirname, 'app-dir');
+    const sharedDest = join(repoRootPath, '.vercel/output/shared');
+    const fsPath = join(__filename); // any real file works as the byte source
+
+    const escapingKey =
+      '../../node_modules/.pnpm/next@1.0.0/node_modules/next/dist/server.js';
+    const {
+      files,
+      filePathMap = {},
+      shared = {},
+    } = filesWithoutFsRefs(
+      { [escapingKey]: new FileFsRef({ fsPath }) },
+      repoRootPath,
+      sharedDest,
+      true
+    );
+
+    // The FileFsRef is removed from `files` and the escaping key is gone.
+    expect(files[escapingKey]).toBeUndefined();
+    expect(Object.keys(filePathMap)).not.toContain(escapingKey);
+
+    // It is re-anchored inside the function root (no leading `..`).
+    const anchoredKey =
+      'node_modules/.pnpm/next@1.0.0/node_modules/next/dist/server.js';
+    expect(Object.keys(filePathMap)).toEqual([anchoredKey]);
+    expect(filePathMap[anchoredKey]).not.toContain('..');
+
+    // The shared bytes are placed under the same anchored key, and the
+    // recorded value points at them (relative to the repo root).
+    expect(shared[anchoredKey]).toBeDefined();
+    expect(filePathMap[anchoredKey]).toEqual(
+      `.vercel/output/shared/${anchoredKey}`
+    );
+  });
 });

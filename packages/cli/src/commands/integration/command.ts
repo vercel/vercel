@@ -1,5 +1,12 @@
 import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
+import {
+  claimSubcommand,
+  connectSubcommand,
+  createThresholdSubcommand,
+  disconnectSubcommand,
+  removeSubcommand as resourceRemoveSubcommand,
+} from '../integration-resource/command';
 
 export const addSubcommand = {
   name: 'add',
@@ -79,6 +86,22 @@ export const addSubcommand = {
       argument: 'ID',
       description:
         'Installation ID to use when multiple installations exist for the integration',
+    },
+    {
+      name: 'claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox (e.g. Stripe, Shopify), claim it immediately without prompting',
+    },
+    {
+      name: 'no-claim',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'If the new resource is a sandbox, skip the offer to claim it (only print a hint)',
     },
     formatOption,
   ],
@@ -561,11 +584,41 @@ export const guideSubcommand = {
   ],
 } as const;
 
+export const resourceSubcommand = {
+  name: 'resource',
+  aliases: [],
+  description:
+    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold, claim)',
+  options: [],
+  arguments: [],
+  subcommands: [
+    connectSubcommand,
+    createThresholdSubcommand,
+    disconnectSubcommand,
+    resourceRemoveSubcommand,
+    claimSubcommand,
+  ],
+  examples: [
+    {
+      name: 'Connect a resource to the current project',
+      value: `${packageName} integration resource connect my-acme-resource`,
+    },
+    {
+      name: 'Disconnect a resource from the current project',
+      value: `${packageName} integration resource disconnect my-acme-resource`,
+    },
+    {
+      name: 'Remove a resource (disconnecting all projects first)',
+      value: `${packageName} integration resource remove my-acme-resource --disconnect-all --yes`,
+    },
+  ],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
   description:
-    'Manage marketplace integrations. To manage individual resources (disconnect, remove), see `integration-resource`.',
+    'Manage marketplace integrations. To manage individual resources, see `vercel integration resource`.',
   options: [],
   arguments: [],
   subcommands: [
@@ -577,6 +630,7 @@ export const integrationCommand = {
     installationsSubcommand,
     listSubcommand,
     openSubcommand,
+    resourceSubcommand,
     updateSubcommand,
     removeSubcommand,
   ],
@@ -584,6 +638,10 @@ export const integrationCommand = {
     {
       name: 'Install a specific product from an integration',
       value: `${packageName} integration add acme/acme-redis`,
+    },
+    {
+      name: 'Connect an existing resource to the current project',
+      value: `${packageName} integration resource connect my-acme-resource`,
     },
   ],
 } as const;

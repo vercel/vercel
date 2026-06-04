@@ -1,5 +1,8 @@
 import type { HasField, Route } from '@vercel/routing-utils';
-import { isScheduleTriggeredService } from '@vercel/build-utils';
+import {
+  isScheduleTriggeredService,
+  isExperimentalService,
+} from '@vercel/build-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -10,6 +13,8 @@ import type {
   DetectServicesOptions,
   DetectServicesResult,
   ExperimentalServices,
+  ExperimentalServicesV2,
+  ExperimentalService,
   InferredServicesConfig,
   InferredServicesResult,
   ResolvedServicesResult,
@@ -28,6 +33,7 @@ import {
 } from './utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { resolveAllConfiguredServices } from './resolve';
+import { resolveAllConfiguredServicesV2 } from './resolve-v2';
 import { autoDetectServices } from './auto-detect';
 import { detectRailwayServices } from './detect-railway';
 import { detectRenderServices } from './detect-render';
@@ -133,7 +139,7 @@ export async function detectServices(
     workPath,
     detectEntrypoint,
     configuredServices: providedConfiguredServices,
-    configuredServicesType,
+    configuredServicesType: providedConfiguredServicesType,
   } = options;
 
   // Scope filesystem to workPath if provided
@@ -157,25 +163,47 @@ export async function detectServices(
   const hasProvidedConfiguredServices =
     providedConfiguredServices &&
     Object.keys(providedConfiguredServices).length > 0;
-  const hasNonEmptyPublicServicesConfig =
-    (hasProvidedConfiguredServices && configuredServicesType === 'services') ||
-    (!hasProvidedConfiguredServices &&
-      vercelConfig?.services &&
-      Object.keys(vercelConfig.services).length > 0);
-  const configuredServices = hasProvidedConfiguredServices
-    ? providedConfiguredServices
-    : hasNonEmptyPublicServicesConfig
-      ? vercelConfig?.services
-      : vercelConfig?.experimentalServices;
-  const hasConfiguredServices =
-    configuredServices && Object.keys(configuredServices).length > 0;
+
+  // `experimentalServicesV2` dispatch
+  const experimentalServicesV2 =
+    hasProvidedConfiguredServices &&
+    providedConfiguredServicesType === 'experimentalServicesV2'
+      ? (providedConfiguredServices as ExperimentalServicesV2)
+      : hasProvidedConfiguredServices
+        ? undefined
+        : vercelConfig?.experimentalServicesV2;
+  if (
+    experimentalServicesV2 &&
+    Object.keys(experimentalServicesV2).length > 0
+  ) {
+    const result = await resolveAllConfiguredServicesV2(
+      experimentalServicesV2,
+      scopedFs
+    );
+    return withResolvedResult({
+      services: result.services,
+      source: 'configured',
+      // V2 uses explicit `bindings`, so no implicit `{NAME}_URL` injection.
+      useImplicitEnvInjection: false,
+      // V2 routes are explicitly carried per-service to output them separately.
+      routes: emptyRoutes(),
+      errors: result.errors,
+      warnings: [],
+    });
+  }
+
+  const experimentalServicesV1 = hasProvidedConfiguredServices
+    ? (providedConfiguredServices as ExperimentalServices)
+    : vercelConfig?.experimentalServices;
+  const hasExperimentalServicesV1 =
+    experimentalServicesV1 && Object.keys(experimentalServicesV1).length > 0;
 
   // Try auto-detection of services.
   // Priority: Railway > Render > Procfile > blessed layouts.
   // Any hard error (.errors) from detection will result into
   // exit from detection and return of the error
   // back to the user
-  if (!hasConfiguredServices) {
+  if (!hasExperimentalServicesV1) {
     const detectors: Array<{
       detect: (options: {
         fs: DetectorFilesystem;
@@ -202,8 +230,9 @@ export async function detectServices(
       routes: emptyRoutes(),
       errors: [
         {
-          code: 'NO_SERVICES_CONFIGURED',
-          message: 'No services configured. Add `services` to vercel.json.',
+          code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
         },
       ],
       warnings: [],
@@ -212,14 +241,9 @@ export async function detectServices(
 
   // Resolve configured services from vercel.json
   const result = await resolveAllConfiguredServices(
-    configuredServices,
+    experimentalServicesV1,
     scopedFs,
-    'configured',
-    {
-      requireFileEntrypointForBackendRuntimes: Boolean(
-        hasNonEmptyPublicServicesConfig
-      ),
-    }
+    'configured'
   );
 
   // Generate routes
@@ -228,9 +252,8 @@ export async function detectServices(
   return withResolvedResult({
     services: result.services,
     source: 'configured',
-    // GA `services` opts into explicit `env`; experimentalServices keeps
-    // the legacy `{NAME}_URL` injection.
-    useImplicitEnvInjection: !hasNonEmptyPublicServicesConfig,
+    // experimentalServices uses the legacy `{NAME}_URL` injection.
+    useImplicitEnvInjection: true,
     routes,
     errors: result.errors,
     warnings: [],
@@ -364,7 +387,11 @@ async function tryResolveInferred(
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
-export function generateServicesRoutes(services: Service[]): ServicesRoutes {
+export function generateServicesRoutes(allServices: Service[]): ServicesRoutes {
+  // Route generation only applies to `experimentalServices`, V2 carries
+  // its own per-service route tables to be applied later.
+  const services = allServices.filter(isExperimentalService);
+
   const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
@@ -376,7 +403,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
   // so more specific routes match before broader ones.
   const sortedWebServices = services
     .filter(
-      (s): s is Service & { routePrefix: string } =>
+      (s): s is ExperimentalService & { routePrefix: string } =>
         s.type === 'web' && typeof s.routePrefix === 'string'
     )
     .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
@@ -475,7 +502,7 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function getWebRoutePrefixes(services: Service[]): string[] {
+function getWebRoutePrefixes(services: ExperimentalService[]): string[] {
   const unique = new Set<string>();
   for (const service of services) {
     if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
@@ -506,7 +533,7 @@ function getExplicitHostPrefixNegativeLookahead(
   return `(?!(?:${explicitPrefixes.join('|')})(?:/|$))`;
 }
 
-function getHostCondition(service: Service): HasField | undefined {
+function getHostCondition(service: ExperimentalService): HasField | undefined {
   if (service.type !== 'web') {
     return undefined;
   }

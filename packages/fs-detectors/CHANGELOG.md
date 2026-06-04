@@ -1,5 +1,40 @@
 # @vercel/fs-detectors
 
+## 6.7.8
+
+### Patch Changes
+
+- 0a170fd: [services] wire `experimentalServicesV2` into `fs-detectors`.
+- Updated dependencies [0a170fd]
+  - @vercel/build-utils@13.27.1
+
+## 6.7.7
+
+### Patch Changes
+
+- Updated dependencies [338cc35]
+  - @vercel/build-utils@13.27.0
+
+## 6.7.6
+
+### Patch Changes
+
+- 3019788: [services] Remove the `services` field from `vercel.json` and the `VERCEL_USE_SERVICES` gate.
+- Updated dependencies [3019788]
+- Updated dependencies [fe893ec]
+- Updated dependencies [fddeb55]
+- Updated dependencies [c0f1229]
+  - @vercel/build-utils@13.26.6
+  - @vercel/error-utils@2.2.0
+  - @vercel/frameworks@3.27.0
+
+## 6.7.5
+
+### Patch Changes
+
+- Updated dependencies [1180675]
+  - @vercel/build-utils@13.26.5
+
 ## 6.7.4
 
 ### Patch Changes

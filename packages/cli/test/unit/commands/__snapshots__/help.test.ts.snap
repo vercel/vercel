@@ -753,7 +753,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
 
 exports[`help command > connex help output snapshots > connex attach subcommand > connex attach subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect attach client [options]
+  ▲ vercel connect attach connector [options]
 
   Attach a Vercel project to a connector for one or more environments                                                   
 
@@ -872,7 +872,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
 exports[`help command > connex help output snapshots > connex detach subcommand > connex detach subcommand help column width 120 1`] = `
 "
-  ▲ vercel connect detach client [options]
+  ▲ vercel connect detach connector [options]
 
   Detach a Vercel project from a connector                                                                              
 
@@ -924,18 +924,21 @@ exports[`help command > connex help output snapshots > connex help column width 
 
   Commands:
 
-  create  type    Create a new connector                                
-  update  id      Update connector branding (icon and colors)           
-  list            List connectors linked to the current project (falls  
-                  back to every connector in the team when no project is
-                  linked or when --all-projects is set)                 
-  token   id      Get a token for a connector (accepts a connector ID   
-                  like scl_abc or a UID like slack/my-bot)              
-  attach  client  Attach a Vercel project to a connector for one or more
-                  environments                                          
-  detach  client  Detach a Vercel project from a connector              
-  remove  client  Delete a connector                                    
-  open    id      Open a connector in the Vercel dashboard              
+  create         type       Create a new connector                      
+  update         id         Update connector branding (icon and colors) 
+  list                      List connectors linked to the current       
+                            project (falls back to every connector in   
+                            the team when no project is linked or when  
+                            --all-projects is set)                      
+  token          id         Get a token for a connector (accepts a      
+                            connector ID like scl_abc or a UID like     
+                            slack/my-bot)                               
+  attach         connector  Attach a Vercel project to a connector for  
+                            one or more environments                    
+  detach         connector  Detach a Vercel project from a connector    
+  remove         connector  Delete a connector                          
+  revoke-tokens  connector  Revoke tokens issued from a connector       
+  open           id         Open a connector in the Vercel dashboard    
 
 
   Global Options:
@@ -3634,9 +3637,8 @@ exports[`help command > integration help output snapshots > integration help col
   ▲ vercel integration command
 
   Manage marketplace integrations. To   
-  manage individual resources           
-  (disconnect, remove), see             
-  \`integration-resource\`.               
+  manage individual resources, see      
+  \`vercel integration resource\`.        
 
   Commands:
 
@@ -3734,6 +3736,15 @@ exports[`help command > integration help output snapshots > integration help col
                                   da…
                                   via
                                   SSO
+  resource                        Ma…
+                                  ma…
+                                  in…
+                                  re…
+                                  (c…
+                                  di…
+                                  re…
+                                  cr…
+                                  cl…
   update         integration      Up…
                                   a  
                                   ma…
@@ -3895,6 +3906,10 @@ exports[`help command > integration help output snapshots > integration help col
 
     $ vercel integration add acme/acme-redis
 
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
+
 "
 `;
 
@@ -3902,8 +3917,8 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations. To manage individual resources (disconnect,  
-  remove), see \`integration-resource\`.                                          
+  Manage marketplace integrations. To manage individual resources, see \`vercel  
+  integration resource\`.                                                        
 
   Commands:
 
@@ -3926,6 +3941,9 @@ exports[`help command > integration help output snapshots > integration help col
                                   integrations for the current project       
   open           name [resource]  Opens a marketplace integration's or       
                                   resource's dashboard via SSO               
+  resource                        Manage marketplace integration resources   
+                                  (connect, disconnect, remove,              
+                                  create-threshold, claim)                   
   update         integration      Update a marketplace integration           
                                   installation (billing plan or which        
                                   projects can access it). Install, remove,  
@@ -3969,6 +3987,10 @@ exports[`help command > integration help output snapshots > integration help col
 
     $ vercel integration add acme/acme-redis
 
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
+
 "
 `;
 
@@ -3976,7 +3998,7 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations. To manage individual resources (disconnect, remove), see \`integration-resource\`.     
+  Manage marketplace integrations. To manage individual resources, see \`vercel integration resource\`.                   
 
   Commands:
 
@@ -3991,6 +4013,8 @@ exports[`help command > integration help output snapshots > integration help col
   installations                   List marketplace integration installations for the current team (account scope)    
   list           [project]        List resources from marketplace integrations for the current project               
   open           name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                  
+  resource                        Manage marketplace integration resources (connect, disconnect, remove,             
+                                  create-threshold, claim)                                                           
   update         integration      Update a marketplace integration installation (billing plan or which projects can  
                                   access it). Install, remove, and connect flows are separate (integration add,      
                                   integration remove, integration-resource, env pull, etc.) — not part of update.    
@@ -4022,6 +4046,10 @@ exports[`help command > integration help output snapshots > integration help col
   - Install a specific product from an integration
 
     $ vercel integration add acme/acme-redis
+
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
 
 "
 `;
@@ -4268,7 +4296,7 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource disconnect resource [project] [options]
 
-  Disconnect a resource from a project, or the current project                                                          
+  Disconnect a marketplace resource from a project                                                                      
 
   Options:
 
@@ -4321,10 +4349,18 @@ exports[`help command > integration-resource help output snapshots > integration
   ▲ vercel integration-resource command
 
   Manage marketplace integration        
-  resources                             
+  resources (alias for \`vercel          
+  integration resource\`)                
 
   Commands:
 
+  connect           resource [project]            …
+                                                  a
+                                                  …
+                                                  …
+                                                  …
+                                                  a
+                                                  …
   create-threshold  resource minimum spend limit  …
                                                   a
                                                   …
@@ -4343,13 +4379,27 @@ exports[`help command > integration-resource help output snapshots > integration
                                                   a
                                                   …
                                                   …
+                                                  …
+                                                  a
+                                                  …
+  remove            resource                      …
+                                                  …
+                                                  …
+                                                  …
+  claim             [resource]                    …
                                                   a
                                                   …
                                                   …
                                                   …
                                                   …
                                                   …
-  remove            resource                      …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
                                                   …
                                                   …
                                                   …
@@ -4410,21 +4460,30 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource command
 
-  Manage marketplace integration resources                                      
+  Manage marketplace integration resources (alias for \`vercel integration       
+  resource\`)                                                                    
 
   Commands:
 
+  connect           resource [project]            Connect a marketplace 
+                                                  resource to a project 
   create-threshold  resource minimum spend limit  Creates a threshold   
                                                   for a resource (or    
                                                   installation, if the  
                                                   integration uses      
                                                   installation-level    
                                                   thresholds)           
-  disconnect        resource [project]            Disconnect a resource 
-                                                  from a project, or the
-                                                  current project       
+  disconnect        resource [project]            Disconnect a          
+                                                  marketplace resource  
+                                                  from a project        
   remove            resource                      Delete an integration 
                                                   resource              
+  claim             [resource]                    Claim a sandbox       
+                                                  marketplace resource  
+                                                  (e.g. Stripe, Shopify)
+                                                  by opening the        
+                                                  provider claim URL in 
+                                                  your browser          
 
 
   Global Options:
@@ -4450,14 +4509,17 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource command
 
-  Manage marketplace integration resources                                                                              
+  Manage marketplace integration resources (alias for \`vercel integration resource\`)                                    
 
   Commands:
 
+  connect           resource [project]            Connect a marketplace resource to a project                   
   create-threshold  resource minimum spend limit  Creates a threshold for a resource (or installation, if the   
                                                   integration uses installation-level thresholds)               
-  disconnect        resource [project]            Disconnect a resource from a project, or the current project  
+  disconnect        resource [project]            Disconnect a marketplace resource from a project              
   remove            resource                      Delete an integration resource                                
+  claim             [resource]                    Claim a sandbox marketplace resource (e.g. Stripe, Shopify) by
+                                                  opening the provider claim URL in your browser                
 
 
   Global Options:

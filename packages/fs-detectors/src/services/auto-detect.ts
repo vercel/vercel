@@ -130,9 +130,9 @@ export async function autoDetectServices(
     warnings: [],
     errors: [
       {
-        code: 'NO_SERVICES_CONFIGURED',
+        code: 'NO_EXPERIMENTAL_SERVICES_CONFIGURED',
         message:
-          'No services detected. Configure services in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
+          'No services detected. Configure `experimentalServices` in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
       },
     ],
   };
