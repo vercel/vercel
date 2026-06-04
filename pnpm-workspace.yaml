@@ -13,4 +13,5 @@ minimumReleaseAgeExclude:
   - '@turbo/*'
   - '@vercel/*'
   - 'next'
+  - 'sandbox'
   - 'turbo'
