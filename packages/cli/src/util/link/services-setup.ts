@@ -2,9 +2,10 @@ import { normalizePath } from '@vercel/build-utils';
 import { join, relative } from 'path';
 import {
   detectServices,
+  isExperimentalService,
   LocalFileSystemDetector,
   type DetectServicesResult,
-  type Service,
+  type ExperimentalService,
 } from '@vercel/fs-detectors';
 import output from '../../output-manager';
 import type Client from '../client';
@@ -67,8 +68,12 @@ export function displayConfiguredServicesSetup(
   detectServicesResult: DetectServicesResult,
   configFileName = 'vercel.json'
 ): void {
-  if (detectServicesResult.services.length > 0) {
-    displayDetectedServices(detectServicesResult.services);
+  // display only `experimentalServices` for now
+  const v1Services = detectServicesResult.services.filter(
+    isExperimentalService
+  );
+  if (v1Services.length > 0) {
+    displayDetectedServices(v1Services);
   }
   if (detectServicesResult.errors.length > 0) {
     displayServiceErrors(detectServicesResult.errors);
@@ -76,7 +81,9 @@ export function displayConfiguredServicesSetup(
   displayServicesConfigNote(configFileName);
 }
 
-function formatDetectedServicesSummary(services: Service[]): string {
+function formatDetectedServicesSummary(
+  services: ExperimentalService[]
+): string {
   if (services.length === 0) {
     return '';
   }

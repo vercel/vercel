@@ -38,7 +38,7 @@ describe('detectServices', () => {
       expect(result.resolved?.source).toBe('auto-detected');
       expect(result.inferred).toBeNull();
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+      expect(result.errors[0].code).toBe('NO_EXPERIMENTAL_SERVICES_CONFIGURED');
     });
 
     it('should auto-detect a Ruby backend service in backend/', async () => {
@@ -94,52 +94,15 @@ describe('detectServices', () => {
 
       expect(result.services).toEqual([]);
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+      expect(result.errors[0].code).toBe('NO_EXPERIMENTAL_SERVICES_CONFIGURED');
     });
   });
 
-  describe('with services', () => {
-    const originalServicesEnv = process.env.VERCEL_USE_SERVICES;
-
-    beforeEach(() => {
-      process.env.VERCEL_USE_SERVICES = '1';
-    });
-
-    afterEach(() => {
-      if (originalServicesEnv === undefined) {
-        delete process.env.VERCEL_USE_SERVICES;
-      } else {
-        process.env.VERCEL_USE_SERVICES = originalServicesEnv;
-      }
-    });
-
-    it('should reject services when VERCEL_USE_SERVICES is not set', async () => {
-      delete process.env.VERCEL_USE_SERVICES;
+  describe('with experimentalServices entrypoint handling', () => {
+    it('should detect services configured with mount syntax', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
-          services: {
-            web: {
-              framework: 'nextjs',
-              mount: '/',
-            },
-          },
-        }),
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.services).toEqual([]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toEqual({
-        code: 'INVALID_VERCEL_CONFIG',
-        message:
-          'Invalid vercel.json - should NOT have additional property `services`. Please remove it.',
-      });
-    });
-
-    it('should detect services configured with public mount syntax', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          services: {
+          experimentalServices: {
             web: {
               framework: 'nextjs',
               mount: '/',
@@ -171,7 +134,7 @@ describe('detectServices', () => {
     it('should allow frontend frameworks without entrypoint', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
-          services: {
+          experimentalServices: {
             web: {
               framework: 'nextjs',
               mount: '/',
@@ -189,15 +152,13 @@ describe('detectServices', () => {
     });
 
     it.each([
-      ['FastAPI framework', { framework: 'fastapi' }],
-      ['Express framework', { framework: 'express' }],
       ['Python runtime', { runtime: 'python' }],
       ['Node runtime', { runtime: 'node' }],
       ['Go runtime', { runtime: 'go' }],
     ])('should require entrypoint for %s services', async (_, serviceConfig) => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
-          services: {
+          experimentalServices: {
             api: {
               mount: '/api',
               ...serviceConfig,
@@ -215,55 +176,10 @@ describe('detectServices', () => {
       });
     });
 
-    it('should require backend services entrypoint to be a file path', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          services: {
-            api: {
-              entrypoint: 'apps/api',
-              framework: 'fastapi',
-              mount: '/api',
-            },
-          },
-        }),
-        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.services).toEqual([]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toMatchObject({
-        code: 'INVALID_ENTRYPOINT',
-        serviceName: 'api',
-      });
-    });
-
-    it('should require auto-detected backend services entrypoint to be a file path', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          services: {
-            api: {
-              entrypoint: 'apps/api',
-              mount: '/api',
-            },
-          },
-        }),
-        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.services).toEqual([]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toMatchObject({
-        code: 'INVALID_ENTRYPOINT',
-        serviceName: 'api',
-      });
-    });
-
     it('should allow Python module:function entrypoint for backend services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
-          services: {
+          experimentalServices: {
             api: {
               runtime: 'python',
               entrypoint: 'api.app:app',
@@ -287,10 +203,10 @@ describe('detectServices', () => {
       });
     });
 
-    it('should error for Python module:function entrypoint when services module file does not exist', async () => {
+    it('should error for Python module:function entrypoint when module file does not exist', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
-          services: {
+          experimentalServices: {
             api: {
               runtime: 'python',
               entrypoint: 'api.missing:app',

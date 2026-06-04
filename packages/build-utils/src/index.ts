@@ -152,6 +152,7 @@ export * from './trace';
 export { NODE_VERSIONS } from './fs/node-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
+export { isPackageInstalled } from './is-package-installed';
 
 export { defaultCachePathGlob } from './default-cache-path-glob';
 

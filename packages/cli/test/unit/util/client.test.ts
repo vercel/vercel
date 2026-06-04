@@ -73,6 +73,31 @@ describe('Client', () => {
       }
     });
 
+    it('does not retry a request aborted via its signal', async () => {
+      client.scenario.get('/v2/user', (_req, res) => {
+        res.json({ user: { uid: 'abc' } });
+      });
+
+      const onRetry = vi.spyOn(
+        client as unknown as { _onRetry: (error: Error) => void },
+        '_onRetry'
+      );
+
+      const abortController = new AbortController();
+      abortController.abort();
+
+      await expect(
+        client.fetch('/v2/user', {
+          json: false,
+          retry: { retries: 3 },
+          // @ts-expect-error: signal types differ between node-fetch and web
+          signal: abortController.signal,
+        })
+      ).rejects.toThrowError(/abort/i);
+
+      expect(onRetry).not.toHaveBeenCalled();
+    });
+
     it('should return 3xx responses directly when redirect is manual', async () => {
       client.scenario.get('/v1/test-redirect', (_req, res) => {
         res.writeHead(302, { Location: 'https://example.com/target' });
