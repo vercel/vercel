@@ -1,9 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'events';
+import { tmpdir } from 'os';
 import { spawn } from 'child_process';
 import output from '../../../src/output-manager';
 import { executeUpgrade } from '../../../src/util/upgrade';
-import getUpdateCommand from '../../../src/util/get-update-command';
+import { getUpdateCommandInfo } from '../../../src/util/get-update-command';
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -23,12 +24,14 @@ vi.mock('../../../src/output-manager', () => ({
 
 // Mock get-update-command
 vi.mock('../../../src/util/get-update-command', () => ({
-  default: vi.fn().mockResolvedValue('npm i -g vercel@latest'),
+  getUpdateCommandInfo: vi
+    .fn()
+    .mockResolvedValue({ command: 'npm i -g vercel@latest', global: true }),
 }));
 
 const spawnMock = vi.mocked(spawn);
 const outputMock = vi.mocked(output);
-const getUpdateCommandMock = vi.mocked(getUpdateCommand);
+const getUpdateCommandInfoMock = vi.mocked(getUpdateCommandInfo);
 
 describe('executeUpgrade', () => {
   beforeEach(() => {
@@ -180,16 +183,56 @@ describe('executeUpgrade', () => {
       'npm',
       ['i', '-g', 'vercel@latest'],
       {
+        cwd: tmpdir(),
         stdio: ['inherit', 'pipe', 'pipe'],
         shell: false,
       }
     );
   });
 
-  it('should spawn with native package arguments', async () => {
-    getUpdateCommandMock.mockResolvedValueOnce(
-      'npm i -g @vercel/vc-native@latest --force'
+  it('should spawn a global upgrade from a neutral directory', async () => {
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+
+    mockProcess.emit('close', 0);
+    await exitCodePromise;
+
+    expect(spawnMock).toHaveBeenCalledWith(
+      'npm',
+      ['i', '-g', 'vercel@latest'],
+      expect.objectContaining({ cwd: tmpdir() })
     );
+  });
+
+  it('should spawn a local upgrade from the current working directory', async () => {
+    getUpdateCommandInfoMock.mockResolvedValueOnce({
+      command: 'pnpm i vercel@latest',
+      global: false,
+    });
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+
+    mockProcess.emit('close', 0);
+    await exitCodePromise;
+
+    expect(spawnMock).toHaveBeenCalledWith(
+      'pnpm',
+      ['i', 'vercel@latest'],
+      expect.objectContaining({ cwd: process.cwd() })
+    );
+  });
+
+  it('should spawn with native package arguments', async () => {
+    getUpdateCommandInfoMock.mockResolvedValueOnce({
+      command: 'npm i -g @vercel/vc-native@latest --force',
+      global: true,
+    });
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);
 
@@ -203,6 +246,7 @@ describe('executeUpgrade', () => {
       'npm',
       ['i', '-g', '@vercel/vc-native@latest', '--force'],
       {
+        cwd: tmpdir(),
         stdio: ['inherit', 'pipe', 'pipe'],
         shell: false,
       }
@@ -221,7 +265,7 @@ describe('executeUpgrade', () => {
 
     expect(outputMock.log).toHaveBeenCalledWith('Upgrading Vercel CLI...');
     expect(outputMock.debug).toHaveBeenCalledWith(
-      'Executing: npm i -g vercel@latest'
+      `Executing: npm i -g vercel@latest (cwd: ${tmpdir()})`
     );
   });
 });
