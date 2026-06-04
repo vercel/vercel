@@ -1,0 +1,14 @@
+packages:
+  - 'packages/*'
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+nodeLinker: isolated
+publicHoistPattern:
+  # The crux of the repro: @adobe/fetch hoists to the root, but
+  # @planetscale/database does NOT. That asymmetry is what triggers the
+  # missing-dependency bug being tested — the CJS variant of
+  # @planetscale/database lives in a non-hoisted, nested node_modules.
+  - '@planetscale/database'
+  - '@adobe/fetch'
+strictPeerDependencies: false

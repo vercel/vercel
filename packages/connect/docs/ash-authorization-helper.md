@@ -20,12 +20,12 @@ That boilerplate is where subtle bugs live — swap one error mapping and the ag
 
 ```ts
 // agent/connections/linear.ts — target shape
-import { connect } from "@vercel/connect/ash";
-import { defineMcpClientConnection } from "experimental-ash/connections";
+import { connect } from '@vercel/connect/ash';
+import { defineMcpClientConnection } from 'experimental-ash/connections';
 
 export default defineMcpClientConnection({
-  url: "https://mcp.linear.app/sse",
-  description: "Linear workspace — issues, projects, cycles, and comments.",
+  url: 'https://mcp.linear.app/sse',
+  description: 'Linear workspace — issues, projects, cycles, and comments.',
   authorization: connect({
     connector: process.env.CONNECTOR_LINEAR!,
   }),
@@ -67,7 +67,7 @@ Ash's `NonInteractiveAuthorizationDefinition` technically accepts `principalType
 
 ```ts
 interface InteractiveAuthorizationDefinition<State extends JsonValue> {
-  readonly principalType: "user";
+  readonly principalType: 'user';
   getToken(opts: { principal: ConnectionPrincipal }): Promise<TokenResult>;
   startAuthorization(opts: {
     principal: ConnectionPrincipal;
@@ -111,9 +111,13 @@ import {
   type JsonValue,
   type NonInteractiveAuthorizationDefinition,
   type TokenResult,
-} from "experimental-ash/connections";
+} from 'experimental-ash/connections';
 
-import type { ConnectOptions, ConnectTokenParams } from "./token.js";
+import type {
+  ConnectOptions,
+  ConnectTokenParams,
+  ConnectTokenSubject,
+} from './token.js';
 
 /**
  * State journaled by Ash between `startAuthorization` and
@@ -127,9 +131,9 @@ export type ConnectAuthorizationState = {
 };
 
 export type ConnectAuthorizationPhase =
-  | "getToken"
-  | "startAuthorization"
-  | "completeAuthorization";
+  | 'getToken'
+  | 'startAuthorization'
+  | 'completeAuthorization';
 
 export interface AshAuthorizationOptions {
   /**
@@ -150,13 +154,21 @@ export interface AshAuthorizationOptions {
    *   Returns a non-interactive definition (`getToken` only). Ash
    *   v1 does not support interactive OAuth in app mode.
    */
-  readonly principalType?: "app" | "user";
+  readonly principalType?: 'app' | 'user';
 
   /**
    * Forwarded on every token request. The helper derives `subject`
    * from the principal; any other field is passed through verbatim.
    */
-  readonly tokenParams?: Omit<ConnectTokenParams, "subject">;
+  readonly tokenParams?: Omit<ConnectTokenParams, 'subject'>;
+
+  /**
+   * Override how Ash's framework-resolved principal is mapped to a
+   * Vercel Connect token subject.
+   */
+  readonly principalToSubject?: (
+    principal: ConnectionPrincipal
+  ) => ConnectTokenSubject | Promise<ConnectTokenSubject>;
 
   /**
    * Forwarded to `@vercel/connect`. Primarily for tests that inject
@@ -180,7 +192,7 @@ export interface AshAuthorizationOptions {
    */
   readonly onError?: (
     error: unknown,
-    phase: ConnectAuthorizationPhase,
+    phase: ConnectAuthorizationPhase
   ) => Error | undefined;
 }
 
@@ -191,13 +203,13 @@ export interface AshAuthorizationOptions {
  * Drop directly into `defineMcpClientConnection`.
  */
 export function connect(
-  options: AshAuthorizationOptions & { readonly principalType?: "user" },
+  options: AshAuthorizationOptions & { readonly principalType?: 'user' }
 ): InteractiveAuthorizationDefinition<ConnectAuthorizationState>;
 export function connect(
-  options: AshAuthorizationOptions & { readonly principalType: "app" },
+  options: AshAuthorizationOptions & { readonly principalType: 'app' }
 ): NonInteractiveAuthorizationDefinition;
 export function connect(
-  options: AshAuthorizationOptions,
+  options: AshAuthorizationOptions
 ):
   | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
   | NonInteractiveAuthorizationDefinition;
@@ -229,17 +241,17 @@ export function connect(
 
 ```ts
 // agent/connections/linear.ts
-import { connect } from "@vercel/connect/ash";
-import { defineMcpClientConnection } from "experimental-ash/connections";
+import { connect } from '@vercel/connect/ash';
+import { defineMcpClientConnection } from 'experimental-ash/connections';
 
 const connector = process.env.CONNECTOR_LINEAR;
 if (!connector) {
-  throw new Error("CONNECTOR_LINEAR is required to use the linear connection.");
+  throw new Error('CONNECTOR_LINEAR is required to use the linear connection.');
 }
 
 export default defineMcpClientConnection({
-  url: "https://mcp.linear.app/sse",
-  description: "Linear workspace — issues, projects, cycles, and comments.",
+  url: 'https://mcp.linear.app/sse',
+  description: 'Linear workspace — issues, projects, cycles, and comments.',
   authorization: connect({
     connector,
   }),
@@ -253,15 +265,15 @@ A missing env var fails at module load (i.e. agent boot). The check lives at the
 ```ts
 // agent/connections/status-api.ts — a shared service the agent polls
 // on its own identity, no end-user consent.
-import { connect } from "@vercel/connect/ash";
-import { defineMcpClientConnection } from "experimental-ash/connections";
+import { connect } from '@vercel/connect/ash';
+import { defineMcpClientConnection } from 'experimental-ash/connections';
 
 export default defineMcpClientConnection({
-  url: "https://status.internal.example.com/mcp",
-  description: "Internal status API (agent-owned credential).",
+  url: 'https://status.internal.example.com/mcp',
+  description: 'Internal status API (agent-owned credential).',
   authorization: connect({
     connector: process.env.CONNECTOR_STATUS!,
-    principalType: "app",
+    principalType: 'app',
   }),
 });
 ```
@@ -298,6 +310,22 @@ authorization: connect({
 ```
 
 Same pattern for `resources`, `installationId`, and `authorizationDetails`.
+
+### Custom subject mapping
+
+By default, app principals map to `{ type: "app" }` and user principals map to
+`{ type: "user", id, issuer }`. Use `principalToSubject` when a connector needs
+a different subject shape:
+
+```ts
+authorization: connect({
+  connector: process.env.CONNECTOR_OAUTH!,
+  principalToSubject: principal => ({
+    type: "jwt-bearer",
+    sub: principal.attributes.email,
+  }),
+}),
+```
 
 ### Custom error translation
 
@@ -406,17 +434,17 @@ After migration, `agent/connections/linear.ts` and `agent/connections/notion.ts`
 
 ```ts
 // agent/connections/linear.ts (after)
-import { connect } from "@vercel/connect/ash";
-import { defineMcpClientConnection } from "experimental-ash/connections";
+import { connect } from '@vercel/connect/ash';
+import { defineMcpClientConnection } from 'experimental-ash/connections';
 
 const connector = process.env.CONNECTOR_LINEAR;
 if (!connector) {
-  throw new Error("CONNECTOR_LINEAR is required to use the linear connection.");
+  throw new Error('CONNECTOR_LINEAR is required to use the linear connection.');
 }
 
 export default defineMcpClientConnection({
-  url: "https://mcp.linear.app/sse",
-  description: "Linear workspace — issues, projects, cycles, and comments.",
+  url: 'https://mcp.linear.app/sse',
+  description: 'Linear workspace — issues, projects, cycles, and comments.',
   authorization: connect({
     connector,
   }),
@@ -432,12 +460,14 @@ export default defineMcpClientConnection({
 Sequential; each step validates the next.
 
 1. **Ash prereq PR — [DONE].**
+
    - The principal-model branch already exposes `AuthorizationDefinition`, `ConnectionPrincipal`, `TokenResult`, `ConnectionAuthorizationChallenge`, and the two error classes from `experimental-ash/connections`.
    - `isConnectionAuthorizationRequiredError` / `isConnectionAuthorizationFailedError` discriminate on `err.name` (not `instanceof`), which already addresses the cross-realm/duplicate-package risk.
    - `withDefaultAuthorizationInstructions(challenge, connectionName)` in `src/execution/authorization-challenge-defaults.ts` fills in the default `"Authorize <ConnectionName> in your browser to continue."` text using the slot name; capitalization helper covers hyphenated/empty cases.
    - Pending follow-up: publish a new Ash alpha that includes the principal-model surface so consumers don't need a workspace override. Until then the Vercel Connect repo uses a pnpm `overrides` entry that links `experimental-ash` to a local checkout.
 
 2. **Vercel Connect SDK change — [DONE locally, pending publish].**
+
    - Add `experimental-ash` as an optional peer dep (`peerDependenciesMeta.experimental-ash.optional: true`) and as a devDep.
    - Add `./ash` subpath export pointing to `./dist/ash.{js,d.ts}`.
    - Implement `connect` in `src/ash.ts` with type-only imports from `experimental-ash/connections`. Drop the structural mirror types and the local error class lookalikes.
@@ -457,6 +487,7 @@ Sequential; each step validates the next.
 3. **Changeset.** Minor bump on `@vercel/connect`; call out required Ash version range.
 
 4. **Demo app migration — [DONE].**
+
    - Rewrote `linear.ts` / `notion.ts` to use the helper, with a top-level env-var check that throws on import if the connector id is unset.
    - Deleted `agent/lib/connect.ts`.
    - Added `@types/node` to devDeps and `"types": ["node"]` to `tsconfig.json`.
