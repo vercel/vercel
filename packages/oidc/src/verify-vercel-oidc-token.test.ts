@@ -316,6 +316,6 @@ describe('verifyVercelOidcToken', () => {
         ...verifyResult.payload,
         ...payload,
       },
-    } as Awaited<ReturnType<typeof jwtVerify>>);
+    } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
   }
 });
