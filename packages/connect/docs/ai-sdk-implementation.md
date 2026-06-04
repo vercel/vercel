@@ -1,6 +1,8 @@
-# Native AI SDK integration for `@vercel/connect`
+# Native AI SDK integration for `@vercel/connect` — implementation plan
 
 **Status:** proposal
+**Scope:** SDK changes in `vercel/vercel/packages/connect` + the example app that smoke-tests them in `vercel/ai/examples/`.
+**Companion doc:** [`ai-sdk-content.md`](./ai-sdk-content.md) plans the docs work that ships alongside this — the V0 docs-only path, the `vercel-docs` guides, and the `vercel/ai` cookbook recipe and reference cross-link.
 **Target release:** `@vercel/connect@0.2` — primary subpath `@vercel/connect/ai-sdk` (the AI SDK audience is the headline), with `@vercel/connect/mcp` shipping alongside it in V1 as an accurate-to-scope home for non-AI-SDK MCP clients (Mastra, official MCP TS SDK, etc.). V2 extends `/ai-sdk` with HITL glue.
 **Prerequisites:** `@ai-sdk/mcp` shipped with `OAuthClientProvider` (already in `vercel/ai`, see [`packages/mcp/src/tool/oauth.ts`](https://github.com/vercel/ai/blob/main/packages/mcp/src/tool/oauth.ts)); `streamText`/`generateText` `toolApproval` configuration (added in AI SDK v7, see [`packages/ai/src/generate-text/stream-text.ts`](https://github.com/vercel/ai/blob/main/packages/ai/src/generate-text/stream-text.ts)); MCP-spec `OAuthClientProvider` interface (in [`modelcontextprotocol/typescript-sdk`](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/packages/client/src/client/auth.ts), which the AI SDK borrows from).
 
@@ -177,42 +179,11 @@ Two new subpath exports, split by audience:
 - **`@vercel/connect/ai-sdk`** (V1 primary surface, extended in V2): AI SDK developers' entry point. In V1, re-exports `connectAuthProvider` + `ConsentRequiredError` + `ConsentChallenge` so AI SDK users only need to know one import path. In V2, adds `withConsentApproval` (auto-wraps tools with `toolApproval: 'user-approval'` for the AI SDK's HITL flow) and eventually `<ConnectConsentBoundary>` (V3 React glue).
 - **`@vercel/connect/mcp`** (V1): canonical home for `connectAuthProvider` — implements MCP-spec `OAuthClientProvider` by delegating to `getToken` and `startAuthorization`. Same function the `/ai-sdk` subpath re-exports; exists at this path so MCP-only consumers (Mastra, official MCP TS SDK, etc.) can import from a name that accurately reflects what the function is.
 
-## V0: Docs-only (ship now)
+## V0 — there is no SDK work
 
-Before any package code lands, the integration works today with the public SDK surface:
+V0 is a docs-only path that uses the existing `getToken` surface. It ships before this plan ever lands. Owned by [`ai-sdk-content.md`](./ai-sdk-content.md). Mentioned here only so the V1 → V2 → V3 numbering reads as a continuation.
 
-```ts
-import { createMCPClient } from '@ai-sdk/mcp';
-import { getToken } from '@vercel/connect';
-import { streamText, stepCountIs } from 'ai';
-
-const userId = 'user_demo_123';
-
-const token = await getToken('oauth/linear', {
-  subject: { type: 'user', id: userId },
-  scopes: ['read'],
-});
-
-const mcpClient = await createMCPClient({
-  transport: {
-    type: 'http',
-    url: 'https://mcp.linear.app',
-    headers: { Authorization: `Bearer ${token}` },
-  },
-});
-
-const stream = await streamText({
-  model: 'anthropic/claude-sonnet-4.6',
-  prompt: 'Show me my open Linear issues',
-  tools: await mcpClient.tools(),
-  stopWhen: stepCountIs(10),
-  onFinish: async () => { await mcpClient.close(); },
-});
-```
-
-**Action:** publish a guide page at `/docs/connect/guides/use-with-ai-sdk` (vercel-docs) and a runnable example at `/docs/connect/examples/ai-agent-with-linear`. Zero changes to `@vercel/connect`. This unblocks the AI SDK audience immediately while V1 is in flight.
-
-Limitations V0 doesn't address (these are why V1 exists):
+V0's limitations are what motivate V1:
 
 - Token is resolved once at client init; if it expires mid-conversation, the MCP client must be rebuilt.
 - Consent gating runs upfront; a tool call cannot trigger consent mid-stream.
@@ -404,116 +375,42 @@ const stream = await streamText({
 });
 ```
 
-## AI SDK content plan (mirror surface in `vercel/ai`)
+## Example app (smoke-test gate for V1 release)
 
-The Connect-side docs (`vercel-docs` → `/docs/connect/...`) reach developers who already know Connect. The reverse-discovery path — developers who land on `ai-sdk.dev` looking for "how do I auth my MCP tools?" — is what makes the integration actually findable. This section plans the symmetric artifacts in `vercel/ai`.
+A runnable example app in `vercel/ai/examples/next-mcp-vercel-connect/` mirrors the cookbook recipe end-to-end. It exists primarily as the **release gate for V1**: a green build of the example against the latest `vercel/ai` `main` is the signal that the published `@vercel/connect@0.2` is safe to ship. Secondary uses (giving readers a clone-and-run reference, surfacing in the AI SDK examples index) are owned by the [content plan](./ai-sdk-content.md).
 
-### Surface inventory in `vercel/ai`
+### Why this lives in `vercel/ai`, not `packages/connect/__tests__/`
 
-Content lives in three layers (verified against the repo as of 2026-06-03):
+Two reasons:
 
-| Layer                                                                                                              | Purpose                                                            | Existing prior art                                                                                                |
-| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `content/docs/03-ai-sdk-core/17-mcp-apps.mdx`                                                                      | Canonical MCP reference page (concepts, transports, lifecycle)     | Already covers `createMCPClient`, transports, `tools()` lifecycle                                                 |
-| `content/cookbook/01-next/73-mcp-tools.mdx`, `75-human-in-the-loop.mdx`                                            | Framework-specific recipes; numbered to control sidebar order      | `73-mcp-tools.mdx` (Stdio/SSE/HTTP MCP), `75-human-in-the-loop.mdx` (HITL with `useChat` and approval responses)  |
-| `examples/{framework}-{provider/feature}/`                                                                         | Runnable example apps with their own `package.json`                | `examples/mcp/`, `examples/next-agent/`, `examples/next-workflow/`                                                |
+1. **Catches interface drift earliest.** The example resolves `@ai-sdk/mcp` and `ai` from the workspace, not from a pinned `package.json`. If a new AI SDK canary adds a required `OAuthClientProvider` method, the example app fails to build in `vercel/ai` CI before we publish a release that would silently break. A fixture pinned to a specific `@ai-sdk/mcp` version inside `packages/connect` wouldn't.
+2. **Doubles as the recipe's executable spec.** The cookbook recipe (owned by the content plan) is generated *from* this example app's source. Drift between the recipe code and runnable code is impossible because they're the same file.
 
-### Artifacts to add
-
-#### 1. Cookbook recipe — `content/cookbook/01-next/74-mcp-tools-with-vercel-connect.mdx`
-
-The headline artifact. Slots between the existing MCP recipe (`73`) and the HITL recipe (`75`), so a reader following the natural sidebar order discovers Connect immediately after learning the base MCP pattern. Numbering chosen deliberately: `74` keeps the alphabetical/numeric ordering stable without renumbering existing files.
-
-Frontmatter (matches the format the AI SDK docs builder expects):
-
-```mdx
----
-title: MCP Tools with Vercel Connect
-description: Use Vercel Connect to manage OAuth for MCP-backed tools in a Next.js agent
-tags: ['next', 'tool use', 'agent', 'mcp', 'oauth', 'vercel']
----
-```
-
-Recipe outline:
-
-1. **Why** — a paragraph framing the problem (per-provider OAuth client + token storage + refresh + plumbing collapses to one adapter call).
-2. **Prerequisites** — Vercel project linked, `vercel env pull` for the OIDC token, a Linear (or Linear-equivalent) Custom OAuth connector created in the Vercel dashboard.
-3. **Install** — `pnpm install ai @ai-sdk/react @ai-sdk/mcp @vercel/connect`.
-4. **Wire the route handler** — `app/api/chat/route.ts` showing `connectAuthProvider` slotted into `createMCPClient({ transport: { authProvider } })` + `streamText` with `convertToModelMessages` and `toUIMessageStreamResponse`.
-5. **Wire the client** — `app/page.tsx` using `useChat` from `@ai-sdk/react` with `DefaultChatTransport`. (Matches the existing recipes' shape so the reader doesn't need to learn a new client pattern.)
-6. **Handle consent** — `try { ... } catch (ConsentRequiredError) { redirect(err.redirectUrl) }`. Cross-link to the Connect concepts page on authentication for the deeper "what's happening" picture.
-7. **Add approval (HITL)** — drop in `withConsentApproval(tools, { approve: ['linear_create_issue'] })` and pass `tools.approvalConfig` to `streamText`. Note the symmetry with recipe `75` — "everything from the HITL recipe applies; Connect just provides the underlying tools."
-8. **What this replaced** — short bullet list of the per-provider boilerplate the recipe sidesteps (OAuth client registration, token DB, refresh job, etc.).
-9. **Next steps** — links into the AI SDK MCP reference, the Connect concepts pages, and the example app below.
-
-**Why this lives in `vercel/ai`, not just `vercel-docs`:** SEO and discoverability. A developer searching "ai sdk mcp oauth" hits ai-sdk.dev first. The Connect-side guide in `vercel-docs` is for developers who already know Connect; the cookbook recipe is for developers who don't.
-
-#### 2. Reference cross-link — small additions to `content/docs/03-ai-sdk-core/17-mcp-apps.mdx`
-
-A short "Authentication" subsection (or extension of the existing one if there is one) that calls out three options for providing bearer tokens to an MCP server:
-
-- Static bearer in `headers` — for service-to-service tokens.
-- Custom `OAuthClientProvider` — for apps with existing OAuth infrastructure.
-- **`@vercel/connect/ai-sdk`'s `connectAuthProvider`** — for apps using Vercel Connect to broker per-user OAuth grants. Single-paragraph mention + link to the cookbook recipe. Do *not* duplicate the recipe. (The same function is also exported from `@vercel/connect/mcp` for non-AI-SDK MCP clients; the AI SDK page only mentions `/ai-sdk`.)
-
-This is the cross-link that turns the recipe from "hidden cookbook" into "discoverable from the canonical MCP reference."
-
-#### 3. Example app — `examples/next-mcp-vercel-connect/`
-
-A runnable example app mirroring the cookbook recipe end-to-end. Useful for:
-
-- Smoke-testing every release of `@vercel/connect/ai-sdk` (and the underlying `/mcp` impl) against the latest `vercel/ai` `main`.
-- Letting readers `git clone` and run instead of copy-pasting from MDX.
-- Catching `OAuthClientProvider` interface drift early (if the AI SDK adds a method, the example fails to build).
-
-Structure:
+### Structure
 
 ```
 examples/next-mcp-vercel-connect/
-├── README.md                  — points back to the cookbook recipe and the Connect docs
+├── README.md                  — links to the cookbook recipe and the Connect concepts pages
 ├── package.json               — depends on ai@workspace:*, @ai-sdk/mcp@workspace:*, @vercel/connect
 ├── app/
 │   ├── api/chat/route.ts      — connectAuthProvider + createMCPClient + streamText
-│   └── page.tsx               — useChat with approval UI rendering
-├── .env.example               — CONNECT_CONNECTOR, etc.
+│   └── page.tsx               — useChat with consent + approval UI
+├── .env.example               — CONNECT_CONNECTOR, VERCEL_OIDC_TOKEN
 └── tsconfig.json
 ```
 
 This pattern is well-established in the repo (`examples/mcp/`, `examples/next-agent/`, `examples/next-workflow/`).
 
-#### 4. Discoverability touch-ups
+### Release gate
 
-- Add `vercel-connect` (or `oauth`) tag to the cookbook recipe so it surfaces in tag filters.
-- Update `examples/README.md` (or the equivalent index) to list the new example.
-- Consider a one-line callout in `content/docs/03-ai-sdk-core/15-tools-and-tool-calling.mdx` under "tools that need authentication" — but only if a natural insertion point exists; do not force.
+The V1 publish PR in `vercel/vercel` is blocked on a green CI run of the example app in `vercel/ai`:
 
-### Cross-repo PR coordination
+1. Open a PR in `vercel/ai` adding `examples/next-mcp-vercel-connect/` pointed at the V1 RC tag of `@vercel/connect`.
+2. CI builds and type-checks the example against `vercel/ai`'s workspace versions of `ai` and `@ai-sdk/mcp`.
+3. If green: cut the `@vercel/connect@0.2` stable release.
+4. If red: fix the SDK in `vercel/vercel`, rev the RC, re-run.
 
-The artifacts span three repos. To avoid broken cross-links during rollout:
-
-| Repo                                    | What ships                                                                                                                              | Depends on                                                       |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `vercel/vercel` (`packages/connect`)    | V1: both `@vercel/connect/ai-sdk` (primary) and `@vercel/connect/mcp` subpath exports + Changeset. V2: extends `/ai-sdk` with HITL glue. | Nothing — independent                                            |
-| `vercel/vercel-front` (`vercel-docs`)   | `/docs/connect/guides/use-with-ai-sdk` + `/docs/connect/examples/ai-agent-with-linear`                                                  | Either the V0 bearer-header pattern (no SDK dep) or V1 published |
-| `vercel/ai` (`content/` + `examples/`)  | Cookbook recipe, MCP docs cross-link, example app                                                                                       | V1 published to npm                                              |
-
-Sequencing:
-
-1. **Land V0** in `vercel-docs` first — pure docs, no dependencies, ships the headline integration story today.
-2. **Land V1** (`@vercel/connect/ai-sdk` primary subpath + `@vercel/connect/mcp` canonical-impl subpath + Changeset) in `vercel/vercel` and publish to npm.
-3. **Update V0 guide** in `vercel-docs` to feature the `authProvider` variant as the recommended path; keep the V0 bearer-header pattern as a "minimal / no extra deps" fallback.
-4. **Open AI SDK PR** simultaneously: cookbook recipe + MCP docs cross-link + example app. Cookbook recipe is the discovery anchor; the rest are supporting.
-5. **Land V2** (`withConsentApproval` + HITL recipe additions) in a second round across `vercel/vercel` → `vercel-docs` → `vercel/ai`.
-
-Cross-link rule: every new page links to its mirror on the other side. The Connect guide says "see the AI SDK cookbook recipe for the framework-specific walkthrough"; the cookbook recipe says "see the Connect concepts pages for what happens behind the adapter." Asymmetric anchor text avoids accidental loops.
-
-### What `vercel/ai` content does NOT add
-
-To keep the AI SDK docs focused, we explicitly do not propose:
-
-- A provider page under `content/providers/` — Connect is not an LLM provider.
-- A foundations page rewrite — MCP foundations already exist; we extend, not duplicate.
-- A separate "auth" docs section — `OAuthClientProvider` is documented at the MCP level; Connect is one consumer of that interface.
+V2 adds an "approval flow" step to the same example; the V2 publish gate is the same example with that step exercised in CI.
 
 ## Open design questions
 
@@ -550,17 +447,13 @@ To keep the AI SDK docs focused, we explicitly do not propose:
 - Run the docs-page example against a real Linear MCP connector with a test workspace.
 - Run a two-provider example (Linear + GitHub) with overlapping tool names and `prefix:` to verify no collisions.
 
-## Release plan
+## SDK release sequence
 
-Each phase ships across all repos it touches in the same week to keep cross-links live.
+Only the `vercel/vercel` SDK + the `vercel/ai` example app are listed here. The matching docs/recipe artifacts (and their cross-repo coordination) live in [`ai-sdk-content.md`](./ai-sdk-content.md).
 
-### Phase V0 — docs only (no SDK changes, ships this week)
+### Phase V0 — no SDK work
 
-| Repo                  | Artifact                                                                                                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `vercel/vercel-front` | `/docs/connect/guides/use-with-ai-sdk` (V0 pattern: `getToken` + bearer header in `createMCPClient`)                       |
-| `vercel/vercel-front` | `/docs/connect/examples/ai-agent-with-linear` (runnable Linear example using V0 pattern)                                   |
-| `vercel/ai`           | *(none — V0 lives in Connect docs only; SDK consumers can already do it without our blessing)*                             |
+V0 is docs-only and ships from the content plan. The implementation plan picks up at V1.
 
 ### Phase V1 — `@vercel/connect/ai-sdk` (primary) + `@vercel/connect/mcp` adapter
 
@@ -571,21 +464,15 @@ Each phase ships across all repos it touches in the same week to keep cross-link
 | `vercel/vercel`       | Peer dependency on `@ai-sdk/mcp@^1 \|\| ^2` (covers AI SDK v6 + v7); Changeset; version bump to `@vercel/connect@0.2`                                                   |
 | `vercel/vercel`       | TypeScript compatibility test verifying the adapter satisfies both AI SDK's and official MCP SDK's `OAuthClientProvider` shapes                                          |
 | `vercel/vercel`       | Unit tests for `tokens()`, `redirectToAuthorization`, `invalidateCredentials`; integration tests against a mock MCP server                                               |
-| `vercel/vercel-front` | Update `/docs/connect/guides/use-with-ai-sdk` to feature the `authProvider` variant (importing from `@vercel/connect/ai-sdk`) as primary; keep V0 as minimal fallback    |
-| `vercel/ai`           | Cookbook recipe `content/cookbook/01-next/74-mcp-tools-with-vercel-connect.mdx` (imports from `@vercel/connect/ai-sdk`)                                                  |
-| `vercel/ai`           | Cross-link addition in `content/docs/03-ai-sdk-core/17-mcp-apps.mdx` (Authentication subsection, points at `@vercel/connect/ai-sdk`)                                     |
-| `vercel/ai`           | Example app `examples/next-mcp-vercel-connect/` mirroring the recipe                                                                                                     |
+| `vercel/ai`           | Example app `examples/next-mcp-vercel-connect/` (smoke-test gate — see §"Example app" above). Cookbook recipe and reference cross-link are content plan deliverables.    |
 
 ### Phase V2 — `withConsentApproval` + HITL polish
 
-| Repo                  | Artifact                                                                                                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Repo                  | Artifact                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `vercel/vercel`       | Extend `@vercel/connect/ai-sdk` (already shipping in V1): add `withConsentApproval` helper with prefix/approve filtering + `approvalConfig` builder |
-| `vercel/vercel`       | Tests against `streamText({ toolApproval })` for approval and denial paths                                                 |
-| `vercel/vercel-front` | New page `/docs/connect/guides/handle-tool-approval` walking through the chat-turn-boundary pattern and function-timeout map |
-| `vercel/vercel-front` | Update Linear example to include an approval-gated tool call                                                                |
-| `vercel/ai`           | Append "Approval" section to cookbook recipe `74` showing `withConsentApproval` (don't fork the recipe)                    |
-| `vercel/ai`           | Update example app to demonstrate the approval flow                                                                         |
+| `vercel/vercel`       | Tests against `streamText({ toolApproval })` for approval and denial paths                                                                        |
+| `vercel/ai`           | Add an approval-gated step to `examples/next-mcp-vercel-connect/`; this becomes the V2 publish gate                                               |
 
 ### Phase V3 — UI primitives (deferred until V2 has real usage)
 
@@ -594,9 +481,9 @@ Each phase ships across all repos it touches in the same week to keep cross-link
 | `vercel/vercel`       | `<ConnectConsentBoundary>` React component (catches `ConsentRequiredError`, emits a custom data part)                      |
 | `vercel/ai`           | If adopted, possibly an AI Elements primitive for rendering the consent prompt                                              |
 
-## Strategic angle
+## Strategic angle (SDK)
 
-This integration is what makes Connect *concrete* for the AI SDK audience. Today, a Next.js + AI SDK developer building an agent has to assemble OAuth + token storage + token refresh + MCP plumbing from four libraries. With this adapter, the entire stack collapses to:
+The SDK value proposition: a Next.js + AI SDK developer building an agent today has to assemble OAuth + token storage + token refresh + MCP plumbing from four libraries. With this adapter, the entire stack collapses to:
 
 ```ts
 import { connectAuthProvider } from '@vercel/connect/ai-sdk';
@@ -604,10 +491,10 @@ import { connectAuthProvider } from '@vercel/connect/ai-sdk';
 authProvider: connectAuthProvider('oauth/linear', { subject: { type: 'user', id: userId } });
 ```
 
-That's the same "kill the boilerplate" win the AI SDK is known for, applied to OAuth — and it gives Connect a headline demo for the exact audience the AI SDK already owns.
+That's the same "kill the boilerplate" win the AI SDK is known for, applied to OAuth.
 
-V0 (the docs-only path) costs essentially nothing and unblocks the AI SDK audience today. V1 is the long-term ergonomic surface, shipped at `@vercel/connect/ai-sdk` so the import path reflects the headline use case. V2 closes the interactive-flow gap by leaning on the AI SDK's existing `toolApproval` primitive, so we don't have to invent a new HITL mechanism.
-
-The `vercel/ai` content plan — cookbook recipe + MCP reference cross-link + example app, all referencing `@vercel/connect/ai-sdk` — is what makes the integration discoverable from the AI SDK audience, not just from Connect's existing audience. Without that, V1's adapter ships into the void; with it, the integration shows up on the canonical surface where developers are already searching "ai sdk mcp oauth."
+V1 is the long-term ergonomic surface, shipped at `@vercel/connect/ai-sdk` so the import path reflects the headline use case. V2 closes the interactive-flow gap by leaning on the AI SDK's existing `toolApproval` primitive, so we don't have to invent a new HITL mechanism.
 
 The MCP-spec compatibility (`@vercel/connect/mcp`) is a real bonus on top: the same one-line collapse works for Mastra users and anyone else on the MCP-spec interface, with zero extra implementation work. We claim that surface without distracting from the AI SDK headline.
+
+Discoverability — making AI SDK developers find this in the first place — is the content plan's job. See [`ai-sdk-content.md`](./ai-sdk-content.md).
