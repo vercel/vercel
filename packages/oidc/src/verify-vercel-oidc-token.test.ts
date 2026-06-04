@@ -143,6 +143,18 @@ describe('verifyVercelOidcToken', () => {
     expect(result.payload.environment).toBe('preview');
   });
 
+  test('accepts a matching projectId array option', async () => {
+    mockVerifiedPayload({
+      project_id: 'prj_allowed',
+    });
+
+    const result = await verifyVercelOidcToken('token', {
+      projectId: ['prj_first', 'prj_allowed'],
+    });
+
+    expect(result.payload.project_id).toBe('prj_allowed');
+  });
+
   test('accepts a matching ownerId option', async () => {
     const result = await verifyVercelOidcToken('token', {
       ownerId: 'team_team1',
@@ -225,6 +237,18 @@ describe('verifyVercelOidcToken', () => {
     expect(jwtVerify).toHaveBeenCalledTimes(1);
   });
 
+  test('accepts a matching environment array option', async () => {
+    mockVerifiedPayload({
+      environment: 'preview',
+    });
+
+    const result = await verifyVercelOidcToken('token', {
+      environment: ['production', 'preview'],
+    });
+
+    expect(result.payload.environment).toBe('preview');
+  });
+
   test('rejects a token from a different project', async () => {
     mockVerifiedPayload({
       project_id: 'prj_other',
@@ -232,6 +256,30 @@ describe('verifyVercelOidcToken', () => {
 
     await expect(verifyVercelOidcToken('token')).rejects.toThrow(
       'Expected Vercel OIDC token project_id claim to be "prj_test".'
+    );
+  });
+
+  test('rejects a token from a project outside the projectId array', async () => {
+    mockVerifiedPayload({
+      project_id: 'prj_other',
+    });
+
+    await expect(
+      verifyVercelOidcToken('token', {
+        projectId: ['prj_first', 'prj_second'],
+      })
+    ).rejects.toThrow(
+      'Expected Vercel OIDC token project_id claim to be one of: "prj_first", "prj_second".'
+    );
+  });
+
+  test('requires a non-empty projectId array', async () => {
+    await expect(
+      verifyVercelOidcToken('token', {
+        projectId: [],
+      })
+    ).rejects.toThrow(
+      "Expected VERCEL_PROJECT_ID to be set or projectId to be provided. Pass projectId: '*' to allow any project_id claim."
     );
   });
 
@@ -290,6 +338,20 @@ describe('verifyVercelOidcToken', () => {
     );
   });
 
+  test('rejects a token from an environment outside the environment array', async () => {
+    mockVerifiedPayload({
+      environment: 'preview',
+    });
+
+    await expect(
+      verifyVercelOidcToken('token', {
+        environment: ['production', 'development'],
+      })
+    ).rejects.toThrow(
+      'Expected Vercel OIDC token environment claim to be one of: "production", "development".'
+    );
+  });
+
   test('requires a projectId default or wildcard', async () => {
     delete process.env.VERCEL_PROJECT_ID;
 
@@ -303,6 +365,16 @@ describe('verifyVercelOidcToken', () => {
     delete process.env.VERCEL_ENV;
 
     await expect(verifyVercelOidcToken('token')).rejects.toThrow(
+      "Expected VERCEL_TARGET_ENV or VERCEL_ENV to be set or environment to be provided. Pass environment: '*' to allow any environment claim."
+    );
+  });
+
+  test('requires a non-empty environment array', async () => {
+    await expect(
+      verifyVercelOidcToken('token', {
+        environment: [],
+      })
+    ).rejects.toThrow(
       "Expected VERCEL_TARGET_ENV or VERCEL_ENV to be set or environment to be provided. Pass environment: '*' to allow any environment claim."
     );
   });

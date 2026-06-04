@@ -35,12 +35,13 @@ export type VercelOidcPayload = JWTPayload & {
  * - `issuer`: Expected `iss` claim verified by Jose. The verified issuer must
  *   still be `https://oidc.vercel.com` or start with
  *   `https://oidc.vercel.com/`.
- * - `projectId`: Expected `project_id` claim. Defaults to
- *   `process.env.VERCEL_PROJECT_ID`. Pass `'*'` to allow any project ID. When
- *   `projectId` is `'*'`, either `ownerId` or `audience` is required.
- * - `environment`: Expected `environment` claim. Defaults to
- *   `process.env.VERCEL_TARGET_ENV || process.env.VERCEL_ENV`. Pass `'*'` to
- *   allow any environment.
+ * - `projectId`: Expected `project_id` claim or claims. Defaults to
+ *   `process.env.VERCEL_PROJECT_ID`. Pass an array to allow any matching
+ *   project ID. Pass `'*'` to allow any project ID. When `projectId` is `'*'`,
+ *   either `ownerId` or `audience` is required.
+ * - `environment`: Expected `environment` claim or claims. Defaults to
+ *   `process.env.VERCEL_TARGET_ENV || process.env.VERCEL_ENV`. Pass an array
+ *   to allow any matching environment. Pass `'*'` to allow any environment.
  * - `ownerId`: Expected `owner_id` claim. When omitted, the claim is not
  *   checked.
  * - Any other Jose JWT verification option.
@@ -52,8 +53,8 @@ export type VercelOidcPayload = JWTPayload & {
 export async function verifyVercelOidcToken<PayloadType = VercelOidcPayload>(
   token: string,
   options?: {
-    projectId?: string;
-    environment?: string;
+    projectId?: string | string[] | '*';
+    environment?: string | string[] | '*';
     ownerId?: string;
   } & JWTVerifyOptions
 ): Promise<JWTVerifyResult<PayloadType>> {
@@ -131,22 +132,32 @@ function validateClaim({
   actual: unknown;
   claim: string;
   env: string;
-  expected: string | undefined;
+  expected: string | string[] | undefined;
   option: string;
 }): void {
   if (expected === '*') {
     return;
   }
 
-  if (!expected) {
+  if (expected === undefined || expected.length === 0) {
     throw new TypeError(
       `Expected ${env} to be set or ${option} to be provided. Pass ${option}: '*' to allow any ${claim} claim.`
     );
   }
 
+  if (
+    Array.isArray(expected) &&
+    typeof actual === 'string' &&
+    expected.includes(actual)
+  ) {
+    return;
+  }
+
   if (actual !== expected) {
     throw new TypeError(
-      `Expected Vercel OIDC token ${claim} claim to be "${expected}".`
+      Array.isArray(expected)
+        ? `Expected Vercel OIDC token ${claim} claim to be one of: ${expected.map(value => `"${value}"`).join(', ')}.`
+        : `Expected Vercel OIDC token ${claim} claim to be "${expected}".`
     );
   }
 }
