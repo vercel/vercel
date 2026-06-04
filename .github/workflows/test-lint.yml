@@ -26,8 +26,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
       - run: pnpm install
       # Enforce a changeset file to be present
       - run: pnpm exec changeset status --since=main
@@ -49,8 +49,8 @@ jobs:
         uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
         with:
           targets: wasm32-wasip2
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
       - run: pnpm install
       - name: Biome lint
         run: pnpm run lint
