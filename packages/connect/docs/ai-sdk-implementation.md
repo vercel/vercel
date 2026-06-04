@@ -179,6 +179,59 @@ Two new subpath exports, split by audience:
 - **`@vercel/connect/ai-sdk`** (V1 primary surface, extended in V2): AI SDK developers' entry point. In V1, re-exports `connectAuthProvider` + `ConsentRequiredError` + `ConsentChallenge` so AI SDK users only need to know one import path. In V2, adds `withConsentApproval` (auto-wraps tools with `toolApproval: 'user-approval'` for the AI SDK's HITL flow) and eventually `<ConnectConsentBoundary>` (V3 React glue).
 - **`@vercel/connect/mcp`** (V1): canonical home for `connectAuthProvider` — implements MCP-spec `OAuthClientProvider` by delegating to `getToken` and `startAuthorization`. Same function the `/ai-sdk` subpath re-exports; exists at this path so MCP-only consumers (Mastra, official MCP TS SDK, etc.) can import from a name that accurately reflects what the function is.
 
+### `package.json` delta
+
+Mirrors the existing pattern for `@vercel/connect/{ash,betterauth,authjs}` — each adapter declares its upstream as an **optional peer dependency** so installing `@vercel/connect` doesn't force unrelated downloads, and pins a dev dependency so the workspace can type-check and build:
+
+```diff
+ "exports": {
+   ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+   "./ash":        { "types": "./dist/ash/index.d.ts",        "default": "./dist/ash/index.js" },
+   "./betterauth": { "types": "./dist/betterauth/index.d.ts", "default": "./dist/betterauth/index.js" },
+   "./authjs":     { "types": "./dist/authjs/index.d.ts",     "default": "./dist/authjs/index.js" },
++  "./mcp":        { "types": "./dist/mcp/index.d.ts",        "default": "./dist/mcp/index.js" },
++  "./ai-sdk":     { "types": "./dist/ai-sdk/index.d.ts",     "default": "./dist/ai-sdk/index.js" }
+ },
+ "peerDependencies": {
+   "@auth/core": ">=0.37.0",
+   "better-auth": ">=1.5.0",
+-  "experimental-ash": ">=0.8.2"
++  "experimental-ash": ">=0.8.2",
++  "@ai-sdk/mcp": "^1 || ^2",
++  "ai": "^6 || ^7"
+ },
+ "peerDependenciesMeta": {
+   "@auth/core":        { "optional": true },
+   "better-auth":       { "optional": true },
+-  "experimental-ash":  { "optional": true }
++  "experimental-ash":  { "optional": true },
++  "@ai-sdk/mcp":       { "optional": true },
++  "ai":                { "optional": true }
+ },
+ "devDependencies": {
+   "@auth/core": "0.37.4",
+   "better-auth": "1.5.5",
+   "experimental-ash": "0.31.0",
++  "@ai-sdk/mcp": "2.0.0-beta.37",
++  "ai": "7.0.0-beta.116",
+   "typescript": "^5"
+ }
+```
+
+**Why optional:**
+
+- Mastra users who only import `@vercel/connect/mcp` shouldn't be forced to install `ai`.
+- AI SDK users who only import `@vercel/connect/ai-sdk` need both `@ai-sdk/mcp` (for the `OAuthClientProvider` interface and `createMCPClient`) and `ai` (for `streamText` / `toolApproval` types in V2).
+- Service-to-service consumers who only use the root `@vercel/connect` for `getToken` need neither.
+
+This matches the existing per-adapter optionality. Installing `@vercel/connect` is still zero extra dependencies for the root use case; each adapter adds its own peers only when imported.
+
+**Why `ai: ^6 || ^7` not `^7` only:**
+
+V1 supports both v6 and v7 (per the AI SDK version compatibility matrix). V2's `withConsentApproval` requires `ai@^7` for the `toolApproval` primitive, but enforcing that via the package-level peer dep would break v6 users who only use V1's `connectAuthProvider`. Instead, V2 enforces v7 at the type level: importing `withConsentApproval` against `ai@6` produces a clear TS error ("`toolApproval` is not a property of `streamText` options"). When `ai@6` is EOL'd we can tighten the peer dep to `^7` in a minor release.
+
+**Dev-dep pins:** match the versions used by the verified interface stability diff (see "Interface stability" subsection) so the type-check CI run reflects the contract the plan commits to. Bump in Changesets when the AI SDK promotes new versions.
+
 ## V0 — there is no SDK work
 
 V0 is a docs-only path that uses the existing `getToken` surface. It ships before this plan ever lands. Owned by [`ai-sdk-content.md`](./ai-sdk-content.md). Mentioned here only so the V1 → V2 → V3 numbering reads as a continuation.
@@ -191,7 +244,7 @@ V0's limitations are what motivate V1:
 
 ## V1: `@vercel/connect/ai-sdk` (primary) + `@vercel/connect/mcp`
 
-Two subpath exports backed by one implementation, mirroring the shape of the existing `@vercel/connect/ash`, `/betterauth`, and `/authjs` subpaths.
+Two subpath exports backed by one implementation, mirroring the shape of the existing `@vercel/connect/ash`, `/betterauth`, and `/authjs` subpaths — same `exports` map convention, same **optional peer dependency** pattern via `peerDependenciesMeta` (see [§`package.json` delta](#packagejson-delta) below), same Changeset workflow for upstream version bumps. Nothing novel about the package shape; the AI SDK adapter slots into the established adapter family.
 
 - **`@vercel/connect/ai-sdk`** is the only path AI SDK docs, recipes, and examples reference. It re-exports `connectAuthProvider`, `ConsentRequiredError`, and `ConsentChallenge` from `/mcp`.
 - **`@vercel/connect/mcp`** owns the canonical implementation. Its existence as a separately-named subpath is what lets Mastra, the official `@modelcontextprotocol/typescript-sdk`, and any other MCP-spec client import from an accurate path. AI SDK users never need to know `/mcp` exists.
@@ -420,7 +473,7 @@ V2 adds an "approval flow" step to the same example; the V2 publish gate is the 
 4. **JWT-bearer subject support.** `ConnectTokenParams['subject']` already supports `{ type: 'jwt-bearer', sub, iss?, aud?, additionalClaims? }`. The adapter passes through verbatim, but the consent flow doesn't apply — `tokens()` either succeeds or throws. Document this in the JSDoc; no API change needed.
 5. **MCP server discovery vs schema definition.** `mcpClient.tools()` defaults to schema discovery (auto-syncs). For least-privilege agents we may want `mcpClient.tools({ schemas: { … } })` for explicit allowlisting. This is a pass-through; document the pattern in the guide.
 6. **Connection pooling.** If a chat app opens 50 concurrent MCP clients per request, each over its own WebSocket/SSE, costs blow up. Is pooling the adapter's problem or the consumer's? **Lean:** out of scope for V1. Mention in the docs that production deployments should reuse `mcpClient` across requests when the auth subject is stable.
-7. **`OAuthClientProvider` interface drift.** Verified identical between `@ai-sdk/mcp@1.x` and `2.x` (see "Interface stability" subsection above), so V1 supports both. Future drift mitigation: pin peer dep range, ship a Changeset for each AI SDK major. The AI SDK vs official MCP TS SDK delta is ~5% (also documented above) — a single implementation satisfies both today.
+7. **`OAuthClientProvider` interface drift.** Resolved, no longer open. The interface is verified identical between `@ai-sdk/mcp@1.x` and `2.x` (see "Interface stability" subsection), so V1 supports both. The AI SDK vs official MCP TS SDK delta is ~5% — a single implementation satisfies both today. Drift mitigation already wired in via the [package.json delta](#packagejson-delta): both `@ai-sdk/mcp` and `ai` are declared as **optional peer dependencies** following the existing `@vercel/connect/{ash,betterauth,authjs}` pattern, with dev-dep pins matching the versions used by the verified diff. When the AI SDK ships a major bump, the workflow is: (1) re-run the type-defs diff against the new version, (2) update the dev-dep pin and the peer-dep range together in a Changeset, (3) if the interface meaningfully changed, ship a facade entry point (`/mcp/v6`, `/mcp/v7`) without breaking the existing one.
 
 ## Testing plan
 
