@@ -1,42 +1,43 @@
 import { Client, type ClientOptions } from '@opensearch-project/opensearch';
 import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws';
 import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
+import { requireEnv, resolvePrefix } from './internal/resolve-prefix';
 
 /**
  * Options for {@link createOpenSearch}.
  *
- * All fields are optional — when omitted, values are read from the
- * environment variables that Vercel injects for an OpenSearch
- * Marketplace resource. Any field on the underlying `ClientOptions`
- * from `@opensearch-project/opensearch` may also be passed and will
- * be forwarded to the `Client`.
+ * All fields are optional. With no arguments, the factory finds the connected
+ * OpenSearch resource by scanning env for a `_AWS_RESOURCE_ARN` starting
+ * with `arn:aws:aoss:`, then reads every other field from env vars under
+ * that prefix.
+ *
+ * Any field on the underlying `ClientOptions` from
+ * `@opensearch-project/opensearch` may also be passed and is forwarded to the
+ * `Client`.
  */
 export interface CreateOpenSearchOptions extends Partial<ClientOptions> {
   /**
-   * The OpenSearch collection endpoint. Defaults to
-   * `process.env.OPENSEARCH_ENDPOINT`.
+   * The env var prefix the Marketplace integration was linked under
+   * (e.g. `STORAGE`, `STORAGE2`, or a custom name). Defaults to autodetect
+   * via the resource ARN — only required when multiple OpenSearch resources
+   * are connected.
    */
+  prefix?: string;
+  /** Overrides `<prefix>_OPENSEARCH_ENDPOINT`. */
   endpoint?: string;
-  /**
-   * The AWS region the collection lives in. Defaults to
-   * `process.env.AWS_REGION`.
-   */
+  /** Overrides `<prefix>_AWS_REGION`. */
   region?: string;
-  /**
-   * The IAM role to assume when signing requests. Defaults to
-   * `process.env.AWS_ROLE_ARN`, which Vercel sets when the
-   * project is connected to an AWS Marketplace resource.
-   */
+  /** Overrides `<prefix>_AWS_ROLE_ARN`. */
   roleArn?: string;
 }
 
 /**
- * Creates an OpenSearch `Client` pre-configured for a Vercel
- * Marketplace OpenSearch Serverless resource.
+ * Creates an OpenSearch `Client` pre-configured for a Vercel Marketplace
+ * OpenSearch resource.
  *
  * Credentials are obtained via Vercel OIDC + `sts:AssumeRoleWithWebIdentity`.
- * The role, region, and endpoint default to env vars Vercel injects
- * automatically when the project is connected to an OpenSearch resource.
+ * Configuration is resolved from the env vars Vercel injects under the
+ * resource's link prefix.
  *
  * @example
  * ```ts
@@ -47,32 +48,32 @@ export interface CreateOpenSearchOptions extends Partial<ClientOptions> {
  * ```
  */
 export function createOpenSearch(opts: CreateOpenSearchOptions = {}): Client {
-  const endpoint = opts.endpoint ?? process.env.OPENSEARCH_ENDPOINT;
-  const region = opts.region ?? process.env.AWS_REGION;
-  const roleArn = opts.roleArn ?? process.env.AWS_ROLE_ARN;
-
-  const missing: string[] = [];
-  if (!endpoint) missing.push('OPENSEARCH_ENDPOINT');
-  if (!region) missing.push('AWS_REGION');
-  if (!roleArn) missing.push('AWS_ROLE_ARN');
-  if (missing.length > 0) {
-    throw new Error(
-      `createOpenSearch: missing required environment variable${
-        missing.length === 1 ? '' : 's'
-      } ${missing.join(', ')}. Connect an OpenSearch resource from the Vercel Marketplace, or pass { endpoint, region, roleArn } explicitly.`
+  const factory = 'createOpenSearch';
+  let prefix = opts.prefix;
+  const fromEnv = (suffix: string) =>
+    requireEnv(
+      factory,
+      (prefix ??= resolvePrefix({
+        factory,
+        service: 'OpenSearch',
+        arnPrefix: 'arn:aws:aoss:',
+      })),
+      suffix
     );
-  }
 
-  const { endpoint: _e, region: _r, roleArn: _ra, ...rest } = opts;
+  const endpoint = opts.endpoint ?? fromEnv('OPENSEARCH_ENDPOINT');
+  const region = opts.region ?? fromEnv('AWS_REGION');
+  const roleArn = opts.roleArn ?? fromEnv('AWS_ROLE_ARN');
+
+  const { prefix: _p, endpoint: _e, region: _r, roleArn: _ra, ...rest } = opts;
 
   return new Client({
     ...AwsSigv4Signer({
-      region: region as string,
+      region,
       service: 'aoss',
-      getCredentials: () =>
-        awsCredentialsProvider({ roleArn: roleArn as string })(),
+      getCredentials: () => awsCredentialsProvider({ roleArn })(),
     }),
-    node: endpoint as string,
+    node: endpoint,
     ...rest,
   });
 }

@@ -4,15 +4,18 @@
 
 # Interface: CreateOpenSearchOptions
 
-Defined in: [packages/aws/src/opensearch.ts:14](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L14)
+Defined in: [packages/aws/src/opensearch.ts:18](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L18)
 
 Options for [createOpenSearch](../functions/createOpenSearch.md).
 
-All fields are optional — when omitted, values are read from the
-environment variables that Vercel injects for an OpenSearch
-Marketplace resource. Any field on the underlying `ClientOptions`
-from `@opensearch-project/opensearch` may also be passed and will
-be forwarded to the `Client`.
+All fields are optional. With no arguments, the factory finds the connected
+OpenSearch resource by scanning env for a `_AWS_RESOURCE_ARN` starting
+with `arn:aws:aoss:`, then reads every other field from env vars under
+that prefix.
+
+Any field on the underlying `ClientOptions` from
+`@opensearch-project/opensearch` may also be passed and is forwarded to the
+`Client`.
 
 ## Extends
 
@@ -156,10 +159,9 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 > `optional` **endpoint?**: `string`
 
-Defined in: [packages/aws/src/opensearch.ts:19](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L19)
+Defined in: [packages/aws/src/opensearch.ts:27](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L27)
 
-The OpenSearch collection endpoint. Defaults to
-`process.env.OPENSEARCH_ENDPOINT`.
+Overrides `<prefix>_OPENSEARCH_ENDPOINT`.
 
 ---
 
@@ -295,6 +297,19 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 ---
 
+### prefix?
+
+> `optional` **prefix?**: `string`
+
+Defined in: [packages/aws/src/opensearch.ts:25](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L25)
+
+The env var prefix the Marketplace integration was linked under
+(e.g. `STORAGE`, `STORAGE2`, or a custom name). Defaults to autodetect
+via the resource ARN — only required when multiple OpenSearch resources
+are connected.
+
+---
+
 ### proxy?
 
 > `optional` **proxy?**: `string` \| `URL`
@@ -311,10 +326,9 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 > `optional` **region?**: `string`
 
-Defined in: [packages/aws/src/opensearch.ts:24](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L24)
+Defined in: [packages/aws/src/opensearch.ts:29](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L29)
 
-The AWS region the collection lives in. Defaults to
-`process.env.AWS_REGION`.
+Overrides `<prefix>_AWS_REGION`.
 
 ---
 
@@ -346,11 +360,9 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 > `optional` **roleArn?**: `string`
 
-Defined in: [packages/aws/src/opensearch.ts:30](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L30)
+Defined in: [packages/aws/src/opensearch.ts:31](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L31)
 
-The IAM role to assume when signing requests. Defaults to
-`process.env.AWS_ROLE_ARN`, which Vercel sets when the
-project is connected to an AWS Marketplace resource.
+Overrides `<prefix>_AWS_ROLE_ARN`.
 
 ---
 

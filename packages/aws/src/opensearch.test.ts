@@ -25,33 +25,46 @@ import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws';
 import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
 import { createOpenSearch } from './opensearch';
 
-const ENV_KEYS = ['OPENSEARCH_ENDPOINT', 'AWS_REGION', 'AWS_ROLE_ARN'] as const;
+const KEYS = [
+  'AWS_RESOURCE_ARN',
+  'OPENSEARCH_ENDPOINT',
+  'AWS_REGION',
+  'AWS_ROLE_ARN',
+  'STORAGE_AWS_RESOURCE_ARN',
+  'STORAGE_OPENSEARCH_ENDPOINT',
+  'STORAGE_AWS_REGION',
+  'STORAGE_AWS_ROLE_ARN',
+  'STORAGE2_AWS_RESOURCE_ARN',
+  'STORAGE2_OPENSEARCH_ENDPOINT',
+  'STORAGE2_AWS_REGION',
+  'STORAGE2_AWS_ROLE_ARN',
+];
 
 describe('createOpenSearch', () => {
-  const originalEnv: Record<string, string | undefined> = {};
+  const original: Record<string, string | undefined> = {};
 
   beforeEach(() => {
-    for (const key of ENV_KEYS) {
-      originalEnv[key] = process.env[key];
-      delete process.env[key];
+    for (const k of KEYS) {
+      original[k] = process.env[k];
+      delete process.env[k];
     }
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    for (const key of ENV_KEYS) {
-      if (originalEnv[key] === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = originalEnv[key];
-      }
+    for (const k of KEYS) {
+      if (original[k] === undefined) delete process.env[k];
+      else process.env[k] = original[k];
     }
   });
 
-  test('uses Vercel-injected env vars when no options are provided', async () => {
-    process.env.OPENSEARCH_ENDPOINT = 'https://example.aoss.amazonaws.com';
-    process.env.AWS_REGION = 'us-east-2';
-    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1234567890:role/vercel-opensearch';
+  test('autodetects the prefix from the resource ARN', async () => {
+    process.env.STORAGE_AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/abc';
+    process.env.STORAGE_OPENSEARCH_ENDPOINT =
+      'https://example.aoss.amazonaws.com';
+    process.env.STORAGE_AWS_REGION = 'us-east-2';
+    process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/vercel-opensearch';
 
     const client = createOpenSearch();
 
@@ -65,10 +78,9 @@ describe('createOpenSearch', () => {
     expect(signerArgs.region).toBe('us-east-2');
     expect(signerArgs.service).toBe('aoss');
 
-    // Calling getCredentials should defer to awsCredentialsProvider with the role.
     await signerArgs.getCredentials();
     expect(awsCredentialsProvider).toHaveBeenCalledWith({
-      roleArn: 'arn:aws:iam::1234567890:role/vercel-opensearch',
+      roleArn: 'arn:aws:iam::1:role/vercel-opensearch',
     });
 
     expect(
@@ -76,35 +88,88 @@ describe('createOpenSearch', () => {
     ).toBe('https://example.aoss.amazonaws.com');
   });
 
-  test('explicit options override env', () => {
-    process.env.OPENSEARCH_ENDPOINT = 'https://env-endpoint.example';
-    process.env.AWS_REGION = 'us-east-2';
-    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/env';
+  test('uses an explicit prefix override', () => {
+    process.env.STORAGE_AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/one';
+    process.env.STORAGE_OPENSEARCH_ENDPOINT = 'https://one.example';
+    process.env.STORAGE_AWS_REGION = 'us-east-2';
+    process.env.STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::1:role/one';
 
-    createOpenSearch({
-      endpoint: 'https://override-endpoint.example',
-      region: 'eu-west-1',
-      roleArn: 'arn:aws:iam::2:role/override',
-    });
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/two';
+    process.env.STORAGE2_OPENSEARCH_ENDPOINT = 'https://two.example';
+    process.env.STORAGE2_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/two';
 
+    const client = createOpenSearch({ prefix: 'STORAGE2' });
     const signerArgs = (AwsSigv4Signer as unknown as ReturnType<typeof vi.fn>)
       .mock.calls[0][0] as { region: string };
     expect(signerArgs.region).toBe('eu-west-1');
-    expect(awsCredentialsProvider).not.toHaveBeenCalled();
+    expect(
+      (client as unknown as { options: { node: string } }).options.node
+    ).toBe('https://two.example');
   });
 
-  test('throws a helpful error when env vars are missing', () => {
-    expect(() => createOpenSearch()).toThrow(
-      /OPENSEARCH_ENDPOINT.*AWS_REGION.*AWS_ROLE_ARN/
-    );
+  test('explicit fields override env entirely', () => {
+    createOpenSearch({
+      endpoint: 'https://override.example',
+      region: 'eu-west-2',
+      roleArn: 'arn:aws:iam::3:role/override',
+    });
+    const signerArgs = (AwsSigv4Signer as unknown as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0] as { region: string };
+    expect(signerArgs.region).toBe('eu-west-2');
   });
 
-  test('lists only the missing env vars in the error', () => {
-    process.env.OPENSEARCH_ENDPOINT = 'https://example';
+  test('throws when no resource is connected', () => {
+    expect(() => createOpenSearch()).toThrow(/no OpenSearch resource/);
+  });
+
+  test('throws when multiple resources are connected without a prefix', () => {
+    process.env.STORAGE_AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/one';
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/two';
+    expect(() => createOpenSearch()).toThrow(/multiple OpenSearch resources/);
+  });
+
+  test('autodetects an unprefixed default connection', () => {
+    process.env.AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/default';
+    process.env.OPENSEARCH_ENDPOINT = 'https://default.example';
     process.env.AWS_REGION = 'us-east-2';
-    // AWS_ROLE_ARN intentionally missing.
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
 
-    expect(() => createOpenSearch()).toThrow(/AWS_ROLE_ARN/);
-    expect(() => createOpenSearch()).not.toThrow(/OPENSEARCH_ENDPOINT/);
+    const client = createOpenSearch();
+    const signerArgs = (AwsSigv4Signer as unknown as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0] as { region: string };
+    expect(signerArgs.region).toBe('us-east-2');
+    expect(
+      (client as unknown as { options: { node: string } }).options.node
+    ).toBe('https://default.example');
+  });
+
+  test('default + STORAGE2: bare call returns default, prefixed returns prefixed', () => {
+    process.env.AWS_RESOURCE_ARN =
+      'arn:aws:aoss:us-east-2:1:collection/default';
+    process.env.OPENSEARCH_ENDPOINT = 'https://default.example';
+    process.env.AWS_REGION = 'us-east-2';
+    process.env.AWS_ROLE_ARN = 'arn:aws:iam::1:role/default';
+
+    process.env.STORAGE2_AWS_RESOURCE_ARN =
+      'arn:aws:aoss:eu-west-1:1:collection/second';
+    process.env.STORAGE2_OPENSEARCH_ENDPOINT = 'https://second.example';
+    process.env.STORAGE2_AWS_REGION = 'eu-west-1';
+    process.env.STORAGE2_AWS_ROLE_ARN = 'arn:aws:iam::2:role/second';
+
+    const a = createOpenSearch();
+    const b = createOpenSearch({ prefix: 'STORAGE2' });
+
+    expect((a as unknown as { options: { node: string } }).options.node).toBe(
+      'https://default.example'
+    );
+    expect((b as unknown as { options: { node: string } }).options.node).toBe(
+      'https://second.example'
+    );
   });
 });
