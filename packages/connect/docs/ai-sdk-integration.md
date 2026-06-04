@@ -57,6 +57,24 @@ The AI SDK's `OAuthClientProvider` and the official MCP TS SDK's `OAuthClientPro
 
 The narrower AI SDK shape is a subtype of the official shape, so a single implementation returning a non-undefined `string | URL` satisfies both. The V1 implementer should write the adapter against the AI SDK's stricter shape (so the type-check is tight) and verify it satisfies the official MCP SDK's looser shape via a TypeScript compatibility test. If the interfaces diverge further over time, we can ship two facade entry points (`/mcp/ai-sdk` and `/mcp/official`) without breaking the existing one.
 
+### Interface stability across `@ai-sdk/mcp@1.x` and `@ai-sdk/mcp@2.x` (verified)
+
+Pulled and diffed both published tarballs on 2026-06-03:
+
+```
+$ diff @ai-sdk/mcp@1.0.46/dist/index.d.ts @ai-sdk/mcp@2.0.0-beta.37/dist/index.d.ts | wc -l
+30
+```
+
+The 30-line delta touches **none** of `OAuthClientProvider`, `OAuthTokens`, `OAuthClientMetadata`, `OAuthClientInformation`, `AuthorizationServerMetadata`, `UnauthorizedError`, or the `auth()` function. The interface declarations (lines 146–188 in both files) are byte-for-byte identical. The actual deltas:
+
+- `MCPTransport.protocolVersion?` field removed in v2
+- `MCPTransportConfig.redirect` default changed `'follow'` → `'error'` in v2
+- `resource_link` content block variant removed in v2
+- Deprecated `clientName` shim removed in v2
+
+**Conclusion: a single `connectAuthProvider` implementation satisfies both `@ai-sdk/mcp@1.x` (paired with `ai@6`) and `@ai-sdk/mcp@2.x` (paired with `ai@7`). The peer dep `^1 || ^2` is safe, no facade split needed.** Re-verify if a future v3 ships.
+
 ## Motivation
 
 Today, a Next.js + AI SDK developer who wants an agent to call provider APIs has to do all of:
@@ -497,7 +515,7 @@ To keep the AI SDK docs focused, we explicitly do not propose:
 4. **JWT-bearer subject support.** `ConnectTokenParams['subject']` already supports `{ type: 'jwt-bearer', sub, iss?, aud?, additionalClaims? }`. The adapter passes through verbatim, but the consent flow doesn't apply — `tokens()` either succeeds or throws. Document this in the JSDoc; no API change needed.
 5. **MCP server discovery vs schema definition.** `mcpClient.tools()` defaults to schema discovery (auto-syncs). For least-privilege agents we may want `mcpClient.tools({ schemas: { … } })` for explicit allowlisting. This is a pass-through; document the pattern in the guide.
 6. **Connection pooling.** If a chat app opens 50 concurrent MCP clients per request, each over its own WebSocket/SSE, costs blow up. Is pooling the adapter's problem or the consumer's? **Lean:** out of scope for V1. Mention in the docs that production deployments should reuse `mcpClient` across requests when the auth subject is stable.
-7. **`OAuthClientProvider` interface drift.** The AI SDK MCP package may add new methods. **Mitigation:** pin a peer dependency range on `@ai-sdk/mcp`, ship a Changeset for each AI SDK major.
+7. **`OAuthClientProvider` interface drift.** Verified identical between `@ai-sdk/mcp@1.x` and `2.x` (see "Interface stability" subsection above), so V1 supports both. Future drift mitigation: pin peer dep range, ship a Changeset for each AI SDK major. The AI SDK vs official MCP TS SDK delta is ~5% (also documented above) — a single implementation satisfies both today.
 
 ## Testing plan
 
