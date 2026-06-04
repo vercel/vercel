@@ -477,7 +477,18 @@ V2 adds an "approval flow" step to the same example; the V2 publish gate is the 
 
 ## Testing plan
 
-### Unit tests (in `packages/connect`)
+Four tiers, each catching a different class of bug. The first two run in PR CI; the third runs nightly + before every publish; the fourth is the final human-eyes pass.
+
+| Tier | Speed | Runs in PR CI | Catches |
+| ---- | ----- | ------------- | ------- |
+| Unit | <1s   | Yes           | Adapter logic in isolation (mocked Connect + mocked transport) |
+| Integration | ~5s | Yes        | Adapter ↔ real `createMCPClient` ↔ mocked MCP server |
+| E2E | ~30s | No (opt-in)    | Adapter ↔ real Connect API ↔ real MCP server. **V1 publish gate.** |
+| Manual smoke | — | No           | Human eyes on the user-facing flow |
+
+### Unit tests (in `packages/connect/src/mcp/__tests__/`)
+
+Run against fully mocked dependencies. Cover:
 
 - `tokens()` returns a valid `OAuthTokens` shape when `getToken` resolves.
 - `tokens()` returns `undefined` on `UserAuthorizationRequiredError`.
@@ -486,19 +497,69 @@ V2 adds an "approval flow" step to the same example; the V2 publish gate is the 
 - `invalidateCredentials('tokens')` evicts the LRU cache entry.
 - `withConsentApproval` produces the correct `approvalConfig` shape, including `prefix`/`approve` filtering.
 
-### Integration tests (in a fixtures app)
+### Integration tests (in `packages/connect/__tests__/integration/`)
 
-- Wire `connectAuthProvider` into a real `createMCPClient`, mock the MCP server, assert:
-  - First request sets `Authorization: Bearer <token>` from `getToken`.
-  - 401 response triggers `authorizeOnce()` and lands in `redirectToAuthorization`.
-  - Token refresh on second request after expiry.
-  - Multi-client composition produces non-conflicting tool maps.
-- Wire `withConsentApproval` into `streamText`, simulate a `tool-approval` chunk, deny it, assert the model receives `execution-denied`.
+Wire `connectAuthProvider` into a real `createMCPClient` instance against an in-process mock MCP server (using `@ai-sdk/mcp`'s test helpers). Assert:
 
-### Manual smoke
+- First request sets `Authorization: Bearer <token>` from `getToken`.
+- 401 response triggers `authorizeOnce()` and lands in `redirectToAuthorization`.
+- Token refresh on second request after expiry.
+- Multi-client composition produces non-conflicting tool maps.
+- Wire `withConsentApproval` into `streamText` against a mocked LLM, simulate a `tool-approval` chunk, deny it, assert the model receives `execution-denied`.
 
-- Run the docs-page example against a real Linear MCP connector with a test workspace.
-- Run a two-provider example (Linear + GitHub) with overlapping tool names and `prefix:` to verify no collisions.
+### E2E tests (in `packages/connect/__tests__/e2e/`) — V1 publish gate
+
+These are the tests that actually prove the adapter works against the live Connect API, not just against our assumptions about it. They use `vercel link` + `vercel env pull` to authenticate as a real Vercel project with real connectors attached.
+
+**Test project setup (one-time per dev machine):**
+
+```bash
+cd packages/connect/__tests__/e2e
+vercel link --project vercel-internal-playground   # or ash-starter-template
+vercel env pull .env.test                          # provisions VERCEL_OIDC_TOKEN
+```
+
+The test project must have these connectors attached (owned by the connect team — coordinate with @allenzhou for access):
+
+| Connector UID                    | Purpose                                                  |
+| -------------------------------- | -------------------------------------------------------- |
+| `oauth/linear`                   | Happy-path `tokens()` returns valid bearer for real MCP  |
+| `oauth/linear-unauthorized`      | Forces `UserAuthorizationRequiredError` → consent flow   |
+| `slack/test-workspace`           | Alternate provider for multi-connector composition test  |
+| `api-key/intentionally-broken`   | Forces `ConnectorInstallationRequiredError`              |
+
+Tests are gracefully skipped (not failed) when `.env.test` is missing, with a clear message pointing at the setup steps. CI runs them as a separate job that injects a service-account OIDC token from a GitHub Actions secret.
+
+**E2E assertions:**
+
+- `tokens()` against `oauth/linear` returns a non-empty access token whose `Authorization: Bearer <token>` header is accepted by `https://mcp.linear.app` (assert 200 on `/mcp` handshake).
+- `tokens()` against `oauth/linear-unauthorized` throws `UserAuthorizationRequiredError` and `startAuthorization` returns a `url` whose host is the connector's configured authorization server.
+- `tokens()` against `api-key/intentionally-broken` throws `ConnectorInstallationRequiredError`.
+- Full `createMCPClient` + `mcpClient.tools()` round-trip against the real Linear MCP server, asserting the tool list is non-empty and one of the expected tool names is present.
+- `withConsentApproval` against the real Linear tools produces an `approvalConfig` keyed by the actual tool names returned by Linear's MCP server (catches drift when Linear renames tools).
+
+**Cadence:**
+
+- Manually before every `@vercel/connect` publish: `pnpm test:e2e` in `packages/connect`.
+- Nightly via a GitHub Actions cron job with a service-account OIDC token, posting failures to the connect team channel.
+- The `examples/next-mcp-vercel-connect/` smoke-test in `vercel/ai` (see §"Example app") is the cross-repo equivalent and runs in `vercel/ai` CI on every PR that touches `@ai-sdk/mcp` or `ai`.
+
+### Manual smoke / acceptance (pre-publish, human-driven)
+
+After all automated tiers pass, run the published-candidate package end-to-end with a real chat UI to catch UX issues no test will surface:
+
+- Run the docs-page example against a real Linear MCP connector with a test workspace; confirm the consent redirect URL renders as expected and post-consent the chat actually returns Linear data.
+- Run a two-provider example (Linear + GitHub) with overlapping tool names and `prefix:` to verify no collisions surface in the rendered chat output.
+- Manually revoke a token in the Linear workspace and confirm the next chat turn surfaces `ConsentRequiredError` rather than a confusing 401.
+
+### Test project ownership
+
+The Vercel-internal test project(s) used by the E2E tier are owned by the connect team. The plan currently lists two candidates:
+
+- **`vercel-internal-playground`** — generic Vercel internal sandbox; needs the four test connectors attached.
+- **`ash-starter-template`** — Ash starter that already has Connect connectors wired; faster to bootstrap from but the connector UIDs may need renaming to match the table above.
+
+@allenzhou to confirm which project we standardize on and ensure the four listed connectors are attached and current. The test suite reads the project name from `.env.test`'s `VERCEL_PROJECT_NAME` (set by `vercel env pull`) and the connector UIDs from a small `e2e-config.ts` so renames don't require code changes.
 
 ## SDK release sequence
 
@@ -516,16 +577,19 @@ V0 is docs-only and ships from the content plan. The implementation plan picks u
 | `vercel/vercel`       | `@vercel/connect/ai-sdk` subpath export — re-exports `connectAuthProvider`, `ConsentRequiredError`, `ConsentChallenge` from `/mcp`. Primary surface for AI SDK consumers. |
 | `vercel/vercel`       | Peer dependency on `@ai-sdk/mcp@^1 \|\| ^2` (covers AI SDK v6 + v7); Changeset; version bump to `@vercel/connect@0.2`                                                   |
 | `vercel/vercel`       | TypeScript compatibility test verifying the adapter satisfies both AI SDK's and official MCP SDK's `OAuthClientProvider` shapes                                          |
-| `vercel/vercel`       | Unit tests for `tokens()`, `redirectToAuthorization`, `invalidateCredentials`; integration tests against a mock MCP server                                               |
-| `vercel/ai`           | Example app `examples/next-mcp-vercel-connect/` (smoke-test gate — see §"Example app" above). Cookbook recipe and reference cross-link are content plan deliverables.    |
+| `vercel/vercel`       | Unit tests + integration tests (mock MCP server) — both run in PR CI                                                                                                     |
+| `vercel/vercel`       | E2E tests against real Connect API via `vercel link` + `vercel env pull` to a Vercel-internal test project (`vercel-internal-playground` or `ash-starter-template`). **V1 publish gate.** See §"Testing plan" → "E2E tests". |
+| `vercel/vercel`       | GitHub Actions nightly cron running the E2E suite with a service-account OIDC token; failures post to the connect team channel                                           |
+| `vercel/ai`           | Example app `examples/next-mcp-vercel-connect/` (cross-repo smoke-test gate — see §"Example app" above). Cookbook recipe and reference cross-link are content plan deliverables. |
 
 ### Phase V2 — `withConsentApproval` + HITL polish
 
 | Repo                  | Artifact                                                                                                                                          |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `vercel/vercel`       | Extend `@vercel/connect/ai-sdk` (already shipping in V1): add `withConsentApproval` helper with prefix/approve filtering + `approvalConfig` builder |
-| `vercel/vercel`       | Tests against `streamText({ toolApproval })` for approval and denial paths                                                                        |
-| `vercel/ai`           | Add an approval-gated step to `examples/next-mcp-vercel-connect/`; this becomes the V2 publish gate                                               |
+| `vercel/vercel`       | Unit + integration tests against `streamText({ toolApproval })` for approval and denial paths                                                     |
+| `vercel/vercel`       | Extend E2E suite: assert `withConsentApproval` against the real Linear MCP server produces an `approvalConfig` keyed by the actual tool names (catches Linear-side tool renames) |
+| `vercel/ai`           | Add an approval-gated step to `examples/next-mcp-vercel-connect/`; this becomes the V2 cross-repo publish gate                                    |
 
 ### Phase V3 — UI primitives (deferred until V2 has real usage)
 
