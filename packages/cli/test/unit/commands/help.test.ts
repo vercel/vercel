@@ -819,7 +819,10 @@ describe('help command', () => {
     describe('rollback status help output snapshots', () => {
       it('rollback status help column width 120', () => {
         expect(
-          help(rollback.rollbackCommand, { columns: 120 })
+          help(rollback.statusSubcommand, {
+            columns: 120,
+            parent: rollback.rollbackCommand,
+          })
         ).toMatchSnapshot();
       });
     });

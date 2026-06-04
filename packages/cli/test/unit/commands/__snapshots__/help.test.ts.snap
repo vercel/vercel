@@ -6565,19 +6565,13 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback status help output snapshots > rollback status help column width 120 1`] = `
 "
-  ▲ vercel rollback url|deploymentId [options]
+  ▲ vercel rollback status [project] [options]
 
-  Quickly revert back to a previous deployment                                                                          
-
-  Commands:
-
-  status  [project]  Show the status of any current pending rollbacks                                           
-
+  Show the status of any current pending rollbacks                                                                      
 
   Options:
 
-       --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
-  -y,  --yes             Accept default value for all prompts                                                                
+   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
 
 
   Global Options:
@@ -6596,9 +6590,11 @@ exports[`help command > rollback help output snapshots > rollback status help ou
 
   Examples:
 
-  - Rollback a deployment using id or url
+  - Show the status of any current pending rollbacks
 
-    $ vercel rollback <deployment id/url>
+    $ vercel rollback status
+    $ vercel rollback status <project>
+    $ vercel rollback status --timeout 30s
 
 "
 `;
