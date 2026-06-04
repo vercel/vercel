@@ -428,6 +428,124 @@ const stream = await streamText({
 });
 ```
 
+### What this replaces
+
+The V2 snippet above is five lines of glue. Three alternative paths to the same behavior, in order of decreasing pain:
+
+#### Without Connect at all (you own the OAuth stack)
+
+```ts
+// Pre-work outside this file:
+// - Register OAuth apps with Linear and GitHub in each provider's console
+// - Store LINEAR_CLIENT_ID/SECRET, GITHUB_CLIENT_ID/SECRET as env vars
+// - Run a migration:
+//   CREATE TABLE oauth_tokens (
+//     user_id TEXT, provider TEXT, access_token TEXT, refresh_token TEXT,
+//     expires_at TIMESTAMP, scopes TEXT[],
+//     PRIMARY KEY (user_id, provider)
+//   );
+// - Ship /api/oauth/linear/callback and /api/oauth/github/callback routes,
+//   each handling code exchange, PKCE verification, state validation, token persistence
+
+async function getProviderToken(userId: string, provider: 'linear' | 'github') {
+  const row = await db.oauth_tokens.findUnique({
+    where: { user_id_provider: { userId, provider } },
+  });
+  if (!row) throw new ConsentRequiredError(buildOAuthAuthorizeUrl(provider, userId));
+
+  if (row.expires_at < new Date(Date.now() + 60_000)) {
+    const refreshed = await fetch(`https://api.${provider}.com/oauth/token`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: row.refresh_token,
+        client_id: process.env[`${provider.toUpperCase()}_CLIENT_ID`]!,
+        client_secret: process.env[`${provider.toUpperCase()}_CLIENT_SECRET`]!,
+      }),
+    }).then((r) => r.json());
+    await db.oauth_tokens.update({
+      where: { user_id_provider: { userId, provider } },
+      data: {
+        access_token: refreshed.access_token,
+        expires_at: new Date(Date.now() + refreshed.expires_in * 1000),
+      },
+    });
+    return refreshed.access_token;
+  }
+  return row.access_token;
+}
+
+// ... then the same buildClient / prefix / approvalConfig / streamText plumbing below,
+// with getProviderToken() in place of @vercel/connect's getToken().
+```
+
+Plus security review of `client_secret` storage, on-call rotation when a provider forces a refresh-token reissue, and a migration every time you add a third provider.
+
+#### Connect without the adapter (V0 pattern — Connect handles OAuth, you handle AI SDK glue)
+
+```ts
+import { createMCPClient } from '@ai-sdk/mcp';
+import {
+  getToken,
+  startAuthorization,
+  UserAuthorizationRequiredError,
+} from '@vercel/connect';
+import { streamText } from 'ai';
+
+async function buildClient(connector: string, mcpUrl: string) {
+  try {
+    const token = await getToken(connector, { subject: { type: 'user', id: userId } });
+    return await createMCPClient({
+      transport: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${token}` } },
+    });
+  } catch (err) {
+    if (err instanceof UserAuthorizationRequiredError) {
+      const { url } = await startAuthorization(connector, { subject: { type: 'user', id: userId } });
+      throw new ConsentRequiredError(url);
+    }
+    throw err;
+  }
+}
+
+const [linearClient, githubClient] = await Promise.all([
+  buildClient('oauth/linear', 'https://mcp.linear.app'),
+  buildClient('oauth/github', 'https://mcp.github.com'),
+]);
+
+const linearTools = await linearClient.tools();
+const githubTools = await githubClient.tools();
+
+const prefix = (tools: Record<string, unknown>, p: string) =>
+  Object.fromEntries(Object.entries(tools).map(([k, v]) => [`${p}${k}`, v]));
+
+const linear = prefix(linearTools, 'linear_');
+const github = prefix(githubTools, 'github_');
+
+const approvalConfig = Object.fromEntries(
+  [...Object.keys(linear), ...Object.keys(github)].map((k) => [k, 'user-approval' as const]),
+);
+
+const stream = await streamText({
+  model: 'anthropic/claude-sonnet-4.6',
+  prompt: '...',
+  tools: { ...linear, ...github },
+  toolApproval: approvalConfig,
+  onFinish: async () => {
+    await Promise.all([linearClient.close(), githubClient.close()]);
+  },
+});
+```
+
+Plus: token expiry mid-conversation → rebuild the MCP client by hand. `invalidateCredentials` cache eviction → drop and re-fetch manually. Per-tool approval filtering (`approve: ['linear_create_issue']` instead of gating everything) → another `Object.entries` reduce.
+
+#### Summary
+
+| Stack | Per-provider glue | What you own |
+|---|---|---|
+| Raw OAuth (no Connect) | ~200 lines + DB schema + 2 callback routes | Client registration, DB, refresh, callback routes, security review |
+| Connect SDK alone (V0)             | ~30 lines              | Per-provider `try`/`catch` + bearer header + tool prefix + approval config |
+| Connect AI SDK adapter (V1 + V2)   | ~3 lines               | `withConsentApproval(...)` — the helper builds the rest                    |
+
 ## Example app (smoke-test gate for V1 release)
 
 A runnable example app in `vercel/ai/examples/next-mcp-vercel-connect/` mirrors the cookbook recipe end-to-end. It exists primarily as the **release gate for V1**: a green build of the example against the latest `vercel/ai` `main` is the signal that the published `@vercel/connect@0.2` is safe to ship. Secondary uses (giving readers a clone-and-run reference, surfacing in the AI SDK examples index) are owned by the [content plan](./ai-sdk-content.md).
