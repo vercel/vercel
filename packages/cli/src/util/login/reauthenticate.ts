@@ -8,11 +8,10 @@ export default async function reauthenticate(
   client: Client,
   error: Pick<SAMLError, 'enforced' | 'scope' | 'teamId'>
 ): Promise<LoginResult> {
-  // The device code flow opens a browser and polls for human approval, so it
-  // cannot succeed when the caller supplied an explicit token (we should
-  // respect their choice and not silently swap it out) or when there is no
-  // interactive TTY available (e.g. CI). Bail early with an actionable error
-  // instead of hanging for the full request timeout.
+  // The device code flow opens a browser when possible, prints the verification
+  // URL, and polls for human approval. It cannot succeed when the caller
+  // supplied an explicit token; respect that token instead of silently swapping
+  // it out.
   const { tokenSource } = client.authConfig;
   const reauthAction = error.enforced
     ? 'SAML re-authentication is required'
@@ -32,7 +31,7 @@ export default async function reauthenticate(
     );
   }
 
-  if (!client.stdin.isTTY) {
+  if (!client.stdin.isTTY && process.env.CI) {
     throw new Error(
       `${reauthAction} for ${bold(error.scope)} scope, but the current environment is non-interactive so the device-code flow cannot be completed. ` +
         `Run \`vercel login\` in an interactive shell, or set VERCEL_TOKEN / pass \`--token\` with a token that is authorized for that scope.`
@@ -66,7 +65,7 @@ export default async function reauthenticate(
     refreshToken: tokens.refresh_token,
   });
 
-  client.writeToAuthConfigFile();
+  client.persistAuthConfig();
 
   output.success(`Authentication complete for ${bold(error.scope)} scope.`);
 

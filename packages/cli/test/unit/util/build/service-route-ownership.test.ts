@@ -1,10 +1,14 @@
-import type { Service } from '@vercel/build-utils';
+import type { ExperimentalService } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 import { scopeRoutesToServiceOwnership } from '../../../../src/util/build/service-route-ownership';
 
-function createWebService(name: string, routePrefix: string): Service {
+function createWebService(
+  name: string,
+  routePrefix: string
+): ExperimentalService {
   return {
+    schema: 'experimentalServices',
     name,
     type: 'web',
     workspace: '.',

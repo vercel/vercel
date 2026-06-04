@@ -32,7 +32,7 @@ async function fetchUser(client: Client) {
     if (client.authConfig.userId !== res.user.id) {
       client.updateAuthConfig({ userId: res.user.id });
       try {
-        client.writeToAuthConfigFile();
+        client.persistAuthConfig();
       } catch {
         output.debug('Failed to persist cached userId to auth config.');
       }
@@ -49,7 +49,7 @@ async function fetchUser(client: Client) {
       if (client.authConfig.userId) {
         client.updateAuthConfig({ userId: undefined });
         try {
-          client.writeToAuthConfigFile();
+          client.persistAuthConfig();
         } catch {
           output.debug('Failed to persist cached userId to auth config.');
         }

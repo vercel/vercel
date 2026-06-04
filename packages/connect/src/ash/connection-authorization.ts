@@ -40,7 +40,11 @@ import {
 } from 'experimental-ash/connections';
 
 import { startAuthorization } from '../authorization.js';
-import type { ConnectOptions, ConnectTokenParams } from '../token.js';
+import type {
+  ConnectOptions,
+  ConnectTokenParams,
+  ConnectTokenSubject,
+} from '../token.js';
 import {
   ConnectorInstallationRequiredError,
   getTokenResponse,
@@ -121,6 +125,16 @@ export interface AshAuthorizationOptions {
    * `authorizationDetails`. Passed through verbatim.
    */
   readonly tokenParams?: Omit<ConnectTokenParams, 'subject'>;
+
+  /**
+   * Override how Ash's framework-resolved principal is mapped to a
+   * Vercel Connect token subject. When omitted, app principals map to
+   * `{ type: "app" }` and user principals map to
+   * `{ type: "user", id, issuer }`.
+   */
+  readonly principalToSubject?: (
+    principal: ConnectionPrincipal
+  ) => ConnectTokenSubject | Promise<ConnectTokenSubject>;
 
   /**
    * Low-level Vercel Connect SDK options (currently `vercelToken`
@@ -261,7 +275,7 @@ function buildInteractiveDefinition(
       try {
         const response = await getTokenResponse(
           options.connector,
-          buildTokenParams(options, principal),
+          await buildTokenParams(options, principal),
           options.connectOptions
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -302,11 +316,24 @@ function buildInteractiveDefinition(
         // in production.
         const response = await startAuthorization(
           options.connector,
-          buildTokenParams(options, principal),
-          { ...options.connectOptions, callbackUrl: callbackUrl ?? webhook }
+          await buildTokenParams(options, principal),
+          {
+            ...options.connectOptions,
+            callbackUrl: callbackUrl ?? webhook,
+            deviceCode: true,
+          }
         );
         return {
-          challenge: buildChallenge(options, response.url),
+          challenge: {
+            url: response.url,
+            ...(response.deviceCode ? { userCode: response.deviceCode } : null),
+            ...(response.expiresAt
+              ? { expiresAt: new Date(response.expiresAt).toISOString() }
+              : null),
+            ...(options.instructions
+              ? { instructions: options.instructions }
+              : null),
+          } satisfies ConnectionAuthorizationChallenge,
           state: { verifier: response.verifier },
         };
       } catch (error) {
@@ -320,7 +347,7 @@ function buildInteractiveDefinition(
       try {
         const response = await getTokenResponse(
           options.connector,
-          buildTokenParams(options, principal),
+          await buildTokenParams(options, principal),
           options.connectOptions
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -340,7 +367,7 @@ function buildNonInteractiveDefinition(
       try {
         const response = await getTokenResponse(
           options.connector,
-          buildTokenParams(options, principal),
+          await buildTokenParams(options, principal),
           options.connectOptions
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -351,33 +378,24 @@ function buildNonInteractiveDefinition(
   };
 }
 
-function buildTokenParams(
+async function buildTokenParams(
   options: AshAuthorizationOptions,
   principal: ConnectionPrincipal
-): ConnectTokenParams {
+): Promise<ConnectTokenParams> {
+  const toSubject = options.principalToSubject ?? principalToSubject;
   return {
     ...options.tokenParams,
-    subject: principalToSubject(principal),
+    subject: await toSubject(principal),
   };
 }
 
 function principalToSubject(
   principal: ConnectionPrincipal
-): ConnectTokenParams['subject'] {
+): ConnectTokenSubject {
   if (principal.type === 'app') {
     return { type: 'app' };
   }
   return { type: 'user', id: principal.id, issuer: principal.issuer };
-}
-
-function buildChallenge(
-  options: AshAuthorizationOptions,
-  url: string
-): ConnectionAuthorizationChallenge {
-  if (options.instructions === undefined) {
-    return { url };
-  }
-  return { url, instructions: options.instructions };
 }
 
 /**

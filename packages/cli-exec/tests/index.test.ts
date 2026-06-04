@@ -485,24 +485,46 @@ test('passes stdio through to execa', async () => {
 
 test('passes timeout through to execa', async () => {
   const root = createDirectory();
-  const cwd = path.join(root, 'apps', 'web');
   const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const cwd = tmpdir();
+  const binPath = path.join(root, binName);
+  let invocation: {
+    command: string;
+    commandArgs: string[];
+    source: 'path';
+  };
 
   mkdirSync(cwd, { recursive: true });
-  writeExecutable(binPath, {
-    win32: '@echo off\r\nnode -e "setTimeout(() => {}, 1000)"\r\n',
-    posix: '#!/bin/sh\nnode -e "setTimeout(() => {}, 1000)"\n',
-  });
 
-  await expect(execVercelCli([], { cwd, timeout: 10 })).rejects.toEqual(
+  if (process.platform === 'win32') {
+    writeExecutable(binPath, {
+      win32: '@echo off\r\n:loop\r\ngoto loop\r\n',
+      posix: '#!/bin/sh\nnode -e "setTimeout(() => {}, 5000)"\n',
+    });
+    invocation = {
+      command: realpathSync(binPath),
+      commandArgs: [],
+      source: 'path',
+    };
+  } else {
+    const cliPath = path.join(root, 'vercel.js');
+
+    writeFileSync(cliPath, 'setTimeout(() => {}, 5000);\n');
+    chmodSync(cliPath, 0o755);
+    symlinkSync(cliPath, binPath);
+    invocation = {
+      command: process.execPath,
+      commandArgs: [realpathSync(binPath)],
+      source: 'path',
+    };
+  }
+
+  await expect(
+    execVercelCli([], { cwd, env: { PATH: root }, timeout: 100 })
+  ).rejects.toEqual(
     expect.objectContaining<VercelCliError>({
       code: 'VERCEL_CLI_TIMED_OUT',
-      invocation: {
-        command: realpathSync(binPath),
-        commandArgs: [],
-        source: 'local-bin',
-      },
+      invocation,
     })
   );
 });

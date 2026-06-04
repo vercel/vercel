@@ -96,17 +96,30 @@ async function processDiscoveryEndpointResponse(
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
  */
-export async function deviceAuthorizationRequest(): Promise<Response> {
+export async function deviceAuthorizationRequest(options?: {
+  refresh_token?: string;
+  acr_values?: string;
+}): Promise<Response> {
+  const body = new URLSearchParams({
+    client_id: VERCEL_CLI_CLIENT_ID,
+  });
+
+  if (options?.refresh_token) {
+    body.set('refresh_token', options.refresh_token);
+    if (options.acr_values) {
+      body.set('acr_values', options.acr_values);
+    }
+  } else {
+    body.set('scope', 'openid offline_access');
+  }
+
   return await nodeFetch((await as()).device_authorization_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'user-agent': userAgent,
     },
-    body: new URLSearchParams({
-      client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid offline_access',
-    }),
+    body,
   });
 }
 

@@ -1,8 +1,13 @@
 {
   "name": "@vercel/connect",
-  "version": "0.0.6-alpha.1",
+  "version": "0.1.3",
   "license": "Apache-2.0",
   "type": "module",
+  "repository": {
+    "directory": "packages/connect",
+    "type": "git",
+    "url": "git+https://github.com/vercel/vercel.git"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

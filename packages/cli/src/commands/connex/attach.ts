@@ -73,7 +73,7 @@ export async function attach(
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connect attach <client>'
+      'Missing connector ID or UID. Usage: vercel connect attach <connector>'
     );
     return 1;
   }

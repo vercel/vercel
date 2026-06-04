@@ -58,6 +58,7 @@ const platforms = [
 
 if (checkSourcesOnly) {
   await stat(join(packageRoot, 'bin', 'vercel'));
+  await stat(join(packageRoot, 'postinstall.mjs'));
   await stat(join(packageRoot, 'scripts', 'stage-packages.mjs'));
   process.exit(0);
 }
@@ -108,9 +109,14 @@ const wrapperDir = join(outputRoot, 'vc-native');
 await mkdir(join(wrapperDir, 'bin'), { recursive: true });
 await copyFile(
   join(packageRoot, 'bin', 'vercel'),
-  join(wrapperDir, 'bin', 'vercel')
+  join(wrapperDir, 'bin', 'vercel.exe')
 );
-await chmod(join(wrapperDir, 'bin', 'vercel'), 0o755);
+await chmod(join(wrapperDir, 'bin', 'vercel.exe'), 0o755);
+await copyFile(
+  join(packageRoot, 'postinstall.mjs'),
+  join(wrapperDir, 'postinstall.mjs')
+);
+await chmod(join(wrapperDir, 'postinstall.mjs'), 0o755);
 await writePackageJson(wrapperDir, {
   name: '@vercel/vc-native',
   version,
@@ -119,13 +125,16 @@ await writePackageJson(wrapperDir, {
   homepage: 'https://vercel.com',
   repository: repository('packages/vc-native'),
   bin: {
-    vercel: './bin/vercel',
-    vc: './bin/vercel',
+    vercel: './bin/vercel.exe',
+    vc: './bin/vercel.exe',
+  },
+  scripts: {
+    postinstall: 'node ./postinstall.mjs',
   },
   optionalDependencies: Object.fromEntries(
     stagedPlatforms.map(platform => [platform.name, version])
   ),
-  files: ['bin'],
+  files: ['bin', 'postinstall.mjs'],
   publishConfig: { access: 'public' },
 });
 packageDirs.push(wrapperDir);
