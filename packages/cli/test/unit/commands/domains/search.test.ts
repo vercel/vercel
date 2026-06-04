@@ -1,6 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import domains from '../../../../src/commands/domains';
 import { client } from '../../../mocks/client';
+
+let globalConfigDir: string;
+
+beforeEach(async () => {
+  globalConfigDir = await mkdtemp(join(tmpdir(), 'domains-search-cache-'));
+  vi.spyOn(client, 'getGlobalPathConfig').mockReturnValue(globalConfigDir);
+});
+
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await rm(globalConfigDir, { recursive: true, force: true });
+});
 
 describe('domains search', () => {
   it('prints subcommand help', async () => {
@@ -68,6 +83,164 @@ describe('domains search', () => {
       }
       "
     `);
+  });
+
+  it('reuses the supported TLD catalog for 30 minutes', async () => {
+    let supportedTlds = ['com'];
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(supportedTlds);
+    });
+    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+      const body = req.body as { domains?: string[] };
+      res.json({
+        results: body.domains?.map(domain => ({
+          domain,
+          purchasePrice: 20,
+          renewalPrice: 20,
+          transferPrice: 20,
+          years: 1,
+        })),
+      });
+    });
+
+    client.setArgv('domains', 'search', 'acme', '--format=json');
+    expect(await domains(client)).toEqual(0);
+    const firstOutput = client.stdout.getFullOutput();
+
+    supportedTlds = ['dev'];
+    client.setArgv('domains', 'search', 'acme', '--format=json');
+    expect(await domains(client)).toEqual(0);
+
+    expect(
+      JSON.parse(client.stdout.getFullOutput().slice(firstOutput.length))
+        .results
+    ).toMatchObject([{ domain: 'acme.com' }]);
+  });
+
+  it('refreshes the supported TLD catalog after 30 minutes', async () => {
+    const now = Date.now();
+    const dateNow = vi.spyOn(Date, 'now').mockReturnValue(now);
+    let supportedTlds = ['com'];
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(supportedTlds);
+    });
+    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+      const body = req.body as { domains?: string[] };
+      res.json({
+        results: body.domains?.map(domain => ({
+          domain,
+          purchasePrice: 20,
+          renewalPrice: 20,
+          transferPrice: 20,
+          years: 1,
+        })),
+      });
+    });
+
+    client.setArgv('domains', 'search', 'acme', '--format=json');
+    expect(await domains(client)).toEqual(0);
+    const firstOutput = client.stdout.getFullOutput();
+
+    supportedTlds = ['dev'];
+    dateNow.mockReturnValue(now + 30 * 60 * 1000 + 1);
+    client.setArgv('domains', 'search', 'acme', '--format=json');
+    expect(await domains(client)).toEqual(0);
+
+    expect(
+      JSON.parse(client.stdout.getFullOutput().slice(firstOutput.length))
+        .results
+    ).toMatchObject([{ domain: 'acme.dev' }]);
+  });
+
+  it('ignores a malformed supported TLD cache', async () => {
+    const cachePath = join(
+      globalConfigDir,
+      'cache',
+      'domains-search-supported-tlds.json'
+    );
+    await mkdir(dirname(cachePath), { recursive: true });
+    await writeFile(cachePath, '{', 'utf8');
+
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com']);
+    });
+    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+      const body = req.body as { domains?: string[] };
+      res.json({
+        results: body.domains?.map(domain => ({
+          domain,
+          purchasePrice: 20,
+          renewalPrice: 20,
+          transferPrice: 20,
+          years: 1,
+        })),
+      });
+    });
+
+    client.setArgv('domains', 'search', 'acme', '--format=json');
+    expect(await domains(client)).toEqual(0);
+
+    expect(JSON.parse(client.stdout.getFullOutput()).results).toMatchObject([
+      { domain: 'acme.com' },
+    ]);
+  });
+
+  it('isolates cached TLD catalogs by order and active team', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (req, res) => {
+      if (req.query.teamId === 'team_b') {
+        res.json(['net']);
+      } else if (req.query.order === 'alphabetical') {
+        res.json(['dev']);
+      } else {
+        res.json(['com']);
+      }
+    });
+    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+      const body = req.body as { domains?: string[] };
+      res.json({
+        results: body.domains?.map(domain => ({
+          domain,
+          purchasePrice: 20,
+          renewalPrice: 20,
+          transferPrice: 20,
+          years: 1,
+        })),
+      });
+    });
+
+    client.config.currentTeam = 'team_a';
+    client.setArgv('domains', 'search', 'acme', '--format=json');
+    expect(await domains(client)).toEqual(0);
+    const relevanceOutput = client.stdout.getFullOutput();
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--order=alphabetical',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+    const alphabeticalOutput = client.stdout
+      .getFullOutput()
+      .slice(relevanceOutput.length);
+
+    client.config.currentTeam = 'team_b';
+    client.setArgv('domains', 'search', 'acme', '--format=json');
+    expect(await domains(client)).toEqual(0);
+    const teamOutput = client.stdout
+      .getFullOutput()
+      .slice(relevanceOutput.length + alphabeticalOutput.length);
+
+    expect(JSON.parse(relevanceOutput).results).toMatchObject([
+      { domain: 'acme.com' },
+    ]);
+    expect(JSON.parse(alphabeticalOutput).results).toMatchObject([
+      { domain: 'acme.dev' },
+    ]);
+    expect(JSON.parse(teamOutput).results).toMatchObject([
+      { domain: 'acme.net' },
+    ]);
   });
 
   it('narrows TLD fragments and renders action-oriented human output', async () => {
@@ -262,6 +435,8 @@ describe('domains search', () => {
   });
 
   it('returns an empty final page', async () => {
+    const now = Date.now();
+    const dateNow = vi.spyOn(Date, 'now').mockReturnValue(now);
     let catalogRequestCount = 0;
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       catalogRequestCount++;
@@ -287,6 +462,7 @@ describe('domains search', () => {
     const firstOutput = client.stdout.getFullOutput();
     const cursor = JSON.parse(firstOutput).pagination.next;
 
+    dateNow.mockReturnValue(now + 30 * 60 * 1000 + 1);
     client.setArgv(
       'domains',
       'search',
@@ -664,6 +840,8 @@ describe('domains search', () => {
   });
 
   it('rejects stale continuation cursors', async () => {
+    const now = Date.now();
+    const dateNow = vi.spyOn(Date, 'now').mockReturnValue(now);
     let catalogRequestCount = 0;
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       catalogRequestCount++;
@@ -686,6 +864,7 @@ describe('domains search', () => {
     expect(await domains(client)).toEqual(0);
     const cursor = JSON.parse(client.stdout.getFullOutput()).pagination.next;
 
+    dateNow.mockReturnValue(now + 30 * 60 * 1000 + 1);
     client.setArgv('domains', 'search', 'acme', '--next', cursor);
 
     expect(await domains(client)).toEqual(1);

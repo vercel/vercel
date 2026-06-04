@@ -1,4 +1,5 @@
 import { URLSearchParams } from 'url';
+import { z } from 'zod';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -14,8 +15,21 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const DEFAULT_ORDER = 'relevance';
 const ORDERS = ['relevance', 'alphabetical', 'length'] as const;
+const SUPPORTED_TLDS_CACHE_FILE = 'cache/domains-search-supported-tlds.json';
+const SUPPORTED_TLDS_CACHE_TTL_MS = 30 * 60 * 1000;
 
 type SupportedTldsOrder = (typeof ORDERS)[number];
+
+const supportedTldsSchema = z.array(z.string());
+const supportedTldsCacheSchema = z.object({
+  entries: z.record(
+    z.string(),
+    z.object({
+      fetchedAt: z.number(),
+      tlds: supportedTldsSchema,
+    })
+  ),
+});
 
 type DomainPriceQuote = {
   domain: string;
@@ -106,10 +120,7 @@ export default async function search(
   }
 
   try {
-    const params = new URLSearchParams({ order });
-    const supportedTlds = await client.fetch<string[]>(
-      `/v1/registrar/tlds/supported?${params}`
-    );
+    const supportedTlds = await getSupportedTlds(client, order);
     const matchingTlds = filterTlds(supportedTlds, fragment, order);
     const offsetResult = getOffset(matchingTlds, cursor);
     if (!offsetResult.valid) {
@@ -180,6 +191,61 @@ export default async function search(
     printError(error);
     return 1;
   }
+}
+
+async function getSupportedTlds(
+  client: Client,
+  order: SupportedTldsOrder
+): Promise<string[]> {
+  const cache = await client.maybeReadConfig(
+    SUPPORTED_TLDS_CACHE_FILE,
+    supportedTldsCacheSchema
+  );
+  const cacheKey = JSON.stringify([client.config.currentTeam ?? null, order]);
+  const cachedEntry = cache?.entries[cacheKey];
+  if (cachedEntry && isSupportedTldsCacheEntryFresh(cachedEntry.fetchedAt)) {
+    output.debug('Using cached supported TLD catalog');
+    return cachedEntry.tlds;
+  }
+
+  const params = new URLSearchParams({ order });
+  const supportedTlds = supportedTldsSchema.parse(
+    await client.fetch<unknown>(`/v1/registrar/tlds/supported?${params}`)
+  );
+
+  try {
+    const fetchedAt = Date.now();
+    const freshEntries = Object.fromEntries(
+      Object.entries(cache?.entries ?? {}).filter(([, entry]) =>
+        isSupportedTldsCacheEntryFresh(entry.fetchedAt, fetchedAt)
+      )
+    );
+    await client.writeConfig(
+      SUPPORTED_TLDS_CACHE_FILE,
+      supportedTldsCacheSchema,
+      {
+        entries: {
+          ...freshEntries,
+          [cacheKey]: {
+            fetchedAt,
+            tlds: supportedTlds,
+          },
+        },
+      }
+    );
+  } catch (error) {
+    output.debug(`Failed to cache supported TLD catalog: ${error}`);
+  }
+
+  return supportedTlds;
+}
+
+function isSupportedTldsCacheEntryFresh(
+  fetchedAt: number,
+  now = Date.now()
+): boolean {
+  const age = now - fetchedAt;
+  return age >= 0 && age <= SUPPORTED_TLDS_CACHE_TTL_MS;
 }
 
 function encodeCursor(cursor: ContinuationCursor): string {
