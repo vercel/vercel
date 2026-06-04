@@ -1,5 +1,14 @@
 # @vercel/connect
 
+## 0.1.3
+
+### Patch Changes
+
+- e65b418: Add the JWT bearer token subject type to the public Connect token params and
+  allow the Ash helper to customize principal-to-subject mapping.
+- 2e15337: Allow `connectSlackCredentials` to forward `ConnectTokenParams` (e.g. `installationId`, `scopes`, `validityBufferMs`) and `ConnectOptions` through to `getToken`. The `subject` field stays pinned to `{ type: 'app' }` so the helper still enforces app-scoped Slack bot tokens.
+- 5398562: Add typed support for well-known Connect authorization details.
+
 ## 0.1.2
 
 ### Patch Changes

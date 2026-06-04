@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.27.1
+
+### Patch Changes
+
+- 0a170fd: [services] wire `experimentalServicesV2` into `fs-detectors`.
+
 ## 13.27.0
 
 ### Minor Changes
