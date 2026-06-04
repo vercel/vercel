@@ -28,6 +28,26 @@ vercel integration discover                        # list all marketplace integr
 vercel integration discover --format=json          # as JSON
 ```
 
+## Accepting Terms (Install Without a Resource)
+
+Some integrations require accepting marketplace legal terms before the team can install them. `accept-terms` installs the integration at the account/team scope without provisioning a product resource. Requires an interactive terminal and human confirmation.
+
+```bash
+vercel integration accept-terms <integration>
+vercel integration accept-terms neon
+vercel integration accept-terms neon --format=json
+```
+
+## Listing Installations
+
+`installations` lists every marketplace integration installation on the team (account scope). Useful for finding installation/configuration IDs needed by `update` and `add --installation-id`.
+
+```bash
+vercel integration installations                          # all installations on the team
+vercel integration installations --integration neon       # filter by integration slug
+vercel integration installations --format json            # JSON output
+```
+
 ## Adding an Integration
 
 ```bash
@@ -145,6 +165,22 @@ vercel env pull                                        # pulls to .env.local
 ```
 
 This runs automatically after `vercel integration add` (unless `--no-env-pull`).
+
+## Updating an Installation
+
+`update` changes the billing plan or which projects can access an installation. Install / remove / connect flows live elsewhere (`integration add`, `integration remove`, `integration-resource ...`).
+
+```bash
+vercel integration update <integration> --projects all                                  # grant all team projects access
+vercel integration update neon --projects prj_abc --projects prj_def                    # limit to specific projects
+vercel integration update acme --plan pro                                               # change billing plan
+vercel integration update neon --installation-id icfg_xxx --projects all                # select an installation when several exist
+vercel integration update acme --plan pro --authorization-id auth_xxx                   # provide billing authorization
+vercel integration update neon --projects all --format=json                             # JSON output
+vercel integration update neon --projects all --non-interactive                         # JSON-on-stdout success/error
+```
+
+Use `vercel integration installations` to find the right `--installation-id` when multiple marketplace installations exist for the same integration.
 
 ## Removing Resources
 
