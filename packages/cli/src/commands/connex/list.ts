@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
@@ -207,9 +208,9 @@ export async function list(
   }
   const rows = clients.map(c => {
     const row = [
-      c.uid || chalk.gray('–'),
+      stripAnsi(c.uid || '') || chalk.gray('–'),
       c.id,
-      c.name || chalk.gray('–'),
+      stripAnsi(c.name || '') || chalk.gray('–'),
       c.typeName || c.type,
     ];
     if (unscoped) {
