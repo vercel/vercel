@@ -1,5 +1,9 @@
 export { getContext } from './get-context';
 export {
+  verifyVercelOidcToken,
+  type VercelOidcPayload,
+} from './verify-vercel-oidc-token';
+export {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
 } from './auth-errors';
