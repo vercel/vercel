@@ -2,8 +2,8 @@
   "name": "elysia-vercel-repro",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@11.0.4",
+  "packageManager": "pnpm@10.29.3",
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   }
 }
