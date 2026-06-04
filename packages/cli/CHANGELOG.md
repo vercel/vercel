@@ -1,5 +1,48 @@
 # vercel
 
+## 54.9.1
+
+### Patch Changes
+
+- f5ab607: [evals] Shrink eval result uploads and fix run discovery
+
+  The eval ingest transform (`transform-agent-eval-to-canonical.js`) now excludes raw transcripts (`transcript-raw.jsonl`) from the `--upload-artifacts all` path, roughly halving each ingest payload. The parsed `transcript.json` is still uploaded and still read for `resolvedModels` metadata.
+
+  It also normalizes provider-prefixed model paths before upload. Models that resolve to `provider/model` (e.g. `openai/gpt-5.5-pro`) write results one directory deeper, pushing the timestamp past the `experiment/model/timestamp` shape the ingest endpoint discovers runs from, which previously failed with `Could not discover any experiment/model/timestamp runs`. The model is now collapsed to a single segment (`openai-gpt-5.5-pro`) so discovery succeeds.
+
+- 2b31813: Fix `vc build --standalone` failing to zip Lambdas when run from a monorepo
+  subdirectory. When dependencies are hoisted to the monorepo root (e.g. pnpm's
+  `node_modules/.pnpm/...`), the recorded function file paths could escape the
+  function root (`../../node_modules/...`), which later caused zipping to fail
+  with `invalid relative path: ../../node_modules/...`. These paths are now
+  re-anchored inside the function so the standalone output is self-contained.
+- 252c6eb: [cli] Show `claim` in `vercel integration resource --help`
+
+  The `claim` subcommand was missing from `resourceSubcommand.subcommands`, so `vercel integration resource --help` only listed `connect`, `disconnect`, `remove`, and `create-threshold`. The legacy `vercel integration-resource --help` and the dispatcher's runtime resolution both already included `claim` — this was purely a help/discoverability gap on the canonical nested path. Adds `claimSubcommand` to the subcommand list and updates the parent description accordingly.
+
+- 0a170fd: [services] wire `experimentalServicesV2` into `fs-detectors`.
+- Updated dependencies [aeb5bfa]
+- Updated dependencies [0a170fd]
+  - @vercel/backends@0.8.7
+  - @vercel/build-utils@13.27.1
+  - @vercel/static-build@2.9.37
+  - @vercel/elysia@0.1.88
+  - @vercel/express@0.1.98
+  - @vercel/fastify@0.1.91
+  - @vercel/go@3.8.0
+  - @vercel/h3@0.1.97
+  - @vercel/hono@0.2.91
+  - @vercel/hydrogen@1.3.8
+  - @vercel/koa@0.1.71
+  - @vercel/nestjs@0.2.92
+  - @vercel/next@4.17.5
+  - @vercel/node@5.8.12
+  - @vercel/python@6.44.0
+  - @vercel/redwood@2.4.15
+  - @vercel/remix-builder@5.8.6
+  - @vercel/ruby@2.4.0
+  - @vercel/rust@1.3.0
+
 ## 54.9.0
 
 ### Minor Changes

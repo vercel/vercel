@@ -1,6 +1,6 @@
 {
   "name": "@vercel/nestjs",
-  "version": "0.2.91",
+  "version": "0.2.92",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
