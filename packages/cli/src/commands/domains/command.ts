@@ -117,6 +117,61 @@ export const priceSubcommand = {
   ],
 } as const;
 
+export const searchSubcommand = {
+  name: 'search',
+  aliases: [],
+  description: 'Discover domain-name candidates from a keyword or fragment',
+  arguments: [
+    {
+      name: 'query',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'order',
+      shorthand: null,
+      type: String,
+      argument: 'ORDER',
+      description:
+        'Order candidates by relevance, alphabetical order, or length (default: relevance)',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'NUMBER',
+      description:
+        'Number of candidates to return per page (default: 20, max: 50)',
+      deprecated: false,
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      description: 'Show the next page of candidates',
+      deprecated: false,
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Discover domain-name candidates',
+      value: `${packageName} domains search acme`,
+    },
+    {
+      name: 'Narrow candidates with a TLD fragment',
+      value: `${packageName} domains search acme.d`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains search acme --format=json`,
+    },
+  ],
+} as const;
+
 export const buySubcommand = {
   name: 'buy',
   aliases: [],
@@ -217,6 +272,7 @@ export const domainsCommand = {
     checkSubcommand,
     moveSubcommand,
     priceSubcommand,
+    searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
   ],

@@ -2103,6 +2103,14 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    or  
                                    more
                                    dom…
+  search       query               Dis…
+                                   dom…
+                                   can…
+                                   from
+                                   a   
+                                   key…
+                                   or  
+                                   fra…
   transfer-in  domain              Tra…
                                    in a
                                    dom…
@@ -2189,6 +2197,8 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    Vercel Team                                 
   price        domain              Show registrar price quotes for one or more 
                                    domains                                     
+  search       query               Discover domain-name candidates from a      
+                                   keyword or fragment                         
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
@@ -2228,6 +2238,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
   price        domain              Show registrar price quotes for one or more domains                                 
+  search       query               Discover domain-name candidates from a keyword or fragment                          
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
