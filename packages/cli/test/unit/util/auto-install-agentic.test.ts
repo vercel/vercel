@@ -264,7 +264,6 @@ describe('projectHasUsedClaudeCode', () => {
     await mkdir(join(fakeHome, '.claude', 'projects'), { recursive: true });
     originalHome = process.env.HOME;
     originalUserProfile = process.env.USERPROFILE;
-    // os.homedir() reads HOME on POSIX and USERPROFILE on Windows.
     process.env.HOME = fakeHome;
     process.env.USERPROFILE = fakeHome;
   });
