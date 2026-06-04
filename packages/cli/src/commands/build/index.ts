@@ -168,7 +168,7 @@ interface BuildOutputConfig {
   crons?: Cron[];
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
-  services?: Service[];
+  services?: ExperimentalService[];
   deploymentId?: string;
 }
 
@@ -2015,6 +2015,9 @@ async function doBuild(
     detectedExperimentalServicesV2RootRoutes,
     existingConfig?.routes
   );
+  const detectedLegacyServices = detectedServices?.filter(
+    isExperimentalService
+  );
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
@@ -2038,8 +2041,10 @@ async function doBuild(
       }),
     ...(!detectedLegacyExperimentalServicesConfig &&
       !detectedExperimentalServicesV2Config &&
-      detectedServices &&
-      detectedServices.length > 0 && { services: detectedServices }),
+      detectedLegacyServices &&
+      detectedLegacyServices.length > 0 && {
+        services: detectedLegacyServices,
+      }),
     ...(mergedDeploymentId && { deploymentId: mergedDeploymentId }),
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });

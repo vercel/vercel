@@ -107,7 +107,7 @@ export interface InferredServicesResult {
 export interface DetectServicesResult extends ResolvedServicesResult {
   /**
    * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (`vercel.json#experimentalServices`)
+   * - `configured`: loaded from explicit project configuration (`vercel.json#experimentalServices` or `vercel.json#experimentalServicesV2`)
    * - `auto-detected`: inferred from project structure
    */
   // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
