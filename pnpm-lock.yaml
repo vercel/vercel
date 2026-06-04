@@ -1961,6 +1961,9 @@ importers:
       '@vercel/cli-exec':
         specifier: workspace:*
         version: link:../cli-exec
+      jose:
+        specifier: ^5.9.6
+        version: 5.9.6
     devDependencies:
       prettier:
         specifier: 3.8.3
