@@ -593,4 +593,85 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       await expect(lambda.createZip()).resolves.toBeInstanceOf(Buffer);
     }
   );
+
+  // Regression test for the `--standalone` monorepo zip bug.
+  //
+  // Setup mirrors the original failure: a pnpm turborepo where the project is
+  // linked *inside* the app (`apps/web/.vercel/project.json`, no
+  // `rootDirectory`) and `vc build --standalone` is run from `apps/web`. The
+  // app's `node_modules` are hoisted to the monorepo root
+  // (`<root>/node_modules/.pnpm/...`), two levels above `apps/web`.
+  //
+  // Before the fix, `--standalone` recorded Lambda file keys that escaped the
+  // function root to reach those hoisted dependencies, e.g.
+  // `../../node_modules/.pnpm/next@.../next/dist/compiled/next-server/server.runtime.prod.js`.
+  // `vc build` succeeded, but zipping the reconstructed Lambda later (as the
+  // deploy pipeline does) failed because `yazl` rejects any zip entry name
+  // containing a `..` segment with:
+  //
+  //   Error: invalid relative path: ../../node_modules/.pnpm/.../server.runtime.prod.js
+  //
+  // The fix re-anchors those escaping keys inside the function root, so the
+  // resulting Lambda is self-contained and zips cleanly.
+  it.skipIf(process.platform === 'win32')(
+    'produces a zippable --standalone Lambda from a monorepo subdirectory',
+    async () => {
+      // Copy the fixture to a temp dir OUTSIDE this repo so its pnpm workspace
+      // does not get mixed up with the monorepo we're testing in.
+      const monorepoRoot = setupUnitFixture(
+        'commands/build/turborepo-next-standalone'
+      );
+      // The project is linked inside the app, and the build runs from there
+      // (no `rootDirectory`), exactly like the original reproduction.
+      const appDir = join(monorepoRoot, 'apps', 'web');
+      const output = join(appDir, '.vercel/output');
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_turborepo_next_standalone',
+        name: 'turborepo-next-standalone',
+        framework: 'nextjs',
+        rootDirectory: null,
+      });
+
+      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+      process.env.TURBO_FORCE = '1'; // Force execution, ignore cache
+
+      // Run from inside the app directory.
+      client.cwd = appDir;
+      client.setArgv('build', '--standalone', '--yes');
+      const exitCode = await build(client);
+
+      expect(exitCode).toEqual(0);
+
+      // The Next app's main route should have produced a Lambda.
+      const indexFuncDir = join(output, 'functions', 'index.func');
+      expect(await fs.pathExists(indexFuncDir)).toBe(true);
+
+      // No `filePathMap` key should escape the function root — the hoisted
+      // `../../node_modules/.pnpm/...` paths must be re-anchored to
+      // `node_modules/.pnpm/...` inside the function.
+      const vcConfig = await fs.readJSON(join(indexFuncDir, '.vc-config.json'));
+      const escapingKeys = Object.keys(vcConfig.filePathMap ?? {}).filter(key =>
+        key.split('/').includes('..')
+      );
+      expect(escapingKeys).toEqual([]);
+
+      // The re-anchored keys still point at the hoisted dependencies (the
+      // values reach the monorepo-root `node_modules`).
+      const reanchored = Object.keys(vcConfig.filePathMap ?? {}).filter(key =>
+        key.startsWith('node_modules/.pnpm/')
+      );
+      expect(reanchored.length).toBeGreaterThan(0);
+
+      // Reconstruct the Lambda exactly like the deploy pipeline does (glob the
+      // `.func` dir + hydrate `filePathMap` relative to the build cwd) and zip
+      // it. This used to throw `invalid relative path: ../../...`.
+      const lambda = await createLambdaFromFuncDir(indexFuncDir, appDir);
+      const zip = await lambda.createZip();
+      expect(zip.length).toBeGreaterThan(0);
+    }
+  );
 });

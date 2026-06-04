@@ -28,6 +28,37 @@ vercel api /v9/projects/<project>/env/<env-id> -X PATCH --raw-field value=false 
 
 Use `vercel api list` to discover available endpoints. `vercel api ls` is also accepted as an alias.
 
+## `vercel traces` — Captured Request Traces
+
+Fetch traces captured for a Vercel project. `get` is the default subcommand.
+
+```bash
+vercel traces get req_1234567890                                   # markdown summary
+vercel traces req_1234567890                                       # equivalent (get is default)
+vercel traces get req_1234567890 --json                            # raw trace JSON to stdout
+vercel traces get req_1234567890 --scope my-team --project my-app  # specific team/project
+vercel traces get req_1234567890 --open                            # open in Vercel Dashboard
+vercel traces get req_1234567890 --open --view gantt               # specific dashboard view (timeline, tree, gantt)
+```
+
+`--view` is only valid alongside `--open`.
+
+## `vercel oauth-apps` — Vercel Apps (OAuth)
+
+Register Vercel Apps (OAuth client IDs) and manage team installations. Useful for building integrations that authenticate against a Vercel team.
+
+```bash
+vercel oauth-apps register --name "My App" --slug my-app --redirect-uri https://app.example.com/oauth/callback
+vercel oauth-apps register --name "My App" --slug my-app --format json    # JSON output includes clientId
+vercel oauth-apps install --client-id cl_abc --permission read:project --permission read:deployment
+vercel oauth-apps install --client-id cl_abc --permission read:project --projects prj_a,prj_b   # scope to projects (or `*` for all)
+vercel oauth-apps list-requests --format json                             # pending install requests
+vercel oauth-apps dismiss cl_abc123 --yes                                 # dismiss a pending request
+vercel oauth-apps remove inst_abc123 --yes                                # uninstall (aliases: rm, uninstall)
+```
+
+`register` issues a client ID. `install` (alias `add`) installs an app to the current team using that client ID. At least one `--permission` is required (the install errors with `Provide at least one --permission` otherwise); repeat `--permission` for each scope the app needs.
+
 ## Other Commands
 
 - `vercel webhooks` — manage webhooks (create, ls, rm)
