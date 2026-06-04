@@ -1106,15 +1106,21 @@ importers:
         specifier: workspace:*
         version: link:../oidc
     devDependencies:
+      '@ai-sdk/mcp':
+        specifier: 2.0.0-beta.37
+        version: 2.0.0-beta.37(zod@3.25.76)
       '@auth/core':
         specifier: 0.37.4
         version: 0.37.4
+      ai:
+        specifier: 7.0.0-beta.116
+        version: 7.0.0-beta.116(zod@3.25.76)
       better-auth:
         specifier: 1.5.5
         version: 1.5.5(mongodb@6.18.0)(vitest@2.0.3)
       experimental-ash:
         specifier: 0.31.0
-        version: 0.31.0(mongodb@6.18.0)(vite@5.1.8)
+        version: 0.31.0(ai@7.0.0-beta.116)(mongodb@6.18.0)(vite@5.1.8)
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -2489,6 +2495,30 @@ packages:
       zod: 3.25.76
     dev: true
 
+  /@ai-sdk/gateway@4.0.0-beta.67(zod@3.25.76):
+    resolution: {integrity: sha512-qG1a0wwjLL+oVI1LOdpEs74PRl3yNPF5i0CgiuXTbU0Bb+JyUFuSwCJiQvlsIylu/mNpav3Mb+ODj15EF6/NZA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.14
+      '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@3.25.76)
+      '@vercel/oidc': 3.2.0
+      zod: 3.25.76
+    dev: true
+
+  /@ai-sdk/mcp@2.0.0-beta.37(zod@3.25.76):
+    resolution: {integrity: sha512-Gvo9phoe4nAiPPg3hfdq6L4WPWghExIJMYBNYUyltCMjJrK4ZxoadZxAxFguZcIUIaNtcdwUe2uq2yJ/dUcx1Q==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.14
+      '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@3.25.76)
+      pkce-challenge: 5.0.1
+      zod: 3.25.76
+    dev: true
+
   /@ai-sdk/provider-utils@2.2.8(zod@3.25.76):
     resolution: {integrity: sha512-fqhG+4sCVv8x7nFzYnFo19ryhAa3w096Kmc3hWxMQfW/TubPOmt3A6tYZhl4mUfQWWQMsuSkLrtjlWuXBVSGQA==}
     engines: {node: '>=18'}
@@ -2509,7 +2539,20 @@ packages:
     dependencies:
       '@ai-sdk/provider': 2.0.1
       '@standard-schema/spec': 1.1.0
-      eventsource-parser: 3.0.6
+      eventsource-parser: 3.1.0
+      zod: 3.25.76
+    dev: true
+
+  /@ai-sdk/provider-utils@5.0.0-beta.30(zod@3.25.76):
+    resolution: {integrity: sha512-X3AxTsFJZr9Mw32SncWJA4/ShU8NA/XjhoallCYdcdQZ2gZZ/cIDyJJ6pNh1aBhicRNHv2ndgI6w/H2NGNIjOA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.14
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.1.0
       zod: 3.25.76
     dev: true
 
@@ -2522,6 +2565,13 @@ packages:
 
   /@ai-sdk/provider@2.0.1:
     resolution: {integrity: sha512-KCUwswvsC5VsW2PWFqF8eJgSCu5Ysj7m1TxiHTVA6g7k360bk0RNQENT8KTMAYEs+8fWPD3Uu4dEmzGHc+jGng==}
+    engines: {node: '>=18'}
+    dependencies:
+      json-schema: 0.4.0
+    dev: true
+
+  /@ai-sdk/provider@4.0.0-beta.14:
+    resolution: {integrity: sha512-SMijtjVHs38n0dMkTcNuGrnStiF76OhAqS0R+ZX4iXUnuPPyTxQoVcF8Xuf2AoBB5rqndTId5FVT05bgqD5KsA==}
     engines: {node: '>=18'}
     dependencies:
       json-schema: 0.4.0
@@ -4056,7 +4106,7 @@ packages:
       '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       '@standard-schema/spec': 1.1.0
-      better-call: 1.3.2(zod@4.4.3)
+      better-call: 1.3.2(zod@3.25.76)
       jose: 6.1.3
       kysely: 0.28.17
       nanostores: 1.3.0
@@ -6545,7 +6595,7 @@ packages:
       cors: 2.8.6
       cross-spawn: 7.0.6
       eventsource: 3.0.7
-      eventsource-parser: 3.0.6
+      eventsource-parser: 3.1.0
       express: 5.2.1
       express-rate-limit: 8.2.1(express@5.2.1)
       hono: 4.11.9
@@ -10917,6 +10967,10 @@ packages:
       tinyrainbow: 1.2.0
     dev: true
 
+  /@workflow/serde@4.1.0:
+    resolution: {integrity: sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==}
+    dev: true
+
   /@yao-pkg/pkg-fetch@3.5.33:
     resolution: {integrity: sha512-j2UoH+eP4VobfovQg1gkWwDoB4O/tv8rlLnEjUEEHuWXJ5eBLNUIrobMSEp773/2pgUJUfqqPUFIhS1pN8OZuQ==}
     hasBin: true
@@ -11067,6 +11121,18 @@ packages:
       '@ai-sdk/provider': 2.0.1
       '@ai-sdk/provider-utils': 3.0.22(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
+      zod: 3.25.76
+    dev: true
+
+  /ai@7.0.0-beta.116(zod@3.25.76):
+    resolution: {integrity: sha512-xLVY+YU0sKmQ7zVU6y/6vCFn7o8HHNNgGTK789rqxxmcwSIau/RsmoCzXp/1c6sppA+PU6i4Uh5aCwFAQmjwEA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+    dependencies:
+      '@ai-sdk/gateway': 4.0.0-beta.67(zod@3.25.76)
+      '@ai-sdk/provider': 4.0.0-beta.14
+      '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@3.25.76)
       zod: 3.25.76
     dev: true
 
@@ -11696,7 +11762,7 @@ packages:
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.2.0
       '@noble/hashes': 2.2.0
-      better-call: 1.3.2(zod@4.4.3)
+      better-call: 1.3.2(zod@3.25.76)
       defu: 6.1.7
       jose: 6.1.3
       kysely: 0.28.17
@@ -11708,7 +11774,7 @@ packages:
       - '@cloudflare/workers-types'
     dev: true
 
-  /better-call@1.3.2(zod@4.4.3):
+  /better-call@1.3.2(zod@3.25.76):
     resolution: {integrity: sha512-4cZIfrerDsNTn3cm+MhLbUePN0gdwkhSXEuG7r/zuQ8c/H7iU0/jSK5TD3FW7U0MgKHce/8jGpPYNO4Ve+4NBw==}
     peerDependencies:
       zod: ^4.0.0
@@ -11720,7 +11786,7 @@ packages:
       '@better-fetch/fetch': 1.1.21
       rou3: 0.7.12
       set-cookie-parser: 3.1.0
-      zod: 4.4.3
+      zod: 3.25.76
     dev: true
 
   /better-path-resolve@1.0.0:
@@ -14041,8 +14107,8 @@ packages:
     transitivePeerDependencies:
       - bare-abort-controller
 
-  /eventsource-parser@3.0.6:
-    resolution: {integrity: sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg==}
+  /eventsource-parser@3.1.0:
+    resolution: {integrity: sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg==}
     engines: {node: '>=18.0.0'}
     dev: true
 
@@ -14050,7 +14116,7 @@ packages:
     resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
     engines: {node: '>=18.0.0'}
     dependencies:
-      eventsource-parser: 3.0.6
+      eventsource-parser: 3.1.0
     dev: true
 
   /execa@0.8.0:
@@ -14164,17 +14230,18 @@ packages:
       jest-util: 29.7.0
     dev: true
 
-  /experimental-ai-sdk-code-mode@1.0.7:
+  /experimental-ai-sdk-code-mode@1.0.7(ai@7.0.0-beta.116):
     resolution: {integrity: sha512-JXt3QQIoxcFG9MP1tQIL+WrcaIdmjUgDF4ZS2Eh+zkaX4+vObJMuQG5rIJtfYMtimyYmx9MSBa/Lj24GmpttFg==}
     engines: {node: '>=22.13.0'}
     peerDependencies:
       ai: ^6.0.0 || ^7.0.0-beta.0
     dependencies:
+      ai: 7.0.0-beta.116(zod@3.25.76)
       quickjs-emscripten: 0.32.0
       zod: 4.4.3
     dev: true
 
-  /experimental-ash@0.31.0(mongodb@6.18.0)(vite@5.1.8):
+  /experimental-ash@0.31.0(ai@7.0.0-beta.116)(mongodb@6.18.0)(vite@5.1.8):
     resolution: {integrity: sha512-+bneu0G8U1uK9lakaMt7X7tjnm3FgCdNlwxu3YoOdjSsC0s3EhWPNe3vlnCb+N20ZgaCfrp3EFzEl9O91kN9uA==}
     engines: {node: '>=24'}
     hasBin: true
@@ -14194,7 +14261,8 @@ packages:
       react:
         optional: true
     dependencies:
-      experimental-ai-sdk-code-mode: 1.0.7
+      ai: 7.0.0-beta.116(zod@3.25.76)
+      experimental-ai-sdk-code-mode: 1.0.7(ai@7.0.0-beta.116)
       nitro: 3.0.260522-beta(mongodb@6.18.0)(vite@5.1.8)
     transitivePeerDependencies:
       - '@azure/app-configuration'
