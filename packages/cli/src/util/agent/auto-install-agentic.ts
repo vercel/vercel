@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { access } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
 import chalk from 'chalk';
@@ -117,10 +117,40 @@ async function writePrefs(
   }
 }
 
-async function getPluginTargets(agentName?: string): Promise<string[]> {
+function encodeClaudeProjectDir(projectPath: string): string {
+  return projectPath.replace(/[^A-Za-z0-9]/g, '-');
+}
+
+export async function projectHasUsedClaudeCode(cwd: string): Promise<boolean> {
+  const home = homedir();
+  const projectsDir = join(home, '.claude', 'projects');
+  let dir = resolve(cwd);
+  while (dir !== home) {
+    if (await fileExists(join(projectsDir, encodeClaudeProjectDir(dir)))) {
+      return true;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+  return false;
+}
+
+async function getPluginTargets(
+  agentName?: string,
+  cwd?: string
+): Promise<string[]> {
   const targetForAgent = getPluginTargetForAgent(agentName);
   if (targetForAgent) {
     return [targetForAgent];
+  }
+  if (agentName) {
+    return [];
+  }
+  if (cwd && (await projectHasUsedClaudeCode(cwd))) {
+    return ['claude-code'];
   }
   return [];
 }
@@ -597,7 +627,7 @@ export async function autoInstallVercelPlugin(
     const applyMode = options?.mode === 'apply';
 
     if (!prefs.pluginDeclined || applyMode) {
-      const targets = await getPluginTargets(client.agentName);
+      const targets = await getPluginTargets(client.agentName, client.cwd);
       const uninstalledTargets: string[] = [];
       const claudeStatus = targets.includes('claude-code')
         ? await getClaudePluginStatus()
@@ -669,7 +699,7 @@ export async function showPluginTipIfNeeded(client: Client): Promise<void> {
     const prefs = await readPrefs(client);
     if (prefs.pluginDeclined) return;
 
-    const targets = await getPluginTargets(client.agentName);
+    const targets = await getPluginTargets(client.agentName, client.cwd);
     for (const target of targets) {
       if (!(await isPluginInstalledForTarget(target))) {
         output.log(
