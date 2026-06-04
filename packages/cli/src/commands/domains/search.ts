@@ -406,11 +406,12 @@ async function quoteCandidates(
       if (!quote) {
         throw new Error(`Missing registrar quote for ${domain}.`);
       }
+      const available = quote.purchasePrice !== null;
       return {
         domain: quote.domain,
-        available: quote.purchasePrice !== null,
+        available,
         purchasePrice: quote.purchasePrice,
-        renewalPrice: quote.renewalPrice,
+        renewalPrice: available ? quote.renewalPrice : null,
         years: quote.years,
       };
     });

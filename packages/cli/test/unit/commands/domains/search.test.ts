@@ -57,7 +57,7 @@ describe('domains search', () => {
             "domain": "acme.dev",
             "available": false,
             "purchasePrice": null,
-            "renewalPrice": 30,
+            "renewalPrice": null,
             "years": 1
           }
         ],
@@ -190,7 +190,7 @@ describe('domains search', () => {
         domain: 'acme.dev',
         available: false,
         purchasePrice: null,
-        renewalPrice: 30,
+        renewalPrice: null,
         years: 1,
       },
     ]);
