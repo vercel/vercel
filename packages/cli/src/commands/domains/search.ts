@@ -524,45 +524,18 @@ async function getCandidatePage(
   lastTld: string | null;
   hasMore: boolean;
 }> {
-  if (!availableOnly) {
-    const pageTlds = tlds.slice(offset, offset + limit);
-    return {
-      results: await quoteCandidates(
-        client,
-        pageTlds.map(tld => `${keyword}.${tld}`)
-      ),
-      lastTld: pageTlds.at(-1) ?? null,
-      hasMore: offset + pageTlds.length < tlds.length,
-    };
-  }
-
-  const results: DomainCandidate[] = [];
-  let currentOffset = offset;
-  let lastTld: string | null = null;
-
-  while (currentOffset < tlds.length && results.length < limit) {
-    const batchTlds = tlds.slice(currentOffset, currentOffset + MAX_LIMIT);
-    const candidates = await quoteCandidates(
-      client,
-      batchTlds.map(tld => `${keyword}.${tld}`)
-    );
-
-    for (let index = 0; index < candidates.length; index++) {
-      lastTld = batchTlds[index];
-      currentOffset++;
-      if (candidates[index].available) {
-        results.push(candidates[index]);
-      }
-      if (results.length === limit) {
-        break;
-      }
-    }
-  }
+  const pageTlds = tlds.slice(offset, offset + limit);
+  const candidates = await quoteCandidates(
+    client,
+    pageTlds.map(tld => `${keyword}.${tld}`)
+  );
 
   return {
-    results,
-    lastTld,
-    hasMore: currentOffset < tlds.length,
+    results: availableOnly
+      ? candidates.filter(candidate => candidate.available)
+      : candidates,
+    lastTld: pageTlds.at(-1) ?? null,
+    hasMore: offset + pageTlds.length < tlds.length,
   };
 }
 

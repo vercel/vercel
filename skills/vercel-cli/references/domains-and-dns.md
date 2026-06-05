@@ -31,6 +31,7 @@ vercel domains search acme --available --tld .com --limit 200
 ```
 
 Search returns availability, purchase pricing, and renewal pricing in bulk. Use the continuation command printed by the CLI to fetch the next page.
+`--limit` controls how many candidates are checked per page. `--available` filters that window, so a page can return fewer results than the limit.
 
 ### Availability
 

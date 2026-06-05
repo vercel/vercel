@@ -2427,7 +2427,7 @@ exports[`help command > domains help output snapshots > domains search help outp
 
        --available        Show only candidates available to register                                                    
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
-       --limit <NUMBER>   Number of candidates to return per page (default: 20, max: 200)                               
+       --limit <NUMBER>   Number of candidates to check per page (default: 20, max: 200)                                
        --next <CURSOR>    Show the next page of candidates                                                              
        --order <ORDER>    Order candidates by relevance, alphabetical order, or length (default: relevance)             
        --tld <TLD>        Filter candidates by exact TLD. Repeatable.                                                   

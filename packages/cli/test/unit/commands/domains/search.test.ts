@@ -647,7 +647,7 @@ describe('domains search', () => {
     });
     client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       expect(req.body).toEqual({
-        domains: ['acme.com', 'acme.dev', 'acme.io'],
+        domains: ['acme.com', 'acme.dev'],
       });
       res.json({
         results: [
@@ -663,19 +663,11 @@ describe('domains search', () => {
             years: 1,
             premium: false,
           },
-          {
-            domain: 'acme.io',
-            available: true,
-            price: 20,
-            renewalPrice: 25,
-            years: 1,
-            premium: false,
-          },
         ],
       });
     });
 
-    client.setArgv('domains', 'search', 'acme', '--available', '--limit=1');
+    client.setArgv('domains', 'search', 'acme', '--available', '--limit=2');
     expect(await domains(client)).toEqual(0);
 
     const output = client.stderr.getFullOutput();
@@ -748,7 +740,7 @@ describe('domains search', () => {
     ]);
   });
 
-  it('fills an available-only JSON page up to the requested limit', async () => {
+  it('filters only the current JSON page without filling the limit', async () => {
     let searchRequestCount = 0;
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev', 'io', 'net', 'org']);
@@ -756,7 +748,7 @@ describe('domains search', () => {
     client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       searchRequestCount++;
       expect(req.body).toEqual({
-        domains: ['acme.com', 'acme.dev', 'acme.io', 'acme.net', 'acme.org'],
+        domains: ['acme.com', 'acme.dev'],
       });
       res.json({
         results: [
@@ -769,26 +761,6 @@ describe('domains search', () => {
             available: true,
             price: 20,
             renewalPrice: 25,
-            years: 1,
-            premium: false,
-          },
-          {
-            domain: 'acme.io',
-            available: false,
-          },
-          {
-            domain: 'acme.net',
-            available: true,
-            price: 30,
-            renewalPrice: 35,
-            years: 1,
-            premium: false,
-          },
-          {
-            domain: 'acme.org',
-            available: true,
-            price: 40,
-            renewalPrice: 45,
             years: 1,
             premium: false,
           },
@@ -816,13 +788,6 @@ describe('domains search', () => {
         renewalPrice: 25,
         years: 1,
       },
-      {
-        domain: 'acme.net',
-        available: true,
-        purchasePrice: 30,
-        renewalPrice: 35,
-        years: 1,
-      },
     ]);
     expect(payload.pagination).toEqual({
       next: expect.any(String),
@@ -830,31 +795,30 @@ describe('domains search', () => {
     });
   });
 
-  it('scans multiple batches without returning an empty intermediate page', async () => {
-    const tlds = Array.from(
-      { length: 202 },
-      (_, index) => `tld${index.toString().padStart(3, '0')}`
-    );
-    const requestSizes: number[] = [];
+  it('returns an empty filtered page without scanning the next window', async () => {
+    let searchRequestCount = 0;
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
-      res.json(tlds);
+      res.json(['com', 'dev', 'io']);
     });
     client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      searchRequestCount++;
       const body = req.body as { domains: string[] };
-      requestSizes.push(body.domains.length);
+      expect(body.domains).toEqual(
+        searchRequestCount === 1 ? ['acme.com', 'acme.dev'] : ['acme.io']
+      );
       res.json({
-        results: body.domains.map(domain => ({
-          domain,
-          ...(domain.endsWith('tld200') || domain.endsWith('tld201')
-            ? {
+        results: body.domains.map(domain =>
+          searchRequestCount === 1
+            ? { domain, available: false }
+            : {
+                domain,
                 available: true,
                 price: 20,
                 renewalPrice: 25,
                 years: 1,
                 premium: false,
               }
-            : { available: false }),
-        })),
+        ),
       });
     });
 
@@ -868,32 +832,35 @@ describe('domains search', () => {
     );
     expect(await domains(client)).toEqual(0);
 
-    expect(requestSizes).toEqual([200, 2]);
-    expect(requestSizes.every(size => size <= 200)).toEqual(true);
-    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+    const firstOutput = client.stdout.getFullOutput();
+    const firstPage = JSON.parse(firstOutput);
+    expect(searchRequestCount).toEqual(1);
+    expect(firstPage).toEqual({
       query: 'acme',
       order: 'relevance',
-      results: [
-        {
-          domain: 'acme.tld200',
-          available: true,
-          purchasePrice: 20,
-          renewalPrice: 25,
-          years: 1,
-        },
-        {
-          domain: 'acme.tld201',
-          available: true,
-          purchasePrice: 20,
-          renewalPrice: 25,
-          years: 1,
-        },
-      ],
+      results: [],
       pagination: {
-        next: null,
+        next: expect.any(String),
         limit: 2,
       },
     });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--available',
+      '--next',
+      firstPage.pagination.next,
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+
+    expect(searchRequestCount).toEqual(2);
+    expect(
+      JSON.parse(client.stdout.getFullOutput().slice(firstOutput.length))
+        .results
+    ).toMatchObject([{ domain: 'acme.io', available: true }]);
   });
 
   it('outputs API errors as JSON without partial results', async () => {

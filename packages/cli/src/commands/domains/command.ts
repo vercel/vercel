@@ -150,7 +150,7 @@ export const searchSubcommand = {
       type: Number,
       argument: 'NUMBER',
       description:
-        'Number of candidates to return per page (default: 20, max: 200)',
+        'Number of candidates to check per page (default: 20, max: 200)',
       deprecated: false,
     },
     {
