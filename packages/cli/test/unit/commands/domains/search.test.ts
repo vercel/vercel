@@ -31,22 +31,21 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (_req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      expect(req.body).toEqual({ domains: ['acme.com', 'acme.dev'] });
       res.json({
         results: [
           {
             domain: 'acme.com',
-            purchasePrice: 20,
+            available: true,
+            price: 20,
             renewalPrice: 20,
-            transferPrice: 20,
             years: 1,
+            premium: false,
           },
           {
             domain: 'acme.dev',
-            purchasePrice: null,
-            renewalPrice: 30,
-            transferPrice: null,
-            years: 1,
+            available: false,
           },
         ],
       });
@@ -73,7 +72,7 @@ describe('domains search', () => {
             "available": false,
             "purchasePrice": null,
             "renewalPrice": null,
-            "years": 1
+            "years": null
           }
         ],
         "pagination": {
@@ -90,15 +89,16 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(supportedTlds);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -124,15 +124,16 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(supportedTlds);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -164,15 +165,16 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -195,15 +197,16 @@ describe('domains search', () => {
         res.json(['com']);
       }
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -247,36 +250,32 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['co.uk', 'com', 'co', 'company']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (_req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (_req, res) => {
       res.json({
         results: [
           {
             domain: 'acme.co',
-            purchasePrice: 25,
+            available: true,
+            price: 25,
             renewalPrice: 40,
-            transferPrice: 30,
             years: 2,
+            premium: false,
           },
           {
             domain: 'acme.co.uk',
-            purchasePrice: null,
-            renewalPrice: 33,
-            transferPrice: null,
-            years: 1,
+            available: false,
           },
           {
             domain: 'acme.com',
-            purchasePrice: null,
-            renewalPrice: 22,
-            transferPrice: null,
-            years: 1,
+            available: false,
           },
           {
             domain: 'acme.company',
-            purchasePrice: 18,
+            available: true,
+            price: 18,
             renewalPrice: 24,
-            transferPrice: 20,
             years: 1,
+            premium: true,
           },
         ],
       });
@@ -302,15 +301,16 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['company', 'co.uk', 'co', 'com', 'net']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 25,
-          transferPrice: 30,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -325,63 +325,129 @@ describe('domains search', () => {
     ).toEqual(['acme.co', 'acme.company', 'acme.co.uk', 'acme.com']);
   });
 
-  it('accepts bulk quote responses returned as an array', async () => {
+  it('filters candidates by repeatable exact TLDs', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev', 'co.uk', 'net']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      expect(req.body).toEqual({ domains: ['acme.com', 'acme.dev'] });
+      const body = req.body as { domains: string[] };
+      res.json({
+        results: body.domains.map(domain => ({
+          domain,
+          available: true,
+          price: 20,
+          renewalPrice: 25,
+          years: 1,
+          premium: false,
+        })),
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--tld',
+      '.DEV',
+      '--tld=COM',
+      '--tld',
+      'dev',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+
+    expect(
+      JSON.parse(client.stdout.getFullOutput()).results.map(
+        (result: { domain: string }) => result.domain
+      )
+    ).toEqual(['acme.com', 'acme.dev']);
+  });
+
+  it('combines a TLD fragment with exact TLD filters', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['co.uk', 'co.ug', 'com']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      expect(req.body).toEqual({ domains: ['acme.co.uk'] });
+      res.json({
+        results: [
+          {
+            domain: 'acme.co.uk',
+            available: true,
+            price: 20,
+            renewalPrice: 25,
+            years: 1,
+            premium: false,
+          },
+        ],
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme.co.u',
+      '--tld=co.uk',
+      '--tld=com',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+    expect(JSON.parse(client.stdout.getFullOutput()).results).toMatchObject([
+      { domain: 'acme.co.uk' },
+    ]);
+  });
+
+  it('returns an empty result when exact TLD filters do not match', async () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (_req, res) => {
+
+    client.setArgv('domains', 'search', 'acme', '--tld=net', '--format=json');
+    expect(await domains(client)).toEqual(0);
+    expect(JSON.parse(client.stdout.getFullOutput()).results).toEqual([]);
+  });
+
+  it('rejects malformed search responses returned as an array', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (_req, res) => {
       res.json([
         {
           domain: 'acme.com',
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         },
         {
           domain: 'acme.dev',
-          purchasePrice: null,
-          renewalPrice: 30,
-          transferPrice: null,
-          years: 1,
+          available: false,
         },
       ]);
     });
 
     client.setArgv('domains', 'search', 'acme', '--format=json');
-    expect(await domains(client)).toEqual(0);
-
-    expect(JSON.parse(client.stdout.getFullOutput()).results).toEqual([
-      {
-        domain: 'acme.com',
-        available: true,
-        purchasePrice: 20,
-        renewalPrice: 20,
-        years: 1,
-      },
-      {
-        domain: 'acme.dev',
-        available: false,
-        purchasePrice: null,
-        renewalPrice: null,
-        years: 1,
-      },
-    ]);
+    expect(await domains(client)).toEqual(1);
+    expect(client.stdout.getFullOutput()).toEqual('');
   });
 
   it('continues after the last TLD with a different valid limit', async () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev', 'io', 'net']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -444,15 +510,16 @@ describe('domains search', () => {
         catalogRequestCount === 1 ? ['com', 'dev', 'io'] : ['com', 'dev']
       );
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -487,15 +554,16 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -513,15 +581,16 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -540,31 +609,67 @@ describe('domains search', () => {
     );
   });
 
-  it('isolates registry-invalid candidates without losing valid quotes', async () => {
+  it('preserves exact TLD filters in the human continuation command', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      const body = req.body as { domains: string[] };
+      res.json({
+        results: body.domains.map(domain => ({
+          domain,
+          available: true,
+          price: 20,
+          renewalPrice: 20,
+          years: 1,
+          premium: false,
+        })),
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--tld=dev',
+      '--tld=com',
+      '--limit=1'
+    );
+    expect(await domains(client)).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      'vercel domains search acme --tld=com --tld=dev --next '
+    );
+  });
+
+  it('keeps unavailable candidates alongside available search results', async () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'ca', 'dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
-      const body = req.body as { domains?: string[] };
-
-      if (body.domains?.includes('a.ca')) {
-        res.status(400).json({
-          error: {
-            code: 'domain_too_short',
-            message: 'The domain name a.ca is too short.',
-          },
-        });
-        return;
-      }
-
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      expect(req.body).toEqual({ domains: ['a.com', 'a.ca', 'a.dev'] });
       res.json({
-        results: body.domains?.map(domain => ({
-          domain,
-          purchasePrice: 20,
-          renewalPrice: 25,
-          transferPrice: 30,
-          years: 1,
-        })),
+        results: [
+          {
+            domain: 'a.com',
+            available: true,
+            price: 20,
+            renewalPrice: 25,
+            years: 1,
+            premium: false,
+          },
+          {
+            domain: 'a.ca',
+            available: false,
+          },
+          {
+            domain: 'a.dev',
+            available: true,
+            price: 20,
+            renewalPrice: 25,
+            years: 1,
+            premium: false,
+          },
+        ],
       });
     });
 
@@ -600,11 +705,11 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (_req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (_req, res) => {
       res.status(400).json({
         error: {
-          code: 'unexpected_quote_error',
-          message: 'Registrar quote failed.',
+          code: 'unexpected_search_error',
+          message: 'Registrar search failed.',
         },
       });
     });
@@ -613,8 +718,8 @@ describe('domains search', () => {
     expect(await domains(client)).toEqual(1);
 
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
-      error: 'unexpected_quote_error',
-      message: 'Registrar quote failed.',
+      error: 'unexpected_search_error',
+      message: 'Registrar search failed.',
     });
     expect(client.stderr.getFullOutput()).toEqual('');
   });
@@ -630,11 +735,11 @@ describe('domains search', () => {
     expect(client.stdout.getFullOutput()).toEqual('');
   });
 
-  it('fails without partial output for a malformed quote response', async () => {
+  it('fails without partial output for a malformed search response', async () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (_req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (_req, res) => {
       res.json({ quotes: [] });
     });
 
@@ -644,19 +749,20 @@ describe('domains search', () => {
     expect(client.stdout.getFullOutput()).toEqual('');
   });
 
-  it('fails without partial output when a quote response is incomplete', async () => {
+  it('fails without partial output when a search response is incomplete', async () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (_req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (_req, res) => {
       res.json({
         results: [
           {
             domain: 'acme.com',
-            purchasePrice: 20,
+            available: true,
+            price: 20,
             renewalPrice: 20,
-            transferPrice: 20,
             years: 1,
+            premium: false,
           },
         ],
       });
@@ -667,7 +773,7 @@ describe('domains search', () => {
 
     expect(client.stdout.getFullOutput()).toEqual('');
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing registrar quote for acme.dev'
+      'Missing registrar search result for acme.dev'
     );
   });
 
@@ -680,15 +786,16 @@ describe('domains search', () => {
           : unsortedTlds
       );
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -724,15 +831,16 @@ describe('domains search', () => {
           : unsortedTlds
       );
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -767,30 +875,31 @@ describe('domains search', () => {
     expect(client.stderr.getFullOutput()).toContain('--json');
   });
 
-  it.each([0, 51])('rejects invalid limit boundary %i', async limit => {
+  it.each([0, 201])('rejects invalid limit boundary %i', async limit => {
     client.setArgv('domains', 'search', 'acme', `--limit=${limit}`);
 
     expect(await domains(client)).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Provide a number from 1 to 50'
+      'Provide a number from 1 to 200'
     );
   });
 
-  it.each([1, 50])('accepts limit boundary %i', async limit => {
+  it.each([1, 200])('accepts limit boundary %i', async limit => {
     const tlds = Array.from({ length: limit }, (_, index) => `tld${index}`);
 
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(tlds);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -814,15 +923,16 @@ describe('domains search', () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });
@@ -835,8 +945,104 @@ describe('domains search', () => {
 
     expect(await domains(client)).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'does not match the current query or order'
+      'does not match the current query'
     );
+  });
+
+  it('accepts reordered exact TLD filters with a continuation cursor', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      const body = req.body as { domains: string[] };
+      res.json({
+        results: body.domains.map(domain => ({
+          domain,
+          available: true,
+          price: 20,
+          renewalPrice: 20,
+          years: 1,
+          premium: false,
+        })),
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--tld=dev',
+      '--tld=com',
+      '--limit=1',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+    const firstOutput = client.stdout.getFullOutput();
+    const cursor = JSON.parse(firstOutput).pagination.next;
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--tld=com',
+      '--tld=dev',
+      '--next',
+      cursor,
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+    expect(
+      JSON.parse(client.stdout.getFullOutput().slice(firstOutput.length))
+        .results
+    ).toMatchObject([{ domain: 'acme.dev' }]);
+  });
+
+  it('rejects a continuation cursor when exact TLD filters change', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      const body = req.body as { domains: string[] };
+      res.json({
+        results: body.domains.map(domain => ({
+          domain,
+          available: true,
+          price: 20,
+          renewalPrice: 20,
+          years: 1,
+          premium: false,
+        })),
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--tld=com',
+      '--tld=dev',
+      '--limit=1',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+    const cursor = JSON.parse(client.stdout.getFullOutput()).pagination.next;
+
+    client.setArgv('domains', 'search', 'acme', '--tld=com', '--next', cursor);
+    expect(await domains(client)).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain('or TLD filters');
+  });
+
+  it.each([
+    '',
+    '.',
+    'co..uk',
+    '-com',
+    'com/',
+  ])('rejects invalid exact TLD filter %j', async tld => {
+    client.setArgv('domains', 'search', 'acme', `--tld=${tld}`);
+
+    expect(await domains(client)).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain('Invalid TLD filter');
   });
 
   it('rejects stale continuation cursors', async () => {
@@ -847,15 +1053,16 @@ describe('domains search', () => {
       catalogRequestCount++;
       res.json(catalogRequestCount === 1 ? ['com', 'dev'] : ['dev']);
     });
-    client.scenario.post('/v1/registrar/domains/price', (req, res) => {
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
       const body = req.body as { domains?: string[] };
       res.json({
         results: body.domains?.map(domain => ({
           domain,
-          purchasePrice: 20,
+          available: true,
+          price: 20,
           renewalPrice: 20,
-          transferPrice: 20,
           years: 1,
+          premium: false,
         })),
       });
     });

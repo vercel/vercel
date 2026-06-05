@@ -12,7 +12,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { searchSubcommand } from './command';
 
 const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 50;
+const MAX_LIMIT = 200;
 const DEFAULT_ORDER = 'relevance';
 const ORDERS = ['relevance', 'alphabetical', 'length'] as const;
 const SUPPORTED_TLDS_CACHE_FILE = 'cache/domains-search-supported-tlds.json';
@@ -31,14 +31,6 @@ const supportedTldsCacheSchema = z.object({
   ),
 });
 
-type DomainPriceQuote = {
-  domain: string;
-  purchasePrice: number | null;
-  renewalPrice: number | null;
-  transferPrice: number | null;
-  years: number;
-};
-
 type DomainCandidate = {
   domain: string;
   available: boolean;
@@ -47,16 +39,30 @@ type DomainCandidate = {
   years: number | null;
 };
 
-type BulkDomainPriceResponse =
-  | DomainPriceQuote[]
-  | {
-      results: DomainPriceQuote[];
-    };
+const domainSearchResultSchema = z.discriminatedUnion('available', [
+  z.object({
+    domain: z.string(),
+    available: z.literal(false),
+  }),
+  z.object({
+    domain: z.string(),
+    available: z.literal(true),
+    years: z.number(),
+    price: z.number(),
+    renewalPrice: z.number(),
+    premium: z.boolean(),
+  }),
+]);
+
+const domainsSearchResponseSchema = z.object({
+  results: z.array(domainSearchResultSchema),
+});
 
 type ContinuationCursor = {
   query: string;
   fragment: string | null;
   order: SupportedTldsOrder;
+  tlds: string[];
   lastTld: string;
 };
 
@@ -97,9 +103,16 @@ export default async function search(
     return 1;
   }
 
+  const tldsResult = normalizeTldFilters(parsedArgs.flags['--tld']);
+  if (!tldsResult.valid) {
+    output.error(tldsResult.error);
+    return 1;
+  }
+
   const { query, keyword, fragment } = queryResult;
   const order = orderResult.order;
   const limit = limitResult.limit;
+  const tlds = tldsResult.tlds;
   const cursorResult = decodeCursor(parsedArgs.flags['--next']);
   if (!cursorResult.valid) {
     output.error(cursorResult.error);
@@ -111,17 +124,18 @@ export default async function search(
     cursor &&
     (cursor.query !== query ||
       cursor.fragment !== fragment ||
-      cursor.order !== order)
+      cursor.order !== order ||
+      !areStringArraysEqual(cursor.tlds, tlds))
   ) {
     output.error(
-      'The continuation cursor does not match the current query or order.'
+      'The continuation cursor does not match the current query, order, or TLD filters.'
     );
     return 1;
   }
 
   try {
     const supportedTlds = await getSupportedTlds(client, order);
-    const matchingTlds = filterTlds(supportedTlds, fragment, order);
+    const matchingTlds = filterTlds(supportedTlds, fragment, tlds, order);
     const offsetResult = getOffset(matchingTlds, cursor);
     if (!offsetResult.valid) {
       output.error(offsetResult.error);
@@ -136,6 +150,7 @@ export default async function search(
             query,
             fragment,
             order,
+            tlds,
             lastTld: page[page.length - 1],
           })
         : null;
@@ -167,7 +182,7 @@ export default async function search(
     if (next) {
       output.log('');
       output.log(
-        `To continue, run ${getCommandName(getContinuationCommand(query, order, next))}`
+        `To continue, run ${getCommandName(getContinuationCommand(query, order, tlds, next))}`
       );
     }
     return 0;
@@ -289,7 +304,10 @@ function isContinuationCursor(value: unknown): value is ContinuationCursor {
 
   const cursor = value as Record<string, unknown>;
   const keys = Object.keys(cursor).sort();
-  if (keys.length !== 4 || keys.join(',') !== 'fragment,lastTld,order,query') {
+  if (
+    keys.length !== 5 ||
+    keys.join(',') !== 'fragment,lastTld,order,query,tlds'
+  ) {
     return false;
   }
 
@@ -298,6 +316,8 @@ function isContinuationCursor(value: unknown): value is ContinuationCursor {
     (typeof cursor.fragment === 'string' || cursor.fragment === null) &&
     typeof cursor.order === 'string' &&
     ORDERS.includes(cursor.order as SupportedTldsOrder) &&
+    Array.isArray(cursor.tlds) &&
+    cursor.tlds.every(tld => typeof tld === 'string') &&
     typeof cursor.lastTld === 'string' &&
     cursor.lastTld.length > 0
   );
@@ -406,14 +426,47 @@ function getOrder(
 function getContinuationCommand(
   query: string,
   order: SupportedTldsOrder,
+  tlds: string[],
   cursor: string
 ): string {
-  const flags = [`--next ${cursor}`];
+  const flags: string[] = [];
   if (order !== DEFAULT_ORDER) {
-    flags.unshift(`--order=${order}`);
+    flags.push(`--order=${order}`);
   }
+  flags.push(...tlds.map(tld => `--tld=${tld}`));
+  flags.push(`--next ${cursor}`);
 
   return `domains search ${query} ${flags.join(' ')}`;
+}
+
+function normalizeTldFilters(
+  values: string[] | undefined
+): { valid: true; tlds: string[] } | { valid: false; error: string } {
+  if (values === undefined) {
+    return { valid: true, tlds: [] };
+  }
+
+  const tlds = Array.from(
+    new Set(values.map(value => value.trim().toLowerCase().replace(/^\./, '')))
+  ).sort();
+  const invalidTld = tlds.find(
+    tld => tld.length === 0 || !tld.split('.').every(isValidLabel)
+  );
+  if (invalidTld !== undefined) {
+    return {
+      valid: false,
+      error: `Invalid TLD filter: "${invalidTld}".`,
+    };
+  }
+
+  return { valid: true, tlds };
+}
+
+function areStringArraysEqual(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
 }
 
 function getLimit(
@@ -432,13 +485,15 @@ function getLimit(
 function filterTlds(
   tlds: string[],
   fragment: string | null,
+  filters: string[],
   order: SupportedTldsOrder
 ): string[] {
-  if (fragment === null) {
-    return tlds;
-  }
-
-  const matchingTlds = tlds.filter(tld => tld.startsWith(fragment));
+  const filterSet = new Set(filters);
+  const matchingTlds = tlds.filter(
+    tld =>
+      (fragment === null || tld.startsWith(fragment)) &&
+      (filterSet.size === 0 || filterSet.has(tld))
+  );
   return order === 'relevance'
     ? matchingTlds.sort((a, b) =>
         a === fragment ? -1 : b === fragment ? 1 : 0
@@ -454,56 +509,40 @@ async function quoteCandidates(
     return [];
   }
 
-  try {
-    const response = await client.fetch<BulkDomainPriceResponse>(
-      '/v1/registrar/domains/price',
-      {
-        method: 'POST',
-        body: {
-          domains,
-        },
-      }
-    );
-    const quotes = Array.isArray(response) ? response : response.results;
-    const quotesByDomain = new Map(quotes.map(quote => [quote.domain, quote]));
+  const response = domainsSearchResponseSchema.parse(
+    await client.fetch<unknown>('/v1/registrar/domains/search', {
+      method: 'POST',
+      body: {
+        domains,
+      },
+    })
+  );
+  const resultsByDomain = new Map(
+    response.results.map(result => [result.domain, result])
+  );
 
-    return domains.map(domain => {
-      const quote = quotesByDomain.get(domain);
-      if (!quote) {
-        throw new Error(`Missing registrar quote for ${domain}.`);
-      }
-      const available = quote.purchasePrice !== null;
+  return domains.map(domain => {
+    const result = resultsByDomain.get(domain);
+    if (!result) {
+      throw new Error(`Missing registrar search result for ${domain}.`);
+    }
+    if (!result.available) {
       return {
-        domain: quote.domain,
-        available,
-        purchasePrice: quote.purchasePrice,
-        renewalPrice: available ? quote.renewalPrice : null,
-        years: quote.years,
+        domain: result.domain,
+        available: false,
+        purchasePrice: null,
+        renewalPrice: null,
+        years: null,
       };
-    });
-  } catch (error) {
-    if (!isAPIError(error) || error.code !== 'domain_too_short') {
-      throw error;
     }
-
-    if (domains.length === 1) {
-      return [
-        {
-          domain: domains[0],
-          available: false,
-          purchasePrice: null,
-          renewalPrice: null,
-          years: null,
-        },
-      ];
-    }
-
-    const middle = Math.floor(domains.length / 2);
-    return [
-      ...(await quoteCandidates(client, domains.slice(0, middle))),
-      ...(await quoteCandidates(client, domains.slice(middle))),
-    ];
-  }
+    return {
+      domain: result.domain,
+      available: true,
+      purchasePrice: result.price,
+      renewalPrice: result.renewalPrice,
+      years: result.years,
+    };
+  });
 }
 
 function renderTable(results: DomainCandidate[]): string {

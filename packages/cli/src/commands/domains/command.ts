@@ -143,7 +143,15 @@ export const searchSubcommand = {
       type: Number,
       argument: 'NUMBER',
       description:
-        'Number of candidates to return per page (default: 20, max: 50)',
+        'Number of candidates to return per page (default: 20, max: 200)',
+      deprecated: false,
+    },
+    {
+      name: 'tld',
+      shorthand: null,
+      type: [String],
+      argument: 'TLD',
+      description: 'Filter candidates by exact TLD. Repeatable.',
       deprecated: false,
     },
     {
@@ -164,6 +172,10 @@ export const searchSubcommand = {
     {
       name: 'Narrow candidates with a TLD fragment',
       value: `${packageName} domains search acme.d`,
+    },
+    {
+      name: 'Filter candidates by TLD',
+      value: `${packageName} domains search acme --tld com --tld dev`,
     },
     {
       name: 'JSON output',

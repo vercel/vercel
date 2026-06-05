@@ -2417,6 +2417,56 @@ exports[`help command > domains help output snapshots > domains remove help outp
 "
 `;
 
+exports[`help command > domains help output snapshots > domains search help output snapshots > domains search help column width 120 1`] = `
+"
+  ▲ vercel domains search query [options]
+
+  Discover domain-name candidates from a keyword or fragment                                                            
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of candidates to return per page (default: 20, max: 200)                               
+       --next <CURSOR>    Show the next page of candidates                                                              
+       --order <ORDER>    Order candidates by relevance, alphabetical order, or length (default: relevance)             
+       --tld <TLD>        Filter candidates by exact TLD. Repeatable.                                                   
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Discover domain-name candidates
+
+    $ vercel domains search acme
+
+  - Narrow candidates with a TLD fragment
+
+    $ vercel domains search acme.d
+
+  - Filter candidates by TLD
+
+    $ vercel domains search acme --tld com --tld dev
+
+  - JSON output
+
+    $ vercel domains search acme --format=json
+
+"
+`;
+
 exports[`help command > domains help output snapshots > domains transfer-in help output snapshots > domains transfer-in help column width 120 1`] = `
 "
   ▲ vercel domains transfer-in domain [options]
