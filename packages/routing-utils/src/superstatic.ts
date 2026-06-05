@@ -3,7 +3,14 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
-import { Route, Redirect, Rewrite, HasField, Header } from './types';
+import {
+  Route,
+  RouteWithSrc,
+  Redirect,
+  Rewrite,
+  HasField,
+  Header,
+} from './types';
 
 /*
   [START] Temporary double-install of path-to-regexp to compare the impact of the update
@@ -176,14 +183,24 @@ export function convertRewrites(
     normalizeHasKeys(r.missing);
 
     try {
-      const dest = replaceSegments(
-        segments,
-        hasSegments,
-        r.destination,
-        false,
-        internalParamNames
-      );
-      const route: Route = { src, dest, check: true };
+      // Service-targeted rewrite (RFC: destination.type === 'service'): a
+      // terminal handoff into the target service's route table. The precise
+      // lowering (phase placement and `path` segment interpolation) is finalized
+      // by the Build Output compiler; here we preserve the destination object.
+      const route: RouteWithSrc =
+        typeof r.destination === 'string'
+          ? {
+              src,
+              dest: replaceSegments(
+                segments,
+                hasSegments,
+                r.destination,
+                false,
+                internalParamNames
+              ),
+              check: true,
+            }
+          : { src, destination: r.destination };
 
       if (typeof r.env !== 'undefined') {
         route.env = r.env;

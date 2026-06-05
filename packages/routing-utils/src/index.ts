@@ -18,6 +18,7 @@ import {
   RouteInput,
   RouteWithHandle,
   RouteWithSrc,
+  ServiceDestination,
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
@@ -61,13 +62,21 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
   }
 
   if (route.destination !== undefined) {
-    if (route.dest !== undefined) {
+    if (typeof route.destination === 'string') {
+      if (route.dest !== undefined) {
+        throw new Error(
+          `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
+        );
+      }
+      route.dest = route.destination;
+      delete route.destination;
+    } else if (route.dest !== undefined) {
+      // A service-targeted destination object cannot coexist with `dest`.
       throw new Error(
-        `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
+        `Route at index ${index} cannot define both \`dest\` and a service \`destination\`. Please use only one.`
       );
     }
-    route.dest = route.destination;
-    delete route.destination;
+    // Service-targeted destination objects are preserved as-is.
   }
 
   if (route.statusCode !== undefined) {
@@ -217,7 +226,7 @@ function checkPatternSyntax(
   }: {
     source: string;
     has?: HasField;
-    destination?: string;
+    destination?: string | ServiceDestination;
   }
 ): { message: string; link: string } | null {
   let sourceSegments = new Set<string>();
@@ -231,7 +240,9 @@ function checkPatternSyntax(
     };
   }
 
-  if (destination) {
+  // Service-targeted destinations are objects, not URL strings; skip the
+  // string-destination segment validation for them.
+  if (typeof destination === 'string') {
     try {
       const { hostname, pathname, query } = parseUrl(destination, true);
       sourceToRegex(hostname || '').segments.forEach(name =>

@@ -120,6 +120,118 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
+  test('accepts and preserves service `destination` dispatch routes', () => {
+    const routes: Route[] = [
+      {
+        src: '^/api/health$',
+        destination: { type: 'service', service: 'web', path: '/api/health' },
+      },
+      {
+        src: '^/api(?:/(.*))?$',
+        destination: { type: 'service', service: 'api', path: '/$1' },
+      },
+      {
+        src: '^/(.*)$',
+        destination: { type: 'service', service: 'web', path: '/$1' },
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    // The object `destination` is preserved, not folded into `dest`.
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts a service `destination` with only type and service', () => {
+    const routes: Route[] = [
+      { src: '^/(.*)$', destination: { type: 'service', service: 'web' } },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('still folds a string `destination` alias into `dest`', () => {
+    const input: RouteInput[] = [{ src: '^/a$', destination: '/b' }];
+
+    const { error, routes } = normalizeRoutes(input);
+    assert.equal(error, null);
+    assert.ok(routes);
+    if (routes) {
+      const [route] = routes;
+      assert.equal(isHandler(route), false);
+      if (!isHandler(route)) {
+        assert.equal(route.dest, '/b');
+        assert.equal(route.destination, undefined);
+      }
+    }
+  });
+
+  test('rejects a service `destination` missing `service`', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([{ src: '^/(.*)$', destination: { type: 'service' } }]),
+      false
+    );
+  });
+
+  test('rejects a service `destination` missing `type`', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([{ src: '^/(.*)$', destination: { service: 'web' } }]),
+      false
+    );
+  });
+
+  test('rejects a service `destination` with an unknown property', () => {
+    const validate = ajv.compile(routesSchema);
+    assert.equal(
+      validate([
+        {
+          src: '^/(.*)$',
+          destination: { type: 'service', service: 'web', dest: '/x' },
+        },
+      ]),
+      false
+    );
+  });
+
+  test('lowers a service-targeted rewrite into a `destination` route', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/v1/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:path*',
+          },
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    assert.ok(routes);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/:path*',
+      });
+      // Terminal handoff: no filesystem re-check is added.
+      assert.equal(serviceRoute.check, undefined);
+    }
+  });
+
   test('normalizes src', () => {
     const expected = '^/about$';
     const sources = [
