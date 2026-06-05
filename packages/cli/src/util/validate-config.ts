@@ -11,6 +11,7 @@ import type { VercelConfig } from './dev/types';
 import {
   functionsSchema,
   buildsSchema,
+  getMaxDurationSchema,
   NowBuildError,
   getPrettyError,
 } from '@vercel/build-utils';
@@ -302,12 +303,7 @@ const experimentalServicesCommonProperties = {
     minimum: 128,
     maximum: 10240,
   },
-  maxDuration: {
-    oneOf: [
-      { type: 'integer', minimum: 1, maximum: 900 },
-      { type: 'string', enum: ['max'] },
-    ],
-  },
+  maxDuration: getMaxDurationSchema(),
   includeFiles: {
     oneOf: [
       { type: 'string', minLength: 1 },
