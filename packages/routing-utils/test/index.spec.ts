@@ -201,6 +201,31 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('rejects `continue: true` with a service `destination`', () => {
+    const { error } = normalizeRoutes([
+      {
+        src: '^/api/(.*)$',
+        destination: { type: 'service', service: 'api' },
+        continue: true,
+      },
+    ]);
+
+    assert.ok(error, 'expected a validation error');
+    assert.ok(
+      error?.errors?.some(e => e.includes('service `destination`')),
+      'expected a terminal-handoff error message'
+    );
+  });
+
+  test('allows a service `destination` without `continue`', () => {
+    const routes: Route[] = [
+      { src: '^/api/(.*)$', destination: { type: 'service', service: 'api' } },
+    ];
+
+    const { error } = normalizeRoutes(routes);
+    assert.equal(error, null);
+  });
+
   test('lowers a service-targeted rewrite into a `destination` route', () => {
     const { error, routes } = getTransformedRoutes({
       rewrites: [

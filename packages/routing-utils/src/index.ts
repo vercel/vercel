@@ -154,6 +154,18 @@ export function normalizeRoutes(
         errors.push(regError);
       }
 
+      // A service-targeted `destination` is a terminal handoff into the target
+      // service's route table; routing does not continue in the current table.
+      if (
+        route.destination &&
+        typeof route.destination === 'object' &&
+        route.continue
+      ) {
+        errors.push(
+          `Route at index ${i} cannot define \`continue: true\` with a service \`destination\`. The service handoff is terminal.`
+        );
+      }
+
       // The last seen handling is the current handler
       const handleValue = handling[handling.length - 1];
       if (handleValue === 'hit') {
