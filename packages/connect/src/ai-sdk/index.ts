@@ -1,15 +1,15 @@
 /**
  * Public surface of the `@vercel/connect/ai-sdk` subpath.
  *
- * Holds AI SDK-specific helpers for adapting Vercel Connect to
- * `streamText` / `generateText` / the `Agent` class. The MCP-spec
- * `connectAuthProvider` is re-exported from
- * `@vercel/connect/mcp` for convenience — AI SDK users only need
- * this single import.
+ * Re-exports the MCP-spec `connectAuthProvider` (and its consent
+ * types) so AI SDK users have a single, ergonomic import. The
+ * provider plugs straight into `@ai-sdk/mcp`'s `createMCPClient`
+ * `authProvider` and works with AI SDK v6 and v7.
  *
- * The V2 helper `withConsentApproval` is AI SDK v7-only (it depends
- * on `ToolApprovalConfiguration` and `toolApproval`, both new in v7).
- * The re-exported `connectAuthProvider` works with AI SDK v6 and v7.
+ * Tool-call approval (Human-in-the-Loop) is intentionally not
+ * provided here — it is independent of Connect and already covered by
+ * the AI SDK's own `toolApproval` primitive (and `wrapMcpTools` in
+ * `@ai-sdk/policy-opa`). See `docs/ai-sdk-mcp-integration.md`.
  *
  * Both `ai` and `@ai-sdk/mcp` are optional peer dependencies:
  * importing this entrypoint requires them to be installed in the
@@ -21,7 +21,6 @@
  * import { streamText } from 'ai';
  * import {
  *   connectAuthProvider,
- *   withConsentApproval,
  *   ConsentRequiredError,
  * } from '@vercel/connect/ai-sdk';
  *
@@ -36,15 +35,10 @@
  *   },
  * });
  *
- * const linearTools = withConsentApproval(await mcpClient.tools(), {
- *   prefix: 'linear_',
- * });
- *
  * try {
  *   const result = await streamText({
  *     model: 'openai/gpt-5.4',
- *     tools: linearTools.tools,
- *     toolApproval: linearTools.toolApproval,
+ *     tools: await mcpClient.tools(),
  *     prompt,
  *   });
  *   return result.toUIMessageStreamResponse();
@@ -60,12 +54,6 @@ export {
   type ConnectAuthProviderOptions,
   type ConsentChallenge,
 } from '../mcp/connect-auth-provider.js';
-
-export {
-  withConsentApproval,
-  type WithConsentApprovalOptions,
-  type WithConsentApprovalResult,
-} from './with-consent-approval.js';
 
 export {
   ConnectError,

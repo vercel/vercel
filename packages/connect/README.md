@@ -5,7 +5,7 @@ SDK for obtaining scoped tokens for third-party services on behalf of apps or us
 Six entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
-- `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: `connectAuthProvider` for MCP transports and `withConsentApproval` for AI SDK v7 Human-in-the-Loop (optional peers: `ai`, `@ai-sdk/mcp`)
+- `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
 - `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
 - `@vercel/connect/ash` — adapter helpers for [Ash](https://github.com/vercel/ash) connections (optional peer: `experimental-ash`)
 - `@vercel/connect/betterauth` — [Better Auth](https://www.better-auth.com/) `genericOAuth` provider (optional peer: `better-auth`)
@@ -37,7 +37,6 @@ import { streamText } from 'ai';
 import {
   connectAuthProvider,
   ConsentRequiredError,
-  withConsentApproval,
 } from '@vercel/connect/ai-sdk';
 
 const mcp = await createMCPClient({
@@ -50,13 +49,10 @@ const mcp = await createMCPClient({
   },
 });
 
-const linear = withConsentApproval(await mcp.tools(), { prefix: 'linear_' });
-
 try {
   const result = await streamText({
     model: 'openai/gpt-5.4',
-    tools: linear.tools,
-    toolApproval: linear.toolApproval,
+    tools: await mcp.tools(),
     prompt,
   });
   return result.toUIMessageStreamResponse();
@@ -65,6 +61,9 @@ try {
   throw err;
 }
 ```
+
+Tool-call approval (Human-in-the-Loop) is independent of Connect — use the AI
+SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.

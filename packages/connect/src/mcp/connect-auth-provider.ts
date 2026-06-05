@@ -15,27 +15,28 @@ import {
 /** Options accepted by {@link connectAuthProvider}. */
 export interface ConnectAuthProviderOptions {
   /**
-   * Override the Vercel OIDC token fetcher. Defaults to the package
-   * `@vercel/oidc` resolver used by the rest of `@vercel/connect`.
-   * Useful for tests and non-Vercel runtimes.
+   * Override the Vercel OIDC token used to authenticate against the
+   * Connect API. Defaults to the `@vercel/oidc` resolver used by the
+   * rest of `@vercel/connect`. Useful for tests and non-Vercel
+   * runtimes.
+   *
+   * Accepts a callback because the adapter is long-lived: `tokens()`
+   * is invoked across many turns and refreshes, so a captured string
+   * would go stale. When a function is provided it is resolved at
+   * call time.
    */
-  readonly vercelToken?: string;
+  readonly vercelToken?: string | (() => string | Promise<string>);
 
   /**
-   * Override the redirect URL surfaced to MCP clients via
-   * `OAuthClientProvider.redirectUrl`. Defaults to an empty string —
-   * Connect manages the connector's registered callback server-side
-   * and the MCP transport never reads this value when our
-   * `tokens()` / `redirectToAuthorization` are wired correctly.
+   * Where to send the user after they finish granting access on
+   * Connect's hosted consent page. Forwarded to Connect's
+   * `startAuthorization` (as its `callbackUrl`) and also surfaced
+   * through the MCP-spec `OAuthClientProvider.redirectUrl` getter.
+   *
+   * Defaults to an empty string — Connect then falls back to the
+   * connector's server-side registered redirect.
    */
   readonly redirectUrl?: string;
-
-  /**
-   * Override the callback URL passed to `startAuthorization` when
-   * Connect reports that the user has not yet authorized the
-   * connector. Defaults to the connector's registered redirect.
-   */
-  readonly callbackUrl?: string;
 
   /**
    * Called when Vercel Connect reports that the user has not yet
@@ -62,6 +63,14 @@ export interface ConsentChallenge {
   readonly url: string;
   readonly request: string;
   readonly verifier: string;
+  /**
+   * Device code to display to the user when Connect issues a
+   * device-flow authorization. Present only when the connector uses
+   * device flow.
+   */
+  readonly deviceCode?: string;
+  /** Epoch-ms expiry of the consent challenge, when Connect reports one. */
+  readonly expiresAt?: number;
 }
 
 /**
@@ -78,6 +87,8 @@ export class ConsentRequiredError extends Error {
   readonly url: string;
   readonly request: string;
   readonly verifier: string;
+  readonly deviceCode?: string;
+  readonly expiresAt?: number;
 
   constructor(challenge: ConsentChallenge) {
     super(
@@ -88,6 +99,8 @@ export class ConsentRequiredError extends Error {
     this.url = challenge.url;
     this.request = challenge.request;
     this.verifier = challenge.verifier;
+    this.deviceCode = challenge.deviceCode;
+    this.expiresAt = challenge.expiresAt;
   }
 }
 
@@ -117,25 +130,23 @@ export function connectAuthProvider(
   options?: ConnectAuthProviderOptions
 ): OAuthClientProvider {
   const redirectUrl = options?.redirectUrl ?? '';
-  const tokenOptions = options?.vercelToken
-    ? { vercelToken: options.vercelToken }
-    : undefined;
-  const authorizationOptions = {
-    ...(options?.vercelToken !== undefined && {
-      vercelToken: options.vercelToken,
-    }),
-    ...(options?.callbackUrl !== undefined && {
-      callbackUrl: options.callbackUrl,
-    }),
-  };
+
+  async function resolveVercelToken(): Promise<string | undefined> {
+    const { vercelToken } = options ?? {};
+    if (typeof vercelToken === 'function') {
+      return vercelToken();
+    }
+    return vercelToken;
+  }
 
   return {
     async tokens(): Promise<OAuthTokens | undefined> {
       try {
+        const vercelToken = await resolveVercelToken();
         const response = await getTokenResponse(
           connector,
           params,
-          tokenOptions
+          vercelToken !== undefined ? { vercelToken } : undefined
         );
         const expiresInSeconds = Math.max(
           1,
@@ -166,17 +177,22 @@ export function connectAuthProvider(
       // The URL argument is the MCP server's discovered authorization
       // endpoint. We ignore it — Connect has its own consent URL
       // backed by the connector's registered OAuth client.
-      const response = await startAuthorization(
-        connector,
-        params,
-        authorizationOptions
-      );
+      const vercelToken = await resolveVercelToken();
+      const response = await startAuthorization(connector, params, {
+        ...(vercelToken !== undefined && { vercelToken }),
+        // Forward the post-consent return URL so the user lands back
+        // in the app. Empty string => Connect uses the connector's
+        // registered redirect.
+        ...(redirectUrl !== '' && { callbackUrl: redirectUrl }),
+      });
       const challenge: ConsentChallenge = {
         connector,
         subject: params.subject,
         url: response.url,
         request: response.request,
         verifier: response.verifier,
+        deviceCode: response.deviceCode,
+        expiresAt: response.expiresAt,
       };
       if (options?.onConsentRequired) {
         await options.onConsentRequired(challenge);
@@ -206,6 +222,9 @@ export function connectAuthProvider(
     },
 
     get redirectUrl(): string {
+      // Same value forwarded to Connect as the post-consent return
+      // URL. Surfaced here to satisfy the OAuthClientProvider
+      // contract; the standard flow that reads it is never triggered.
       return redirectUrl;
     },
 

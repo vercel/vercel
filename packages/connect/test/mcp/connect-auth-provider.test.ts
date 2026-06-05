@@ -48,6 +48,23 @@ describe('connectAuthProvider', () => {
       });
     });
 
+    it('resolves a vercelToken callback at call time', async () => {
+      vi.spyOn(token, 'getTokenResponse').mockResolvedValue({
+        token: 'access_token_value',
+        expiresAt: Date.now() + 60 * 60 * 1000,
+        connector: { id: 'scl_abc', uid: CONNECTOR, type: 'oauth' },
+      });
+
+      const vercelToken = vi.fn().mockResolvedValue('fresh_token');
+      const provider = connectAuthProvider(CONNECTOR, PARAMS, { vercelToken });
+      await provider.tokens();
+
+      expect(vercelToken).toHaveBeenCalledTimes(1);
+      expect(token.getTokenResponse).toHaveBeenCalledWith(CONNECTOR, PARAMS, {
+        vercelToken: 'fresh_token',
+      });
+    });
+
     it('returns at least 1 second of expires_in even when the token is near expiry', async () => {
       vi.spyOn(token, 'getTokenResponse').mockResolvedValue({
         token: 'expiring_token',
@@ -100,7 +117,7 @@ describe('connectAuthProvider', () => {
 
       const provider = connectAuthProvider(CONNECTOR, PARAMS, {
         vercelToken: 'vercel_oidc_token',
-        callbackUrl: 'https://example.com/callback',
+        redirectUrl: 'https://example.com/callback',
       });
 
       const ignoredUrl = new URL('https://mcp.linear.app/auth/authorize');
@@ -122,6 +139,47 @@ describe('connectAuthProvider', () => {
           vercelToken: 'vercel_oidc_token',
           callbackUrl: 'https://example.com/callback',
         }
+      );
+    });
+
+    it('surfaces deviceCode and expiresAt from the Connect response', async () => {
+      const expiresAt = Date.now() + 5 * 60 * 1000;
+      vi.spyOn(authorization, 'startAuthorization').mockResolvedValue({
+        request: 'req_abc',
+        verifier: 'verifier_xyz',
+        url: 'https://connect.vercel.com/consent/oauth/linear?req=abc',
+        deviceCode: 'WDJB-MJHT',
+        expiresAt,
+      });
+
+      const provider = connectAuthProvider(CONNECTOR, PARAMS);
+      await expect(
+        provider.redirectToAuthorization(new URL('https://ignored'))
+      ).rejects.toMatchObject({
+        deviceCode: 'WDJB-MJHT',
+        expiresAt,
+      });
+    });
+
+    it('resolves a vercelToken callback at call time', async () => {
+      vi.spyOn(authorization, 'startAuthorization').mockResolvedValue({
+        request: 'req_abc',
+        verifier: 'verifier_xyz',
+        url: 'https://connect.vercel.com/consent',
+      });
+
+      const vercelToken = vi.fn().mockResolvedValue('fresh_token');
+      const provider = connectAuthProvider(CONNECTOR, PARAMS, { vercelToken });
+
+      await expect(
+        provider.redirectToAuthorization(new URL('https://ignored'))
+      ).rejects.toBeInstanceOf(ConsentRequiredError);
+
+      expect(vercelToken).toHaveBeenCalledTimes(1);
+      expect(authorization.startAuthorization).toHaveBeenCalledWith(
+        CONNECTOR,
+        PARAMS,
+        { vercelToken: 'fresh_token' }
       );
     });
 
