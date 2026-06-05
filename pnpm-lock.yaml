@@ -1116,9 +1116,9 @@ importers:
       better-auth:
         specifier: 1.5.5
         version: 1.5.5(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@2.1.4(@edge-runtime/vm@3.2.0)(@types/node@24.12.4)(terser@5.48.0))
-      experimental-ash:
-        specifier: 0.31.0
-        version: 0.31.0(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.6.2(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0)))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))
+      eve:
+        specifier: file:./fixtures/eve
+        version: file:packages/connect/fixtures/eve
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -8499,25 +8499,8 @@ packages:
     peerDependencies:
       ai: ^6.0.0 || ^7.0.0-beta.0
 
-  experimental-ash@0.31.0:
-    resolution: {integrity: sha512-+bneu0G8U1uK9lakaMt7X7tjnm3FgCdNlwxu3YoOdjSsC0s3EhWPNe3vlnCb+N20ZgaCfrp3EFzEl9O91kN9uA==}
-    engines: {node: '>=24'}
-    hasBin: true
-    peerDependencies:
-      '@opentelemetry/api': ^1.0.0
-      ai: 7.0.0-canary.154
-      braintrust: ^3.0.0
-      next: ^16.0.0
-      react: ^19.0.0
-    peerDependenciesMeta:
-      '@opentelemetry/api':
-        optional: true
-      braintrust:
-        optional: true
-      next:
-        optional: true
-      react:
-        optional: true
+  eve@file:packages/connect/fixtures/eve:
+    resolution: {directory: packages/connect/fixtures/eve, type: directory}
 
   express-rate-limit@8.5.2:
     resolution: {integrity: sha512-5Kb34ipNX694DH48vN9irak1Qx30nb0PLYHXfJgw4YEjiC3ZEmZJhwOp+VfiCYwFzvFTdB9QkArYS5kXa2cx2A==}
@@ -19088,52 +19071,7 @@ snapshots:
       quickjs-emscripten: 0.32.0
       zod: 4.4.3
 
-  experimental-ash@0.31.0(@opentelemetry/api@1.9.1)(@vercel/blob@2.4.0)(@vercel/functions@3.6.2(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0)))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(next@16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.60.4)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0)):
-    dependencies:
-      experimental-ai-sdk-code-mode: 1.0.7
-      nitro: 3.0.260522-beta(@vercel/blob@2.4.0)(@vercel/functions@3.6.2(@aws-sdk/credential-provider-web-identity@3.609.0(@aws-sdk/client-sts@3.609.0)))(chokidar@4.0.3)(dotenv@16.6.1)(jiti@2.7.0)(lru-cache@11.5.1)(mongodb@6.18.0(socks@2.8.9))(mysql2@3.14.2)(rollup@4.60.4)(vite@7.1.7(@types/node@24.12.4)(jiti@2.7.0)(terser@5.48.0)(tsx@4.21.0)(yaml@2.9.0))
-    optionalDependencies:
-      '@opentelemetry/api': 1.9.1
-      next: 16.2.6(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react: 18.3.1
-    transitivePeerDependencies:
-      - '@azure/app-configuration'
-      - '@azure/cosmos'
-      - '@azure/data-tables'
-      - '@azure/identity'
-      - '@azure/keyvault-secrets'
-      - '@azure/storage-blob'
-      - '@capacitor/preferences'
-      - '@deno/kv'
-      - '@electric-sql/pglite'
-      - '@libsql/client'
-      - '@netlify/blobs'
-      - '@netlify/runtime'
-      - '@planetscale/database'
-      - '@upstash/redis'
-      - '@vercel/blob'
-      - '@vercel/functions'
-      - '@vercel/kv'
-      - '@vercel/queue'
-      - aws4fetch
-      - better-sqlite3
-      - chokidar
-      - dotenv
-      - drizzle-orm
-      - giget
-      - idb-keyval
-      - ioredis
-      - jiti
-      - lru-cache
-      - miniflare
-      - mongodb
-      - mysql2
-      - rollup
-      - sqlite3
-      - uploadthing
-      - vite
-      - xml2js
-      - zephyr-agent
+  eve@file:packages/connect/fixtures/eve: {}
 
   express-rate-limit@8.5.2(express@5.2.1):
     dependencies:

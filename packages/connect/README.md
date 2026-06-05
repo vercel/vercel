@@ -5,7 +5,7 @@ SDK for obtaining scoped tokens for third-party services on behalf of apps or us
 Four entrypoints, all ESM:
 
 - `@vercel/connect` — core token / authorization SDK
-- `@vercel/connect/ash` — adapter helpers for [Ash](https://github.com/vercel/ash) connections (optional peer: `experimental-ash`)
+- `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
 - `@vercel/connect/betterauth` — [Better Auth](https://www.better-auth.com/) `genericOAuth` provider (optional peer: `better-auth`)
 - `@vercel/connect/authjs` — [Auth.js](https://authjs.dev/) `OAuth2Config` provider (optional peer: `@auth/core`)
 
@@ -27,11 +27,11 @@ const token = await getToken(process.env.CONNECTOR_LINEAR!, {
 });
 ```
 
-### Ash
+### Eve
 
 ```ts
-import { defineMcpClientConnection } from 'experimental-ash/connections';
-import { connect } from '@vercel/connect/ash';
+import { defineMcpClientConnection } from 'eve/connections';
+import { connect } from '@vercel/connect/eve';
 
 export default defineMcpClientConnection({
   url: 'https://mcp.linear.app/sse',
