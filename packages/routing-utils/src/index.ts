@@ -50,6 +50,13 @@ export function isValidHandleValue(handle: string): handle is HandleValue {
   return validHandleValues.has(handle);
 }
 
+/**
+ * Folds input-only aliases into their canonical fields: `source` -> `src` and
+ * `statusCode` -> `status`. `destination` is an alias for `dest` ONLY when it is a
+ * string; a service-targeted `destination` object (`{ type: 'service', ... }`)
+ * has no `dest` equivalent and is intentionally left in place. A route may not
+ * set both a canonical field and its alias.
+ */
 function convertRouteAliases(route: RouteWithSrc, index: number): void {
   if (route.source !== undefined) {
     if (route.src !== undefined) {
@@ -62,21 +69,18 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
   }
 
   if (route.destination !== undefined) {
-    if (typeof route.destination === 'string') {
-      if (route.dest !== undefined) {
-        throw new Error(
-          `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
-        );
-      }
-      route.dest = route.destination;
-      delete route.destination;
-    } else if (route.dest !== undefined) {
-      // A service-targeted destination object cannot coexist with `dest`.
+    if (route.dest !== undefined) {
       throw new Error(
-        `Route at index ${index} cannot define both \`dest\` and a service \`destination\`. Please use only one.`
+        `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
       );
     }
-    // Service-targeted destination objects are preserved as-is.
+    // `destination` aliases `dest` only in its string form. A service-targeted
+    // `destination` object has no `dest` equivalent, so it is NOT folded and
+    // stays on `destination`.
+    if (typeof route.destination === 'string') {
+      route.dest = route.destination;
+      delete route.destination;
+    }
   }
 
   if (route.statusCode !== undefined) {
@@ -105,7 +109,9 @@ export function normalizeRoutes(
     const route = { ...r } as Route;
     routes.push(route);
 
-    // Convert aliases (source -> src, destination -> dest, statusCode -> status)
+    // Fold input aliases into canonical fields (source -> src,
+    // statusCode -> status, and string `destination` -> dest). A service
+    // `destination` object is preserved, not aliased.
     if (!isHandler(route)) {
       try {
         convertRouteAliases(route as RouteWithSrc, i);
