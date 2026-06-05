@@ -217,7 +217,10 @@ function normalizePage(page: string): string {
   return page;
 }
 
-export type Redirect = Rewrite & {
+export type Redirect = Omit<Rewrite, 'destination'> & {
+  // Redirects can't target a service, so `destination` stays a plain string
+  // (unlike `Rewrite['destination']`, which is `string | ServiceDestination`).
+  destination: string;
   statusCode?: number;
   permanent?: boolean;
 };
