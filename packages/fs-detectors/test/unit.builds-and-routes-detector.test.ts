@@ -156,6 +156,67 @@ describe('Test `detectBuilders`', () => {
     );
   });
 
+  it('should use services builders when experimentalServicesV2 is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, services, errors, useImplicitEnvInjection } =
+      await detectBuilders([], undefined, {
+        experimentalServicesV2: {
+          web: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'server.py',
+            rewrites: [{ source: '/(.*)', destination: '/$1' }],
+          },
+          api: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'jobs/cleanup.py',
+            rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(useImplicitEnvInjection).toBe(false);
+    expect(services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'web',
+        }),
+        expect.objectContaining({
+          name: 'api',
+        }),
+      ])
+    );
+    expect(services?.find(service => service.name === 'web')?.routePrefix).toBe(
+      undefined
+    );
+    expect(services?.find(service => service.name === 'api')?.routePrefix).toBe(
+      undefined
+    );
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+  });
+
   it('should error when the services framework is selected without experimentalServices', async () => {
     const { builders, errors, defaultRoutes, rewriteRoutes } =
       await detectBuilders(['package.json'], undefined, {

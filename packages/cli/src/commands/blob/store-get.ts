@@ -6,7 +6,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
-import { getStoreSubcommand } from './command';
+import { getStoreInfoSubcommand } from './command';
 import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-get';
 import {
   formatStoreDetails,
@@ -24,7 +24,9 @@ export default async function getStore(
     },
   });
 
-  const flagsSpecification = getFlagsSpecification(getStoreSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(
+    getStoreInfoSubcommand.options
+  );
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {

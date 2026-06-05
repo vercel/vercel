@@ -267,6 +267,41 @@ describe('connex list', () => {
       expect(stderr).not.toContain('proj_gone');
     });
 
+    it('should strip ansi from uid and name in table output', async () => {
+      client.scenario.get('/v1/connect/connectors', (_req, res) => {
+        res.json({
+          clients: [
+            {
+              id: 'scl_unsafe',
+              uid: '\x1b[2Jslack/unsafe',
+              name: 'Unsafe\x1b[1A Name',
+              type: 'slack',
+              typeName: 'Slack',
+              createdAt: Date.now() - 60_000,
+              includes: {
+                projects: {
+                  items: [],
+                  hasMore: false,
+                  cursor: null,
+                },
+              },
+            },
+          ],
+        });
+      });
+
+      client.setArgv('connect', 'list', '--all-projects');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('slack/unsafe');
+      expect(stderr).toContain('Unsafe Name');
+      expect(stderr).not.toContain('\x1b[2J');
+      expect(stderr).not.toContain('\x1b[1A');
+    });
+
     it('should render empty-state without project context', async () => {
       client.scenario.get('/v1/connect/connectors', (_req, res) => {
         res.json({ clients: [] });

@@ -1635,12 +1635,29 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                            below
                            for  
                            exam…
-  list    domain           List 
-                           all  
+  list    [domain]         List 
                            DNS  
                            entr…
-                           for a
+                           Pass 
+                           a    
                            doma…
+                           to   
+                           list 
+                           its  
+                           reco…
+                           or   
+                           omit 
+                           the  
+                           argu…
+                           to   
+                           list 
+                           reco…
+                           acro…
+                           every
+                           doma…
+                           on   
+                           the  
+                           scope
                            (def…
   remove  id               Remo…
                            a DNS
@@ -1744,7 +1761,9 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
   add     domain details   Add a new DNS entry (see below for examples) 
   import  domain zonefile  Import a DNS zone file (see below for        
                            examples)                                    
-  list    domain           List all DNS entries for a domain (default)  
+  list    [domain]         List DNS entries. Pass a domain to list its  
+                           records, or omit the argument to list records
+                           across every domain on the scope (default)   
   remove  id               Remove a DNS entry using its ID              
 
 
@@ -1809,7 +1828,8 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   add     domain details   Add a new DNS entry (see below for examples)                                         
   import  domain zonefile  Import a DNS zone file (see below for examples)                                      
-  list    domain           List all DNS entries for a domain (default)                                          
+  list    [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
+                           records across every domain on the scope (default)                                   
   remove  id               Remove a DNS entry using its ID                                                      
 
 
@@ -1887,9 +1907,10 @@ exports[`help command > dns help output snapshots > dns import help output snaps
 
 exports[`help command > dns help output snapshots > dns list help output snapshots > dns list help column width 120 1`] = `
 "
-  ▲ vercel dns list domain [options]
+  ▲ vercel dns list [domain] [options]
 
-  List all DNS entries for a domain                                                                                     
+  List DNS entries. Pass a domain to list its records, or omit the argument to list records across every domain on the  
+  scope                                                                                                                 
 
   Options:
 
@@ -3117,7 +3138,7 @@ exports[`help command > init help output snapshots > init help column width 40 1
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3165,7 +3186,7 @@ exports[`help command > init help output snapshots > init help column width 80 1
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3211,7 +3232,7 @@ exports[`help command > init help output snapshots > init help column width 120 
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -5800,7 +5821,8 @@ exports[`help command > promote help output snapshots > promote status help outp
 
   Options:
 
-  -y,  --yes  Skip the confirmation prompt when linking a Project                                                       
+       --timeout <TIME>  Time to wait for promotion completion [3m]                                                          
+  -y,  --yes             Skip the confirmation prompt when linking a Project                                                 
 
 
   Global Options:
@@ -6543,19 +6565,13 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback status help output snapshots > rollback status help column width 120 1`] = `
 "
-  ▲ vercel rollback url|deploymentId [options]
+  ▲ vercel rollback status [project] [options]
 
-  Quickly revert back to a previous deployment                                                                          
-
-  Commands:
-
-  status  [project]  Show the status of any current pending rollbacks                                           
-
+  Show the status of any current pending rollbacks                                                                      
 
   Options:
 
-       --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
-  -y,  --yes             Accept default value for all prompts                                                                
+   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
 
 
   Global Options:
@@ -6574,9 +6590,11 @@ exports[`help command > rollback help output snapshots > rollback status help ou
 
   Examples:
 
-  - Rollback a deployment using id or url
+  - Show the status of any current pending rollbacks
 
-    $ vercel rollback <deployment id/url>
+    $ vercel rollback status
+    $ vercel rollback status <project>
+    $ vercel rollback status --timeout 30s
 
 "
 `;
