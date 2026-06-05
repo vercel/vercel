@@ -2810,6 +2810,105 @@ createServer((_req, res) => {
     ).toBe(true);
   });
 
+  it('should preserve generated experimentalServices when builder output config already has services', async () => {
+    const cwd = await getWriteableDirectory();
+    const appDir = join(cwd, 'app');
+    const output = join(cwd, '.vercel', 'output');
+    await fs.ensureDir(join(cwd, '.vercel'));
+    await fs.writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: '.',
+      projectId: '.',
+      settings: {
+        framework: null,
+        installCommand: '',
+        rootDirectory: 'app',
+      },
+    });
+    await fs.outputJSON(join(appDir, 'package.json'), {
+      scripts: {
+        build: 'node build.mjs',
+      },
+    });
+    await fs.outputFile(
+      join(appDir, 'build.mjs'),
+      `
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const rootOutputDir = join(process.cwd(), '..', '.vercel', 'output');
+mkdirSync(rootOutputDir, { recursive: true });
+writeFileSync(
+  join(rootOutputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    experimentalServices: {
+      worker: {
+        type: 'job',
+        trigger: 'queue',
+        root: '.',
+        entrypoint: 'worker.js',
+        runtime: 'node',
+        topics: ['jobs']
+      }
+    }
+  }, null, 2)
+);
+
+const appOutputDir = join(process.cwd(), '.vercel', 'output');
+mkdirSync(join(appOutputDir, 'static'), { recursive: true });
+writeFileSync(join(appOutputDir, 'static', 'index.html'), 'ok');
+writeFileSync(
+  join(appOutputDir, 'config.json'),
+  JSON.stringify({
+    version: 3,
+    experimentalServices: {
+      web: {
+        type: 'web',
+        root: '.',
+        framework: 'vite',
+        entrypoint: '.',
+        mount: '/'
+      }
+    }
+  }, null, 2)
+);
+`
+    );
+    await fs.outputFile(
+      join(appDir, 'worker.js'),
+      `
+module.exports = (_req, res) => {
+  res.end('ok');
+};
+`
+    );
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.experimentalServices).toEqual({
+      web: expect.objectContaining({
+        type: 'web',
+        framework: 'vite',
+        entrypoint: '.',
+        mount: '/',
+      }),
+      worker: expect.objectContaining({
+        type: 'job',
+        trigger: 'queue',
+        entrypoint: 'worker.js',
+      }),
+    });
+    expect(config.services).toBeUndefined();
+    expect(
+      await fs.pathExists(
+        join(output, 'functions/_svc/worker/index.func/.vc-config.json')
+      )
+    ).toBe(true);
+  });
+
   it('should build experimentalServicesV2 discovered from generated Build Output config into service directories', async () => {
     const cwd = await getWriteableDirectory();
     const output = join(cwd, '.vercel', 'output');

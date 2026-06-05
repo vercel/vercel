@@ -402,7 +402,6 @@ export default async function main(client: Client): Promise<number> {
     project = await readProjectSettings(vercelDir);
   }
 
-  // Delete output directory from potential previous build
   const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
   const outputDir = parsedArgs.flags['--output']
     ? resolve(parsedArgs.flags['--output'])
@@ -1481,20 +1480,16 @@ async function doBuild(
               if (outputConfig instanceof CantParseJSONFile) {
                 throw outputConfig;
               }
-              if (
-                hasNonEmptyObject(outputConfig?.experimentalServices) &&
-                !hasNonEmptyObject(buildOutputConfig.experimentalServices)
-              ) {
-                buildOutputConfig.experimentalServices =
-                  outputConfig.experimentalServices;
-              }
-              if (
-                hasNonEmptyObject(outputConfig?.experimentalServicesV2) &&
-                !hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
-              ) {
-                buildOutputConfig.experimentalServicesV2 =
-                  outputConfig.experimentalServicesV2;
-              }
+              buildOutputConfig.experimentalServices =
+                getGeneratedExperimentalServicesV1Config([
+                  outputConfig,
+                  buildOutputConfig,
+                ]);
+              buildOutputConfig.experimentalServicesV2 =
+                getGeneratedExperimentalServicesV2Config([
+                  outputConfig,
+                  buildOutputConfig,
+                ]);
               if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
                 hasNonEmptyObject(buildOutputConfig.experimentalServicesV2)
@@ -2572,31 +2567,33 @@ function getExperimentalServicesV2Routes(
 function getGeneratedExperimentalServicesV1Config(
   buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServices | undefined {
+  const merged: ExperimentalServices = {};
   for (const result of buildResults) {
     if (
       result &&
       'experimentalServices' in result &&
       hasNonEmptyObject(result.experimentalServices)
     ) {
-      return result.experimentalServices;
+      Object.assign(merged, result.experimentalServices);
     }
   }
-  return undefined;
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
 function getGeneratedExperimentalServicesV2Config(
   buildResults: Iterable<BuildResult | BuildOutputConfig | null | undefined>
 ): ExperimentalServicesV2 | undefined {
+  const merged: ExperimentalServicesV2 = {};
   for (const result of buildResults) {
     if (
       result &&
       'experimentalServicesV2' in result &&
       hasNonEmptyObject(result.experimentalServicesV2)
     ) {
-      return result.experimentalServicesV2;
+      Object.assign(merged, result.experimentalServicesV2);
     }
   }
-  return undefined;
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
 async function mergeDeploymentId(
