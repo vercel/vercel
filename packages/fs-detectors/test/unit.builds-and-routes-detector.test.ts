@@ -859,13 +859,13 @@ describe('Test `detectBuilders`', () => {
     expect(errors[0].code).toBe('invalid_function_duration');
   });
 
-  describe('with VERCEL_ALLOW_EXTENDED_MAX_DURATION=1', () => {
+  describe('with VERCEL_CLI_SKIP_MAX_DURATION_LIMIT=1', () => {
     beforeEach(() => {
-      process.env.VERCEL_ALLOW_EXTENDED_MAX_DURATION = '1';
+      process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT = '1';
     });
 
     afterEach(() => {
-      delete process.env.VERCEL_ALLOW_EXTENDED_MAX_DURATION;
+      delete process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT;
     });
 
     it('allows maxDuration above 900s, deferring to server-side validation', async () => {

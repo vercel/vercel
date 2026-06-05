@@ -730,9 +730,9 @@ function validateFunctions({ functions = {} }: Options) {
       };
     }
 
-    // The upper bound is plan-aware and enforced server-side; only apply a
-    // client-side maximum when it has not been disabled via
-    // `VERCEL_ALLOW_EXTENDED_MAX_DURATION`. The lower bound and integer check
+    // The upper bound is enforced by server-side validation; only apply a
+    // client-side maximum when it has not been skipped via
+    // `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`. The lower bound and integer check
     // are always enforced.
     const maxDurationLimit = getMaxDurationLimit();
     if (

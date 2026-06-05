@@ -144,7 +144,7 @@ export * from './should-serve';
 export * from './schemas';
 export {
   DEFAULT_MAX_DURATION_LIMIT,
-  ALLOW_EXTENDED_MAX_DURATION_ENV,
+  SKIP_MAX_DURATION_LIMIT_ENV,
   getMaxDurationLimit,
   getMaxDurationSchema,
 } from './max-duration';

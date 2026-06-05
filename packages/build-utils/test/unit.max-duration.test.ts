@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  ALLOW_EXTENDED_MAX_DURATION_ENV,
+  SKIP_MAX_DURATION_LIMIT_ENV,
   DEFAULT_MAX_DURATION_LIMIT,
   getMaxDurationLimit,
   getMaxDurationSchema,
@@ -8,7 +8,7 @@ import {
 
 describe('getMaxDurationLimit', () => {
   afterEach(() => {
-    delete process.env[ALLOW_EXTENDED_MAX_DURATION_ENV];
+    delete process.env[SKIP_MAX_DURATION_LIMIT_ENV];
   });
 
   it('returns the default 900s limit when the flag is unset', () => {
@@ -17,19 +17,19 @@ describe('getMaxDurationLimit', () => {
   });
 
   it('returns undefined (no client-side limit) when the flag is enabled', () => {
-    process.env[ALLOW_EXTENDED_MAX_DURATION_ENV] = '1';
+    process.env[SKIP_MAX_DURATION_LIMIT_ENV] = '1';
     expect(getMaxDurationLimit()).toBeUndefined();
   });
 
   it('only opts out for the exact value "1"', () => {
-    process.env[ALLOW_EXTENDED_MAX_DURATION_ENV] = 'true';
+    process.env[SKIP_MAX_DURATION_LIMIT_ENV] = 'true';
     expect(getMaxDurationLimit()).toBe(DEFAULT_MAX_DURATION_LIMIT);
   });
 });
 
 describe('getMaxDurationSchema', () => {
   afterEach(() => {
-    delete process.env[ALLOW_EXTENDED_MAX_DURATION_ENV];
+    delete process.env[SKIP_MAX_DURATION_LIMIT_ENV];
   });
 
   it('includes a 900 maximum on the integer branch by default', () => {
@@ -43,7 +43,7 @@ describe('getMaxDurationSchema', () => {
   });
 
   it('omits the maximum (but keeps minimum/integer) when the flag is enabled', () => {
-    process.env[ALLOW_EXTENDED_MAX_DURATION_ENV] = '1';
+    process.env[SKIP_MAX_DURATION_LIMIT_ENV] = '1';
     const schema = getMaxDurationSchema();
     expect(schema).toEqual({
       oneOf: [
