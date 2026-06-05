@@ -262,6 +262,24 @@ describe('normalizeRoutes', () => {
     }
   });
 
+  test('rejects a service `destination.path` referencing an unknown segment', () => {
+    const { error } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:unknown*',
+          },
+        },
+      ],
+    });
+
+    assert.ok(error, 'expected a validation error');
+    assert.equal(error?.code, 'invalid_rewrite');
+  });
+
   test('normalizes src', () => {
     const expected = '^/about$';
     const sources = [

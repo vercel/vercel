@@ -74,9 +74,7 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
         `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
       );
     }
-    // `destination` aliases `dest` only in its string form. A service-targeted
-    // `destination` object has no `dest` equivalent, so it is NOT folded and
-    // stays on `destination`.
+    // `destination` aliases `dest` only in its string form
     if (typeof route.destination === 'string') {
       route.dest = route.destination;
       delete route.destination;
@@ -109,9 +107,7 @@ export function normalizeRoutes(
     const route = { ...r } as Route;
     routes.push(route);
 
-    // Fold input aliases into canonical fields (source -> src,
-    // statusCode -> status, and string `destination` -> dest). A service
-    // `destination` object is preserved, not aliased.
+    // Convert aliases (source -> src, destination -> dest, statusCode -> status)
     if (!isHandler(route)) {
       try {
         convertRouteAliases(route as RouteWithSrc, i);
@@ -246,11 +242,17 @@ function checkPatternSyntax(
     };
   }
 
-  // Service-targeted destinations are objects, not URL strings; skip the
-  // string-destination segment validation for them.
-  if (typeof destination === 'string') {
+  // For a service destination, validate `path` the same way as a plain string destination.
+  const destinationString =
+    typeof destination === 'string'
+      ? destination
+      : typeof destination?.path === 'string'
+        ? destination.path
+        : undefined;
+
+  if (destinationString !== undefined) {
     try {
-      const { hostname, pathname, query } = parseUrl(destination, true);
+      const { hostname, pathname, query } = parseUrl(destinationString, true);
       sourceToRegex(hostname || '').segments.forEach(name =>
         destinationSegments.add(name)
       );
