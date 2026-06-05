@@ -101,9 +101,9 @@ export type RouteWithSrc = {
    * their canonical forms (`src`, `dest`, `status`) and stripped from the route
    * object.
    *
-   * `destination` may also be a service-targeted object (RFC: Vercel Backends),
-   * in which case routing is delegated into the named service's internal route
-   * table and the object is preserved as-is (not folded into `dest`).
+   * `destination` may also be a service-targeted object, in which case routing
+   * is delegated into the named service's internal route table and the object
+   * is preserved as-is (not folded into `dest`).
    */
   source?: string;
   destination?: string | ServiceDestination;
