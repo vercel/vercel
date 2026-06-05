@@ -59,6 +59,7 @@ import url from 'url';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
+import { tracedPhase } from './post-compile-tracing';
 import {
   collectTracedFiles,
   createLambdaFromPseudoLayers,
@@ -575,7 +576,9 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   if (buildCallback) {
-    await buildCallback(buildOptions);
+    await tracedPhase(builderSpan, 'buildCallback', () =>
+      buildCallback(buildOptions)
+    );
   }
 
   let buildOutputVersion: undefined | number;
@@ -1229,7 +1232,9 @@ export const build: BuildV2 = async buildOptions => {
       entryPath
     );
     const nodeModules = excludeFiles(
-      await glob('node_modules/**', entryPath),
+      await tracedPhase(builderSpan, 'glob node_modules', () =>
+        glob('node_modules/**', entryPath)
+      ),
       file => file.startsWith('node_modules/.cache')
     );
     const nextFiles = {
@@ -1256,73 +1261,78 @@ export const build: BuildV2 = async buildOptions => {
     const launcherPath = path.join(__dirname, 'legacy-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
 
-    await Promise.all(
-      Object.keys(pages).map(async page => {
-        // These default pages don't have to be handled as they'd always 404
-        if (['_app.js', '_error.js', '_document.js'].includes(page)) {
-          return;
-        }
+    await tracedPhase(builderSpan, 'createLegacyServerlessFunctions', () =>
+      Promise.all(
+        Object.keys(pages).map(async page => {
+          // These default pages don't have to be handled as they'd always 404
+          if (['_app.js', '_error.js', '_document.js'].includes(page)) {
+            return;
+          }
 
-        const pathname = page.replace(/\.js$/, '');
-        const launcher = launcherData.replace(
-          'PATHNAME_PLACEHOLDER',
-          `/${pathname.replace(/(^|\/)index$/, '')}`
-        );
+          const pathname = page.replace(/\.js$/, '');
+          const launcher = launcherData.replace(
+            'PATHNAME_PLACEHOLDER',
+            `/${pathname.replace(/(^|\/)index$/, '')}`
+          );
 
-        const pageFiles = {
-          [`${outputDirectory}/server/static/${buildId}/pages/_document.js`]:
-            filesAfterBuild[
-              `${outputDirectory}/server/static/${buildId}/pages/_document.js`
-            ],
-          [`${outputDirectory}/server/static/${buildId}/pages/_app.js`]:
-            filesAfterBuild[
-              `${outputDirectory}/server/static/${buildId}/pages/_app.js`
-            ],
-          [`${outputDirectory}/server/static/${buildId}/pages/_error.js`]:
-            filesAfterBuild[
-              `${outputDirectory}/server/static/${buildId}/pages/_error.js`
-            ],
-          [`${outputDirectory}/server/static/${buildId}/pages/${page}`]:
-            filesAfterBuild[
-              `${outputDirectory}/server/static/${buildId}/pages/${page}`
-            ],
-        };
+          const pageFiles = {
+            [`${outputDirectory}/server/static/${buildId}/pages/_document.js`]:
+              filesAfterBuild[
+                `${outputDirectory}/server/static/${buildId}/pages/_document.js`
+              ],
+            [`${outputDirectory}/server/static/${buildId}/pages/_app.js`]:
+              filesAfterBuild[
+                `${outputDirectory}/server/static/${buildId}/pages/_app.js`
+              ],
+            [`${outputDirectory}/server/static/${buildId}/pages/_error.js`]:
+              filesAfterBuild[
+                `${outputDirectory}/server/static/${buildId}/pages/_error.js`
+              ],
+            [`${outputDirectory}/server/static/${buildId}/pages/${page}`]:
+              filesAfterBuild[
+                `${outputDirectory}/server/static/${buildId}/pages/${page}`
+              ],
+          };
 
-        let lambdaOptions = {};
-        if (config && config.functions) {
-          lambdaOptions = await getLambdaOptionsFromFunction({
-            sourceFile: await getSourceFilePathFromPage({
-              workPath: entryPath,
-              page,
-            }),
-            config,
-          });
-        }
+          let lambdaOptions = {};
+          if (config && config.functions) {
+            lambdaOptions = await getLambdaOptionsFromFunction({
+              sourceFile: await getSourceFilePathFromPage({
+                workPath: entryPath,
+                page,
+              }),
+              config,
+            });
+          }
 
-        debug(`Creating serverless function for page: "${page}"...`);
-        lambdas[path.posix.join(entryDirectory, pathname)] = new NodejsLambda({
-          files: {
-            ...nextFiles,
-            ...pageFiles,
-            '___next_launcher.cjs': new FileBlob({ data: launcher }),
-          },
-          handler: '___next_launcher.cjs',
-          runtime: nodeVersion.runtime,
-          ...lambdaOptions,
-          operationType: 'Page', // always Page because we're in legacy mode
-          shouldAddHelpers: false,
-          shouldAddSourcemapSupport: false,
-          supportsMultiPayloads: true,
-          framework: {
-            slug: 'nextjs',
-            version: nextVersion,
-          },
-          shouldDisableAutomaticFetchInstrumentation:
-            process.env
-              .VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION === '1',
-        });
-        debug(`Created serverless function for page: "${page}"`);
-      })
+          debug(`Creating serverless function for page: "${page}"...`);
+          lambdas[path.posix.join(entryDirectory, pathname)] = new NodejsLambda(
+            {
+              files: {
+                ...nextFiles,
+                ...pageFiles,
+                '___next_launcher.cjs': new FileBlob({ data: launcher }),
+              },
+              handler: '___next_launcher.cjs',
+              runtime: nodeVersion.runtime,
+              ...lambdaOptions,
+              operationType: 'Page', // always Page because we're in legacy mode
+              shouldAddHelpers: false,
+              shouldAddSourcemapSupport: false,
+              supportsMultiPayloads: true,
+              framework: {
+                slug: 'nextjs',
+                version: nextVersion,
+              },
+              shouldDisableAutomaticFetchInstrumentation:
+                process.env
+                  .VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+                '1',
+            }
+          );
+          debug(`Created serverless function for page: "${page}"`);
+        })
+      )
     );
   } else {
     debug('Preparing serverless function files...');
@@ -1593,55 +1603,57 @@ export const build: BuildV2 = async buildOptions => {
         ]
       );
 
-      return serverBuild({
-        config,
-        functionsConfigManifest,
-        nextVersion,
-        trailingSlash,
-        appPathRoutesManifest,
-        dynamicPages,
-        canUsePreviewMode,
-        staticPages,
-        localePrefixed404,
-        lambdaPages: pages,
-        lambdaAppPaths,
-        omittedPrerenderRoutes,
-        isCorrectLocaleAPIRoutes,
-        pagesDir,
-        headers,
-        onMatchHeaders,
-        beforeFilesRewrites,
-        afterFilesRewrites,
-        fallbackRewrites,
-        workPath,
-        redirects,
-        nodeVersion,
-        dynamicPrefix,
-        routesManifest,
-        imagesManifest,
-        wildcardConfig,
-        prerenderManifest,
-        entryDirectory,
-        entryPath,
-        baseDir,
-        dataRoutes,
-        buildId,
-        escapedBuildId,
-        outputDirectory,
-        trailingSlashRedirects,
-        requiredServerFilesManifest,
-        privateOutputs,
-        hasIsr404Page,
-        hasIsr500Page,
-        variantsManifest,
-        experimentalPPRRoutes,
-        isAppPPREnabled,
-        isAppFullPPREnabled,
-        isAppClientSegmentCacheEnabled,
-        isAppClientParamParsingEnabled,
-        clientParamParsingOrigins,
-        files,
-      });
+      return tracedPhase(builderSpan, 'serverBuild', () =>
+        serverBuild({
+          config,
+          functionsConfigManifest,
+          nextVersion,
+          trailingSlash,
+          appPathRoutesManifest,
+          dynamicPages,
+          canUsePreviewMode,
+          staticPages,
+          localePrefixed404,
+          lambdaPages: pages,
+          lambdaAppPaths,
+          omittedPrerenderRoutes,
+          isCorrectLocaleAPIRoutes,
+          pagesDir,
+          headers,
+          onMatchHeaders,
+          beforeFilesRewrites,
+          afterFilesRewrites,
+          fallbackRewrites,
+          workPath,
+          redirects,
+          nodeVersion,
+          dynamicPrefix,
+          routesManifest,
+          imagesManifest,
+          wildcardConfig,
+          prerenderManifest,
+          entryDirectory,
+          entryPath,
+          baseDir,
+          dataRoutes,
+          buildId,
+          escapedBuildId,
+          outputDirectory,
+          trailingSlashRedirects,
+          requiredServerFilesManifest,
+          privateOutputs,
+          hasIsr404Page,
+          hasIsr500Page,
+          variantsManifest,
+          experimentalPPRRoutes,
+          isAppPPREnabled,
+          isAppFullPPREnabled,
+          isAppClientSegmentCacheEnabled,
+          isAppClientParamParsingEnabled,
+          clientParamParsingOrigins,
+          files,
+        })
+      );
     }
 
     // > 1 because _error is a lambda but isn't used if a static 404 is available
