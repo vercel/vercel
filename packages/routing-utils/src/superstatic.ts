@@ -183,24 +183,29 @@ export function convertRewrites(
     normalizeHasKeys(r.missing);
 
     try {
-      // Service-targeted rewrite (RFC: destination.type === 'service'): a
-      // terminal handoff into the target service's route table. The precise
-      // lowering (phase placement and `path` segment interpolation) is finalized
-      // by the Build Output compiler; here we preserve the destination object.
-      const route: RouteWithSrc =
-        typeof r.destination === 'string'
-          ? {
-              src,
-              dest: replaceSegments(
-                segments,
-                hasSegments,
-                r.destination,
-                false,
-                internalParamNames
-              ),
-              check: true,
-            }
-          : { src, destination: r.destination };
+      // Replace `:param` placeholders with `$1`/`$name` backrefs that point at
+      // the source's capture groups.
+      const interpolate = (value: string): string =>
+        replaceSegments(
+          segments,
+          hasSegments,
+          value,
+          false,
+          internalParamNames
+        );
+
+      let route: RouteWithSrc;
+      if (typeof r.destination === 'string') {
+        route = { src, dest: interpolate(r.destination), check: true };
+      } else {
+        // Service destination: a terminal handoff into the target service's
+        // route table. Interpolate `path` like a string `dest`.
+        const destination = { ...r.destination };
+        if (typeof destination.path === 'string') {
+          destination.path = interpolate(destination.path);
+        }
+        route = { src, destination };
+      }
 
       if (typeof r.env !== 'undefined') {
         route.env = r.env;

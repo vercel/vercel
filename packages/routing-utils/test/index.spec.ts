@@ -222,13 +222,43 @@ describe('normalizeRoutes', () => {
     );
     assert.ok(serviceRoute, 'expected a service-targeted route');
     if (serviceRoute && !isHandler(serviceRoute)) {
+      // `path` is interpolated like a string dest: `:path*` -> `$1`.
       assert.deepStrictEqual(serviceRoute.destination, {
         type: 'service',
         service: 'my_backend',
-        path: '/:path*',
+        path: '/$1',
       });
       // Terminal handoff: no filesystem re-check is added.
       assert.equal(serviceRoute.check, undefined);
+    }
+  });
+
+  test('interpolates path and query segments in a service `destination`', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/org/:orgSlug/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:path*?org=:orgSlug',
+          },
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute)) {
+      // orgSlug is capture $1, path is capture $2.
+      assert.deepStrictEqual(serviceRoute.destination, {
+        type: 'service',
+        service: 'my_backend',
+        path: '/$2?org=$1',
+      });
     }
   });
 
