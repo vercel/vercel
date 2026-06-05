@@ -129,6 +129,13 @@ export const searchSubcommand = {
   ],
   options: [
     {
+      name: 'available',
+      shorthand: null,
+      type: Boolean,
+      description: 'Show only candidates available to register',
+      deprecated: false,
+    },
+    {
       name: 'order',
       shorthand: null,
       type: String,
@@ -176,6 +183,10 @@ export const searchSubcommand = {
     {
       name: 'Filter candidates by TLD',
       value: `${packageName} domains search acme --tld com --tld dev`,
+    },
+    {
+      name: 'Show only available candidates',
+      value: `${packageName} domains search acme --available`,
     },
     {
       name: 'JSON output',

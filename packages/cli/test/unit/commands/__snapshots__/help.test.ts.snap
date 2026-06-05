@@ -2425,6 +2425,7 @@ exports[`help command > domains help output snapshots > domains search help outp
 
   Options:
 
+       --available        Show only candidates available to register                                                    
   -F,  --format <FORMAT>  Specify the output format (json)                                                              
        --limit <NUMBER>   Number of candidates to return per page (default: 20, max: 200)                               
        --next <CURSOR>    Show the next page of candidates                                                              
@@ -2459,6 +2460,10 @@ exports[`help command > domains help output snapshots > domains search help outp
   - Filter candidates by TLD
 
     $ vercel domains search acme --tld com --tld dev
+
+  - Show only available candidates
+
+    $ vercel domains search acme --available
 
   - JSON output
 

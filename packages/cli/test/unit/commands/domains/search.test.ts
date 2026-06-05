@@ -641,6 +641,53 @@ describe('domains search', () => {
     );
   });
 
+  it('filters unavailable candidates from human output and preserves the filter when continuing', async () => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev', 'io']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      expect(req.body).toEqual({
+        domains: ['acme.com', 'acme.dev', 'acme.io'],
+      });
+      res.json({
+        results: [
+          {
+            domain: 'acme.com',
+            available: false,
+          },
+          {
+            domain: 'acme.dev',
+            available: true,
+            price: 20,
+            renewalPrice: 25,
+            years: 1,
+            premium: false,
+          },
+          {
+            domain: 'acme.io',
+            available: true,
+            price: 20,
+            renewalPrice: 25,
+            years: 1,
+            premium: false,
+          },
+        ],
+      });
+    });
+
+    client.setArgv('domains', 'search', 'acme', '--available', '--limit=1');
+    expect(await domains(client)).toEqual(0);
+
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('acme.dev');
+    expect(output).not.toContain('acme.com');
+    expect(output).not.toContain('acme.io');
+    expect(output).not.toContain('Unavailable');
+    expect(output).toContain(
+      'To continue, run `vercel domains search acme --available --next '
+    );
+  });
+
   it('keeps unavailable candidates alongside available search results', async () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'ca', 'dev']);
@@ -699,6 +746,154 @@ describe('domains search', () => {
         years: 1,
       },
     ]);
+  });
+
+  it('fills an available-only JSON page up to the requested limit', async () => {
+    let searchRequestCount = 0;
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev', 'io', 'net', 'org']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      searchRequestCount++;
+      expect(req.body).toEqual({
+        domains: ['acme.com', 'acme.dev', 'acme.io', 'acme.net', 'acme.org'],
+      });
+      res.json({
+        results: [
+          {
+            domain: 'acme.com',
+            available: false,
+          },
+          {
+            domain: 'acme.dev',
+            available: true,
+            price: 20,
+            renewalPrice: 25,
+            years: 1,
+            premium: false,
+          },
+          {
+            domain: 'acme.io',
+            available: false,
+          },
+          {
+            domain: 'acme.net',
+            available: true,
+            price: 30,
+            renewalPrice: 35,
+            years: 1,
+            premium: false,
+          },
+          {
+            domain: 'acme.org',
+            available: true,
+            price: 40,
+            renewalPrice: 45,
+            years: 1,
+            premium: false,
+          },
+        ],
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--available',
+      '--limit=2',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(searchRequestCount).toEqual(1);
+    expect(payload.results).toEqual([
+      {
+        domain: 'acme.dev',
+        available: true,
+        purchasePrice: 20,
+        renewalPrice: 25,
+        years: 1,
+      },
+      {
+        domain: 'acme.net',
+        available: true,
+        purchasePrice: 30,
+        renewalPrice: 35,
+        years: 1,
+      },
+    ]);
+    expect(payload.pagination).toEqual({
+      next: expect.any(String),
+      limit: 2,
+    });
+  });
+
+  it('scans multiple batches without returning an empty intermediate page', async () => {
+    const tlds = Array.from(
+      { length: 202 },
+      (_, index) => `tld${index.toString().padStart(3, '0')}`
+    );
+    const requestSizes: number[] = [];
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(tlds);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      const body = req.body as { domains: string[] };
+      requestSizes.push(body.domains.length);
+      res.json({
+        results: body.domains.map(domain => ({
+          domain,
+          ...(domain.endsWith('tld200') || domain.endsWith('tld201')
+            ? {
+                available: true,
+                price: 20,
+                renewalPrice: 25,
+                years: 1,
+                premium: false,
+              }
+            : { available: false }),
+        })),
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      '--available',
+      '--limit=2',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+
+    expect(requestSizes).toEqual([200, 2]);
+    expect(requestSizes.every(size => size <= 200)).toEqual(true);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      query: 'acme',
+      order: 'relevance',
+      results: [
+        {
+          domain: 'acme.tld200',
+          available: true,
+          purchasePrice: 20,
+          renewalPrice: 25,
+          years: 1,
+        },
+        {
+          domain: 'acme.tld201',
+          available: true,
+          purchasePrice: 20,
+          renewalPrice: 25,
+          years: 1,
+        },
+      ],
+      pagination: {
+        next: null,
+        limit: 2,
+      },
+    });
   });
 
   it('outputs API errors as JSON without partial results', async () => {
@@ -919,6 +1114,25 @@ describe('domains search', () => {
     );
   });
 
+  it('rejects a continuation cursor without availability state', async () => {
+    const cursor = Buffer.from(
+      JSON.stringify({
+        query: 'acme',
+        fragment: null,
+        order: 'relevance',
+        tlds: [],
+        lastTld: 'com',
+      }),
+      'utf8'
+    ).toString('base64url');
+
+    client.setArgv('domains', 'search', 'acme', '--next', cursor);
+    expect(await domains(client)).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Invalid continuation cursor'
+    );
+  });
+
   it('rejects a continuation cursor when the query changes', async () => {
     client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
       res.json(['com', 'dev']);
@@ -946,6 +1160,55 @@ describe('domains search', () => {
     expect(await domains(client)).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
       'does not match the current query'
+    );
+  });
+
+  it.each([
+    { firstPageFlag: '--available', continuationFlag: undefined },
+    { firstPageFlag: undefined, continuationFlag: '--available' },
+  ])('rejects a continuation cursor when the availability filter changes', async ({
+    firstPageFlag,
+    continuationFlag,
+  }) => {
+    client.scenario.get('/v1/registrar/tlds/supported', (_req, res) => {
+      res.json(['com', 'dev']);
+    });
+    client.scenario.post('/v1/registrar/domains/search', (req, res) => {
+      const body = req.body as { domains: string[] };
+      res.json({
+        results: body.domains.map(domain => ({
+          domain,
+          available: true,
+          price: 20,
+          renewalPrice: 20,
+          years: 1,
+          premium: false,
+        })),
+      });
+    });
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      ...(firstPageFlag ? [firstPageFlag] : []),
+      '--limit=1',
+      '--format=json'
+    );
+    expect(await domains(client)).toEqual(0);
+    const cursor = JSON.parse(client.stdout.getFullOutput()).pagination.next;
+
+    client.setArgv(
+      'domains',
+      'search',
+      'acme',
+      ...(continuationFlag ? [continuationFlag] : []),
+      '--next',
+      cursor
+    );
+    expect(await domains(client)).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'does not match the current query, order, or filters'
     );
   });
 
@@ -1029,7 +1292,7 @@ describe('domains search', () => {
 
     client.setArgv('domains', 'search', 'acme', '--tld=com', '--next', cursor);
     expect(await domains(client)).toEqual(1);
-    expect(client.stderr.getFullOutput()).toContain('or TLD filters');
+    expect(client.stderr.getFullOutput()).toContain('or filters');
   });
 
   it.each([

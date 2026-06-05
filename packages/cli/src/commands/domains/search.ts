@@ -63,6 +63,7 @@ type ContinuationCursor = {
   fragment: string | null;
   order: SupportedTldsOrder;
   tlds: string[];
+  availableOnly: boolean;
   lastTld: string;
 };
 
@@ -113,6 +114,7 @@ export default async function search(
   const order = orderResult.order;
   const limit = limitResult.limit;
   const tlds = tldsResult.tlds;
+  const availableOnly = parsedArgs.flags['--available'] ?? false;
   const cursorResult = decodeCursor(parsedArgs.flags['--next']);
   if (!cursorResult.valid) {
     output.error(cursorResult.error);
@@ -125,10 +127,11 @@ export default async function search(
     (cursor.query !== query ||
       cursor.fragment !== fragment ||
       cursor.order !== order ||
-      !areStringArraysEqual(cursor.tlds, tlds))
+      !areStringArraysEqual(cursor.tlds, tlds) ||
+      cursor.availableOnly !== availableOnly)
   ) {
     output.error(
-      'The continuation cursor does not match the current query, order, or TLD filters.'
+      'The continuation cursor does not match the current query, order, or filters.'
     );
     return 1;
   }
@@ -142,22 +145,25 @@ export default async function search(
       return 1;
     }
 
-    const offset = offsetResult.offset;
-    const page = matchingTlds.slice(offset, offset + limit);
+    const page = await getCandidatePage(
+      client,
+      keyword,
+      matchingTlds,
+      offsetResult.offset,
+      limit,
+      availableOnly
+    );
     const next =
-      page.length > 0 && offset + page.length < matchingTlds.length
+      page.lastTld !== null && page.hasMore
         ? encodeCursor({
             query,
             fragment,
             order,
             tlds,
-            lastTld: page[page.length - 1],
+            availableOnly,
+            lastTld: page.lastTld,
           })
         : null;
-    const results = await quoteCandidates(
-      client,
-      page.map(tld => `${keyword}.${tld}`)
-    );
 
     if (formatResult.jsonOutput) {
       client.stdout.write(
@@ -165,7 +171,7 @@ export default async function search(
           {
             query,
             order,
-            results,
+            results: page.results,
             pagination: {
               next,
               limit,
@@ -178,11 +184,11 @@ export default async function search(
       return 0;
     }
 
-    output.log(renderTable(results));
+    output.log(renderTable(page.results));
     if (next) {
       output.log('');
       output.log(
-        `To continue, run ${getCommandName(getContinuationCommand(query, order, tlds, next))}`
+        `To continue, run ${getCommandName(getContinuationCommand(query, order, tlds, availableOnly, next))}`
       );
     }
     return 0;
@@ -305,8 +311,8 @@ function isContinuationCursor(value: unknown): value is ContinuationCursor {
   const cursor = value as Record<string, unknown>;
   const keys = Object.keys(cursor).sort();
   if (
-    keys.length !== 5 ||
-    keys.join(',') !== 'fragment,lastTld,order,query,tlds'
+    keys.length !== 6 ||
+    keys.join(',') !== 'availableOnly,fragment,lastTld,order,query,tlds'
   ) {
     return false;
   }
@@ -318,6 +324,7 @@ function isContinuationCursor(value: unknown): value is ContinuationCursor {
     ORDERS.includes(cursor.order as SupportedTldsOrder) &&
     Array.isArray(cursor.tlds) &&
     cursor.tlds.every(tld => typeof tld === 'string') &&
+    typeof cursor.availableOnly === 'boolean' &&
     typeof cursor.lastTld === 'string' &&
     cursor.lastTld.length > 0
   );
@@ -427,6 +434,7 @@ function getContinuationCommand(
   query: string,
   order: SupportedTldsOrder,
   tlds: string[],
+  availableOnly: boolean,
   cursor: string
 ): string {
   const flags: string[] = [];
@@ -434,6 +442,9 @@ function getContinuationCommand(
     flags.push(`--order=${order}`);
   }
   flags.push(...tlds.map(tld => `--tld=${tld}`));
+  if (availableOnly) {
+    flags.push('--available');
+  }
   flags.push(`--next ${cursor}`);
 
   return `domains search ${query} ${flags.join(' ')}`;
@@ -499,6 +510,60 @@ function filterTlds(
         a === fragment ? -1 : b === fragment ? 1 : 0
       )
     : matchingTlds;
+}
+
+async function getCandidatePage(
+  client: Client,
+  keyword: string,
+  tlds: string[],
+  offset: number,
+  limit: number,
+  availableOnly: boolean
+): Promise<{
+  results: DomainCandidate[];
+  lastTld: string | null;
+  hasMore: boolean;
+}> {
+  if (!availableOnly) {
+    const pageTlds = tlds.slice(offset, offset + limit);
+    return {
+      results: await quoteCandidates(
+        client,
+        pageTlds.map(tld => `${keyword}.${tld}`)
+      ),
+      lastTld: pageTlds.at(-1) ?? null,
+      hasMore: offset + pageTlds.length < tlds.length,
+    };
+  }
+
+  const results: DomainCandidate[] = [];
+  let currentOffset = offset;
+  let lastTld: string | null = null;
+
+  while (currentOffset < tlds.length && results.length < limit) {
+    const batchTlds = tlds.slice(currentOffset, currentOffset + MAX_LIMIT);
+    const candidates = await quoteCandidates(
+      client,
+      batchTlds.map(tld => `${keyword}.${tld}`)
+    );
+
+    for (let index = 0; index < candidates.length; index++) {
+      lastTld = batchTlds[index];
+      currentOffset++;
+      if (candidates[index].available) {
+        results.push(candidates[index]);
+      }
+      if (results.length === limit) {
+        break;
+      }
+    }
+  }
+
+  return {
+    results,
+    lastTld,
+    hasMore: currentOffset < tlds.length,
+  };
 }
 
 async function quoteCandidates(
