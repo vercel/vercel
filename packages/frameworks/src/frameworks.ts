@@ -2374,7 +2374,7 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Sanity (v2)',
+    name: 'Sanity (v2 - legacy)',
     slug: 'sanity-v2',
     demo: 'https://sanity-studio-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity-v2.svg',
