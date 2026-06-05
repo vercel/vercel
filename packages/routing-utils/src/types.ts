@@ -63,17 +63,8 @@ type Transform = {
   env?: string[];
 };
 
-/**
- * A service-targeted destination (RFC: Vercel Backends). When a route or
- * rewrite `destination` is this object form, routing is delegated into the
- * named service's internal route table. `path` is routing-only — it selects a
- * route inside the target service and does not mutate the URL observed by user
- * code.
- */
 export type ServiceDestination = {
-  /** Discriminator. Must be `"service"` for service-targeted destinations. */
   type: 'service';
-  /** Target service name from `services`. */
   service: string;
   /** Routing-only path used to select a route inside the target service. */
   path?: string;
