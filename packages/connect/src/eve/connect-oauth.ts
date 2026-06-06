@@ -3,7 +3,7 @@ import {
   type AuthFn,
   type VerifyOidcConfig,
   verifyOidc,
-} from 'experimental-ash/channels/auth';
+} from 'eve/channels/auth';
 
 declare const process:
   | { readonly env?: Readonly<Record<string, string | undefined>> }
@@ -39,7 +39,7 @@ export interface ConnectOAuthOptions {
   readonly environment?: ConnectOAuthAudienceEnvironment;
 
   /**
-   * Optional gateway session id (`sub`) matchers. Patterns use Ash's
+   * Optional gateway session id (`sub`) matchers. Patterns use Eve's
    * IAM-style `*` wildcard matching.
    */
   readonly subjects?: readonly string[];
@@ -71,12 +71,12 @@ export interface ConnectOAuthOptions {
    */
   readonly discoveryUrl?: string;
 
-  /** Clock skew in seconds. Defaults to Ash's OIDC verifier default. */
+  /** Clock skew in seconds. Defaults to Eve's OIDC verifier default. */
   readonly clockSkewSeconds?: number;
 }
 
 /**
- * Returns an Ash route auth callback for Vercel Connect OAuth gateway
+ * Returns an Eve route auth callback for Vercel Connect OAuth gateway
  * access tokens.
  *
  * The accepted token must be a bearer JWT issued by

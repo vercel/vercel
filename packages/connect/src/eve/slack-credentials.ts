@@ -1,11 +1,11 @@
-import type { SlackChannelCredentials } from 'experimental-ash/channels/slack';
+import type { SlackChannelCredentials } from 'eve/channels/slack';
 
 import {
   getToken,
   type ConnectOptions,
   type ConnectTokenParams,
 } from '../index.js';
-import { vercelOidc } from 'experimental-ash/channels/auth';
+import { vercelOidc } from 'eve/channels/auth';
 
 /**
  * Token parameters accepted by {@link connectSlackCredentials}.
@@ -36,8 +36,8 @@ export type ConnectSlackCredentialsParams = Omit<ConnectTokenParams, 'subject'>;
  * `installationId`, `scopes`, or `validityBufferMs`.
  *
  * ```ts
- * import { slackRoute } from "experimental-ash/channels/slack";
- * import { connectSlackCredentials } from "@vercel/connect/ash";
+ * import { slackRoute } from "eve/channels/slack";
+ * import { connectSlackCredentials } from "@vercel/connect/eve";
  *
  * export default slackRoute({
  *   credentials: connectSlackCredentials("scl_..."),

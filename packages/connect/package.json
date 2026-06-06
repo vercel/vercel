@@ -13,9 +13,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./ash": {
-      "types": "./dist/ash/index.d.ts",
-      "default": "./dist/ash/index.js"
+    "./eve": {
+      "types": "./dist/eve/index.d.ts",
+      "default": "./dist/eve/index.js"
     },
     "./betterauth": {
       "types": "./dist/betterauth/index.d.ts",
@@ -40,7 +40,7 @@
   "peerDependencies": {
     "@auth/core": ">=0.37.0",
     "better-auth": ">=1.5.0",
-    "experimental-ash": ">=0.8.2"
+    "eve": ">=0.8.2"
   },
   "peerDependenciesMeta": {
     "@auth/core": {
@@ -49,14 +49,14 @@
     "better-auth": {
       "optional": true
     },
-    "experimental-ash": {
+    "eve": {
       "optional": true
     }
   },
   "devDependencies": {
     "@auth/core": "0.37.4",
     "better-auth": "1.5.5",
-    "experimental-ash": "0.31.0",
+    "eve": "file:./fixtures/eve",
     "typescript": "^5"
   },
   "private": false,
