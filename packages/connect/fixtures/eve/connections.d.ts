@@ -26,9 +26,7 @@ export interface ConnectionAuthorizationChallenge {
   readonly expiresAt?: string;
 }
 
-export interface InteractiveAuthorizationDefinition<
-  State extends JsonValue = JsonValue,
-> {
+export interface InteractiveAuthorizationDefinition<Resume = JsonValue> {
   readonly principalType: 'user';
   readonly getToken: (options: {
     readonly principal: ConnectionPrincipal;
@@ -39,7 +37,7 @@ export interface InteractiveAuthorizationDefinition<
     readonly webhook?: string;
   }) => Promise<{
     readonly challenge: ConnectionAuthorizationChallenge;
-    readonly state: State;
+    readonly resume?: Resume;
   }>;
   readonly completeAuthorization: (options: {
     readonly principal: ConnectionPrincipal;
