@@ -5,12 +5,17 @@ import type {
   OAuthTokens,
 } from '@ai-sdk/mcp';
 import { startAuthorization } from '../authorization.js';
+import { ConsentRequiredError, type ConsentChallenge } from '../consent.js';
 import {
   ConnectorInstallationRequiredError,
   UserAuthorizationRequiredError,
   getTokenResponse,
   type ConnectTokenParams,
 } from '../token.js';
+
+// Re-exported so existing `@vercel/connect/mcp` and `@vercel/connect/ai-sdk`
+// imports keep resolving these from here after the move to `../consent.js`.
+export { ConsentRequiredError, type ConsentChallenge } from '../consent.js';
 
 /** Options accepted by {@link connectAuthProvider}. */
 export interface ConnectAuthProviderOptions {
@@ -48,60 +53,6 @@ export interface ConnectAuthProviderOptions {
   readonly onConsentRequired?: (
     challenge: ConsentChallenge
   ) => void | Promise<void>;
-}
-
-/**
- * Returned to {@link ConnectAuthProviderOptions.onConsentRequired} (or
- * raised inside {@link ConsentRequiredError}) when Connect has no
- * cached grant for the configured subject and the caller must surface
- * the consent URL.
- */
-export interface ConsentChallenge {
-  readonly connector: string;
-  readonly subject: ConnectTokenParams['subject'];
-  /** Consent URL to redirect the user to. */
-  readonly url: string;
-  readonly request: string;
-  readonly verifier: string;
-  /**
-   * Device code to display to the user when Connect issues a
-   * device-flow authorization. Present only when the connector uses
-   * device flow.
-   */
-  readonly deviceCode?: string;
-  /** Epoch-ms expiry of the consent challenge, when Connect reports one. */
-  readonly expiresAt?: number;
-}
-
-/**
- * Thrown by the {@link connectAuthProvider} default
- * `onConsentRequired` handler when the user has no Connect grant for
- * the configured subject. Catch at the boundary
- * (`route handler` / `streamText` call site) and redirect to
- * `error.url`.
- */
-export class ConsentRequiredError extends Error {
-  readonly name = 'ConsentRequiredError';
-  readonly connector: string;
-  readonly subject: ConnectTokenParams['subject'];
-  readonly url: string;
-  readonly request: string;
-  readonly verifier: string;
-  readonly deviceCode?: string;
-  readonly expiresAt?: number;
-
-  constructor(challenge: ConsentChallenge) {
-    super(
-      `Vercel Connect: user authorization required for connector "${challenge.connector}". Redirect the user to challenge.url to grant access.`
-    );
-    this.connector = challenge.connector;
-    this.subject = challenge.subject;
-    this.url = challenge.url;
-    this.request = challenge.request;
-    this.verifier = challenge.verifier;
-    this.deviceCode = challenge.deviceCode;
-    this.expiresAt = challenge.expiresAt;
-  }
 }
 
 const EMPTY_CLIENT_METADATA: OAuthClientMetadata = {
