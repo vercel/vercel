@@ -48,6 +48,13 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandSearch(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'search',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',
