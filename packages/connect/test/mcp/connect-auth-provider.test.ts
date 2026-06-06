@@ -161,6 +161,47 @@ describe('connectAuthProvider', () => {
       });
     });
 
+    it('forwards deviceCode: true to startAuthorization when configured', async () => {
+      vi.spyOn(authorization, 'startAuthorization').mockResolvedValue({
+        request: 'req_abc',
+        verifier: 'verifier_xyz',
+        url: 'https://connect.vercel.com/consent',
+      });
+
+      const provider = connectAuthProvider(CONNECTOR, PARAMS, {
+        deviceCode: true,
+      });
+
+      await expect(
+        provider.redirectToAuthorization(new URL('https://ignored'))
+      ).rejects.toBeInstanceOf(ConsentRequiredError);
+
+      expect(authorization.startAuthorization).toHaveBeenCalledWith(
+        CONNECTOR,
+        PARAMS,
+        { deviceCode: true }
+      );
+    });
+
+    it('omits deviceCode from startAuthorization by default', async () => {
+      vi.spyOn(authorization, 'startAuthorization').mockResolvedValue({
+        request: 'req_abc',
+        verifier: 'verifier_xyz',
+        url: 'https://connect.vercel.com/consent',
+      });
+
+      const provider = connectAuthProvider(CONNECTOR, PARAMS);
+      await expect(
+        provider.redirectToAuthorization(new URL('https://ignored'))
+      ).rejects.toBeInstanceOf(ConsentRequiredError);
+
+      expect(authorization.startAuthorization).toHaveBeenCalledWith(
+        CONNECTOR,
+        PARAMS,
+        {}
+      );
+    });
+
     it('resolves a vercelToken callback at call time', async () => {
       vi.spyOn(authorization, 'startAuthorization').mockResolvedValue({
         request: 'req_abc',

@@ -39,6 +39,14 @@ export interface ConnectAuthProviderOptions {
   readonly redirectUrl?: string;
 
   /**
+   * Request the device-authorization flow when minting a consent
+   * challenge. When `true`, Connect returns a `deviceCode` (and
+   * `expiresAt`) on the {@link ConsentChallenge} for out-of-band /
+   * headless approval. Defaults to `false`.
+   */
+  readonly deviceCode?: boolean;
+
+  /**
    * Called when Vercel Connect reports that the user has not yet
    * authorized the connector. The caller decides how to surface the
    * consent URL — `redirect()`, throw a typed error, emit a custom
@@ -181,9 +189,10 @@ export function connectAuthProvider(
       const response = await startAuthorization(connector, params, {
         ...(vercelToken !== undefined && { vercelToken }),
         // Forward the post-consent return URL so the user lands back
-        // in the app. Empty string => Connect uses the connector's
-        // registered redirect.
-        ...(redirectUrl !== '' && { callbackUrl: redirectUrl }),
+        // in the app. Falsy (the default empty string) => Connect uses
+        // the connector's registered redirect.
+        ...(redirectUrl && { callbackUrl: redirectUrl }),
+        ...(options?.deviceCode && { deviceCode: true }),
       });
       const challenge: ConsentChallenge = {
         connector,
