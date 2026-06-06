@@ -2313,6 +2313,44 @@ export const frameworks = [
     experimental: true,
   },
   {
+    name: 'Eve',
+    slug: 'eve',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/eve.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/eve-dark.svg',
+    tagline:
+      'A filesystem-first framework for durable backend agents on Vercel.',
+    description:
+      'An Eve app: agents authored as a directory of files, compiled and served on Vercel.',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"eve":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pnpm install`, `yarn install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'eve build',
+        placeholder: '`npm run build` or `eve build`',
+      },
+      devCommand: {
+        value: 'eve dev',
+        placeholder: 'eve dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+    experimental: true,
+  },
+  {
     name: 'Sanity',
     slug: 'sanity',
     demo: 'https://template-studio-clean.sanity.dev',

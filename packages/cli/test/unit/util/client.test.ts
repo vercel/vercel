@@ -9,6 +9,7 @@ import { ProxyAgent } from 'proxy-agent';
 import { createServer } from 'http';
 import { client } from '../../mocks/client';
 import * as getArgs from '../../../src/util/get-args';
+import pkg from '../../../src/util/pkg';
 
 const testConfigSchema = z.object({
   enabled: z.boolean(),
@@ -122,6 +123,28 @@ describe('Client', () => {
       });
 
       await client.fetch('/v9/projects?teamId=team_explicit', { json: false });
+    });
+
+    it.each([
+      '/v1/registrar/domains/example.com/availability',
+      '/v1/registrar/tlds/supported',
+      '/v5/domains/example.com',
+    ])('sends the CLI version with domain API requests to %s', async path => {
+      client.scenario.get(path, (req, res) => {
+        expect(req.headers['x-vercel-cli-version']).toBe(pkg.version);
+        res.json({ ok: true });
+      });
+
+      await client.fetch(path);
+    });
+
+    it('does not send the domains CLI version header to unrelated APIs', async () => {
+      client.scenario.get('/v2/user', (req, res) => {
+        expect(req.headers['x-vercel-cli-version']).toBeUndefined();
+        res.json({ user: { uid: 'abc' } });
+      });
+
+      await client.fetch('/v2/user');
     });
 
     it('should treat 3xx as errors when redirect is not manual', async () => {

@@ -291,6 +291,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('domains search help output snapshots', () => {
+      it('domains search help column width 120', () => {
+        expect(
+          help(domains.searchSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('domains inspect help output snapshots', () => {
       it('domains inspect help column width 120', () => {
         expect(
