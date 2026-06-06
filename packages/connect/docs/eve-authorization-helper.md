@@ -34,7 +34,7 @@ export default defineMcpClientConnection({
 
 `connector` is the only required field. `principalType` defaults to `"user"`; authors set `"app"` only for app-scoped credentials. `connector` is a plain string — authors do their own env-var validation at module load (the typical pattern is a top-level `if (!value) throw ...`). Eve fills in `"Authorize <ConnectionName> in your browser to continue."` as the default consent-page prompt using the slot name it already derives from the filesystem path. Authors override via the optional `instructions` field only when they want non-default phrasing.
 
-The helper imports Eve's authorization types directly via type-only imports from `eve/connections` and returns Eve's real `InteractiveAuthorizationDefinition<State>` / `NonInteractiveAuthorizationDefinition`. `eve` is declared as an **optional peer dependency** of `@vercel/connect`, and the helper lives at the `@vercel/connect/eve` subpath, so consumers that don't use Eve never load it.
+The helper imports Eve's authorization types directly via type-only imports from `eve/connections` and returns Eve's real `InteractiveAuthorizationDefinition` / `NonInteractiveAuthorizationDefinition`. `eve` is declared as an **optional peer dependency** of `@vercel/connect`, and the helper lives at the `@vercel/connect/eve` subpath, so consumers that don't use Eve never load it.
 
 ### principalType → definition shape
 
@@ -66,18 +66,18 @@ Eve's `NonInteractiveAuthorizationDefinition` technically accepts `principalType
 `AuthorizationDefinition` is a discriminated union. The interactive branch:
 
 ```ts
-interface InteractiveAuthorizationDefinition<State extends JsonValue> {
+interface InteractiveAuthorizationDefinition<Resume = JsonValue> {
   readonly principalType: 'user';
   getToken(opts: { principal: ConnectionPrincipal }): Promise<TokenResult>;
   startAuthorization(opts: {
     principal: ConnectionPrincipal;
-    webhook: string;
-  }): Promise<{ challenge: ConnectionAuthorizationChallenge; state: State }>;
+    callbackUrl: string;
+  }): Promise<{ challenge: ConnectionAuthorizationChallenge; resume?: Resume }>;
   completeAuthorization(opts: {
     principal: ConnectionPrincipal;
-    state: State;
-    webhook: string;
-    request: AuthorizationCallbackRequest;
+    callbackUrl: string;
+    resume?: Resume;
+    callback: AuthorizationCallback; // { params, method, body? } — no headers
   }): Promise<TokenResult>;
 }
 ```
@@ -95,7 +95,6 @@ interface InteractiveAuthorizationDefinition<State extends JsonValue> {
 | `ConnectorInstallationRequiredError`           | `ConnectionAuthorizationFailedError` (`retryable: false`) | deployment issue, not user-fixable                                                                                                                                         |
 | `NoValidTokenError`                            | `ConnectionAuthorizationRequiredError`                    | treat as "need consent"                                                                                                                                                    |
 | `startAuthorization` `callbackUrl` / `webhook` | `opts.webhook`                                            | always `callbackUrl: webhook` (Eve mints a browser-redirect URL with a branded landing page; `webhook:` would land the user on Vercel Connect's generic close-window page) |
-| `verifier`                                     | `state.verifier`                                          | journaled; currently unused by Eve                                                                                                                                         |
 
 ## Proposed API
 
@@ -108,7 +107,6 @@ import {
   type ConnectionAuthorizationChallenge,
   type ConnectionPrincipal,
   type InteractiveAuthorizationDefinition,
-  type JsonValue,
   type NonInteractiveAuthorizationDefinition,
   type TokenResult,
 } from 'eve/connections';
@@ -118,17 +116,6 @@ import type {
   ConnectTokenParams,
   ConnectTokenSubject,
 } from './token.js';
-
-/**
- * State journaled by Eve between `startAuthorization` and
- * `completeAuthorization`. Currently just the PKCE verifier; the
- * index signature exists to satisfy Eve's `State extends JsonValue`
- * constraint.
- */
-export type ConnectAuthorizationState = {
-  readonly verifier: string;
-  readonly [key: string]: JsonValue;
-};
 
 export type ConnectAuthorizationPhase =
   | 'getToken'
@@ -204,15 +191,13 @@ export interface EveAuthorizationOptions {
  */
 export function connect(
   options: EveAuthorizationOptions & { readonly principalType?: 'user' }
-): InteractiveAuthorizationDefinition<ConnectAuthorizationState>;
+): InteractiveAuthorizationDefinition;
 export function connect(
   options: EveAuthorizationOptions & { readonly principalType: 'app' }
 ): NonInteractiveAuthorizationDefinition;
 export function connect(
   options: EveAuthorizationOptions
-):
-  | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
-  | NonInteractiveAuthorizationDefinition;
+): InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition;
 ```
 
 ### Behavior
@@ -227,9 +212,9 @@ export function connect(
    | `ConnectorInstallationRequiredError`                              | `ConnectionAuthorizationFailedError` (`reason: "connector_installation_required"`, `retryable: false`) |
    | anything else                                                     | passed through `onError`, then rethrown verbatim                                                       |
 
-2. **`startAuthorization`** — calls Vercel Connect with `callbackUrl: webhook`. Eve's `webhook` parameter is semantically a browser-redirect target — the runtime mints it via `createWebhook({ respondWith: buildAuthorizationCompletePage() })` so the user lands on a branded "you can close this tab" page after consent. That maps to Vercel Connect's `callbackUrl:` semantics, which already accepts both `https://` (prod) and `http://localhost` (vercel dev), so one field covers both. We deliberately do **not** route `https://` URLs into Vercel Connect's `webhook:` (server-POST) field even though that would be more robust to the user closing the consent tab right after IdP callback: that mode shows the user Vercel Connect's generic "close this window" page instead of Eve's branded landing page, and the helper would need to grow protocol-aware logic that diverges from the simple "Eve mints one URL, Vercel Connect redirects there" mental model. Revisit if tab-close timeouts become a real problem in production. Returns `{ challenge: { url, instructions? }, state: { verifier } }`. `instructions` is only set when the author provides one — otherwise Eve fills in the default in its runtime step (see `withDefaultAuthorizationInstructions`).
+2. **`startAuthorization`** — calls Vercel Connect with `callbackUrl: webhook`. Eve's `webhook` parameter is semantically a browser-redirect target — the runtime mints it via `createWebhook({ respondWith: buildAuthorizationCompletePage() })` so the user lands on a branded "you can close this tab" page after consent. That maps to Vercel Connect's `callbackUrl:` semantics, which already accepts both `https://` (prod) and `http://localhost` (vercel dev), so one field covers both. We deliberately do **not** route `https://` URLs into Vercel Connect's `webhook:` (server-POST) field even though that would be more robust to the user closing the consent tab right after IdP callback: that mode shows the user Vercel Connect's generic "close this window" page instead of Eve's branded landing page, and the helper would need to grow protocol-aware logic that diverges from the simple "Eve mints one URL, Vercel Connect redirects there" mental model. Revisit if tab-close timeouts become a real problem in production. Returns `{ challenge: { url, instructions? } }` — the narrowed contract no longer journals a `state`/`resume` blob, so the PKCE verifier never crosses the step boundary. `instructions` is only set when the author provides one — otherwise Eve fills in the default in its runtime step (see `withDefaultAuthorizationInstructions`).
 
-3. **`completeAuthorization`** — ignores the journaled `state` and `request` payload (Vercel Connect is authoritative); re-calls `getTokenResponse`. If it still throws `UserAuthorizationRequiredError` / `NoValidTokenError`, translate to `ConnectionAuthorizationFailedError` with a "Vercel Connect still reports user as unauthorized" message (defaults to `retryable: true` so the model can re-prompt — most cases are network blips or replays).
+3. **`completeAuthorization`** — ignores the journaled `resume` and the `callback` payload (Vercel Connect is authoritative); re-calls `getTokenResponse`. If it still throws `UserAuthorizationRequiredError` / `NoValidTokenError`, translate to `ConnectionAuthorizationFailedError` with a "Vercel Connect still reports user as unauthorized" message (defaults to `retryable: true` so the model can re-prompt — most cases are network blips or replays).
 
 4. **App-scoped mode** (`principalType: "app"`) — helper returns only `getToken` (no `startAuthorization` / `completeAuthorization`). Vercel Connect gets `subject: { type: "app" }` on every request. Token-fetch failure surfaces as `ConnectionAuthorizationFailedError` with `retryable: false` because there is no user to consent.
 
@@ -508,7 +493,7 @@ Sequential; each step validates the next.
 2. **Switch to Vercel Connect's `webhook:` (server-POST) mode for `https://` URLs?** Would survive the user closing the consent tab right after IdP callback, where the current `callbackUrl` browser redirect would be lost. Costs the branded landing page (user sees Vercel Connect's generic close-window page) and adds protocol-aware logic to the helper. Defer until tab-close timeouts show up as a real prod issue.
 3. **Auto-load `connector` from `CONNECTOR_<NAME>`?** Saves a line; hides magic. Recommend explicit `connector`.
 4. **Inspect `request.url` for `?error=access_denied`?** Today both connections skip this. Vercel Connect's `UserAuthorizationRequiredError` covers it from the server's perspective, but we lose the "user clicked Deny" (terminal) vs "IdP flow still pending" (retryable) distinction. Defer until Vercel Connect surfaces it, or add an `onCallback` hook.
-5. **Is `state: { verifier }` useful?** Eve journals it but does not read it. Cheap to keep for debuggability; propose: keep.
+5. **Is `state: { verifier }` useful?** ~~Eve journals it but does not read it. Cheap to keep for debuggability; propose: keep.~~ **Resolved (contract narrowing):** Eve narrowed the contract so secrets no longer cross the step boundary, and the helper now returns only `{ challenge }` from `startAuthorization`. The verifier is no longer journaled. The renamed, secrets-discouraged `resume` field remains available for non-secret correlation, but the helper does not use it.
 6. **Rename `connector` → `uid` (or similar) SDK-wide?** The Vercel Connect dashboard labels the value `UID`, the SDK calls it `connector`, and the value can be either a UID slug (`oauth/mcp-linear-app`) or an opaque SCL token (`scl_...`). The helper inherits whatever name the SDK uses. If the SDK ever wants to unify naming, that's a separate SDK-level migration (deprecate `connector`, accept `uid`, bump minor) — not in scope here, but worth raising in the Vercel Connect repo alongside this plan.
 
 ## Risk / rollback

@@ -34,7 +34,6 @@ import {
   type ConnectionAuthorizationChallenge,
   type ConnectionPrincipal,
   type InteractiveAuthorizationDefinition,
-  type JsonValue,
   type NonInteractiveAuthorizationDefinition,
   type TokenResult,
 } from 'eve/connections';
@@ -60,20 +59,6 @@ export type ConnectAuthorizationPhase =
   | 'getToken'
   | 'startAuthorization'
   | 'completeAuthorization';
-
-/**
- * State journaled by Eve between
- * {@link InteractiveAuthorizationDefinition.startAuthorization} and
- * {@link InteractiveAuthorizationDefinition.completeAuthorization}.
- *
- * Currently just the PKCE verifier. The index signature exists to
- * satisfy Eve's `State extends JsonValue` constraint; in practice
- * the only key the helper produces or reads is `verifier`.
- */
-export type ConnectAuthorizationState = {
-  readonly verifier: string;
-  readonly [key: string]: JsonValue;
-};
 
 interface GetTokenOptions {
   readonly principal: ConnectionPrincipal;
@@ -200,7 +185,7 @@ export interface VercelConnectMetadata {
  */
 export type EveConnectAuthorizationDefinition<
   TAuthorization extends
-    | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
+    | InteractiveAuthorizationDefinition
     | NonInteractiveAuthorizationDefinition,
 > = TAuthorization & {
   readonly vercelConnect: VercelConnectMetadata;
@@ -225,28 +210,22 @@ export type EveConnectAuthorizationDefinition<
  */
 export function connect(
   connector: string
-): EveConnectAuthorizationDefinition<
-  InteractiveAuthorizationDefinition<ConnectAuthorizationState>
->;
+): EveConnectAuthorizationDefinition<InteractiveAuthorizationDefinition>;
 export function connect(
   options: EveAuthorizationOptions & { readonly principalType?: 'user' }
-): EveConnectAuthorizationDefinition<
-  InteractiveAuthorizationDefinition<ConnectAuthorizationState>
->;
+): EveConnectAuthorizationDefinition<InteractiveAuthorizationDefinition>;
 export function connect(
   options: EveAuthorizationOptions & { readonly principalType: 'app' }
 ): EveConnectAuthorizationDefinition<NonInteractiveAuthorizationDefinition>;
 export function connect(
   options: EveAuthorizationInput
 ): EveConnectAuthorizationDefinition<
-  | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
-  | NonInteractiveAuthorizationDefinition
+  InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 >;
 export function connect(
   input: EveAuthorizationInput
 ): EveConnectAuthorizationDefinition<
-  | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
-  | NonInteractiveAuthorizationDefinition
+  InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 > {
   const options = normalizeAuthorizationOptions(input);
   const vercelConnect: VercelConnectMetadata = { connector: options.connector };
@@ -267,7 +246,7 @@ function normalizeAuthorizationOptions(
 
 function buildInteractiveDefinition(
   options: EveAuthorizationOptions
-): InteractiveAuthorizationDefinition<ConnectAuthorizationState> {
+): InteractiveAuthorizationDefinition {
   return {
     principalType: 'user',
 
@@ -290,7 +269,6 @@ function buildInteractiveDefinition(
       webhook,
     }: StartAuthorizationOptions): Promise<{
       challenge: ConnectionAuthorizationChallenge;
-      state: ConnectAuthorizationState;
     }> {
       try {
         // Eve's `webhook` parameter is semantically a browser-redirect
@@ -334,7 +312,6 @@ function buildInteractiveDefinition(
               ? { instructions: options.instructions }
               : null),
           } satisfies ConnectionAuthorizationChallenge,
-          state: { verifier: response.verifier },
         };
       } catch (error) {
         throw translate(error, 'startAuthorization', options);
