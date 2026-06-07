@@ -825,6 +825,10 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
        --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
        --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
+       --connector-type <TYPE>   Connector type for non-managed creation. By default, the backend infers the type from the   
+                                 service.                                                                                    
+       --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
+                                 create API.                                                                                 
   -F,  --format <FORMAT>         Specify the output format (json)                                                            
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
   -n,  --name <NAME>             Name of the connector                                                                       
@@ -862,6 +866,14 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with branding (icon and colors)
 
     $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
+
+  - Create a non-managed connector from explicit data
+
+    $ vercel connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'
+
+  - Create a non-managed connector with an explicit connector type
+
+    $ vercel connect create slack --name my-bot --connector-type slack --data '{"appId":"A123","appName":"my-bot","clientId":"abc","clientSecret":"secret"}'
 
   - Output as JSON
 

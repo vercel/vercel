@@ -28,6 +28,24 @@ export const createSubcommand = {
       description: 'Enable webhook triggers for this connector',
     },
     {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      argument: 'JSON',
+      deprecated: false,
+      description:
+        'JSON object for non-managed connector creation. When set, posts directly to the connector create API.',
+    },
+    {
+      name: 'connector-type',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Connector type for non-managed creation. By default, the backend infers the type from the service.',
+    },
+    {
       name: 'icon',
       shorthand: null,
       type: String,
@@ -70,6 +88,14 @@ export const createSubcommand = {
     {
       name: 'Create with branding (icon and colors)',
       value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
+      name: 'Create a non-managed connector from explicit data',
+      value: `${packageName} connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'`,
+    },
+    {
+      name: 'Create a non-managed connector with an explicit connector type',
+      value: `${packageName} connect create slack --name my-bot --connector-type slack --data '{"appId":"A123","appName":"my-bot","clientId":"abc","clientSecret":"secret"}'`,
     },
     {
       name: 'Output as JSON',
