@@ -53,4 +53,10 @@ export class EnvPullTelemetryClient
       });
     }
   }
+
+  trackCliFlagNoGitignore(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-gitignore');
+    }
+  }
 }

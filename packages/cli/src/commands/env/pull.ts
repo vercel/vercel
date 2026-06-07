@@ -109,6 +109,7 @@ export default async function pull(
 
   telemetryClient.trackCliArgumentFilename(args[0]);
   telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliFlagNoGitignore(opts['--no-gitignore']);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionId(opts['--id']);
@@ -160,6 +161,8 @@ export default async function pull(
       flags: opts,
     }) || 'development';
 
+  const noGitignore = !!opts['--no-gitignore'];
+
   await envPullCommandLogic(
     client,
     filename,
@@ -169,7 +172,8 @@ export default async function pull(
     gitBranch,
     client.cwd,
     source,
-    deploymentId
+    deploymentId,
+    noGitignore
   );
 
   return 0;
@@ -184,7 +188,8 @@ export async function envPullCommandLogic(
   gitBranch: string | undefined,
   cwd: string,
   source: EnvRecordsSource,
-  deploymentId?: string
+  deploymentId?: string,
+  noGitignore: boolean = false
 ) {
   const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
@@ -281,7 +286,7 @@ export async function envPullCommandLogic(
   }
 
   let isGitIgnoreUpdated = false;
-  if (filename === '.env.local') {
+  if (filename === '.env.local' && !noGitignore) {
     // When the file is `.env.local`, we also add it to `.gitignore`
     // to avoid accidentally committing it to git.
     // We use '.env*' to match the default .gitignore from

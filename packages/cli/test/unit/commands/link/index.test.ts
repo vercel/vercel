@@ -774,6 +774,68 @@ describe('link', () => {
     });
   });
 
+  describe('--no-gitignore', () => {
+    it('should skip writing .gitignore when --no-gitignore is passed', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--yes', '--no-gitignore');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Searching for existing projects');
+      await expect(client.stderr).toOutput(
+        `Linked      ${team.slug}/${project.name}`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "link --no-gitignore"').toEqual(0);
+
+      // .vercel/project.json should still be written
+      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.orgId).toEqual(team.id);
+      expect(projectJson.projectId).toEqual(project.id);
+
+      // .gitignore should NOT have been created
+      expect(await pathExists(join(cwd, '.gitignore'))).toBe(false);
+    });
+
+    it('should track --no-gitignore telemetry flag', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--yes', '--no-gitignore');
+      const exitCode = await link(client);
+      expect(exitCode, 'exit code for "link"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:yes',
+          value: 'TRUE',
+        },
+        {
+          key: 'flag:no-gitignore',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
   describe('--non-interactive', () => {
     it('outputs action_required JSON and exits when not linked and multiple teams (no --team)', async () => {
       const cwd = setupTmpDir();

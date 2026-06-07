@@ -57,6 +57,13 @@ export const linkCommand = {
         'Skip questions when setting up new project using default scope and settings',
     },
     confirmOption,
+    {
+      name: 'no-gitignore',
+      description: 'Skip automatic addition of ".vercel" to ".gitignore"',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {
