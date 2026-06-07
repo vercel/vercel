@@ -2124,6 +2124,14 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    or  
                                    more
                                    dom…
+  search       query               Dis…
+                                   dom…
+                                   can…
+                                   from
+                                   a   
+                                   key…
+                                   or  
+                                   fra…
   transfer-in  domain              Tra…
                                    in a
                                    dom…
@@ -2210,6 +2218,8 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    Vercel Team                                 
   price        domain              Show registrar price quotes for one or more 
                                    domains                                     
+  search       query               Discover domain-name candidates from a      
+                                   keyword or fragment                         
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
@@ -2249,6 +2259,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
   price        domain              Show registrar price quotes for one or more domains                                 
+  search       query               Discover domain-name candidates from a keyword or fragment                          
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
@@ -2423,6 +2434,61 @@ exports[`help command > domains help output snapshots > domains remove help outp
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains search help output snapshots > domains search help column width 120 1`] = `
+"
+  ▲ vercel domains search query [options]
+
+  Discover domain-name candidates from a keyword or fragment                                                            
+
+  Options:
+
+       --available        Show only candidates available to register                                                    
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of candidates to check per page (default: 20, max: 200)                                
+       --next <CURSOR>    Show the next page of candidates                                                              
+       --order <ORDER>    Order candidates by relevance, alphabetical order, or length (default: relevance)             
+       --tld <TLD>        Filter candidates by exact TLD. Repeatable.                                                   
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Discover domain-name candidates
+
+    $ vercel domains search acme
+
+  - Narrow candidates with a TLD fragment
+
+    $ vercel domains search acme.d
+
+  - Filter candidates by TLD
+
+    $ vercel domains search acme --tld com --tld dev
+
+  - Show only available candidates
+
+    $ vercel domains search acme --available
+
+  - JSON output
+
+    $ vercel domains search acme --format=json
 
 "
 `;

@@ -7,7 +7,7 @@ Six entrypoints, all ESM:
 - `@vercel/connect` — core token / authorization SDK
 - `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
 - `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
-- `@vercel/connect/ash` — adapter helpers for [Ash](https://github.com/vercel/ash) connections (optional peer: `experimental-ash`)
+- `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
 - `@vercel/connect/betterauth` — [Better Auth](https://www.better-auth.com/) `genericOAuth` provider (optional peer: `better-auth`)
 - `@vercel/connect/authjs` — [Auth.js](https://authjs.dev/) `OAuth2Config` provider (optional peer: `@auth/core`)
 
@@ -68,11 +68,11 @@ SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
 
-### Ash
+### Eve
 
 ```ts
-import { defineMcpClientConnection } from 'experimental-ash/connections';
-import { connect } from '@vercel/connect/ash';
+import { defineMcpClientConnection } from 'eve/connections';
+import { connect } from '@vercel/connect/eve';
 
 export default defineMcpClientConnection({
   url: 'https://mcp.linear.app/sse',
