@@ -332,6 +332,52 @@ describe('Test `detectBuilders`', () => {
     }
   });
 
+  it('should warn when api/ files exist but no service covers them', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'api_dir_ignored' }),
+      ])
+    );
+  });
+
+  it('should not warn when a service explicitly covers the api/ directory', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+          backend: {
+            entrypoint: 'api/index.py',
+            routePrefix: '/api',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings.every(w => w.code !== 'api_dir_ignored')).toBe(true);
+  });
+
   it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders } = await invokeDetectBuildersAndThrow(files, null, {

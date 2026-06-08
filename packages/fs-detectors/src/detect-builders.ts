@@ -22,7 +22,10 @@ import {
   isExperimentalBackendsEnabled,
   getMaxDurationLimit,
 } from '@vercel/build-utils';
-import { getServicesBuilders } from './services/get-services-builders';
+import {
+  getServicesBuilders,
+  warnIgnoredDirectories,
+} from './services/get-services-builders';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -158,12 +161,20 @@ export async function detectBuilders(
     configuredServices != null && typeof configuredServices === 'object';
 
   if (hasServicesConfig || framework === 'services') {
-    return getServicesBuilders({
+    const result = await getServicesBuilders({
       workPath: options.workPath,
       configuredServices: configuredServices,
       configuredServicesType,
       projectFramework: framework,
     });
+
+    if (configuredServices != null) {
+      result.warnings.push(
+        ...warnIgnoredDirectories(files, configuredServices)
+      );
+    }
+
+    return result;
   }
 
   const errors: ErrorResponse[] = [];
