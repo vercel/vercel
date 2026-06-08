@@ -1,6 +1,7 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
+import stripAnsi from 'strip-ansi';
 import { useUser } from '../../../mocks/user';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -671,10 +672,13 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput(
-        `Found multiple Git repositories in your local Git config:\n• origin: https://github.com/user/repo.git\n• secondary: https://github.com/user/repo2.git`
+        `Found multiple Git repositories in your local Git config:`
       );
       await expect(client.stderr).toOutput(
         `Do you still want to connect https://github.com/user3/repo3? (y/N)`
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+        /Found multiple Git repositories in your local Git config:\n\s{0,2}• origin: https:\/\/github\.com\/user\/repo\.git\n\s{0,2}• secondary: https:\/\/github\.com\/user\/repo2\.git/
       );
       client.stdin.write('y\n');
 
