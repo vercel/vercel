@@ -1,5 +1,33 @@
 # @vercel/connect
 
+## 0.2.0
+
+### Minor Changes
+
+- 1701fc0: Add `@vercel/connect/ai-sdk` and `@vercel/connect/mcp` subpath entrypoints
+  for native Vercel AI SDK and Model Context Protocol integration.
+
+  `connectAuthProvider(connector, params)` returns an MCP-spec
+  `OAuthClientProvider` that delegates token issuance to Vercel Connect and
+  surfaces consent challenges as a typed `ConsentRequiredError` (or via an
+  `onConsentRequired` callback). Works with `@ai-sdk/mcp@^1`, `@ai-sdk/mcp@^2`,
+  and the official MCP TypeScript SDK.
+
+  Both `ai` and `@ai-sdk/mcp` are optional peer dependencies — importing the
+  adapter subpaths requires them, but the rest of `@vercel/connect` is
+  unaffected.
+
+- 0fd543a: Narrow the `@vercel/connect/eve` interactive-authorization contract to match Eve's narrowed `InteractiveAuthorizationDefinition`. `startAuthorization` now returns only `{ challenge }` (the journaled `state` is gone), so a Connect-backed session no longer carries OAuth secrets across a workflow step boundary. Runtime behavior is unchanged — Connect still re-polls `getTokenResponse(connector, principal)` in `completeAuthorization`.
+
+  Breaking public-type change: the `ConnectAuthorizationState` type is removed and `connect()` no longer parameterizes `InteractiveAuthorizationDefinition`.
+
+- c7da77b: Rename the Vercel Connect Ash adapter to Eve.
+
+### Patch Changes
+
+- Updated dependencies [01cf6c2]
+  - @vercel/oidc@3.6.1
+
 ## 0.1.3
 
 ### Patch Changes
