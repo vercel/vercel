@@ -66,7 +66,7 @@ For exact blank-gutter spacing, prefer `printAlignedLabel()` unit tests or a dir
 expect(stripAnsi(lastPrinted())).toBe('  Linked      acme/web\n');
 ```
 
-Command harnesses may normalize leading indentation; do not write a command test that only passes when the harness preserves the two blank gutter columns.
+For command output, assert the row is present and has no semantic gutter glyph when it should use the blank gutter. Keep exact two-space gutter assertions in `printAlignedLabel()` unit tests, where the helper output is observed directly.
 
 ## Stale-String Sweeps
 
