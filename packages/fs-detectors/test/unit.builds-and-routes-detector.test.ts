@@ -847,6 +847,67 @@ describe('Test `detectBuilders`', () => {
     expect(builders.length).toBe(1);
   });
 
+  it('rejects maxDuration above the default 900s limit', async () => {
+    const functions = { 'pages/index.ts': { maxDuration: 1200 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toHaveLength(0);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  describe('with VERCEL_CLI_SKIP_MAX_DURATION_LIMIT=1', () => {
+    beforeEach(() => {
+      process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT;
+    });
+
+    it('allows maxDuration above 900s, deferring to server-side validation', async () => {
+      const pkg = {
+        scripts: { build: 'next build' },
+        dependencies: { next: '9.0.0' },
+      };
+      const functions = { 'pages/api/long.ts': { maxDuration: 1200 } };
+      const files = ['package.json', 'pages/index.js', 'pages/api/long.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+        functions,
+      });
+
+      expect(errors).toHaveLength(0);
+      expect(builders.length).toBe(1);
+    });
+
+    it('still rejects a non-integer maxDuration', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 1.5 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
+
+    it('still rejects a maxDuration below 1', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 0 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
+  });
+
   it('invalid function memory', async () => {
     const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];

@@ -20,6 +20,7 @@ import {
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
+  getMaxDurationLimit,
 } from '@vercel/build-utils';
 import { getServicesBuilders } from './services/get-services-builders';
 
@@ -729,17 +730,25 @@ function validateFunctions({ functions = {} }: Options) {
       };
     }
 
+    // The upper bound is enforced by server-side validation; only apply a
+    // client-side maximum when it has not been skipped via
+    // `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`. The lower bound and integer check
+    // are always enforced.
+    const maxDurationLimit = getMaxDurationLimit();
     if (
       func.maxDuration !== undefined &&
       func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
-        func.maxDuration > 900 ||
+        (maxDurationLimit !== undefined &&
+          func.maxDuration > maxDurationLimit) ||
         !Number.isInteger(func.maxDuration))
     ) {
       return {
         code: 'invalid_function_duration',
         message:
-          'Functions must have a maxDuration between 1 and 900, or "max".',
+          maxDurationLimit !== undefined
+            ? `Functions must have a maxDuration between 1 and ${maxDurationLimit}, or "max".`
+            : 'Functions must have a positive integer maxDuration, or "max".',
       };
     }
 
