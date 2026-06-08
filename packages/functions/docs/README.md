@@ -8,3 +8,4 @@
 
 - [index](index/README.md)
 - [oidc](oidc/README.md)
+- [websocket](websocket/README.md)

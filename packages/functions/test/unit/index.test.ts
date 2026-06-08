@@ -7,8 +7,16 @@ evalScript.esm = code => evalScript(code, ['--input-type', 'module']);
 
 describe('@vercel/functions', () => {
   const EXPECTED_METHODS = [
+    'addCacheTag',
+    'attachDatabasePool',
+    'dangerouslyDeleteBySrcImage',
+    'dangerouslyDeleteByTag',
+    'experimental_attachDatabasePool',
     'geolocation',
+    'getCache',
     'getEnv',
+    'invalidateBySrcImage',
+    'invalidateByTag',
     'ipAddress',
     'next',
     'rewrite',
@@ -114,6 +122,30 @@ describe('@vercel/functions/middleware', () => {
   test('load as ESM', async () => {
     const code =
       "import f from '@vercel/functions/middleware'; console.log(JSON.stringify(Object.keys(f)))";
+    const exportedMethods = await evalScript
+      .esm(code)
+      .then(output => JSON.parse(output));
+
+    expect(exportedMethods).toEqual(EXPECTED_METHODS);
+  });
+});
+
+describe('@vercel/functions/websocket', () => {
+  const EXPECTED_METHODS = ['getWebSocketUpgrade'];
+
+  test('load as CommonJS', async () => {
+    const code =
+      "console.log(JSON.stringify(Object.keys(require('@vercel/functions/websocket'))))";
+    const exportedMethods = await evalScript(code).then(output =>
+      JSON.parse(output)
+    );
+
+    expect(exportedMethods).toEqual(EXPECTED_METHODS);
+  });
+
+  test('load as ESM', async () => {
+    const code =
+      "import f from '@vercel/functions/websocket'; console.log(JSON.stringify(Object.keys(f)))";
     const exportedMethods = await evalScript
       .esm(code)
       .then(output => JSON.parse(output));

@@ -1,6 +1,7 @@
 import { RuntimeCache } from './cache/types';
 import { PurgeApi } from './purge/types';
 import { AddCacheTagApi } from './addcachetag/types';
+import type { WebSocketUpgrade } from './websocket';
 
 type Context = {
   waitUntil?: (promise: Promise<unknown>) => void;
@@ -8,6 +9,7 @@ type Context = {
   purge?: PurgeApi;
   addCacheTag?: AddCacheTagApi;
   headers?: Record<string, string>;
+  upgradeWebSocket?: () => WebSocketUpgrade;
 };
 
 export const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
