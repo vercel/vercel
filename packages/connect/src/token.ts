@@ -169,6 +169,38 @@ export async function getTokenResponse(
   return data;
 }
 
+export async function deleteToken(
+  connector: string,
+  params: {
+    subject: ConnectTokenSubject;
+    installationId?: string;
+  },
+  options?: ConnectOptions
+): Promise<void> {
+  const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
+  const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
+
+  const response = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${vercelToken}`,
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to delete token'
+    );
+  }
+
+  await response.json();
+  cache.clear();
+}
+
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;
 const MAX_CACHE_SIZE = 100;
 

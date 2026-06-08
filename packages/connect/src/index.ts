@@ -1,4 +1,5 @@
 export {
+  deleteToken,
   getToken,
   getTokenResponse,
   ConnectError,
