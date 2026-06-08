@@ -2,30 +2,32 @@ import { readFile, realpath } from 'fs-extra';
 import { sep, dirname, join, resolve } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { scanParentDirs } from '@vercel/build-utils';
+import { scanParentDirs, type CliType } from '@vercel/build-utils';
 import { packageName } from './pkg-name';
 import { isNativeBinaryInstall } from './native-install';
-
-type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun' | 'vlt';
 
 const nativePackageName = '@vercel/vc-native';
 
 const execFileAsync = promisify(execFile);
 
-const globalRootQueries: Record<
-  'npm' | 'pnpm' | 'yarn',
-  { args: string[]; packageDir: (root: string, pkg: string) => string }
-> = {
+const globalRootQueries = {
   npm: { args: ['root', '-g'], packageDir: (root, pkg) => join(root, pkg) },
   pnpm: { args: ['root', '-g'], packageDir: (root, pkg) => join(root, pkg) },
   yarn: {
     args: ['global', 'dir'],
     packageDir: (root, pkg) => join(root, 'node_modules', pkg),
   },
-};
+} satisfies Partial<
+  Record<
+    CliType,
+    { args: string[]; packageDir: (root: string, pkg: string) => string }
+  >
+>;
+
+type GlobalCliType = keyof typeof globalRootQueries;
 
 async function getPackageManagerGlobalRoot(
-  cliType: 'npm' | 'pnpm' | 'yarn'
+  cliType: GlobalCliType
 ): Promise<string | null> {
   try {
     const { stdout } = await execFileAsync(
@@ -46,8 +48,8 @@ async function getPackageManagerGlobalRoot(
 async function detectGlobalCliType(
   installPath: string,
   pkg: string
-): Promise<'npm' | 'pnpm' | 'yarn' | null> {
-  for (const cliType of ['npm', 'pnpm', 'yarn'] as const) {
+): Promise<GlobalCliType | null> {
+  for (const cliType of Object.keys(globalRootQueries) as GlobalCliType[]) {
     const root = await getPackageManagerGlobalRoot(cliType);
     if (!root) {
       continue;

@@ -135,6 +135,8 @@ export {
   validateNpmrc,
 };
 
+export type { CliType } from './fs/run-user-scripts';
+
 export { EdgeFunction } from './edge-function';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
