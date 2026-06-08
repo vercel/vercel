@@ -18,6 +18,7 @@ import {
   formatQuantity,
   extractDatePortion,
 } from '../../util/billing/format';
+import { inspectInvoice, listInvoices } from './invoices';
 
 export default async function contract(client: Client): Promise<number> {
   const { print, log, error, spinner } = output;
@@ -50,6 +51,37 @@ export default async function contract(client: Client): Promise<number> {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
+  const billingAction = parsedArgs.args[1];
+
+  if (billingAction === 'invoices') {
+    const invoiceAction = parsedArgs.args[2] ?? 'ls';
+    let teamScope: string | undefined;
+    try {
+      const scope = await getScope(client);
+      teamScope = scope.team?.id;
+    } catch {
+      teamScope = client.config.currentTeam;
+    }
+
+    try {
+      if (invoiceAction === 'ls' || invoiceAction === 'list') {
+        return await listInvoices(client, teamScope, asJson);
+      }
+      if (invoiceAction === 'inspect') {
+        const invoiceId = parsedArgs.args[3];
+        if (!invoiceId) {
+          error('Usage: vercel billing invoices inspect <invoiceId>');
+          return 2;
+        }
+        return await inspectInvoice(client, invoiceId, teamScope, asJson);
+      }
+      error('Usage: vercel billing invoices ls | inspect <invoiceId>');
+      return 2;
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
+  }
 
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
