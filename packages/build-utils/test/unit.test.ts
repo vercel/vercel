@@ -581,6 +581,18 @@ it('should round-trip hasPostponed as a tri-state', async () => {
     bypassToken: 'some-long-bypass-token-to-make-it-work',
   });
   expect(omitted.hasPostponed).toBeUndefined();
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        hasPostponed: 'yes',
+      })
+  ).toThrow('The `hasPostponed` argument for `Prerender` must be a boolean');
 });
 
 it('should support passQuery correctly', async () => {

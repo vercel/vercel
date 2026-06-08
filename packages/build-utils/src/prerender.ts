@@ -86,6 +86,11 @@ export class Prerender {
     // (`true` | `false` | `undefined`) round-trips intact. Do not adopt the
     // `partialFallback`/`exposeErrBody` idiom below, which collapses `false`
     // into `undefined`.
+    if (hasPostponed !== undefined && typeof hasPostponed !== 'boolean') {
+      throw new Error(
+        'The `hasPostponed` argument for `Prerender` must be a boolean or undefined.'
+      );
+    }
     this.hasPostponed = hasPostponed;
 
     this.lambda = lambda;
