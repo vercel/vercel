@@ -116,6 +116,36 @@ it('should overwrite PATH with last value', () => {
   });
 });
 
+it('should not allow prototype pollution via __proto__ key', () => {
+  // Regression test for #15725.  A malicious env containing a `__proto__`
+  // own property (e.g. produced by `JSON.parse`) must not be allowed to
+  // replace the returned object's prototype with attacker-controlled data,
+  // and must not pollute `Object.prototype`.
+  const malicious = JSON.parse(
+    '{"__proto__":{"polluted":"yes"},"GOOD":"keep"}'
+  );
+  const result = cloneEnv(malicious) as Record<string, unknown>;
+
+  // Returned object's prototype must remain Object.prototype.
+  expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+  // Looking up `polluted` must not surface the attacker value via the chain.
+  expect(result.polluted).toBeUndefined();
+  // The unsafe key itself must not be copied as a regular own property.
+  expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(false);
+  // Legitimate keys are still copied.
+  expect(result.GOOD).toBe('keep');
+  // `Object.prototype` was not globally polluted.
+  expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+});
+
+it('should not copy other unsafe keys (constructor, prototype)', () => {
+  const malicious = JSON.parse(
+    '{"constructor":"x","prototype":"y","SAFE":"keep"}'
+  );
+  const result = cloneEnv(malicious);
+  expect(result).toEqual({ SAFE: 'keep' });
+});
+
 it('should handle process.env at any argument position', () => {
   expect(
     cloneEnv(
