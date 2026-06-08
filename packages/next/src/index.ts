@@ -195,7 +195,7 @@ function isLegacyNext(nextVersion: string) {
   }
 
   // If the version is an exact match with the legacy versions
-  if (nextLegacyVersions.indexOf(nextVersion) !== -1) {
+  if (nextLegacyVersions.includes(nextVersion)) {
     return true;
   }
 

@@ -524,5 +524,5 @@ type SourceOutput = { code: string; map: string };
  * Filter diagnostics.
  */
 function filterDiagnostics(diagnostics: _ts.Diagnostic[], ignore: number[]) {
-  return diagnostics.filter(x => ignore.indexOf(x.code) === -1);
+  return diagnostics.filter(x => !ignore.includes(x.code));
 }
