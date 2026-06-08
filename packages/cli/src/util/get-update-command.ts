@@ -143,7 +143,11 @@ async function isGlobalByPrefix(installPath: string): Promise<boolean> {
     return true;
   }
 
-  return installPath.startsWith(await realpath(prefixPath));
+  try {
+    return installPath.startsWith(await realpath(prefixPath));
+  } catch (_) {
+    return true;
+  }
 }
 
 async function resolveInstall(): Promise<{
