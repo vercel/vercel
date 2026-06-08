@@ -60,5 +60,6 @@ export { default as telemetry } from './commands/telemetry';
 export { default as traces } from './commands/traces';
 export { default as upgrade } from './commands/upgrade';
 export { default as usage } from './commands/usage';
+export { default as byoc } from './commands/byoc';
 export { default as webhooks } from './commands/webhooks';
 export { default as whoami } from './commands/whoami';
