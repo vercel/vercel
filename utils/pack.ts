@@ -71,6 +71,13 @@ async function main() {
     }
     await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
 
+    const existingTarballs = (await fs.readdir(dir)).filter(f =>
+      /^vercel-.+\.tgz$/.test(f)
+    );
+    await Promise.all(
+      existingTarballs.map(tarball => fs.rm(path.join(dir, tarball)))
+    );
+
     await execa('pnpm', ['pack'], {
       cwd: dir,
       stdio: 'inherit',
