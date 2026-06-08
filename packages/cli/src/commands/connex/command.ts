@@ -43,7 +43,7 @@ export const createSubcommand = {
       argument: 'TYPE',
       deprecated: false,
       description:
-        'Connector type for non-managed creation. By default, the backend infers the type from the service.',
+        'Connector type for non-managed creation. By default, the type is resolved from the service.',
     },
     {
       name: 'icon',
