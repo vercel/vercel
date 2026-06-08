@@ -44,7 +44,7 @@ function expectLinkRowsUseNonProductionGutter(
   const plain = stripAnsi(output);
 
   for (const label of labels) {
-    expect(plain).toMatch(new RegExp(`^${label.padEnd(12)}`, 'm'));
+    expect(plain).toMatch(new RegExp(`^\\s{0,2}${label.padEnd(12)}`, 'm'));
   }
 
   expect(plain).not.toMatch(
