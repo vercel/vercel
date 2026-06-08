@@ -6,6 +6,7 @@ import {
   matchers,
   type Route,
 } from './router';
+import type { Redirect, Rewrite } from './types';
 
 const { header, cookie, query, host } = matchers;
 import { cacheHeader } from 'pretty-cache-header';
@@ -454,8 +455,9 @@ describe('Router', () => {
         }
       );
 
-      expect(route.transforms[0].env).toEqual(['API_KEY']);
-      expect(route.transforms[1].env).toEqual(['REGION']);
+      expect(route).toMatchObject({
+        transforms: [{ env: ['API_KEY'] }, { env: ['REGION'] }],
+      });
     });
 
     it('should include respectOriginCacheControl in route with transforms', () => {
@@ -489,10 +491,29 @@ describe('Router', () => {
         })
       );
 
-      // userId is a path param, not an env var
-      expect(route.transforms[0].env).toBeUndefined();
-      // TOKEN is an env var
-      expect(route.transforms[1].env).toEqual(['TOKEN']);
+      // userId is a path param — should not have env
+      // TOKEN is an env var — should appear in env
+      expect(route).toMatchObject({
+        transforms: [
+          expect.not.objectContaining({ env: expect.anything() }),
+          { env: ['TOKEN'] },
+        ],
+      });
+    });
+  });
+
+  describe('rewrite callback without transforms', () => {
+    it('should return Rewrite when callback returns only conditions', () => {
+      const result = router.rewrite('/users/:userId', '/v2/users/$1', () => ({
+        has: [{ type: 'header' as const, key: 'x-forwarded-for' }],
+      }));
+      expect(result).toHaveProperty('source');
+      expect(result).not.toHaveProperty('transforms');
+      expect(result).toEqual({
+        source: '/users/:userId',
+        destination: '/v2/users/$1',
+        has: [{ type: 'header', key: 'x-forwarded-for' }],
+      });
     });
   });
 
@@ -535,18 +556,18 @@ describe('Router', () => {
 
   describe('route', () => {
     it('should auto-extract env vars from transforms', () => {
-      const route = {
+      const route: Route = {
         src: '/users/:userId',
         transforms: [
           {
-            type: 'request.headers' as const,
-            op: 'set' as const,
+            type: 'request.headers',
+            op: 'set',
             target: { key: 'x-user-id' },
             args: '$userId',
           },
           {
-            type: 'request.headers' as const,
-            op: 'set' as const,
+            type: 'request.headers',
+            op: 'set',
             target: { key: 'authorization' },
             args: 'Bearer $BEARER_TOKEN',
           },
@@ -556,17 +577,22 @@ describe('Router', () => {
       router.route(route);
 
       // Env should be auto-extracted
-      expect(route.transforms[0].env).toBeUndefined(); // userId is path param
-      expect(route.transforms[1].env).toEqual(['BEARER_TOKEN']);
+      // userId is a path param — should not have env
+      expect(route).toMatchObject({
+        transforms: [
+          expect.not.objectContaining({ env: expect.anything() }),
+          { env: ['BEARER_TOKEN'] },
+        ],
+      });
     });
 
     it('should extract env vars from array args', () => {
-      const route = {
+      const route: Route = {
         src: '/home',
         transforms: [
           {
-            type: 'request.headers' as const,
-            op: 'append' as const,
+            type: 'request.headers',
+            op: 'append',
             target: { key: 'session-temp' },
             args: ['$REGION', '$DATACENTER'],
           },
@@ -575,7 +601,135 @@ describe('Router', () => {
 
       router.route(route);
 
-      expect(route.transforms[0].env).toEqual(['REGION', 'DATACENTER']);
+      expect(route).toMatchObject({
+        transforms: [{ env: ['REGION', 'DATACENTER'] }],
+      });
+    });
+  });
+
+  describe('redirect return type narrowing', () => {
+    it('should return Redirect with no options', () => {
+      const result: Redirect = router.redirect('/old', '/new');
+      expect(result).toHaveProperty('source');
+      expect(result).toHaveProperty('destination');
+      expect(result).not.toHaveProperty('transforms');
+    });
+
+    it('should return Redirect with permanent option', () => {
+      const result: Redirect = router.redirect('/old', '/new', {
+        permanent: true,
+      });
+      expect(result).toEqual({
+        source: '/old',
+        destination: '/new',
+        permanent: true,
+      });
+    });
+
+    it('should return Redirect with statusCode option', () => {
+      const result: Redirect = router.redirect('/old-path', '/new-path', {
+        statusCode: 301,
+      });
+      expect(result).toEqual({
+        source: '/old-path',
+        destination: '/new-path',
+        statusCode: 301,
+      });
+    });
+
+    it('should return Redirect with has/missing conditions', () => {
+      const result: Redirect = router.redirect('/admin', '/login', {
+        permanent: false,
+        has: [{ type: 'header', key: 'x-test' }],
+        missing: [{ type: 'cookie', key: 'auth' }],
+      });
+      expect(result.source).toBe('/admin');
+      expect(result).not.toHaveProperty('transforms');
+    });
+
+    it('should return Route when requestHeaders is provided', () => {
+      const result = router.redirect('/old', '/new', {
+        permanent: true,
+        requestHeaders: { 'x-key': 'val' },
+      });
+      expect(result).toHaveProperty('transforms');
+    });
+
+    it('should be assignable to Redirect[] without type assertions', () => {
+      const redirects: Redirect[] = [
+        router.redirect('/a', '/b'),
+        router.redirect('/c', '/d', { permanent: true }),
+        router.redirect('/e', '/f', { statusCode: 301 }),
+        router.redirect('/g', '/h', {
+          has: [{ type: 'cookie', key: 'session' }],
+        }),
+      ];
+      expect(redirects).toHaveLength(4);
+    });
+  });
+
+  describe('rewrite return type narrowing', () => {
+    it('should return Rewrite with no options', () => {
+      const result: Rewrite = router.rewrite('/api/(.*)', '/v2/$1');
+      expect(result).toHaveProperty('source');
+      expect(result).not.toHaveProperty('transforms');
+    });
+
+    it('should return Rewrite with has/missing conditions', () => {
+      const result: Rewrite = router.rewrite('/api/(.*)', '/v2/$1', {
+        has: [{ type: 'header', key: 'x-version' }],
+      });
+      expect(result.source).toBe('/api/(.*)');
+      expect(result).not.toHaveProperty('transforms');
+    });
+
+    it('should return Rewrite with respectOriginCacheControl', () => {
+      const result: Rewrite = router.rewrite(
+        '/proxy/(.*)',
+        'https://backend.example.com/$1',
+        { respectOriginCacheControl: false }
+      );
+      expect(result).not.toHaveProperty('transforms');
+    });
+
+    it('should return Route when requestHeaders is provided', () => {
+      const result = router.rewrite(
+        '/api/(.*)',
+        'https://backend.example.com/$1',
+        { requestHeaders: { authorization: 'Bearer token' } }
+      );
+      expect(result).toHaveProperty('transforms');
+    });
+
+    it('should return Route when responseHeaders is provided', () => {
+      const result = router.rewrite(
+        '/api/(.*)',
+        'https://backend.example.com/$1',
+        { responseHeaders: { 'x-powered-by': 'vercel' } }
+      );
+      expect(result).toHaveProperty('transforms');
+    });
+
+    it('should return Route when requestQuery is provided', () => {
+      const result = router.rewrite(
+        '/api/(.*)',
+        'https://backend.example.com/$1',
+        { requestQuery: { version: '2' } }
+      );
+      expect(result).toHaveProperty('transforms');
+    });
+
+    it('should be assignable to Rewrite[] without type assertions', () => {
+      const rewrites: Rewrite[] = [
+        router.rewrite('/a/(.*)', '/b/$1'),
+        router.rewrite('/c/(.*)', '/d/$1', {
+          has: [{ type: 'header', key: 'x-test' }],
+        }),
+        router.rewrite('/e/(.*)', '/f/$1', {
+          respectOriginCacheControl: false,
+        }),
+      ];
+      expect(rewrites).toHaveLength(3);
     });
   });
 

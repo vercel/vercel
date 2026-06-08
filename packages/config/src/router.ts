@@ -661,12 +661,36 @@ export class Router {
     options: {
       has?: Condition[];
       missing?: Condition[];
-      requestHeaders?: Record<string, string | string[]>;
-      responseHeaders?: Record<string, string | string[]>;
-      requestQuery?: Record<string, string | string[]>;
       respectOriginCacheControl?: boolean;
-    } & Record<never, never> // Make this structurally distinct from functions
+    } & // Require at least one transform field so this overload only matches
+    // when transforms are present — otherwise falls through to the Rewrite overload.
+    (
+      | {
+          requestHeaders: Record<string, string | string[]>;
+          responseHeaders?: Record<string, string | string[]>;
+          requestQuery?: Record<string, string | string[]>;
+        }
+      | {
+          responseHeaders: Record<string, string | string[]>;
+          requestHeaders?: Record<string, string | string[]>;
+          requestQuery?: Record<string, string | string[]>;
+        }
+      | {
+          requestQuery: Record<string, string | string[]>;
+          requestHeaders?: Record<string, string | string[]>;
+          responseHeaders?: Record<string, string | string[]>;
+        }
+    )
   ): Rewrite | Route;
+  rewrite<T extends string>(
+    source: T,
+    destination: string,
+    options: {
+      has?: Condition[];
+      missing?: Condition[];
+      respectOriginCacheControl?: boolean;
+    }
+  ): Rewrite;
   public rewrite<T extends string>(
     source: T,
     destination: string,
@@ -868,9 +892,19 @@ export class Router {
       statusCode?: number;
       has?: Condition[];
       missing?: Condition[];
-      requestHeaders?: Record<string, string | string[]>;
+      requestHeaders: Record<string, string | string[]>;
     }
   ): Redirect | Route;
+  public redirect<T extends string>(
+    source: T,
+    destination: string,
+    options: {
+      permanent?: boolean;
+      statusCode?: number;
+      has?: Condition[];
+      missing?: Condition[];
+    }
+  ): Redirect;
   public redirect<T extends string>(
     source: T,
     destination: string,
