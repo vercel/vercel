@@ -4,7 +4,8 @@ import { confirmOption, projectOption, yesOption } from '../../util/arg-common';
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add projects to an existing repository link',
+  description:
+    'Add projects to an existing repository link created by link --repo',
   arguments: [],
   options: [
     {
@@ -38,11 +39,13 @@ export const linkCommand = {
     {
       ...projectOption,
       shorthand: 'p',
-      description: 'Set the project name or ID to link',
+      description:
+        'Set the project name or ID to link; required for non-interactive existing-project links',
     },
     {
       name: 'team',
-      description: 'Set the team ID or slug',
+      description:
+        'Set the team ID or slug; use with --project for non-interactive links',
       shorthand: null,
       argument: 'TEAM_ID_OR_SLUG',
       type: String,

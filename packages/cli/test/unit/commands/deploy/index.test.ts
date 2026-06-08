@@ -1647,20 +1647,23 @@ describe('deploy', () => {
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput(
-          'In which directory is your code located?'
-        );
+        await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
-        );
+        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
+        const output = client.stderr.getFullOutput();
+        expect(output).not.toContain(
+          'In which directory is your code located?'
+        );
+        expect(output).not.toContain(
+          'Do you want to change additional project settings?'
+        );
       });
 
       it('prefills "project name" prompt based on directory name', async () => {
@@ -1681,20 +1684,23 @@ describe('deploy', () => {
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).
-        await expect(client.stderr).toOutput(
-          'In which directory is your code located?'
-        );
+        await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput(
-          'Do you want to change additional project settings?'
-        );
+        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
+        const output = client.stderr.getFullOutput();
+        expect(output).not.toContain(
+          'In which directory is your code located?'
+        );
+        expect(output).not.toContain(
+          'Do you want to change additional project settings?'
+        );
       });
     });
   });

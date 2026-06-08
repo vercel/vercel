@@ -37,7 +37,10 @@ vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
   autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
 }));
 
-function expectLinkRowsUseBlankGutter(output: string, labels: string[]) {
+function expectLinkRowsUseNonProductionGutter(
+  output: string,
+  labels: string[]
+) {
   const plain = stripAnsi(output);
 
   for (const label of labels) {
@@ -45,7 +48,7 @@ function expectLinkRowsUseBlankGutter(output: string, labels: string[]) {
   }
 
   expect(plain).not.toMatch(
-    /^[▲✓] (Project|Source|Linked|Directory|Settings)\s/m
+    /^[▲✓] (Project|Source|Linked|Directory|Config)\s/m
   );
 }
 
@@ -875,18 +878,18 @@ describe('link', () => {
       `Linked          ${team.slug}/${project.name}`
     );
     await expect(client.stderr).toOutput('Directory');
-    await expect(client.stderr).toOutput('Settings    .vercel/project.json');
+    await expect(client.stderr).toOutput('Config      .vercel/project.json');
 
     await expect(client.stderr).toOutput('Pull environment variables now?');
     client.stdin.write('n\n');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
-    expectLinkRowsUseBlankGutter(client.stderr.getFullOutput(), [
+    expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
       'Project',
       'Linked',
       'Directory',
-      'Settings',
+      'Config',
     ]);
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
@@ -1570,7 +1573,7 @@ describe('link', () => {
       selectSpy.mockRestore();
 
       expect(exitCode).toEqual(0);
-      expectLinkRowsUseBlankGutter(client.stderr.getFullOutput(), [
+      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
         'Project',
         'Source',
         'Linked',
@@ -2203,7 +2206,7 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-      expectLinkRowsUseBlankGutter(client.stderr.getFullOutput(), [
+      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
         'Project',
         'Source',
         'Linked',
@@ -2342,7 +2345,7 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-      expectLinkRowsUseBlankGutter(client.stderr.getFullOutput(), [
+      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
         'Project',
         'Source',
         'Linked',

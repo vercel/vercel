@@ -89,7 +89,7 @@ async function setupProject(
   // `project-link-deploy` with empty package.json). Wait for whichever fires.
   let sawDirectoryPrompt = false;
   await waitForPrompt(process, chunk => {
-    if (chunk.includes('In which directory is your code located?')) {
+    if (chunk.includes('Code directory?')) {
       sawDirectoryPrompt = true;
       return true;
     }
@@ -125,10 +125,7 @@ async function setupProject(
   }
 
   const hasAdditionalProjectSettingsToChange = vercelAuth !== 'standard';
-  await waitForPrompt(
-    process,
-    'Do you want to change additional project settings?'
-  );
+  await waitForPrompt(process, 'Customize advanced settings?');
 
   if (hasAdditionalProjectSettingsToChange) {
     process.stdin?.write('y\n');
@@ -352,16 +349,13 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
 
-  await waitForPrompt(now, 'In which directory is your code located?');
+  await waitForPrompt(now, 'Code directory?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Customize settings?');
   now.stdin?.write('no\n');
 
-  await waitForPrompt(
-    now,
-    'Do you want to change additional project settings?'
-  );
+  await waitForPrompt(now, 'Customize advanced settings?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, /Linked\s+/);
@@ -1025,7 +1019,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write(`${projectRootDir}\n`);
 
   // This means the framework detection worked!
@@ -1136,10 +1130,10 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
+  await waitForPrompt(vc, 'Customize advanced settings?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Linked\s+/);
@@ -1572,7 +1566,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, 'Output Directory?');
   vc.stdin?.write('output\n');
-  await waitForPrompt(vc, 'Do you want to change additional project settings?');
+  await waitForPrompt(vc, 'Customize advanced settings?');
   vc.stdin?.write('n\n');
   await waitForPrompt(
     vc,
@@ -1686,66 +1680,69 @@ test.each([
     vercelAuth: 'standard',
     expectedStatus: 401,
   },
-] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
-  vercelAuth,
-  expectedStatus,
-}: {
-  vercelAuth: 'none' | 'standard';
-  expectedStatus: number;
-}) => {
-  const dir = await setupE2EFixture('project-vercel-auth');
-  const projectName = `project-vercel-auth-${
-    Math.random().toString(36).split('.')[1]
-  }`;
+] as const)(
+  '[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s',
+  async ({
+    vercelAuth,
+    expectedStatus,
+  }: {
+    vercelAuth: 'none' | 'standard';
+    expectedStatus: number;
+  }) => {
+    const dir = await setupE2EFixture('project-vercel-auth');
+    const projectName = `project-vercel-auth-${
+      Math.random().toString(36).split('.')[1]
+    }`;
 
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
+    // remove previously linked project if it exists
+    await remove(path.join(dir, '.vercel'));
 
-  const now = execCli(binaryPath, [dir], {
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+    const now = execCli(binaryPath, [dir], {
+      env: {
+        FORCE_TTY: '1',
+      },
+    });
 
-  await setupProject(
-    now,
-    projectName,
-    {
-      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-      outputDirectory: 'o',
-    },
-    {
-      vercelAuth,
-    }
-  );
+    await setupProject(
+      now,
+      projectName,
+      {
+        buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+        outputDirectory: 'o',
+      },
+      {
+        vercelAuth,
+      }
+    );
 
-  const output = await now;
+    const output = await now;
 
-  // Ensure the exit code is right
-  expect(output.exitCode, formatOutput(output)).toBe(0);
+    // Ensure the exit code is right
+    expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
+    // Ensure .gitignore is created
+    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+    expect(gitignore).toBe('.vercel\n');
 
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
+    // Ensure .vercel/project.json and .vercel/README.txt are created
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+      'project.json'
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+      'README.txt'
+    ).toBe(true);
 
-  const { href } = new URL(output.stdout);
+    const { href } = new URL(output.stdout);
 
-  // Send a test request to the deployment
-  const response = await nodeFetch(href);
-  expect(response.status).toBe(expectedStatus);
+    // Send a test request to the deployment
+    const response = await nodeFetch(href);
+    expect(response.status).toBe(expectedStatus);
 
-  const projectResponse = await apiFetch(`/projects/${projectName}`, {
-    method: 'DELETE',
-  });
-  expect(projectResponse.status).toBe(204);
-});
+    const projectResponse = await apiFetch(`/projects/${projectName}`, {
+      method: 'DELETE',
+    });
+    expect(projectResponse.status).toBe(204);
+  }
+);

@@ -480,7 +480,7 @@ export async function linkFolderToProject(
 
   printAlignedLabel('Linked', `${orgSlug}/${projectName}`);
   printAlignedLabel('Directory', toHumanPath(path));
-  printAlignedLabel('Settings', join(VERCEL_DIR, VERCEL_DIR_PROJECT));
+  printAlignedLabel('Config', join(VERCEL_DIR, VERCEL_DIR_PROJECT));
 
   if (!pullEnv) {
     return;

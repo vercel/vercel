@@ -100,9 +100,7 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Found project');
         client.stdin.write('y\n');
 
-        await expect(client.stderr).toOutput(
-          'Would you like to pull environment variables now?'
-        );
+        await expect(client.stderr).toOutput('Pull environment variables now?');
         client.stdin.write('n\n');
 
         await expect(client.stderr).toOutput(
@@ -118,6 +116,9 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Connected');
 
         expect(exitCode).toEqual(0);
+        expect(client.stderr.getFullOutput()).not.toContain(
+          'Would you like to pull environment variables now?'
+        );
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
             key: 'subcommand:connect',
@@ -204,9 +205,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
-      );
+      await expect(client.stderr).toOutput('Pull environment variables now?');
       client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
@@ -217,6 +216,9 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Would you like to pull environment variables now?'
+      );
 
       const project: Project = await client.fetch(`/v8/projects/unlinked`);
       expect(project.link).toMatchObject({
@@ -255,9 +257,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
-      );
+      await expect(client.stderr).toOutput('Pull environment variables now?');
       client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
@@ -273,6 +273,9 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Would you like to pull environment variables now?'
+      );
 
       const project: Project = await client.fetch(`/v8/projects/unlinked`);
       expect(project.link).toMatchObject({
@@ -668,7 +671,7 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput(
-        `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
+        `Found multiple Git repositories in your local Git config:\n• origin: https://github.com/user/repo.git\n• secondary: https://github.com/user/repo2.git`
       );
       await expect(client.stderr).toOutput(
         `Do you still want to connect https://github.com/user3/repo3? (y/N)`

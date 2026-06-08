@@ -383,7 +383,7 @@ test('deploy from a nested directory', async () => {
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
@@ -419,7 +419,7 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
   await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!

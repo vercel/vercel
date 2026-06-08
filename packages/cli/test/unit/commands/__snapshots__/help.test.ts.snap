@@ -4674,7 +4674,8 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
   add    Add projects to an     
          existing repository    
-         link                   
+         link created by link   
+         --repo                 
 
 
   Options:
@@ -4683,7 +4684,12 @@ exports[`help command > link help output snapshots > link help column width 40 1
                                  project  
                                  name or  
                                  ID to    
-                                 link     
+                                 link;    
+                                 required 
+                                 for      
+                                 non-inte…
+                                 existing…
+                                 links    
   -r,  --repo                    Link     
                                  multiple 
                                  projects 
@@ -4693,7 +4699,12 @@ exports[`help command > link help output snapshots > link help column width 40 1
                                  (alpha)  
        --team <TEAM_ID_OR_SLUG>  Set the  
                                  team ID  
-                                 or slug  
+                                 or slug; 
+                                 use with 
+                                 --project
+                                 for      
+                                 non-inte…
+                                 links    
   -y,  --yes                     Skip     
                                  questions
                                  when     
@@ -4789,15 +4800,18 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
   Commands:
 
-  add    Add projects to an existing repository link                    
+  add    Add projects to an existing repository link created by link    
+         --repo                                                         
 
 
   Options:
 
-  -p,  --project <NAME_OR_ID>    Set the project name or ID to link               
+  -p,  --project <NAME_OR_ID>    Set the project name or ID to link; required for 
+                                 non-interactive existing-project links           
   -r,  --repo                    Link multiple projects from the Git repository   
                                  (alpha)                                          
-       --team <TEAM_ID_OR_SLUG>  Set the team ID or slug                          
+       --team <TEAM_ID_OR_SLUG>  Set the team ID or slug; use with --project for  
+                                 non-interactive links                            
   -y,  --yes                     Skip questions when setting up with default team 
                                  and settings                                     
 
@@ -4855,14 +4869,14 @@ exports[`help command > link help output snapshots > link help column width 120 
 
   Commands:
 
-  add    Add projects to an existing repository link                                                            
+  add    Add projects to an existing repository link created by link --repo                                     
 
 
   Options:
 
-  -p,  --project <NAME_OR_ID>    Set the project name or ID to link                                                       
+  -p,  --project <NAME_OR_ID>    Set the project name or ID to link; required for non-interactive existing-project links  
   -r,  --repo                    Link multiple projects from the Git repository (alpha)                                   
-       --team <TEAM_ID_OR_SLUG>  Set the team ID or slug                                                                  
+       --team <TEAM_ID_OR_SLUG>  Set the team ID or slug; use with --project for non-interactive links                    
   -y,  --yes                     Skip questions when setting up with default team and settings                            
 
 
