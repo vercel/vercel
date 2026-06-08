@@ -38,7 +38,7 @@ Rules:
 - Ask `Code directory?` only for real root ambiguity.
 - Compress framework detection: `Detected Next.js (Build Command: next build, Output Directory: .next)`.
 - Print aligned result rows with `printAlignedLabel()`: `Linked`, `Added`, and optional follow-up state.
-- Link/setup rows keep the blank two-space gutter. Do not use `▲` or `✓` for `Linked`, `Project`, `Directory`, `Settings`, or `Source`.
+- Link/setup rows keep the blank two-space gutter. Do not use `▲` or `✓` for `Linked`, `Project`, `Directory`, `Config`, `Settings`, or `Source`.
 - Offer `Pull environment variables now?` after linking when TTY and safe.
 
 Current gaps to migrate incrementally:

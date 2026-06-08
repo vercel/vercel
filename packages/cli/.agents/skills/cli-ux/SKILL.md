@@ -1,6 +1,6 @@
 ---
 name: cli-ux
-description: Use when a packages/cli change affects user-visible or machine-visible CLI behavior: command flows, prompts, help text, output layout, progress, success states, warnings, errors, JSON/stdout/stderr contracts, non-interactive/agent payloads, copywriting, design-system consistency, or tests that assert those contracts. Do not load for implementation-only refactors with unchanged CLI surface. This skill folder is the canonical CLI design system; AGENTS.md is only the lean always-loaded router. IMPORTANT: load the references named in "When to Load References"; SKILL.md alone is the workflow entrypoint, not the full rule set.
+description: Use for packages/cli changes that affect command UX, prompts, help, output layout, progress, success, warnings, errors, JSON/stdout/stderr contracts, non-interactive/agent behavior, copy, or tests for those surfaces. Do not load for implementation-only refactors with unchanged CLI surface.
 ---
 
 # Vercel CLI UX

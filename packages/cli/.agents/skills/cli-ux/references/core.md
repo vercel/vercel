@@ -103,7 +103,7 @@ Any command that resolves a resource or changes local/remote state should use th
 
 - Treat an explicit command invocation as intent; do not ask a vague intent-confirmation prompt.
 - Show the resolved target before prompts or mutation: team, project, domain, path, environment, or integration.
-- Before confirming an inferred resource, show it as structured state, usually aligned rows such as `Project`, `Team`, `Directory`, `Source`, or `Settings`.
+- Before confirming an inferred resource, show it as structured state, usually aligned rows such as `Project`, `Team`, `Directory`, `Source`, `Config`, or `Settings`.
 - Ask for the smallest missing value with a concrete noun: `Which team?`, `Project?`, `Domain?`, `Environment?`, `Name?`.
 - Ask `Customize settings?` only after showing the inferred settings.
 - Ask root/path questions only when there is real ambiguity.
@@ -194,7 +194,7 @@ Rules:
 - Use aligned rows for compact resolved-state previews before confirmation when a command has identified a resource.
 - Do not force aligned rows onto simple one-line success, plain lists, or dense tables.
 - Aligned-row labels are Title-Case nouns: `Linked`, `Inspect`, `Production`.
-- Preview labels use stable Title-Case nouns: `Project`, `Team`, `Directory`, `Source`, `Settings`.
+- Preview labels use stable Title-Case nouns: `Project`, `Team`, `Directory`, `Source`, `Config`, `Settings`.
 - If a mutation changes multiple durable things, one-line success is insufficient; print a compact result block.
 - Production rows and production alias rows use `▲`: `▲ Production`, `▲ Aliased`.
 - Preview, setup, link, settings, local file, and non-production rows keep the blank two-space gutter.

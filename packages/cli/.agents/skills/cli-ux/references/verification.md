@@ -30,6 +30,44 @@ When changing CLI UX behavior:
 - cover input hardening for traversal, query fragments, control characters, and pre-encoded values
 - update related implementation docs when changing shared contracts
 
+## Shared Helper Impact Map
+
+Before editing shared prompt/output/link helpers, inspect call sites and tests first.
+
+- `inputProject()` changes affect `vc link`, setup during `vc deploy`, and any command that calls `setupAndLink()`.
+- `inputRootDirectory()` and `editProjectSettings()` changes affect first-link setup paths from deploy, link, and integration tests.
+- `setupAndLink()` changes affect unlinked flows reached through `ensureLink()`.
+- `linkFolderToProject()` changes affect any command that links before continuing work, including deploy, dev, pull/env, git connect, open, target, and other project-scoped commands.
+- `printAlignedLabel()` changes affect deploy result rows and every command adopting aligned rows.
+
+Use `rg` before editing and testing:
+
+```bash
+rg -n "inputProject|inputRootDirectory|editProjectSettings|setupAndLink|ensureLink|linkFolderToProject|printAlignedLabel" packages/cli/src packages/cli/test
+rg -n "Old prompt text|Old output text" packages/cli/test packages/cli/src
+```
+
+If a helper is shared, update direct tests plus at least one parallel command-family path that reaches the helper.
+
+## Gutter Assertions
+
+Assert both the helper contract and command behavior:
+
+```ts
+expect(stripAnsi(output)).toContain('▲ Production');
+expect(stripAnsi(output)).not.toMatch(
+  /^[▲✓] (Project|Source|Linked|Directory|Config|Settings)\s/m
+);
+```
+
+For exact blank-gutter spacing, prefer `printAlignedLabel()` unit tests or a direct `output.print` mock:
+
+```ts
+expect(stripAnsi(lastPrinted())).toBe('  Linked      acme/web\n');
+```
+
+Command harnesses may normalize leading indentation; do not write a command test that only passes when the harness preserves the two blank gutter columns.
+
 ## Stale-String Sweeps
 
 For any UX/copy/output work:

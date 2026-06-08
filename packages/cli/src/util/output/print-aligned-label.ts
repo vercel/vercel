@@ -12,8 +12,8 @@ export const ALIGNED_LABEL_WIDTH = 12;
  *
  * The 2-char prefix is the CLI's "gutter" — column 0 is reserved for
  * semantic glyphs (▲ Vercel/Production, ✓ Ready, ? prompt). Everything else
- * lives at column 2+ as indented body content. See the deploy-flow design
- * doc for the full gutter system.
+ * lives at column 2+ as indented body content. See the cli-ux skill's Layout
+ * and Glyphs + Color sections for the full gutter system.
  */
 export function printAlignedLabel(
   label: string,
