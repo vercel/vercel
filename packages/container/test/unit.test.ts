@@ -30,7 +30,6 @@ describe('@vercel/container', () => {
           files: {},
           handler: 'docker.io/library/nginx:1.27',
           runtime: 'container',
-          architecture: 'linux/amd64',
           environment: {},
         },
       },
@@ -79,7 +78,6 @@ describe('@vercel/container', () => {
     expect(result.output['_svc/api/index']).toMatchObject({
       handler: 'docker.io/library/nginx:1.27',
       runtime: 'container',
-      architecture: 'linux/amd64',
       environment: {},
     });
   });

@@ -213,7 +213,6 @@ describe('detectServices', () => {
         {
           src: '^/api(?:/.*)?$',
           dest: '/_svc/api/index',
-          check: true,
         },
       ]);
     });

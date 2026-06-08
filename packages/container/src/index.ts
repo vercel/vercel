@@ -41,7 +41,6 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
         files: {},
         handler,
         runtime: 'container',
-        architecture: 'linux/amd64',
         environment: {},
         ...(command ? { command } : {}),
       } as any,

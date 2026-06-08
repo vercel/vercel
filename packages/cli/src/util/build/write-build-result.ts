@@ -658,7 +658,6 @@ async function writeContainerImage(
     {
       handler,
       runtime: 'container',
-      architecture: (containerImage as any).architecture ?? 'linux/amd64',
       environment: (containerImage as any).environment ?? {},
       ...((containerImage as any).command
         ? { command: (containerImage as any).command }
