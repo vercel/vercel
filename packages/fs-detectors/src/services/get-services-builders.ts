@@ -182,3 +182,34 @@ export async function getServicesBuilders(
     useImplicitEnvInjection: result.useImplicitEnvInjection,
   };
 }
+
+/**
+ * Returns warnings for ignored directories that are not covered by services
+ */
+export function warnIgnoredDirectories(
+  files: string[],
+  configuredServices: ConfiguredServices
+): ErrorResponse[] {
+  const warnings: ErrorResponse[] = [];
+
+  if (files.some(f => f.startsWith('api/'))) {
+    const serviceCoversApi = Object.values(configuredServices).some(service => {
+      const root = service.root ?? '.';
+      const entrypoint = service.entrypoint ?? '';
+      return (
+        root === 'api' ||
+        root.startsWith('api/') ||
+        (root === '.' && entrypoint.startsWith('api/'))
+      );
+    });
+    if (!serviceCoversApi) {
+      warnings.push({
+        code: 'api_dir_ignored',
+        message:
+          'The `api/` directory will not be built because `experimentalServices` is configured. To serve these files, declare them as a service in your `vercel.json`.',
+      });
+    }
+  }
+
+  return warnings;
+}
