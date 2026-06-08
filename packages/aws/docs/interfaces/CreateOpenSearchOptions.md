@@ -4,7 +4,7 @@
 
 # Interface: CreateOpenSearchOptions
 
-Defined in: [packages/aws/src/opensearch.ts:14](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L14)
+Defined in: [packages/aws/src/opensearch.ts:14](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/aws/src/opensearch.ts#L14)
 
 Options for [createOpenSearch](../functions/createOpenSearch.md).
 
@@ -156,7 +156,7 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 > `optional` **endpoint?**: `string`
 
-Defined in: [packages/aws/src/opensearch.ts:19](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L19)
+Defined in: [packages/aws/src/opensearch.ts:19](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/aws/src/opensearch.ts#L19)
 
 The OpenSearch collection endpoint. Defaults to
 `process.env.OPENSEARCH_ENDPOINT`.
@@ -311,7 +311,7 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 > `optional` **region?**: `string`
 
-Defined in: [packages/aws/src/opensearch.ts:24](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L24)
+Defined in: [packages/aws/src/opensearch.ts:24](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/aws/src/opensearch.ts#L24)
 
 The AWS region the collection lives in. Defaults to
 `process.env.AWS_REGION`.
@@ -346,7 +346,7 @@ Defined in: node_modules/.pnpm/@opensearch-project+opensearch@3.3.0/node_modules
 
 > `optional` **roleArn?**: `string`
 
-Defined in: [packages/aws/src/opensearch.ts:30](https://github.com/vercel/vercel/blob/main/packages/aws/src/opensearch.ts#L30)
+Defined in: [packages/aws/src/opensearch.ts:30](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/aws/src/opensearch.ts#L30)
 
 The IAM role to assume when signing requests. Defaults to
 `process.env.AWS_ROLE_ARN`, which Vercel sets when the

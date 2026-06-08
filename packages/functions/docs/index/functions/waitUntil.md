@@ -6,7 +6,7 @@
 
 > **waitUntil**(`promise`): `void` \| `undefined`
 
-Defined in: [packages/functions/src/wait-until.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/wait-until.ts#L19)
+Defined in: [packages/functions/src/wait-until.ts:19](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/wait-until.ts#L19)
 
 Extends the lifetime of the request handler for the lifetime of the given [Promise](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)
 

@@ -6,7 +6,7 @@
 
 > **awsCredentialsProvider**(`init`): `AwsCredentialIdentityProvider`
 
-Defined in: [packages/functions/src/oidc/aws-credentials-provider.ts:70](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L70)
+Defined in: [packages/functions/src/oidc/aws-credentials-provider.ts:70](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L70)
 
 ## Parameters
 

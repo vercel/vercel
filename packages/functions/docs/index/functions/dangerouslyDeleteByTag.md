@@ -6,7 +6,7 @@
 
 > **dangerouslyDeleteByTag**(`tag`, `options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`void`\>
 
-Defined in: [packages/functions/src/purge/index.ts:12](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L12)
+Defined in: [packages/functions/src/purge/index.ts:12](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/purge/index.ts#L12)
 
 ## Parameters
 

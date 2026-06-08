@@ -6,7 +6,7 @@
 
 > **rewrite**(`destination`, `init?`): [`Response`](https://developer.mozilla.org/docs/Web/API/Response)
 
-Defined in: [packages/functions/src/middleware.ts:101](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L101)
+Defined in: [packages/functions/src/middleware.ts:101](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/middleware.ts#L101)
 
 Returns a response that rewrites the request to a different URL.
 

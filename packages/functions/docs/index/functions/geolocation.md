@@ -6,7 +6,7 @@
 
 > **geolocation**(`request`): [`Geo`](../interfaces/Geo.md)
 
-Defined in: [packages/functions/src/headers.ts:180](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L180)
+Defined in: [packages/functions/src/headers.ts:180](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/functions/src/headers.ts#L180)
 
 Returns the location information for the incoming request.
 

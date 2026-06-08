@@ -6,7 +6,7 @@
 
 > **awsCredentialsProvider**(`init`): `AwsCredentialIdentityProvider`
 
-Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:61](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L61)
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:61](https://github.com/vercel/vercel-cli-fluid-runtimes/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L61)
 
 Obtains the Vercel OIDC token and creates an AWS credential provider function
 that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
