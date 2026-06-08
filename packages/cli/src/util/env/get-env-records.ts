@@ -13,6 +13,7 @@ export type EnvRecordsSource =
   | 'vercel-cli:env:run'
   | 'vercel-cli:dev'
   | 'vercel-cli:pull'
+  | 'vercel-cli:build'
   | 'vercel-cli:link'
   | 'vercel-cli:integration:add'
   | 'vercel-cli:blob:store-add'
