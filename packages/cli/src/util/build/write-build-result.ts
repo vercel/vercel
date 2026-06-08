@@ -152,7 +152,11 @@ function isEdgeFunction(v: any): v is EdgeFunction {
 }
 
 function isContainerImage(v: any): v is ContainerImage {
-  return v?.type === 'ContainerImage';
+  // Container image functions are emitted as Lambda-typed outputs with
+  // `runtime: 'container'` to match the build container's collection contract
+  // (vercel/api#74661). Detect by runtime so they are handled before the
+  // generic Lambda path.
+  return v?.runtime === 'container';
 }
 
 export function isLambda(v: any): v is Lambda {
@@ -273,7 +277,14 @@ async function writeBuildResultV2(args: {
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
-    if (isLambda(output)) {
+    if (isContainerImage(output)) {
+      injectServiceEnvVars(
+        output,
+        service && isExperimentalService(service) ? service : undefined,
+        stripServiceRoutePrefix
+      );
+      await writeContainerImage(outputDir, output, normalizedPath);
+    } else if (isLambda(output)) {
       injectServiceEnvVars(
         output,
         service && isExperimentalService(service) ? service : undefined,
@@ -365,13 +376,6 @@ async function writeBuildResultV2(args: {
         existingFunctions,
         standalone
       );
-    } else if (isContainerImage(output)) {
-      injectServiceEnvVars(
-        output,
-        service && isExperimentalService(service) ? service : undefined,
-        stripServiceRoutePrefix
-      );
-      await writeContainerImage(outputDir, output, normalizedPath);
     } else {
       throw new Error(
         `Unsupported output type: "${
@@ -495,7 +499,14 @@ async function writeBuildResultV3(args: {
             ? src.substring(0, src.length - ext.length)
             : src
         );
-  if (isLambda(output)) {
+  if (isContainerImage(output)) {
+    injectServiceEnvVars(
+      output,
+      service && isExperimentalService(service) ? service : undefined,
+      stripServiceRoutePrefix
+    );
+    await writeContainerImage(outputDir, output, path);
+  } else if (isLambda(output)) {
     injectServiceEnvVars(
       output,
       service && isExperimentalService(service) ? service : undefined,
@@ -519,13 +530,6 @@ async function writeBuildResultV3(args: {
       undefined,
       standalone
     );
-  } else if (isContainerImage(output)) {
-    injectServiceEnvVars(
-      output,
-      service && isExperimentalService(service) ? service : undefined,
-      stripServiceRoutePrefix
-    );
-    await writeContainerImage(outputDir, output, path);
   } else {
     throw new Error(
       `Unsupported output type: "${(output as any).type}" for ${build.src}`

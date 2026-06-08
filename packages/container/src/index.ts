@@ -37,7 +37,11 @@ export async function build(options: BuildOptions): Promise<BuildResultV2> {
   return {
     output: {
       [outputPath]: {
-        type: 'ContainerImage',
+        // Emit a Lambda-typed output with `runtime: 'container'`. The build
+        // container keys off `type === 'Lambda' && runtime === 'container'`
+        // (vercel/api#74661) to collect container image functions, so the
+        // output must use the `Lambda` discriminator rather than a bespoke type.
+        type: 'Lambda',
         files: {},
         handler,
         runtime: 'container',
