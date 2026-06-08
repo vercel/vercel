@@ -2,9 +2,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import mcpCommand from '../../../../src/commands/mcp';
 
+const { execFileSyncMock, getLinkedProjectMock } = vi.hoisted(() => ({
+  execFileSyncMock: vi.fn(),
+  getLinkedProjectMock: vi.fn(),
+}));
+
+vi.mock('child_process', () => ({
+  execFileSync: execFileSyncMock,
+}));
+
+vi.mock('../../../../src/util/projects/link', () => ({
+  getLinkedProject: getLinkedProjectMock,
+}));
+
 describe('mcp', () => {
   beforeEach(() => {
     client.reset();
+    execFileSyncMock.mockReset();
+    execFileSyncMock.mockReturnValue('');
+    getLinkedProjectMock.mockReset();
+    getLinkedProjectMock.mockResolvedValue({
+      status: 'linked',
+      org: { type: 'team', id: 'team_123', slug: 'acme' },
+      project: { id: 'prj_123', name: 'safe-project' },
+    });
   });
 
   describe('--non-interactive', () => {
@@ -62,6 +83,38 @@ describe('mcp', () => {
       const exitCode = await mcpCommand(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Invalid client(s): Foo');
+    });
+
+    it('uses arg-based process execution for one-click URLs', async () => {
+      client.setArgv('mcp', '--project', '--clients', 'Cursor');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      getLinkedProjectMock.mockResolvedValue({
+        status: 'linked',
+        org: { type: 'team', id: 'team_123', slug: 'acme' },
+        project: { id: 'prj_123', name: `evil'$(touch /tmp/pwn)` },
+      });
+
+      const exitCode = await mcpCommand(client);
+      expect(exitCode).toBe(0);
+
+      const openCmd =
+        process.platform === 'darwin'
+          ? 'open'
+          : process.platform === 'win32'
+            ? 'cmd'
+            : 'xdg-open';
+      const openCall = execFileSyncMock.mock.calls.find(
+        call => call[0] === openCmd
+      );
+
+      expect(openCall).toBeDefined();
+      if (!openCall) return;
+
+      const args = openCall[1] as string[];
+      const urlArg = process.platform === 'win32' ? args[3] : args[0];
+      expect(urlArg).toContain(`name=vercel-evil'$(touch /tmp/pwn)`);
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 });
