@@ -11,100 +11,13 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { VERCEL_CONFIG_EXTENSIONS } from '../../util/compile-vercel-config';
 import { isVercelTomlEnabled } from '../../util/is-vercel-toml-enabled';
+import { validateCronSchedule } from '../../util/cron';
+
+export { validateCronSchedule };
 
 interface CronEntry {
   path: string;
   schedule: string;
-}
-
-const CRON_FIELD_RANGES: [string, number, number][] = [
-  ['minute', 0, 59],
-  ['hour', 0, 23],
-  ['day of month', 1, 31],
-  ['month', 1, 12],
-  ['day of week', 0, 7],
-];
-
-export function validateCronSchedule(expression: string): string | true {
-  if (expression.length > 256) {
-    return 'Schedule expression must be 256 characters or less';
-  }
-
-  const fields = expression.trim().split(/\s+/);
-  if (fields.length !== 5) {
-    return `Schedule must have exactly 5 fields (minute hour day-of-month month day-of-week), got ${fields.length}`;
-  }
-
-  for (let i = 0; i < fields.length; i++) {
-    const [name, min, max] = CRON_FIELD_RANGES[i];
-    const error = validateCronField(fields[i], name, min, max);
-    if (error) {
-      return error;
-    }
-  }
-
-  return true;
-}
-
-function validateCronField(
-  field: string,
-  name: string,
-  min: number,
-  max: number
-): string | null {
-  // Handle lists (e.g. "1,15,30")
-  const parts = field.split(',');
-  for (const part of parts) {
-    // Handle step values (e.g. "*/5" or "1-30/2")
-    const [range, stepStr] = part.split('/');
-
-    if (stepStr !== undefined) {
-      const step = Number(stepStr);
-      if (!Number.isInteger(step) || step < 1) {
-        return `Invalid step value "${stepStr}" in ${name} field`;
-      }
-    }
-
-    if (range === '*') {
-      continue;
-    }
-
-    // Handle ranges (e.g. "1-5")
-    if (range.includes('-')) {
-      const rangeParts = range.split('-');
-      if (
-        rangeParts.length !== 2 ||
-        rangeParts[0] === '' ||
-        rangeParts[1] === ''
-      ) {
-        return `Invalid range "${range}" in ${name} field`;
-      }
-      const [startStr, endStr] = rangeParts;
-      const start = Number(startStr);
-      const end = Number(endStr);
-      if (!Number.isInteger(start) || !Number.isInteger(end)) {
-        return `Invalid range "${range}" in ${name} field`;
-      }
-      if (start < min || start > max || end < min || end > max) {
-        return `Value out of range in ${name} field (${min}-${max})`;
-      }
-      if (start > end) {
-        return `Invalid range "${range}" in ${name} field: start is greater than end`;
-      }
-      continue;
-    }
-
-    // Single value
-    const value = Number(range);
-    if (!Number.isInteger(value)) {
-      return `Invalid value "${range}" in ${name} field`;
-    }
-    if (value < min || value > max) {
-      return `Value ${value} out of range in ${name} field (${min}-${max})`;
-    }
-  }
-
-  return null;
 }
 
 export default async function add(client: Client, argv: string[]) {
