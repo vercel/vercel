@@ -38,9 +38,11 @@ describe('getUpdateCommandInfo install detection', () => {
   });
 
   it('emits a global npm command when the CLI lives under the npm global root', async () => {
-    realpathMock.mockResolvedValueOnce('/gnm/vercel/dist');
+    const npmRoot = join(sep, 'gnm');
+    const installPath = join(npmRoot, 'vercel', 'dist');
+    realpathMock.mockResolvedValueOnce(installPath);
     mockExecFile.mockImplementation(async (file: string) => {
-      if (file === 'npm') return { stdout: '/gnm\n', stderr: '' };
+      if (file === 'npm') return { stdout: `${npmRoot}\n`, stderr: '' };
       throw new Error('not installed');
     });
 
@@ -50,14 +52,18 @@ describe('getUpdateCommandInfo install detection', () => {
   });
 
   it('resolves pnpm global installs through the symlinked store path', async () => {
-    realpathMock.mockResolvedValueOnce('/pnpm-store/vercel/dist');
+    const npmRoot = join(sep, 'npm-gnm');
+    const pnpmRoot = join(sep, 'pnpm-gnm');
+    const pnpmStorePackage = join(sep, 'pnpm-store', 'vercel');
+    const installPath = join(pnpmStorePackage, 'dist');
+    realpathMock.mockResolvedValueOnce(installPath);
     realpathMock.mockImplementation(async (p: any) => {
-      if (p === join('/pnpm-gnm', 'vercel')) return '/pnpm-store/vercel';
+      if (p === join(pnpmRoot, 'vercel')) return pnpmStorePackage;
       return String(p);
     });
     mockExecFile.mockImplementation(async (file: string) => {
-      if (file === 'npm') return { stdout: '/npm-gnm\n', stderr: '' };
-      if (file === 'pnpm') return { stdout: '/pnpm-gnm\n', stderr: '' };
+      if (file === 'npm') return { stdout: `${npmRoot}\n`, stderr: '' };
+      if (file === 'pnpm') return { stdout: `${pnpmRoot}\n`, stderr: '' };
       throw new Error('not installed');
     });
 
