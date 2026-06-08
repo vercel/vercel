@@ -115,21 +115,21 @@ export interface ConnectOptions {
 }
 
 export async function getToken(
-  connector: string,
+  connectorId: string,
   params: ConnectTokenParams,
   options?: ConnectOptions
 ): Promise<string> {
-  const { token } = await getTokenResponse(connector, params, options);
+  const { token } = await getTokenResponse(connectorId, params, options);
   return token;
 }
 
 export async function getTokenResponse(
-  connector: string,
+  connectorId: string,
   params: ConnectTokenParams,
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
   const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = JSON.stringify({ connector, ...params });
+  const cacheKey = JSON.stringify({ connectorId, ...params });
 
   const cached = cache.get(cacheKey);
   if (cached) {
@@ -143,7 +143,7 @@ export async function getTokenResponse(
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
 
-  const endpoint = `https://api.vercel.com/v1/connect/token/${encodeURIComponent(connector)}`;
+  const endpoint = `https://api.vercel.com/v1/connect/token/${encodeURIComponent(connectorId)}`;
 
   const response = await fetch(endpoint, {
     method: 'POST',

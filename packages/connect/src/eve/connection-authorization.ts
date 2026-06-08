@@ -82,7 +82,7 @@ export interface EveAuthorizationOptions {
    * UID (`oauth/mcp-linear-app`) — both resolve to the same
    * connector on the Vercel Connect side.
    */
-  readonly connector: string;
+  readonly connectorId: string;
 
   /**
    * Whether this connection authenticates as the agent itself
@@ -161,7 +161,7 @@ export type EveAuthorizationInput = string | EveAuthorizationOptions;
  * connections at compile time and surface deep links to the matching
  * connector settings page.
  *
- * The `connector` field carries the raw value the author passed to
+ * The `connectorId` field carries the raw value the author passed to
  * {@link connect} — either the human-readable UID
  * (`"oauth/mcp-linear-app"`) or the opaque service-connector key
  * (`"scl_..."`). Consumers that need the canonical `scl_...` form
@@ -175,7 +175,7 @@ export type EveAuthorizationInput = string | EveAuthorizationOptions;
  * callbacks.
  */
 export interface VercelConnectMetadata {
-  readonly connector: string;
+  readonly connectorId: string;
 }
 
 /**
@@ -209,7 +209,7 @@ export type EveConnectAuthorizationDefinition<
  * without inspecting closure state.
  */
 export function connect(
-  connector: string
+  connectorId: string
 ): EveConnectAuthorizationDefinition<InteractiveAuthorizationDefinition>;
 export function connect(
   options: EveAuthorizationOptions & { readonly principalType?: 'user' }
@@ -228,7 +228,9 @@ export function connect(
   InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 > {
   const options = normalizeAuthorizationOptions(input);
-  const vercelConnect: VercelConnectMetadata = { connector: options.connector };
+  const vercelConnect: VercelConnectMetadata = {
+    connectorId: options.connectorId,
+  };
   if (options.principalType === 'app') {
     return { ...buildNonInteractiveDefinition(options), vercelConnect };
   }
@@ -239,7 +241,7 @@ function normalizeAuthorizationOptions(
   input: EveAuthorizationInput
 ): EveAuthorizationOptions {
   if (typeof input === 'string') {
-    return { connector: input };
+    return { connectorId: input };
   }
   return input;
 }
@@ -253,7 +255,7 @@ function buildInteractiveDefinition(
     async getToken({ principal }: GetTokenOptions): Promise<TokenResult> {
       try {
         const response = await getTokenResponse(
-          options.connector,
+          options.connectorId,
           await buildTokenParams(options, principal),
           options.connectOptions
         );
@@ -293,7 +295,7 @@ function buildInteractiveDefinition(
         // model. Revisit if tab-close timeouts become a real problem
         // in production.
         const response = await startAuthorization(
-          options.connector,
+          options.connectorId,
           await buildTokenParams(options, principal),
           {
             ...options.connectOptions,
@@ -323,7 +325,7 @@ function buildInteractiveDefinition(
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
         const response = await getTokenResponse(
-          options.connector,
+          options.connectorId,
           await buildTokenParams(options, principal),
           options.connectOptions
         );
@@ -343,7 +345,7 @@ function buildNonInteractiveDefinition(
     async getToken({ principal }: GetTokenOptions): Promise<TokenResult> {
       try {
         const response = await getTokenResponse(
-          options.connector,
+          options.connectorId,
           await buildTokenParams(options, principal),
           options.connectOptions
         );

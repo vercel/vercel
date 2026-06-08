@@ -17,7 +17,7 @@
  *     connect({
  *       id: "slack",
  *       name: "Slack",
- *       connector: process.env.CONNECTOR_SLACK!,
+ *       connectorId: process.env.CONNECTOR_SLACK!,
  *     }),
  *   ],
  * };
@@ -58,7 +58,7 @@ export interface AuthJsConnectOptions {
    * opaque service connector key (`scl_...`) or the human-readable
    * UID (`oauth/mcp-linear-app`).
    */
-  readonly connector: string;
+  readonly connectorId: string;
 
   /**
    * Scopes to request. `offline_access` is added automatically so
@@ -91,7 +91,7 @@ export function connect(
     id: options.id,
     name: options.name,
     type: 'oauth',
-    clientId: options.connector,
+    clientId: options.connectorId,
     // The token endpoint expects client_secret_basic, but the secret
     // is a Vercel OIDC token that has to be fetched per-request. We
     // rely on the customFetch hook below to inject the token endpoint
@@ -127,7 +127,7 @@ export function connect(
       if (url.startsWith(CONNECT_TOKEN_URL)) {
         const vercelToken = await fetchVercelToken();
         const credentials = `${encodeURIComponent(
-          options.connector
+          options.connectorId
         )}:${encodeURIComponent(vercelToken)}`;
         const headers = new Headers(init?.headers);
         headers.set('authorization', `Basic ${btoa(credentials)}`);

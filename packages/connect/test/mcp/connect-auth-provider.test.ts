@@ -125,7 +125,7 @@ describe('connectAuthProvider', () => {
         provider.redirectToAuthorization(ignoredUrl)
       ).rejects.toMatchObject({
         name: 'ConsentRequiredError',
-        connector: CONNECTOR,
+        connectorId: CONNECTOR,
         subject: PARAMS.subject,
         url: 'https://connect.vercel.com/consent/oauth/linear?req=abc',
         request: 'req_abc',
@@ -287,14 +287,14 @@ describe('connectAuthProvider', () => {
   describe('ConsentRequiredError', () => {
     it('exposes the consent metadata as enumerable fields', () => {
       const err = new ConsentRequiredError({
-        connector: CONNECTOR,
+        connectorId: CONNECTOR,
         subject: PARAMS.subject,
         url: 'https://connect.vercel.com/consent',
         request: 'req',
         verifier: 'ver',
       });
       expect(err.name).toBe('ConsentRequiredError');
-      expect(err.connector).toBe(CONNECTOR);
+      expect(err.connectorId).toBe(CONNECTOR);
       expect(err.url).toBe('https://connect.vercel.com/consent');
       expect(err.request).toBe('req');
       expect(err.verifier).toBe('ver');
@@ -303,7 +303,7 @@ describe('connectAuthProvider', () => {
 
     it('is an instanceof Error and ConsentRequiredError', () => {
       const err = new ConsentRequiredError({
-        connector: CONNECTOR,
+        connectorId: CONNECTOR,
         subject: PARAMS.subject,
         url: 'u',
         request: 'r',

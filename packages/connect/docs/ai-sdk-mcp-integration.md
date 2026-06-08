@@ -50,11 +50,11 @@ developer never sees any of it.
 
 Key building blocks already in this package (pre-existing, not new):
 
-- `getTokenResponse(connector, params, options?)` → `{ token, expiresAt, … }`
+- `getTokenResponse(connectorId, params, options?)` → `{ token, expiresAt, … }`
   (`src/token.ts`). Throws `UserAuthorizationRequiredError` when the subject has
   no grant yet, and `ConnectorInstallationRequiredError` when the connector is
   not installed.
-- `startAuthorization(connector, params, options?)` → `{ url, request, verifier, deviceCode? }`
+- `startAuthorization(connectorId, params, options?)` → `{ url, request, verifier, deviceCode? }`
   (`src/authorization.ts`). `url` is the Connect-hosted consent page to send the
   user to.
 
@@ -169,15 +169,15 @@ no-op for us. We only need two methods to do real work: `tokens()` and
 `src/mcp/connect-auth-provider.ts`. It returns an `OAuthClientProvider` whose
 methods map onto Connect:
 
-| Interface member        | Our implementation |
-| ----------------------- | ------------------ |
-| `tokens()`              | Calls `getTokenResponse`. Maps `{ token, expiresAt }` → `{ access_token, token_type: 'Bearer', expires_in }`. On `UserAuthorizationRequiredError` returns **`undefined`** (the spec signal for "no token, start auth"). On `ConnectorInstallationRequiredError` throws (config error, not a per-user consent issue). |
-| `redirectToAuthorization(url)` | **Ignores** the SDK-discovered `url`. Calls Connect's `startAuthorization` to get Connect's own consent URL, then either throws `ConsentRequiredError` (default) or invokes the `onConsentRequired` callback. |
-| `saveTokens` / `saveCodeVerifier` | No-ops — Connect owns persistence and PKCE. |
-| `codeVerifier()`        | Throws loudly. A correctly-wired transport never calls it (we own PKCE server-side); failing visibly beats fabricating a fake verifier. |
-| `redirectUrl`           | Configurable, defaults to `''`. The same value is forwarded to Connect's `startAuthorization` as the post-consent return URL (`callbackUrl`); empty string falls back to the connector's registered redirect. |
-| `clientMetadata`        | Minimal `{ redirect_uris: [] }` (only used during dynamic registration, which we never trigger). |
-| `clientInformation()`   | `{ client_id: connector }` — the connector UID stands in as the client id, so the orchestrator skips dynamic registration. |
+| Interface member                  | Our implementation                                                                                                                                                                                                                                                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokens()`                        | Calls `getTokenResponse`. Maps `{ token, expiresAt }` → `{ access_token, token_type: 'Bearer', expires_in }`. On `UserAuthorizationRequiredError` returns **`undefined`** (the spec signal for "no token, start auth"). On `ConnectorInstallationRequiredError` throws (config error, not a per-user consent issue). |
+| `redirectToAuthorization(url)`    | **Ignores** the SDK-discovered `url`. Calls Connect's `startAuthorization` to get Connect's own consent URL, then either throws `ConsentRequiredError` (default) or invokes the `onConsentRequired` callback.                                                                                                        |
+| `saveTokens` / `saveCodeVerifier` | No-ops — Connect owns persistence and PKCE.                                                                                                                                                                                                                                                                          |
+| `codeVerifier()`                  | Throws loudly. A correctly-wired transport never calls it (we own PKCE server-side); failing visibly beats fabricating a fake verifier.                                                                                                                                                                              |
+| `redirectUrl`                     | Configurable, defaults to `''`. The same value is forwarded to Connect's `startAuthorization` as the post-consent return URL (`callbackUrl`); empty string falls back to the connector's registered redirect.                                                                                                        |
+| `clientMetadata`                  | Minimal `{ redirect_uris: [] }` (only used during dynamic registration, which we never trigger).                                                                                                                                                                                                                     |
+| `clientInformation()`             | `{ client_id: connectorId }` — the connector UID stands in as the client id, so the orchestrator skips dynamic registration.                                                                                                                                                                                         |
 
 ### End-to-end consent sequence
 
@@ -260,7 +260,7 @@ them is the main review concern.
 1. **OAuth consent (Connect's job).** "Allow this app to access your Linear
    account at all." Happens once per user; handled by `connectAuthProvider`.
 2. **Tool-call approval (AI SDK HITL).** "Are you sure you want the agent to
-   create *this* issue right now?" Happens per action; handled by the AI SDK v7
+   create _this_ issue right now?" Happens per action; handled by the AI SDK v7
    `toolApproval` primitive.
 
 **This package only handles #1.** Tool-call approval is deliberately left to
@@ -293,8 +293,8 @@ cookbook (HITL via the AI SDK's own primitives, no new Connect code).
 **Reviewer feedback (dvoytenko):**
 
 - On a doc sample that fetches a token once and threads the raw string into
-  `createMCPClient`: *"This looks bad because token can expire and MCP client
-  won't be able to re-request it. The callback is the way."* This is the core
+  `createMCPClient`: _"This looks bad because token can expire and MCP client
+  won't be able to re-request it. The callback is the way."_ This is the core
   point — a captured token string goes stale; the client needs a callback
   (`tokens()`) it can re-invoke. This **validates the V1 adapter** over the V0
   raw-string pattern.
@@ -309,20 +309,20 @@ against drift in `@ai-sdk/mcp`'s `OAuthClientProvider`.
 
 **Reviewer feedback (dvoytenko, requested changes) — and how it was addressed:**
 
-1. `with-consent-approval.ts` *"wholly independent from Connect?"* → **Removed**
+1. `with-consent-approval.ts` _"wholly independent from Connect?"_ → **Removed**
    (AI SDK glue, duplicated `wrapMcpTools`; see [§7](#7-tool-calling-hitl-and-the-two-consents)).
-2. `vercelToken?: string` *"make it a callback?"* → **Done.** Now accepts
+2. `vercelToken?: string` _"make it a callback?"_ → **Done.** Now accepts
    `string | (() => string | Promise<string>)`, resolved at call time.
-3. `callbackUrl` vs `redirectUrl` *"What's the difference?"* → **Consolidated**
+3. `callbackUrl` vs `redirectUrl` _"What's the difference?"_ → **Consolidated**
    onto one `redirectUrl` (both the provider value and the post-consent return URL).
-4. `ConsentChallenge` *"Add optional `userCode`/`deviceCode`"* → **Done.**
+4. `ConsentChallenge` _"Add optional `userCode`/`deviceCode`"_ → **Done.**
    `deviceCode` + `expiresAt` thread onto the challenge and `ConsentRequiredError`.
-5. `redirectToAuthorization` *"...no redirect URL of any kind"* → **Confirmed.**
+5. `redirectToAuthorization` _"...no redirect URL of any kind"_ → **Confirmed.**
    The SDK-discovered URL is ignored; the consent URL comes from `startAuthorization`.
-6. *"Pass redirectUrl"* → **Done.** A non-empty `redirectUrl` is forwarded as
+6. _"Pass redirectUrl"_ → **Done.** A non-empty `redirectUrl` is forwarded as
    `callbackUrl` (Connect's `returnUrl`).
-7. Version bump *"Why is it here?"* → **Reverted** to `0.1.2`; changeset drives it.
-8. Imports *"Where are these files?"* → `../authorization.js` is sibling
+7. Version bump _"Why is it here?"_ → **Reverted** to `0.1.2`; changeset drives it.
+8. Imports _"Where are these files?"_ → `../authorization.js` is sibling
    `src/authorization.ts` (`.js` required by NodeNext); OAuth types are the
    optional `@ai-sdk/mcp` peer dep.
 
@@ -344,13 +344,13 @@ Remaining open items:
 
 ## 10. Reference map
 
-| Concept | File |
-| --- | --- |
-| Connect token fetch + error types | `src/token.ts` |
-| Connect consent / authorization start | `src/authorization.ts` |
-| MCP `OAuthClientProvider` adapter | `src/mcp/connect-auth-provider.ts` |
-| `/mcp` public surface | `src/mcp/index.ts` |
-| `/ai-sdk` public surface | `src/ai-sdk/index.ts` |
-| AI SDK `OAuthClientProvider` + `auth()` orchestrator | `vercel/ai` → `packages/mcp/src/tool/oauth.ts` |
+| Concept                                               | File                                                        |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| Connect token fetch + error types                     | `src/token.ts`                                              |
+| Connect consent / authorization start                 | `src/authorization.ts`                                      |
+| MCP `OAuthClientProvider` adapter                     | `src/mcp/connect-auth-provider.ts`                          |
+| `/mcp` public surface                                 | `src/mcp/index.ts`                                          |
+| `/ai-sdk` public surface                              | `src/ai-sdk/index.ts`                                       |
+| AI SDK `OAuthClientProvider` + `auth()` orchestrator  | `vercel/ai` → `packages/mcp/src/tool/oauth.ts`              |
 | AI SDK HTTP transport (token attach + 401 → `auth()`) | `vercel/ai` → `packages/mcp/src/tool/mcp-http-transport.ts` |
-| AI SDK equivalent of our HITL helper | `vercel/ai` → `packages/policy-opa/src/wrap-mcp-tools.ts` |
+| AI SDK equivalent of our HITL helper                  | `vercel/ai` → `packages/policy-opa/src/wrap-mcp-tools.ts`   |

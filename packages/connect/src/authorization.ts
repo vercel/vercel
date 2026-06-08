@@ -18,12 +18,12 @@ export interface ConnectAuthorizationResponse {
 }
 
 export async function startAuthorization(
-  connector: string,
+  connectorId: string,
   params: ConnectTokenParams,
   options?: ConnectAuthorizationOptions
 ): Promise<ConnectAuthorizationResponse> {
-  if (!connector) {
-    throw new Error('connector is required');
+  if (!connectorId) {
+    throw new Error('connectorId is required');
   }
   if (options?.callbackUrl !== undefined) {
     validateCallbackUrl(options.callbackUrl);
@@ -33,7 +33,7 @@ export async function startAuthorization(
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
-  const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connector)}`;
+  const endpoint = `https://api.vercel.com/v1/connect/authorize/${encodeURIComponent(connectorId)}`;
 
   const body = {
     ...params,
