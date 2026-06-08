@@ -1,6 +1,6 @@
 import { FilesMap } from './hashes';
 import nodeFetch, { RequestInit } from 'node-fetch';
-import { join, sep, relative, basename } from 'path';
+import { join, sep, relative, basename, isAbsolute, resolve } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
@@ -134,8 +134,19 @@ export async function buildFileTree(
           const configJson = await readFile(p, 'utf8');
           const config = JSON.parse(configJson);
           if (!config.filePathMap) return;
-          for (const v of Object.values(config.filePathMap) as string[]) {
-            refs.add(join(path, v));
+          for (const v of Object.values(config.filePathMap)) {
+            if (typeof v !== 'string') continue;
+            const ref = resolve(path, v);
+            const relativeRef = relative(path, ref);
+            if (
+              relativeRef === '..' ||
+              relativeRef.startsWith(`..${sep}`) ||
+              isAbsolute(relativeRef)
+            ) {
+              debug(`Skipping filePathMap reference outside project: ${v}`);
+              continue;
+            }
+            refs.add(ref);
           }
         })
       );
