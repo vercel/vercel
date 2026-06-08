@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import redeploy from '../../../../src/commands/redeploy';
@@ -231,6 +231,27 @@ describe('redeploy', () => {
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(1);
+    });
+  });
+
+  describe('VERCEL_ORG_ID', () => {
+    afterEach(() => {
+      delete process.env.VERCEL_ORG_ID;
+    });
+
+    it('should use VERCEL_ORG_ID for team context when set', async () => {
+      const teamId = 'team_dummy';
+      const { fromDeployment, toDeployment } = initRedeployTest();
+      // The deployment must belong to the same team for the scope check to pass
+      fromDeployment.team = { id: teamId, name: 'dummy', slug: 'dummy' };
+      toDeployment.readyState = 'READY';
+
+      process.env.VERCEL_ORG_ID = teamId;
+      client.setArgv('redeploy', fromDeployment.id, '--no-wait');
+
+      const exitCode = await redeploy(client);
+      expect(exitCode).toEqual(0);
+      expect(client.config.currentTeam).toEqual(teamId);
     });
   });
 });
