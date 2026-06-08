@@ -61,7 +61,7 @@ jobs:
           enable-cache: false
 
       - name: Install pnpm
-        run: npm i -g pnpm@8.3.1
+        run: npm i -g pnpm@10.29.3
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -121,7 +121,7 @@ jobs:
           package-manager-cache: false
 
       - name: Install pnpm
-        run: npm i -g pnpm@8.3.1
+        run: npm i -g pnpm@10.29.3
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

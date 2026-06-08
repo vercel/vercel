@@ -22,12 +22,13 @@ export const importSubcommand = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List all DNS entries for a domain',
+  description:
+    'List DNS entries. Pass a domain to list its records, or omit the argument to list records across every domain on the scope',
   default: true,
   arguments: [
     {
       name: 'domain',
-      required: true,
+      required: false,
     },
   ],
   options: [limitOption, nextOption],

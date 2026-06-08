@@ -9,6 +9,7 @@ import type {
   Config,
   BuilderFunctions,
   ExperimentalServices,
+  ExperimentalServicesV2,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
@@ -19,6 +20,7 @@ import {
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
+  getMaxDurationLimit,
 } from '@vercel/build-utils';
 import { getServicesBuilders } from './services/get-services-builders';
 
@@ -65,6 +67,7 @@ export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
   experimentalServices?: ExperimentalServices;
+  experimentalServicesV2?: ExperimentalServicesV2;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -141,10 +144,16 @@ export async function detectBuilders(
   services?: Service[];
   useImplicitEnvInjection?: boolean;
 }> {
-  const { experimentalServices, projectSettings = {} } = options;
+  const {
+    experimentalServices: experimentalServicesV1,
+    experimentalServicesV2,
+    projectSettings = {},
+  } = options;
   const { framework } = projectSettings;
-  const configuredServices = experimentalServices;
-  const configuredServicesType = 'experimentalServices';
+  const configuredServices = experimentalServicesV2 ?? experimentalServicesV1;
+  const configuredServicesType = experimentalServicesV2
+    ? 'experimentalServicesV2'
+    : 'experimentalServices';
   const hasServicesConfig =
     configuredServices != null && typeof configuredServices === 'object';
 
@@ -721,17 +730,25 @@ function validateFunctions({ functions = {} }: Options) {
       };
     }
 
+    // The upper bound is enforced by server-side validation; only apply a
+    // client-side maximum when it has not been skipped via
+    // `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT`. The lower bound and integer check
+    // are always enforced.
+    const maxDurationLimit = getMaxDurationLimit();
     if (
       func.maxDuration !== undefined &&
       func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
-        func.maxDuration > 900 ||
+        (maxDurationLimit !== undefined &&
+          func.maxDuration > maxDurationLimit) ||
         !Number.isInteger(func.maxDuration))
     ) {
       return {
         code: 'invalid_function_duration',
         message:
-          'Functions must have a maxDuration between 1 and 900, or "max".',
+          maxDurationLimit !== undefined
+            ? `Functions must have a maxDuration between 1 and ${maxDurationLimit}, or "max".`
+            : 'Functions must have a positive integer maxDuration, or "max".',
       };
     }
 

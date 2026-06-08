@@ -47,7 +47,7 @@ import {
   detectApiDirectory,
   detectApiExtensions,
   isOfficialRuntime,
-  type Service,
+  type ExperimentalService,
 } from '@vercel/fs-detectors';
 import { frameworkList } from '@vercel/frameworks';
 
@@ -180,7 +180,7 @@ export default class DevServer {
   >;
   private originalProjectSettings?: ProjectSettings;
   private projectSettings?: ProjectSettings;
-  private services?: Service[];
+  private services?: ExperimentalService[];
   private orchestrator?: ServicesOrchestrator;
   private queueBroker?: QueueBroker;
 

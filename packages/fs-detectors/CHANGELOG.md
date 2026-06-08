@@ -1,5 +1,20 @@
 # @vercel/fs-detectors
 
+## 6.7.8
+
+### Patch Changes
+
+- 0a170fd: [services] wire `experimentalServicesV2` into `fs-detectors`.
+- Updated dependencies [0a170fd]
+  - @vercel/build-utils@13.27.1
+
+## 6.7.7
+
+### Patch Changes
+
+- Updated dependencies [338cc35]
+  - @vercel/build-utils@13.27.0
+
 ## 6.7.6
 
 ### Patch Changes

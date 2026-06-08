@@ -1,3 +1,5 @@
+import { getMaxDurationSchema } from './max-duration';
+
 const triggerEventSchemaV1 = {
   type: 'object',
   properties: {
@@ -92,12 +94,7 @@ export const functionsSchema = {
           minimum: 128,
           maximum: 10240,
         },
-        maxDuration: {
-          oneOf: [
-            { type: 'integer', minimum: 1, maximum: 900 },
-            { type: 'string', enum: ['max'] },
-          ],
-        },
+        maxDuration: getMaxDurationSchema(),
         regions: {
           type: 'array',
           items: {

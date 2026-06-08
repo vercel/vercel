@@ -1,5 +1,18 @@
 # @vercel/build-utils
 
+## 13.27.1
+
+### Patch Changes
+
+- 0a170fd: [services] wire `experimentalServicesV2` into `fs-detectors`.
+
+## 13.27.0
+
+### Minor Changes
+
+- 338cc35: Add isPackageInstalled util for detecting dependencies during build.
+  Fix Vercel Flags dependency detection for emitting datafiles during builds with OIDC tokens.
+
 ## 13.26.6
 
 ### Patch Changes

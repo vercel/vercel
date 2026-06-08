@@ -40,17 +40,19 @@ vercel mf inspect-group --group="my-group" --format=json  # machine-readable
 
 ### Add / Remove Projects
 
-Run from the project directory. Both commands require an interactive terminal.
+Run from the project directory.
 
 ```bash
 vercel mf add-to-group                               # interactive
 vercel mf add-to-group --group="my-group" --default-route=/docs
 
 vercel mf remove-from-group                          # interactive
-vercel mf remove-from-group --yes                    # skips project-link prompt only
+vercel mf remove-from-group --yes                    # non-interactive: skips all confirmations
 ```
 
-After removing, update `microfrontends.json` in the default app to remove the project's entry. The default app can only be removed after all other projects are removed.
+`add-to-group` requires an interactive terminal. `remove-from-group` runs non-interactively when `--yes` is passed; `--yes` skips the project-link prompt, the "still referenced in microfrontends.json" confirmation, and the final removal confirmation.
+
+After removing, update `microfrontends.json` in the default app to remove the project's entry. **The default app cannot be removed via the CLI** — change the default app in the Vercel Dashboard first, then `remove-from-group` works on the formerly-default project.
 
 ### Delete Group
 
@@ -58,7 +60,7 @@ Irreversible. All projects are removed from the group automatically.
 
 ```bash
 vercel mf delete-group                               # interactive
-vercel mf delete-group --group="my-group"
+vercel mf delete-group --group="my-group" --yes      # non-interactive
 ```
 
 ## `pull`
@@ -129,5 +131,6 @@ Each app deploys independently. Routing is controlled by `microfrontends.json` d
 - **Using `--non-interactive` when billing limits are exceeded**: The CLI blocks this — run interactively instead.
 - **Skipping `vercel mf pull` in polyrepo**: Without `microfrontends.json` locally, the proxy can't route correctly.
 - **Forgetting to update `microfrontends.json` after `remove-from-group`**: Leaving the entry causes routing errors on the next default app deployment.
-- **Running `add-to-group` or `remove-from-group` in CI**: Both require an interactive terminal — use the Vercel Dashboard instead.
+- **Running `add-to-group` in CI**: It requires an interactive terminal — use the Vercel Dashboard instead. `remove-from-group` and `delete-group` both accept `--yes` and can run non-interactively.
+- **Trying to remove the default app**: The CLI refuses. Change the default app in the Vercel Dashboard, then remove the formerly-default project.
 - **Deploying only the child app after config changes**: Changes to `microfrontends.json` only take effect when the default app is deployed.
