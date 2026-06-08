@@ -25,6 +25,8 @@ describe('determineAgent', () => {
     vi.stubEnv('COPILOT_MODEL', '');
     vi.stubEnv('COPILOT_ALLOW_ALL', '');
     vi.stubEnv('COPILOT_GITHUB_TOKEN', '');
+    vi.stubEnv('HERMES_SESSION_PLATFORM', '');
+    vi.stubEnv('OPENCLAW_SHELL', '');
   });
 
   afterEach(() => {
@@ -432,6 +434,52 @@ describe('determineAgent', () => {
       it('returns no agent', async () => {
         const result = await determineAgent();
         expect(result).toEqual({ isAgent: false });
+      });
+    });
+  });
+
+  describe('hermes detection', () => {
+    describe('HERMES_SESSION_PLATFORM not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('HERMES_SESSION_PLATFORM set', () => {
+      beforeEach(() => {
+        vi.stubEnv('HERMES_SESSION_PLATFORM', 'telegram');
+      });
+
+      it('detects hermes', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.HERMES },
+        });
+      });
+    });
+  });
+
+  describe('openclaw detection', () => {
+    describe('OPENCLAW_SHELL not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('OPENCLAW_SHELL set', () => {
+      beforeEach(() => {
+        vi.stubEnv('OPENCLAW_SHELL', 'exec');
+      });
+
+      it('detects openclaw', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.OPENCLAW },
+        });
       });
     });
   });
