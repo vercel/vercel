@@ -68,6 +68,12 @@ describe('deleteToken', () => {
     });
   });
 
+  it('allows empty successful delete responses', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(deleteToken(CONNECTOR, PARAMS)).resolves.toBeUndefined();
+  });
+
   it('maps API errors through ConnectError', async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(

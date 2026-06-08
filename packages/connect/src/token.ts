@@ -197,7 +197,6 @@ export async function deleteToken(
     );
   }
 
-  await response.json();
   cache.clear();
 }
 
