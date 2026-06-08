@@ -1,13 +1,13 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ConnectError, deleteToken } from '../src/token.js';
+import { ConnectError, revokeToken } from '../src/token.js';
 
 vi.mock('@vercel/oidc', () => ({
   getVercelOidcToken: vi.fn(),
 }));
 
 const CONNECTOR = 'oauth/linear';
-const PARAMS: Parameters<typeof deleteToken>[1] = {
+const PARAMS: Parameters<typeof revokeToken>[1] = {
   subject: { type: 'user', id: 'user_123' },
   installationId: 'icfg_123',
 };
@@ -19,7 +19,7 @@ const RESULT = {
   providerFailed: 0,
 };
 
-describe('deleteToken', () => {
+describe('revokeToken', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -37,7 +37,7 @@ describe('deleteToken', () => {
     fetchMock.mockResolvedValue(jsonResponse(RESULT));
 
     await expect(
-      deleteToken(CONNECTOR, PARAMS, { vercelToken: 'vercel_token' })
+      revokeToken(CONNECTOR, PARAMS, { vercelToken: 'vercel_token' })
     ).resolves.toBeUndefined();
 
     expect(getVercelOidcToken).not.toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('deleteToken', () => {
   it('uses the Vercel OIDC token when no explicit token is provided', async () => {
     fetchMock.mockResolvedValue(jsonResponse(RESULT));
 
-    await deleteToken(CONNECTOR, PARAMS);
+    await revokeToken(CONNECTOR, PARAMS);
 
     expect(getVercelOidcToken).toHaveBeenCalledTimes(1);
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -71,7 +71,7 @@ describe('deleteToken', () => {
   it('allows empty successful delete responses', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
 
-    await expect(deleteToken(CONNECTOR, PARAMS)).resolves.toBeUndefined();
+    await expect(revokeToken(CONNECTOR, PARAMS)).resolves.toBeUndefined();
   });
 
   it('maps API errors through ConnectError', async () => {
@@ -80,14 +80,14 @@ describe('deleteToken', () => {
         {
           error: {
             code: 'forbidden',
-            message: 'Missing permission to delete tokens',
+            message: 'Missing permission to revoke tokens',
           },
         },
         { status: 403, statusText: 'Forbidden' }
       )
     );
 
-    const promise = deleteToken(CONNECTOR, PARAMS);
+    const promise = revokeToken(CONNECTOR, PARAMS);
 
     await expect(promise).rejects.toBeInstanceOf(ConnectError);
     await expect(promise).rejects.toMatchObject({
@@ -95,7 +95,7 @@ describe('deleteToken', () => {
       code: 'forbidden',
       status: 403,
       statusText: 'Forbidden',
-      message: 'Missing permission to delete tokens',
+      message: 'Missing permission to revoke tokens',
     });
   });
 });

@@ -97,4 +97,4 @@ import { connect } from '@vercel/connect/authjs';
 const providers = [connect({ connector: 'linear' })];
 ```
 
-See the source under `src/` for the full API (additional helpers like `deleteToken`, `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).
+See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).

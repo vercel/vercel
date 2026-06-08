@@ -169,7 +169,7 @@ export async function getTokenResponse(
   return data;
 }
 
-export async function deleteToken(
+export async function revokeToken(
   connector: string,
   params: {
     subject: ConnectTokenSubject;
@@ -193,7 +193,7 @@ export async function deleteToken(
   if (!response.ok) {
     throw await createConnectErrorFromResponse(
       response,
-      'Failed to delete token'
+      'Failed to revoke token'
     );
   }
 

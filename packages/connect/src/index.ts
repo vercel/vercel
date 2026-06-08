@@ -1,7 +1,7 @@
 export {
-  deleteToken,
   getToken,
   getTokenResponse,
+  revokeToken,
   ConnectError,
   NoValidTokenError,
   UserAuthorizationRequiredError,
