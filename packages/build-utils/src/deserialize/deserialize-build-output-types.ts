@@ -3,6 +3,7 @@ import type { Lambda } from '../lambda';
 import type { Prerender } from '../prerender';
 import type { BuildResultV2Typical, Files } from '../types';
 import type {
+  SerializedContainerImage,
   SerializedEdgeFunction,
   SerializedLambda,
   SerializedNodejsLambda,
@@ -87,6 +88,7 @@ export interface DeserializeBuildOutputOptions<
 export type DeserializeBuildOutputFiles = BuildResultV2Typical['output'];
 export type DeserializeBuildOutputPrerenderFallback = Prerender['fallback'];
 export type DeserializeBuildOutputSerializedConfig =
+  | SerializedContainerImage
   | SerializedEdgeFunction
   | SerializedLambda
   | SerializedNodejsLambda;

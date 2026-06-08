@@ -8,6 +8,7 @@ import type { Lambda } from '../lambda';
 import { Prerender } from '../prerender';
 import type { BuildResultV2Typical } from '../types';
 import { createFunctionsIterator } from './create-functions-iterator';
+import { deserializeContainerImage } from './deserialize-container-image';
 import { deserializeEdgeFunction } from './deserialize-edge-function';
 import type {
   DeserializeBuildOutputConfig,
@@ -18,8 +19,18 @@ import type {
   DeserializeBuildOutputSerializedPrerender,
   DeserializeBuildOutputPathOverride,
 } from './deserialize-build-output-types';
+import type { SerializedContainerImage } from './serialized-types';
 import { maybeReadJSON } from './maybe-read-json';
 import { validateFrameworkVersion } from './validate-framework-version';
+
+function isSerializedContainerImage(
+  config: DeserializeBuildOutputSerializedConfig
+): config is SerializedContainerImage {
+  return (
+    config.type === 'ContainerImage' ||
+    ('runtime' in config && config.runtime === 'container')
+  );
+}
 
 const MAX_DEPLOYMENT_ID_LENGTH = 32;
 const VALID_DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
@@ -271,6 +282,16 @@ export async function deserializeBuildOutput<
 
       const files = await glob('**', { cwd: fnDir, includeDirectories: true });
       delete files['.vc-config.json'];
+
+      if (isSerializedContainerImage(funcConfig)) {
+        output[path] = await deserializeContainerImage(
+          files,
+          funcConfig,
+          repoRootPath,
+          fileFsRefsCache
+        );
+        continue;
+      }
 
       if (funcConfig.type === 'EdgeFunction' || funcConfig.runtime === 'edge') {
         output[path] = await deserializeEdgeFunction(

@@ -65,6 +65,14 @@ const ENTRYPOINT_REQUIRED_RUNTIMES = new Set<ServiceRuntime>([
   'go',
 ]);
 
+function isContainerRuntime(config: ConfiguredServiceConfig): boolean {
+  return config.runtime === 'container';
+}
+
+function normalizeContainerCommand(command: string | string[]): string[] {
+  return Array.isArray(command) ? command : [command];
+}
+
 type ConfiguredServiceConfig = ExperimentalServiceConfig;
 
 interface ResolvedEntrypointPath {
@@ -679,6 +687,13 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if (config.command !== undefined && !isContainerRuntime(config)) {
+    return {
+      code: 'INVALID_COMMAND',
+      message: `Service "${name}" can only specify "command" when using runtime "container".`,
+      serviceName: name,
+    };
+  }
   return null;
 }
 
@@ -746,8 +761,16 @@ export async function resolveConfiguredService(
   const routePrefixWasConfigured =
     routingResult.routing?.routePrefixConfigured ?? false;
 
+  const containerEntrypoint =
+    isContainerRuntime(config) && typeof rawEntrypoint === 'string'
+      ? rawEntrypoint
+      : undefined;
   let resolvedEntrypointPath = resolvedEntrypoint;
-  if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+  if (
+    !containerEntrypoint &&
+    !resolvedEntrypointPath &&
+    typeof rawEntrypoint === 'string'
+  ) {
     const entrypointToResolve = moduleAttrParsed
       ? moduleAttrParsed.filePath
       : rawEntrypoint;
@@ -758,7 +781,11 @@ export async function resolveConfiguredService(
     });
     resolvedEntrypointPath = resolved.entrypoint;
   }
-  if (typeof rawEntrypoint === 'string' && !resolvedEntrypointPath) {
+  if (
+    !containerEntrypoint &&
+    typeof rawEntrypoint === 'string' &&
+    !resolvedEntrypointPath
+  ) {
     throw new Error(
       `Failed to resolve entrypoint "${rawEntrypoint}" for service "${name}".`
     );
@@ -859,7 +886,10 @@ export async function resolveConfiguredService(
     } else {
       builderUse = getBuilderForRuntime(inferredRuntime);
     }
-    builderSrc = resolvedEntrypointFile!;
+    builderSrc =
+      inferredRuntime === 'container' && typeof containerEntrypoint === 'string'
+        ? containerEntrypoint
+        : resolvedEntrypointFile!;
   }
 
   const normalizedSubdomain =
@@ -920,6 +950,12 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (containerEntrypoint) {
+    builderConfig.handler = containerEntrypoint;
+  }
+  if (config.command !== undefined) {
+    builderConfig.command = normalizeContainerCommand(config.command);
+  }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
   }
@@ -931,7 +967,7 @@ export async function resolveConfiguredService(
     trigger,
     group,
     workspace,
-    entrypoint: resolvedEntrypointFile,
+    entrypoint: containerEntrypoint ?? resolvedEntrypointFile,
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
     subdomain: normalizedSubdomain,
@@ -988,7 +1024,10 @@ export async function resolveAllConfiguredServices(
     const serviceFs = serviceFsResult.fs;
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    if (typeof serviceConfig.entrypoint === 'string') {
+    if (
+      typeof serviceConfig.entrypoint === 'string' &&
+      !isContainerRuntime(serviceConfig)
+    ) {
       const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
       const entrypointToResolve =
         moduleAttr?.filePath ?? serviceConfig.entrypoint;

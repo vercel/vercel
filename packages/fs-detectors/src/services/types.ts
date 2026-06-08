@@ -137,6 +137,7 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+  container: '@vercel/container',
 };
 
 export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {

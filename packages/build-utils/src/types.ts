@@ -4,6 +4,7 @@ import type FileBlob from './file-blob';
 import type { Lambda, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
+import type { ContainerImage } from './container-image';
 import type { Span } from './trace';
 import type {
   HasField,
@@ -776,7 +777,7 @@ export interface BuildResultV2Typical {
   routes?: any[];
   images?: Images;
   output: {
-    [key: string]: File | Lambda | Prerender | EdgeFunction;
+    [key: string]: File | Lambda | Prerender | EdgeFunction | ContainerImage;
   };
   wildcard?: Array<{
     domain: string;
@@ -936,7 +937,13 @@ export interface TriggerEvent extends TriggerEventBase {
   consumer: string;
 }
 
-export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
+export type ServiceRuntime =
+  | 'node'
+  | 'python'
+  | 'go'
+  | 'rust'
+  | 'ruby'
+  | 'container';
 
 export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
 
@@ -977,8 +984,10 @@ export interface ExperimentalServiceConfig {
   framework?: string;
   /** Builder to use, e.g. @vercel/node, @vercel/python */
   builder?: string;
-  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  /** Specific service runtime to use, e.g. node, python, or container. */
   runtime?: string;
+  /** Optional command override for container image services. */
+  command?: string | string[];
 
   workspace?: string;
   buildCommand?: string;

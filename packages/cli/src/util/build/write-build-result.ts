@@ -26,6 +26,7 @@ import {
   download,
   downloadFile,
   type EdgeFunction,
+  type ContainerImage,
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
@@ -150,6 +151,10 @@ function isEdgeFunction(v: any): v is EdgeFunction {
   return v?.type === 'EdgeFunction';
 }
 
+function isContainerImage(v: any): v is ContainerImage {
+  return v?.type === 'ContainerImage';
+}
+
 export function isLambda(v: any): v is Lambda {
   return v?.type === 'Lambda';
 }
@@ -169,26 +174,28 @@ export interface PathOverride {
 }
 
 function injectServiceEnvVars(
-  lambda: Lambda,
+  fn: { environment?: Record<string, string | undefined>; config?: any },
   service?: ExperimentalService,
   stripServiceRoutePrefix: boolean = false
 ): void {
+  const target = fn.config ?? fn;
+  target.environment ??= {};
   if (service?.name) {
     // Exposes the owning service so the API can resolve per-service envVars
     // at deploy time.
-    lambda.environment.VERCEL_SERVICE_NAME = service.name;
+    target.environment.VERCEL_SERVICE_NAME = service.name;
   }
   if (service?.type) {
-    lambda.environment.VERCEL_SERVICE_TYPE = service.type;
+    target.environment.VERCEL_SERVICE_TYPE = service.type;
   }
   if (service?.trigger) {
-    lambda.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
+    target.environment.VERCEL_SERVICE_TRIGGER = service.trigger;
   }
   if (service?.routePrefix && service.routePrefix !== '/') {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+    target.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
   }
   if (stripServiceRoutePrefix) {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+    target.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
   }
 }
 
@@ -358,6 +365,13 @@ async function writeBuildResultV2(args: {
         existingFunctions,
         standalone
       );
+    } else if (isContainerImage(output)) {
+      injectServiceEnvVars(
+        output,
+        service && isExperimentalService(service) ? service : undefined,
+        stripServiceRoutePrefix
+      );
+      await writeContainerImage(outputDir, output, normalizedPath);
     } else {
       throw new Error(
         `Unsupported output type: "${
@@ -505,6 +519,13 @@ async function writeBuildResultV3(args: {
       undefined,
       standalone
     );
+  } else if (isContainerImage(output)) {
+    injectServiceEnvVars(
+      output,
+      service && isExperimentalService(service) ? service : undefined,
+      stripServiceRoutePrefix
+    );
+    await writeContainerImage(outputDir, output, path);
   } else {
     throw new Error(
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
@@ -618,6 +639,35 @@ async function writeFunctionSymlink(
  * @param path The URL path where the `EdgeFunction` can be accessed from
  * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
+async function writeContainerImage(
+  outputDir: string,
+  containerImage: ContainerImage,
+  path: string
+) {
+  const dest = join(outputDir, 'functions', `${path}.func`);
+  const handler = (containerImage as any).handler;
+  if (typeof handler !== 'string' || handler.length === 0) {
+    throw new Error(
+      `Container image output for "${path}" is missing "handler".`
+    );
+  }
+
+  await fs.mkdirp(dest);
+  await fs.writeJSON(
+    join(dest, '.vc-config.json'),
+    {
+      handler,
+      runtime: 'container',
+      architecture: (containerImage as any).architecture ?? 'linux/amd64',
+      environment: (containerImage as any).environment ?? {},
+      ...((containerImage as any).command
+        ? { command: (containerImage as any).command }
+        : {}),
+    },
+    { spaces: 2 }
+  );
+}
+
 async function writeEdgeFunction(
   repoRootPath: string,
   outputDir: string,
