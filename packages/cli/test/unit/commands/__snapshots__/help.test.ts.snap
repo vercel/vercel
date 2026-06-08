@@ -825,8 +825,7 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
        --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
        --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
-       --connector-type <TYPE>   Connector type for non-managed creation. By default, the backend infers the type from the   
-                                 service.                                                                                    
+       --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
        --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
                                  create API.                                                                                 
   -F,  --format <FORMAT>         Specify the output format (json)                                                            
