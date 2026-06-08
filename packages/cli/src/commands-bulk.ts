@@ -41,6 +41,7 @@ export { default as mcp } from './commands/mcp';
 export { default as metrics } from './commands/metrics';
 export { default as microfrontends } from './commands/microfrontends';
 export { default as oauthApps } from './commands/oauth-apps';
+export { default as observability } from './commands/observability';
 export { default as open } from './commands/open';
 export { default as project } from './commands/project';
 export { default as promote } from './commands/promote';
