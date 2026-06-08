@@ -2,26 +2,11 @@ import { spawn } from 'node:child_process';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Smoke test the built CLI binary by actually *running* it.
-//
-// `--version` alone is not a sufficient release gate: it never loads the
-// config/auth code path, so a binary that is missing a bundled package (e.g.
-// `@vercel/cli-auth`) passes `--version` and still crashes on `login`/`whoami`.
-// This script runs a battery of representative commands and fails the release
-// if any of them surface a module-resolution / native-load failure or crash.
-//
-// Usage: node scripts/smoke-test-binary.mjs [path-to-binary]
-//        (defaults to ./dist-bin/vercel)
-
 const packageRoot = resolve(fileURLToPath(new URL('../', import.meta.url)));
 
 const binArg = process.argv[2] ?? 'dist-bin/vercel';
 const binPath = isAbsolute(binArg) ? binArg : join(packageRoot, binArg);
 
-// Commands exercising the major code paths without needing network or
-// credentials. `--help` variants load the command module (and its imports,
-// including config/auth) without performing real work; `whoami` exercises the
-// auth-read path directly. Extend this list as new heavy command paths land.
 const COMMANDS = [
   ['--version'],
   ['help'],
@@ -39,9 +24,6 @@ const COMMANDS = [
   ['domains', '--help'],
 ];
 
-// Output that indicates a broken binary, regardless of exit code. These are
-// failures we must never release: missing bundled modules, un-loadable native
-// addons, syntax/parse errors, or a raw Node internal stack trace.
 const FAILURE_PATTERNS = [
   /ERR_MODULE_NOT_FOUND/,
   /Cannot find package/,
@@ -55,8 +37,6 @@ const FAILURE_PATTERNS = [
   /\n\s+at node:internal\//,
 ];
 
-// A command being logged-out (whoami/login) legitimately exits non-zero; that
-// is NOT a smoke failure. Only the patterns above (or a crash signal) are.
 const PER_COMMAND_TIMEOUT_MS = 30_000;
 
 function runCommand(args) {
@@ -68,7 +48,6 @@ function runCommand(args) {
         NO_COLOR: '1',
         NO_UPDATE_NOTIFIER: '1',
         VERCEL_CLI_DISABLE_UPDATE_NOTIFIER: '1',
-        // Avoid touching/writing the user's real auth during the read path.
         VERCEL_DIR: join(packageRoot, '.smoke-test-home'),
       },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -110,7 +89,6 @@ function evaluate(args, result) {
       reasons.push(`matched ${pattern}`);
     }
   }
-  // A crash by signal (segfault/abort) or a forced kill (timeout/hang).
   if (result.signal && result.signal !== 'SPAWN_ERROR') {
     reasons.push(`killed by signal ${result.signal}`);
   }
@@ -152,11 +130,6 @@ async function main() {
     for (const failure of failures) {
       console.error(`  - ${failure.label}: ${failure.reasons.join('; ')}`);
     }
-    console.error(
-      '\nThis binary must not be released. A common cause is an imported package ' +
-        'that was not bundled into the binary (see binaryRuntimePackageNames in ' +
-        'scripts/build-binary.mjs).'
-    );
     process.exit(1);
   }
 

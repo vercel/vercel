@@ -143,9 +143,6 @@ jobs:
           set -euo pipefail
           bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
           chmod +x "$bin" || true
-          # Runs a battery of real commands (login/whoami/help/...) and fails the
-          # release if any crash or hit a module-resolution error. `--version`
-          # alone is not enough: it never loads the auth/config path.
           node scripts/smoke-test-binary.mjs "$bin"
 
       - name: Install rcodesign
@@ -236,7 +233,6 @@ jobs:
           set -euo pipefail
           bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
           chmod +x "$bin" || true
-          # Re-run the full battery on the signed/notarized binary.
           node scripts/smoke-test-binary.mjs "$bin"
 
       - name: Compute checksum
@@ -429,8 +425,6 @@ jobs:
               out="$($prefix/bin/vercel --version)"
               echo "$out"
               if [[ "$out" == "$version" ]]; then
-                # Verify the *published* binary actually runs real commands, not
-                # just --version, before declaring the release good.
                 node packages/cli/scripts/smoke-test-binary.mjs "$prefix/bin/vercel"
                 exit 0
               fi

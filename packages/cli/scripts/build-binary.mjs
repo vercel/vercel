@@ -99,9 +99,6 @@ for (const dependency of directDependencies) {
   await scanPackage(dependency, packageRoot);
 }
 
-// Packages that are imported by the bundle but intentionally NOT staged into the
-// binary (e.g. resolved at runtime from outside it). Add entries sparingly and
-// document why — every entry is a hole in the static check.
 const STATIC_CHECK_IGNORE = new Set([]);
 
 await verifyExternalImportsAreStaged();
@@ -130,23 +127,6 @@ child.on('exit', (code, signal) => {
   process.exit(code ?? 1);
 });
 
-// Fail the build if the bundled output *statically* imports a dependency that was
-// not staged into the binary. scripts/build.mjs marks every dependency `external`,
-// so a package that is imported but absent from binaryRuntimePackageNames (and not
-// pulled in transitively) compiles cleanly yet crashes on load at runtime with
-// ERR_MODULE_NOT_FOUND — exactly how @vercel/cli-auth shipped broken. This
-// reconciles "statically imported by the bundle" against "present in the binary"
-// up front, before signing/upload, so a broken binary can never be released.
-//
-// Scope, deliberately narrow to stay false-positive-free:
-//   - Only `import ... from '<x>'` / `export ... from '<x>'` and top-level
-//     `require('<x>')` are checked. Dynamic `import('<x>')` is excluded: it is
-//     used for lazy/optional loads (e.g. builders like @vercel/go, fetched on
-//     demand) that are intentionally not bundled. The runtime smoke test is the
-//     backstop for those.
-//   - Only specifiers that are declared dependencies of this package are
-//     considered (that is exactly esbuild's `external` set), which also discards
-//     incidental `from '...'` matches inside string/template literals.
 async function verifyExternalImportsAreStaged() {
   const distDir = join(stagingRoot, 'dist');
   const declaredDependencies = new Set(
@@ -166,7 +146,6 @@ async function verifyExternalImportsAreStaged() {
   };
   await walk(distDir);
 
-  // Static `from '<x>'` (import/export) and top-level `require('<x>')` only.
   const specifierRe = /(?:\bfrom\s*|\brequire\s*\(\s*)["']([^"']+)["']/g;
   const builtins = new Set(builtinModules);
   const imported = new Set();
