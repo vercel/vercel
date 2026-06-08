@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
+import { builtinModules, createRequire } from 'node:module';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
@@ -18,6 +18,7 @@ const packageJson = JSON.parse(
 const binaryRuntimePackageNames = [
   '@vercel/blob',
   '@vercel/build-utils',
+  '@vercel/cli-auth',
   '@vercel/cli-config',
   '@vercel/detect-agent',
   '@vercel/fun',
@@ -98,6 +99,13 @@ for (const dependency of directDependencies) {
   await scanPackage(dependency, packageRoot);
 }
 
+// Packages that are imported by the bundle but intentionally NOT staged into the
+// binary (e.g. resolved at runtime from outside it). Add entries sparingly and
+// document why — every entry is a hole in the static check.
+const STATIC_CHECK_IGNORE = new Set([]);
+
+await verifyExternalImportsAreStaged();
+
 const args = normalizeOutputArgs(process.argv.slice(2));
 const customNodeRuntimeEnv = await seedCustomNodeRuntime(args);
 const child = spawn(
@@ -121,6 +129,96 @@ child.on('exit', (code, signal) => {
   }
   process.exit(code ?? 1);
 });
+
+// Fail the build if the bundled output *statically* imports a dependency that was
+// not staged into the binary. scripts/build.mjs marks every dependency `external`,
+// so a package that is imported but absent from binaryRuntimePackageNames (and not
+// pulled in transitively) compiles cleanly yet crashes on load at runtime with
+// ERR_MODULE_NOT_FOUND — exactly how @vercel/cli-auth shipped broken. This
+// reconciles "statically imported by the bundle" against "present in the binary"
+// up front, before signing/upload, so a broken binary can never be released.
+//
+// Scope, deliberately narrow to stay false-positive-free:
+//   - Only `import ... from '<x>'` / `export ... from '<x>'` and top-level
+//     `require('<x>')` are checked. Dynamic `import('<x>')` is excluded: it is
+//     used for lazy/optional loads (e.g. builders like @vercel/go, fetched on
+//     demand) that are intentionally not bundled. The runtime smoke test is the
+//     backstop for those.
+//   - Only specifiers that are declared dependencies of this package are
+//     considered (that is exactly esbuild's `external` set), which also discards
+//     incidental `from '...'` matches inside string/template literals.
+async function verifyExternalImportsAreStaged() {
+  const distDir = join(stagingRoot, 'dist');
+  const declaredDependencies = new Set(
+    Object.keys(packageJson.dependencies ?? {})
+  );
+
+  const files = [];
+  const walk = async dir => {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+      } else if (/\.(?:js|mjs|cjs)$/.test(entry.name)) {
+        files.push(full);
+      }
+    }
+  };
+  await walk(distDir);
+
+  // Static `from '<x>'` (import/export) and top-level `require('<x>')` only.
+  const specifierRe = /(?:\bfrom\s*|\brequire\s*\(\s*)["']([^"']+)["']/g;
+  const builtins = new Set(builtinModules);
+  const imported = new Set();
+
+  for (const file of files) {
+    const content = await fs.readFile(file, 'utf8');
+    let match;
+    while ((match = specifierRe.exec(content)) !== null) {
+      const specifier = match[1];
+      if (specifier.startsWith('.') || specifier.startsWith('/')) continue;
+      if (specifier.startsWith('node:')) continue;
+      const segments = specifier.split('/');
+      const packageName = specifier.startsWith('@')
+        ? segments.slice(0, 2).join('/')
+        : segments[0];
+      if (!packageName || builtins.has(packageName)) continue;
+      if (!declaredDependencies.has(packageName)) continue;
+      imported.add(packageName);
+    }
+  }
+
+  const missing = [];
+  for (const packageName of imported) {
+    if (STATIC_CHECK_IGNORE.has(packageName)) continue;
+    const manifest = join(
+      stagedNodeModules,
+      ...packageName.split('/'),
+      'package.json'
+    );
+    try {
+      await fs.stat(manifest);
+    } catch {
+      missing.push(packageName);
+    }
+  }
+
+  if (missing.length > 0) {
+    missing.sort();
+    throw new Error(
+      `Binary build aborted: ${missing.length} dependency(ies) are statically ` +
+        `imported by the bundle but were not staged into the binary:\n` +
+        missing.map(name => `  - ${name}`).join('\n') +
+        `\n\nAdd them to binaryRuntimePackageNames in scripts/build-binary.mjs ` +
+        `(or to STATIC_CHECK_IGNORE if intentionally excluded). Releasing this ` +
+        `binary would crash at runtime with ERR_MODULE_NOT_FOUND.`
+    );
+  }
+
+  console.log(
+    `Static check: all ${imported.size} statically-imported dependencies are staged into the binary.`
+  );
+}
 
 async function stagePackage(name, issuerDir = packageRoot, scan = true) {
   const packageDir = await findPackageDir(name, issuerDir);

@@ -53,7 +53,7 @@ jobs:
             asset: vercel-linux-arm64
             ext: ''
             sign: false
-            smoke: false
+            smoke: true
             custom_node_path: .node-runtime/node-v22.22.2-linux-arm64-small-icu/bin/node
             custom_node_platform: linux
             custom_node_arch: arm64
@@ -143,9 +143,10 @@ jobs:
           set -euo pipefail
           bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
           chmod +x "$bin" || true
-          out=$(./"$bin" --version)
-          echo "$out"
-          test -n "$out"
+          # Runs a battery of real commands (login/whoami/help/...) and fails the
+          # release if any crash or hit a module-resolution error. `--version`
+          # alone is not enough: it never loads the auth/config path.
+          node scripts/smoke-test-binary.mjs "$bin"
 
       - name: Install rcodesign
         if: ${{ matrix.sign }}
@@ -227,7 +228,7 @@ jobs:
             --api-key-file "$APPLE_API_KEY_PATH" \
             --wait \
             "$zip_path"
-      - name: Smoke test binary version
+      - name: Smoke test binary after signing
         if: ${{ matrix.smoke }}
         shell: bash
         working-directory: packages/cli
@@ -235,9 +236,8 @@ jobs:
           set -euo pipefail
           bin="dist-bin/${{ matrix.asset }}${{ matrix.ext }}"
           chmod +x "$bin" || true
-          out=$(./"$bin" --version)
-          echo "$out"
-          test -n "$out"
+          # Re-run the full battery on the signed/notarized binary.
+          node scripts/smoke-test-binary.mjs "$bin"
 
       - name: Compute checksum
         shell: bash
@@ -429,6 +429,9 @@ jobs:
               out="$($prefix/bin/vercel --version)"
               echo "$out"
               if [[ "$out" == "$version" ]]; then
+                # Verify the *published* binary actually runs real commands, not
+                # just --version, before declaring the release good.
+                node packages/cli/scripts/smoke-test-binary.mjs "$prefix/bin/vercel"
                 exit 0
               fi
             fi
