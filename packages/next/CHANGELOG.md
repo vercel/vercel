@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.18.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
 ## 4.17.6
 
 ### Patch Changes
