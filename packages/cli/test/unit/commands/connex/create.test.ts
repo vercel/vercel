@@ -133,6 +133,472 @@ describe('connex create', () => {
     expect(postBody.service).toBe('jira');
   });
 
+  it('should create a non-managed connector when --data is provided', async () => {
+    let managedHit = false;
+    let discoveryHit = false;
+    let discoveryUrl = '';
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      managedHit = true;
+      res.json(fakeConnexClient());
+    });
+    client.scenario.get('/v1/connect/services/:service', (req, res) => {
+      discoveryHit = true;
+      discoveryUrl = req.url ?? '';
+      expect((req.params as { service: string }).service).toBe(
+        'mcp.linear.app'
+      );
+      res.json({
+        types: [
+          {
+            type: 'api-key',
+          },
+        ],
+      });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(
+        fakeConnexClient({
+          id: 'scl_nonmanaged1',
+          uid: 'uid_nonmanaged1',
+          type: 'oauth',
+          service: 'mcp.linear.app',
+        })
+      );
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.linear.app',
+      '--name',
+      'linear',
+      '--triggers',
+      '--data',
+      '{"clientId":"abc123","serverUrl":"https://linear.app/oauth"}'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(managedHit).toBe(false);
+    expect(discoveryHit).toBe(true);
+    expect(discoveryUrl).toContain('schemas=true');
+    expect(discoveryUrl).toContain(`teamId=${team.id}`);
+    expect(postBody).toMatchObject({
+      service: 'mcp.linear.app',
+      name: 'linear',
+      type: 'api-key',
+      triggers: { enabled: true },
+      data: {
+        clientId: 'abc123',
+        serverUrl: 'https://linear.app/oauth',
+      },
+    });
+    expect(postBody.request_code).toBeUndefined();
+    await expect(client.stderr).toOutput(
+      'mcp.linear.app connector created: scl_nonmanaged1 (UID uid_nonmanaged1)'
+    );
+  });
+
+  it('should default non-managed connector type to oauth when service discovery returns 404', async () => {
+    let discoveryHit = false;
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      discoveryHit = true;
+      res.statusCode = 404;
+      res.json({ error: { code: 'not_found', message: 'Not Found' } });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(
+        fakeConnexClient({
+          id: 'scl_nonmanaged_404',
+          uid: 'uid_nonmanaged_404',
+          type: 'oauth',
+        })
+      );
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'unknown-service',
+      '--name',
+      'unknown',
+      '--data',
+      '{"clientId":"abc123"}'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(discoveryHit).toBe(true);
+    expect(postBody).toMatchObject({
+      service: 'unknown-service',
+      name: 'unknown',
+      type: 'oauth',
+      data: {
+        clientId: 'abc123',
+      },
+    });
+  });
+
+  it('should default non-managed connector type to oauth when service discovery has no types', async () => {
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ types: [] });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(
+        fakeConnexClient({
+          id: 'scl_nonmanaged_no_types',
+          uid: 'uid_nonmanaged_no_types',
+          type: 'oauth',
+        })
+      );
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'unknown-service',
+      '--name',
+      'unknown',
+      '--data',
+      '{"clientId":"abc123"}'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody.type).toBe('oauth');
+  });
+
+  it('should send connector type for non-managed creation when --connector-type is provided', async () => {
+    let discoveryHit = false;
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      discoveryHit = true;
+      res.json({ types: [{ type: 'oauth' }] });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(
+        fakeConnexClient({
+          id: 'scl_nonmanaged_type',
+          uid: 'uid_nonmanaged_type',
+          type: 'slack',
+        })
+      );
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--name',
+      'my-bot',
+      '--connector-type',
+      'slack',
+      '--data',
+      '{"appId":"A123","appName":"my-bot","clientId":"abc","clientSecret":"secret"}'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(discoveryHit).toBe(false);
+    expect(postBody).toMatchObject({
+      service: 'slack',
+      name: 'my-bot',
+      type: 'slack',
+      data: {
+        appId: 'A123',
+        appName: 'my-bot',
+        clientId: 'abc',
+        clientSecret: 'secret',
+      },
+    });
+  });
+
+  it('should show create input schema when --data has no value', async () => {
+    let discoveryUrl = '';
+    let postHit = false;
+    client.scenario.get('/v1/connect/services/:service', (req, res) => {
+      discoveryUrl = req.url ?? '';
+      res.json({
+        types: [
+          {
+            type: 'slack',
+            createInputSchema: {
+              type: 'object',
+              required: ['clientId', 'clientSecret'],
+              properties: {
+                clientId: { type: 'string' },
+                clientSecret: { type: 'string' },
+              },
+            },
+          },
+        ],
+      });
+    });
+    client.scenario.post('/v1/connect/connectors', (_req, res) => {
+      postHit = true;
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv('connect', 'create', 'slack', '--data');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(postHit).toBe(false);
+    expect(discoveryUrl).toContain('schemas=true');
+    expect(discoveryUrl).toContain(`teamId=${team.id}`);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('--data requires a non-empty JSON object.');
+    expect(stderr).toContain(
+      'Expected --data schema for connector type "slack"'
+    );
+    expect(stderr).toContain('"clientSecret"');
+  });
+
+  it('should show schema for the user-specified type when --data is empty', async () => {
+    let postHit = false;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({
+        types: [
+          {
+            type: 'oauth',
+            createInputSchema: {
+              properties: {
+                clientId: { type: 'string' },
+              },
+            },
+          },
+          {
+            type: 'slack',
+            createInputSchema: {
+              properties: {
+                appId: { type: 'string' },
+              },
+            },
+          },
+        ],
+      });
+    });
+    client.scenario.post('/v1/connect/connectors', (_req, res) => {
+      postHit = true;
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--connector-type',
+      'slack',
+      '--data',
+      ''
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(postHit).toBe(false);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      'Expected --data schema for connector type "slack"'
+    );
+    expect(stderr).toContain('"appId"');
+    expect(stderr).not.toContain('"clientId"');
+  });
+
+  it('should fetch oauth service schema when service discovery returns 404 and no connector type is specified', async () => {
+    const fetchedServices: string[] = [];
+    client.scenario.get('/v1/connect/services/:service', (req, res) => {
+      const service = (req.params as { service: string }).service;
+      fetchedServices.push(service);
+      if (service === 'unknown-service') {
+        res.statusCode = 404;
+        res.json({ error: { code: 'not_found', message: 'Not Found' } });
+        return;
+      }
+      res.json({
+        types: [
+          {
+            type: 'oauth',
+            createInputSchema: {
+              properties: {
+                clientId: { type: 'string' },
+              },
+            },
+          },
+        ],
+      });
+    });
+
+    client.setArgv('connect', 'create', 'unknown-service', '--data');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(fetchedServices).toEqual(['unknown-service', 'oauth']);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      'Expected --data schema for connector type "oauth"'
+    );
+    expect(stderr).toContain('"clientId"');
+  });
+
+  it('should fetch the specified connector type schema when service discovery returns 404', async () => {
+    const fetchedServices: string[] = [];
+    client.scenario.get('/v1/connect/services/:service', (req, res) => {
+      const service = (req.params as { service: string }).service;
+      fetchedServices.push(service);
+      if (service === 'unknown-service') {
+        res.statusCode = 404;
+        res.json({ error: { code: 'not_found', message: 'Not Found' } });
+        return;
+      }
+      res.json({
+        types: [
+          {
+            type: 'slack',
+            createInputSchema: {
+              properties: {
+                appId: { type: 'string' },
+              },
+            },
+          },
+        ],
+      });
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'unknown-service',
+      '--data',
+      '--connector-type',
+      'slack'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(fetchedServices).toEqual(['unknown-service', 'slack']);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      'Expected --data schema for connector type "slack"'
+    );
+    expect(stderr).toContain('"appId"');
+  });
+
+  it('should only show missing data error when no create input schema is found', async () => {
+    const fetchedServices: string[] = [];
+    client.scenario.get('/v1/connect/services/:service', (req, res) => {
+      fetchedServices.push((req.params as { service: string }).service);
+      res.statusCode = 404;
+      res.json({ error: { code: 'not_found', message: 'Not Found' } });
+    });
+
+    client.setArgv('connect', 'create', 'unknown-service', '--data');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(fetchedServices).toEqual(['unknown-service', 'oauth']);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('--data requires a non-empty JSON object.');
+    expect(stderr).not.toContain('Expected --data schema');
+  });
+
+  it('should reject invalid --data JSON before any network call', async () => {
+    let postHit = false;
+    client.scenario.post('/v1/connect/connectors', (_req, res) => {
+      postHit = true;
+      res.json(fakeConnexClient());
+    });
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      postHit = true;
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--name',
+      'my-bot',
+      '--data',
+      '{not json}'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(postHit).toBe(false);
+    await expect(client.stderr).toOutput(
+      'Invalid JSON for --data. Expected a JSON object.'
+    );
+  });
+
+  it('should reject non-object --data before any network call', async () => {
+    let postHit = false;
+    client.scenario.post('/v1/connect/connectors', (_req, res) => {
+      postHit = true;
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--name',
+      'my-bot',
+      '--data',
+      '["clientId"]'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(postHit).toBe(false);
+    await expect(client.stderr).toOutput(
+      'The --data value must be a JSON object.'
+    );
+  });
+
+  it('should reject --connector-type without --data', async () => {
+    let postHit = false;
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      postHit = true;
+      res.json(fakeConnexClient());
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'slack',
+      '--name',
+      'my-bot',
+      '--connector-type',
+      'slack'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(postHit).toBe(false);
+    await expect(client.stderr).toOutput(
+      'The --connector-type flag requires --data.'
+    );
+  });
+
   it('should output JSON when --format=json is used', async () => {
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(

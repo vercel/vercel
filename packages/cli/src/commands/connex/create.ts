@@ -18,6 +18,13 @@ import {
 } from '../../util/connex/upload-icon';
 import type { ConnexClient } from './types';
 
+interface ConnexServiceInfo {
+  types?: Array<{
+    type?: string;
+    createInputSchema?: Record<string, unknown>;
+  }>;
+}
+
 export async function create(
   client: Client,
   args: string[],
@@ -29,6 +36,8 @@ export async function create(
     '--icon'?: string;
     '--background-color'?: string;
     '--accent-color'?: string;
+    '--data'?: string;
+    '--connector-type'?: string;
   }
 ): Promise<number> {
   const formatResult = validateJsonOutput(flags);
@@ -43,6 +52,26 @@ export async function create(
     output.error('Missing service type. Usage: vercel connect create <type>');
     return 1;
   }
+
+  const dataFlag = flags['--data'];
+  const connectorType = flags['--connector-type'];
+  if (connectorType && dataFlag === undefined) {
+    output.error('The --connector-type flag requires --data.');
+    return 1;
+  }
+
+  const hasDataFlag = dataFlag !== undefined;
+  const isDataFlagEmpty = hasDataFlag && dataFlag.trim().length === 0;
+  let nonManagedData: JSONObject | undefined;
+  if (hasDataFlag && !isDataFlagEmpty) {
+    try {
+      nonManagedData = parseDataFlag(dataFlag);
+    } catch (err) {
+      output.error((err as Error).message);
+      return 1;
+    }
+  }
+  const isNonManagedCreate = hasDataFlag;
 
   // Preflight branding validation BEFORE team selection / network / upload.
   // This includes hex format, icon path readability, AND magic-byte check —
@@ -79,6 +108,10 @@ export async function create(
     'Select the team where you want to create this connector'
   );
 
+  if (isDataFlagEmpty) {
+    return await outputMissingDataError(client, serviceType, connectorType);
+  }
+
   // Get app name from flag or interactive prompt
   let name = flags['--name'];
   if (!name) {
@@ -110,14 +143,11 @@ export async function create(
     output.stopSpinner();
   }
 
-  // Generate request code and attempt to create the managed client directly
-  const { verifier, requestCode } = generateRequestCode();
   const link = await getProjectLink(client, client.cwd);
 
   const body: JSONObject = {
     service: serviceType,
     name,
-    request_code: requestCode,
   };
   if (link?.projectId) {
     body.projectId = link.projectId;
@@ -136,25 +166,61 @@ export async function create(
   output.spinner('Setting up...');
   let createdClient: ConnexClient | null = null;
   let browserUrl: string | undefined;
-  try {
-    createdClient = await client.fetch<ConnexClient>(
-      '/v1/connect/connectors/managed?autoinstall=true',
-      { method: 'POST', body }
-    );
-  } catch (err: unknown) {
-    const apiErr = err as { status?: number; registerUrl?: string };
-    if (apiErr.status === 422 && apiErr.registerUrl) {
-      browserUrl = apiErr.registerUrl;
-    } else if (apiErr.status === 404) {
-      output.stopSpinner();
-      output.error(
-        'Connect is not enabled for this team. Contact support to enable it.'
+
+  let verifier: string | undefined;
+  if (isNonManagedCreate) {
+    try {
+      const resolvedConnectorType =
+        connectorType ??
+        (await discoverConnectorType(client, serviceType)) ??
+        'oauth';
+
+      body.data = nonManagedData;
+      body.type = resolvedConnectorType;
+
+      createdClient = await client.fetch<ConnexClient>(
+        '/v1/connect/connectors',
+        { method: 'POST', body }
       );
-      return 1;
-    } else {
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number };
+      if (apiErr.status === 404) {
+        output.stopSpinner();
+        output.error(
+          'Connect is not enabled for this team. Contact support to enable it.'
+        );
+        return 1;
+      }
       output.stopSpinner();
       printError(err);
       return 1;
+    }
+  } else {
+    // Generate request code and attempt to create the managed client directly.
+    const request = generateRequestCode();
+    verifier = request.verifier;
+    body.request_code = request.requestCode;
+
+    try {
+      createdClient = await client.fetch<ConnexClient>(
+        '/v1/connect/connectors/managed?autoinstall=true',
+        { method: 'POST', body }
+      );
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; registerUrl?: string };
+      if (apiErr.status === 422 && apiErr.registerUrl) {
+        browserUrl = apiErr.registerUrl;
+      } else if (apiErr.status === 404) {
+        output.stopSpinner();
+        output.error(
+          'Connect is not enabled for this team. Contact support to enable it.'
+        );
+        return 1;
+      } else {
+        output.stopSpinner();
+        printError(err);
+        return 1;
+      }
     }
   }
   output.stopSpinner();
@@ -186,6 +252,11 @@ export async function create(
     );
 
     output.spinner('Waiting for you to complete setup in the browser...');
+    if (!verifier) {
+      output.stopSpinner();
+      output.error('Missing browser setup verifier.');
+      return 1;
+    }
     const resultFromBrowser = await awaitConnexResult(client, verifier);
     output.stopSpinner();
 
@@ -271,4 +342,104 @@ export async function create(
     );
   }
   return brandingPatchFailed ? 1 : 0;
+}
+
+function parseDataFlag(raw: string): JSONObject {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Invalid JSON for --data. Expected a JSON object.');
+  }
+
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('The --data value must be a JSON object.');
+  }
+
+  return parsed as JSONObject;
+}
+
+async function discoverConnectorType(
+  client: Client,
+  service: string
+): Promise<string | undefined> {
+  const serviceInfo = await fetchServiceInfo(client, service);
+  return defaultConnectorType(serviceInfo);
+}
+
+async function outputMissingDataError(
+  client: Client,
+  service: string,
+  inputConnectorType?: string
+): Promise<number> {
+  const { connectorType, createInputSchema } =
+    await resolveMissingDataSchemaInfo(client, service, inputConnectorType);
+
+  let message = '--data requires a non-empty JSON object.';
+  if (createInputSchema) {
+    message += `\n\nExpected --data schema for connector type "${connectorType}":\n${JSON.stringify(
+      createInputSchema,
+      null,
+      2
+    )}`;
+  }
+
+  output.error(message);
+  return 1;
+}
+
+async function resolveMissingDataSchemaInfo(
+  client: Client,
+  service: string,
+  inputConnectorType?: string
+): Promise<{
+  connectorType: string;
+  createInputSchema?: Record<string, unknown>;
+}> {
+  let serviceInfo = await fetchServiceInfo(client, service);
+  const connectorType =
+    inputConnectorType ?? defaultConnectorType(serviceInfo) ?? 'oauth';
+
+  if (!serviceInfo) {
+    serviceInfo = await fetchServiceInfo(client, inputConnectorType || 'oauth');
+  }
+
+  return {
+    connectorType,
+    createInputSchema: createInputSchemaForType(serviceInfo, connectorType),
+  };
+}
+
+async function fetchServiceInfo(
+  client: Client,
+  service: string
+): Promise<ConnexServiceInfo | undefined> {
+  try {
+    return await client.fetch<ConnexServiceInfo>(
+      `/v1/connect/services/${encodeURIComponent(service)}?schemas=true`
+    );
+  } catch (err) {
+    const apiErr = err as { status?: number };
+    if (apiErr.status === 404) {
+      return undefined;
+    }
+    throw err;
+  }
+}
+
+function defaultConnectorType(
+  serviceInfo: ConnexServiceInfo | undefined
+): string | undefined {
+  const discoveredType = serviceInfo?.types?.[0]?.type;
+  if (typeof discoveredType === 'string' && discoveredType.length > 0) {
+    return discoveredType;
+  }
+}
+
+function createInputSchemaForType(
+  serviceInfo: ConnexServiceInfo | undefined,
+  connectorType: string
+): Record<string, unknown> | undefined {
+  return serviceInfo?.types?.find(typeInfo => typeInfo.type === connectorType)
+    ?.createInputSchema;
 }
