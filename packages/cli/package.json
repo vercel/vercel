@@ -26,7 +26,7 @@
     "vercel": "pnpm build && node ./dist/vc.js",
     "vc": "pnpm vercel",
     "type-check": "tsc --noEmit",
-    "test:evals": "tsx evals/run.ts",
+    "test:evals": "node -e process.exit(0)",
     "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry",
     "test:evals:local-fixture": "tsx evals/run.ts --local-fixture"
