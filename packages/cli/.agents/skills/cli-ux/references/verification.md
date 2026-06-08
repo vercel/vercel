@@ -36,8 +36,8 @@ Before editing shared prompt/output/link helpers, inspect call sites and tests f
 
 - `inputProject()` changes affect `vc link`, setup during `vc deploy`, and any command that calls `setupAndLink()`.
 - `inputRootDirectory()` and `editProjectSettings()` changes affect first-link setup paths from deploy, link, and integration tests.
-- `setupAndLink()` changes affect unlinked flows reached through `ensureLink()`.
-- `linkFolderToProject()` changes affect any command that links before continuing work, including deploy, dev, pull/env, git connect, open, target, and other project-scoped commands.
+- `setupAndLink()` changes affect direct setup callers and unlinked flows reached through `ensureLink()`, including `vc dev`.
+- `linkFolderToProject()` changes affect any command that links before continuing work, including deploy, dev, pull/env, git connect/disconnect, open, target, and other project-scoped commands.
 - `printAlignedLabel()` changes affect deploy result rows and every command adopting aligned rows.
 
 Use `rg` before editing and testing:
