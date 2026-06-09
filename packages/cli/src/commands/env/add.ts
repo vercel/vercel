@@ -178,36 +178,8 @@ function formatEnvironmentTargets(
     .join(', ');
 }
 
-function environmentLabel(
-  envTargets: string[]
-): 'Environment' | 'Environments' {
-  return envTargets.length === 1 ? 'Environment' : 'Environments';
-}
-
-function typeLabel(type: EnvType): 'Encrypted' | 'Sensitive' {
-  return type === 'sensitive' ? 'Sensitive' : 'Encrypted';
-}
-
-function printEnvAddPreview(
-  link: ProjectLinked,
-  envName: string,
-  envTargets: string[],
-  envGitBranch: string | undefined,
-  customEnvironments: CustomEnvironment[]
-): void {
-  output.print('\n');
-  printAlignedLabel('Project', projectLabel(link));
-  printAlignedLabel('Variable', envName);
-  if (envTargets.length > 0) {
-    printAlignedLabel(
-      environmentLabel(envTargets),
-      formatEnvironmentTargets(envTargets, customEnvironments)
-    );
-  }
-  if (envGitBranch) {
-    printAlignedLabel('Branch', envGitBranch);
-  }
-  output.print('\n');
+function typeLabel(type: EnvType): 'Non-sensitive' | 'Sensitive' {
+  return type === 'sensitive' ? 'Sensitive' : 'Non-sensitive';
 }
 
 function printEnvAddResult(
@@ -220,10 +192,10 @@ function printEnvAddResult(
   force: boolean
 ): void {
   output.print('\n');
-  printAlignedLabel(force ? 'Overrode' : 'Added', envName);
+  printAlignedLabel(force ? 'Overrode' : 'Added', envName, { gutter: '✓' });
   printAlignedLabel('Project', projectLabel(link));
   printAlignedLabel(
-    environmentLabel(envTargets),
+    'Environments',
     formatEnvironmentTargets(envTargets, customEnvironments)
   );
   if (envGitBranch) {
@@ -730,17 +702,8 @@ export default async function add(client: Client, argv: string[]) {
     isSensitive = true;
   } else {
     if (!client.nonInteractive) {
-      printEnvAddPreview(
-        link,
-        envName,
-        envTargets,
-        envGitBranch,
-        customEnvironments
-      );
       output.print(
-        `  ${chalk.dim(
-          'Sensitive values cannot be read later from the dashboard or CLI.'
-        )}\n`
+        `  ${chalk.dim('Sensitive values cannot be read later.')}\n`
       );
     }
     isSensitive = await client.input.confirm(SENSITIVE_SECRET_PROMPT, true);
@@ -753,21 +716,18 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  if (!client.nonInteractive && skipSensitivePrompt) {
-    printEnvAddPreview(
-      link,
-      envName,
-      envTargets,
-      envGitBranch,
-      customEnvironments
+  if (
+    !client.nonInteractive &&
+    skipSensitivePrompt &&
+    policyOn &&
+    !isSensitive &&
+    envTargets.length === 0
+  ) {
+    output.print(
+      `  ${chalk.dim(
+        'Team policy limits non-sensitive values to Development.'
+      )}\n`
     );
-    if (policyOn && !isSensitive && envTargets.length === 0) {
-      output.print(
-        `  ${chalk.dim(
-          'Team policy limits non-sensitive values to Development.'
-        )}\n`
-      );
-    }
   }
 
   if (forceSensitive && envTargets.includes('development')) {

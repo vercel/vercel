@@ -96,7 +96,7 @@ describe('env add', () => {
     });
 
     describe('sensitive prompt', () => {
-      it('prints resolved preview and compact result without echoing the value', async () => {
+      it('prints compact result without redundant preview rows or echoing the value', async () => {
         const secretValue = 'super-secret-output-guard';
 
         client.setArgv('env', 'add', 'TRANSCRIPT_VAR', 'preview', 'branchName');
@@ -104,30 +104,36 @@ describe('env add', () => {
 
         await expect(client.stderr).toOutput('Store as sensitive?');
         const previewOutput = stripAnsi(client.stderr.getFullOutput());
-        expect(previewOutput).toMatch(
-          /\n\s{0,2}Project\s+\S+\/vercel-env-pull\n\s{0,2}Variable\s+TRANSCRIPT_VAR\n\s{0,2}Environment\s+Preview\n\s{0,2}Branch\s+branchName\n/
-        );
         expect(previewOutput).toContain(
+          'Sensitive values cannot be read later.'
+        );
+        expect(previewOutput).not.toContain(
           'Sensitive values cannot be read later from the dashboard or CLI.'
+        );
+        expect(previewOutput).not.toMatch(
+          /\n\s{0,2}(Project|Variable|Environments|Branch)\s+/
         );
 
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput('Value?');
         client.stdin.write(`${secretValue}\n`);
 
-        await expect(client.stderr).toOutput('Added       TRANSCRIPT_VAR');
+        await expect(client.stderr).toOutput(
+          '✓ Added           TRANSCRIPT_VAR'
+        );
         await expect(exitCodePromise).resolves.toBe(0);
 
         const fullOutput = stripAnsi(client.stderr.getFullOutput());
         expect(fullOutput).toMatch(
-          /\n\s{0,2}Added\s+TRANSCRIPT_VAR\n\s{0,2}Project\s+\S+\/vercel-env-pull\n\s{0,2}Environment\s+Preview\n\s{0,2}Branch\s+branchName\n\s{0,2}Type\s+Encrypted\n/
+          /\n✓ Added\s+TRANSCRIPT_VAR\n\s{0,2}Project\s+\S+\/vercel-env-pull\n\s{0,2}Environments\s+Preview\n\s{0,2}Branch\s+branchName\n\s{0,2}Type\s+Non-sensitive\n/
         );
+        expect(fullOutput).not.toMatch(/\n\s{0,2}Variable\s+TRANSCRIPT_VAR\n/);
         expect(fullOutput).not.toContain(secretValue);
         expect(fullOutput).not.toMatch(
           /Added Environment Variable|✅|successfully/
         );
         expect(fullOutput).not.toMatch(
-          /^[▲✓] (Project|Variable|Environment|Branch|Type|Added)\s/m
+          /^[▲✓] (Project|Variable|Environments|Branch|Type)\s/m
         );
       });
 
@@ -650,7 +656,9 @@ describe('env add', () => {
         await expect(client.stderr).toOutput('Value?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Value is empty');
-        await expect(client.stderr).toOutput('Added       EMPTY_VALUE_YES');
+        await expect(client.stderr).toOutput(
+          '✓ Added           EMPTY_VALUE_YES'
+        );
         await expect(exitCodePromise).resolves.toBe(0);
       });
     });
@@ -860,12 +868,12 @@ describe('env add', () => {
           await expect(client.stderr).toOutput('Value?');
           client.stdin.write('testvalue\n');
           await expect(client.stderr).toOutput(
-            'Added       REDIS_CONNECTION_STRING'
+            '✓ Added           REDIS_CONNECTION_STRING'
           );
-          await expect(client.stderr).toOutput('Project     ');
-          await expect(client.stderr).toOutput('Environment Preview');
-          await expect(client.stderr).toOutput('Branch      branchName');
-          await expect(client.stderr).toOutput('Type        Encrypted');
+          await expect(client.stderr).toOutput('Project         ');
+          await expect(client.stderr).toOutput('Environments    Preview');
+          await expect(client.stderr).toOutput('Branch          branchName');
+          await expect(client.stderr).toOutput('Type            Non-sensitive');
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "env"').toEqual(0);
         });
@@ -1208,7 +1216,9 @@ describe('env add', () => {
 
         await expect(exitCodePromise).resolves.toBe(0);
         expect(logSpy).not.toHaveBeenCalled();
-        expect(client.stderr.getFullOutput()).toContain('Environment Preview');
+        expect(client.stderr.getFullOutput()).toContain(
+          'Environments    Preview'
+        );
         expect(client.stderr.getFullOutput()).not.toContain('my-secret-value');
 
         exitSpy.mockRestore();
@@ -1229,7 +1239,9 @@ describe('env add', () => {
 
         await expect(exitCodePromise).resolves.toBe(0);
         expect(logSpy).not.toHaveBeenCalled();
-        expect(client.stderr.getFullOutput()).toContain('Environment Preview');
+        expect(client.stderr.getFullOutput()).toContain(
+          'Environments    Preview'
+        );
         expect(client.stderr.getFullOutput()).not.toContain('value-via-stdin');
 
         exitSpy.mockRestore();
