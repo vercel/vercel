@@ -7,6 +7,14 @@ import * as nativeInstall from '../../../src/util/native-install';
 
 describe('getUpdateCommand', () => {
   const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
+  const originalPlatform = process.platform;
+
+  function setPlatform(platform: NodeJS.Platform) {
+    Object.defineProperty(process, 'platform', {
+      value: platform,
+      configurable: true,
+    });
+  }
 
   afterEach(() => {
     if (originalVercelVcNative === undefined) {
@@ -14,6 +22,7 @@ describe('getUpdateCommand', () => {
     } else {
       process.env.VERCEL_VC_NATIVE = originalVercelVcNative;
     }
+    setPlatform(originalPlatform);
   });
 
   it('should detect update command', async () => {
@@ -40,8 +49,9 @@ describe('getUpdateCommand', () => {
     methodSpy.mockRestore();
   });
 
-  it('should self-upgrade for standalone native installs', async () => {
+  it('should self-upgrade for standalone native installs on unix', async () => {
     process.env.VERCEL_VC_NATIVE = '1';
+    setPlatform('linux');
     const methodSpy = vi
       .spyOn(nativeInstall, 'getNativeInstallMethod')
       .mockReturnValue('standalone');
@@ -49,6 +59,19 @@ describe('getUpdateCommand', () => {
     const updateCommand = await getUpdateCommand();
 
     expect(updateCommand).toBe('vercel upgrade');
+    methodSpy.mockRestore();
+  });
+
+  it('uses the package manager for standalone native installs on windows', async () => {
+    process.env.VERCEL_VC_NATIVE = '1';
+    setPlatform('win32');
+    const methodSpy = vi
+      .spyOn(nativeInstall, 'getNativeInstallMethod')
+      .mockReturnValue('standalone');
+
+    const updateCommand = await getUpdateCommand();
+
+    expect(updateCommand).toContain('@vercel/vc-native@latest');
     methodSpy.mockRestore();
   });
 

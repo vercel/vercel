@@ -8,6 +8,14 @@ const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
 describe('upgrade', () => {
   const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
+  const originalPlatform = process.platform;
+
+  function setPlatform(platform: NodeJS.Platform) {
+    Object.defineProperty(process, 'platform', {
+      value: platform,
+      configurable: true,
+    });
+  }
 
   afterEach(() => {
     writeConfigSpy.mockClear();
@@ -16,6 +24,7 @@ describe('upgrade', () => {
     } else {
       process.env.VERCEL_VC_NATIVE = originalVercelVcNative;
     }
+    setPlatform(originalPlatform);
   });
 
   describe('--help', () => {
@@ -80,6 +89,7 @@ describe('upgrade', () => {
 
     it('prints the self-upgrade command for standalone vc-native installs', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
+      setPlatform('linux');
       const methodSpy = vi
         .spyOn(nativeInstall, 'getNativeInstallMethod')
         .mockReturnValue('standalone');
@@ -142,6 +152,7 @@ describe('upgrade', () => {
 
     it('outputs the self-upgrade command for standalone vc-native installs', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
+      setPlatform('linux');
       const methodSpy = vi
         .spyOn(nativeInstall, 'getNativeInstallMethod')
         .mockReturnValue('standalone');

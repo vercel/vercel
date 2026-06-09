@@ -34,8 +34,16 @@ const getUpdateCommandMock = vi.mocked(getUpdateCommand);
 
 describe('executeUpgrade', () => {
   const spies: Array<{ mockRestore: () => void }> = [];
+  const originalPlatform = process.platform;
   let isNativeSpy: ReturnType<typeof vi.spyOn>;
   let standaloneSpy: ReturnType<typeof vi.spyOn>;
+
+  function setPlatform(platform: NodeJS.Platform) {
+    Object.defineProperty(process, 'platform', {
+      value: platform,
+      configurable: true,
+    });
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,6 +60,7 @@ describe('executeUpgrade', () => {
     while (spies.length) {
       spies.pop()?.mockRestore();
     }
+    setPlatform(originalPlatform);
     vi.clearAllMocks();
   });
 
@@ -241,7 +250,8 @@ describe('executeUpgrade', () => {
     );
   });
 
-  it('should use the in-process updater for standalone native installs', async () => {
+  it('should use the in-process updater for standalone native installs on unix', async () => {
+    setPlatform('linux');
     isNativeSpy.mockReturnValue(true);
     spies.push(
       vi
