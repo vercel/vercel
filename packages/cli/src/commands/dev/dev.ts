@@ -2,10 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import {
-  isExperimentalService,
-  type ExperimentalService,
-} from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 
 import DevServer, { DevCommandExitError } from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -155,20 +152,12 @@ export default async function dev(
       .env;
   }
 
-  let services: ExperimentalService[] | undefined;
+  let services: Service[] | undefined;
   let useImplicitServicesEnvInjection = true;
   const servicesResult = await tryDetectServices(cwd);
   const foundServices = servicesResult && servicesResult.services.length > 0;
   if (foundServices) {
-    // `vercel dev` only supports `experimentalServices` services for now.
-    services = servicesResult.services.filter(isExperimentalService);
-    if (servicesResult.services.length !== services.length) {
-      output.error(
-        `${getCommandName('dev')} supports only \`experimentalServices\`.`
-      );
-      return 1;
-    }
-
+    services = servicesResult.services;
     displayDetectedServices(services);
     useImplicitServicesEnvInjection = servicesResult.useImplicitEnvInjection;
   }
