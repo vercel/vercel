@@ -1,5 +1,12 @@
 # vercel
 
+## 54.10.3
+
+### Patch Changes
+
+- 4f82914: Bump the embedded `sandbox` CLI to 3.1.2 (`@vercel/sandbox` 2.1.1) to fix `vc sandbox` commands crashing with a segmentation fault.
+  - @vercel/node@5.8.14
+
 ## 54.10.2
 
 ### Patch Changes
