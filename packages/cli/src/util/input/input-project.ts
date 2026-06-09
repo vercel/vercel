@@ -12,6 +12,30 @@ type LinkPromptContext = {
   directory?: string;
 };
 
+type ProjectDecision = 'create' | 'existing';
+
+async function inputProjectDecision(
+  client: Client,
+  defaultDecision: ProjectDecision
+): Promise<ProjectDecision> {
+  const createChoice = {
+    name: 'Create new project',
+    value: 'create' as const,
+  };
+  const existingChoice = {
+    name: 'Link existing project',
+    value: 'existing' as const,
+  };
+
+  return await client.input.select<ProjectDecision>({
+    message: 'Project?',
+    choices:
+      defaultDecision === 'existing'
+        ? [existingChoice, createChoice]
+        : [createChoice, existingChoice],
+  });
+}
+
 export default async function inputProject(
   client: Client,
   org: Org,
@@ -64,11 +88,11 @@ export default async function inputProject(
   let shouldLinkProject;
 
   if (!detectedProject) {
-    // did not auto-detect a project to link
-    shouldLinkProject = await client.input.confirm(
-      `Link to existing project?`,
-      false
+    const decision = await inputProjectDecision(
+      client,
+      skipAutoDetect ? 'existing' : 'create'
     );
+    shouldLinkProject = decision === 'existing';
   } else {
     // auto-detected a project to link
     output.print(`  ${chalk.bold('Found existing project')}\n`);
@@ -81,10 +105,8 @@ export default async function inputProject(
     }
 
     // user doesn't want to link the auto-detected project
-    shouldLinkProject = await client.input.confirm(
-      `Link to different existing project?`,
-      true
-    );
+    const decision = await inputProjectDecision(client, 'existing');
+    shouldLinkProject = decision === 'existing';
   }
 
   if (shouldLinkProject) {

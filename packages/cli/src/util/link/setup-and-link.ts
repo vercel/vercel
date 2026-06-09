@@ -112,12 +112,12 @@ const CHECKBOX_INSTRUCTIONS = [
   chalk.dim('('),
   chalk.cyan('<space>'),
   chalk.dim(' select, '),
+  chalk.cyan('<enter>'),
+  chalk.dim(' confirm, '),
   chalk.cyan('<a>'),
   chalk.dim(' toggle all, '),
   chalk.cyan('<i>'),
-  chalk.dim(' invert, '),
-  chalk.cyan('<enter>'),
-  chalk.dim(' confirm)'),
+  chalk.dim(' invert)'),
 ].join('');
 
 function printCrossTeamSearchScope({
@@ -547,9 +547,13 @@ export default async function setupAndLink(
 
     if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
       if (crossTeamMatches.length === 0) {
-        output.print(
-          `  Searched    ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available without SSO\n  No matching projects found\n`
+        printAlignedLabel(
+          'Searched',
+          `${searchedTeamSlugs.length} ${
+            searchedTeamSlugs.length === 1 ? 'team' : 'teams'
+          } available without SSO`
         );
+        output.print('  No matching projects found\n');
       }
       const limitedTeamMatches = await searchSelectedLimitedTeams({
         client,

@@ -1639,8 +1639,8 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link to existing project?');
-        client.stdin.write('no\n');
+        await expect(client.stderr).toOutput('Project?');
+        client.stdin.write('\n');
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${nameOption})`);
@@ -1676,8 +1676,8 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Link to existing project?');
-        client.stdin.write('no\n');
+        await expect(client.stderr).toOutput('Project?');
+        client.stdin.write('\n');
 
         // The one expecation that the test is actually about!
         await expect(client.stderr).toOutput(`Name? (${directoryName})`);

@@ -77,8 +77,8 @@ async function setupProject(
   await waitForPrompt(process, /Which team[^?]*\?/);
   process.stdin?.write('\n');
 
-  await waitForPrompt(process, 'Link to existing project?');
-  process.stdin?.write('no\n');
+  await waitForPrompt(process, 'Project?');
+  process.stdin?.write('\n');
 
   await waitForPrompt(process, 'Name?');
   process.stdin?.write(`${projectName}\n`);
@@ -343,8 +343,8 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
   await waitForPrompt(now, 'Which team?');
   now.stdin?.write('\n');
 
-  await waitForPrompt(now, 'Link to existing project?');
-  now.stdin?.write('no\n');
+  await waitForPrompt(now, 'Project?');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, `Name? (${projectName})`);
   now.stdin?.write(`\n`);
@@ -1013,8 +1013,8 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+  await waitForPrompt(vc, 'Project?');
+  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
@@ -1124,8 +1124,8 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+  await waitForPrompt(vc, 'Project?');
+  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write(`${projectName}\n`);
@@ -1549,8 +1549,8 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   await waitForPrompt(vc, 'Set up');
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('n\n');
+  await waitForPrompt(vc, 'Project?');
+  vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Name?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Customize settings?');

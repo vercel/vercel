@@ -917,8 +917,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('awesome-app\n');
@@ -963,6 +963,8 @@ describe('link', () => {
     expect(fullOutput).not.toContain(
       'Would you like to pull environment variables now?'
     );
+    expect(fullOutput).not.toContain('Link to existing project?');
+    expect(fullOutput).not.toContain('Link to different existing project?');
   });
 
   it('should write vercel.json for inferred multi-service layouts', async () => {
@@ -990,8 +992,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('multi-service-app\n');
@@ -1063,8 +1065,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('declined-multi-service-app\n');
@@ -1123,8 +1125,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('single-fastapi-app\n');
@@ -1202,8 +1204,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('selected-directory-multi-service-app\n');
@@ -1289,8 +1291,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('nested-multi-service-app\n');
@@ -1356,8 +1358,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('invalid-selected-root-config-app\n');
@@ -1408,8 +1410,8 @@ describe('link', () => {
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
+    await expect(client.stderr).toOutput('Project?');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Name?');
     client.stdin.write('services-with-builds\n');
@@ -1959,8 +1961,8 @@ describe('link', () => {
       client.stdin.write('\n');
 
       // inputProject runs with skipAutoDetect, so no duplicate search
-      await expect(client.stderr).toOutput('Link to existing project?');
-      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Project?');
+      client.stdin.write('\n');
 
       // Mock pagination returns {}, so hasMoreProjects is true → text input
       await expect(client.stderr).toOutput('Existing project name?');
@@ -1994,8 +1996,8 @@ describe('link', () => {
       client.stdin.write('\n');
 
       // inputProject runs auto-detect (skipAutoDetect=false), finds nothing
-      await expect(client.stderr).toOutput('Link to existing project?');
-      client.stdin.write('n\n');
+      await expect(client.stderr).toOutput('Project?');
+      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Name?');
       client.stdin.write(`${basename(cwd)}\n`);
@@ -2484,7 +2486,7 @@ describe('link', () => {
         'Select teams that require SSO to search'
       );
       expect(stripAnsi(client.stderr.getFullOutput())).toContain(
-        '<space> select, <a> toggle all, <i> invert, <enter> confirm'
+        '<space> select, <enter> confirm, <a> toggle all, <i> invert'
       );
       client.stdin.write(' \n');
 
