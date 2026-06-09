@@ -98,13 +98,20 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliSubcommandCreate(subcommandOriginal);
 
         const createFlagsSpec = getFlagsSpecification(createSubcommand.options);
-        const createParsedArgs = parseArguments(subArgs, createFlagsSpec);
+        const createParsedArgs = parseArguments(
+          normalizeCreateDataArgs(subArgs),
+          createFlagsSpec
+        );
         telemetry.trackCliOptionIcon(createParsedArgs.flags['--icon']);
         telemetry.trackCliOptionBackgroundColor(
           createParsedArgs.flags['--background-color']
         );
         telemetry.trackCliOptionAccentColor(
           createParsedArgs.flags['--accent-color']
+        );
+        telemetry.trackCliOptionData(createParsedArgs.flags['--data']);
+        telemetry.trackCliOptionConnectorType(
+          createParsedArgs.flags['--connector-type']
         );
         return await create(
           client,
@@ -328,4 +335,20 @@ export default async function connex(client: Client): Promise<number> {
     printError(err);
     return 1;
   }
+}
+
+function normalizeCreateDataArgs(args: string[]): string[] {
+  const normalized: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    normalized.push(arg);
+
+    if (arg === '--data') {
+      const next = args[i + 1];
+      if (next === undefined || next.startsWith('-')) {
+        normalized.push('');
+      }
+    }
+  }
+  return normalized;
 }

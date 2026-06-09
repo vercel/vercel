@@ -280,8 +280,8 @@ jobs:
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
 
       - name: install uv@0.10.11
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
@@ -398,8 +398,8 @@ jobs:
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
 
       - name: Install uv
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0

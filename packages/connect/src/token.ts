@@ -1,8 +1,35 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectAuthorizationDetail } from './authorization-details.js';
 
+export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer';
+
+export type ConnectTokenSubject =
+  | ConnectAppTokenSubject
+  | ConnectUserTokenSubject
+  | ConnectJwtBearerTokenSubject;
+
+export interface ConnectAppTokenSubject {
+  type: 'app';
+}
+
+export interface ConnectUserTokenSubject {
+  type: 'user';
+  id: string;
+  issuer?: string;
+}
+
+export interface ConnectJwtBearerTokenSubject {
+  type: 'jwt-bearer';
+  sub: string;
+  /** Defaults to the connector's OAuth client id. */
+  iss?: string;
+  /** Defaults to the connector's OAuth token endpoint. */
+  aud?: string;
+  additionalClaims?: Record<string, unknown>;
+}
+
 export interface ConnectTokenParams {
-  subject: { type: 'app' } | { type: 'user'; id: string; issuer?: string };
+  subject: ConnectTokenSubject;
   installationId?: string;
   audience?: string[];
   scopes?: string[];
@@ -140,6 +167,37 @@ export async function getTokenResponse(
   cache.set(cacheKey, { response: data, lastUsed: Date.now() });
 
   return data;
+}
+
+export async function revokeToken(
+  connector: string,
+  params: {
+    subject: ConnectTokenSubject;
+    installationId?: string;
+  },
+  options?: ConnectOptions
+): Promise<void> {
+  const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
+  const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
+
+  const response = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${vercelToken}`,
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to revoke token'
+    );
+  }
+
+  cache.clear();
 }
 
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;

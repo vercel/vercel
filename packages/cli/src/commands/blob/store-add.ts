@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import { envPullCommandLogic } from '../env/pull';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { addStoreSubcommand } from './command';
+import { createStoreSubcommand } from './command';
 import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
 import { printError } from '../../util/error';
 import { parseAccessFlag } from '../../util/blob/access';
@@ -25,7 +25,9 @@ export default async function addStore(
     },
   });
 
-  const flagsSpecification = getFlagsSpecification(addStoreSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(
+    createStoreSubcommand.options
+  );
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {

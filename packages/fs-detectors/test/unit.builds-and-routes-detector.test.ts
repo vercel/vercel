@@ -156,6 +156,67 @@ describe('Test `detectBuilders`', () => {
     );
   });
 
+  it('should use services builders when experimentalServicesV2 is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, services, errors, useImplicitEnvInjection } =
+      await detectBuilders([], undefined, {
+        experimentalServicesV2: {
+          web: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'server.py',
+            rewrites: [{ source: '/(.*)', destination: '/$1' }],
+          },
+          api: {
+            root: '.',
+            runtime: 'python',
+            entrypoint: 'jobs/cleanup.py',
+            rewrites: [{ source: '/api/(.*)', destination: '/$1' }],
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(useImplicitEnvInjection).toBe(false);
+    expect(services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'web',
+        }),
+        expect.objectContaining({
+          name: 'api',
+        }),
+      ])
+    );
+    expect(services?.find(service => service.name === 'web')?.routePrefix).toBe(
+      undefined
+    );
+    expect(services?.find(service => service.name === 'api')?.routePrefix).toBe(
+      undefined
+    );
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+  });
+
   it('should error when the services framework is selected without experimentalServices', async () => {
     const { builders, errors, defaultRoutes, rewriteRoutes } =
       await detectBuilders(['package.json'], undefined, {
@@ -269,6 +330,52 @@ describe('Test `detectBuilders`', () => {
     } finally {
       rmSync(workPath, { recursive: true, force: true });
     }
+  });
+
+  it('should warn when api/ files exist but no service covers them', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'api_dir_ignored' }),
+      ])
+    );
+  });
+
+  it('should not warn when a service explicitly covers the api/ directory', async () => {
+    const { warnings } = await detectBuilders(
+      ['api/index.py', 'pages/index.js', 'package.json', 'requirements.txt'],
+      undefined,
+      {
+        experimentalServices: {
+          frontend: {
+            framework: 'nextjs',
+            entrypoint: '.',
+            routePrefix: '/',
+          },
+          backend: {
+            entrypoint: 'api/index.py',
+            routePrefix: '/api',
+          },
+        },
+        projectSettings: { framework: null },
+      }
+    );
+
+    expect(warnings.every(w => w.code !== 'api_dir_ignored')).toBe(true);
   });
 
   it('should never select now.json src', async () => {
@@ -784,6 +891,67 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors).toHaveLength(0);
     expect(builders.length).toBe(1);
+  });
+
+  it('rejects maxDuration above the default 900s limit', async () => {
+    const functions = { 'pages/index.ts': { maxDuration: 1200 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toHaveLength(0);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  describe('with VERCEL_CLI_SKIP_MAX_DURATION_LIMIT=1', () => {
+    beforeEach(() => {
+      process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT;
+    });
+
+    it('allows maxDuration above 900s, deferring to server-side validation', async () => {
+      const pkg = {
+        scripts: { build: 'next build' },
+        dependencies: { next: '9.0.0' },
+      };
+      const functions = { 'pages/api/long.ts': { maxDuration: 1200 } };
+      const files = ['package.json', 'pages/index.js', 'pages/api/long.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+        functions,
+      });
+
+      expect(errors).toHaveLength(0);
+      expect(builders.length).toBe(1);
+    });
+
+    it('still rejects a non-integer maxDuration', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 1.5 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
+
+    it('still rejects a maxDuration below 1', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 0 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
   });
 
   it('invalid function memory', async () => {

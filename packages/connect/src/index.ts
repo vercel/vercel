@@ -1,6 +1,7 @@
 export {
   getToken,
   getTokenResponse,
+  revokeToken,
   ConnectError,
   NoValidTokenError,
   UserAuthorizationRequiredError,
@@ -9,6 +10,7 @@ export {
   type ConnectOptions,
   type ConnectTokenParams,
   type ConnectTokenResponse,
+  type ConnectTokenSubject,
   type ConnectVendorErrorPayload,
 } from './token.js';
 

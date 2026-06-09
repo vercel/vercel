@@ -209,6 +209,7 @@ interface ResolveConfiguredServiceOptions {
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
 }
+
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -969,7 +970,7 @@ export async function resolveAllConfiguredServices(
   const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
-    const serviceConfig = services[name];
+    const serviceConfig = services[name] as ExperimentalServiceConfig;
 
     const validationError = validateServiceConfig(name, serviceConfig, options);
     if (validationError) {
