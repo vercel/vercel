@@ -14,6 +14,22 @@ The init object for the `awsCredentialsProvider` function.
 
 ## Properties
 
+### audience?
+
+> `optional` **audience?**: `string`
+
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:27](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L27)
+
+Optional audience to set on the exchanged token.
+
+#### Default
+
+```ts
+undefined;
+```
+
+---
+
 ### clientConfig?
 
 > `optional` **clientConfig?**: `any`
@@ -51,6 +67,22 @@ The duration, in seconds, of the role session. Defaults to 3600 seconds.
 #### Inherited from
 
 `Omit.durationSeconds`
+
+---
+
+### jti?
+
+> `optional` **jti?**: `string`
+
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:32](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L32)
+
+Optional JTI to set on the exchanged token.
+
+#### Default
+
+```ts
+undefined;
+```
 
 ---
 

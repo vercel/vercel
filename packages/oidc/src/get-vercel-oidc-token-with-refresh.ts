@@ -1,10 +1,15 @@
+import {
+  exchangeVercelOidcToken,
+  type ExchangeVercelOidcTokenOptions,
+} from './exchange-vercel-oidc-token';
 import { getVercelOidcTokenSync } from './get-vercel-oidc-token-sync';
 import { VercelOidcTokenError } from './token-error';
 
 /**
  * Options for getting the Vercel OIDC token.
  */
-export interface GetVercelOidcTokenOptions {
+export interface GetVercelOidcTokenOptions
+  extends Omit<ExchangeVercelOidcTokenOptions, 'token'> {
   /**
    * Optional team ID (team_*) or slug to use for token refresh.
    * When provided, this team will be used instead of reading from `.vercel/project.json`.
@@ -96,6 +101,14 @@ export async function getVercelOidcToken(
       throw new VercelOidcTokenError(message);
     }
     throw error;
+  }
+
+  if (options?.audience) {
+    token = await exchangeVercelOidcToken({
+      token,
+      audience: options.audience,
+      jti: options.jti,
+    });
   }
   return token;
 }

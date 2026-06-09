@@ -4,20 +4,20 @@
 
 # Function: awsCredentialsProvider()
 
-> **awsCredentialsProvider**(`init`): `AwsCredentialIdentityProvider`
+> **awsCredentialsProvider**(`audience`): `AwsCredentialIdentityProvider`
 
-Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:61](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L61)
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:76](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L76)
 
 Obtains the Vercel OIDC token and creates an AWS credential provider function
 that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
 
 ## Parameters
 
-### init
+### audience
 
 [`AwsCredentialsProviderInit`](../interfaces/AwsCredentialsProviderInit.md)
 
-The initialization object.
+Optional audience to set on the exchanged token.
 
 ## Returns
 
@@ -33,6 +33,8 @@ import { awsCredentialsProvider } from '@vercel/functions/oidc';
 
 const s3Client = new s3.S3Client({
   credentials: awsCredentialsProvider({
+    audience: 'https://sts.amazonaws.com',
+    jti: secureRandomString(),
     roleArn: 'arn:aws:iam::1234567890:role/RoleA',
     clientConfig: { region: 'us-west-2' },
     clientPlugins: [addFooHeadersPlugin],

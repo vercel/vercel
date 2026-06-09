@@ -1,7 +1,7 @@
 import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import type { FromWebTokenInit } from '@aws-sdk/credential-provider-web-identity';
 import { fromWebToken } from '@aws-sdk/credential-provider-web-identity';
-import { getVercelOidcTokenSync } from '@vercel/oidc';
+import { getVercelOidcToken } from '@vercel/oidc';
 
 /**
  * The init object for the `awsCredentialsProvider` function.
@@ -19,12 +19,25 @@ import { getVercelOidcTokenSync } from '@vercel/oidc';
  */
 
 export interface AwsCredentialsProviderInit
-  extends Omit<FromWebTokenInit, 'webIdentityToken'> {}
+  extends Omit<FromWebTokenInit, 'webIdentityToken'> {
+  /**
+   * Optional audience to set on the exchanged token.
+   * @default undefined
+   */
+  audience?: string;
+  /**
+   * Optional JTI to set on the exchanged token.
+   * @default undefined
+   */
+  jti?: string;
+}
 
 /**
  * Obtains the Vercel OIDC token and creates an AWS credential provider function
  * that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
  *
+ * @param {string} audience - Optional audience to set on the exchanged token.
+ * @param {string} jti - Optional JTI to set on the exchanged token.
  * @param {AwsCredentialsProviderInit} init - The initialization object.
  * @param {string} init.roleArn - ARN of the role that the caller is assuming.
  * @param {Object} [init.clientConfig] - Custom STS client configurations overriding the default ones.
@@ -45,6 +58,8 @@ export interface AwsCredentialsProviderInit
  *
  * const s3Client = new s3.S3Client({
  *   credentials: awsCredentialsProvider({
+ *     audience: 'https://sts.amazonaws.com',
+ *     jti: secureRandomString(),
  *     roleArn: "arn:aws:iam::1234567890:role/RoleA",
  *     clientConfig: { region: "us-west-2" },
  *     clientPlugins: [addFooHeadersPlugin],
@@ -58,13 +73,15 @@ export interface AwsCredentialsProviderInit
  * });
  * ```
  */
-export function awsCredentialsProvider(
-  init: AwsCredentialsProviderInit
-): AwsCredentialIdentityProvider {
+export function awsCredentialsProvider({
+  audience,
+  jti,
+  ...init
+}: AwsCredentialsProviderInit): AwsCredentialIdentityProvider {
   return async () => {
     return fromWebToken({
       ...init,
-      webIdentityToken: getVercelOidcTokenSync(),
+      webIdentityToken: await getVercelOidcToken({ audience, jti }),
     })();
   };
 }
