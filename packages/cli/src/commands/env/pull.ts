@@ -3,9 +3,7 @@ import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import type Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
 import param from '../../util/output/param';
-import stamp from '../../util/output/stamp';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import {
   type EnvRecordsSource,
@@ -36,6 +34,7 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -235,7 +234,6 @@ export async function envPullCommandLogic(
 
   output.log(downloadMessage);
 
-  const pullStamp = stamp();
   output.spinner('Downloading');
 
   const pullId = deploymentId || link.project.id;
@@ -291,13 +289,11 @@ export async function envPullCommandLogic(
     isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*');
   }
 
-  output.print(
-    `${prependEmoji(
-      `${exists ? 'Updated' : 'Created'} ${chalk.bold(filename)} file ${
-        isGitIgnoreUpdated ? 'and added it to .gitignore' : ''
-      } ${chalk.gray(pullStamp())}`,
-      emoji('success')
-    )}\n`
+  output.print('\n');
+  printAlignedLabel(
+    exists ? 'Updated' : 'Created',
+    `${filename} file${isGitIgnoreUpdated ? ' and added it to .gitignore' : ''}`,
+    { gutter: '✓' }
   );
 }
 

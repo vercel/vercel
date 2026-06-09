@@ -67,7 +67,7 @@ export function buildDeltaString(
   deltaString += chalk.red(addDeltaSection('-', removed));
 
   return deltaString
-    ? chalk.gray('Changes:\n') + deltaString + '\n'
+    ? chalk.gray('  Changes:\n') + deltaString + '\n'
     : deltaString;
 }
 
@@ -80,7 +80,7 @@ function addDeltaSection(
   return (
     arr
       .sort()
-      .map(item => `${prefix} ${item}${changed ? ' (Updated)' : ''}`)
+      .map(item => `  ${prefix} ${item}${changed ? ' (Updated)' : ''}`)
       .join('\n') + '\n'
   );
 }

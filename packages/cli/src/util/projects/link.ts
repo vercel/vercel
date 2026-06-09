@@ -479,7 +479,7 @@ export async function linkFolderToProject(
   await addToGitIgnore(path);
 
   output.print('\n');
-  printAlignedLabel(resultLabel, `${orgSlug}/${projectName}`);
+  printAlignedLabel(resultLabel, `${orgSlug}/${projectName}`, { gutter: '✓' });
 
   if (!pullEnv) {
     return;

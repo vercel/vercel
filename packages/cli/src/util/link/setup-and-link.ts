@@ -97,15 +97,6 @@ function formatMatchSource(match: CrossTeamMatch): string {
   return match.reason === 'repo-root' ? 'Git repository' : 'Folder name';
 }
 
-function formatTeamList(slugs: string[]): string {
-  const shown = slugs.slice(0, 5);
-  const suffix =
-    slugs.length > shown.length
-      ? `, and ${slugs.length - shown.length} more`
-      : '';
-  return `${shown.join(', ')}${suffix}`;
-}
-
 const CHECKBOX_INSTRUCTIONS = [
   '\n  ',
   chalk.dim('('),
@@ -125,7 +116,13 @@ function printCrossTeamSearchScope({
   searchedTeamSlugs: string[];
 }): void {
   if (searchedTeamSlugs.length > 0) {
-    output.print(`  Searched teams: ${formatTeamList(searchedTeamSlugs)}\n`);
+    output.print(
+      `  ${chalk.dim(
+        `Searched ${searchedTeamSlugs.length} ${
+          searchedTeamSlugs.length === 1 ? 'team' : 'teams'
+        }`
+      )}\n`
+    );
   }
 }
 
@@ -290,7 +287,7 @@ async function promptForLimitedTeams(
   }
 
   return await client.input.checkbox<Team>({
-    message: 'Select teams that require SSO to search',
+    message: 'Select teams that require SSO',
     instructions: CHECKBOX_INSTRUCTIONS,
     choices: teams.map(team => ({
       name: team.name ? `${team.name} (${team.slug})` : team.slug,
@@ -317,12 +314,7 @@ async function searchSelectedLimitedTeams({
     return [];
   }
 
-  output.spinner(
-    `Searching ${selectedTeams.length} ${
-      selectedTeams.length === 1 ? 'team' : 'teams'
-    } that ${selectedTeams.length === 1 ? 'requires' : 'require'} SSO…`,
-    1000
-  );
+  output.spinner('Searching selected teams that require SSO…', 1000);
   try {
     const result = await searchProjectAcrossTeams(client, projectName, path, {
       teams: selectedTeams,
@@ -334,7 +326,7 @@ async function searchSelectedLimitedTeams({
     });
     return result.matches;
   } catch (err) {
-    output.debug(`Selected SSO team search failed: ${err}`);
+    output.debug(`Selected team search requiring SSO failed: ${err}`);
     return [];
   } finally {
     output.stopSpinner();
