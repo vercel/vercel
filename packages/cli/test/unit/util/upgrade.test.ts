@@ -1,4 +1,12 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+  beforeEach,
+  afterEach,
+  type MockInstance,
+} from 'vitest';
 import { EventEmitter } from 'events';
 import { spawn } from 'child_process';
 import output from '../../../src/output-manager';
@@ -35,8 +43,8 @@ const getUpdateCommandMock = vi.mocked(getUpdateCommand);
 describe('executeUpgrade', () => {
   const spies: Array<{ mockRestore: () => void }> = [];
   const originalPlatform = process.platform;
-  let isNativeSpy: ReturnType<typeof vi.spyOn>;
-  let standaloneSpy: ReturnType<typeof vi.spyOn>;
+  let isNativeSpy: MockInstance<() => boolean>;
+  let standaloneSpy: MockInstance<(version?: string) => Promise<number>>;
 
   function setPlatform(platform: NodeJS.Platform) {
     Object.defineProperty(process, 'platform', {
