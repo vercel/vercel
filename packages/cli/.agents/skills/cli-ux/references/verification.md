@@ -78,7 +78,7 @@ For any UX/copy/output work:
 ```bash
 rg -n "\\b(successfully|Unable to|Oops|Whoops|Uh-oh|Please try again|An error occurred|Something went wrong)\\b" <paths>
 rg -n "Do you want to|Would you like to|\\[[0-9]+s\\]|🔗|🔍|🚀|⏳|⋮⋮|✅" <paths>
-rg -n "Link to existing project\\?|Link to different existing project\\?|Link to this project\\?|Found project .*Link to it\\?|Which SSO-protected teams should be searched\\?|SSO-protected|Select teams to search|Link File|Config\\s+\\.vercel/(project|repo)\\.json" <paths>
+rg -n "Link to existing project\\?|Link to different existing project\\?|Link to this project\\?|Found project .*Link to it\\?|Which SSO-protected teams should be searched\\?|SSO-protected|Press <space> to select|to proceed|Select teams to search|Link File|Config\\s+\\.vercel/(project|repo)\\.json" <paths>
 ```
 
 Legacy strings may remain in negative tests. Source matches need classification.

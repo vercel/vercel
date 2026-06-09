@@ -32,18 +32,20 @@ Rules:
 - Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
 - Folder-name matches across teams are lower confidence than repo-root or explicit matches.
-- Cross-team matches need visible team context before linking.
-- Existing-project matches show `Found existing project` as a status heading, then aligned `Directory` and `Project` rows before confirmation.
-- Repository matches show aligned `Project` and `Source` rows before confirmation.
+- Cross-team matches need visible team/search context before linking.
+- Print `Searched teams:` only when search scope affects interpretation, such as multiple teams or manual SSO fallback. Do not add it to a one-team happy path.
+- Existing-project matches show `Directory` once as setup state, then `Found existing project` as a status heading and aligned `Project` before confirmation. If no setup-state `Directory` row exists, include `Directory` in the found-project block instead.
+- Repository matches show `Found existing project`, then aligned `Project` and `Source` rows before confirmation.
 - Ask for the link action after preview rows: `Link directory to project?` or `Link repository to project?`. Do not ask `Link to this project?` after the values are already visible.
 - When without-SSO team search finds no match, show `Searched {count} teams available without SSO`, then `No matching projects found`, then ask `Select teams that require SSO to search`.
 - Use a manual team multiselect for the SSO fallback because each selected SSO-required team may require the user to log in through SSO.
+- Keep checkbox instructions concise: `(<space> select, <enter> confirm, <a> toggle all, <i> invert)`.
 - Use `requires SSO` / `teams that require SSO`; do not use `SSO-protected` in new human copy.
 - `--scope` may remain compatibility input; user-facing copy uses `team`.
 - Use `Which team?`, `Name?`, `Customize settings?`, and `Loading teams…`.
 - Ask `Code directory?` only for real root ambiguity.
 - Compress framework detection: `Detected Next.js (Build Command: next build, Output Directory: .next)`.
-- Print aligned result rows with `printAlignedLabel()`: `Linked`, `Added`, and optional follow-up state.
+- Print aligned result rows with `printAlignedLabel()`: `Linked`, `Created`, `Added`, and optional follow-up state.
 - Link/setup rows keep the blank two-space gutter. Do not use `▲` or `✓` for `Created`, `Linked`, `Added`, `Project`, `Directory`, `Config`, `Settings`, or `Source`.
 - Default human success output prints the user-facing completion receipt, such as `Linked acme/web` or `Created acme/web`.
 - Do not print `.vercel/project.json`, `.vercel/repo.json`, or a repeated `Directory` row in default human success output when the local target was already shown. Verify link files in tests and expose them through machine/debug/help surfaces when needed.
@@ -59,18 +61,18 @@ Current gaps to migrate incrementally:
 
 Link prompt map:
 
-| State                              | Human prompt/output                                                                                                          | Non-interactive                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Multiple teams                     | `Which team?`                                                                                                                | `action_required: missing_team`        |
-| One existing project match         | `Found existing project`, aligned `Directory`/`Project`, then `Link directory to project?`                                   | link only for explicit/repo-root match |
-| One repository project match       | aligned `Project`/`Source`, then `Link repository to project?`                                                               | link only for explicit/repo-root match |
-| Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                  | `action_required: ambiguous_project`   |
-| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO to search` | skip unless explicitly requested       |
-| No project match                   | `Project?` with `Create new project` / `Link existing project`, then `Name?` when creating                                   | require `--yes` or `project_not_found` |
-| Root choices exist                 | `Code directory?`                                                                                                            | require root flag/config/payload       |
-| Settings differ                    | `Customize settings?`                                                                                                        | require flags/config/payload           |
-| Optional env pull                  | `Pull Development Environment Variables into .env.local?`                                                                    | skip unless explicitly requested       |
-| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                 | `action_required: stale_link`          |
+| State                              | Human prompt/output                                                                                                                | Non-interactive                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Multiple teams                     | `Which team?`                                                                                                                      | `action_required: missing_team`        |
+| One existing project match         | `Directory`, `Found existing project`, aligned `Project`, then `Link directory to project?`                                        | link only for explicit/repo-root match |
+| One repository project match       | `Directory`, optional search-status rows, `Found existing project`, aligned `Project`/`Source`, then `Link repository to project?` | link only for explicit/repo-root match |
+| Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                        | `action_required: ambiguous_project`   |
+| No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO to search`       | skip unless explicitly requested       |
+| No project match                   | `Project?` with `Create new project` / `Link existing project`, then `Name?` when creating                                         | require `--yes` or `project_not_found` |
+| Root choices exist                 | `Code directory?`                                                                                                                  | require root flag/config/payload       |
+| Settings differ                    | `Customize settings?`                                                                                                              | require flags/config/payload           |
+| Optional env pull                  | `Pull Development Environment Variables into .env.local?`                                                                          | skip unless explicitly requested       |
+| Stale/deleted link                 | show stale link, then concrete relink choice                                                                                       | `action_required: stale_link`          |
 
 Link acceptance matrix:
 
@@ -154,5 +156,5 @@ Link/deploy stale-string sweep:
 ```bash
 rg -n "Which scope|Loading scopes|What's your project's name|Want to modify|Customize defaults|Set up and deploy .+\\?|Inspect:|Production:|Preview:|Linked to|\\[[0-9]+s\\]|🔗|🔍|🚀|⏳|⋮⋮|✅" <paths>
 rg -n "In which directory is your code located|Do you want to change additional project settings|Would you like to pull environment variables now" <paths>
-rg -n "Link to existing project\\?|Link to different existing project\\?|Link to this project\\?|Found project .*Link to it\\?|Which SSO-protected teams should be searched\\?|SSO-protected|Select teams to search|Link File|Config\\s+\\.vercel/(project|repo)\\.json" <paths>
+rg -n "Link to existing project\\?|Link to different existing project\\?|Link to this project\\?|Found project .*Link to it\\?|Which SSO-protected teams should be searched\\?|SSO-protected|Press <space> to select|to proceed|Select teams to search|Link File|Config\\s+\\.vercel/(project|repo)\\.json" <paths>
 ```
