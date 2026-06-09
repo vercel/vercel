@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import upgrade from '../../../../src/commands/upgrade';
 import * as configFilesUtil from '../../../../src/util/config/files';
+import * as nativeInstall from '../../../../src/util/native-install';
 
 const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
@@ -60,8 +61,11 @@ describe('upgrade', () => {
       await expect(client.stderr).toOutput('Automatic updates: Disabled');
     });
 
-    it('prints native upgrade command for vc-native installs', async () => {
+    it('prints native upgrade command for npm vc-native installs', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
+      const methodSpy = vi
+        .spyOn(nativeInstall, 'getNativeInstallMethod')
+        .mockReturnValue('npm');
       client.setArgv('upgrade', '--dry-run');
 
       const exitCode = await upgrade(client);
@@ -71,6 +75,22 @@ describe('upgrade', () => {
       expect(output).toContain('Upgrade command:');
       expect(output).toContain('@vercel/vc-native@latest');
       expect(output.split(' ')).not.toContain('vercel@latest');
+      methodSpy.mockRestore();
+    });
+
+    it('prints the self-upgrade command for standalone vc-native installs', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      const methodSpy = vi
+        .spyOn(nativeInstall, 'getNativeInstallMethod')
+        .mockReturnValue('standalone');
+      client.setArgv('upgrade', '--dry-run');
+
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('Upgrade command: vercel upgrade');
+      methodSpy.mockRestore();
     });
   });
 
@@ -104,8 +124,11 @@ describe('upgrade', () => {
       expect(['global', 'local']).toContain(json.installationType);
     });
 
-    it('outputs native upgrade command for vc-native installs', async () => {
+    it('outputs native upgrade command for npm vc-native installs', async () => {
       process.env.VERCEL_VC_NATIVE = '1';
+      const methodSpy = vi
+        .spyOn(nativeInstall, 'getNativeInstallMethod')
+        .mockReturnValue('npm');
       client.setArgv('upgrade', '--json');
 
       const exitCode = await upgrade(client);
@@ -114,6 +137,22 @@ describe('upgrade', () => {
       const json = JSON.parse(client.stdout.getFullOutput());
       expect(json.upgradeCommand).toContain('@vercel/vc-native@latest');
       expect(json.upgradeCommand.split(' ')).not.toContain('vercel@latest');
+      methodSpy.mockRestore();
+    });
+
+    it('outputs the self-upgrade command for standalone vc-native installs', async () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      const methodSpy = vi
+        .spyOn(nativeInstall, 'getNativeInstallMethod')
+        .mockReturnValue('standalone');
+      client.setArgv('upgrade', '--json');
+
+      const exitCode = await upgrade(client);
+
+      expect(exitCode).toBe(0);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.upgradeCommand).toBe('vercel upgrade');
+      methodSpy.mockRestore();
     });
   });
 
