@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.7.0
+
+### Minor Changes
+
+- 3f3ef14: Add `experimental_upgradeWebSocket()` API
+
 ## 3.6.3
 
 ### Patch Changes
