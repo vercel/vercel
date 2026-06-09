@@ -93,9 +93,10 @@ Rules:
 - Group related questions.
 - Prefer one chooser over several vague yes/no prompts.
 - Yes/no prompts confirm a concrete thing, not vague intent.
+- If preview rows already show the values, ask for the action instead of repeating one value in the prompt.
 - If a safe default exists, show it and let `--yes` accept it.
 - If a user declines an inferred choice, route to the next concrete choice; do not restart.
-- When mutating both local files and remote state, make both visible.
+- When mutating both local files and remote state, make user-facing effects visible.
 
 ## Setup + Mutation Flows
 
@@ -104,14 +105,18 @@ Any command that resolves a resource or changes local/remote state should use th
 - Treat an explicit command invocation as intent; do not ask a vague intent-confirmation prompt.
 - Show the resolved target before prompts or mutation: team, project, domain, path, environment, or integration.
 - Before confirming an inferred resource, show it as structured state, usually aligned rows such as `Project`, `Team`, `Directory`, `Source`, `Config`, or `Settings`.
+- Keep status headings separate from aligned value rows. Do not turn state into a fake label/value row such as `Found Existing project`; use a short status heading such as `Found existing project` above `Project`/`Directory` rows, bolded when it introduces a block.
 - Ask for the smallest missing value with a concrete noun: `Which team?`, `Project?`, `Domain?`, `Environment?`, `Name?`.
+- For checkbox/multiselect prompts, keep a concise built-in keyboard hint visible in dim text, formatted as a key legend: `(<space> select, <a> toggle all, <i> invert, <enter> confirm)`. If the prompt plus legend would wrap in a typical terminal, put the legend on the next dim line. Let the prompt renderer append it as a hint; do not bake controls into the prompt message, and do not remove the hint while tightening copy.
 - Ask `Customize settings?` only after showing the inferred settings.
 - Ask root/path questions only when there is real ambiguity.
 - Compress detection into one useful line when possible.
+- De-emphasize detection details in parentheses when the primary fact is the framework or resource: `Detected Next.js (Build Command: next build, Output Directory: .next)`.
 - Drop emoji from primary result and progress rows.
 - Print durable mutations as aligned result rows when there are multiple fields.
-- After local and remote mutation, result rows show both the remote resource and durable local artifacts changed.
+- After local and remote mutation, result rows show the remote resource and user-actionable local artifacts changed. Keep internal state files in tests, debug output, machine output, or help text unless the user must act on them.
 - `Linked`, `Created`, `Added`, and similar success rows confirm the outcome; they do not replace pre-confirmation resolved-state rows.
+- Confirmation prompts record intent; completion rows record what actually happened. Do not drop a result row just because the user answered `yes`.
 - If work continues elsewhere, end with a stable inspect/status/logs command.
 - Offer optional follow-up work only when TTY, safe, and clearly secondary.
 - In non-interactive mode, emit the exact missing flag, payload field, or next command instead of asking.
@@ -193,8 +198,9 @@ Rules:
 - Use aligned rows for durable multi-field results: links, deployments, aliases, domains, integrations, environment changes, and other completed mutations.
 - Use aligned rows for compact resolved-state previews before confirmation when a command has identified a resource.
 - Do not force aligned rows onto simple one-line success, plain lists, or dense tables.
-- Aligned-row labels are Title-Case nouns: `Linked`, `Inspect`, `Production`.
+- Aligned-row labels are stable Title-Case labels: `Linked`, `Inspect`, `Production`.
 - Preview labels use stable Title-Case nouns: `Project`, `Team`, `Directory`, `Source`, `Config`, `Settings`.
+- Use `Config` or `Settings` only for user-facing configuration/settings. Do not label internal link-state files as settings.
 - If a mutation changes multiple durable things, one-line success is insufficient; print a compact result block.
 - Production rows and production alias rows use `▲`: `▲ Production`, `▲ Aliased`.
 - Preview, setup, link, settings, local file, and non-production rows keep the blank two-space gutter.

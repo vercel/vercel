@@ -67,7 +67,7 @@ Top-tier commands:
 - ask only what cannot be inferred
 - show detected state before asking for overrides
 - show resolved targets in structured output before confirmations
-- show local and remote side effects in result blocks after mutation
+- show user-facing local and remote side effects in result blocks after mutation
 - use gutter glyphs only for semantic state, not decoration
 - use one concept per prompt
 - support flags or payloads for every prompt path
@@ -89,7 +89,7 @@ A CLI UX change is not done until:
 - prompt/result copy changes also checked layout, order, and surrounding flow
 - resolved target and planned mutation are visible before risky work
 - inferred resource confirmations show the resolved target before asking
-- mutation results show durable remote resources and local artifacts changed
+- mutation results show durable remote resources and user-actionable local artifacts changed
 - aligned rows use the correct gutter: `▲` for production rows, blank for preview/setup/link rows, `✓` only for readiness/completion status
 - every prompt has a flag, argument, or machine-readable action path
 - old vague prompts/output are locked out by tests

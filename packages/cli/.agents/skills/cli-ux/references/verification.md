@@ -16,7 +16,9 @@ When changing CLI UX behavior:
 - cover warnings on stderr and never on machine stdout
 - cover empty list output: human empty copy, filtered empty copy, machine `[]`/`{}` stdout, exit `0`
 - cover resolved-state previews before confirmations when a command infers a resource
-- cover result blocks for local and remote side effects when mutations touch both
+- cover result blocks for remote resources and user-actionable local side effects when mutations touch both
+- cover internal local state files through tests, debug output, machine output, or help text instead of default human success output when they are not user-actionable
+- cover prompt/action separation: values appear in preview rows, then prompts ask for the action
 - cover raw gutter glyphs, not only stripped output: `▲` for production rows, blank gutter for preview/setup/link rows, and `✓` only for readiness/completion status
 - cover `--no-color`, `NO_COLOR`, and no ANSI where machine output is involved
 - cover `--yes`, `--force`, typed confirmation, and `--dry-run` when the command family supports them
@@ -75,6 +77,7 @@ For any UX/copy/output work:
 ```bash
 rg -n "\\b(successfully|Unable to|Oops|Whoops|Uh-oh|Please try again|An error occurred|Something went wrong)\\b" <paths>
 rg -n "Do you want to|Would you like to|\\[[0-9]+s\\]|🔗|🔍|🚀|⏳|⋮⋮|✅" <paths>
+rg -n "Link to existing project\\?|Link to different existing project\\?|Link to this project\\?|Found project .*Link to it\\?|Which SSO-protected teams should be searched\\?|SSO-protected|Select teams to search|Link File|Config\\s+\\.vercel/(project|repo)\\.json" <paths>
 ```
 
 Legacy strings may remain in negative tests. Source matches need classification.
@@ -85,9 +88,12 @@ Reject or fix changes that:
 
 - add inferable prompts
 - ask the same concept twice
+- put a value inside a prompt when a preceding preview row should own it
 - change prompt or success copy without checking surrounding flow and layout
 - confirm an inferred resource without showing the resolved target first
-- report a multi-side-effect mutation with one-line success only
+- report a multi-side-effect mutation with one-line success when user-actionable local side effects need to be visible
+- expose internal state files as default human success rows when tests/machine/debug/help would be the right surface
+- encode a status heading as a fake aligned label/value row
 - use a gutter glyph as decoration instead of semantic state
 - put `▲` on preview/setup/link/local file rows, or omit it from production rows
 - use `✓` as a generic icon on aligned result rows instead of readiness/completion status
