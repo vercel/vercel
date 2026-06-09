@@ -1,5 +1,16 @@
-import { WebSocketServer, type WebSocket } from 'ws';
+import type { WebSocket } from 'ws';
 import { getContext } from '../get-context';
+
+function loadWebSocketServer() {
+  try {
+    return require('ws').WebSocketServer;
+  } catch {
+    throw new Error(
+      'The "ws" package is required for experimental_upgradeWebSocket(). ' +
+        'Install it with: npm install ws'
+    );
+  }
+}
 
 export async function experimental_upgradeWebSocket(
   handler: (ws: WebSocket) => void | Promise<void>
@@ -12,6 +23,8 @@ export async function experimental_upgradeWebSocket(
         'This feature requires a Vercel runtime that supports WebSocket upgrades.'
     );
   }
+
+  const WebSocketServer = loadWebSocketServer();
 
   const { req, socket, head } = ctx.upgradeWebSocket();
 
