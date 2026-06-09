@@ -58,7 +58,7 @@ Assert both the helper contract and command behavior:
 ```ts
 expect(stripAnsi(output)).toContain('▲ Production');
 expect(stripAnsi(output)).not.toMatch(
-  /^[▲✓] (Project|Source|Linked|Directory|Config|Settings)\s/m
+  /^[▲✓] (Project|Source|Created|Linked|Added|Directory|Config|Settings)\s/m
 );
 ```
 
@@ -96,7 +96,7 @@ Reject or fix changes that:
 - encode a status heading as a fake aligned label/value row
 - use a gutter glyph as decoration instead of semantic state
 - put `▲` on preview/setup/link/local file rows, or omit it from production rows
-- use `✓` as a generic icon on aligned result rows instead of readiness/completion status
+- use `✓` as a generic icon on mutation receipt rows such as `Created`, `Linked`, or `Added`
 - use `scope` where `team` works
 - add emoji to primary result or progress rows
 - put timing on URL rows

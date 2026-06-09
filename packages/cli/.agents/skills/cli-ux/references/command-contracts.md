@@ -44,7 +44,7 @@ Rules:
 - Ask `Code directory?` only for real root ambiguity.
 - Compress framework detection: `Detected Next.js (Build Command: next build, Output Directory: .next)`.
 - Print aligned result rows with `printAlignedLabel()`: `Linked`, `Added`, and optional follow-up state.
-- Link/setup rows keep the blank two-space gutter. Do not use `▲` or `✓` for `Linked`, `Project`, `Directory`, `Config`, `Settings`, or `Source`.
+- Link/setup rows keep the blank two-space gutter. Do not use `▲` or `✓` for `Created`, `Linked`, `Added`, `Project`, `Directory`, `Config`, `Settings`, or `Source`.
 - Default human success output prints the user-facing completion receipt, such as `Linked acme/web` or `Created acme/web`.
 - Do not print `.vercel/project.json`, `.vercel/repo.json`, or a repeated `Directory` row in default human success output when the local target was already shown. Verify link files in tests and expose them through machine/debug/help surfaces when needed.
 - Offer `Pull Development Environment Variables into .env.local?` after linking when TTY and safe.

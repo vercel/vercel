@@ -208,6 +208,7 @@ Rules:
 - No colon after labels in aligned rows.
 - No timing suffix on URL rows.
 - Deployment result blocks may append `✓ Ready in 47s`; that line is readiness/completion state, not a generic success icon for every result row.
+- Mutation receipt rows such as `Created`, `Linked`, and `Added` keep the blank gutter. The verb already carries the success state.
 - never hand-pad rows when a helper exists
 
 ## List + Detail Commands
@@ -233,7 +234,7 @@ Allowed primary glyphs:
 
 - `▲` production/Vercel touchpoint
 - `?` active prompt
-- `✓` deployment readiness or terminal completion status
+- `✓` deployment readiness or terminal wait-state completion, not generic create/link/add success
 - `·` inline separator
 - `→` relationship/transition
 - `…` continuing work
@@ -264,7 +265,7 @@ Color:
 - Final success gets one terminal line.
 - Success names what changed and where: `Linked acme/web`, `Added example.com to acme/web`, not `Done.` or `Success!`.
 - Include the durable identifier: resource, URL, path, or ID.
-- `✓ Ready in 47s` is only for deployment readiness.
+- `✓ Ready in 47s` is only for deployment readiness. Do not use `✓` on `Created`, `Linked`, `Added`, or other mutation receipt rows.
 - Do not claim ready for `--no-wait` while still building.
 - Target: clear spinners and partial ANSI on `SIGINT` / `SIGTERM` before printing cancellation state. No global handler exists yet; add one before relying on this as current behavior.
 - If cancellation may leave remote work running, say how to inspect status.
