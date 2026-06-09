@@ -1,10 +1,16 @@
 /**
  * Public surface of the `@vercel/connect/ai-sdk` subpath.
  *
- * Re-exports the MCP-spec `connectAuthProvider` (and its consent
- * types) so AI SDK users have a single, ergonomic import. The
- * provider plugs straight into `@ai-sdk/mcp`'s `createMCPClient`
- * `authProvider` and works with AI SDK v6 and v7.
+ * Two complementary surfaces for AI SDK users:
+ *
+ * - `connectAuthProvider` — the MCP-spec `OAuthClientProvider` for
+ *   connecting to remote MCP servers. Plugs straight into
+ *   `@ai-sdk/mcp`'s `createMCPClient` `authProvider` and works with AI
+ *   SDK v6 and v7.
+ * - `withConnect` — wraps a plain AI SDK tool definition so its
+ *   `execute` runs with a `fetch` (and raw `token`) already authorized
+ *   for a Connect connector, for tools that call a provider's
+ *   REST/GraphQL API directly (no MCP server).
  *
  * Tool-call approval (Human-in-the-Loop) is intentionally not
  * provided here — it is independent of Connect and already covered by
@@ -54,6 +60,14 @@ export {
   type ConnectAuthProviderOptions,
   type ConsentChallenge,
 } from '../mcp/connect-auth-provider.js';
+
+export {
+  withConnect,
+  type ConnectAuthorizationRequired,
+  type ConnectToolDefinition,
+  type ConnectToolExecutionOptions,
+  type WithConnectConfig,
+} from './with-connect.js';
 
 export {
   ConnectError,
