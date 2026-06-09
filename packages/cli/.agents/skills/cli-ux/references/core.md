@@ -90,10 +90,12 @@ Rules:
 - Show detected state before dependent prompts.
 - A copy change is incomplete until the surrounding flow is checked: resolved state before decisions, side effects after mutation, and exact next action when useful.
 - Do not let better wording hide a bad order; move the state/result into the right surface.
+- Do not print state only to prove the CLI resolved it. Print it when it changes the next decision, prevents ambiguity, or confirms a durable result.
 - Group related questions.
 - Prefer one chooser over several vague yes/no prompts.
 - Yes/no prompts confirm a concrete thing, not vague intent.
 - If preview rows already show the values, ask for the action instead of repeating one value in the prompt.
+- If argv or a prior prompt already contains the value, do not restate it in a preview row unless the row adds a new relationship or destination.
 - If a safe default exists, show it and let `--yes` accept it.
 - If a user declines an inferred choice, route to the next concrete choice; do not restart.
 - When mutating both local files and remote state, make user-facing effects visible.
@@ -105,15 +107,18 @@ Any command that resolves a resource or changes local/remote state should use th
 - Treat an explicit command invocation as intent; do not ask a vague intent-confirmation prompt.
 - Show the resolved target before prompts or mutation: team, project, domain, path, environment, or integration.
 - Before confirming an inferred resource, show it as structured state, usually aligned rows such as `Project`, `Team`, `Directory`, `Source`, `Config`, or `Settings`.
+- Do not use resolved-state rows before every later prompt. Once the target is obvious, keep moving.
 - Keep status headings separate from aligned value rows. Do not turn state into a fake label/value row such as `Found Existing project`; use a short status heading such as `Found existing project` above `Project`/`Directory` rows, bolded when it introduces a block.
 - Ask for the smallest missing value with a concrete noun: `Which team?`, `Project?`, `Domain?`, `Environment?`, `Name?`.
-- For checkbox/multiselect prompts, keep a concise built-in keyboard hint visible in dim text, formatted as a key legend with primary controls first: `(<space> select, <enter> confirm, <a> toggle all, <i> invert)`. If the prompt plus legend would wrap in a typical terminal, put the legend on the next dim line. Let the prompt renderer append it as a hint; do not bake controls into the prompt message, and do not remove the hint while tightening copy.
+- For checkbox/multiselect prompts, keep a concise built-in keyboard hint visible in dim text on the prompt line when it fits, formatted as a key legend with primary controls first: `<space> select, <enter> confirm, <a> toggle all, <i> invert`. If the prompt plus legend would wrap in a typical terminal, put the legend on the next dim line. Do not wrap the legend in parentheses. Let the prompt renderer append it as a hint; do not bake controls into the prompt message, and do not remove the hint while tightening copy.
 - Ask `Customize settings?` only after showing the inferred settings.
 - Ask root/path questions only when there is real ambiguity.
 - Compress detection into one useful line when possible.
-- De-emphasize detection details in parentheses when the primary fact is the framework or resource: `Detected Next.js (Build Command: next build, Output Directory: .next)`.
+- De-emphasize detection details in parentheses when the primary fact is the framework or resource: `Detected TanStack Start (Build Command: vite build, Output Directory: dist)`.
+- Omit framework defaults from detection output when the framework name already explains them. Include build/output details only when they differ from defaults, are non-obvious, or affect the next decision.
 - Drop emoji from primary result and progress rows.
 - Print durable mutations as aligned result rows when there are multiple fields.
+- Prefer a compact verb row for the changed object, then a separate destination row when it improves scanning: `✓ Added API_TOKEN`, `Project acme/web`.
 - After local and remote mutation, result rows show the remote resource and user-actionable local artifacts changed. Keep internal state files in tests, debug output, machine output, or help text unless the user must act on them.
 - `Linked`, `Created`, `Added`, and similar success rows confirm the outcome; they do not replace pre-confirmation resolved-state rows.
 - Confirmation prompts record intent; completion rows record what actually happened. Do not drop a result row just because the user answered `yes`.
@@ -137,6 +142,8 @@ Defaults:
 - Make defaults visible.
 - Prefer the most common safe value.
 - Echo important resolved state after defaults are accepted.
+- Active input prompts keep a visible separator between the question and the cursor, even before any value is typed. Masked prompts must not collapse the cursor against the label.
+- If a short explanation only qualifies the current prompt, keep it as dim inline prompt context: `Store as sensitive? Sensitive values cannot be read later`. Do not wrap the hint in parentheses or add trailing punctuation. Do not promote it into a separate output row unless it is independent state, progress, warning, or result.
 
 Good:
 
@@ -157,7 +164,7 @@ Pick one surface before writing copy:
 - prompt: user must decide
 - progress: work is happening
 - success: action completed
-- warning: action completed but needs review
+- warning: nonfatal risk, compatibility, deprecation, or post-action review notice
 - error: action failed
 - table/list: many resources
 - detail: one resource
@@ -173,7 +180,7 @@ Use existing helpers before adding formatting:
 
 - `output.print()` for designed rows
 - `output.log()` only when the gray `> ` prefix is intended
-- `output.warn()` / `output.error()` for warnings/errors
+- `output.warn()` / `output.error()` for warnings/errors when their format matches the target surface; if a warning helper emits a non-target label such as `WARNING!`, use or add a scoped formatted warning row and test it
 - `output.spinner()` for long-running work
 - `printAlignedLabel()` for target aligned label-value result blocks
 - `table()` for tabular data
@@ -182,40 +189,45 @@ Use existing helpers before adding formatting:
 Target aligned result rows:
 
 ```text
-  Project     acme/web
-  Domain      example.com
-  Environment Production
-▲ Enabled     example.com
+✓ Added           API_TOKEN
+  Project         acme/web
+  Environments    Production, Preview
+  Type            Sensitive
+▲ Production      https://my-app.vercel.app
 ✓ Ready in 47s
 ```
 
 Rules:
 
-- The first 2 columns are the gutter: either two spaces (`"  "`) or a semantic glyph plus space (`"▲ "`, `"✓ "`).
+- The first 2 columns are the gutter: either two spaces (`"  "`) or a semantic glyph plus space (`"▲ "`, `"✓ "`, `"! "`).
 - The gutter is not decoration. Use a glyph only when it carries state; otherwise keep the two-space gutter.
-- label width: 12 chars
-- value column: 14
+- label width: 16 chars
+- value column: 18
 - Use aligned rows for durable multi-field results: links, deployments, aliases, domains, integrations, environment changes, and other completed mutations.
 - Use aligned rows for compact resolved-state previews before confirmation when a command has identified a resource.
 - Do not force aligned rows onto simple one-line success, plain lists, or dense tables.
-- Aligned-row labels are stable Title-Case labels: `Linked`, `Inspect`, `Production`.
+- Aligned-row labels are stable Title-Case labels: `Linked`, `Added`, `Inspect`, `Production`.
 - Preview labels use stable Title-Case nouns: `Project`, `Team`, `Directory`, `Source`, `Config`, `Settings`.
 - Use `Config` or `Settings` only for user-facing configuration/settings. Do not label internal link-state files as settings.
 - If a mutation changes multiple durable things, one-line success is insufficient; print a compact result block.
 - Production rows and production alias rows use `▲`: `▲ Production`, `▲ Aliased`.
-- Preview, setup, link, settings, local file, and non-production rows keep the blank two-space gutter.
+- Primary completed-phase rows use `✓`: `✓ Added`, `✓ Created`, `✓ Linked`, `✓ Removed`, `✓ Updated`, `✓ Overrode`, `✓ Ready`.
+- Warning rows use `!` in the gutter: `! --scope is deprecated. Use --team.` Do not render `WARNING!` starting at column 0; if a command must keep a text warning label for compatibility, indent it after the blank gutter.
+- Preview, setup, discovery, progress, settings, local file, and secondary receipt rows keep the blank two-space gutter.
+- Body section headings and detail blocks such as `Changes:`, diff rows, and local file summaries keep the blank two-space gutter. Do not let section headings or `+`/`-` diff markers occupy column 0.
 - URLs are cyan in human output and plain strings in JSON.
 - No colon after labels in aligned rows.
 - No timing suffix on URL rows.
-- Deployment result blocks may append `✓ Ready in 47s`; that line is readiness/completion state, not a generic success icon for every result row.
-- Mutation receipt rows such as `Created`, `Linked`, and `Added` keep the blank gutter. The verb already carries the success state.
+- Use `✓` once per completed phase as a visual anchor. Do not put it on every row in a result block.
+- Use `✓` only after the phase is actually satisfied. Do not use it for discovery or in-progress rows such as `Found`, `Detected`, `Searched`, `Searching`, or `Saving`.
+- Mutation receipt rows such as `Created`, `Linked`, and `Added` use `✓` when they are the primary completed phase. Secondary rows such as `Project`, `Environment`, `Directory`, `Config`, `Branch`, and `Type` keep the blank gutter.
 - never hand-pad rows when a helper exists
 
 Vertical rhythm:
 
 - Use blank lines to separate logical phases, not to decorate individual rows.
 - Use one blank line between setup/detection, prompt groups, mutation receipts, long-running progress, and terminal readiness/error states when those phases are present.
-- Treat search/status output and resolved preview headings as separate phases when both are shown: `Searched teams: acme` then a blank line before `Found existing project`.
+- Treat search/status output and resolved preview headings as separate phases when both are shown: `Searched 13 teams` then a blank line before `Found existing project`.
 - Keep related rows contiguous: aligned preview rows, prompt/hint/choices, result blocks, lists, tables, and progress sequences do not get internal blank lines.
 - Do not add leading/trailing blank lines to machine-readable output, JSON/JSONL, or parseable stdout.
 - Avoid double blank lines. If the transcript needs more than one blank line, the flow likely needs a clearer heading, row label, or phase split instead.
@@ -243,7 +255,8 @@ Allowed primary glyphs:
 
 - `▲` production/Vercel touchpoint
 - `?` active prompt
-- `✓` deployment readiness or terminal wait-state completion, not generic create/link/add success
+- `✓` primary completed phase: completed action, deployment readiness, or terminal wait-state completion
+- `!` warning or nonfatal risk notice
 - `·` inline separator
 - `→` relationship/transition
 - `…` continuing work
@@ -259,7 +272,8 @@ Color:
 - bold: labels, important values
 - cyan: URLs
 - dim: paths, hints, metadata, durations
-- green: success only
+- green: success only; color the `✓` gutter green when color is enabled, but do not turn secondary receipt rows green
+- yellow: warnings only; color the `!` gutter yellow when color is enabled
 - red: errors only
 - Target: respect `--no-color` and standard `NO_COLOR`; current handling is narrower, so widen rather than narrow support when touching color handling.
 - Machine output is colorless regardless of color settings.
@@ -271,10 +285,11 @@ Color:
 - Use spinners for in-progress work, not resolved URLs.
 - Spinner text uses present participles: `Building…`, `Completing…`.
 - Do not interleave parallel progress unless readable.
-- Final success gets one terminal line.
-- Success names what changed and where: `Linked acme/web`, `Added example.com to acme/web`, not `Done.` or `Success!`.
+- Final success gets one primary completion row; add secondary receipt rows only for necessary durable context.
+- Success names what changed and where, either in one row (`✓ Linked acme/web`, `✓ Added example.com to acme/web`) or in a compact receipt block (`✓ Added API_TOKEN`, `Project acme/web`). Never use `Done.` or `Success!`.
 - Include the durable identifier: resource, URL, path, or ID.
-- `✓ Ready in 47s` is only for deployment readiness. Do not use `✓` on `Created`, `Linked`, `Added`, or other mutation receipt rows.
+- Use `✓` on the primary completed-phase row: `✓ Linked acme/web`, `✓ Added API_TOKEN`, `✓ Ready in 47s`. Do not use it on secondary receipt rows.
+- Do not put durations in ordinary mutation receipts. Include timing only when duration is the outcome users care about, such as readiness or an explicit wait/build phase.
 - Do not claim ready for `--no-wait` while still building.
 - Target: clear spinners and partial ANSI on `SIGINT` / `SIGTERM` before printing cancellation state. No global handler exists yet; add one before relying on this as current behavior.
 - If cancellation may leave remote work running, say how to inspect status.
@@ -285,6 +300,7 @@ Foreground commands such as dev servers, log following, waits, and live build ou
 
 - Do not put a spinner over a live log stream.
 - Keep status, prompts, warnings, and diagnostics on stderr.
+- Search-scope diagnostics should be dim and compact. Prefer counts over names: `Searched 13 teams`, not a wrapped list of team slugs. Print names only when the names themselves are actionable choices or needed to resolve ambiguity.
 - Stream logs to stdout when they are the primary, pipeable output; otherwise follow the command family's existing stream contract.
 - Make follow/wait boundaries explicit: `--follow`, `--wait`, `--no-wait`, timeout, and completion states should be visible in help and output.
 - Explain Ctrl-C semantics before or during long follow modes when useful: stopping local following is not always canceling remote work.
@@ -334,8 +350,9 @@ Permission/access errors should include safe versions of:
 
 ## Warnings
 
-- Warn only when the action completed but the user should review something; otherwise use error or stay silent.
+- Warn only for a nonfatal condition the user should review before continuing or after completion; otherwise use error or stay silent.
 - Structure: what happened · why it matters · optional fix or next step.
+- In human output, prefer the warning gutter glyph over a label: `! <message>`, not `WARNING! <message>`.
 - Do not cry wolf; a warning on every run trains users to ignore it.
 - Deprecation warnings name the replacement and stay on stderr: `--scope is deprecated. Use --team.`
 - Never put warnings on machine stdout; see Streams + Formats.
@@ -352,11 +369,12 @@ Permission/access errors should include safe versions of:
 
 ## Secrets
 
-- Never print tokens, secret values, env values, request bodies, or unredacted user content.
+- Never print tokens, secret values, request bodies, or unredacted user content.
 - Redact secrets in output, JSON, debug logs, telemetry, errors, and suggested commands.
 - Prefer stdin, file input, or an interactive prompt for secret input; avoid requiring plaintext secrets in argv flags.
 - If a secret flag exists for scripting, document the stdin/file alternative.
 - Do not include secret-bearing flags in `next` commands.
+- For env-value write prompts, mask values classified as sensitive. Non-sensitive values may stay visible while the user types or edits them, but do not repeat entered values in receipts, logs, JSON, telemetry, warnings, errors, or suggested commands.
 - Treat values read from stdin, files, env, API responses, and remote resources as sensitive until classified.
 - Permission errors should not reveal whether a private resource exists across tenant boundaries.
 

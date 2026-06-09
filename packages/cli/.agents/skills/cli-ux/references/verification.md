@@ -16,11 +16,12 @@ When changing CLI UX behavior:
 - cover warnings on stderr and never on machine stdout
 - cover empty list output: human empty copy, filtered empty copy, machine `[]`/`{}` stdout, exit `0`
 - cover resolved-state previews before confirmations when a command infers a resource
+- cover that preview rows do not restate values already visible in argv or earlier prompt answers
 - cover result blocks for remote resources and user-actionable local side effects when mutations touch both
 - cover internal local state files through tests, debug output, machine output, or help text instead of default human success output when they are not user-actionable
 - cover prompt/action separation: values appear in preview rows, then prompts ask for the action
 - cover vertical rhythm: phase breaks use at most one blank line, and related rows remain contiguous
-- cover raw gutter glyphs, not only stripped output: `▲` for production rows, blank gutter for preview/setup/link rows, and `✓` only for readiness/completion status
+- cover raw gutter glyphs, not only stripped output: `▲` for production rows, `✓` for the primary completed phase, `!` for warnings, and blank gutter for previews, progress, and secondary receipt rows
 - cover `--no-color`, `NO_COLOR`, and no ANSI where machine output is involved
 - cover `--yes`, `--force`, typed confirmation, and `--dry-run` when the command family supports them
 - cover retry/no-duplicate behavior for remote mutations
@@ -58,15 +59,26 @@ Assert both the helper contract and command behavior:
 
 ```ts
 expect(stripAnsi(output)).toContain('▲ Production');
+expect(stripAnsi(output)).toContain('✓ Added');
 expect(stripAnsi(output)).not.toMatch(
-  /^[▲✓] (Project|Source|Created|Linked|Added|Directory|Config|Settings)\s/m
+  /^[▲✓!] (Project|Team|Source|Directory|Config|Settings|Environment|Environments|Branch|Type|Found|Detected|Searched|Searching|Saving)\s/m
 );
+expect(stripAnsi(output)).not.toMatch(
+  /^▲ (Created|Linked|Added|Updated|Removed|Overrode)\s/m
+);
+```
+
+When warning output changes:
+
+```ts
+expect(stripAnsi(output)).toMatch(/^! .+/m);
+expect(stripAnsi(output)).not.toContain('WARNING!');
 ```
 
 For exact blank-gutter spacing, prefer `printAlignedLabel()` unit tests or a direct `output.print` mock:
 
 ```ts
-expect(stripAnsi(lastPrinted())).toBe('  Linked      acme/web\n');
+expect(stripAnsi(lastPrinted())).toBe('  Project         acme/web\n');
 ```
 
 For command output, assert the row is present and has no semantic gutter glyph when it should use the blank gutter. Keep exact two-space gutter assertions in `printAlignedLabel()` unit tests, where the helper output is observed directly.
@@ -78,10 +90,9 @@ For any UX/copy/output work:
 ```bash
 rg -n "\\b(successfully|Unable to|Oops|Whoops|Uh-oh|Please try again|An error occurred|Something went wrong)\\b" <paths>
 rg -n "Do you want to|Would you like to|\\[[0-9]+s\\]|🔗|🔍|🚀|⏳|⋮⋮|✅" <paths>
-rg -n "Link to existing project\\?|Link to different existing project\\?|Link to this project\\?|Found project .*Link to it\\?|Which SSO-protected teams should be searched\\?|SSO-protected|Press <space> to select|to proceed|Select teams to search|Link File|Config\\s+\\.vercel/(project|repo)\\.json" <paths>
 ```
 
-Legacy strings may remain in negative tests. Source matches need classification.
+Legacy strings may remain in negative tests. Source matches need classification. Run command-specific stale sweeps from `command-contracts.md` when the touched command has a contract.
 
 ## Review Checklist
 
@@ -89,6 +100,7 @@ Reject or fix changes that:
 
 - add inferable prompts
 - ask the same concept twice
+- print preview rows that restate values already visible in argv, prompt answers, or the command line
 - put a value inside a prompt when a preceding preview row should own it
 - change prompt or success copy without checking surrounding flow and layout
 - confirm an inferred resource without showing the resolved target first
@@ -98,7 +110,8 @@ Reject or fix changes that:
 - use a gutter glyph as decoration instead of semantic state
 - add blank lines inside a related block or omit phase breaks in a dense multi-phase flow
 - put `▲` on preview/setup/link/local file rows, or omit it from production rows
-- use `✓` as a generic icon on mutation receipt rows such as `Created`, `Linked`, or `Added`
+- use `✓` as decoration, on every row, or on discovery/progress rows instead of only the primary completed phase
+- print warnings with a column-0 `WARNING!` label instead of the warning gutter
 - use `scope` where `team` works
 - add emoji to primary result or progress rows
 - put timing on URL rows

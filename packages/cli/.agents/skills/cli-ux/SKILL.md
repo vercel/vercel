@@ -47,6 +47,7 @@ Load only what the task needs.
 | Help/flags/completions           | `core.md` → Commands + Flags, Help + Discoverability, Compatibility                             |
 | Destructive/production mutation  | `core.md` → Dangerous Actions, Remote Work, Secrets                                             |
 | `vc link` or setup/link work     | [`references/command-contracts.md`](references/command-contracts.md) → Link Flow Contract       |
+| `vc env add` work                | `command-contracts.md` → Env Add Flow Contract                                                  |
 | `vc`, `vc deploy`, deploy output | `command-contracts.md` → Deploy Flow Contract                                                   |
 | Tests, stale-copy sweeps, review | [`references/verification.md`](references/verification.md)                                      |
 
@@ -67,6 +68,7 @@ Top-tier commands:
 - ask only what cannot be inferred
 - show detected state before asking for overrides
 - show resolved targets in structured output before confirmations
+- avoid restating values already visible in argv, prompts, or nearby rows
 - show user-facing local and remote side effects in result blocks after mutation
 - use gutter glyphs only for semantic state, not decoration
 - use one concept per prompt
@@ -90,7 +92,7 @@ A CLI UX change is not done until:
 - resolved target and planned mutation are visible before risky work
 - inferred resource confirmations show the resolved target before asking
 - mutation results show durable remote resources and user-actionable local artifacts changed
-- aligned rows use the correct gutter: `▲` for production rows, blank for preview/setup/link rows, `✓` only for readiness/completion status
+- aligned rows use `printAlignedLabel()` with the shared 16-character label column and correct gutter: `▲` for production rows, `✓` for the primary completed phase, `!` for warnings, blank for previews, progress, and secondary receipt rows
 - every prompt has a flag, argument, or machine-readable action path
 - old vague prompts/output are locked out by tests
 - JSON/agent output remains valid, bounded, and stdout-clean

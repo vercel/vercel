@@ -101,4 +101,4 @@ Always-loaded digest; full CLI UX gates live in `packages/cli/.agents/skills/cli
 - Validate local input before remote mutations.
 - Do not retry non-idempotent remote mutations in a way that can duplicate resources.
 - Do not edit examples, fixtures, generated files, or package-lock artifacts unless they are directly required for the task.
-- Repo policy requires a changeset by default. For guide-only or `packages/cli/.agents`-only changes, add an empty changeset unless the PR owner explicitly says no changeset.
+- Every PR needs a changeset. Use an empty changeset only for guide-only or `packages/cli/.agents`-only changes.
