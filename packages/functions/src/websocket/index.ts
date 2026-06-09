@@ -1,9 +1,10 @@
 import type { WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
-function loadWebSocketServer() {
+async function loadWebSocketServer() {
   try {
-    return require('ws').WebSocketServer;
+    const ws = await import('ws');
+    return ws.WebSocketServer;
   } catch {
     throw new Error(
       'The "ws" package is required for experimental_upgradeWebSocket(). ' +
@@ -24,7 +25,7 @@ export async function experimental_upgradeWebSocket(
     );
   }
 
-  const WebSocketServer = loadWebSocketServer();
+  const WebSocketServer = await loadWebSocketServer();
 
   const { req, socket, head } = ctx.upgradeWebSocket();
 
