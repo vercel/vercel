@@ -48,7 +48,7 @@ function expectLinkRowsUseNonProductionGutter(
   }
 
   expect(plain).not.toMatch(
-    /^[▲✓] (Project|Source|Linked|Directory|Config)\s/m
+    /^[▲✓] (Project|Source|Created|Linked|Added|Directory|Searched|Projects|Config)\s/m
   );
 }
 
@@ -866,9 +866,8 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Found existing project');
     await expect(client.stderr).toOutput('Directory');
+    await expect(client.stderr).toOutput('Found existing project');
     await expect(client.stderr).toOutput(
       `Project     ${team.slug}/${project.name}`
     );
@@ -889,7 +888,18 @@ describe('link', () => {
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
+    const plainOutput = stripAnsi(client.stderr.getFullOutput());
+    expect(plainOutput).toMatch(
+      /^\s{0,2}Directory\s+.+\n\nSearching for existing projects…\n\n\s{0,2}Found existing project/m
+    );
+    expect(plainOutput).toMatch(
+      /Link directory to project\?.*\n\n\s{0,2}Linked\s+/
+    );
+    expect(plainOutput).toMatch(
+      /\s{0,2}Linked\s+.+\n\n\? Pull Development Environment Variables into \.env\.local\?/
+    );
     expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+      'Directory',
       'Project',
       'Linked',
     ]);
@@ -913,7 +923,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -934,19 +944,30 @@ describe('link', () => {
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
-      `Linked          ${user.username}/awesome-app`
+      `Created         ${user.username}/awesome-app`
     );
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
     // Anti-regression: old "Set up and deploy <path>?" confirm prompt is gone.
-    // Status line is "Set up <path>" with no trailing "?" question mark.
+    // Setup state is an aligned Directory row, not a prompt/status sentence.
     const fullOutput = client.stderr.getFullOutput();
+    const plainOutput = stripAnsi(fullOutput);
+    expect(plainOutput).toMatch(
+      /^\s{0,2}Directory\s+.+\n\n(?:Searching for existing projects…\nLoading teams…\n)?\? Which team\?/m
+    );
+    expect(plainOutput).toMatch(
+      /Code directory\?.*\n\n\s{0,2}Detected Next\.js/
+    );
+    expect(plainOutput).toMatch(
+      /Customize advanced settings\?.*\n\n\s{0,2}Created\s+/
+    );
     // Old: `Set up and deploy "${path}"?`
     expect(fullOutput).not.toMatch(/Set up and deploy "[^"]+"\?/);
     // Old inquirer prefix: `? Set up and deploy ...`
     expect(fullOutput).not.toMatch(/\? Set up and deploy/);
+    expect(stripAnsi(fullOutput)).not.toMatch(/^\s*Set up ["“]/m);
     // Anti-regression: "Which scope" was renamed to "Which team".
     expect(fullOutput).not.toContain(
       'Which scope should contain your project?'
@@ -965,6 +986,10 @@ describe('link', () => {
     );
     expect(fullOutput).not.toContain('Link to existing project?');
     expect(fullOutput).not.toContain('Link to different existing project?');
+    expect(fullOutput).not.toContain(
+      `Linked      ${user.username}/awesome-app`
+    );
+    expectLinkRowsUseNonProductionGutter(fullOutput, ['Directory', 'Created']);
   });
 
   it('should write vercel.json for inferred multi-service layouts', async () => {
@@ -988,7 +1013,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -1061,7 +1086,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -1121,7 +1146,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -1200,7 +1225,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -1287,7 +1312,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -1354,7 +1379,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -1406,7 +1431,7 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
-    await expect(client.stderr).toOutput('Set up');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput('Which team?');
     client.stdin.write('\n');
 
@@ -1562,7 +1587,7 @@ describe('link', () => {
 
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Found existing project');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
@@ -1608,7 +1633,7 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1646,7 +1671,7 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1684,7 +1709,7 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1729,7 +1754,7 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1771,7 +1796,7 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1811,7 +1836,7 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1851,7 +1876,7 @@ describe('link', () => {
       client.setArgv('--project', project.name!);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1914,7 +1939,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
@@ -1951,7 +1976,7 @@ describe('link', () => {
       client.setArgv();
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       // Decline cross-team match
       await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('n\n');
@@ -1990,7 +2015,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       // No match found during cross-team search, should go to selectOrg
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\n');
@@ -2011,7 +2036,7 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Customize advanced settings?');
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Linked          ');
+      await expect(client.stderr).toOutput('Created         ');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2217,8 +2242,7 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Searched teams:');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Found existing project');
       await expect(client.stderr).toOutput('Link repository to project?');
       client.stdin.write('y\n');
@@ -2233,7 +2257,16 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      expect(plainOutput).toMatch(
+        /^\s{0,2}Directory\s+.+\n\nSearching for existing projects…\n\n\s{0,2}Found existing project/m
+      );
+      expect(plainOutput).not.toContain('Searched teams:');
+      expect(plainOutput).toMatch(
+        /Link repository to project\?.*\n\n\s{0,2}Linked\s+/
+      );
       expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+        'Directory',
         'Project',
         'Source',
         'Linked',
@@ -2360,7 +2393,7 @@ describe('link', () => {
       client.setArgv('--project', expectedProject.name);
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Found existing project');
       await expect(client.stderr).toOutput('Link repository to project?');
       client.stdin.write('y\n');
@@ -2436,7 +2469,7 @@ describe('link', () => {
       client.cwd = projectDir;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput('Not one of these projects');
       client.stdin.write('\n');
 
@@ -2481,7 +2514,7 @@ describe('link', () => {
       client.cwd = cwd;
       const exitCodePromise = link(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
       await expect(client.stderr).toOutput(
         'Select teams that require SSO to search'
       );
@@ -2503,6 +2536,17 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+      const plainOutput = stripAnsi(client.stderr.getFullOutput());
+      expect(plainOutput).toMatch(/^\s{0,2}Directory\s+.+/m);
+      expect(plainOutput).toContain(
+        'Searched    1 team available without SSO\nNo matching projects found'
+      );
+      expect(plainOutput).toMatch(
+        /Searched teams: .+\n\n\s{0,2}Found existing project/
+      );
+      expect(plainOutput).toMatch(
+        /Link directory to project\?.*\n\n\s{0,2}Linked\s+/
+      );
       expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
         'Press <space> to select'
       );
@@ -2513,6 +2557,12 @@ describe('link', () => {
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.projectId).toEqual(limitedProject.id);
       expect(projectJson.orgId).toEqual(limitedTeam.id);
+      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+        'Directory',
+        'Searched',
+        'Project',
+        'Linked',
+      ]);
     });
 
     describe('multiple matches', () => {
@@ -2640,7 +2690,7 @@ describe('link', () => {
         client.cwd = cwd;
         const exitCodePromise = link(client);
 
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput(
           'Projects    2 matches across teams'
         );
@@ -2695,7 +2745,7 @@ describe('link', () => {
         client.cwd = cwd;
         const exitCodePromise = link(client);
 
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput(
           'Projects    2 matches across teams'
         );

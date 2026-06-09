@@ -64,7 +64,6 @@ export interface SetupAndLinkOptions {
   forceDelete?: boolean;
   link?: ProjectLinkResult;
   successEmoji?: EmojiLabel;
-  setupMsg?: string;
   projectName?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
@@ -200,6 +199,8 @@ async function maybePullEnvAfterLink(
   if (!pullEnv || !client.stdin.isTTY || client.nonInteractive) {
     return;
   }
+
+  output.print('\n');
 
   const pullEnvConfirmed =
     autoConfirm ||
@@ -370,12 +371,12 @@ async function linkCrossTeamMatches({
       });
     }
 
+    output.print('\n');
     output.print(`  ${chalk.bold('Found existing project')}\n`);
     if (match.reason === 'repo-root') {
       printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
       printAlignedLabel('Source', formatMatchSource(match));
     } else {
-      printAlignedLabel('Directory', toHumanPath(path));
       printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
     }
     const confirmed = await client.input.confirm(
@@ -425,6 +426,7 @@ async function linkCrossTeamMatches({
     value: null,
   });
 
+  output.print('\n');
   printAlignedLabel('Projects', `${matches.length} matches across teams`);
   const selected = await client.input.select<CrossTeamMatch | null>({
     message: 'Which project?',
@@ -454,7 +456,6 @@ export default async function setupAndLink(
     forceDelete = false,
     link,
     successEmoji = 'link',
-    setupMsg = 'Set up',
     projectName,
     nonInteractive = false,
     pullEnv = true,
@@ -492,12 +493,10 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
-  // Status line — intent is implied by the user running `vc` in this directory.
-  // The "Set up and deploy?" confirmation prompt is gone; Ctrl-C is the escape hatch.
-  // Single leading newline, 2-space indent, straight quotes — matches the prototype.
-  output.print(
-    `\n  ${chalk.bold(setupMsg)} ${chalk.dim(`"${toHumanPath(path)}"`)}\n`
-  );
+  // The command invocation carries setup intent; show the local target as state.
+  output.print('\n');
+  printAlignedLabel('Directory', toHumanPath(path));
+  output.print('\n');
 
   let skipAutoDetect = false;
   if (searchAcrossTeams) {
@@ -526,7 +525,12 @@ export default async function setupAndLink(
       output.stopSpinner();
     }
 
-    if (crossTeamMatches.length > 0 && !autoConfirm && !nonInteractive) {
+    if (
+      crossTeamMatches.length > 0 &&
+      searchedTeamSlugs.length > 1 &&
+      !autoConfirm &&
+      !nonInteractive
+    ) {
       printCrossTeamSearchScope({
         searchedTeamSlugs,
       });
@@ -611,8 +615,7 @@ export default async function setupAndLink(
       org,
       projectName,
       autoConfirm,
-      skipAutoDetect,
-      { directory: path }
+      skipAutoDetect
     );
   } catch (err) {
     if (
@@ -839,7 +842,8 @@ export default async function setupAndLink(
       org.slug,
       successEmoji,
       autoConfirm,
-      false // don't prompt to pull env for newly created projects
+      false, // don't prompt to pull env for newly created projects
+      'Created'
     );
 
     await connectGitRepository(client, path, project, autoConfirm, org);
@@ -880,6 +884,8 @@ export async function connectGitRepository(
     if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
       return;
     }
+
+    output.print('\n');
 
     const shouldConnect =
       autoConfirm ||

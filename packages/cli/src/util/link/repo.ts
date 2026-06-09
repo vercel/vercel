@@ -206,6 +206,7 @@ export async function linkRepoProject(
   await writeReadme(repoLink.rootPath);
   await addToGitIgnore(repoLink.rootPath);
 
+  output.print('\n');
   printAlignedLabel('Linked', `${orgSlug}/${project.name}`);
 
   return {

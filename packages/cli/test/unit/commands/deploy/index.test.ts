@@ -1635,7 +1635,7 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
@@ -1672,7 +1672,7 @@ describe('deploy', () => {
 
         // I'd like to include project path in this assertion, but it ends up containing
         // a line break in a non-determinsitic location.
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 

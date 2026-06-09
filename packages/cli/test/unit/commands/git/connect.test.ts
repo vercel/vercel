@@ -93,7 +93,7 @@ describe('git connect', () => {
         client.setArgv('git', 'connect', remoteUrl);
         const gitPromise = git(client);
 
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
 
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
@@ -200,7 +200,7 @@ describe('git connect', () => {
       client.setArgv('git', 'connect');
       const gitPromise = git(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
@@ -254,7 +254,7 @@ describe('git connect', () => {
       client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
       const gitPromise = git(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');

@@ -78,7 +78,6 @@ export default async function dev(
         autoConfirm: opts['--yes'],
         link,
         successEmoji: 'link',
-        setupMsg: 'Set up',
         nonInteractive: client.nonInteractive,
       });
 

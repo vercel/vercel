@@ -70,10 +70,7 @@ async function setupProject(
     vercelAuth: 'standard',
   }
 ) {
-  await waitForPrompt(
-    process,
-    /Set up (?:and (?:deploy|develop) )?[“"][^”"]+[”"]/
-  );
+  await waitForPrompt(process, 'Directory');
   await waitForPrompt(process, /Which team[^?]*\?/);
   process.stdin?.write('\n');
 
@@ -339,7 +336,7 @@ test('should prefill "project name" prompt with vercel.json `name`', async () =>
     }
   });
 
-  await waitForPrompt(now, /Set up [“"]/);
+  await waitForPrompt(now, 'Directory');
   await waitForPrompt(now, 'Which team?');
   now.stdin?.write('\n');
 
@@ -451,8 +448,8 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
 
   let detectedNotice = false;
 
-  // Terminate after the first status line. The "Set up and deploy?" prompt was
-  // removed, so writing to stdin would leak into the next real prompt.
+  // Terminate after the first setup-state row. The old "Set up and deploy?"
+  // prompt is gone, so writing to stdin would leak into the next real prompt.
   await waitForPrompt(now, chunk => {
     detectedNotice =
       detectedNotice ||
@@ -460,7 +457,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
         'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
-    return /Set up [“"][^”"]+[”"]/.test(chunk);
+    return /Directory\s+/.test(chunk);
   });
   now.kill('SIGTERM');
 
@@ -1009,7 +1006,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Directory');
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
@@ -1120,7 +1117,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, /Set up [“"]/);
+  await waitForPrompt(vc, 'Directory');
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
 
@@ -1546,7 +1543,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
     },
   });
 
-  await waitForPrompt(vc, 'Set up');
+  await waitForPrompt(vc, 'Directory');
   await waitForPrompt(vc, 'Which team?');
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Project?');
