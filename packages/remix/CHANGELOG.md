@@ -1,5 +1,18 @@
 # @vercel/remix-builder
 
+## 5.9.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 5.8.6
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/error-utils@2.2.0
+
 ## 5.8.5
 
 ### Patch Changes

@@ -552,6 +552,49 @@ it('should support experimentalBypassFor correctly', async () => {
   );
 });
 
+it('should round-trip hasPostponed as a tri-state', async () => {
+  // The api repo relies on telling `false` (PPR machinery but fully static)
+  // apart from `undefined` (no signal), so `false` must NOT collapse to
+  // `undefined` the way other boolean options do.
+  const postponed = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    hasPostponed: true,
+  });
+  expect(postponed.hasPostponed).toBe(true);
+
+  const notPostponed = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    hasPostponed: false,
+  });
+  expect(notPostponed.hasPostponed).toBe(false);
+
+  const omitted = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(omitted.hasPostponed).toBeUndefined();
+
+  expect(
+    () =>
+      new Prerender({
+        expiration: 1,
+        fallback: null,
+        group: 1,
+        bypassToken: 'some-long-bypass-token-to-make-it-work',
+        // @ts-expect-error - intentionally invalid to assert validation
+        hasPostponed: 'yes',
+      })
+  ).toThrow('The `hasPostponed` argument for `Prerender` must be a boolean');
+});
+
 it('should support passQuery correctly', async () => {
   new Prerender({
     expiration: 1,
@@ -1024,7 +1067,7 @@ it('should detect package.json in nested backend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(6);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -1036,7 +1079,7 @@ it('should detect package.json in nested frontend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(6);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 

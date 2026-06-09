@@ -1,5 +1,35 @@
 # @vercel/elysia
 
+## 0.1.90
+
+### Patch Changes
+
+- @vercel/node@5.8.14
+
+## 0.1.89
+
+### Patch Changes
+
+- @vercel/node@5.8.13
+
+## 0.1.88
+
+### Patch Changes
+
+- @vercel/node@5.8.12
+
+## 0.1.87
+
+### Patch Changes
+
+- @vercel/node@5.8.11
+
+## 0.1.86
+
+### Patch Changes
+
+- @vercel/node@5.8.10
+
 ## 0.1.85
 
 ### Patch Changes

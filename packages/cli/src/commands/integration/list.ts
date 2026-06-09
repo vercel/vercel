@@ -4,6 +4,8 @@ import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
 import type { Resource } from '../../util/integration-resource/types';
 import { getResources } from '../../util/integration-resource/get-resources';
+import { isSandboxResource } from '../../util/integration-resource/claim-status';
+import { packageName } from '../../util/pkg-name';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
@@ -143,8 +145,11 @@ export async function list(client: Client) {
         integration: resource.product?.slug,
         configurationId: resource.product?.integrationConfigurationId,
         projects: resource.projectsMetadata?.map(project => project.name),
+        isSandbox: isSandboxResource(resource),
       };
     });
+
+  const sandboxCount = results.filter(r => r.isSandbox).length;
 
   telemetry.trackCliOptionIntegration(
     parsedArguments.flags['--integration'],
@@ -153,14 +158,20 @@ export async function list(client: Client) {
 
   if (asJson) {
     output.stopSpinner();
-    const jsonResources = results.map(result => ({
-      id: result.id,
-      name: result.name,
-      status: result.status,
-      product: result.product,
-      installationId: result.configurationId,
-      projects: result.projects,
-    }));
+    const jsonResources = results.map(result => {
+      const obj: Record<string, unknown> = {
+        id: result.id,
+        name: result.name,
+        status: result.status,
+        product: result.product,
+        installationId: result.configurationId,
+        projects: result.projects,
+      };
+      if (result.isSandbox) {
+        obj.claim_status = 'sandbox';
+      }
+      return obj;
+    });
     client.stdout.write(
       `${JSON.stringify({ resources: jsonResources }, null, 2)}\n`
     );
@@ -184,7 +195,7 @@ export async function list(client: Client) {
         ),
         ...results.map(result => [
           resourceLink(contextName, result) ?? chalk.gray('–'),
-          resourceStatus(result.status ?? '–'),
+          resourceStatus(result.status ?? '–', result.isSandbox),
           result.product ?? chalk.gray('–'),
           integrationLink(result, team) ?? chalk.gray('–'),
           chalk.grey(
@@ -195,26 +206,37 @@ export async function list(client: Client) {
       { hsep: 8 }
     )}`
   );
+
+  if (sandboxCount > 0) {
+    const noun = sandboxCount === 1 ? 'resource' : 'resources';
+    output.log(`${sandboxCount} sandbox ${noun} can be claimed.`);
+    output.print(
+      `  Run \`${packageName} integration-resource claim <name>\` to claim one.\n`
+    );
+  }
+
   return 0;
 }
 
-// Builds a string with an appropriately coloured indicator
-function resourceStatus(status: string) {
+// Builds a string with an appropriately coloured indicator, plus a
+// `[SANDBOX]` annotation for sandbox marketplace resources.
+function resourceStatus(status: string, isSandbox = false) {
   const CIRCLE = '● ';
   const statusTitleCase = title(status);
+  const sandboxTag = isSandbox ? ` ${chalk.yellow('[SANDBOX]')}` : '';
   switch (status) {
     case 'initializing':
-      return chalk.yellow(CIRCLE) + statusTitleCase;
+      return chalk.yellow(CIRCLE) + statusTitleCase + sandboxTag;
     case 'error':
-      return chalk.red(CIRCLE) + statusTitleCase;
+      return chalk.red(CIRCLE) + statusTitleCase + sandboxTag;
     case 'available':
-      return chalk.green(CIRCLE) + statusTitleCase;
+      return chalk.green(CIRCLE) + statusTitleCase + sandboxTag;
     case 'suspended':
-      return chalk.white(CIRCLE) + statusTitleCase;
+      return chalk.white(CIRCLE) + statusTitleCase + sandboxTag;
     case 'limits-exceeded-suspended':
-      return `${chalk.white(CIRCLE)}Limits exceeded`;
+      return `${chalk.white(CIRCLE)}Limits exceeded${sandboxTag}`;
     default:
-      return chalk.gray(statusTitleCase);
+      return chalk.gray(statusTitleCase) + sandboxTag;
   }
 }
 

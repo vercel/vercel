@@ -205,6 +205,7 @@ export const build: BuildV2 = async args => {
       ignoreNodeModules: false,
       ignore: args.config.excludeFiles,
       conditions: isBun ? ['bun'] : undefined,
+      traceFiles: true,
       span: buildSpan,
     });
 

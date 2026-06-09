@@ -457,6 +457,7 @@ export const deleteSubcommand = {
     {
       name: 'name-or-id',
       required: true,
+      multiple: true,
     },
   ],
   options: [

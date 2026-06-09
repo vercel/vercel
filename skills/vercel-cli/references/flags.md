@@ -12,7 +12,11 @@ vercel flags create my-feature --kind string --description "My flag"  # string f
 vercel flags create my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"  # with explicit variants
 ```
 
-Flag kinds: `boolean` (default), `string`, `number`. Boolean flags get `true`/`false` variants automatically; use `--variant VALUE[=LABEL]` (repeatable) for string/number flags.
+Flag kinds: `boolean` (default), `string`, `number`, `json`. Boolean flags get `true`/`false` variants automatically; use `--variant VALUE[=LABEL]` (repeatable) for string/number/json flags. JSON variant values must be valid JSON literals (objects, arrays, strings, etc.).
+
+```bash
+vercel flags create layout-config --kind json --variant '{"theme":"light"}'=Light --variant '{"theme":"dark","sidebar":true}'=Dark
+```
 
 ## Listing and Inspecting
 
@@ -62,11 +66,11 @@ Only works with **boolean** flags. Shortcuts that set the served variant to `tru
 vercel flags enable my-feature -e production
 vercel flags enable my-feature -e production --message "Resume production rollout"
 vercel flags disable my-feature -e production
-vercel flags disable my-feature -e production --variant off
+vercel flags disable my-feature -e production --variant false
 vercel flags disable my-feature -e production --message "Pause rollout"
 ```
 
-Environments: `production`, `preview`, `development`. Omit `-e` to choose interactively.
+Boolean variants resolve by ID or **value** (`true` / `false`), not label. Passing `--variant off` for a boolean flag is rejected unless `off` is the variant's literal value or ID. Environments: `production`, `preview`, `development`. Omit `-e` to choose interactively.
 
 ## Archive / Delete
 
@@ -74,6 +78,53 @@ Environments: `production`, `preview`, `development`. Omit `-e` to choose intera
 vercel flags archive my-feature --yes                     # archive (skip prompt)
 vercel flags rm my-feature --yes                          # delete (must be archived first)
 ```
+
+## Split (Weighted Traffic)
+
+Distribute traffic across variants with weights. Repeat `--weight VARIANT=WEIGHT` per variant; weights are normalized, and `0` excludes a variant from the split.
+
+```bash
+vercel flags split redesigned-checkout -e production --by user.userId --weight false=95 --weight true=5
+vercel flags split welcome-message -e production --by user.userId --default-variant control --weight control=90 --weight treatment=10
+vercel flags split checkout-copy -e preview --by user.userId --default-variant control --weight control=50 --weight treatment=50 --weight legacy=0
+```
+
+Each `VARIANT` in `--weight` must resolve to a variant by ID or value, not label. Default boolean flags have values `true` and `false` (labels `On`/`Off` don't resolve), so pass `false`/`true` rather than `off`/`on` unless a flag was created with explicit `off`/`on` variants.
+
+Options: `--environment`/`-e`, `--by ENTITY.ATTRIBUTE`, `--weight VARIANT=WEIGHT` (repeatable), `--default-variant`, `--message`.
+
+## Rollout (Progressive)
+
+Move traffic from one variant to another over a series of stages. `--stage PERCENTAGE,DURATION` is repeatable; `100%` is implied at the end.
+
+```bash
+vercel flags rollout redesigned-checkout -e production --by user.userId --stage 5,6h --stage 10,6h --stage 25,12h --stage 50,1d
+vercel flags rollout welcome-message -e production --by user.userId --from-variant control --to-variant treatment --default-variant control --stage 10,2h --stage 50,12h --start 2026-04-16T09:00:00Z
+vercel flags rollout redesigned-checkout -e production --stage 5,30m --stage 25,2h --stage 50,8h    # update schedule only
+```
+
+Options: `--environment`/`-e`, `--by`, `--from-variant`, `--to-variant`, `--default-variant`, `--stage`/`-s` (repeatable), `--start` (`now`, a relative duration like `1h`, or an ISO 8601 datetime), `--message`. For boolean flags, `--from-variant` defaults to `false` and `--to-variant` to `true`.
+
+## Prepare (Build Integration)
+
+Prepare flag definition fallbacks for the build. Used in build pipelines so the deployed app has fallback values for every flag.
+
+```bash
+vercel flags prepare
+```
+
+## Override (Cookie Token)
+
+Encrypts flag overrides into a secure token suitable for the `vercel-flag-overrides` cookie, or decrypts an existing token. Useful for testing variants without changing served defaults.
+
+```bash
+vercel flags override my-flag=true
+vercel flags override flag-a=true flag-b=hello
+vercel flags override my-flag=42 --expiration 30d
+vercel flags override --decrypt <token>
+```
+
+Options: `--expiration TIME` (default `1y`), `--decrypt TOKEN`.
 
 ## SDK Keys
 

@@ -89,11 +89,11 @@ describe('prepareFlagsDefinitions', () => {
     const indexJs = await readOutput('index.js');
     expect(indexJs).toContain(sha256(sdkKey));
     expect(indexJs).not.toContain(sdkKey);
-    expect(indexJs).toContain('export function get(hashedSdkKey)');
+    expect(indexJs).toContain('export function get(key)');
 
     // index.d.ts should exist
     const dts = await readOutput('index.d.ts');
-    expect(dts).toContain('export function get(hashedSdkKey: string)');
+    expect(dts).toContain('export function get(key: string)');
 
     // package.json should exist
     const packageJson = JSON.parse(await readOutput('package.json'));
@@ -216,7 +216,7 @@ describe('prepareFlagsDefinitions', () => {
 
     // Lookup function uses the hashed key parameter
     expect(indexJs).toContain(
-      'export function get(hashedSdkKey) {\n  return map[hashedSdkKey]?.() ?? null;\n}'
+      'export function get(key) {\n  return map[key]?.() ?? null;\n}'
     );
 
     // Raw key must not appear

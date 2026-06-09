@@ -1,5 +1,19 @@
 # @vercel/functions
 
+## 3.6.3
+
+### Patch Changes
+
+- Updated dependencies [01cf6c2]
+  - @vercel/oidc@3.6.1
+
+## 3.6.2
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/oidc@3.6.0
+
 ## 3.6.1
 
 ### Patch Changes

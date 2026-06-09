@@ -1,5 +1,17 @@
 # @vercel/aws
 
+## 0.2.3
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.1.4
+
+## 0.2.2
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.1.3
+
 ## 0.2.1
 
 ### Patch Changes

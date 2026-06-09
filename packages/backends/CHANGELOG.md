@@ -1,5 +1,43 @@
 # @vercel/backends
 
+## 0.8.9
+
+### Patch Changes
+
+- Updated dependencies [4e849dd]
+  - @vercel/build-utils@13.28.0
+
+## 0.8.8
+
+### Patch Changes
+
+- Updated dependencies [c5eeb30]
+- Updated dependencies [09c39af]
+  - @vercel/build-utils@13.27.2
+
+## 0.8.7
+
+### Patch Changes
+
+- aeb5bfa: Trace runtime dependencies from both TypeScript sources and rolldown output chunks. NFT picks the `require` vs `import` exports condition based on the parent file's parse result, so source-only tracing miscategorises packages whose conditional exports point at different files (e.g. `@planetscale/database` -> `dist/index.js` for `import`, `dist/cjs/index.js` for `require`). A CJS bundle that did `require('@planetscale/database')` at runtime would fail with `Cannot find module` because the CJS variant was never traced or uploaded.
+- Updated dependencies [0a170fd]
+  - @vercel/build-utils@13.27.1
+
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [338cc35]
+  - @vercel/build-utils@13.27.0
+
+## 0.8.5
+
+### Patch Changes
+
+- Updated dependencies [3019788]
+- Updated dependencies [fe893ec]
+  - @vercel/build-utils@13.26.6
+
 ## 0.8.4
 
 ### Patch Changes

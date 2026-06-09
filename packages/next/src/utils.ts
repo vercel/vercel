@@ -2649,6 +2649,13 @@ export const onPrerenderRoute =
     let postponedPrerender: string | undefined;
     let postponedState: string | null = null;
     let didPostpone = false;
+    // Tri-state postpone signal surfaced on the resulting `Prerender` objects:
+    // `true`/`false` only for app-router PPR routes whose `.meta` we actually
+    // inspect below, `undefined` everywhere else (pages router, non-PPR app
+    // routes, blocking routes). Distinct from `didPostpone`, which also
+    // requires the `.html` file to exist and can't distinguish "inspected, no
+    // postpone" from "never inspected".
+    let hasPostponed: boolean | undefined;
     if (
       renderingMode === RenderingMode.PARTIALLY_STATIC &&
       appDir &&
@@ -2656,6 +2663,7 @@ export const onPrerenderRoute =
       !isBlocking
     ) {
       postponedState = getHTMLPostponedState({ appDir, routeFileNoExt });
+      hasPostponed = Boolean(postponedState);
 
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       if (fs.existsSync(htmlPath)) {
@@ -3108,6 +3116,7 @@ export const onPrerenderRoute =
           chain,
           allowHeader,
           partialFallback: partialFallback || undefined,
+          hasPostponed,
 
           ...(isNotFound
             ? {
@@ -3158,6 +3167,7 @@ export const onPrerenderRoute =
           experimentalBypassFor,
           allowHeader,
           partialFallback: undefined,
+          hasPostponed,
 
           ...(isNotFound
             ? {
@@ -3263,6 +3273,7 @@ export const onPrerenderRoute =
               experimentalBypassFor,
               allowHeader,
               partialFallback: undefined,
+              hasPostponed,
               chain: {
                 outputPath: normalizePathData(outputPathData),
                 headers: routesManifest.ppr.chain.headers,
@@ -3391,6 +3402,7 @@ export const onPrerenderRoute =
                 group: prerenderGroup,
                 allowHeader,
                 partialFallback: undefined,
+                hasPostponed,
 
                 // These routes are always only static, so they should not
                 // permit any bypass unless it's for preview

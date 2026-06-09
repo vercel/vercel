@@ -825,6 +825,9 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
        --accent-color <HEX>      Accent color for the connector icon (e.g. #1A2B3C)                                          
        --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
+       --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
+       --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
+                                 create API.                                                                                 
   -F,  --format <FORMAT>         Specify the output format (json)                                                            
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
   -n,  --name <NAME>             Name of the connector                                                                       
@@ -862,6 +865,14 @@ exports[`help command > connex help output snapshots > connex create subcommand 
   - Create with branding (icon and colors)
 
     $ vercel connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'
+
+  - Create a non-managed connector from explicit data
+
+    $ vercel connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'
+
+  - Create a non-managed connector with an explicit connector type
+
+    $ vercel connect create slack --name my-bot --connector-type slack --data '{"appId":"A123","appName":"my-bot","clientId":"abc","clientSecret":"secret"}'
 
   - Output as JSON
 
@@ -1635,12 +1646,29 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                            below
                            for  
                            exam…
-  list    domain           List 
-                           all  
+  list    [domain]         List 
                            DNS  
                            entr…
-                           for a
+                           Pass 
+                           a    
                            doma…
+                           to   
+                           list 
+                           its  
+                           reco…
+                           or   
+                           omit 
+                           the  
+                           argu…
+                           to   
+                           list 
+                           reco…
+                           acro…
+                           every
+                           doma…
+                           on   
+                           the  
+                           scope
                            (def…
   remove  id               Remo…
                            a DNS
@@ -1744,7 +1772,9 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
   add     domain details   Add a new DNS entry (see below for examples) 
   import  domain zonefile  Import a DNS zone file (see below for        
                            examples)                                    
-  list    domain           List all DNS entries for a domain (default)  
+  list    [domain]         List DNS entries. Pass a domain to list its  
+                           records, or omit the argument to list records
+                           across every domain on the scope (default)   
   remove  id               Remove a DNS entry using its ID              
 
 
@@ -1809,7 +1839,8 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   add     domain details   Add a new DNS entry (see below for examples)                                         
   import  domain zonefile  Import a DNS zone file (see below for examples)                                      
-  list    domain           List all DNS entries for a domain (default)                                          
+  list    [domain]         List DNS entries. Pass a domain to list its records, or omit the argument to list    
+                           records across every domain on the scope (default)                                   
   remove  id               Remove a DNS entry using its ID                                                      
 
 
@@ -1887,9 +1918,10 @@ exports[`help command > dns help output snapshots > dns import help output snaps
 
 exports[`help command > dns help output snapshots > dns list help output snapshots > dns list help column width 120 1`] = `
 "
-  ▲ vercel dns list domain [options]
+  ▲ vercel dns list [domain] [options]
 
-  List all DNS entries for a domain                                                                                     
+  List DNS entries. Pass a domain to list its records, or omit the argument to list records across every domain on the  
+  scope                                                                                                                 
 
   Options:
 
@@ -2103,6 +2135,14 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    or  
                                    more
                                    dom…
+  search       query               Dis…
+                                   dom…
+                                   can…
+                                   from
+                                   a   
+                                   key…
+                                   or  
+                                   fra…
   transfer-in  domain              Tra…
                                    in a
                                    dom…
@@ -2189,6 +2229,8 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    Vercel Team                                 
   price        domain              Show registrar price quotes for one or more 
                                    domains                                     
+  search       query               Discover domain-name candidates from a      
+                                   keyword or fragment                         
   transfer-in  domain              Transfer in a domain name to Vercel         
   remove       domain              Remove ownership of a domain name from a    
                                    Vercel Team                                 
@@ -2228,6 +2270,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   check        domain              Check if a domain is available to buy                                               
   move         domain destination  Move ownership of a domain name to another Vercel Team                              
   price        domain              Show registrar price quotes for one or more domains                                 
+  search       query               Discover domain-name candidates from a keyword or fragment                          
   transfer-in  domain              Transfer in a domain name to Vercel                                                 
   remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
@@ -2402,6 +2445,61 @@ exports[`help command > domains help output snapshots > domains remove help outp
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains search help output snapshots > domains search help column width 120 1`] = `
+"
+  ▲ vercel domains search query [options]
+
+  Discover domain-name candidates from a keyword or fragment                                                            
+
+  Options:
+
+       --available        Show only candidates available to register                                                    
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+       --limit <NUMBER>   Number of candidates to check per page (default: 20, max: 200)                                
+       --next <CURSOR>    Show the next page of candidates                                                              
+       --order <ORDER>    Order candidates by relevance, alphabetical order, or length (default: relevance)             
+       --tld <TLD>        Filter candidates by exact TLD. Repeatable.                                                   
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Discover domain-name candidates
+
+    $ vercel domains search acme
+
+  - Narrow candidates with a TLD fragment
+
+    $ vercel domains search acme.d
+
+  - Filter candidates by TLD
+
+    $ vercel domains search acme --tld com --tld dev
+
+  - Show only available candidates
+
+    $ vercel domains search acme --available
+
+  - JSON output
+
+    $ vercel domains search acme --format=json
 
 "
 `;
@@ -3117,7 +3215,7 @@ exports[`help command > init help output snapshots > init help column width 40 1
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3165,7 +3263,7 @@ exports[`help command > init help output snapshots > init help column width 80 1
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3211,7 +3309,7 @@ exports[`help command > init help output snapshots > init help column width 120 
 
   - Initialize example project into specified directory
 
-    $ vercel <example> <dir>
+    $ vercel init <example> <dir>
 
   - Initialize example project without checking
 
@@ -3616,9 +3714,8 @@ exports[`help command > integration help output snapshots > integration help col
   ▲ vercel integration command
 
   Manage marketplace integrations. To   
-  manage individual resources           
-  (disconnect, remove), see             
-  \`integration-resource\`.               
+  manage individual resources, see      
+  \`vercel integration resource\`.        
 
   Commands:
 
@@ -3716,6 +3813,15 @@ exports[`help command > integration help output snapshots > integration help col
                                   da…
                                   via
                                   SSO
+  resource                        Ma…
+                                  ma…
+                                  in…
+                                  re…
+                                  (c…
+                                  di…
+                                  re…
+                                  cr…
+                                  cl…
   update         integration      Up…
                                   a  
                                   ma…
@@ -3877,6 +3983,10 @@ exports[`help command > integration help output snapshots > integration help col
 
     $ vercel integration add acme/acme-redis
 
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
+
 "
 `;
 
@@ -3884,8 +3994,8 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations. To manage individual resources (disconnect,  
-  remove), see \`integration-resource\`.                                          
+  Manage marketplace integrations. To manage individual resources, see \`vercel  
+  integration resource\`.                                                        
 
   Commands:
 
@@ -3908,6 +4018,9 @@ exports[`help command > integration help output snapshots > integration help col
                                   integrations for the current project       
   open           name [resource]  Opens a marketplace integration's or       
                                   resource's dashboard via SSO               
+  resource                        Manage marketplace integration resources   
+                                  (connect, disconnect, remove,              
+                                  create-threshold, claim)                   
   update         integration      Update a marketplace integration           
                                   installation (billing plan or which        
                                   projects can access it). Install, remove,  
@@ -3951,6 +4064,10 @@ exports[`help command > integration help output snapshots > integration help col
 
     $ vercel integration add acme/acme-redis
 
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
+
 "
 `;
 
@@ -3958,7 +4075,7 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations. To manage individual resources (disconnect, remove), see \`integration-resource\`.     
+  Manage marketplace integrations. To manage individual resources, see \`vercel integration resource\`.                   
 
   Commands:
 
@@ -3973,6 +4090,8 @@ exports[`help command > integration help output snapshots > integration help col
   installations                   List marketplace integration installations for the current team (account scope)    
   list           [project]        List resources from marketplace integrations for the current project               
   open           name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                  
+  resource                        Manage marketplace integration resources (connect, disconnect, remove,             
+                                  create-threshold, claim)                                                           
   update         integration      Update a marketplace integration installation (billing plan or which projects can  
                                   access it). Install, remove, and connect flows are separate (integration add,      
                                   integration remove, integration-resource, env pull, etc.) — not part of update.    
@@ -4004,6 +4123,10 @@ exports[`help command > integration help output snapshots > integration help col
   - Install a specific product from an integration
 
     $ vercel integration add acme/acme-redis
+
+  - Connect an existing resource to the current project
+
+    $ vercel integration resource connect my-acme-resource
 
 "
 `;
@@ -4250,7 +4373,7 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource disconnect resource [project] [options]
 
-  Disconnect a resource from a project, or the current project                                                          
+  Disconnect a marketplace resource from a project                                                                      
 
   Options:
 
@@ -4303,10 +4426,18 @@ exports[`help command > integration-resource help output snapshots > integration
   ▲ vercel integration-resource command
 
   Manage marketplace integration        
-  resources                             
+  resources (alias for \`vercel          
+  integration resource\`)                
 
   Commands:
 
+  connect           resource [project]            …
+                                                  a
+                                                  …
+                                                  …
+                                                  …
+                                                  a
+                                                  …
   create-threshold  resource minimum spend limit  …
                                                   a
                                                   …
@@ -4325,13 +4456,27 @@ exports[`help command > integration-resource help output snapshots > integration
                                                   a
                                                   …
                                                   …
+                                                  …
+                                                  a
+                                                  …
+  remove            resource                      …
+                                                  …
+                                                  …
+                                                  …
+  claim             [resource]                    …
                                                   a
                                                   …
                                                   …
                                                   …
                                                   …
                                                   …
-  remove            resource                      …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
+                                                  …
                                                   …
                                                   …
                                                   …
@@ -4392,21 +4537,30 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource command
 
-  Manage marketplace integration resources                                      
+  Manage marketplace integration resources (alias for \`vercel integration       
+  resource\`)                                                                    
 
   Commands:
 
+  connect           resource [project]            Connect a marketplace 
+                                                  resource to a project 
   create-threshold  resource minimum spend limit  Creates a threshold   
                                                   for a resource (or    
                                                   installation, if the  
                                                   integration uses      
                                                   installation-level    
                                                   thresholds)           
-  disconnect        resource [project]            Disconnect a resource 
-                                                  from a project, or the
-                                                  current project       
+  disconnect        resource [project]            Disconnect a          
+                                                  marketplace resource  
+                                                  from a project        
   remove            resource                      Delete an integration 
                                                   resource              
+  claim             [resource]                    Claim a sandbox       
+                                                  marketplace resource  
+                                                  (e.g. Stripe, Shopify)
+                                                  by opening the        
+                                                  provider claim URL in 
+                                                  your browser          
 
 
   Global Options:
@@ -4432,14 +4586,17 @@ exports[`help command > integration-resource help output snapshots > integration
 "
   ▲ vercel integration-resource command
 
-  Manage marketplace integration resources                                                                              
+  Manage marketplace integration resources (alias for \`vercel integration resource\`)                                    
 
   Commands:
 
+  connect           resource [project]            Connect a marketplace resource to a project                   
   create-threshold  resource minimum spend limit  Creates a threshold for a resource (or installation, if the   
                                                   integration uses installation-level thresholds)               
-  disconnect        resource [project]            Disconnect a resource from a project, or the current project  
+  disconnect        resource [project]            Disconnect a marketplace resource from a project              
   remove            resource                      Delete an integration resource                                
+  claim             [resource]                    Claim a sandbox marketplace resource (e.g. Stripe, Shopify) by
+                                                  opening the provider claim URL in your browser                
 
 
   Global Options:
@@ -5741,7 +5898,8 @@ exports[`help command > promote help output snapshots > promote status help outp
 
   Options:
 
-  -y,  --yes  Skip the confirmation prompt when linking a Project                                                       
+       --timeout <TIME>  Time to wait for promotion completion [3m]                                                          
+  -y,  --yes             Skip the confirmation prompt when linking a Project                                                 
 
 
   Global Options:
@@ -6484,19 +6642,13 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback status help output snapshots > rollback status help column width 120 1`] = `
 "
-  ▲ vercel rollback url|deploymentId [options]
+  ▲ vercel rollback status [project] [options]
 
-  Quickly revert back to a previous deployment                                                                          
-
-  Commands:
-
-  status  [project]  Show the status of any current pending rollbacks                                           
-
+  Show the status of any current pending rollbacks                                                                      
 
   Options:
 
-       --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
-  -y,  --yes             Accept default value for all prompts                                                                
+   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
 
 
   Global Options:
@@ -6515,9 +6667,11 @@ exports[`help command > rollback help output snapshots > rollback status help ou
 
   Examples:
 
-  - Rollback a deployment using id or url
+  - Show the status of any current pending rollbacks
 
-    $ vercel rollback <deployment id/url>
+    $ vercel rollback status
+    $ vercel rollback status <project>
+    $ vercel rollback status --timeout 30s
 
 "
 `;
