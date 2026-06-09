@@ -4,21 +4,49 @@
 
 # Interface: WebSocket
 
-Defined in: packages/functions/src/types/websocket.ts:8
-
-A WebSocket connection. Compatible with the `ws` library's `WebSocket` type.
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:438
 
 ## Extends
 
-- `EventEmitter`
+- `WebSocketAlias`
 
 ## Properties
+
+### binaryType
+
+> **binaryType**: `"nodebuffer"` \| `"arraybuffer"` \| `"fragments"`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:51
+
+#### Inherited from
+
+`WebSocketAlias.binaryType`
+
+***
+
+### bufferedAmount
+
+> `readonly` **bufferedAmount**: `number`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:52
+
+#### Inherited from
+
+`WebSocketAlias.bufferedAmount`
+
+***
 
 ### CLOSED
 
 > `readonly` **CLOSED**: `3`
 
-Defined in: packages/functions/src/types/websocket.ts:13
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:72
+
+The connection is closed.
+
+#### Inherited from
+
+`WebSocketAlias.CLOSED`
 
 ***
 
@@ -26,7 +54,13 @@ Defined in: packages/functions/src/types/websocket.ts:13
 
 > `readonly` **CLOSING**: `2`
 
-Defined in: packages/functions/src/types/websocket.ts:12
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:70
+
+The connection is in the process of closing.
+
+#### Inherited from
+
+`WebSocketAlias.CLOSING`
 
 ***
 
@@ -34,7 +68,87 @@ Defined in: packages/functions/src/types/websocket.ts:12
 
 > `readonly` **CONNECTING**: `0`
 
-Defined in: packages/functions/src/types/websocket.ts:10
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:66
+
+The connection is not yet open.
+
+#### Inherited from
+
+`WebSocketAlias.CONNECTING`
+
+***
+
+### extensions
+
+> `readonly` **extensions**: `string`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:53
+
+#### Inherited from
+
+`WebSocketAlias.extensions`
+
+***
+
+### isPaused
+
+> `readonly` **isPaused**: `boolean`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:55
+
+Indicates whether the websocket is paused
+
+#### Inherited from
+
+`WebSocketAlias.isPaused`
+
+***
+
+### onclose
+
+> **onclose**: ((`event`) => `void`) \| `null`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:76
+
+#### Inherited from
+
+`WebSocketAlias.onclose`
+
+***
+
+### onerror
+
+> **onerror**: ((`event`) => `void`) \| `null`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:75
+
+#### Inherited from
+
+`WebSocketAlias.onerror`
+
+***
+
+### onmessage
+
+> **onmessage**: ((`event`) => `void`) \| `null`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:77
+
+#### Inherited from
+
+`WebSocketAlias.onmessage`
+
+***
+
+### onopen
+
+> **onopen**: ((`event`) => `void`) \| `null`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:74
+
+#### Inherited from
+
+`WebSocketAlias.onopen`
 
 ***
 
@@ -42,15 +156,51 @@ Defined in: packages/functions/src/types/websocket.ts:10
 
 > `readonly` **OPEN**: `1`
 
-Defined in: packages/functions/src/types/websocket.ts:11
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:68
+
+The connection is open and ready to communicate.
+
+#### Inherited from
+
+`WebSocketAlias.OPEN`
+
+***
+
+### protocol
+
+> `readonly` **protocol**: `string`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:56
+
+#### Inherited from
+
+`WebSocketAlias.protocol`
 
 ***
 
 ### readyState
 
-> `readonly` **readyState**: `number`
+> `readonly` **readyState**: `0` \| `1` \| `2` \| `3`
 
-Defined in: packages/functions/src/types/websocket.ts:9
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:58
+
+The current state of the connection
+
+#### Inherited from
+
+`WebSocketAlias.readyState`
+
+***
+
+### url
+
+> `readonly` **url**: `string`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:63
+
+#### Inherited from
+
+`WebSocketAlias.url`
 
 ## Methods
 
@@ -80,47 +230,277 @@ Defined in: node\_modules/.pnpm/@types+node@20.11.0/node\_modules/@types/node/ev
 
 #### Inherited from
 
-`EventEmitter.[captureRejectionSymbol]`
+`WebSocketAlias.[captureRejectionSymbol]`
+
+***
+
+### addEventListener()
+
+> **addEventListener**\<`K`\>(`type`, `listener`, `options?`): `void`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:117
+
+#### Type Parameters
+
+##### K
+
+`K` *extends* keyof `WebSocketEventMap`
+
+#### Parameters
+
+##### type
+
+`K`
+
+##### listener
+
+((`event`) => `void`) \| \{ `handleEvent`: `void`; \}
+
+##### options?
+
+`EventListenerOptions`
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+`WebSocketAlias.addEventListener`
 
 ***
 
 ### addListener()
 
-> **addListener**(`eventName`, `listener`): `this`
+#### Call Signature
 
-Defined in: node\_modules/.pnpm/@types+node@20.11.0/node\_modules/@types/node/events.d.ts:545
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:171
 
 Alias for `emitter.on(eventName, listener)`.
 
-#### Parameters
+##### Parameters
 
-##### eventName
+###### event
 
-`string` \| `symbol`
+`"close"`
 
-##### listener
+###### listener
 
-(...`args`) => `void`
+(`code`, `reason`) => `void`
 
-#### Returns
+##### Returns
 
 `this`
 
-#### Since
+##### Since
 
 v0.1.26
 
-#### Inherited from
+##### Inherited from
 
-`EventEmitter.addListener`
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:172
+
+##### Parameters
+
+###### event
+
+`"error"`
+
+###### listener
+
+(`error`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:173
+
+##### Parameters
+
+###### event
+
+`"upgrade"`
+
+###### listener
+
+(`request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:174
+
+##### Parameters
+
+###### event
+
+`"message"`
+
+###### listener
+
+(`data`, `isBinary`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:175
+
+##### Parameters
+
+###### event
+
+`"open"`
+
+###### listener
+
+() => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:176
+
+##### Parameters
+
+###### event
+
+`"ping"` \| `"pong"`
+
+###### listener
+
+(`data`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:177
+
+##### Parameters
+
+###### event
+
+`"redirect"`
+
+###### listener
+
+(`url`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:178
+
+##### Parameters
+
+###### event
+
+`"unexpected-response"`
+
+###### listener
+
+(`request`, `response`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
+
+#### Call Signature
+
+> **addListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:182
+
+##### Parameters
+
+###### event
+
+`string` \| `symbol`
+
+###### listener
+
+(...`args`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.addListener`
 
 ***
 
 ### close()
 
-> **close**(`code?`, `reason?`): `void`
+> **close**(`code?`, `data?`): `void`
 
-Defined in: packages/functions/src/types/websocket.ts:25
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:87
 
 #### Parameters
 
@@ -128,13 +508,17 @@ Defined in: packages/functions/src/types/websocket.ts:25
 
 `number`
 
-##### reason?
+##### data?
 
 `string` \| `Buffer`
 
 #### Returns
 
 `void`
+
+#### Inherited from
+
+`WebSocketAlias.close`
 
 ***
 
@@ -202,7 +586,7 @@ v0.1.26
 
 #### Inherited from
 
-`EventEmitter.emit`
+`WebSocketAlias.emit`
 
 ***
 
@@ -239,7 +623,7 @@ v6.0.0
 
 #### Inherited from
 
-`EventEmitter.eventNames`
+`WebSocketAlias.eventNames`
 
 ***
 
@@ -262,7 +646,7 @@ v1.0.0
 
 #### Inherited from
 
-`EventEmitter.getMaxListeners`
+`WebSocketAlias.getMaxListeners`
 
 ***
 
@@ -300,7 +684,7 @@ v3.2.0
 
 #### Inherited from
 
-`EventEmitter.listenerCount`
+`WebSocketAlias.listenerCount`
 
 ***
 
@@ -336,39 +720,233 @@ v0.1.26
 
 #### Inherited from
 
-`EventEmitter.listeners`
+`WebSocketAlias.listeners`
 
 ***
 
 ### off()
 
+#### Call Signature
+
 > **off**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:43
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:158
 
 Alias for `emitter.removeListener()`.
 
-#### Parameters
+##### Parameters
 
-##### event
+###### event
 
-`string` \| `symbol`
+`"close"`
 
-##### listener
+###### listener
 
-(...`args`) => `void`
+(`this`, `code`, `reason`) => `void`
 
-#### Returns
+##### Returns
 
 `this`
 
-#### Since
+##### Since
 
 v10.0.0
 
-#### Overrides
+##### Inherited from
 
-`EventEmitter.off`
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:159
+
+##### Parameters
+
+###### event
+
+`"error"`
+
+###### listener
+
+(`this`, `error`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:160
+
+##### Parameters
+
+###### event
+
+`"upgrade"`
+
+###### listener
+
+(`this`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:161
+
+##### Parameters
+
+###### event
+
+`"message"`
+
+###### listener
+
+(`this`, `data`, `isBinary`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:162
+
+##### Parameters
+
+###### event
+
+`"open"`
+
+###### listener
+
+(`this`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:163
+
+##### Parameters
+
+###### event
+
+`"ping"` \| `"pong"`
+
+###### listener
+
+(`this`, `data`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:164
+
+##### Parameters
+
+###### event
+
+`"redirect"`
+
+###### listener
+
+(`this`, `url`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:165
+
+##### Parameters
+
+###### event
+
+`"unexpected-response"`
+
+###### listener
+
+(`this`, `request`, `response`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
+
+#### Call Signature
+
+> **off**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:169
+
+##### Parameters
+
+###### event
+
+`string` \| `symbol`
+
+###### listener
+
+(`this`, ...`args`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.off`
 
 ***
 
@@ -378,7 +956,7 @@ v10.0.0
 
 > **on**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:29
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:132
 
 Adds the `listener` function to the end of the listeners array for the
 event named `eventName`. No checks are made to see if the `listener` has
@@ -415,7 +993,7 @@ myEE.emit('foo');
 
 ###### listener
 
-(`code`, `reason`) => `void`
+(`this`, `code`, `reason`) => `void`
 
 The callback function
 
@@ -427,42 +1005,15 @@ The callback function
 
 v0.1.101
 
-##### Overrides
+##### Inherited from
 
-`EventEmitter.on`
+`WebSocketAlias.on`
 
 #### Call Signature
 
 > **on**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:30
-
-Adds the `listener` function to the end of the listeners array for the
-event named `eventName`. No checks are made to see if the `listener` has
-already been added. Multiple calls passing the same combination of `eventName`and `listener` will result in the `listener` being added, and called, multiple
-times.
-
-```js
-server.on('connection', (stream) => {
-  console.log('someone connected!');
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The`emitter.prependListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.on('foo', () => console.log('a'));
-myEE.prependListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:133
 
 ##### Parameters
 
@@ -472,54 +1023,45 @@ myEE.emit('foo');
 
 ###### listener
 
-(`err`) => `void`
-
-The callback function
+(`this`, `error`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.1.101
-
-##### Overrides
-
-`EventEmitter.on`
+`WebSocketAlias.on`
 
 #### Call Signature
 
 > **on**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:31
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:134
 
-Adds the `listener` function to the end of the listeners array for the
-event named `eventName`. No checks are made to see if the `listener` has
-already been added. Multiple calls passing the same combination of `eventName`and `listener` will result in the `listener` being added, and called, multiple
-times.
+##### Parameters
 
-```js
-server.on('connection', (stream) => {
-  console.log('someone connected!');
-});
-```
+###### event
 
-Returns a reference to the `EventEmitter`, so that calls can be chained.
+`"upgrade"`
 
-By default, event listeners are invoked in the order they are added. The`emitter.prependListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
+###### listener
 
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.on('foo', () => console.log('a'));
-myEE.prependListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+(`this`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.on`
+
+#### Call Signature
+
+> **on**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:135
 
 ##### Parameters
 
@@ -529,54 +1071,21 @@ myEE.emit('foo');
 
 ###### listener
 
-(`data`, `isBinary`) => `void`
-
-The callback function
+(`this`, `data`, `isBinary`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.1.101
-
-##### Overrides
-
-`EventEmitter.on`
+`WebSocketAlias.on`
 
 #### Call Signature
 
 > **on**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:32
-
-Adds the `listener` function to the end of the listeners array for the
-event named `eventName`. No checks are made to see if the `listener` has
-already been added. Multiple calls passing the same combination of `eventName`and `listener` will result in the `listener` being added, and called, multiple
-times.
-
-```js
-server.on('connection', (stream) => {
-  console.log('someone connected!');
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The`emitter.prependListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.on('foo', () => console.log('a'));
-myEE.prependListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:136
 
 ##### Parameters
 
@@ -586,54 +1095,21 @@ myEE.emit('foo');
 
 ###### listener
 
-() => `void`
-
-The callback function
+(`this`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.1.101
-
-##### Overrides
-
-`EventEmitter.on`
+`WebSocketAlias.on`
 
 #### Call Signature
 
 > **on**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:33
-
-Adds the `listener` function to the end of the listeners array for the
-event named `eventName`. No checks are made to see if the `listener` has
-already been added. Multiple calls passing the same combination of `eventName`and `listener` will result in the `listener` being added, and called, multiple
-times.
-
-```js
-server.on('connection', (stream) => {
-  console.log('someone connected!');
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The`emitter.prependListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.on('foo', () => console.log('a'));
-myEE.prependListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:137
 
 ##### Parameters
 
@@ -643,54 +1119,69 @@ myEE.emit('foo');
 
 ###### listener
 
-(`data`) => `void`
-
-The callback function
+(`this`, `data`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.1.101
-
-##### Overrides
-
-`EventEmitter.on`
+`WebSocketAlias.on`
 
 #### Call Signature
 
 > **on**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:34
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:138
 
-Adds the `listener` function to the end of the listeners array for the
-event named `eventName`. No checks are made to see if the `listener` has
-already been added. Multiple calls passing the same combination of `eventName`and `listener` will result in the `listener` being added, and called, multiple
-times.
+##### Parameters
 
-```js
-server.on('connection', (stream) => {
-  console.log('someone connected!');
-});
-```
+###### event
 
-Returns a reference to the `EventEmitter`, so that calls can be chained.
+`"redirect"`
 
-By default, event listeners are invoked in the order they are added. The`emitter.prependListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
+###### listener
 
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.on('foo', () => console.log('a'));
-myEE.prependListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+(`this`, `url`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.on`
+
+#### Call Signature
+
+> **on**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:139
+
+##### Parameters
+
+###### event
+
+`"unexpected-response"`
+
+###### listener
+
+(`this`, `request`, `response`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.on`
+
+#### Call Signature
+
+> **on**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:143
 
 ##### Parameters
 
@@ -700,21 +1191,15 @@ myEE.emit('foo');
 
 ###### listener
 
-(...`args`) => `void`
-
-The callback function
+(`this`, ...`args`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.1.101
-
-##### Overrides
-
-`EventEmitter.on`
+`WebSocketAlias.on`
 
 ***
 
@@ -724,7 +1209,7 @@ v0.1.101
 
 > **once**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:36
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:145
 
 Adds a **one-time**`listener` function for the event named `eventName`. The
 next time `eventName` is triggered, this listener is removed and then invoked.
@@ -759,7 +1244,7 @@ myEE.emit('foo');
 
 ###### listener
 
-(`code`, `reason`) => `void`
+(`this`, `code`, `reason`) => `void`
 
 The callback function
 
@@ -771,40 +1256,15 @@ The callback function
 
 v0.3.0
 
-##### Overrides
+##### Inherited from
 
-`EventEmitter.once`
+`WebSocketAlias.once`
 
 #### Call Signature
 
 > **once**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:37
-
-Adds a **one-time**`listener` function for the event named `eventName`. The
-next time `eventName` is triggered, this listener is removed and then invoked.
-
-```js
-server.once('connection', (stream) => {
-  console.log('Ah, we have our first user!');
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The`emitter.prependOnceListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.once('foo', () => console.log('a'));
-myEE.prependOnceListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:146
 
 ##### Parameters
 
@@ -814,52 +1274,45 @@ myEE.emit('foo');
 
 ###### listener
 
-(`err`) => `void`
-
-The callback function
+(`this`, `error`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.3.0
-
-##### Overrides
-
-`EventEmitter.once`
+`WebSocketAlias.once`
 
 #### Call Signature
 
 > **once**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:38
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:147
 
-Adds a **one-time**`listener` function for the event named `eventName`. The
-next time `eventName` is triggered, this listener is removed and then invoked.
+##### Parameters
 
-```js
-server.once('connection', (stream) => {
-  console.log('Ah, we have our first user!');
-});
-```
+###### event
 
-Returns a reference to the `EventEmitter`, so that calls can be chained.
+`"upgrade"`
 
-By default, event listeners are invoked in the order they are added. The`emitter.prependOnceListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
+###### listener
 
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.once('foo', () => console.log('a'));
-myEE.prependOnceListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+(`this`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.once`
+
+#### Call Signature
+
+> **once**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:148
 
 ##### Parameters
 
@@ -869,52 +1322,21 @@ myEE.emit('foo');
 
 ###### listener
 
-(`data`, `isBinary`) => `void`
-
-The callback function
+(`this`, `data`, `isBinary`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.3.0
-
-##### Overrides
-
-`EventEmitter.once`
+`WebSocketAlias.once`
 
 #### Call Signature
 
 > **once**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:39
-
-Adds a **one-time**`listener` function for the event named `eventName`. The
-next time `eventName` is triggered, this listener is removed and then invoked.
-
-```js
-server.once('connection', (stream) => {
-  console.log('Ah, we have our first user!');
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The`emitter.prependOnceListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.once('foo', () => console.log('a'));
-myEE.prependOnceListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:149
 
 ##### Parameters
 
@@ -924,52 +1346,21 @@ myEE.emit('foo');
 
 ###### listener
 
-() => `void`
-
-The callback function
+(`this`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.3.0
-
-##### Overrides
-
-`EventEmitter.once`
+`WebSocketAlias.once`
 
 #### Call Signature
 
 > **once**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:40
-
-Adds a **one-time**`listener` function for the event named `eventName`. The
-next time `eventName` is triggered, this listener is removed and then invoked.
-
-```js
-server.once('connection', (stream) => {
-  console.log('Ah, we have our first user!');
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The`emitter.prependOnceListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.once('foo', () => console.log('a'));
-myEE.prependOnceListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:150
 
 ##### Parameters
 
@@ -979,52 +1370,69 @@ myEE.emit('foo');
 
 ###### listener
 
-(`data`) => `void`
-
-The callback function
+(`this`, `data`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.3.0
-
-##### Overrides
-
-`EventEmitter.once`
+`WebSocketAlias.once`
 
 #### Call Signature
 
 > **once**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:41
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:151
 
-Adds a **one-time**`listener` function for the event named `eventName`. The
-next time `eventName` is triggered, this listener is removed and then invoked.
+##### Parameters
 
-```js
-server.once('connection', (stream) => {
-  console.log('Ah, we have our first user!');
-});
-```
+###### event
 
-Returns a reference to the `EventEmitter`, so that calls can be chained.
+`"redirect"`
 
-By default, event listeners are invoked in the order they are added. The`emitter.prependOnceListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
+###### listener
 
-```js
-import { EventEmitter } from 'node:events';
-const myEE = new EventEmitter();
-myEE.once('foo', () => console.log('a'));
-myEE.prependOnceListener('foo', () => console.log('b'));
-myEE.emit('foo');
-// Prints:
-//   b
-//   a
-```
+(`this`, `url`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.once`
+
+#### Call Signature
+
+> **once**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:152
+
+##### Parameters
+
+###### event
+
+`"unexpected-response"`
+
+###### listener
+
+(`this`, `request`, `response`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.once`
+
+#### Call Signature
+
+> **once**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:156
 
 ##### Parameters
 
@@ -1034,21 +1442,35 @@ myEE.emit('foo');
 
 ###### listener
 
-(...`args`) => `void`
-
-The callback function
+(`this`, ...`args`) => `void`
 
 ##### Returns
 
 `this`
 
-##### Since
+##### Inherited from
 
-v0.3.0
+`WebSocketAlias.once`
 
-##### Overrides
+***
 
-`EventEmitter.once`
+### pause()
+
+> **pause**(): `void`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:109
+
+Pause the websocket causing it to stop emitting events. Some events can still be
+emitted after this is called, until all buffered data is consumed. This method
+is a noop if the ready state is `CONNECTING` or `CLOSED`.
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+`WebSocketAlias.pause`
 
 ***
 
@@ -1056,13 +1478,13 @@ v0.3.0
 
 > **ping**(`data?`, `mask?`, `cb?`): `void`
 
-Defined in: packages/functions/src/types/websocket.ts:26
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:88
 
 #### Parameters
 
 ##### data?
 
-`unknown`
+`any`
 
 ##### mask?
 
@@ -1075,6 +1497,10 @@ Defined in: packages/functions/src/types/websocket.ts:26
 #### Returns
 
 `void`
+
+#### Inherited from
+
+`WebSocketAlias.ping`
 
 ***
 
@@ -1082,13 +1508,13 @@ Defined in: packages/functions/src/types/websocket.ts:26
 
 > **pong**(`data?`, `mask?`, `cb?`): `void`
 
-Defined in: packages/functions/src/types/websocket.ts:27
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:89
 
 #### Parameters
 
 ##### data?
 
-`unknown`
+`any`
 
 ##### mask?
 
@@ -1101,6 +1527,10 @@ Defined in: packages/functions/src/types/websocket.ts:27
 #### Returns
 
 `void`
+
+#### Inherited from
+
+`WebSocketAlias.pong`
 
 ***
 
@@ -1147,7 +1577,7 @@ v6.0.0
 
 #### Inherited from
 
-`EventEmitter.prependListener`
+`WebSocketAlias.prependListener`
 
 ***
 
@@ -1192,7 +1622,7 @@ v6.0.0
 
 #### Inherited from
 
-`EventEmitter.prependOnceListener`
+`WebSocketAlias.prependOnceListener`
 
 ***
 
@@ -1246,7 +1676,7 @@ v9.4.0
 
 #### Inherited from
 
-`EventEmitter.rawListeners`
+`WebSocketAlias.rawListeners`
 
 ***
 
@@ -1280,15 +1710,49 @@ v0.1.26
 
 #### Inherited from
 
-`EventEmitter.removeAllListeners`
+`WebSocketAlias.removeAllListeners`
+
+***
+
+### removeEventListener()
+
+> **removeEventListener**\<`K`\>(`type`, `listener`): `void`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:124
+
+#### Type Parameters
+
+##### K
+
+`K` *extends* keyof `WebSocketEventMap`
+
+#### Parameters
+
+##### type
+
+`K`
+
+##### listener
+
+((`event`) => `void`) \| \{ `handleEvent`: `void`; \}
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+`WebSocketAlias.removeEventListener`
 
 ***
 
 ### removeListener()
 
+#### Call Signature
+
 > **removeListener**(`event`, `listener`): `this`
 
-Defined in: packages/functions/src/types/websocket.ts:44
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:184
 
 Removes the specified `listener` from the listener array for the event named`eventName`.
 
@@ -1370,27 +1834,238 @@ ee.emit('ping');
 
 Returns a reference to the `EventEmitter`, so that calls can be chained.
 
-#### Parameters
+##### Parameters
 
-##### event
+###### event
 
-`string` \| `symbol`
+`"close"`
 
-##### listener
+###### listener
 
-(...`args`) => `void`
+(`code`, `reason`) => `void`
 
-#### Returns
+##### Returns
 
 `this`
 
-#### Since
+##### Since
 
 v0.1.26
 
-#### Overrides
+##### Inherited from
 
-`EventEmitter.removeListener`
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:185
+
+##### Parameters
+
+###### event
+
+`"error"`
+
+###### listener
+
+(`error`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:186
+
+##### Parameters
+
+###### event
+
+`"upgrade"`
+
+###### listener
+
+(`request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:187
+
+##### Parameters
+
+###### event
+
+`"message"`
+
+###### listener
+
+(`data`, `isBinary`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:188
+
+##### Parameters
+
+###### event
+
+`"open"`
+
+###### listener
+
+() => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:189
+
+##### Parameters
+
+###### event
+
+`"ping"` \| `"pong"`
+
+###### listener
+
+(`data`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:190
+
+##### Parameters
+
+###### event
+
+`"redirect"`
+
+###### listener
+
+(`url`, `request`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:191
+
+##### Parameters
+
+###### event
+
+`"unexpected-response"`
+
+###### listener
+
+(`request`, `response`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+#### Call Signature
+
+> **removeListener**(`event`, `listener`): `this`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:195
+
+##### Parameters
+
+###### event
+
+`string` \| `symbol`
+
+###### listener
+
+(...`args`) => `void`
+
+##### Returns
+
+`this`
+
+##### Inherited from
+
+`WebSocketAlias.removeListener`
+
+***
+
+### resume()
+
+> **resume**(): `void`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:114
+
+Make a paused socket resume emitting events. This method is a noop if the ready
+state is `CONNECTING` or `CLOSED`.
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+`WebSocketAlias.resume`
 
 ***
 
@@ -1400,13 +2075,13 @@ v0.1.26
 
 > **send**(`data`, `cb?`): `void`
 
-Defined in: packages/functions/src/types/websocket.ts:15
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:91
 
 ##### Parameters
 
 ###### data
 
-`string` \| `Buffer` \| [`ArrayBuffer`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer) \| `Buffer`[]
+`BufferLike`
 
 ###### cb?
 
@@ -1416,17 +2091,21 @@ Defined in: packages/functions/src/types/websocket.ts:15
 
 `void`
 
+##### Inherited from
+
+`WebSocketAlias.send`
+
 #### Call Signature
 
 > **send**(`data`, `options`, `cb?`): `void`
 
-Defined in: packages/functions/src/types/websocket.ts:19
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:92
 
 ##### Parameters
 
 ###### data
 
-`string` \| `Buffer` \| [`ArrayBuffer`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer) \| `Buffer`[]
+`BufferLike`
 
 ###### options
 
@@ -1442,6 +2121,10 @@ Defined in: packages/functions/src/types/websocket.ts:19
 
 `boolean`
 
+###### mask?
+
+`boolean`
+
 ###### cb?
 
 (`err?`) => `void`
@@ -1449,6 +2132,10 @@ Defined in: packages/functions/src/types/websocket.ts:19
 ##### Returns
 
 `void`
+
+##### Inherited from
+
+`WebSocketAlias.send`
 
 ***
 
@@ -1481,4 +2168,20 @@ v0.3.5
 
 #### Inherited from
 
-`EventEmitter.setMaxListeners`
+`WebSocketAlias.setMaxListeners`
+
+***
+
+### terminate()
+
+> **terminate**(): `void`
+
+Defined in: node\_modules/.pnpm/@types+ws@8.18.1/node\_modules/@types/ws/index.d.ts:102
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+`WebSocketAlias.terminate`

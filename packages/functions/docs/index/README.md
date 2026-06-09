@@ -16,6 +16,7 @@
 ## Type Aliases
 
 - [AddCacheTagApi](type-aliases/AddCacheTagApi.md)
+- [WebSocket](type-aliases/WebSocket.md)
 - [WebSocketData](type-aliases/WebSocketData.md)
 
 ## Variables
