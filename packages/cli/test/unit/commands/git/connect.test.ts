@@ -98,10 +98,12 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
 
-        await expect(client.stderr).toOutput('Found project');
+        await expect(client.stderr).toOutput('Found existing project');
         client.stdin.write('y\n');
 
-        await expect(client.stderr).toOutput('Pull environment variables now?');
+        await expect(client.stderr).toOutput(
+          'Pull Development Environment Variables into .env.local?'
+        );
         client.stdin.write('n\n');
 
         await expect(client.stderr).toOutput(
@@ -203,10 +205,12 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(
@@ -255,10 +259,12 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       await expect(client.stderr).toOutput(

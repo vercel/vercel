@@ -107,20 +107,26 @@ function formatTeamList(slugs: string[]): string {
   return `${shown.join(', ')}${suffix}`;
 }
 
+const CHECKBOX_INSTRUCTIONS = [
+  '\n  ',
+  chalk.dim('('),
+  chalk.cyan('<space>'),
+  chalk.dim(' select, '),
+  chalk.cyan('<a>'),
+  chalk.dim(' toggle all, '),
+  chalk.cyan('<i>'),
+  chalk.dim(' invert, '),
+  chalk.cyan('<enter>'),
+  chalk.dim(' confirm)'),
+].join('');
+
 function printCrossTeamSearchScope({
   searchedTeamSlugs,
-  skippedLimitedTeamSlugs,
 }: {
   searchedTeamSlugs: string[];
-  skippedLimitedTeamSlugs: string[];
 }): void {
   if (searchedTeamSlugs.length > 0) {
     output.print(`  Searched teams: ${formatTeamList(searchedTeamSlugs)}\n`);
-  }
-  if (skippedLimitedTeamSlugs.length > 0) {
-    output.print(
-      `  Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}\n`
-    );
   }
 }
 
@@ -197,7 +203,10 @@ async function maybePullEnvAfterLink(
 
   const pullEnvConfirmed =
     autoConfirm ||
-    (await client.input.confirm('Pull environment variables now?', true));
+    (await client.input.confirm(
+      'Pull Development Environment Variables into .env.local?',
+      true
+    ));
 
   if (!pullEnvConfirmed) {
     return;
@@ -280,7 +289,8 @@ async function promptForLimitedTeams(
   }
 
   return await client.input.checkbox<Team>({
-    message: 'Which SSO-protected teams?',
+    message: 'Select teams that require SSO to search',
+    instructions: CHECKBOX_INSTRUCTIONS,
     choices: teams.map(team => ({
       name: team.name ? `${team.name} (${team.slug})` : team.slug,
       value: team,
@@ -306,7 +316,7 @@ async function searchSelectedLimitedTeams({
     return [];
   }
 
-  output.spinner('Searching selected SSO-protected teams…', 1000);
+  output.spinner('Searching teams that require SSO…', 1000);
   try {
     const result = await searchProjectAcrossTeams(client, projectName, path, {
       teams: selectedTeams,
@@ -315,11 +325,10 @@ async function searchSelectedLimitedTeams({
     });
     printCrossTeamSearchScope({
       searchedTeamSlugs: result.searchedTeamSlugs,
-      skippedLimitedTeamSlugs: [],
     });
     return result.matches;
   } catch (err) {
-    output.debug(`Selected SSO-protected team search failed: ${err}`);
+    output.debug(`Selected SSO team search failed: ${err}`);
     return [];
   } finally {
     output.stopSpinner();
@@ -361,10 +370,20 @@ async function linkCrossTeamMatches({
       });
     }
 
-    output.print('  Found project\n');
-    printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
-    printAlignedLabel('Source', formatMatchSource(match));
-    const confirmed = await client.input.confirm('Link to this project?', true);
+    output.print(`  ${chalk.bold('Found existing project')}\n`);
+    if (match.reason === 'repo-root') {
+      printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
+      printAlignedLabel('Source', formatMatchSource(match));
+    } else {
+      printAlignedLabel('Directory', toHumanPath(path));
+      printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
+    }
+    const confirmed = await client.input.confirm(
+      match.reason === 'repo-root'
+        ? 'Link repository to project?'
+        : 'Link directory to project?',
+      true
+    );
     if (confirmed) {
       return await linkCrossTeamMatch({
         client,
@@ -406,7 +425,7 @@ async function linkCrossTeamMatches({
     value: null,
   });
 
-  output.print('  Found matching projects across teams\n');
+  printAlignedLabel('Projects', `${matches.length} matches across teams`);
   const selected = await client.input.select<CrossTeamMatch | null>({
     message: 'Which project?',
     choices,
@@ -485,7 +504,6 @@ export default async function setupAndLink(
     // Search for existing projects across all teams
     let crossTeamMatches: CrossTeamMatch[] = [];
     let searchedTeamSlugs: string[] = [];
-    let skippedLimitedTeamSlugs: string[] = [];
     let skippedLimitedTeams: Team[] = [];
     output.spinner('Searching for existing projects…', 1000);
     try {
@@ -501,7 +519,6 @@ export default async function setupAndLink(
       );
       crossTeamMatches = searchResult.matches;
       searchedTeamSlugs = searchResult.searchedTeamSlugs;
-      skippedLimitedTeamSlugs = searchResult.skippedLimitedTeamSlugs;
       skippedLimitedTeams = searchResult.skippedLimitedTeams;
     } catch (err) {
       output.debug(`Cross-team search failed: ${err}`);
@@ -512,7 +529,6 @@ export default async function setupAndLink(
     if (crossTeamMatches.length > 0 && !autoConfirm && !nonInteractive) {
       printCrossTeamSearchScope({
         searchedTeamSlugs,
-        skippedLimitedTeamSlugs,
       });
     }
 
@@ -532,7 +548,7 @@ export default async function setupAndLink(
     if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
       if (crossTeamMatches.length === 0) {
         output.print(
-          `  No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.\n`
+          `  Searched    ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available without SSO\n  No matching projects found\n`
         );
       }
       const limitedTeamMatches = await searchSelectedLimitedTeams({
@@ -555,9 +571,7 @@ export default async function setupAndLink(
         return linkedLimitedMatch;
       }
       if (limitedTeamMatches.length === 0) {
-        output.print(
-          '  No matching projects found in the selected SSO-protected teams.\n'
-        );
+        output.print('  No matching projects found in the selected teams.\n');
       }
       skipAutoDetect =
         skipAutoDetect ||
@@ -593,7 +607,8 @@ export default async function setupAndLink(
       org,
       projectName,
       autoConfirm,
-      skipAutoDetect
+      skipAutoDetect,
+      { directory: path }
     );
   } catch (err) {
     if (

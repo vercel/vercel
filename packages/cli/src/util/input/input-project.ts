@@ -6,13 +6,19 @@ import type { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
 import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
+import toHumanPath from '../humanize-path';
+
+type LinkPromptContext = {
+  directory?: string;
+};
 
 export default async function inputProject(
   client: Client,
   org: Org,
   detectedProjectName: string,
   autoConfirm = false,
-  skipAutoDetect = false
+  skipAutoDetect = false,
+  linkPromptContext: LinkPromptContext = {}
 ): Promise<Project | string> {
   const slugifiedName = slugify(detectedProjectName);
 
@@ -65,9 +71,12 @@ export default async function inputProject(
     );
   } else {
     // auto-detected a project to link
-    output.print('  Found project\n');
+    output.print(`  ${chalk.bold('Found existing project')}\n`);
+    if (linkPromptContext.directory) {
+      printAlignedLabel('Directory', toHumanPath(linkPromptContext.directory));
+    }
     printAlignedLabel('Project', `${org.slug}/${detectedProject.name}`);
-    if (await client.input.confirm(`Link to this project?`, true)) {
+    if (await client.input.confirm(`Link directory to project?`, true)) {
       return detectedProject;
     }
 

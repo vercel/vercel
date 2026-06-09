@@ -867,20 +867,24 @@ describe('link', () => {
     const exitCodePromise = link(client);
 
     await expect(client.stderr).toOutput('Set up');
-    await expect(client.stderr).toOutput('Found project');
+    await expect(client.stderr).toOutput('Found existing project');
+    await expect(client.stderr).toOutput('Directory');
     await expect(client.stderr).toOutput(
       `Project     ${team.slug}/${project.name}`
     );
-    await expect(client.stderr).toOutput('Link to this project?');
+    await expect(client.stderr).toOutput('Link directory to project?');
     client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
       `Linked          ${team.slug}/${project.name}`
     );
-    await expect(client.stderr).toOutput('Directory');
-    await expect(client.stderr).toOutput('Config      .vercel/project.json');
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Config      .vercel/project.json'
+    );
 
-    await expect(client.stderr).toOutput('Pull environment variables now?');
+    await expect(client.stderr).toOutput(
+      'Pull Development Environment Variables into .env.local?'
+    );
     client.stdin.write('n\n');
 
     const exitCode = await exitCodePromise;
@@ -888,8 +892,6 @@ describe('link', () => {
     expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
       'Project',
       'Linked',
-      'Directory',
-      'Config',
     ]);
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
@@ -1559,14 +1561,17 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
@@ -1574,8 +1579,8 @@ describe('link', () => {
 
       expect(exitCode).toEqual(0);
       expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+        'Directory',
         'Project',
-        'Source',
         'Linked',
       ]);
       expect(sawRepoProjectSelector).toBe(false);
@@ -1602,14 +1607,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('y\n');
 
       const exitCode = await exitCodePromise;
@@ -1638,14 +1645,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
@@ -1674,14 +1683,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -1717,14 +1728,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -1757,14 +1770,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('y\n');
 
       const exitCode = await exitCodePromise;
@@ -1795,14 +1810,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('y\n');
 
       const exitCode = await exitCodePromise;
@@ -1833,14 +1850,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -1894,14 +1913,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
@@ -1930,7 +1951,7 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Set up');
       // Decline cross-team match
-      await expect(client.stderr).toOutput('Link to this project?');
+      await expect(client.stderr).toOutput('Link directory to project?');
       client.stdin.write('n\n');
 
       // Should fall through to selectOrg
@@ -1949,7 +1970,9 @@ describe('link', () => {
         `Linked          ${team.slug}/${project.name}`
       );
 
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
@@ -2194,14 +2217,16 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Set up');
       await expect(client.stderr).toOutput('Searched teams:');
-      await expect(client.stderr).toOutput('Skipped 1 SSO-protected team');
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
+      await expect(client.stderr).toOutput('Link repository to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${teamA.slug}/${projectA.name}`
       );
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
@@ -2334,13 +2359,16 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
+      await expect(client.stderr).toOutput('Link repository to project?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${teamA.slug}/${expectedProject.name}`
       );
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
@@ -2413,14 +2441,16 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `Linked          ${teamA.slug}/${repoProject.name}`
       );
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
     });
 
-    it('should search selected SSO-protected teams after no first-pass matches', async () => {
+    it('should search selected teams that require SSO after no first-pass matches', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
       const projectName = basename(cwd);
@@ -2450,20 +2480,33 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput('Set up');
-      await expect(client.stderr).toOutput('Which SSO-protected teams?');
+      await expect(client.stderr).toOutput(
+        'Select teams that require SSO to search'
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+        '<space> select, <a> toggle all, <i> invert, <enter> confirm'
+      );
       client.stdin.write(' \n');
 
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked          ${limitedTeam.slug}/${limitedProject.name}`
       );
-      await expect(client.stderr).toOutput('Pull environment variables now?');
+      await expect(client.stderr).toOutput(
+        'Pull Development Environment Variables into .env.local?'
+      );
       client.stdin.write('n\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+      expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+        'Press <space> to select'
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+        'to proceed'
+      );
 
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.projectId).toEqual(limitedProject.id);
@@ -2550,7 +2593,7 @@ describe('link', () => {
         const exitCodePromise = link(client);
 
         await expect(client.stderr).toOutput(
-          'Found matching projects across teams'
+          'Projects    2 matches across teams'
         );
         // Select first option (team_a)
         client.stdin.write('\n');
@@ -2597,14 +2640,16 @@ describe('link', () => {
 
         await expect(client.stderr).toOutput('Set up');
         await expect(client.stderr).toOutput(
-          'Found matching projects across teams'
+          'Projects    2 matches across teams'
         );
         // Select first option
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Linked          ');
 
-        await expect(client.stderr).toOutput('Pull environment variables now?');
+        await expect(client.stderr).toOutput(
+          'Pull Development Environment Variables into .env.local?'
+        );
         client.stdin.write('n\n');
 
         const exitCode = await exitCodePromise;
@@ -2650,13 +2695,15 @@ describe('link', () => {
 
         await expect(client.stderr).toOutput('Set up');
         await expect(client.stderr).toOutput(
-          'Found matching projects across teams'
+          'Projects    2 matches across teams'
         );
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Linked          ');
 
-        await expect(client.stderr).toOutput('Pull environment variables now?');
+        await expect(client.stderr).toOutput(
+          'Pull Development Environment Variables into .env.local?'
+        );
         client.stdin.write('n\n');
 
         const exitCode = await exitCodePromise;
