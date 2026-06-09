@@ -1401,7 +1401,7 @@ importers:
         specifier: workspace:*
         version: link:../oidc
       ws:
-        specifier: 8.20.0
+        specifier: '>=8'
         version: 8.20.0
     devDependencies:
       '@aws-sdk/client-s3':
