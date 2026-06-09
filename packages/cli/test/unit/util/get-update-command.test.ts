@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import getUpdateCommand, {
+  getUpdatePackageName,
   isGlobal,
 } from '../../../src/util/get-update-command';
 
@@ -32,5 +33,17 @@ describe('getUpdateCommand', () => {
 
     expect(updateCommand).toContain('@vercel/vc-native@latest');
     expect(updateCommand.split(' ')).not.toContain('vercel@latest');
+  });
+
+  describe('getUpdatePackageName', () => {
+    it('returns the node package by default', () => {
+      delete process.env.VERCEL_VC_NATIVE;
+      expect(getUpdatePackageName()).toEqual('vercel');
+    });
+
+    it('returns the native package when running through vc-native', () => {
+      process.env.VERCEL_VC_NATIVE = '1';
+      expect(getUpdatePackageName()).toEqual('@vercel/vc-native');
+    });
   });
 });

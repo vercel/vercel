@@ -32,10 +32,6 @@ export async function canAutoUpdate(
   exitCode: number,
   command?: string
 ) {
-  if (isNativeBinaryInstall()) {
-    return false;
-  }
-
   if (!isAutoUpdateEnabled(client.config)) {
     return false;
   }

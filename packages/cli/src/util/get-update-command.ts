@@ -6,6 +6,10 @@ import { isNativeBinaryInstall } from './native-install';
 
 const nativePackageName = '@vercel/vc-native';
 
+export function getUpdatePackageName(): string {
+  return isNativeBinaryInstall() ? nativePackageName : packageName;
+}
+
 async function getConfigPrefix() {
   const paths = [
     process.env.npm_config_userconfig || process.env.NPM_CONFIG_USERCONFIG,
@@ -84,7 +88,7 @@ export async function isGlobal() {
 
 export default async function getUpdateCommand(): Promise<string> {
   const nativeInstall = isNativeBinaryInstall();
-  const pkgAndVersion = `${nativeInstall ? nativePackageName : packageName}@latest`;
+  const pkgAndVersion = `${getUpdatePackageName()}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);
   let { cliType, lockfilePath } = await scanParentDirs(

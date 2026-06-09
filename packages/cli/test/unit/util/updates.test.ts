@@ -85,13 +85,12 @@ describe('updates', () => {
     expect(isGlobalSpy).not.toHaveBeenCalled();
   });
 
-  it('does not auto-update native binary installs', async () => {
+  it('auto-updates native binary installs when enabled and global', async () => {
     client.config = { updates: { auto: true } };
     process.env.VERCEL_VC_NATIVE = '1';
     isGlobalSpy.mockResolvedValue(true);
 
-    await expect(canAutoUpdate(client, 0)).resolves.toBe(false);
-    expect(isGlobalSpy).not.toHaveBeenCalled();
+    await expect(canAutoUpdate(client, 0)).resolves.toBe(true);
   });
 
   it('does not auto-update after failed commands', async () => {
