@@ -2,7 +2,10 @@ import { readFile, realpath } from 'fs-extra';
 import { sep, dirname, join, resolve } from 'path';
 import { scanParentDirs } from '@vercel/build-utils';
 import { packageName } from './pkg-name';
-import { isNativeBinaryInstall } from './native-install';
+import {
+  getNativeInstallMethod,
+  isNativeBinaryInstall,
+} from './native-install';
 
 const nativePackageName = '@vercel/vc-native';
 
@@ -88,6 +91,15 @@ export async function isGlobal() {
 
 export default async function getUpdateCommand(): Promise<string> {
   const nativeInstall = isNativeBinaryInstall();
+
+  if (
+    nativeInstall &&
+    process.platform !== 'win32' &&
+    getNativeInstallMethod() === 'standalone'
+  ) {
+    return `${packageName} upgrade`;
+  }
+
   const pkgAndVersion = `${getUpdatePackageName()}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);

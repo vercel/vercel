@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import getUpdateCommand, {
   getUpdatePackageName,
   isGlobal,
 } from '../../../src/util/get-update-command';
+import * as nativeInstall from '../../../src/util/native-install';
 
 describe('getUpdateCommand', () => {
   const originalVercelVcNative = process.env.VERCEL_VC_NATIVE;
@@ -28,11 +29,27 @@ describe('getUpdateCommand', () => {
 
   it('should update the native package when running through vc-native', async () => {
     process.env.VERCEL_VC_NATIVE = '1';
+    const methodSpy = vi
+      .spyOn(nativeInstall, 'getNativeInstallMethod')
+      .mockReturnValue('npm');
 
     const updateCommand = await getUpdateCommand();
 
     expect(updateCommand).toContain('@vercel/vc-native@latest');
     expect(updateCommand.split(' ')).not.toContain('vercel@latest');
+    methodSpy.mockRestore();
+  });
+
+  it('should self-upgrade for standalone native installs', async () => {
+    process.env.VERCEL_VC_NATIVE = '1';
+    const methodSpy = vi
+      .spyOn(nativeInstall, 'getNativeInstallMethod')
+      .mockReturnValue('standalone');
+
+    const updateCommand = await getUpdateCommand();
+
+    expect(updateCommand).toBe('vercel upgrade');
+    methodSpy.mockRestore();
   });
 
   describe('getUpdatePackageName', () => {

@@ -4,10 +4,24 @@ import { spawn } from 'child_process';
 import output from '../../../src/output-manager';
 import { executeUpgrade } from '../../../src/util/upgrade';
 import getUpdateCommand from '../../../src/util/get-update-command';
+import {
+  getNativeInstallMethod,
+  isNativeBinaryInstall,
+} from '../../../src/util/native-install';
+import { executeStandaloneUpgrade } from '../../../src/util/native-upgrade';
 
 // Mock child_process
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
+}));
+
+vi.mock('../../../src/util/native-install', () => ({
+  isNativeBinaryInstall: vi.fn(),
+  getNativeInstallMethod: vi.fn(),
+}));
+
+vi.mock('../../../src/util/native-upgrade', () => ({
+  executeStandaloneUpgrade: vi.fn(),
 }));
 
 // Mock output-manager
@@ -29,6 +43,9 @@ vi.mock('../../../src/util/get-update-command', () => ({
 const spawnMock = vi.mocked(spawn);
 const outputMock = vi.mocked(output);
 const getUpdateCommandMock = vi.mocked(getUpdateCommand);
+const isNativeBinaryInstallMock = vi.mocked(isNativeBinaryInstall);
+const getNativeInstallMethodMock = vi.mocked(getNativeInstallMethod);
+const executeStandaloneUpgradeMock = vi.mocked(executeStandaloneUpgrade);
 
 describe('executeUpgrade', () => {
   beforeEach(() => {
@@ -223,5 +240,32 @@ describe('executeUpgrade', () => {
     expect(outputMock.debug).toHaveBeenCalledWith(
       'Executing: npm i -g vercel@latest'
     );
+  });
+
+  it('should use the in-process updater for standalone native installs', async () => {
+    isNativeBinaryInstallMock.mockReturnValue(true);
+    getNativeInstallMethodMock.mockReturnValue('standalone');
+    executeStandaloneUpgradeMock.mockResolvedValue(0);
+
+    const exitCode = await executeUpgrade();
+
+    expect(exitCode).toBe(0);
+    expect(executeStandaloneUpgradeMock).toHaveBeenCalledTimes(1);
+    expect(spawnMock).not.toHaveBeenCalled();
+  });
+
+  it('should use the package manager for npm native installs', async () => {
+    isNativeBinaryInstallMock.mockReturnValue(true);
+    getNativeInstallMethodMock.mockReturnValue('npm');
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+    mockProcess.emit('close', 0);
+    await exitCodePromise;
+
+    expect(executeStandaloneUpgradeMock).not.toHaveBeenCalled();
+    expect(spawnMock).toHaveBeenCalledTimes(1);
   });
 });
