@@ -4,20 +4,20 @@
 
 # Function: awsCredentialsProvider()
 
-> **awsCredentialsProvider**(`audience`): `AwsCredentialIdentityProvider`
+> **awsCredentialsProvider**(`init`): `AwsCredentialIdentityProvider`
 
-Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:76](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L76)
+Defined in: [packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts:77](https://github.com/vercel/vercel/blob/main/packages/oidc-aws-credentials-provider/src/aws-credentials-provider.ts#L77)
 
 Obtains the Vercel OIDC token and creates an AWS credential provider function
 that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
 
 ## Parameters
 
-### audience
+### init
 
 [`AwsCredentialsProviderInit`](../interfaces/AwsCredentialsProviderInit.md)
 
-Optional audience to set on the exchanged token.
+The initialization object.
 
 ## Returns
 

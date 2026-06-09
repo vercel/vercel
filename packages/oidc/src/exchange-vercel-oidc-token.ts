@@ -1,3 +1,13 @@
+import { version } from './version';
+
+/**
+ * The options for the `exchangeVercelOidcToken` function.
+ *
+ * @typedef {Object} ExchangeVercelOidcTokenOptions
+ * @property {string} token - The token to exchange.
+ * @property {string} audience - Optional audience to set on the exchanged token.
+ * @property {string} jti - Optional JTI to set on the exchanged token.
+ */
 export interface ExchangeVercelOidcTokenOptions {
   /**
    * The token to exchange.
@@ -17,8 +27,8 @@ export interface ExchangeVercelOidcTokenOptions {
 
 /**
  * Exchanges a Vercel OIDC token for a Vercel token with a custom audience.
- * @param options - The options for the exchange.
- * @returns The exchanged token.
+ * @param {ExchangeVercelOidcTokenOptions} options - The options for the exchange.
+ * @returns {Promise<string>} A promise that resolves to the exchanged token.
  */
 export async function exchangeVercelOidcToken(
   options?: ExchangeVercelOidcTokenOptions
@@ -27,16 +37,25 @@ export async function exchangeVercelOidcToken(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': `@vercel/oidc@${version}`,
     },
     body: JSON.stringify({
       token: options?.token,
       aud: options?.audience,
-      jti: options?.jti,
+      ...(options?.jti ? { jti: options.jti } : undefined),
     }),
   });
   if (!response.ok) {
     throw new Error('Failed to exchange token');
   }
-  const data = await response.json();
-  return data.token;
+  try {
+    const data = await response.json();
+    if (typeof data.token !== 'string') {
+      throw new Error('Failed to exchange token');
+    }
+    return data.token;
+  } catch (_error) {
+    throw new Error('Failed to exchange token');
+  }
 }
