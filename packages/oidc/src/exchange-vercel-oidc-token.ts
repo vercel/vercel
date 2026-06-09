@@ -27,7 +27,12 @@ export interface ExchangeVercelOidcTokenOptions {
 
 /**
  * Exchanges a Vercel OIDC token for a Vercel token with a custom audience.
+ *
  * @param {ExchangeVercelOidcTokenOptions} options - The options for the exchange.
+ * @param {string} options.token - The token to exchange.
+ * @param {string} options.audience - Optional audience to set on the exchanged token.
+ * @param {string} options.jti - Optional JTI to set on the exchanged token.
+ * @throws {Error} If the token exchange fails.
  * @returns {Promise<string>} A promise that resolves to the exchanged token.
  */
 export async function exchangeVercelOidcToken(
