@@ -19,6 +19,7 @@ When changing CLI UX behavior:
 - cover result blocks for remote resources and user-actionable local side effects when mutations touch both
 - cover internal local state files through tests, debug output, machine output, or help text instead of default human success output when they are not user-actionable
 - cover prompt/action separation: values appear in preview rows, then prompts ask for the action
+- cover vertical rhythm: phase breaks use at most one blank line, and related rows remain contiguous
 - cover raw gutter glyphs, not only stripped output: `▲` for production rows, blank gutter for preview/setup/link rows, and `✓` only for readiness/completion status
 - cover `--no-color`, `NO_COLOR`, and no ANSI where machine output is involved
 - cover `--yes`, `--force`, typed confirmation, and `--dry-run` when the command family supports them
@@ -95,6 +96,7 @@ Reject or fix changes that:
 - expose internal state files as default human success rows when tests/machine/debug/help would be the right surface
 - encode a status heading as a fake aligned label/value row
 - use a gutter glyph as decoration instead of semantic state
+- add blank lines inside a related block or omit phase breaks in a dense multi-phase flow
 - put `▲` on preview/setup/link/local file rows, or omit it from production rows
 - use `✓` as a generic icon on mutation receipt rows such as `Created`, `Linked`, or `Added`
 - use `scope` where `team` works

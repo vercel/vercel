@@ -211,6 +211,14 @@ Rules:
 - Mutation receipt rows such as `Created`, `Linked`, and `Added` keep the blank gutter. The verb already carries the success state.
 - never hand-pad rows when a helper exists
 
+Vertical rhythm:
+
+- Use blank lines to separate logical phases, not to decorate individual rows.
+- Use one blank line between setup/detection, prompt groups, mutation receipts, long-running progress, and terminal readiness/error states when those phases are present.
+- Keep related rows contiguous: aligned preview rows, prompt/hint/choices, result blocks, lists, tables, and progress sequences do not get internal blank lines.
+- Do not add leading/trailing blank lines to machine-readable output, JSON/JSONL, or parseable stdout.
+- Avoid double blank lines. If the transcript needs more than one blank line, the flow likely needs a clearer heading, row label, or phase split instead.
+
 ## List + Detail Commands
 
 Read-only resource commands should use a scan-first shape:

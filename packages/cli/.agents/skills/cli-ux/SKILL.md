@@ -22,7 +22,7 @@ Act like a CLI product engineer, not a string polisher.
 ## Workflow
 
 1. **Surface map.** List help, flags, prompts, progress, warnings, success, errors, tables/lists, detail views, JSON, and agent/non-interactive payloads.
-2. **Structure map.** For each touched line, identify its surface role, order, layout helper, gutter glyph or blank gutter, resolved-state preview, mutation preview, result block, and next action.
+2. **Structure map.** For each touched line, identify its surface role, order, vertical rhythm, layout helper, gutter glyph or blank gutter, resolved-state preview, mutation preview, result block, and next action.
 3. **Mode map.** Trace TTY, non-TTY, `--non-interactive`, JSON/format flags, CI, and pipeable stdout.
 4. **State map.** Name team, project, cwd/root, environment, config files, framework/services, auth, remote resources, and defaults.
 5. **Question audit.** For every prompt, prove the value cannot be inferred and that a flag/arg/payload exists.
@@ -86,7 +86,7 @@ Apply the canonical Review Checklist in [`references/verification.md`](reference
 A CLI UX change is not done until:
 
 - the before/after transcript is easier to scan
-- prompt/result copy changes also checked layout, order, and surrounding flow
+- prompt/result copy changes also checked layout, vertical rhythm, order, and surrounding flow
 - resolved target and planned mutation are visible before risky work
 - inferred resource confirmations show the resolved target before asking
 - mutation results show durable remote resources and user-actionable local artifacts changed
