@@ -4,24 +4,12 @@ import { spawn } from 'child_process';
 import output from '../../../src/output-manager';
 import { executeUpgrade } from '../../../src/util/upgrade';
 import getUpdateCommand from '../../../src/util/get-update-command';
-import {
-  getNativeInstallMethod,
-  isNativeBinaryInstall,
-} from '../../../src/util/native-install';
-import { executeStandaloneUpgrade } from '../../../src/util/native-upgrade';
+import * as nativeInstall from '../../../src/util/native-install';
+import * as nativeUpgrade from '../../../src/util/native-upgrade';
 
 // Mock child_process
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
-}));
-
-vi.mock('../../../src/util/native-install', () => ({
-  isNativeBinaryInstall: vi.fn(),
-  getNativeInstallMethod: vi.fn(),
-}));
-
-vi.mock('../../../src/util/native-upgrade', () => ({
-  executeStandaloneUpgrade: vi.fn(),
 }));
 
 // Mock output-manager
@@ -43,16 +31,27 @@ vi.mock('../../../src/util/get-update-command', () => ({
 const spawnMock = vi.mocked(spawn);
 const outputMock = vi.mocked(output);
 const getUpdateCommandMock = vi.mocked(getUpdateCommand);
-const isNativeBinaryInstallMock = vi.mocked(isNativeBinaryInstall);
-const getNativeInstallMethodMock = vi.mocked(getNativeInstallMethod);
-const executeStandaloneUpgradeMock = vi.mocked(executeStandaloneUpgrade);
 
 describe('executeUpgrade', () => {
+  const spies: Array<{ mockRestore: () => void }> = [];
+  let isNativeSpy: ReturnType<typeof vi.spyOn>;
+  let standaloneSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    isNativeSpy = vi
+      .spyOn(nativeInstall, 'isNativeBinaryInstall')
+      .mockReturnValue(false);
+    standaloneSpy = vi
+      .spyOn(nativeUpgrade, 'executeStandaloneUpgrade')
+      .mockResolvedValue(0);
+    spies.push(isNativeSpy, standaloneSpy);
   });
 
   afterEach(() => {
+    while (spies.length) {
+      spies.pop()?.mockRestore();
+    }
     vi.clearAllMocks();
   });
 
@@ -243,20 +242,25 @@ describe('executeUpgrade', () => {
   });
 
   it('should use the in-process updater for standalone native installs', async () => {
-    isNativeBinaryInstallMock.mockReturnValue(true);
-    getNativeInstallMethodMock.mockReturnValue('standalone');
-    executeStandaloneUpgradeMock.mockResolvedValue(0);
+    isNativeSpy.mockReturnValue(true);
+    spies.push(
+      vi
+        .spyOn(nativeInstall, 'getNativeInstallMethod')
+        .mockReturnValue('standalone')
+    );
 
     const exitCode = await executeUpgrade();
 
     expect(exitCode).toBe(0);
-    expect(executeStandaloneUpgradeMock).toHaveBeenCalledTimes(1);
+    expect(standaloneSpy).toHaveBeenCalledTimes(1);
     expect(spawnMock).not.toHaveBeenCalled();
   });
 
   it('should use the package manager for npm native installs', async () => {
-    isNativeBinaryInstallMock.mockReturnValue(true);
-    getNativeInstallMethodMock.mockReturnValue('npm');
+    isNativeSpy.mockReturnValue(true);
+    spies.push(
+      vi.spyOn(nativeInstall, 'getNativeInstallMethod').mockReturnValue('npm')
+    );
     const mockProcess = createMockProcess();
     spawnMock.mockReturnValue(mockProcess as any);
 
@@ -265,7 +269,7 @@ describe('executeUpgrade', () => {
     mockProcess.emit('close', 0);
     await exitCodePromise;
 
-    expect(executeStandaloneUpgradeMock).not.toHaveBeenCalled();
+    expect(standaloneSpy).not.toHaveBeenCalled();
     expect(spawnMock).toHaveBeenCalledTimes(1);
   });
 });
