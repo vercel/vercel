@@ -317,7 +317,12 @@ async function searchSelectedLimitedTeams({
     return [];
   }
 
-  output.spinner('Searching teams that require SSO…', 1000);
+  output.spinner(
+    `Searching ${selectedTeams.length} ${
+      selectedTeams.length === 1 ? 'team' : 'teams'
+    } that ${selectedTeams.length === 1 ? 'requires' : 'require'} SSO…`,
+    1000
+  );
   try {
     const result = await searchProjectAcrossTeams(client, projectName, path, {
       teams: selectedTeams,

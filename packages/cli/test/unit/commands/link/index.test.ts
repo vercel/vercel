@@ -2523,6 +2523,9 @@ describe('link', () => {
       );
       client.stdin.write(' \n');
 
+      await expect(client.stderr).toOutput(
+        'Searching 1 team that requires SSO…'
+      );
       await expect(client.stderr).toOutput('Found existing project');
       client.stdin.write('y\n');
 
