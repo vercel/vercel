@@ -13,6 +13,7 @@ import {
   acceptTermsSubcommand,
   addSubcommand,
   balanceSubcommand,
+  categoriesSubcommand,
   discoverSubcommand,
   guideSubcommand,
   installationsSubcommand,
@@ -28,6 +29,7 @@ import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
 import { update } from './update-integration';
+import { categories } from './categories';
 import { discover } from './discover';
 import { guide } from './guide';
 import { printAddDynamicHelp } from './add-help';
@@ -46,6 +48,7 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
   installations: getCommandAliases(installationsSubcommand),
+  categories: getCommandAliases(categoriesSubcommand),
   discover: getCommandAliases(discoverSubcommand),
   guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
@@ -156,6 +159,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandInstallations(subcommandOriginal);
       return installationsList(client, subArgs);
+    }
+    case 'categories': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(categoriesSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandCategories(subcommandOriginal);
+      return categories(client, subArgs);
     }
     case 'discover': {
       if (needHelp) {

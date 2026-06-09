@@ -381,8 +381,35 @@ export const discoverSubcommand = {
       ],
     },
     {
+      name: 'List available category slugs to use with --category',
+      value: [`${packageName} integration categories`],
+    },
+    {
       name: 'Discover marketplace integrations as JSON',
       value: [`${packageName} integration discover --format=json`],
+    },
+  ],
+} as const;
+
+export const categoriesSubcommand = {
+  name: 'categories',
+  aliases: [],
+  description:
+    'List marketplace integration categories (slugs valid for `integration discover --category`)',
+  arguments: [],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'List marketplace categories',
+      value: [`${packageName} integration categories`],
+    },
+    {
+      name: 'List categories as JSON',
+      value: [`${packageName} integration categories --format=json`],
+    },
+    {
+      name: 'Use a category slug to filter discover results',
+      value: [`${packageName} integration discover --category storage`],
     },
   ],
 } as const;
@@ -625,6 +652,7 @@ export const integrationCommand = {
     addSubcommand,
     acceptTermsSubcommand,
     balanceSubcommand,
+    categoriesSubcommand,
     discoverSubcommand,
     guideSubcommand,
     installationsSubcommand,
