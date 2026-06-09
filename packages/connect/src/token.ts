@@ -32,6 +32,10 @@ export interface ConnectTokenParams {
   subject: ConnectTokenSubject;
   installationId?: string;
   audience?: string[];
+  /**
+   * Access scopes to request. Use `['*']` to request the default scopes for
+   * the specified subject type.
+   */
   scopes?: string[];
   resources?: string[];
   authorizationDetails?: ConnectAuthorizationDetail[];
@@ -167,6 +171,37 @@ export async function getTokenResponse(
   cache.set(cacheKey, { response: data, lastUsed: Date.now() });
 
   return data;
+}
+
+export async function revokeToken(
+  connector: string,
+  params: {
+    subject: ConnectTokenSubject;
+    installationId?: string;
+  },
+  options?: ConnectOptions
+): Promise<void> {
+  const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
+  const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
+
+  const response = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${vercelToken}`,
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to revoke token'
+    );
+  }
+
+  cache.clear();
 }
 
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;

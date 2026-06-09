@@ -11,10 +11,13 @@
 - [PurgeApi](interfaces/PurgeApi.md)
 - [Request](interfaces/Request.md)
 - [RuntimeCache](interfaces/RuntimeCache.md)
+- [WebSocket](interfaces/WebSocket.md)
 
 ## Type Aliases
 
 - [AddCacheTagApi](type-aliases/AddCacheTagApi.md)
+- [WebSocket](type-aliases/WebSocket.md)
+- [WebSocketData](type-aliases/WebSocketData.md)
 
 ## Variables
 
@@ -26,6 +29,7 @@
 - [attachDatabasePool](functions/attachDatabasePool.md)
 - [dangerouslyDeleteBySrcImage](functions/dangerouslyDeleteBySrcImage.md)
 - [dangerouslyDeleteByTag](functions/dangerouslyDeleteByTag.md)
+- [experimental_upgradeWebSocket](functions/experimental_upgradeWebSocket.md)
 - [geolocation](functions/geolocation.md)
 - [getCache](functions/getCache.md)
 - [getEnv](functions/getEnv.md)
