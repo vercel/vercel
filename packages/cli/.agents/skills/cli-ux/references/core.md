@@ -107,7 +107,7 @@ Any command that resolves a resource or changes local/remote state should use th
 - Before confirming an inferred resource, show it as structured state, usually aligned rows such as `Project`, `Team`, `Directory`, `Source`, `Config`, or `Settings`.
 - Keep status headings separate from aligned value rows. Do not turn state into a fake label/value row such as `Found Existing project`; use a short status heading such as `Found existing project` above `Project`/`Directory` rows, bolded when it introduces a block.
 - Ask for the smallest missing value with a concrete noun: `Which team?`, `Project?`, `Domain?`, `Environment?`, `Name?`.
-- For checkbox/multiselect prompts, keep a concise built-in keyboard hint visible in dim text, formatted as a key legend: `(<space> select, <a> toggle all, <i> invert, <enter> confirm)`. If the prompt plus legend would wrap in a typical terminal, put the legend on the next dim line. Let the prompt renderer append it as a hint; do not bake controls into the prompt message, and do not remove the hint while tightening copy.
+- For checkbox/multiselect prompts, keep a concise built-in keyboard hint visible in dim text, formatted as a key legend with primary controls first: `(<space> select, <enter> confirm, <a> toggle all, <i> invert)`. If the prompt plus legend would wrap in a typical terminal, put the legend on the next dim line. Let the prompt renderer append it as a hint; do not bake controls into the prompt message, and do not remove the hint while tightening copy.
 - Ask `Customize settings?` only after showing the inferred settings.
 - Ask root/path questions only when there is real ambiguity.
 - Compress detection into one useful line when possible.

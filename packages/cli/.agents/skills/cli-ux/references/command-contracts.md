@@ -29,7 +29,7 @@ Rules:
 
 - Before mutation, know whether linking existing project or creating a new one.
 - Running `vc link` is setup intent; do not ask a vague setup-intent prompt.
-- Do not ask `Link to existing project?` when no concrete project is shown.
+- Do not ask `Link to existing project?` when no concrete project is shown. Ask `Project?` with `Create new project` and `Link existing project` choices instead.
 - Do not create a project from a user-supplied `--project` value that was not found.
 - Folder-name matches across teams are lower confidence than repo-root or explicit matches.
 - Cross-team matches need visible team context before linking.
@@ -66,7 +66,7 @@ Link prompt map:
 | One repository project match       | aligned `Project`/`Source`, then `Link repository to project?`                                                               | link only for explicit/repo-root match |
 | Multiple project matches           | aligned `Projects` summary, then `Project?`                                                                                  | `action_required: ambiguous_project`   |
 | No without-SSO match, SSO required | `Searched {count} teams available without SSO`, `No matching projects found`, then `Select teams that require SSO to search` | skip unless explicitly requested       |
-| No project match                   | `Project?` with create/link options, then `Name?`                                                                            | require `--yes` or `project_not_found` |
+| No project match                   | `Project?` with `Create new project` / `Link existing project`, then `Name?` when creating                                   | require `--yes` or `project_not_found` |
 | Root choices exist                 | `Code directory?`                                                                                                            | require root flag/config/payload       |
 | Settings differ                    | `Customize settings?`                                                                                                        | require flags/config/payload           |
 | Optional env pull                  | `Pull Development Environment Variables into .env.local?`                                                                    | skip unless explicitly requested       |
