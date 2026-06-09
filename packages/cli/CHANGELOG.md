@@ -1,5 +1,21 @@
 # vercel
 
+## 54.10.2
+
+### Patch Changes
+
+- 0f7844c: Fix the native CLI binary crashing on auth commands (`login`, `whoami`, `logout`, and any
+  command that reads config) with `ERR_MODULE_NOT_FOUND: '@vercel/cli-auth'`. The package is now
+  staged into the binary. The binary release is also hardened with a real command smoke test and a
+  build-time check that every statically-imported dependency is bundled, so a binary missing a
+  required package can no longer be released.
+- Updated dependencies [78e5d4f]
+  - @vercel/static-build@2.10.0
+  - @vercel/hydrogen@1.4.0
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.0
+  - @vercel/next@4.18.0
+
 ## 54.10.1
 
 ### Patch Changes
