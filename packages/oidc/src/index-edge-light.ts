@@ -1,4 +1,7 @@
-import { exchangeVercelOidcToken, ExchangeVercelOidcTokenOptions } from './exchange-vercel-oidc-token';
+import {
+  exchangeVercelOidcToken,
+  ExchangeVercelOidcTokenOptions,
+} from './exchange-vercel-oidc-token';
 import { getVercelOidcTokenSync } from './get-vercel-oidc-token-sync';
 
 export { getContext } from './get-context';
@@ -11,7 +14,10 @@ export {
   RefreshAccessTokenFailedError,
 } from './auth-errors';
 export { getVercelOidcTokenSync } from './get-vercel-oidc-token-sync';
-export { type ExchangeVercelOidcTokenOptions, exchangeVercelOidcToken } from './exchange-vercel-oidc-token';
+export {
+  type ExchangeVercelOidcTokenOptions,
+  exchangeVercelOidcToken,
+} from './exchange-vercel-oidc-token';
 
 /**
  * Gets the current OIDC token in Edge Runtime.
@@ -19,7 +25,9 @@ export { type ExchangeVercelOidcTokenOptions, exchangeVercelOidcToken } from './
  * Edge Runtime does not support automatic token refresh, so this returns the
  * request-scoped token without checking expiration.
  */
-export async function getVercelOidcToken(options?: ExchangeVercelOidcTokenOptions): Promise<string> {
+export async function getVercelOidcToken(
+  options?: ExchangeVercelOidcTokenOptions
+): Promise<string> {
   let token = getVercelOidcTokenSync();
   if (options?.audience) {
     token = await exchangeVercelOidcToken({
