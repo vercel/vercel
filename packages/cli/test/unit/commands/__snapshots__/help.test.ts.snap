@@ -3625,7 +3625,8 @@ exports[`help command > integration help output snapshots > integration discover
 
   Options:
 
-  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -c,  --category <CATEGORY>  Filter integrations by category (e.g., storage, ai, monitoring)                           
+  -F,  --format <FORMAT>      Specify the output format (json)                                                          
 
 
   Global Options:
@@ -3652,6 +3653,11 @@ exports[`help command > integration help output snapshots > integration discover
 
     $ vercel integration discover postgres
     $ vercel integration discover aws
+
+  - Filter integrations by category
+
+    $ vercel integration discover --category storage
+    $ vercel integration discover -c ai
 
   - Discover marketplace integrations as JSON
 
