@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-[cli] re-enable update notifications and auto-update for the native binary
+[cli] enable update notifications and auto-update for native binary installs (npm and standalone)
