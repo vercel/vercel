@@ -901,8 +901,8 @@ const discoverIntegrations = [
 ];
 
 const discoverCategories = [
-  { id: 'tag_databases', title: 'Storage' },
-  { id: 'tag_dev_tools', title: 'DevTools' },
+  { id: 'tag_databases', slug: 'storage', title: 'Storage' },
+  { id: 'tag_dev_tools', slug: 'dev-tools', title: 'DevTools' },
 ];
 
 export function useResources(returnError?: number) {
@@ -932,6 +932,17 @@ export function useResources(returnError?: number) {
     }
 
     res.json(resources);
+  });
+}
+
+export function useIntegrationCategories(opts?: { status?: number }) {
+  client.scenario.get('/v2/integrations/categories', (_req, res) => {
+    if (opts?.status) {
+      res.status(opts.status);
+      res.end();
+      return;
+    }
+    res.json(discoverCategories);
   });
 }
 
