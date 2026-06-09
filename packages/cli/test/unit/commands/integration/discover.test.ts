@@ -297,5 +297,76 @@ describe('integration', () => {
         },
       ]);
     });
+
+    describe('--category filter', () => {
+      it('passes --category to the API as a query param', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.category).toBe('storage');
+      });
+
+      it('accepts -c shorthand for --category', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv('integration', 'discover', '-c', 'ai', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.category).toBe('ai');
+      });
+
+      it('combines positional query with --category', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          'neon',
+          '--category',
+          'storage',
+          '--json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.category).toBe('storage');
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Neon Postgres');
+      });
+
+      it('tracks telemetry for --category option', async () => {
+        useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:discover',
+            value: 'discover',
+          },
+          {
+            key: 'option:category',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:json',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
   });
 });

@@ -81,6 +81,9 @@ export async function discover(client: Client, args: string[]) {
   const query = parsedArguments.args[0] ?? '';
   telemetry.trackCliArgumentQuery(query);
 
+  const category = parsedArguments.flags['--category'];
+  telemetry.trackCliOptionCategory(category);
+
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -95,7 +98,7 @@ export async function discover(client: Client, args: string[]) {
   let categories: IntegrationCategory[] = [];
   try {
     const [integrationsResult, categoriesResult] = await Promise.allSettled([
-      fetchMarketplaceIntegrationsList(client),
+      fetchMarketplaceIntegrationsList(client, category),
       fetchIntegrationCategories(client),
     ]);
 

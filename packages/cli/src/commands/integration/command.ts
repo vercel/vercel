@@ -367,7 +367,19 @@ export const discoverSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [
+    {
+      name: 'category',
+      shorthand: 'c',
+      type: String,
+      deprecated: false,
+      argument: 'CATEGORY',
+      description:
+        'Filter integrations by category (e.g., storage, ai, monitoring)',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'Discover marketplace integrations',
@@ -378,6 +390,13 @@ export const discoverSubcommand = {
       value: [
         `${packageName} integration discover postgres`,
         `${packageName} integration discover aws`,
+      ],
+    },
+    {
+      name: 'Filter integrations by category',
+      value: [
+        `${packageName} integration discover --category storage`,
+        `${packageName} integration discover -c ai`,
       ],
     },
     {

@@ -939,7 +939,13 @@ export function useIntegrationDiscover(opts?: {
   integrationsStatus?: number;
   categoriesStatus?: number;
 }) {
-  client.scenario.get('/v2/integrations/integrations', (_req, res) => {
+  const integrationsRequests: { category?: string }[] = [];
+
+  client.scenario.get('/v2/integrations/integrations', (req, res) => {
+    integrationsRequests.push({
+      category:
+        typeof req.query.category === 'string' ? req.query.category : undefined,
+    });
     if (opts?.integrationsStatus) {
       res.status(opts.integrationsStatus);
       res.end();
@@ -956,6 +962,8 @@ export function useIntegrationDiscover(opts?: {
     }
     res.json(discoverCategories);
   });
+
+  return { integrationsRequests };
 }
 
 export function useConfiguration() {

@@ -15,9 +15,16 @@ export type IntegrationListItem = {
   canInstall?: boolean;
 };
 
-export async function fetchMarketplaceIntegrationsList(client: Client) {
+export async function fetchMarketplaceIntegrationsList(
+  client: Client,
+  category?: string
+) {
+  const params = new URLSearchParams({ integrationType: 'marketplace' });
+  if (category) {
+    params.set('category', category);
+  }
   return client.fetch<IntegrationListItem[]>(
-    '/v2/integrations/integrations?integrationType=marketplace',
+    `/v2/integrations/integrations?${params.toString()}`,
     {
       json: true,
     }

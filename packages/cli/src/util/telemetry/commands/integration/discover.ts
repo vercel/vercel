@@ -20,4 +20,13 @@ export class IntegrationDiscoverTelemetryClient
       });
     }
   }
+
+  trackCliOptionCategory(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'category',
+        value: this.redactedValue,
+      });
+    }
+  }
 }
