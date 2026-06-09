@@ -9,24 +9,17 @@ const require = createRequire(import.meta.url);
 
 await buildBuilder();
 
-// Locate the @vercel-internals/ipc-proxy package directory.
 const ipcProxyDir = dirname(
   require.resolve('@vercel-internals/ipc-proxy/package.json')
 );
 
-// Copy the prebuilt IPC proxy binaries into bin/ so they ship in the
-// tarball. When esbuild bundles @vercel-internals/ipc-proxy into
-// dist/index.js, __dirname resolves to dist/ and getProxyBinaryPath()
-// looks for the binaries at join(__dirname, '..', 'bin').
-const binSrc = join(ipcProxyDir, 'bin');
+// Ship the prebuilt proxy binaries at ../bin relative to dist/, where the
+// bundled getProxyBinaryPath() resolves them.
 const binDest = join(__dirname, 'bin');
 mkdirSync(binDest, { recursive: true });
-cpSync(binSrc, binDest, { recursive: true });
+cpSync(join(ipcProxyDir, 'bin'), binDest, { recursive: true });
 
-// Copy the shared Go helper source (utils.go) into bootstrap/ so the
-// `vercel dev` wrapper (vc-init-dev.go) can compile against it via
-// `go run`. The production proxy ships as a prebuilt binary, so only the
-// shared helpers are needed here (not proxy.go).
+// utils.go is compiled by the `vercel dev` wrapper (vc-init-dev.go) via `go run`.
 cpSync(
   join(ipcProxyDir, 'bootstrap', 'utils.go'),
   join(__dirname, 'bootstrap', 'utils.go')

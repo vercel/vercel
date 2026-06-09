@@ -31,8 +31,7 @@ describe('getBootstrapDir', () => {
 });
 
 describe('getProxyBinaryPath', () => {
-  // The prebuilt binaries are produced by `pnpm build`. These assertions
-  // assume the package has been built (as it is in CI before tests run).
+  // Assumes `pnpm build` has produced bin/ (always true in CI before tests).
   it('returns an existing binary for x86_64', () => {
     const binPath = getProxyBinaryPath('x86_64');
     expect(binPath.endsWith('proxy-linux-amd64')).toBe(true);

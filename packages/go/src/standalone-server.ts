@@ -145,10 +145,6 @@ export async function buildStandaloneServer({
     }
   }
 
-  // Assemble the Lambda from the prebuilt, language-agnostic IPC proxy
-  // (shipped by @vercel-internals/ipc-proxy) and the user's server binary.
-  // The proxy is the entrypoint (`executable`) and spawns `user-server`,
-  // handling the Vercel executable runtime IPC protocol.
   const lambda = await createStandaloneLambda({
     userServerPath,
     architecture,
