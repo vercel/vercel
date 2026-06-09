@@ -47,10 +47,12 @@ type EnvChoice = {
   disabled?: boolean | string;
 };
 
-const SENSITIVE_SECRET_PROMPT = 'Store as sensitive?';
+const SENSITIVE_VALUE_HINT = 'Sensitive values cannot be read later';
+const SENSITIVE_SECRET_PROMPT = `Store as sensitive? ${chalk.dim(
+  SENSITIVE_VALUE_HINT
+)}`;
 const CHECKBOX_INSTRUCTIONS = [
-  '\n  ',
-  chalk.dim('('),
+  ' ',
   chalk.cyan('<space>'),
   chalk.dim(' select, '),
   chalk.cyan('<enter>'),
@@ -58,7 +60,7 @@ const CHECKBOX_INSTRUCTIONS = [
   chalk.cyan('<a>'),
   chalk.dim(' toggle all, '),
   chalk.cyan('<i>'),
-  chalk.dim(' invert)'),
+  chalk.dim(' invert'),
 ].join('');
 
 function filterEnvChoicesForSensitivity(
@@ -204,10 +206,19 @@ function printEnvAddResult(
   printAlignedLabel('Type', typeLabel(finalType));
 }
 
-function promptEnvValue(client: Client): Promise<string> {
-  return client.input.password({
+function printEnvAddWarning(message: string): void {
+  output.print(`${chalk.yellow('!')} ${message}\n`);
+}
+
+function promptEnvValue(
+  client: Client,
+  opts: { isSensitive: boolean }
+): Promise<string> {
+  return client.input.text({
     message: `Value?`,
-    mask: true,
+    ...(opts.isSensitive
+      ? { transformer: (value: string) => '*'.repeat(value.length) }
+      : {}),
   });
 }
 
@@ -477,7 +488,7 @@ export default async function add(client: Client, argv: string[]) {
       if (!sensitiveWarning) {
         // Non-sensitive public prefix: just show info, no action needed
         for (const w of keyWarnings) {
-          output.warn(w.message);
+          printEnvAddWarning(w.message);
         }
         keyAccepted = true;
         break;
@@ -514,7 +525,7 @@ export default async function add(client: Client, argv: string[]) {
 
       // Sensitive public variable: show all warnings then options
       for (const w of keyWarnings) {
-        output.warn(w.message);
+        printEnvAddWarning(w.message);
       }
 
       const nameWithoutPrefix = removePublicPrefix(envName);
@@ -546,7 +557,7 @@ export default async function add(client: Client, argv: string[]) {
     // Non-interactive: just show warnings
     const keyWarnings = getEnvKeyWarnings(envName);
     for (const w of keyWarnings) {
-      output.warn(w.message);
+      printEnvAddWarning(w.message);
     }
   }
 
@@ -701,11 +712,6 @@ export default async function add(client: Client, argv: string[]) {
   } else if (skipSensitivePrompt) {
     isSensitive = true;
   } else {
-    if (!client.nonInteractive) {
-      output.print(
-        `  ${chalk.dim('Sensitive values cannot be read later.')}\n`
-      );
-    }
     isSensitive = await client.input.confirm(SENSITIVE_SECRET_PROMPT, true);
     if (policyOn && !isSensitive) {
       output.print(
@@ -830,17 +836,17 @@ export default async function add(client: Client, argv: string[]) {
         ],
       });
     }
-    envValue = await promptEnvValue(client);
+    envValue = await promptEnvValue(client, { isSensitive });
   }
 
   const { finalValue } = await validateEnvValue({
     envName,
     initialValue: envValue,
     skipConfirm,
-    promptForValue: () => promptEnvValue(client),
+    promptForValue: () => promptEnvValue(client, { isSensitive }),
     selectAction: choices =>
       client.input.select({ message: 'Value?', choices }),
-    showWarning: msg => output.warn(msg),
+    showWarning: msg => printEnvAddWarning(msg),
     showLog: msg => output.log(msg),
   });
 
@@ -941,7 +947,7 @@ export default async function add(client: Client, argv: string[]) {
       // User asked for encrypted on Production/Preview, but the team policy
       // will promote it to sensitive server-side regardless. Surface that so
       // the user isn't surprised later.
-      output.warn(
+      printEnvAddWarning(
         `--no-sensitive is ignored: your team enforces sensitive Environment Variables for Production and Preview.`
       );
       finalType = 'sensitive';

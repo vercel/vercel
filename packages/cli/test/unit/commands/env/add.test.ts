@@ -96,16 +96,22 @@ describe('env add', () => {
     });
 
     describe('sensitive prompt', () => {
-      it('prints compact result without redundant preview rows or echoing the value', async () => {
-        const secretValue = 'super-secret-output-guard';
+      it('prints compact result without redundant preview rows or repeating the non-sensitive value', async () => {
+        const visibleValue = 'https://api.example.com';
 
         client.setArgv('env', 'add', 'TRANSCRIPT_VAR', 'preview', 'branchName');
         const exitCodePromise = env(client);
 
         await expect(client.stderr).toOutput('Store as sensitive?');
         const previewOutput = stripAnsi(client.stderr.getFullOutput());
-        expect(previewOutput).toContain(
-          'Sensitive values cannot be read later.'
+        expect(previewOutput).toMatch(
+          /Store as sensitive\? Sensitive values cannot be read later/
+        );
+        expect(previewOutput).not.toContain(
+          '(Sensitive values cannot be read later.)'
+        );
+        expect(previewOutput).not.toMatch(
+          /\n\s{0,2}Sensitive values cannot be read later\./
         );
         expect(previewOutput).not.toContain(
           'Sensitive values cannot be read later from the dashboard or CLI.'
@@ -116,7 +122,10 @@ describe('env add', () => {
 
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput('Value?');
-        client.stdin.write(`${secretValue}\n`);
+        expect(client.stderr.getFullOutput()).toMatch(
+          /Value\?\x1b\[[0-9;]*m\x1b\[10G/
+        );
+        client.stdin.write(`${visibleValue}\n`);
 
         await expect(client.stderr).toOutput(
           '✓ Added           TRANSCRIPT_VAR'
@@ -128,7 +137,10 @@ describe('env add', () => {
           /\n✓ Added\s+TRANSCRIPT_VAR\n\s{0,2}Project\s+\S+\/vercel-env-pull\n\s{0,2}Environments\s+Preview\n\s{0,2}Branch\s+branchName\n\s{0,2}Type\s+Non-sensitive\n/
         );
         expect(fullOutput).not.toMatch(/\n\s{0,2}Variable\s+TRANSCRIPT_VAR\n/);
-        expect(fullOutput).not.toContain(secretValue);
+        expect(fullOutput).toContain(visibleValue);
+        expect(fullOutput.slice(fullOutput.indexOf('✓ Added'))).not.toContain(
+          visibleValue
+        );
         expect(fullOutput).not.toMatch(
           /Added Environment Variable|✅|successfully/
         );
@@ -138,6 +150,7 @@ describe('env add', () => {
       });
 
       it('creates the variable as sensitive when the user keeps it at the prompt', async () => {
+        const secretValue = 'super-secret-output-guard';
         const addEnvRecordModule = await import(
           '../../../../src/util/env/add-env-record'
         );
@@ -156,12 +169,15 @@ describe('env add', () => {
         await expect(client.stderr).toOutput('Store as sensitive?');
         client.stdin.write('y\n');
         await expect(client.stderr).toOutput('Value?');
-        client.stdin.write('testvalue\n');
+        client.stdin.write(`${secretValue}\n`);
         await expect(exitCodePromise).resolves.toBe(0);
 
         expect(spy).toHaveBeenCalled();
         const type = spy.mock.calls[0][3];
         expect(type).toBe('sensitive');
+        expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+          secretValue
+        );
 
         spy.mockRestore();
       });
@@ -397,6 +413,13 @@ describe('env add', () => {
         await expect(client.stderr).toOutput('Value?');
         client.stdin.write('testvalue\n');
         await expect(client.stderr).toOutput('Environments?');
+        const outputWithInstructions = stripAnsi(client.stderr.getFullOutput());
+        expect(outputWithInstructions).toContain(
+          'Environments? <space> select, <enter> confirm, <a> toggle all, <i> invert'
+        );
+        expect(outputWithInstructions).not.toContain(
+          'Environments?\n  (<space>'
+        );
         // Select Production, Preview, and Development.
         client.stdin.write(' '); // toggle Production (first row)
         client.stdin.write('\x1B[B'); // down to Preview
@@ -697,6 +720,11 @@ describe('env add', () => {
         await expect(client.stderr).toOutput(
           'The NEXT_PUBLIC_ prefix will make API_KEY visible to anyone visiting your site'
         );
+        const warningOutput = stripAnsi(client.stderr.getFullOutput());
+        expect(warningOutput).toContain(
+          '! The NEXT_PUBLIC_ prefix will make API_KEY visible to anyone visiting your site'
+        );
+        expect(warningOutput).not.toContain('WARNING!');
         await expect(client.stderr).toOutput('Variable name?');
         client.stdin.write('\n'); // Select "Leave as is"
         await expect(client.stderr).toOutput('Store as sensitive?');
