@@ -427,14 +427,12 @@ describe('env pull', () => {
       client.setArgv('env', 'add', 'NEW_VAR');
       const addPromise = env(client);
 
-      await expect(client.stderr).toOutput('Is the value a sensitive secret?');
+      await expect(client.stderr).toOutput('Store as sensitive?');
       client.stdin.write('n\n');
-      await expect(client.stderr).toOutput("What's the value of NEW_VAR?");
+      await expect(client.stderr).toOutput('Value?');
       client.stdin.write('testvalue\n');
 
-      await expect(client.stderr).toOutput(
-        'Add NEW_VAR to which Environments (select multiple)?'
-      );
+      await expect(client.stderr).toOutput('Environments?');
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\x1B[B');
       client.stdin.write(' ');

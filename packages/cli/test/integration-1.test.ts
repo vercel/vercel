@@ -495,22 +495,14 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
       cwd: target,
     });
 
-    await waitForPrompt(vc, "What's the name of the variable?");
+    await waitForPrompt(vc, 'Name?');
     vc.stdin?.write(`${promptEnvVar}\n`);
-    await waitForPrompt(vc, 'Mark as sensitive?');
+    await waitForPrompt(vc, 'Store as sensitive?');
     vc.stdin?.write('n\n');
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes("What's the value of") && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Value?');
     vc.stdin?.write('my plaintext value\n');
 
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes('which Environments') && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Environments?');
     vc.stdin?.write('a\n'); // select all
 
     const { exitCode, stdout, stderr } = await vc;
