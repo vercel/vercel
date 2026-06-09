@@ -32,6 +32,10 @@ export interface ConnectTokenParams {
   subject: ConnectTokenSubject;
   installationId?: string;
   audience?: string[];
+  /**
+   * Access scopes to request. Use `['*']` to request the default scopes for
+   * the specified subject type.
+   */
   scopes?: string[];
   resources?: string[];
   authorizationDetails?: ConnectAuthorizationDetail[];

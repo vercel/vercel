@@ -23,4 +23,15 @@ export {
   type ConnectOAuthOptions,
 } from './connect-oauth.js';
 
-export { connectSlackCredentials } from './slack-credentials.js';
+export {
+  connectGitHubCredentials,
+  type ConnectGitHubCredentialsParams,
+} from './github-credentials.js';
+export {
+  connectLinearCredentials,
+  type ConnectLinearCredentialsParams,
+} from './linear-credentials.js';
+export {
+  connectSlackCredentials,
+  type ConnectSlackCredentialsParams,
+} from './slack-credentials.js';
