@@ -1,5 +1,13 @@
 # @vercel/connect
 
+## 0.2.1
+
+### Patch Changes
+
+- 2988097: Document `ConnectTokenParams.scopes` support for `["*"]` default scopes.
+- 585bd2c: Add the `revokeToken` API for revoking Connect tokens by connector and subject.
+- b151652: Use the published Eve 0.6 beta package for local type validation and add Connect-backed Eve GitHub and Linear channel credential helpers.
+
 ## 0.2.0
 
 ### Minor Changes

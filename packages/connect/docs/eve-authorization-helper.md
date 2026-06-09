@@ -376,7 +376,7 @@ Why we shifted off Option A:
 
 Implementation summary:
 
-- `peerDependencies: { "eve": ">=0.3.0-alpha.19" }` + `peerDependenciesMeta.eve.optional: true`.
+- `peerDependencies: { "eve": ">=0.6.0-beta.1" }` + `peerDependenciesMeta.eve.optional: true`.
 - Subpath export `./eve` → `./dist/eve/index.js` / `./dist/eve/index.d.ts`.
 - `src/eve/` imports types and the two error classes from `eve/connections` and throws Eve's actual error instances. `src/index.ts` does **not** re-export anything from `eve/`.
 
@@ -399,19 +399,19 @@ packages/connect/src/
     "./eve": { "types": "./dist/eve/index.d.ts", "default": "./dist/eve/index.js" },
   },
   "peerDependencies": {
-    "eve": ">=0.3.0-alpha.19",
+    "eve": ">=0.6.0-beta.1",
   },
   "peerDependenciesMeta": {
     "eve": { "optional": true },
   },
   "devDependencies": {
-    "eve": "file:./fixtures/eve",
+    "eve": "0.6.0-beta.1",
     "typescript": "^5",
   },
 }
 ```
 
-The devDep on `eve` exists so the Vercel Connect repo can typecheck `src/eve/` locally; it's not part of the published artifact. Until Eve's registry package is available, it points at a package-local shim with the peer surface this helper consumes.
+The devDep on `eve` exists so the Vercel Connect repo can typecheck `src/eve/` locally against Eve's published type surface; it's not part of the published artifact.
 
 ## Demo app migration
 
@@ -449,7 +449,7 @@ Sequential; each step validates the next.
    - The principal-model branch already exposes `AuthorizationDefinition`, `ConnectionPrincipal`, `TokenResult`, `ConnectionAuthorizationChallenge`, and the two error classes from `eve/connections`.
    - `isConnectionAuthorizationRequiredError` / `isConnectionAuthorizationFailedError` discriminate on `err.name` (not `instanceof`), which already addresses the cross-realm/duplicate-package risk.
    - `withDefaultAuthorizationInstructions(challenge, connectionName)` in `src/execution/authorization-challenge-defaults.ts` fills in the default `"Authorize <ConnectionName> in your browser to continue."` text using the slot name; capitalization helper covers hyphenated/empty cases.
-   - Pending follow-up: publish a new Eve alpha that includes the principal-model surface so consumers don't need a workspace override. Until then the Vercel Connect repo uses a pnpm `overrides` entry that links `eve` to a local checkout.
+   - Eve `0.6.0-beta.1` publishes the principal-model surface consumed by `@vercel/connect/eve`, so the Vercel Connect repo typechecks against the registry package instead of a local shim.
 
 2. **Vercel Connect SDK change — [DONE locally, pending publish].**
 
