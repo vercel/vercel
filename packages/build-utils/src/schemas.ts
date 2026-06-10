@@ -72,7 +72,7 @@ const triggerEventSchema = {
   oneOf: [triggerEventSchemaV1, triggerEventSchemaV2],
 };
 
-export const functionsSchema = {
+export const getFunctionsSchema = () => ({
   type: 'object',
   minProperties: 1,
   maxProperties: 50,
@@ -125,7 +125,15 @@ export const functionsSchema = {
       },
     },
   },
-};
+});
+
+/**
+ * @deprecated Evaluated once at module load, so it does not reflect
+ * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` when the variable is set after this
+ * module is first imported. Prefer {@link getFunctionsSchema}, which reads the
+ * limit at call time.
+ */
+export const functionsSchema = getFunctionsSchema();
 
 export const buildsSchema = {
   type: 'array',

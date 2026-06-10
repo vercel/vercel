@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 6.3.0
+
+### Minor Changes
+
+- 90a7cc1: Support a service-targeted `destination` object (`{ type: "service", service, path }`) on routes and rewrites, so a route/rewrite can delegate into a named service. The service handoff is terminal: `continue: true` together with a service `destination` is rejected during normalization.
+
 ## 6.2.0
 
 ### Minor Changes
