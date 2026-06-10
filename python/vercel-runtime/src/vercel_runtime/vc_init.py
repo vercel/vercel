@@ -894,7 +894,12 @@ if "VERCEL_IPC_PATH" in os.environ:
                         "_vc_service_root_path",
                         "",
                     )
-                    body = read_wsgi_request_body(self.rfile, self.headers)
+                    try:
+                        body = read_wsgi_request_body(self.rfile, self.headers)
+                    except ValueError as exc:
+                        self.log_error("invalid request body: %s", exc)
+                        self.send_error(400)
+                        return
                     env: dict[str, Any] = {
                         "CONTENT_LENGTH": str(len(body)),
                         "CONTENT_TYPE": self.headers.get("content-type", ""),

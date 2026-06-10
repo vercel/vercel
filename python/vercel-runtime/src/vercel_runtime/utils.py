@@ -7,6 +7,7 @@ from typing import Protocol
 # Matches the platform request body limit.
 _MAX_CHUNKED_BODY_BYTES = 100 * 1024 * 1024
 _MAX_CHUNK_SIZE_LINE = 65536
+_MAX_TRAILER_BYTES = 8 * 1024
 
 
 def _is_main_guard_test(node: ast.AST) -> bool:
@@ -91,6 +92,16 @@ def read_wsgi_request_body(
     ``Transfer-Encoding: chunked`` request must be de-chunked here.
     """
     content_length_raw = _get_header(headers, "Content-Length")
+    transfer_encoding = _get_header(headers, "Transfer-Encoding") or ""
+    has_chunked = "chunked" in transfer_encoding.lower()
+
+    # RFC 9112 §6.3: a message with both framing headers may be a request
+    # smuggling attempt and must be rejected.
+    if content_length_raw is not None and has_chunked:
+        raise ValueError(
+            "request has both Content-Length and Transfer-Encoding: chunked"
+        )
+
     if content_length_raw is not None:
         try:
             content_length = int(content_length_raw)
@@ -104,8 +115,7 @@ def read_wsgi_request_body(
             return b""
         return rfile.read(content_length)
 
-    transfer_encoding = _get_header(headers, "Transfer-Encoding") or ""
-    if "chunked" in transfer_encoding.lower():
+    if has_chunked:
         return _read_chunked_body(rfile, max_bytes)
 
     return b""
@@ -126,11 +136,18 @@ def _read_chunked_body(rfile: _Readable, max_bytes: int) -> bytes:
         except ValueError as exc:
             raise ValueError(f"invalid chunk size: {size_token!r}") from exc
         if chunk_size == 0:
-            # Drain trailer headers up to the terminating blank line.
+            # Drain trailer headers up to the terminating blank line. Bounded
+            # so a hostile peer cannot pin the connection with endless lines.
+            trailer_total = 0
             while True:
                 trailer = rfile.readline(_MAX_CHUNK_SIZE_LINE)
                 if trailer in (b"\r\n", b"\n", b""):
                     break
+                trailer_total += len(trailer)
+                if trailer_total > _MAX_TRAILER_BYTES:
+                    raise ValueError(
+                        "chunked request trailer exceeds maximum size"
+                    )
             break
         total += chunk_size
         if total > max_bytes:

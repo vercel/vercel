@@ -89,6 +89,30 @@ class TestReadWsgiRequestBody(unittest.TestCase):
                 rfile, _headers({"Transfer-Encoding": "chunked"})
             )
 
+    def test_both_content_length_and_chunked_raises(self) -> None:
+        raw = b"5\r\nhello\r\n0\r\n\r\n"
+        rfile = io.BytesIO(raw)
+        with self.assertRaises(ValueError):
+            utils.read_wsgi_request_body(
+                rfile,
+                _headers(
+                    {
+                        "Content-Length": "5",
+                        "Transfer-Encoding": "chunked",
+                    }
+                ),
+            )
+
+    def test_chunked_trailer_exceeds_max_raises(self) -> None:
+        # 0-size chunk followed by an oversized trailer block.
+        trailer_line = b"X-Trailer: " + b"a" * 200 + b"\r\n"
+        raw = b"0\r\n" + trailer_line * 100 + b"\r\n"
+        rfile = io.BytesIO(raw)
+        with self.assertRaises(ValueError):
+            utils.read_wsgi_request_body(
+                rfile, _headers({"Transfer-Encoding": "chunked"})
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
