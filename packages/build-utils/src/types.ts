@@ -988,6 +988,13 @@ export interface ExperimentalServiceConfig {
   runtime?: string;
   /** Optional command override for container image services. */
   command?: string | string[];
+  /**
+   * Path to a Dockerfile/Containerfile, relative to the service root, used to
+   * build and push a container image at build time. Only valid for the
+   * `container` runtime. When omitted, a prebuilt image reference is taken from
+   * the service entrypoint instead.
+   */
+  dockerfile?: string;
 
   workspace?: string;
   buildCommand?: string;

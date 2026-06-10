@@ -143,6 +143,25 @@ function buildCommandWithGlobalFlags(
   return cli.getCommandNamePlain(full);
 }
 
+/**
+ * Best-effort check of whether an OIDC JWT is expired (or about to expire).
+ * Returns `true` if we can't read a future `exp`, so callers re-pull a fresh
+ * token rather than handing builders a stale one. The 60s skew covers the time
+ * a build may sit before the container builder authenticates to VCR.
+ */
+function isOidcTokenExpired(token: string, skewMs = 60_000): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const json = Buffer.from(payload, 'base64url').toString('utf8');
+    const { exp } = JSON.parse(json) as { exp?: number };
+    if (typeof exp !== 'number') return true;
+    return Date.now() + skewMs >= exp * 1000;
+  } catch {
+    return true;
+  }
+}
+
 type BuildResult = BuildResultV2 | BuildResultV3;
 
 interface SerializedBuilder extends Builder {
@@ -493,6 +512,45 @@ export default async function main(client: Client): Promise<number> {
       }
     } finally {
       loadEnvSpan.stop();
+    }
+
+    // Ensure the project's OIDC token is available (and fresh) for builders. On
+    // Vercel builds (and `--id`) it's part of the deployment env; for local
+    // builds it only exists if previously pulled, and the token loaded from
+    // `.vercel/.env.*.local` is often expired. The container builder needs a
+    // valid token to authenticate to the Vercel Container Registry, so pull a
+    // fresh one when it's missing or expired.
+    const existingOidcToken = process.env.VERCEL_OIDC_TOKEN;
+    const needsOidcToken =
+      !deploymentId &&
+      link &&
+      (!existingOidcToken || isOidcTokenExpired(existingOidcToken));
+    if (needsOidcToken) {
+      try {
+        // Mint a fresh OIDC token directly rather than pulling (and decrypting)
+        // the entire env just to extract one value. This is the same endpoint
+        // used by `vercel project token` and the `@vercel/oidc` refresh path.
+        const { token: oidcToken } = await client.fetch<{ token: string }>(
+          `/projects/${project.id}/token`,
+          {
+            method: 'POST',
+            accountId: link?.orgId,
+            body: JSON.stringify({ source: 'vercel-cli:build' }),
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+        if (oidcToken) {
+          process.env.VERCEL_OIDC_TOKEN = oidcToken;
+          envToUnset.add('VERCEL_OIDC_TOKEN');
+          output.debug(
+            existingOidcToken
+              ? 'Refreshed expired VERCEL_OIDC_TOKEN for build'
+              : 'Minted VERCEL_OIDC_TOKEN for build'
+          );
+        }
+      } catch (err) {
+        output.debug(`Failed to mint VERCEL_OIDC_TOKEN: ${err}`);
+      }
     }
 
     // For legacy Speed Insights

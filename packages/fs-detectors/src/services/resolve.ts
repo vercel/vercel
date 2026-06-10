@@ -218,6 +218,20 @@ interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
 }
 
+/**
+ * A container service whose entrypoint points at a Dockerfile/Containerfile is
+ * built and pushed at build time, rather than treated as a prebuilt image
+ * reference. Matches `Dockerfile`, `Containerfile`, and `*.Dockerfile`.
+ */
+function isDockerfileEntrypoint(entrypoint: string): boolean {
+  const base = posixPath.basename(entrypoint).toLowerCase();
+  return (
+    base === 'dockerfile' ||
+    base === 'containerfile' ||
+    base.endsWith('.dockerfile')
+  );
+}
+
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -659,6 +673,10 @@ export function validateServiceConfig(
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
   const hasEntrypoint = Boolean(config.entrypoint);
+  // A container service that builds from a Dockerfile produces its own image
+  // reference, so it doesn't require a separate entrypoint.
+  const hasContainerDockerfile =
+    isContainerRuntime(config) && Boolean(config.dockerfile);
   const entrypointRequiredRuntime = getEntrypointRequiredRuntime(config);
 
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
@@ -680,7 +698,12 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+  if (
+    hasBuilderOrRuntime &&
+    !hasFramework &&
+    !hasEntrypoint &&
+    !hasContainerDockerfile
+  ) {
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
@@ -691,6 +714,13 @@ export function validateServiceConfig(
     return {
       code: 'INVALID_COMMAND',
       message: `Service "${name}" can only specify "command" when using runtime "container".`,
+      serviceName: name,
+    };
+  }
+  if (config.dockerfile !== undefined && !isContainerRuntime(config)) {
+    return {
+      code: 'INVALID_DOCKERFILE',
+      message: `Service "${name}" can only specify "dockerfile" when using runtime "container".`,
       serviceName: name,
     };
   }
@@ -764,6 +794,16 @@ export async function resolveConfiguredService(
   const containerEntrypoint =
     isContainerRuntime(config) && typeof rawEntrypoint === 'string'
       ? rawEntrypoint
+      : undefined;
+  // A container entrypoint is either a Dockerfile path to build & push, or a
+  // prebuilt image reference to pass through unchanged.
+  const containerDockerfile =
+    containerEntrypoint && isDockerfileEntrypoint(containerEntrypoint)
+      ? posixPath.normalize(containerEntrypoint)
+      : undefined;
+  const containerImage =
+    containerEntrypoint && !containerDockerfile
+      ? containerEntrypoint
       : undefined;
   let resolvedEntrypointPath = resolvedEntrypoint;
   if (
@@ -889,7 +929,10 @@ export async function resolveConfiguredService(
     builderSrc =
       inferredRuntime === 'container' && typeof containerEntrypoint === 'string'
         ? containerEntrypoint
-        : resolvedEntrypointFile!;
+        : inferredRuntime === 'container' &&
+            typeof config.dockerfile === 'string'
+          ? config.dockerfile
+          : resolvedEntrypointFile!;
   }
 
   const normalizedSubdomain =
@@ -950,11 +993,22 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
-  if (containerEntrypoint) {
-    builderConfig.handler = containerEntrypoint;
+  if (containerImage) {
+    builderConfig.handler = containerImage;
   }
   if (config.command !== undefined) {
     builderConfig.command = normalizeContainerCommand(config.command);
+  }
+  if (containerDockerfile) {
+    // The entrypoint is a Dockerfile path (relative to the service work dir);
+    // hand it to the builder so it builds & pushes instead of treating the
+    // entrypoint as a prebuilt image reference.
+    builderConfig.dockerfile = containerDockerfile;
+  } else if (
+    isContainerRuntime(config) &&
+    typeof config.dockerfile === 'string'
+  ) {
+    builderConfig.dockerfile = config.dockerfile;
   }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
@@ -967,7 +1021,7 @@ export async function resolveConfiguredService(
     trigger,
     group,
     workspace,
-    entrypoint: containerEntrypoint ?? resolvedEntrypointFile,
+    entrypoint: containerImage ?? containerDockerfile ?? resolvedEntrypointFile,
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
     subdomain: normalizedSubdomain,
