@@ -1,6 +1,7 @@
 import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
+import stripAnsi from 'strip-ansi';
 import { useUser } from '../../../mocks/user';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -92,16 +93,16 @@ describe('git connect', () => {
         client.setArgv('git', 'connect', remoteUrl);
         const gitPromise = git(client);
 
-        await expect(client.stderr).toOutput('Set up');
+        await expect(client.stderr).toOutput('Directory');
 
         await expect(client.stderr).toOutput('Which team?');
         client.stdin.write('\r');
 
-        await expect(client.stderr).toOutput('Found project');
+        await expect(client.stderr).toOutput('Found existing project');
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Would you like to pull environment variables now?'
+          'Pull development environment variables into .env.local?'
         );
         client.stdin.write('n\n');
 
@@ -118,6 +119,9 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput('Connected');
 
         expect(exitCode).toEqual(0);
+        expect(client.stderr.getFullOutput()).not.toContain(
+          'Would you like to pull environment variables now?'
+        );
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
             key: 'subcommand:connect',
@@ -196,16 +200,16 @@ describe('git connect', () => {
       client.setArgv('git', 'connect');
       const gitPromise = git(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -217,6 +221,9 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Would you like to pull environment variables now?'
+      );
 
       const project: Project = await client.fetch(`/v8/projects/unlinked`);
       expect(project.link).toMatchObject({
@@ -247,16 +254,16 @@ describe('git connect', () => {
       client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
       const gitPromise = git(client);
 
-      await expect(client.stderr).toOutput('Set up');
+      await expect(client.stderr).toOutput('Directory');
 
       await expect(client.stderr).toOutput('Which team?');
       client.stdin.write('\r');
 
-      await expect(client.stderr).toOutput('Found project');
+      await expect(client.stderr).toOutput('Found existing project');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Would you like to pull environment variables now?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -273,6 +280,9 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Would you like to pull environment variables now?'
+      );
 
       const project: Project = await client.fetch(`/v8/projects/unlinked`);
       expect(project.link).toMatchObject({
@@ -668,10 +678,13 @@ describe('git connect', () => {
       const gitPromise = git(client);
 
       await expect(client.stderr).toOutput(
-        `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
+        `Found multiple Git repositories in your local Git config:`
       );
       await expect(client.stderr).toOutput(
         `Do you still want to connect https://github.com/user3/repo3? (y/N)`
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+        /Found multiple Git repositories in your local Git config:\n\s{0,2}• origin: https:\/\/github\.com\/user\/repo\.git\n\s{0,2}• secondary: https:\/\/github\.com\/user\/repo2\.git/
       );
       client.stdin.write('y\n');
 

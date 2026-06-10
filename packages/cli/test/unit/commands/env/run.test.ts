@@ -142,7 +142,7 @@ describe('env run', () => {
       const exitCodePromise = env(client);
 
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables'
+        'Downloading `development` environment variables'
       );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -188,7 +188,7 @@ describe('env run', () => {
       const exitCodePromise = env(client);
 
       await expect(client.stderr).toOutput(
-        'Downloading `production` Environment Variables'
+        'Downloading `production` environment variables'
       );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -231,7 +231,7 @@ describe('env run', () => {
       const exitCodePromise = env(client);
 
       await expect(client.stderr).toOutput(
-        'Downloading `preview` Environment Variables'
+        'Downloading `preview` environment variables'
       );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);

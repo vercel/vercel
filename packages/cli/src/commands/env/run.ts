@@ -88,7 +88,7 @@ export default async function run(client: Client): Promise<number> {
 
   const gitBranch = parsedArgs.flags['--git-branch'];
 
-  output.spinner(`Downloading \`${environment}\` Environment Variables`);
+  output.spinner(`Downloading \`${environment}\` environment variables`);
 
   const records = await pullEnvRecords(
     client,

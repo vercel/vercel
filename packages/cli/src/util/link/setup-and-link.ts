@@ -48,6 +48,7 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
+import { printAlignedLabel } from '../output/print-aligned-label';
 import {
   displayConfiguredServicesSetup,
   getServicesSetupState,
@@ -63,7 +64,6 @@ export interface SetupAndLinkOptions {
   forceDelete?: boolean;
   link?: ProjectLinkResult;
   successEmoji?: EmojiLabel;
-  setupMsg?: string;
   projectName?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
@@ -93,28 +93,35 @@ function formatCrossTeamMatch(match: CrossTeamMatch): string {
   )}`;
 }
 
-function formatTeamList(slugs: string[]): string {
-  const shown = slugs.slice(0, 5);
-  const suffix =
-    slugs.length > shown.length
-      ? `, and ${slugs.length - shown.length} more`
-      : '';
-  return `${shown.join(', ')}${suffix}`;
+function formatMatchSource(match: CrossTeamMatch): string {
+  return match.reason === 'repo-root' ? 'Git repository' : 'Folder name';
 }
+
+const CHECKBOX_INSTRUCTIONS = [
+  '\n  ',
+  chalk.dim('('),
+  chalk.cyan('<space>'),
+  chalk.dim(' select, '),
+  chalk.cyan('<enter>'),
+  chalk.dim(' confirm, '),
+  chalk.cyan('<a>'),
+  chalk.dim(' toggle all, '),
+  chalk.cyan('<i>'),
+  chalk.dim(' invert)'),
+].join('');
 
 function printCrossTeamSearchScope({
   searchedTeamSlugs,
-  skippedLimitedTeamSlugs,
 }: {
   searchedTeamSlugs: string[];
-  skippedLimitedTeamSlugs: string[];
 }): void {
   if (searchedTeamSlugs.length > 0) {
-    output.print(`  Searched teams: ${formatTeamList(searchedTeamSlugs)}\n`);
-  }
-  if (skippedLimitedTeamSlugs.length > 0) {
     output.print(
-      `  Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}\n`
+      `  ${chalk.dim(
+        `Searched ${searchedTeamSlugs.length} ${
+          searchedTeamSlugs.length === 1 ? 'team' : 'teams'
+        }`
+      )}\n`
     );
   }
 }
@@ -190,10 +197,12 @@ async function maybePullEnvAfterLink(
     return;
   }
 
+  output.print('\n');
+
   const pullEnvConfirmed =
     autoConfirm ||
     (await client.input.confirm(
-      'Would you like to pull environment variables now?',
+      'Pull development environment variables into .env.local?',
       true
     ));
 
@@ -278,7 +287,8 @@ async function promptForLimitedTeams(
   }
 
   return await client.input.checkbox<Team>({
-    message: 'Which SSO-protected teams should be searched?',
+    message: 'Select teams that require SSO',
+    instructions: CHECKBOX_INSTRUCTIONS,
     choices: teams.map(team => ({
       name: team.name ? `${team.name} (${team.slug})` : team.slug,
       value: team,
@@ -304,7 +314,7 @@ async function searchSelectedLimitedTeams({
     return [];
   }
 
-  output.spinner('Searching selected SSO-protected teams…', 1000);
+  output.spinner('Searching selected teams that require SSO…', 1000);
   try {
     const result = await searchProjectAcrossTeams(client, projectName, path, {
       teams: selectedTeams,
@@ -313,11 +323,10 @@ async function searchSelectedLimitedTeams({
     });
     printCrossTeamSearchScope({
       searchedTeamSlugs: result.searchedTeamSlugs,
-      skippedLimitedTeamSlugs: [],
     });
     return result.matches;
   } catch (err) {
-    output.debug(`Selected SSO-protected team search failed: ${err}`);
+    output.debug(`Selected team search requiring SSO failed: ${err}`);
     return [];
   } finally {
     output.stopSpinner();
@@ -359,8 +368,18 @@ async function linkCrossTeamMatches({
       });
     }
 
+    output.print('\n');
+    output.print(`  ${chalk.bold('Found existing project')}\n`);
+    if (match.reason === 'repo-root') {
+      printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
+      printAlignedLabel('Source', formatMatchSource(match));
+    } else {
+      printAlignedLabel('Project', `${match.org.slug}/${match.project.name}`);
+    }
     const confirmed = await client.input.confirm(
-      `Found project ${formatCrossTeamMatch(match)}. Link to it?`,
+      match.reason === 'repo-root'
+        ? 'Link repository to project?'
+        : 'Link directory to project?',
       true
     );
     if (confirmed) {
@@ -404,9 +423,10 @@ async function linkCrossTeamMatches({
     value: null,
   });
 
+  output.print('\n');
+  printAlignedLabel('Projects', `${matches.length} matches across teams`);
   const selected = await client.input.select<CrossTeamMatch | null>({
-    message:
-      'Found matching projects across teams. Which one do you want to link?',
+    message: 'Which project?',
     choices,
     default: currentTeamMatch ?? undefined,
   });
@@ -433,7 +453,6 @@ export default async function setupAndLink(
     forceDelete = false,
     link,
     successEmoji = 'link',
-    setupMsg = 'Set up',
     projectName,
     nonInteractive = false,
     pullEnv = true,
@@ -471,19 +490,16 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
-  // Status line — intent is implied by the user running `vc` in this directory.
-  // The "Set up and deploy?" confirmation prompt is gone; Ctrl-C is the escape hatch.
-  // Single leading newline, 2-space indent, straight quotes — matches the prototype.
-  output.print(
-    `\n  ${chalk.bold(setupMsg)} ${chalk.dim(`"${toHumanPath(path)}"`)}\n`
-  );
+  // The command invocation carries setup intent; show the local target as state.
+  output.print('\n');
+  printAlignedLabel('Directory', toHumanPath(path));
+  output.print('\n');
 
   let skipAutoDetect = false;
   if (searchAcrossTeams) {
     // Search for existing projects across all teams
     let crossTeamMatches: CrossTeamMatch[] = [];
     let searchedTeamSlugs: string[] = [];
-    let skippedLimitedTeamSlugs: string[] = [];
     let skippedLimitedTeams: Team[] = [];
     output.spinner('Searching for existing projects…', 1000);
     try {
@@ -499,7 +515,6 @@ export default async function setupAndLink(
       );
       crossTeamMatches = searchResult.matches;
       searchedTeamSlugs = searchResult.searchedTeamSlugs;
-      skippedLimitedTeamSlugs = searchResult.skippedLimitedTeamSlugs;
       skippedLimitedTeams = searchResult.skippedLimitedTeams;
     } catch (err) {
       output.debug(`Cross-team search failed: ${err}`);
@@ -507,10 +522,14 @@ export default async function setupAndLink(
       output.stopSpinner();
     }
 
-    if (crossTeamMatches.length > 0 && !autoConfirm && !nonInteractive) {
+    if (
+      crossTeamMatches.length > 0 &&
+      searchedTeamSlugs.length > 1 &&
+      !autoConfirm &&
+      !nonInteractive
+    ) {
       printCrossTeamSearchScope({
         searchedTeamSlugs,
-        skippedLimitedTeamSlugs,
       });
     }
 
@@ -529,9 +548,13 @@ export default async function setupAndLink(
 
     if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
       if (crossTeamMatches.length === 0) {
-        output.print(
-          `  No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.\n`
+        printAlignedLabel(
+          'Searched',
+          `${searchedTeamSlugs.length} ${
+            searchedTeamSlugs.length === 1 ? 'team' : 'teams'
+          } available without SSO`
         );
+        output.print('  No matching projects found\n');
       }
       const limitedTeamMatches = await searchSelectedLimitedTeams({
         client,
@@ -553,9 +576,7 @@ export default async function setupAndLink(
         return linkedLimitedMatch;
       }
       if (limitedTeamMatches.length === 0) {
-        output.print(
-          '  No matching projects found in the selected SSO-protected teams.\n'
-        );
+        output.print('  No matching projects found in the selected teams.\n');
       }
       skipAutoDetect =
         skipAutoDetect ||
@@ -784,7 +805,7 @@ export default async function setupAndLink(
     let changeAdditionalSettings = false;
     if (!autoConfirm) {
       changeAdditionalSettings = await client.input.confirm(
-        'Do you want to change additional project settings?',
+        'Customize advanced settings?',
         false
       );
     }
@@ -818,7 +839,8 @@ export default async function setupAndLink(
       org.slug,
       successEmoji,
       autoConfirm,
-      false // don't prompt to pull env for newly created projects
+      false, // don't prompt to pull env for newly created projects
+      'Created'
     );
 
     await connectGitRepository(client, path, project, autoConfirm, org);
@@ -860,12 +882,11 @@ export async function connectGitRepository(
       return;
     }
 
+    output.print('\n');
+
     const shouldConnect =
       autoConfirm ||
-      (await client.input.confirm(
-        `Detected a repository. Connect it to this project?`,
-        true
-      ));
+      (await client.input.confirm(`Connect detected Git repository?`, true));
 
     if (!shouldConnect) {
       return;

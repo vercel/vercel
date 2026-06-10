@@ -5,6 +5,31 @@ import { ProjectNotFound } from '../../util/errors-ts';
 import type { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
+
+type ProjectDecision = 'create' | 'existing';
+
+async function inputProjectDecision(
+  client: Client,
+  defaultDecision: ProjectDecision
+): Promise<ProjectDecision> {
+  const createChoice = {
+    name: 'Create new project',
+    value: 'create' as const,
+  };
+  const existingChoice = {
+    name: 'Link existing project',
+    value: 'existing' as const,
+  };
+
+  return await client.input.select<ProjectDecision>({
+    message: 'Project?',
+    choices:
+      defaultDecision === 'existing'
+        ? [existingChoice, createChoice]
+        : [createChoice, existingChoice],
+  });
+}
 
 export default async function inputProject(
   client: Client,
@@ -57,29 +82,22 @@ export default async function inputProject(
   let shouldLinkProject;
 
   if (!detectedProject) {
-    // did not auto-detect a project to link
-    shouldLinkProject = await client.input.confirm(
-      `Link to existing project?`,
-      false
+    const decision = await inputProjectDecision(
+      client,
+      skipAutoDetect ? 'existing' : 'create'
     );
+    shouldLinkProject = decision === 'existing';
   } else {
     // auto-detected a project to link
-    if (
-      await client.input.confirm(
-        `Found project ${chalk.cyan(
-          `"${org.slug}/${detectedProject.name}"`
-        )}. Link to it?`,
-        true
-      )
-    ) {
+    output.print(`  ${chalk.bold('Found existing project')}\n`);
+    printAlignedLabel('Project', `${org.slug}/${detectedProject.name}`);
+    if (await client.input.confirm(`Link directory to project?`, true)) {
       return detectedProject;
     }
 
     // user doesn't want to link the auto-detected project
-    shouldLinkProject = await client.input.confirm(
-      `Link to different existing project?`,
-      true
-    );
+    const decision = await inputProjectDecision(client, 'existing');
+    shouldLinkProject = decision === 'existing';
   }
 
   if (shouldLinkProject) {
@@ -120,7 +138,7 @@ export default async function inputProject(
         }));
 
       const toLink = await client.input.select<Project>({
-        message: 'Which existing project do you want to link?',
+        message: 'Which project?',
         choices,
       });
 
