@@ -37,13 +37,12 @@ vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
   autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
 }));
 
-function expectLinkRowsUseNonProductionGutter(
-  output: string,
-  labels: string[]
-) {
+function expectLinkRowsUseExpectedGlyphs(output: string, labels: string[]) {
   const plain = stripAnsi(output);
   const completedLabels = new Set(['Created', 'Linked', 'Added']);
 
+  // Exact blank-gutter spacing is covered by printAlignedLabel() unit tests.
+  // Command transcripts assert row presence plus the semantic glyph contract.
   for (const label of labels) {
     const prefix = completedLabels.has(label) ? '✓ ' : '\\s{0,2}';
     expect(plain).toMatch(new RegExp(`^${prefix}${label.padEnd(16)}`, 'm'));
@@ -901,7 +900,7 @@ describe('link', () => {
     expect(plainOutput).toMatch(
       /✓ Linked\s+.+\n\n\? Pull development environment variables into \.env\.local\?/
     );
-    expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+    expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
       'Directory',
       'Project',
       'Linked',
@@ -992,7 +991,7 @@ describe('link', () => {
     expect(fullOutput).not.toContain(
       `✓ Linked          ${user.username}/awesome-app`
     );
-    expectLinkRowsUseNonProductionGutter(fullOutput, ['Directory', 'Created']);
+    expectLinkRowsUseExpectedGlyphs(fullOutput, ['Directory', 'Created']);
   });
 
   it('should write vercel.json for inferred multi-service layouts', async () => {
@@ -1608,7 +1607,7 @@ describe('link', () => {
       selectSpy.mockRestore();
 
       expect(exitCode).toEqual(0);
-      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
         'Directory',
         'Project',
         'Linked',
@@ -2268,7 +2267,7 @@ describe('link', () => {
       expect(plainOutput).toMatch(
         /Link repository to project\?.*\n\n✓ Linked\s+/
       );
-      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
         'Directory',
         'Project',
         'Source',
@@ -2411,7 +2410,7 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
         'Project',
         'Source',
         'Linked',
@@ -2546,7 +2545,7 @@ describe('link', () => {
         'Searched        1 team available without SSO\nNo matching projects found'
       );
       expect(plainOutput).toMatch(
-        /^\s{0,2}Searched 1 team\n\n\s{0,2}Found existing project/m
+        /^\s{0,2}Searched\s+1 team\n\n\s{0,2}Found existing project/m
       );
       expect(plainOutput).not.toContain('Searched teams:');
       expect(plainOutput).toMatch(
@@ -2562,7 +2561,7 @@ describe('link', () => {
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.projectId).toEqual(limitedProject.id);
       expect(projectJson.orgId).toEqual(limitedTeam.id);
-      expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
+      expectLinkRowsUseExpectedGlyphs(client.stderr.getFullOutput(), [
         'Directory',
         'Searched',
         'Project',
