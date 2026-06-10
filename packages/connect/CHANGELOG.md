@@ -1,5 +1,19 @@
 # @vercel/connect
 
+## 0.2.2
+
+### Patch Changes
+
+- 0afea93: Add an opt-in `validate` flag to the Eve `connect()` adapter (backed by a new `forceRefresh` option on `getToken`/`getTokenResponse`). When set, each `getToken` bypasses the in-process token cache and re-checks Vercel Connect, so a grant the user revoked server-side surfaces as an authorization-required prompt instead of being served as a stale, still-cached bearer.
+
+## 0.2.1
+
+### Patch Changes
+
+- 2988097: Document `ConnectTokenParams.scopes` support for `["*"]` default scopes.
+- 585bd2c: Add the `revokeToken` API for revoking Connect tokens by connector and subject.
+- b151652: Use the published Eve 0.6 beta package for local type validation and add Connect-backed Eve GitHub and Linear channel credential helpers.
+
 ## 0.2.0
 
 ### Minor Changes

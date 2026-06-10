@@ -947,6 +947,7 @@ async function doBuild(
   const packageManifests: Array<{
     workspace: string;
     key: string;
+    buildConfig: Config;
     manifest: Record<string, unknown>;
     service?: Service;
     builderUse: string;
@@ -1289,6 +1290,7 @@ async function doBuild(
                       packageManifests.push({
                         workspace,
                         key: fullKey,
+                        buildConfig: buildConfig,
                         manifest: packageManifest,
                         service,
                         builderUse: builderPkg.name,
@@ -1800,6 +1802,7 @@ async function doBuild(
     const projectManifest: Record<string, unknown> = {};
     for (const {
       workspace,
+      buildConfig,
       manifest,
       service,
       builderUse,
@@ -1808,7 +1811,7 @@ async function doBuild(
         ...manifest,
         workspace,
         builder: builderUse,
-        framework: service?.framework,
+        framework: service?.framework ?? buildConfig.framework,
         serviceName: service?.name,
         serviceType:
           service && isExperimentalService(service) ? service.type : undefined,

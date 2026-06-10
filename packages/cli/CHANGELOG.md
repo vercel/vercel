@@ -1,5 +1,31 @@
 # vercel
 
+## 54.11.0
+
+### Minor Changes
+
+- fc7b557: Ensure project manifest includes framework for non-service builds.
+
+### Patch Changes
+
+- bc8dc95: Fix the darwin-arm64 native CLI binary crashing with SIGSEGV on most commands. The custom Node
+  runtime was stripped with bare `strip`, which removes the exported `napi_*` symbols that native
+  addons (`@napi-rs/keyring`) bind against at dlopen time. The runtime is now stripped with
+  `strip -SXx`, which keeps exported symbols. Also makes the `@vercel/vc-native` bin shim launch
+  the platform binary directly when the postinstall script did not run (pnpm blocks dependency
+  build scripts by default), instead of always failing.
+- bc8dc95: Fix `vercel upgrade` crashing with `ENOENT: no such file or directory, realpath '…/.pkg-staging/pkg.js'`
+  in the native binary. The command tried to `realpath` `process.argv[1]`, which points into the binary's
+  virtual filesystem snapshot. Native installs now detect the package manager (npm, pnpm, or yarn) from
+  the binary's real install location and suggest the matching global upgrade command.
+
+## 54.10.3
+
+### Patch Changes
+
+- 4f82914: Bump the embedded `sandbox` CLI to 3.1.2 (`@vercel/sandbox` 2.1.1) to fix `vc sandbox` commands crashing with a segmentation fault.
+  - @vercel/node@5.8.14
+
 ## 54.10.2
 
 ### Patch Changes

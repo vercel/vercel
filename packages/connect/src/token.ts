@@ -32,6 +32,10 @@ export interface ConnectTokenParams {
   subject: ConnectTokenSubject;
   installationId?: string;
   audience?: string[];
+  /**
+   * Access scopes to request. Use `['*']` to request the default scopes for
+   * the specified subject type.
+   */
   scopes?: string[];
   resources?: string[];
   authorizationDetails?: ConnectAuthorizationDetail[];
@@ -112,6 +116,19 @@ export class ConnectorInstallationRequiredError extends ConnectError {
 
 export interface ConnectOptions {
   vercelToken?: string;
+
+  /**
+   * Bypass the in-process token cache and re-fetch from Vercel Connect.
+   *
+   * The cache normally serves any token that is not within
+   * {@link ConnectTokenParams.validityBufferMs} of expiry. That means a
+   * grant the user revoked server-side keeps being handed back from the
+   * local cache until it expires. Set `forceRefresh` when the caller
+   * needs Connect to re-validate the grant on this call — a revoked grant
+   * then surfaces as `no_token` / `user_authorization_required` instead of
+   * a stale bearer.
+   */
+  forceRefresh?: boolean;
 }
 
 export async function getToken(
@@ -131,14 +148,18 @@ export async function getTokenResponse(
   const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
   const cacheKey = JSON.stringify({ connector, ...params });
 
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    const now = Date.now();
-    if (cached.response.expiresAt - now > bufferMs) {
-      cached.lastUsed = now;
-      return cached.response;
-    }
+  if (options?.forceRefresh) {
     cache.delete(cacheKey);
+  } else {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      const now = Date.now();
+      if (cached.response.expiresAt - now > bufferMs) {
+        cached.lastUsed = now;
+        return cached.response;
+      }
+      cache.delete(cacheKey);
+    }
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
