@@ -169,7 +169,7 @@ describe('shouldUseCompileAll', () => {
 });
 
 describe('runCompileAll', () => {
-  it('passes -j 0 and exclude regex to compileall when provided', async () => {
+  it('passes -j 0, -f, and exclude regex to compileall when provided', async () => {
     mockedExeca.mockResolvedValue({} as any);
     const env = { VIRTUAL_ENV: '/work/.vercel/python/.venv' };
 
@@ -188,6 +188,7 @@ describe('runCompileAll', () => {
         '-q',
         '-j',
         '0',
+        '-f',
         '--invalidation-mode',
         'unchecked-hash',
         '-x',

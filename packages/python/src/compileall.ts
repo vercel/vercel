@@ -77,6 +77,7 @@ export async function runCompileAll({
     '-q',
     '-j',
     '0',
+    '-f',
     '--invalidation-mode',
     'unchecked-hash',
     ...(excludeRegex ? ['-x', excludeRegex] : []),
