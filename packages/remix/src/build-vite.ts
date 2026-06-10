@@ -546,6 +546,7 @@ export const build: BuildV2 = async ({
   const prerenderRewrites: { src: string; dest: string }[] = [];
 
   const routes: any[] = [];
+  let hasReactRouterIndexFunction = false;
 
   for (const [id, functionId] of Object.entries(
     buildManifest.routeIdToServerBundleId ?? {}
@@ -593,6 +594,9 @@ export const build: BuildV2 = async ({
 
     output[path] = func;
     if (isReactRouter) {
+      if (path === 'index') {
+        hasReactRouterIndexFunction = true;
+      }
       // Emit parallel entries so the filesystem handle resolves the
       // single-fetch URL(s) for this route to the same bundle. Note that
       // the root index route uses `/_root.data` rather than `/index.data`.
@@ -634,12 +638,16 @@ export const build: BuildV2 = async ({
 
   // For the 404 case, invoke the Function (or serve the static file
   // for `ssr: false` mode) at the `/` path. Remix will serve its 404 route.
-  // React Router uses the `index` output key (not `/`) so runtime-only paths
-  // like `/__manifest` reach the SSR handler instead of a prerendered
-  // `index.html` when the root route was statically generated.
+  // React Router SSR builds use the `index` output key (not `/`) so
+  // runtime-only paths like `/__manifest` reach the SSR handler instead of a
+  // prerendered `index.html`. SPA builds do not emit that function, so their
+  // catch-all must continue to resolve through `/` and serve `index.html`.
   routes.push({
     src: '/(.*)',
-    dest: isReactRouter ? getReactRouterCatchAllDest() : '/',
+    dest:
+      isReactRouter && hasReactRouterIndexFunction
+        ? getReactRouterCatchAllDest()
+        : '/',
   });
 
   // Routes to call after a file has been matched.
