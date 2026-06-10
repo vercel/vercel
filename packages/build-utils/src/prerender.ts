@@ -1,6 +1,17 @@
 import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
 
+function assertOptionalBoolean(
+  value: unknown,
+  name: string
+): asserts value is boolean | undefined {
+  if (value !== undefined && typeof value !== 'boolean') {
+    throw new Error(
+      `The \`${name}\` argument for \`Prerender\` must be a boolean or undefined.`
+    );
+  }
+}
+
 interface PrerenderOptions {
   expiration: number | false;
   staleExpiration?: number;
@@ -107,27 +118,20 @@ export class Prerender {
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
-    // Assigned unconditionally (like `staleExpiration`) so the tri-state
-    // (`true` | `false` | `undefined`) round-trips intact. Do not adopt the
-    // `partialFallback`/`exposeErrBody` idiom below, which collapses `false`
-    // into `undefined`.
-    if (hasPostponed !== undefined && typeof hasPostponed !== 'boolean') {
-      throw new Error(
-        'The `hasPostponed` argument for `Prerender` must be a boolean or undefined.'
-      );
-    }
+    // These tri-state flags are assigned unconditionally (like
+    // `staleExpiration`) so `true` | `false` | `undefined` round-trips intact.
+    // Do not adopt the `partialFallback`/`exposeErrBody` idiom below, which
+    // collapses `false` into `undefined`: for `hasFallback`, `false` (blocking
+    // / omitted template) must stay distinct from `undefined` (concrete
+    // prerender, no fallback concept).
+    assertOptionalBoolean(hasPostponed, 'hasPostponed');
     this.hasPostponed = hasPostponed;
 
-    // Assigned unconditionally (like `hasPostponed`) so the tri-state
-    // (`true` | `false` | `undefined`) round-trips intact. `false` (blocking /
-    // omitted template) must stay distinct from `undefined` (concrete
-    // prerender, no fallback concept).
-    if (hasFallback !== undefined && typeof hasFallback !== 'boolean') {
-      throw new Error(
-        'The `hasFallback` argument for `Prerender` must be a boolean or undefined.'
-      );
-    }
+    assertOptionalBoolean(hasFallback, 'hasFallback');
     this.hasFallback = hasFallback;
+
+    assertOptionalBoolean(isDynamicRoute, 'isDynamicRoute');
+    this.isDynamicRoute = isDynamicRoute;
 
     if (
       htmlSize !== undefined &&
@@ -138,13 +142,6 @@ export class Prerender {
       );
     }
     this.htmlSize = htmlSize;
-
-    if (isDynamicRoute !== undefined && typeof isDynamicRoute !== 'boolean') {
-      throw new Error(
-        'The `isDynamicRoute` argument for `Prerender` must be a boolean or undefined.'
-      );
-    }
-    this.isDynamicRoute = isDynamicRoute;
 
     this.lambda = lambda;
     if (this.lambda) {
