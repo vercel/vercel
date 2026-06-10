@@ -3,3 +3,7 @@ dist
 *.log
 /go
 /analyze
+
+# Copied from @vercel-internals/ipc-proxy during build
+bin
+bootstrap/utils.go
