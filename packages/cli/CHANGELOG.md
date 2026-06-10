@@ -1,5 +1,36 @@
 # vercel
 
+## 54.11.1
+
+### Patch Changes
+
+- 8d8e871: Evaluate the `maxDuration` upper bound at validation time so `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` works regardless of import order.
+
+  The gate was read when `@vercel/build-utils`' `functionsSchema` was constructed and when the CLI compiled its `vercel.json` validator — both at module load. Any process that imports these modules before setting the env var baked in the default 900-second maximum and ignored the flag, failing with `Invalid vercel.json - functions[...].maxDuration should be <= 900`.
+
+  `@vercel/build-utils` now exposes `getFunctionsSchema()`, which reads the limit at call time (the existing `functionsSchema` const is kept but deprecated). The CLI builds and compiles its config validator lazily, caching one validator per resolved limit, so setting the variable after import takes effect. Default behavior is unchanged — the 900s maximum, the lower bound, and the integer check are all still enforced when the variable is unset.
+
+- Updated dependencies [8d8e871]
+  - @vercel/build-utils@13.29.0
+  - @vercel/backends@0.8.10
+  - @vercel/elysia@0.1.91
+  - @vercel/express@0.1.101
+  - @vercel/fastify@0.1.94
+  - @vercel/go@3.8.0
+  - @vercel/h3@0.1.100
+  - @vercel/hono@0.2.94
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.74
+  - @vercel/nestjs@0.2.95
+  - @vercel/next@4.18.0
+  - @vercel/node@5.8.15
+  - @vercel/python@6.44.0
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.0
+  - @vercel/ruby@2.4.0
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.10.1
+
 ## 54.11.0
 
 ### Minor Changes
