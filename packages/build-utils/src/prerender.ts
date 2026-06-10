@@ -20,6 +20,9 @@ interface PrerenderOptions {
   exposeErrBody?: boolean;
   partialFallback?: boolean;
   hasPostponed?: boolean;
+  hasFallback?: boolean;
+  htmlSize?: number;
+  isDynamicRoute?: boolean;
 }
 
 export class Prerender {
@@ -57,6 +60,25 @@ export class Prerender {
    * not provide the signal.
    */
   public hasPostponed?: boolean;
+  /**
+   * `true` when the route's dynamic template had a static fallback page (the
+   * prerender-manifest `fallback` was a string). `false` for blocking/omitted
+   * dynamic templates (manifest `fallback` was `null`/`false`). `undefined` for
+   * concrete prerenders, where the notion of a fallback doesn't apply.
+   */
+  public hasFallback?: boolean;
+  /**
+   * Byte size on disk of the route's prerendered `.html` shell. `0` for an
+   * empty shell (PPR template that postponed everything). `undefined` when
+   * there's no `.html` on disk (pages router, route handlers, edge).
+   */
+  public htmlSize?: number;
+  /**
+   * `true` when this entry came from a dynamic route template (the
+   * prerender-manifest `dynamicRoutes` section: fallback, blocking, or omitted)
+   * rather than a concrete prerender.
+   */
+  public isDynamicRoute?: boolean;
 
   constructor({
     expiration,
@@ -77,6 +99,9 @@ export class Prerender {
     exposeErrBody,
     partialFallback,
     hasPostponed,
+    hasFallback,
+    htmlSize,
+    isDynamicRoute,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -92,6 +117,34 @@ export class Prerender {
       );
     }
     this.hasPostponed = hasPostponed;
+
+    // Assigned unconditionally (like `hasPostponed`) so the tri-state
+    // (`true` | `false` | `undefined`) round-trips intact. `false` (blocking /
+    // omitted template) must stay distinct from `undefined` (concrete
+    // prerender, no fallback concept).
+    if (hasFallback !== undefined && typeof hasFallback !== 'boolean') {
+      throw new Error(
+        'The `hasFallback` argument for `Prerender` must be a boolean or undefined.'
+      );
+    }
+    this.hasFallback = hasFallback;
+
+    if (
+      htmlSize !== undefined &&
+      (!Number.isInteger(htmlSize) || htmlSize < 0)
+    ) {
+      throw new Error(
+        'The `htmlSize` argument for `Prerender` must be a non-negative integer or undefined.'
+      );
+    }
+    this.htmlSize = htmlSize;
+
+    if (isDynamicRoute !== undefined && typeof isDynamicRoute !== 'boolean') {
+      throw new Error(
+        'The `isDynamicRoute` argument for `Prerender` must be a boolean or undefined.'
+      );
+    }
+    this.isDynamicRoute = isDynamicRoute;
 
     this.lambda = lambda;
     if (this.lambda) {
