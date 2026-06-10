@@ -495,7 +495,7 @@ export async function linkFolderToProject(
   const pullEnvConfirmed =
     autoConfirm ||
     (await client.input.confirm(
-      'Pull Development Environment Variables into .env.local?',
+      'Pull development environment variables into .env.local?',
       true
     ));
 

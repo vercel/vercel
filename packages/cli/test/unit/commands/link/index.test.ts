@@ -887,7 +887,7 @@ describe('link', () => {
     );
 
     await expect(client.stderr).toOutput(
-      'Pull Development Environment Variables into .env.local?'
+      'Pull development environment variables into .env.local?'
     );
     client.stdin.write('n\n');
 
@@ -899,7 +899,7 @@ describe('link', () => {
     );
     expect(plainOutput).toMatch(/Link directory to project\?.*\n\n✓ Linked\s+/);
     expect(plainOutput).toMatch(
-      /✓ Linked\s+.+\n\n\? Pull Development Environment Variables into \.env\.local\?/
+      /✓ Linked\s+.+\n\n\? Pull development environment variables into \.env\.local\?/
     );
     expectLinkRowsUseNonProductionGutter(client.stderr.getFullOutput(), [
       'Directory',
@@ -1600,7 +1600,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -1645,7 +1645,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('y\n');
 
@@ -1683,7 +1683,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -1721,7 +1721,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('y\n');
 
@@ -1766,7 +1766,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('y\n');
 
@@ -1808,7 +1808,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('y\n');
 
@@ -1848,7 +1848,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('y\n');
 
@@ -1888,7 +1888,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('y\n');
 
@@ -1951,7 +1951,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -2001,7 +2001,7 @@ describe('link', () => {
       );
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -2254,7 +2254,7 @@ describe('link', () => {
         `✓ Linked          ${teamA.slug}/${projectA.name}`
       );
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -2405,7 +2405,7 @@ describe('link', () => {
         `✓ Linked          ${teamA.slug}/${expectedProject.name}`
       );
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -2480,7 +2480,7 @@ describe('link', () => {
         `✓ Linked          ${teamA.slug}/${repoProject.name}`
       );
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -2534,7 +2534,7 @@ describe('link', () => {
         `✓ Linked          ${limitedTeam.slug}/${limitedProject.name}`
       );
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -2705,7 +2705,7 @@ describe('link', () => {
         await expect(client.stderr).toOutput('✓ Linked          ');
 
         await expect(client.stderr).toOutput(
-          'Pull Development Environment Variables into .env.local?'
+          'Pull development environment variables into .env.local?'
         );
         client.stdin.write('n\n');
 
@@ -2759,7 +2759,7 @@ describe('link', () => {
         await expect(client.stderr).toOutput('✓ Linked          ');
 
         await expect(client.stderr).toOutput(
-          'Pull Development Environment Variables into .env.local?'
+          'Pull development environment variables into .env.local?'
         );
         client.stdin.write('n\n');
 

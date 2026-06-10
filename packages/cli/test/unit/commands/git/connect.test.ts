@@ -102,7 +102,7 @@ describe('git connect', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Pull Development Environment Variables into .env.local?'
+          'Pull development environment variables into .env.local?'
         );
         client.stdin.write('n\n');
 
@@ -209,7 +209,7 @@ describe('git connect', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 
@@ -263,7 +263,7 @@ describe('git connect', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Pull Development Environment Variables into .env.local?'
+        'Pull development environment variables into .env.local?'
       );
       client.stdin.write('n\n');
 

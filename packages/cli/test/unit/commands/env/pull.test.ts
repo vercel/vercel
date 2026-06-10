@@ -83,7 +83,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
     await expect(client.stderr).toOutput(
       'Created         .env.local file and added it to .gitignore'
@@ -188,7 +188,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes', '--environment', 'preview');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `preview` Environment Variables for'
+      'Downloading `preview` environment variables for'
     );
     await expect(client.stderr).toOutput(
       'Created         .env.local file and added it to .gitignore'
@@ -226,7 +226,7 @@ describe('env pull', () => {
       'feat/awesome-thing'
     );
     const exitCodePromise = env(client);
-    // Full output: "Downloading `preview` Environment Variables for jqkgv/vercel-env-pull and any overrides for branch feat/awesome-thing"
+    // Full output: "Downloading `preview` environment variables for jqkgv/vercel-env-pull and any overrides for branch feat/awesome-thing"
     // Note: Can't match the full string due to hyperlink ANSI codes around the org/project slug
     await expect(client.stderr).toOutput(
       'vercel-env-pull and any overrides for branch feat/awesome-thing'
@@ -286,7 +286,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', 'other.env', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
     await expect(client.stderr).toOutput('Created         other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
@@ -328,7 +328,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--environment', 'production');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`production\` Environment Variables for`
+      `Downloading \`production\` environment variables for`
     );
     await expect(client.stderr).toOutput(
       'Created         .env.local file and added it to .gitignore'
@@ -366,7 +366,7 @@ describe('env pull', () => {
     );
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `production` Environment Variables for'
+      'Downloading `production` environment variables for'
     );
     await expect(client.stderr).toOutput('Created         other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
@@ -395,7 +395,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', 'other.env', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
     await expect(client.stderr).toOutput('Created         other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
@@ -447,7 +447,7 @@ describe('env pull', () => {
       client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for'
+        'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput(
         '  Changes:\n  + SPECIAL_FLAG (Updated)\n  + NEW_VAR\n  - TEST\n'
@@ -529,7 +529,7 @@ describe('env pull', () => {
       client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for'
+        'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput('No changes found.\n');
       await expect(client.stderr).toOutput(
@@ -573,7 +573,7 @@ describe('env pull', () => {
       client.setArgv('env', 'pull', '.env.testquotes', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for'
+        'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput('No changes found.\n');
       await expect(client.stderr).toOutput(
@@ -605,7 +605,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
     await expect(client.stderr).toOutput('Created         .env.local file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
@@ -677,7 +677,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
     await expect(client.stderr).toOutput('Created         .env.local file');
     const exitCode = await exitCodePromise;
