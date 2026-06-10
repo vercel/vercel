@@ -61,11 +61,7 @@ export interface PassportIdentityInput {
   token?: string;
 }
 
-const VERCEL_OIDC_ISSUER = 'https://oidc.vercel.com';
 const PASSPORT_ISSUER = 'https://passport.vercel.com';
-const VERCEL_OIDC_JWKS = createRemoteJWKSet(
-  new URL(`${VERCEL_OIDC_ISSUER}/.well-known/jwks`)
-);
 const PASSPORT_JWKS = createRemoteJWKSet(
   new URL(`${PASSPORT_ISSUER}/.well-known/jwks`)
 );
@@ -135,8 +131,8 @@ export class PassportIdentityError extends Error {
  *
  * The helper reads Vercel's request context by default. It prefers the trusted
  * `x-vercel-oidc-passport-token` header, then falls back to the
- * `_vercel_passport` cookie. It accepts both the current Vercel OIDC issuer and
- * the dedicated Passport issuer, but always requires Passport-specific claims.
+ * `_vercel_passport` cookie. It verifies against the dedicated Passport issuer
+ * and always requires Passport-specific claims.
  * For local development, pass `localIdentity` or set `VERCEL_PASSPORT_IDENTITY`
  * to a JSON object.
  */
@@ -513,22 +509,14 @@ function hasAudienceVerification(
 function getJwksForIssuer(
   issuer: unknown
 ): ReturnType<typeof createRemoteJWKSet> {
-  if (isPassportIssuer(issuer)) {
-    return PASSPORT_JWKS;
-  }
-  if (isVercelOidcIssuer(issuer)) {
-    return VERCEL_OIDC_JWKS;
-  }
-
-  throw new TypeError(
-    `Expected Passport token iss claim to be "${PASSPORT_ISSUER}" or "${VERCEL_OIDC_ISSUER}" scoped to an owner.`
-  );
+  validateIssuer(issuer);
+  return PASSPORT_JWKS;
 }
 
 function validateIssuer(actual: unknown): void {
-  if (!isPassportIssuer(actual) && !isVercelOidcIssuer(actual)) {
+  if (!isPassportIssuer(actual)) {
     throw new TypeError(
-      `Expected Passport token iss claim to be "${PASSPORT_ISSUER}" or "${VERCEL_OIDC_ISSUER}" scoped to an owner.`
+      `Expected Passport token iss claim to be "${PASSPORT_ISSUER}" scoped to an owner.`
     );
   }
 }
@@ -537,13 +525,6 @@ function isPassportIssuer(value: unknown): value is string {
   return (
     value === PASSPORT_ISSUER ||
     (typeof value === 'string' && value.startsWith(`${PASSPORT_ISSUER}/`))
-  );
-}
-
-function isVercelOidcIssuer(value: unknown): value is string {
-  return (
-    value === VERCEL_OIDC_ISSUER ||
-    (typeof value === 'string' && value.startsWith(`${VERCEL_OIDC_ISSUER}/`))
   );
 }
 
@@ -619,6 +600,13 @@ function validatePassportPayload(payload: PassportIdentityPayload): void {
       'Passport identity is missing a sub claim.'
     );
   }
+
+  if (!payload.iss || typeof payload.iss !== 'string') {
+    throw new PassportIdentityError(
+      'Passport identity is missing an iss claim.'
+    );
+  }
+  validateIssuer(payload.iss);
 
   const owner = stringClaim(payload.owner);
   const connectorId = stringClaim(payload.connector_id);

@@ -15,7 +15,7 @@ const payload = {
   connector_id: 'scl_123',
   environment: 'production',
   external_sub: 'user_123',
-  iss: 'https://oidc.vercel.com/team-slug',
+  iss: 'https://passport.vercel.com/team-slug',
   owner: 'team-slug',
   project: 'my-project',
   sub: 'owner:team-slug:connector:scl_123:principal:user_123',
@@ -99,16 +99,15 @@ describe('getIdentity', () => {
     expect(identity?.externalSubject).toBe('user_123');
   });
 
-  test('accepts the future Passport issuer', async () => {
+  test('rejects Vercel OIDC issuer tokens', async () => {
     const token = createToken({
       ...payload,
-      iss: 'https://passport.vercel.com/team-slug',
+      iss: 'https://oidc.vercel.com/team-slug',
     });
 
-    const identity = await getIdentity({ token }, { verify: false });
-
-    expect(identity?.payload.iss).toBe('https://passport.vercel.com/team-slug');
-    expect(identity?.externalSubject).toBe('user_123');
+    await expect(getIdentity({ token }, { verify: false })).rejects.toThrow(
+      'Expected Passport token iss claim to be "https://passport.vercel.com" scoped to an owner.'
+    );
   });
 
   test('rejects non-Passport-shaped tokens', async () => {

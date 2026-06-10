@@ -42,11 +42,10 @@ export async function GET() {
 Vercel after Passport validates the visitor. It can also fall back to the
 `_vercel_passport` cookie.
 
-By default, request tokens are verified against Vercel's JWKS. The helper
-accepts the current `https://oidc.vercel.com/{owner}` issuer and the dedicated
-`https://passport.vercel.com/{owner}` issuer. In both cases, it validates the
-Passport-specific token shape so regular Vercel OIDC tokens are not accepted as
-Passport identities.
+By default, request tokens are verified against Passport's JWKS. The helper only
+accepts the dedicated `https://passport.vercel.com/{owner}` issuer. It also
+validates the Passport-specific token shape so regular Vercel OIDC tokens are
+not accepted as Passport identities.
 
 ## Local development
 
