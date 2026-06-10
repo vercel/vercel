@@ -34,7 +34,7 @@ export const listSubcommand = {
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add an Environment Variable (see examples below)',
+  description: 'Add an Environment Variable',
   arguments: [
     {
       name: 'name',
@@ -52,23 +52,21 @@ export const addSubcommand = {
   options: [
     {
       name: 'sensitive',
-      description:
-        'Force the Environment Variable to be sensitive, even when adding to Development (will fail server-side)',
+      description: 'Store the value as sensitive for Production or Preview',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
       name: 'no-sensitive',
-      description:
-        'Opt out of the sensitive default on Production and Preview; value remains readable later',
+      description: 'Store the value as non-sensitive when policy allows',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
       ...forceOption,
-      description: 'Force overwrites when a command would normally fail',
+      description: 'Overwrite an existing variable for the same target',
       shorthand: null,
     },
     {
@@ -78,7 +76,7 @@ export const addSubcommand = {
     },
     {
       name: 'guidance',
-      description: 'Receive command suggestions once command is complete',
+      description: 'Show command suggestions after completion',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -86,7 +84,7 @@ export const addSubcommand = {
     {
       name: 'value',
       description:
-        'Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+        'Set the variable value for non-interactive use; otherwise use stdin or the prompt',
       shorthand: null,
       type: String,
       argument: 'VALUE',
@@ -132,8 +130,8 @@ export const addSubcommand = {
       ],
     },
     {
-      name: 'Add with value as argument (non-interactive)',
-      value: `${packageName} env add API_TOKEN production --value "secret" --yes`,
+      name: 'Add with --value for non-interactive use',
+      value: `${packageName} env add API_TOKEN production --value "<value>" --yes`,
     },
   ],
 } as const;

@@ -586,9 +586,10 @@ test('add a sensitive env var', async () => {
   );
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(
-    'Added Environment Variable envVarName to Project'
-  );
+  expect(output.stderr).toContain('✓ Added           envVarName');
+  expect(output.stderr).toContain('Project         ');
+  expect(output.stderr).toContain('Environments    Production');
+  expect(output.stderr).toContain('Type            Sensitive');
 
   await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
@@ -635,9 +636,8 @@ test('override an existing env var', async () => {
   );
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(
-    'Added Environment Variable envVarName to Project'
-  );
+  expect(output.stderr).toContain('✓ Added           envVarName');
+  expect(output.stderr).toContain('Environments    Production');
 
   // 2. Override
   const outputOverride = await execCli(
@@ -650,9 +650,8 @@ test('override an existing env var', async () => {
   );
 
   expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
-  expect(outputOverride.stderr).toContain(
-    'Overrode Environment Variable envVarName to Project'
-  );
+  expect(outputOverride.stderr).toContain('✓ Overrode         envVarName');
+  expect(outputOverride.stderr).toContain('Environments    Production');
 
   await apiFetch(`/v2/projects/${projectName}`, { method: 'DELETE' });
 });
