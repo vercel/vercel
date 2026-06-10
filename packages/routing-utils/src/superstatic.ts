@@ -3,7 +3,14 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
-import { Route, Redirect, Rewrite, HasField, Header } from './types';
+import {
+  Route,
+  RouteWithSrc,
+  Redirect,
+  Rewrite,
+  HasField,
+  Header,
+} from './types';
 
 /*
   [START] Temporary double-install of path-to-regexp to compare the impact of the update
@@ -176,14 +183,29 @@ export function convertRewrites(
     normalizeHasKeys(r.missing);
 
     try {
-      const dest = replaceSegments(
-        segments,
-        hasSegments,
-        r.destination,
-        false,
-        internalParamNames
-      );
-      const route: Route = { src, dest, check: true };
+      // Replace `:param` placeholders with `$1`/`$name` backrefs that point at
+      // the source's capture groups.
+      const interpolate = (value: string): string =>
+        replaceSegments(
+          segments,
+          hasSegments,
+          value,
+          false,
+          internalParamNames
+        );
+
+      let route: RouteWithSrc;
+      if (typeof r.destination === 'string') {
+        route = { src, dest: interpolate(r.destination), check: true };
+      } else {
+        // Service destination: a terminal handoff into the target service's
+        // route table. Interpolate `path` like a string `dest`.
+        const destination = { ...r.destination };
+        if (typeof destination.path === 'string') {
+          destination.path = interpolate(destination.path);
+        }
+        route = { src, destination };
+      }
 
       if (typeof r.env !== 'undefined') {
         route.env = r.env;

@@ -188,6 +188,24 @@ export async function getUpdateCommandInfo(): Promise<{
   const nativeInstall = isNativeBinaryInstall();
   const pkgAndVersion = `${nativeInstall ? nativePackageName : packageName}@latest`;
 
+  if (nativeInstall) {
+    // The native binary's process.argv[1] points into its virtual filesystem
+    // snapshot, so detect the package manager from the real install location.
+    const segments = process.execPath.split(sep);
+    let cliType: GlobalCliType = 'npm';
+    if (segments.includes('pnpm') || segments.includes('.pnpm')) {
+      cliType = 'pnpm';
+    } else if (segments.includes('yarn') || segments.includes('.yarn')) {
+      cliType = 'yarn';
+    }
+    const install = cliType === 'yarn' ? 'global add' : 'i -g';
+    const force = cliType === 'npm' ? ' --force' : '';
+    return {
+      command: `${cliType} ${install} ${pkgAndVersion}${force}`,
+      global: true,
+    };
+  }
+
   const { cliType, global } = await resolveInstall();
   const yarn = cliType === 'yarn';
 
@@ -196,9 +214,7 @@ export async function getUpdateCommandInfo(): Promise<{
     install = yarn ? 'global add' : 'i -g';
   }
 
-  const force = nativeInstall && cliType === 'npm' ? ' --force' : '';
-
-  return { command: `${cliType} ${install} ${pkgAndVersion}${force}`, global };
+  return { command: `${cliType} ${install} ${pkgAndVersion}`, global };
 }
 
 export default async function getUpdateCommand(): Promise<string> {

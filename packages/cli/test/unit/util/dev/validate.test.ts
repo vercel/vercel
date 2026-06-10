@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
@@ -226,6 +226,48 @@ describe('validateConfig', () => {
     } as unknown as Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  // Regression test for honoring the env var when it is set *after* this module
+  // is imported: `validateConfig` (and therefore `@vercel/build-utils`' functions
+  // schema) is imported at the top of this file, before the env var below is ever
+  // set. The gate must still take effect, which only works if the validator reads
+  // the env var at validation time instead of baking the bound in at module load.
+  describe('VERCEL_CLI_SKIP_MAX_DURATION_LIMIT', () => {
+    const ENV = 'VERCEL_CLI_SKIP_MAX_DURATION_LIMIT';
+
+    afterEach(() => {
+      delete process.env[ENV];
+    });
+
+    const configWith = (maxDuration: number) =>
+      ({ functions: { 'api/*.js': { maxDuration } } }) satisfies Parameters<
+        typeof validateConfig
+      >[0];
+
+    it('rejects maxDuration above the default 900s bound when unset', () => {
+      const error = validateConfig(configWith(1800));
+      expect(error).not.toBeNull();
+      expect(error?.message).toMatch(/900/);
+    });
+
+    it('allows maxDuration above 900s when set to "1" (defers to the server)', () => {
+      process.env[ENV] = '1';
+      expect(validateConfig(configWith(1800))).toBeNull();
+    });
+
+    it('still enforces the lower bound and integer check when skipped', () => {
+      process.env[ENV] = '1';
+      expect(validateConfig(configWith(0))).not.toBeNull();
+      expect(validateConfig(configWith(1.5))).not.toBeNull();
+    });
+
+    it('re-applies the 900s bound once the variable is unset again', () => {
+      process.env[ENV] = '1';
+      expect(validateConfig(configWith(1800))).toBeNull();
+      delete process.env[ENV];
+      expect(validateConfig(configWith(1800))).not.toBeNull();
+    });
   });
 
   it('should not error with experimentalServices mount config', async () => {

@@ -63,6 +63,13 @@ type Transform = {
   env?: string[];
 };
 
+export type ServiceDestination = {
+  type: 'service';
+  service: string;
+  /** Routing-only path used to select a route inside the target service. */
+  path?: string;
+};
+
 export type RouteWithSrc = {
   src: string;
   dest?: string;
@@ -90,11 +97,16 @@ export type RouteWithSrc = {
   /**
    * Aliases for `src`, `dest`, and `status`. These provide consistency with the
    * `rewrites`, `redirects`, and `headers` fields which use `source`, `destination`,
-   * and `statusCode`. During normalization, these are converted to their canonical
-   * forms (`src`, `dest`, `status`) and stripped from the route object.
+   * and `statusCode`. During normalization, the string forms are converted to
+   * their canonical forms (`src`, `dest`, `status`) and stripped from the route
+   * object.
+   *
+   * `destination` may also be a service-targeted object, in which case routing
+   * is delegated into the named service's internal route table and the object
+   * is preserved as-is (not folded into `dest`).
    */
   source?: string;
-  destination?: string;
+  destination?: string | ServiceDestination;
   statusCode?: number;
   /**
    * A middleware key within the `output` key under the build result.
@@ -154,7 +166,7 @@ export interface Build {
 
 export interface Rewrite {
   source: string;
-  destination: string;
+  destination: string | ServiceDestination;
   has?: HasField;
   missing?: HasField;
   statusCode?: number;
