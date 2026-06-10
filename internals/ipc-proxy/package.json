@@ -1,0 +1,29 @@
+{
+  "private": true,
+  "name": "@vercel-internals/ipc-proxy",
+  "version": "1.0.0",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "bin",
+    "bootstrap"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --config ../../vitest.config.mts",
+    "test-unit": "pnpm test",
+    "vitest-run": "vitest -c ../../vitest.config.mts"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "20.11.0",
+    "@vercel-internals/tsconfig": "workspace:*",
+    "@vercel/build-utils": "workspace:*",
+    "execa": "5",
+    "fs-extra": "11.2.0",
+    "tar": "7.5.11",
+    "vitest": "2.0.3"
+  }
+}
