@@ -75,7 +75,7 @@ describe('pull', () => {
     client.setArgv('pull', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+      `Downloading \`development\` environment variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.development.local file`
@@ -154,7 +154,7 @@ describe('pull', () => {
       client.setArgv('pull', cwd);
       const exitCodePromise = pull(client);
       await expect(client.stderr).toOutput(
-        `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+        `Downloading \`development\` environment variables for ${teams[0].slug}/vercel-pull-next`
       );
       await expect(client.stderr).toOutput(
         `Created .vercel${path.sep}.env.development.local file`
@@ -195,7 +195,7 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=preview', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`preview\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+      `Downloading \`preview\` environment variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.preview.local file`
@@ -240,7 +240,7 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=production', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`production\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+      `Downloading \`production\` environment variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.production.local file`
@@ -291,7 +291,7 @@ describe('pull', () => {
     client.setArgv('pull');
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`development\` Environment Variables for ${teams[0].slug}/dashboard`
+      `Downloading \`development\` environment variables for ${teams[0].slug}/dashboard`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.development.local file`
@@ -446,7 +446,7 @@ describe('pull', () => {
       const exitCodePromise = pull(client);
 
       await expect(client.stderr).toOutput(
-        `Downloading \`production\` Environment Variables for ${teams[0].slug}/project-via-flag`
+        `Downloading \`production\` environment variables for ${teams[0].slug}/project-via-flag`
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "pull"').toEqual(0);
