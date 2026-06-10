@@ -310,7 +310,7 @@ describe('integration', () => {
         );
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
-        expect(integrationsRequests.at(-1)?.category).toBe('storage');
+        expect(integrationsRequests.at(-1)?.categories).toEqual(['storage']);
       });
 
       it('accepts -c shorthand for --category', async () => {
@@ -318,7 +318,45 @@ describe('integration', () => {
         client.setArgv('integration', 'discover', '-c', 'ai', '--json');
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
-        expect(integrationsRequests.at(-1)?.category).toBe('ai');
+        expect(integrationsRequests.at(-1)?.categories).toEqual(['ai']);
+      });
+
+      it('accepts repeated --category for multi-category filter', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--category',
+          'ai',
+          '--json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.categories).toEqual([
+          'storage',
+          'ai',
+        ]);
+      });
+
+      it('accepts repeated -c shorthand for multi-category filter', async () => {
+        const { integrationsRequests } = useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '-c',
+          'storage',
+          '-c',
+          'monitoring',
+          '--json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+        expect(integrationsRequests.at(-1)?.categories).toEqual([
+          'storage',
+          'monitoring',
+        ]);
       });
 
       it('combines positional query with --category', async () => {
@@ -333,7 +371,7 @@ describe('integration', () => {
         );
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
-        expect(integrationsRequests.at(-1)?.category).toBe('storage');
+        expect(integrationsRequests.at(-1)?.categories).toEqual(['storage']);
 
         const output = JSON.parse(client.stdout.getFullOutput());
         expect(output.products).toHaveLength(1);
@@ -366,6 +404,27 @@ describe('integration', () => {
             value: 'TRUE',
           },
         ]);
+      });
+
+      it('emits one telemetry event per --category value', async () => {
+        useIntegrationDiscover();
+        client.setArgv(
+          'integration',
+          'discover',
+          '--category',
+          'storage',
+          '--category',
+          'ai',
+          '--json'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const categoryEvents = client.telemetryEventStore.readonlyEvents.filter(
+          e => e.key === 'option:category'
+        );
+        expect(categoryEvents.length).toBe(2);
+        expect(categoryEvents.every(e => e.value === '[REDACTED]')).toBe(true);
       });
     });
   });

@@ -17,11 +17,13 @@ export type IntegrationListItem = {
 
 export async function fetchMarketplaceIntegrationsList(
   client: Client,
-  category?: string
+  categories?: string[]
 ) {
   const params = new URLSearchParams({ integrationType: 'marketplace' });
-  if (category) {
-    params.set('category', category);
+  if (categories?.length) {
+    for (const category of categories) {
+      params.append('category', category);
+    }
   }
   return client.fetch<IntegrationListItem[]>(
     `/v2/integrations/integrations?${params.toString()}`,

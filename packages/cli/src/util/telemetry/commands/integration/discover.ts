@@ -21,12 +21,14 @@ export class IntegrationDiscoverTelemetryClient
     }
   }
 
-  trackCliOptionCategory(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'category',
-        value: this.redactedValue,
-      });
+  trackCliOptionCategory(v: string[] | undefined) {
+    if (v?.length) {
+      for (const _value of v) {
+        this.trackCliOption({
+          option: 'category',
+          value: this.redactedValue,
+        });
+      }
     }
   }
 }

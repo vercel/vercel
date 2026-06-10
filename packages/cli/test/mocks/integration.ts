@@ -950,13 +950,19 @@ export function useIntegrationDiscover(opts?: {
   integrationsStatus?: number;
   categoriesStatus?: number;
 }) {
-  const integrationsRequests: { category?: string }[] = [];
+  const integrationsRequests: { categories?: string[] }[] = [];
 
   client.scenario.get('/v2/integrations/integrations', (req, res) => {
-    integrationsRequests.push({
-      category:
-        typeof req.query.category === 'string' ? req.query.category : undefined,
-    });
+    // Express parses repeated query params as either string (single) or string[] (multiple).
+    // Normalize to string[] so tests can always assert array shape.
+    const raw = req.query.category;
+    let categories: string[] | undefined;
+    if (Array.isArray(raw)) {
+      categories = raw.filter((v): v is string => typeof v === 'string');
+    } else if (typeof raw === 'string') {
+      categories = [raw];
+    }
+    integrationsRequests.push({ categories });
     if (opts?.integrationsStatus) {
       res.status(opts.integrationsStatus);
       res.end();

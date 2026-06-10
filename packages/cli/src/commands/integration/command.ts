@@ -371,11 +371,11 @@ export const discoverSubcommand = {
     {
       name: 'category',
       shorthand: 'c',
-      type: String,
+      type: [String],
       deprecated: false,
       argument: 'CATEGORY',
       description:
-        'Filter integrations by category (e.g., storage, ai, monitoring)',
+        'Filter integrations by category (can be repeated; e.g., -c storage -c ai). Run `vercel integration categories` for valid slugs.',
     },
     formatOption,
     jsonOption,
@@ -397,6 +397,13 @@ export const discoverSubcommand = {
       value: [
         `${packageName} integration discover --category storage`,
         `${packageName} integration discover -c ai`,
+      ],
+    },
+    {
+      name: 'Filter by multiple categories at once (repeat the flag)',
+      value: [
+        `${packageName} integration discover --category storage --category ai`,
+        `${packageName} integration discover -c commerce -c payments -c auth`,
       ],
     },
     {
