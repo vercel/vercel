@@ -39,8 +39,8 @@ export async function GET() {
 ```
 
 `getIdentity` reads the `x-vercel-oidc-passport-token` header injected by
-Vercel after Passport validates the visitor. It can also fall back to the
-`_vercel_passport` cookie.
+Vercel after Passport validates the visitor. For tests and local debugging, you
+can also pass the `_vercel_passport` cookie explicitly.
 
 By default, request tokens are verified against Passport's JWKS. The helper only
 accepts the dedicated `https://passport.vercel.com/{owner}` issuer. It also
@@ -68,7 +68,9 @@ Override individual fields with:
 VERCEL_PASSPORT_DEV_OWNER=acme
 VERCEL_PASSPORT_DEV_CONNECTOR_ID=scl_dev
 VERCEL_PASSPORT_DEV_EXTERNAL_SUB=user_dev
+VERCEL_PASSPORT_DEV_EXTERNAL_ISS=https://idp.example.com
 VERCEL_PASSPORT_DEV_PROJECT=my-project
+VERCEL_PASSPORT_DEV_PROJECT_ID=prj_local
 ```
 
 Disable the local test identity with:
@@ -89,15 +91,17 @@ Or provide the full payload yourself:
 const identity = await getIdentity(undefined, {
   localIdentity: {
     typ: 'passport',
+    iss: 'https://passport.vercel.com/local',
     owner: 'local',
+    connector_id: 'local',
     external_sub: 'local-user',
     sub: 'owner:local:connector:local:principal:local-user',
-    connector_id: 'local',
+    scope: 'owner:local:connector:local:principal:local-user',
   },
 });
 ```
 
-Development identities are ignored when `NODE_ENV=production`.
+Development identities are ignored on Vercel unless `VERCEL_ENV=development`.
 
 You can also copy a Passport token from a deployed request and pass it directly
 for debugging:

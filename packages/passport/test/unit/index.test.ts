@@ -1,4 +1,11 @@
 import { describe, expect, test, vi } from 'vitest';
+
+vi.mock('jose', () => ({
+  createRemoteJWKSet: vi.fn(() => 'jwks'),
+  jwtVerify: vi.fn(async (token: string) => ({ payload: decodeToken(token) })),
+}));
+
+import { jwtVerify } from 'jose';
 import {
   getIdentity,
   PASSPORT_COOKIE_NAME,
@@ -10,19 +17,32 @@ function createToken(payload: Record<string, unknown>): string {
   return `header.${encoded}.signature`;
 }
 
+function decodeToken(token: string): Record<string, unknown> {
+  const [, encoded] = token.split('.');
+  if (!encoded) {
+    throw new Error('missing payload');
+  }
+  return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+}
+
 const payload = {
-  aud: 'https://vercel.com/team-slug',
+  aud: 'https://vercel.com/team-slug/my-project/production',
   connector_id: 'scl_123',
   environment: 'production',
+  external_iss: 'https://example.okta.com/oauth2/default',
   external_sub: 'user_123',
   iss: 'https://passport.vercel.com/team-slug',
   owner: 'team-slug',
+  owner_id: 'team_123',
   project: 'my-project',
+  project_id: 'prj_123',
+  scope: 'owner:team-slug:connector:scl_123:principal:user_123',
   sub: 'owner:team-slug:connector:scl_123:principal:user_123',
   typ: 'passport',
 };
 
 const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+const verifyOptions = { environment: 'production', projectId: 'prj_123' };
 
 describe('getIdentity', () => {
   test('reads Passport identity from Vercel request context', async () => {
@@ -36,9 +56,14 @@ describe('getIdentity', () => {
     };
 
     try {
-      const identity = await getIdentity(undefined, { verify: false });
+      const identity = await getIdentity(undefined, { verifyOptions });
       expect(identity?.tokenSource).toBe('header');
       expect(identity?.externalSubject).toBe('user_123');
+      expect(jwtVerify).toHaveBeenCalledWith(
+        token,
+        'jwks',
+        expect.objectContaining({ algorithms: ['RS256'] })
+      );
     } finally {
       if (previousContext === undefined) {
         delete (globalThis as Record<symbol, unknown>)[SYMBOL_FOR_REQ_CONTEXT];
@@ -53,38 +78,43 @@ describe('getIdentity', () => {
     const token = createToken(payload);
     const identity = await getIdentity(
       new Headers({ [PASSPORT_HEADER_NAME]: token }),
-      { verify: false }
+      { verifyOptions }
     );
 
     expect(identity).toMatchObject({
       connectorId: 'scl_123',
       environment: 'production',
+      externalIssuer: 'https://example.okta.com/oauth2/default',
       externalSubject: 'user_123',
-      owner: 'team-slug',
-      project: 'my-project',
+      owner: { id: 'team_123', slug: 'team-slug' },
+      project: { id: 'prj_123', name: 'my-project' },
       subject: payload.sub,
       token,
       tokenSource: 'header',
-      verified: false,
+      verified: true,
     });
   });
 
-  test('falls back to the Passport cookie', async () => {
+  test('falls back to an explicitly provided Passport cookie', async () => {
     const token = createToken(payload);
     const identity = await getIdentity(
-      { cookieHeader: `${PASSPORT_COOKIE_NAME}=${token}` },
-      { verify: false }
+      {
+        cookieHeader: `${PASSPORT_COOKIE_NAME}=${token}`,
+      },
+      { verifyOptions }
     );
 
     expect(identity?.tokenSource).toBe('cookie');
     expect(identity?.externalSubject).toBe('user_123');
+    expect(identity?.verified).toBe(true);
   });
 
-  test('prefers the header over the cookie', async () => {
+  test('prefers the header over an explicitly provided cookie', async () => {
     const headerToken = createToken(payload);
     const cookieToken = createToken({
       ...payload,
       external_sub: 'cookie-user',
+      scope: 'owner:team-slug:connector:scl_123:principal:cookie-user',
       sub: 'owner:team-slug:connector:scl_123:principal:cookie-user',
     });
     const identity = await getIdentity(
@@ -92,7 +122,7 @@ describe('getIdentity', () => {
         cookieHeader: `${PASSPORT_COOKIE_NAME}=${cookieToken}`,
         headers: { [PASSPORT_HEADER_NAME]: headerToken },
       },
-      { verify: false }
+      { verifyOptions }
     );
 
     expect(identity?.tokenSource).toBe('header');
@@ -144,7 +174,7 @@ describe('getIdentity', () => {
     vi.unstubAllEnvs();
   });
 
-  test('synthesizes a development identity by default outside production', async () => {
+  test('synthesizes a development identity by default outside Vercel', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const identity = await getIdentity();
@@ -153,15 +183,17 @@ describe('getIdentity', () => {
       connectorId: 'local',
       environment: 'development',
       externalSubject: 'test-user',
-      owner: 'local',
-      project: 'local',
+      owner: { id: undefined, slug: 'local' },
+      project: { id: undefined, name: 'local' },
       subject: 'owner:local:connector:local:principal:test-user',
       token: null,
       tokenSource: 'local',
       verified: false,
     });
     expect(identity?.payload).toMatchObject({
+      aud: 'https://vercel.com/local/local/development',
       email: 'test-user@passport.local',
+      iss: 'https://passport.vercel.com/local',
       name: 'Test User',
     });
     expect(warn).toHaveBeenCalledWith(
@@ -174,17 +206,21 @@ describe('getIdentity', () => {
   test('synthesizes a development identity from environment variables', async () => {
     vi.stubEnv('VERCEL_PASSPORT_DEV', '1');
     vi.stubEnv('VERCEL_PASSPORT_DEV_OWNER', 'acme');
+    vi.stubEnv('VERCEL_PASSPORT_DEV_OWNER_ID', 'team_acme');
     vi.stubEnv('VERCEL_PASSPORT_DEV_CONNECTOR_ID', 'scl_dev');
+    vi.stubEnv('VERCEL_PASSPORT_DEV_EXTERNAL_ISS', 'https://idp.example.com');
     vi.stubEnv('VERCEL_PASSPORT_DEV_EXTERNAL_SUB', 'user_dev');
     vi.stubEnv('VERCEL_PASSPORT_DEV_PROJECT', 'demo');
+    vi.stubEnv('VERCEL_PASSPORT_DEV_PROJECT_ID', 'prj_demo');
 
     const identity = await getIdentity();
 
     expect(identity).toMatchObject({
       connectorId: 'scl_dev',
+      externalIssuer: 'https://idp.example.com',
       externalSubject: 'user_dev',
-      owner: 'acme',
-      project: 'demo',
+      owner: { id: 'team_acme', slug: 'acme' },
+      project: { id: 'prj_demo', name: 'demo' },
       subject: 'owner:acme:connector:scl_dev:principal:user_dev',
       tokenSource: 'local',
       verified: false,
@@ -193,8 +229,9 @@ describe('getIdentity', () => {
     vi.unstubAllEnvs();
   });
 
-  test('does not synthesize a development identity in production', async () => {
-    vi.stubEnv('NODE_ENV', 'production');
+  test('does not synthesize a development identity on Vercel production', async () => {
+    vi.stubEnv('VERCEL', '1');
+    vi.stubEnv('VERCEL_ENV', 'production');
     vi.stubEnv('VERCEL_PASSPORT_DEV', '1');
 
     await expect(getIdentity()).resolves.toBeNull();

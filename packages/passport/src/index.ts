@@ -17,6 +17,7 @@ export interface PassportIdentityPayload {
   iss?: string;
   sub: string;
   scope?: string;
+  external_iss?: string;
   external_sub?: string;
   connector_id?: string;
   sid?: string;
@@ -33,10 +34,17 @@ export interface PassportIdentity {
   verified: boolean;
   payload: PassportIdentityPayload;
   subject: string;
+  externalIssuer?: string;
   externalSubject?: string;
   connectorId?: string;
-  owner?: string;
-  project?: string;
+  owner: {
+    id?: string;
+    slug: string;
+  };
+  project?: {
+    id?: string;
+    name?: string;
+  };
   environment?: string;
 }
 
@@ -61,42 +69,34 @@ export interface PassportIdentityInput {
   token?: string;
 }
 
-const PASSPORT_ISSUER = 'https://passport.vercel.com';
-const PASSPORT_JWKS = createRemoteJWKSet(
-  new URL(`${PASSPORT_ISSUER}/.well-known/jwks`)
-);
-const DEFAULT_ALGORITHMS = ['RS256'];
-const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
-let hasWarnedAboutDevelopmentIdentity = false;
-
-type RequestContext = {
-  headers?: Record<string, string>;
-};
-
 export interface PassportDevelopmentIdentityOptions {
-  enabled?: boolean;
+  audience?: string;
   connectorId?: string;
+  enabled?: boolean;
   environment?: string;
+  externalIssuer?: string;
   externalSubject?: string;
+  issuer?: string;
   owner?: string;
+  ownerId?: string;
   project?: string;
+  projectId?: string;
 }
 
 export interface PassportIdentityOptions {
   /**
-   * Verify the Passport token against Vercel's JWKS before returning it.
-   * Defaults to true for tokens read from headers or cookies.
+   * Verify an explicit local token against Passport JWKS. Request-context,
+   * header, and cookie tokens are always verified.
    */
   verify?: boolean;
   /**
-   * Allow a decoded but unverified token when verification is disabled.
-   * Defaults to true when `verify` is false.
+   * Allow a decoded but unverified explicit local token when `verify` is false.
    */
   allowUnverified?: boolean;
   /**
    * Local development identity generation used when no Passport header/cookie
-   * exists. Defaults to enabled outside production. Set to false to disable.
-   * Ignored when `NODE_ENV=production`.
+   * exists. Defaults to enabled outside production and outside Vercel. Set to
+   * false to disable.
    */
   development?: boolean | PassportDevelopmentIdentityOptions;
   /**
@@ -109,7 +109,7 @@ export interface PassportIdentityOptions {
    */
   localIdentityEnv?: string;
   /**
-   * Environment variable name containing a Passport JWT for local development.
+   * Environment variable name containing a Passport JWT for local debugging.
    * Defaults to `VERCEL_PASSPORT_TOKEN`.
    */
   localTokenEnv?: string;
@@ -118,6 +118,18 @@ export interface PassportIdentityOptions {
    */
   verifyOptions?: PassportVerifyOptions;
 }
+
+const PASSPORT_ISSUER = 'https://passport.vercel.com';
+const PASSPORT_JWKS = createRemoteJWKSet(
+  new URL(`${PASSPORT_ISSUER}/.well-known/jwks`)
+);
+const DEFAULT_ALGORITHMS = ['RS256'];
+const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+let hasWarnedAboutDevelopmentIdentity = false;
+
+type RequestContext = {
+  headers?: Record<string, string>;
+};
 
 export class PassportIdentityError extends Error {
   constructor(message: string) {
@@ -130,11 +142,10 @@ export class PassportIdentityError extends Error {
  * Read the Passport identity for the current request.
  *
  * The helper reads Vercel's request context by default. It prefers the trusted
- * `x-vercel-oidc-passport-token` header, then falls back to the
- * `_vercel_passport` cookie. It verifies against the dedicated Passport issuer
- * and always requires Passport-specific claims.
- * For local development, pass `localIdentity` or set `VERCEL_PASSPORT_IDENTITY`
- * to a JSON object.
+ * `x-vercel-oidc-passport-token` header and supports explicit cookie/token
+ * overrides for tests and local debugging. Request tokens are always verified
+ * against the dedicated Passport issuer and must include Passport-specific
+ * claims.
  */
 export async function getIdentity(
   input?: RequestLike | HeadersLike | HeaderRecord | PassportIdentityInput,
@@ -147,7 +158,7 @@ export async function getIdentity(
   const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
   const cookieToken = getCookie(
     normalized.cookies,
-    normalized.cookieHeader ?? getHeader(headers, 'cookie'),
+    normalized.cookieHeader,
     PASSPORT_COOKIE_NAME
   );
   const token =
@@ -161,8 +172,9 @@ export async function getIdentity(
         : 'local';
 
   if (token) {
-    const verify = options.verify ?? tokenSource !== 'local';
-    if (verify) {
+    const shouldVerify =
+      tokenSource === 'local' ? (options.verify ?? false) : true;
+    if (shouldVerify) {
       const payload = await verifyPassportToken(token, options.verifyOptions);
       return createIdentity(token, tokenSource, true, payload);
     }
@@ -198,10 +210,14 @@ function createIdentity(
     verified,
     payload,
     subject: payload.sub,
+    externalIssuer: stringClaim(payload.external_iss),
     externalSubject: stringClaim(payload.external_sub),
     connectorId: stringClaim(payload.connector_id),
-    owner: stringClaim(payload.owner),
-    project: stringClaim(payload.project),
+    owner: {
+      id: stringClaim(payload.owner_id),
+      slug: stringClaim(payload.owner)!,
+    },
+    project: createProjectIdentity(payload),
     environment: stringClaim(payload.environment),
   };
 }
@@ -335,7 +351,7 @@ function getLocalIdentity(
 function getDevelopmentIdentity(
   options: PassportIdentityOptions
 ): PassportIdentityPayload | undefined {
-  if (process.env.NODE_ENV === 'production') {
+  if (!isLocalDevelopmentEnvironment()) {
     return undefined;
   }
 
@@ -354,10 +370,13 @@ function getDevelopmentIdentity(
 
   const owner =
     config.owner ?? process.env.VERCEL_PASSPORT_DEV_OWNER ?? 'local';
+  const ownerId = config.ownerId ?? process.env.VERCEL_PASSPORT_DEV_OWNER_ID;
   const connectorId =
     config.connectorId ??
     process.env.VERCEL_PASSPORT_DEV_CONNECTOR_ID ??
     'local';
+  const externalIssuer =
+    config.externalIssuer ?? process.env.VERCEL_PASSPORT_DEV_EXTERNAL_ISS;
   const externalSubject =
     config.externalSubject ??
     process.env.VERCEL_PASSPORT_DEV_EXTERNAL_SUB ??
@@ -368,24 +387,51 @@ function getDevelopmentIdentity(
     'development';
   const project =
     config.project ?? process.env.VERCEL_PASSPORT_DEV_PROJECT ?? 'local';
+  const projectId =
+    config.projectId ??
+    process.env.VERCEL_PASSPORT_DEV_PROJECT_ID ??
+    process.env.VERCEL_PROJECT_ID;
+  const issuer =
+    config.issuer ??
+    process.env.VERCEL_PASSPORT_DEV_ISSUER ??
+    `${PASSPORT_ISSUER}/${owner}`;
+  const audience =
+    config.audience ??
+    process.env.VERCEL_PASSPORT_DEV_AUDIENCE ??
+    `https://vercel.com/${owner}/${project}/${environment}`;
   const subject = `owner:${owner}:connector:${connectorId}:principal:${externalSubject}`;
 
   warnAboutDevelopmentIdentity();
 
   return {
-    aud: `https://vercel.com/${owner}`,
+    aud: audience,
     connector_id: connectorId,
     email: 'test-user@passport.local',
     environment,
+    ...(externalIssuer ? { external_iss: externalIssuer } : {}),
     external_sub: externalSubject,
-    iss: `https://passport.vercel.com/${owner}`,
+    iss: issuer,
     name: 'Test User',
     owner,
+    ...(ownerId ? { owner_id: ownerId } : {}),
     project,
+    ...(projectId ? { project_id: projectId } : {}),
     scope: subject,
     sub: subject,
     typ: 'passport',
   };
+}
+
+function isLocalDevelopmentEnvironment(): boolean {
+  if (process.env.VERCEL === '1' && process.env.VERCEL_ENV !== 'development') {
+    return false;
+  }
+
+  return (
+    process.env.VERCEL_ENV === undefined ||
+    process.env.VERCEL_ENV === '' ||
+    process.env.VERCEL_ENV === 'development'
+  );
 }
 
 function warnAboutDevelopmentIdentity(): void {
@@ -639,6 +685,15 @@ function validatePassportPayload(payload: PassportIdentityPayload): void {
       'Passport identity scope claim does not match the Passport subject.'
     );
   }
+}
+
+function createProjectIdentity(
+  payload: PassportIdentityPayload
+): PassportIdentity['project'] {
+  const id = stringClaim(payload.project_id);
+  const name = stringClaim(payload.project);
+
+  return id || name ? { id, name } : undefined;
 }
 
 function stringClaim(value: unknown): string | undefined {
