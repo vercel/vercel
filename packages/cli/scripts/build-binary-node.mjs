@@ -122,17 +122,17 @@ async function stripAndSignNode() {
     return false;
   }
 
-  const shouldStrip = !(nodePlatform === 'darwin' && nodeArch === 'x64');
-
-  if (shouldStrip) {
+  if (nodePlatform === 'darwin') {
+    // Bare `strip` removes the exported napi_* symbols that native addons
+    // bind against at dlopen time, crashing with SIGSEGV. `-SXx` keeps
+    // global symbols while still removing debug and local symbols.
+    await run('strip', ['-SXx', outputNode], packageRoot);
+    await run('codesign', ['-f', '--sign', '-', outputNode], packageRoot);
+  } else {
     await run('strip', [outputNode], packageRoot);
   }
 
-  if (nodePlatform === 'darwin') {
-    await run('codesign', ['-f', '--sign', '-', outputNode], packageRoot);
-  }
-
-  return shouldStrip;
+  return true;
 }
 
 function configureFlags() {
