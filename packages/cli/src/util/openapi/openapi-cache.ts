@@ -8,6 +8,8 @@ import {
   CACHE_TTL_MS,
   FETCH_TIMEOUT_MS,
 } from './constants';
+import { readSpecResponse } from './read-spec-response';
+import { assertAllowedSpecUrl } from './spec-url-allowlist';
 import type {
   OpenApiSpec,
   CachedSpec,
@@ -27,12 +29,28 @@ import type {
  * const bodyFields = cache.getBodyFields(endpoint);
  * ```
  */
+export interface OpenApiCacheOptions {
+  /**
+   * Custom OpenAPI spec URL. When provided, this spec replaces the default
+   * public spec entirely and is fetched fresh for each process run.
+   */
+  specUrl?: string;
+  fetchSpecUrl?: (url: string) => Promise<OpenApiSpec | null>;
+}
+
 export class OpenApiCache {
   private readonly cachePath: string;
+  private readonly specUrl: string | undefined;
+  private readonly fetchSpecUrl:
+    | ((url: string) => Promise<OpenApiSpec | null>)
+    | undefined;
   private spec: OpenApiSpec | null = null;
+  private error: string | null = null;
 
-  constructor() {
+  constructor(options?: OpenApiCacheOptions) {
     this.cachePath = join(getGlobalPathConfig(), CACHE_FILE);
+    this.specUrl = options?.specUrl;
+    this.fetchSpecUrl = options?.fetchSpecUrl;
   }
 
   /**
@@ -42,14 +60,28 @@ export class OpenApiCache {
     return this.spec !== null;
   }
 
+  get loadError(): string | null {
+    return this.error;
+  }
+
   /**
    * Load the OpenAPI spec, using cache if available and fresh.
    * Returns true if successful, false otherwise.
    */
   async load(forceRefresh = false): Promise<boolean> {
+    return this.loadSpec(forceRefresh);
+  }
+
+  async loadSpec(forceRefresh = false): Promise<boolean> {
+    this.error = null;
+
+    if (this.specUrl) {
+      return this.loadCustomSpec(this.specUrl);
+    }
+
     // Try to read from cache
     if (!forceRefresh) {
-      const cached = await this.readCache();
+      const cached = await this.readCache(this.cachePath);
       if (cached && !this.isExpired(cached.fetchedAt)) {
         output.debug('Using cached OpenAPI spec');
         this.spec = cached.spec;
@@ -60,18 +92,40 @@ export class OpenApiCache {
     // Fetch fresh spec
     try {
       output.debug('Fetching OpenAPI spec from ' + OPENAPI_URL);
-      this.spec = await this.fetchSpec();
-      await this.saveCache(this.spec);
+      this.spec = await this.fetchSpec(OPENAPI_URL);
+      await this.saveCache(this.cachePath, this.spec);
       return true;
     } catch (err) {
       output.debug(`Failed to fetch OpenAPI spec: ${err}`);
       // If fetch fails, try to use stale cache
-      const stale = await this.readCache();
+      const stale = await this.readCache(this.cachePath);
       if (stale) {
         output.debug('Using stale cached OpenAPI spec');
         this.spec = stale.spec;
         return true;
       }
+      return false;
+    }
+  }
+
+  private async loadCustomSpec(specUrl: string): Promise<boolean> {
+    try {
+      assertAllowedSpecUrl(specUrl);
+      output.debug('Fetching OpenAPI spec from ' + specUrl);
+      const spec = this.fetchSpecUrl
+        ? await this.fetchSpecUrl(specUrl)
+        : await this.fetchSpec(specUrl);
+      if (!spec) {
+        this.error = `Could not load OpenAPI spec from ${specUrl}.`;
+        return false;
+      }
+      this.validateSpec(spec, specUrl);
+      this.spec = spec;
+      return Boolean(this.spec);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.error = message;
+      output.debug(`Failed to fetch OpenAPI spec from ${specUrl}: ${message}`);
       return false;
     }
   }
@@ -216,9 +270,9 @@ export class OpenApiCache {
   /**
    * Read cached spec from disk
    */
-  private async readCache(): Promise<CachedSpec | null> {
+  private async readCache(cachePath: string): Promise<CachedSpec | null> {
     try {
-      const content = await readFile(this.cachePath, 'utf-8');
+      const content = await readFile(cachePath, 'utf-8');
       return JSON.parse(content) as CachedSpec;
     } catch {
       return null;
@@ -226,37 +280,67 @@ export class OpenApiCache {
   }
 
   /**
-   * Save spec to disk cache
+   * Save public spec to disk cache
    */
-  private async saveCache(spec: OpenApiSpec): Promise<void> {
+  private async saveCache(cachePath: string, spec: OpenApiSpec): Promise<void> {
     const cached: CachedSpec = {
       fetchedAt: Date.now(),
       spec,
     };
 
     // Ensure directory exists
-    const dir = join(this.cachePath, '..');
+    const dir = join(cachePath, '..');
     await mkdir(dir, { recursive: true });
 
-    await writeFile(this.cachePath, JSON.stringify(cached));
+    await writeFile(cachePath, JSON.stringify(cached));
     output.debug('Saved OpenAPI spec to cache');
   }
 
   /**
    * Fetch OpenAPI spec from remote with timeout
    */
-  private async fetchSpec(): Promise<OpenApiSpec> {
+  private async fetchSpec(url: string): Promise<OpenApiSpec> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
-      const response = await fetch(OPENAPI_URL, { signal: controller.signal });
+      const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) {
         throw new Error(`Failed to fetch OpenAPI spec: ${response.status}`);
       }
-      return (await response.json()) as OpenApiSpec;
+      const spec = await readSpecResponse<OpenApiSpec>(response, url);
+      this.validateSpec(spec, url);
+      return spec;
     } finally {
       clearTimeout(timeoutId);
+    }
+  }
+
+  private validateSpec(spec: OpenApiSpec | null, url: string): void {
+    if (!spec || typeof spec !== 'object') {
+      throw new Error(
+        `Invalid OpenAPI spec from ${url}: expected a JSON object.`
+      );
+    }
+
+    if (typeof spec.openapi !== 'string' || !spec.openapi.startsWith('3.')) {
+      throw new Error(
+        `Invalid OpenAPI spec from ${url}: expected an OpenAPI 3.x document with an "openapi" field.`
+      );
+    }
+
+    if (!spec.paths || typeof spec.paths !== 'object') {
+      throw new Error(
+        `Invalid OpenAPI spec from ${url}: expected a "paths" object.`
+      );
+    }
+
+    for (const path of Object.keys(spec.paths)) {
+      if (!path.startsWith('/') || path.startsWith('//')) {
+        throw new Error(
+          `Invalid OpenAPI spec from ${url}: path "${path}" must be a relative API path.`
+        );
+      }
     }
   }
 
@@ -268,7 +352,7 @@ export class OpenApiCache {
   }
 
   /**
-   * Sort endpoints by path, then by method
+   * Sort endpoints by path, then by method.
    */
   private sortEndpoints(endpoints: EndpointInfo[]): EndpointInfo[] {
     return endpoints.sort((a, b) => {
@@ -279,7 +363,7 @@ export class OpenApiCache {
   }
 
   /**
-   * Extract all available endpoints from the spec
+   * Extract all available endpoints from the loaded spec.
    */
   private extractEndpoints(): EndpointInfo[] {
     const endpoints: EndpointInfo[] = [];
@@ -315,16 +399,19 @@ export class OpenApiCache {
   /**
    * Resolve a $ref to its actual schema
    */
-  private resolveSchemaRef(schema: Schema | undefined): Schema | undefined {
+  private resolveSchemaRef(
+    schema: Schema | undefined,
+    spec: OpenApiSpec = this.spec!
+  ): Schema | undefined {
     if (!schema) return undefined;
 
     if (schema.$ref) {
       // Parse $ref like "#/components/schemas/SchemaName"
       const match = schema.$ref.match(/^#\/components\/schemas\/(.+)$/);
-      if (match && this.spec!.components?.schemas) {
-        const resolved = this.spec!.components.schemas[match[1]];
+      if (match && spec.components?.schemas) {
+        const resolved = spec.components.schemas[match[1]];
         // Recursively resolve if the resolved schema also has a $ref
-        return this.resolveSchemaRef(resolved);
+        return this.resolveSchemaRef(resolved, spec);
       }
       return undefined;
     }
@@ -333,7 +420,7 @@ export class OpenApiCache {
     if (schema.allOf && schema.allOf.length > 0) {
       const merged: Schema = { type: 'object', properties: {}, required: [] };
       for (const subSchema of schema.allOf) {
-        const resolved = this.resolveSchemaRef(subSchema);
+        const resolved = this.resolveSchemaRef(subSchema, spec);
         if (resolved) {
           if (resolved.properties) {
             merged.properties = {
