@@ -46,6 +46,7 @@ import type {
 } from '../token.js';
 import {
   ConnectorInstallationRequiredError,
+  deleteTokenCacheEntry,
   getTokenResponse,
   NoValidTokenError,
   UserAuthorizationRequiredError,
@@ -209,6 +210,18 @@ export type EveConnectAuthorizationDefinition<
     | NonInteractiveAuthorizationDefinition,
 > = TAuthorization & {
   readonly vercelConnect: VercelConnectMetadata;
+
+  /**
+   * Drops the in-process Vercel Connect token cache entry for
+   * `principal` so the next `getToken` re-fetches instead of re-serving a
+   * rejected bearer. Eve's runtime calls this from its shared eviction
+   * path when a resolved token is rejected (a downstream `401` mapped to
+   * `requireAuth()`, or an MCP server rejecting the bearer), cascading
+   * invalidation from Eve's per-step cache down into this adapter's cache.
+   */
+  readonly evict: (opts: {
+    readonly principal: ConnectionPrincipal;
+  }) => Promise<void>;
 };
 
 /**
@@ -249,10 +262,28 @@ export function connect(
 > {
   const options = normalizeAuthorizationOptions(input);
   const vercelConnect: VercelConnectMetadata = { connector: options.connector };
+  const evict = makeEvict(options);
   if (options.principalType === 'app') {
-    return { ...buildNonInteractiveDefinition(options), vercelConnect };
+    return { ...buildNonInteractiveDefinition(options), vercelConnect, evict };
   }
-  return { ...buildInteractiveDefinition(options), vercelConnect };
+  return { ...buildInteractiveDefinition(options), vercelConnect, evict };
+}
+
+/**
+ * Builds the {@link EveConnectAuthorizationDefinition.evict} callback for
+ * a connector. Resolves the same token params {@link getToken} uses for
+ * `principal`, then drops exactly that cache entry — leaving every other
+ * principal's cached token intact.
+ */
+function makeEvict(
+  options: EveAuthorizationOptions
+): (opts: { readonly principal: ConnectionPrincipal }) => Promise<void> {
+  return async ({ principal }) => {
+    deleteTokenCacheEntry(
+      options.connector,
+      await buildTokenParams(options, principal)
+    );
+  };
 }
 
 function normalizeAuthorizationOptions(

@@ -146,7 +146,7 @@ export async function getTokenResponse(
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
   const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = JSON.stringify({ connector, ...params });
+  const cacheKey = tokenCacheKey(connector, params);
 
   if (options?.forceRefresh) {
     cache.delete(cacheKey);
@@ -221,6 +221,30 @@ export async function revokeToken(
   cache.clear();
 }
 
+/**
+ * Remove a single cached token entry for `(connector, params)` from the
+ * in-process cache.
+ *
+ * Targeted counterpart to {@link revokeToken}'s `cache.clear()`: it drops
+ * exactly the entry {@link getTokenResponse} would serve for these
+ * arguments, leaving every other connector/principal untouched. Use it
+ * when a credential is known to be bad (the resource server rejected the
+ * bearer with a `401`) so the next {@link getTokenResponse} re-fetches
+ * instead of re-serving the rejected token — without paying for a Connect
+ * round trip on every call the way {@link ConnectOptions.forceRefresh}
+ * does.
+ *
+ * The cache key is derived from `connector` plus every field of `params`,
+ * so pass the same `params` used for the original {@link getTokenResponse}
+ * call. No-op when no matching entry exists.
+ */
+export function deleteTokenCacheEntry(
+  connector: string,
+  params: ConnectTokenParams
+): void {
+  cache.delete(tokenCacheKey(connector, params));
+}
+
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;
 const MAX_CACHE_SIZE = 100;
 
@@ -230,6 +254,15 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
+
+/**
+ * Cache key for a `(connector, params)` pair. Stable across calls with
+ * equal arguments so {@link getTokenResponse} and
+ * {@link deleteTokenCacheEntry} address the same entry.
+ */
+function tokenCacheKey(connector: string, params: ConnectTokenParams): string {
+  return JSON.stringify({ connector, ...params });
+}
 
 function evictLru(): void {
   let oldestKey: string | undefined;
