@@ -19,6 +19,14 @@ export const DEFAULT_MAX_DURATION_LIMIT = 900;
  */
 export const SKIP_MAX_DURATION_LIMIT_ENV = 'VERCEL_CLI_SKIP_MAX_DURATION_LIMIT';
 
+// TODO: Once `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` is fully rolled out and the
+// server-side limit is authoritative for everyone, drop the client-side upper
+// bound entirely: remove this env var, `getMaxDurationLimit`, the `maximum`
+// branch of `getMaxDurationSchema`, and the lazy per-limit validator machinery
+// in the CLI (`packages/cli/src/util/validate-config.ts`). The `vercel.json`
+// schema can then be compiled once again with no `maxDuration` maximum, and the
+// lower-bound/integer checks become the only client-side validation.
+
 /**
  * Returns the client-side upper bound for `maxDuration` in seconds, or
  * `undefined` when the bound is skipped via {@link SKIP_MAX_DURATION_LIMIT_ENV}

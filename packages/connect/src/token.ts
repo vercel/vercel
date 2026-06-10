@@ -116,6 +116,19 @@ export class ConnectorInstallationRequiredError extends ConnectError {
 
 export interface ConnectOptions {
   vercelToken?: string;
+
+  /**
+   * Bypass the in-process token cache and re-fetch from Vercel Connect.
+   *
+   * The cache normally serves any token that is not within
+   * {@link ConnectTokenParams.validityBufferMs} of expiry. That means a
+   * grant the user revoked server-side keeps being handed back from the
+   * local cache until it expires. Set `forceRefresh` when the caller
+   * needs Connect to re-validate the grant on this call — a revoked grant
+   * then surfaces as `no_token` / `user_authorization_required` instead of
+   * a stale bearer.
+   */
+  forceRefresh?: boolean;
 }
 
 export async function getToken(
@@ -133,16 +146,20 @@ export async function getTokenResponse(
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
   const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = JSON.stringify({ connector, ...params });
+  const cacheKey = tokenCacheKey(connector, params);
 
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    const now = Date.now();
-    if (cached.response.expiresAt - now > bufferMs) {
-      cached.lastUsed = now;
-      return cached.response;
-    }
+  if (options?.forceRefresh) {
     cache.delete(cacheKey);
+  } else {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      const now = Date.now();
+      if (cached.response.expiresAt - now > bufferMs) {
+        cached.lastUsed = now;
+        return cached.response;
+      }
+      cache.delete(cacheKey);
+    }
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
@@ -204,6 +221,30 @@ export async function revokeToken(
   cache.clear();
 }
 
+/**
+ * Remove a single cached token entry for `(connector, params)` from the
+ * in-process cache.
+ *
+ * Targeted counterpart to {@link revokeToken}'s `cache.clear()`: it drops
+ * exactly the entry {@link getTokenResponse} would serve for these
+ * arguments, leaving every other connector/principal untouched. Use it
+ * when a credential is known to be bad (the resource server rejected the
+ * bearer with a `401`) so the next {@link getTokenResponse} re-fetches
+ * instead of re-serving the rejected token — without paying for a Connect
+ * round trip on every call the way {@link ConnectOptions.forceRefresh}
+ * does.
+ *
+ * The cache key is derived from `connector` plus every field of `params`,
+ * so pass the same `params` used for the original {@link getTokenResponse}
+ * call. No-op when no matching entry exists.
+ */
+export function deleteTokenCacheEntry(
+  connector: string,
+  params: ConnectTokenParams
+): void {
+  cache.delete(tokenCacheKey(connector, params));
+}
+
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;
 const MAX_CACHE_SIZE = 100;
 
@@ -213,6 +254,15 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
+
+/**
+ * Cache key for a `(connector, params)` pair. Stable across calls with
+ * equal arguments so {@link getTokenResponse} and
+ * {@link deleteTokenCacheEntry} address the same entry.
+ */
+function tokenCacheKey(connector: string, params: ConnectTokenParams): string {
+  return JSON.stringify({ connector, ...params });
+}
 
 function evictLru(): void {
   let oldestKey: string | undefined;

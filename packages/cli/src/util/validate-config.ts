@@ -9,8 +9,9 @@ import {
 } from '@vercel/routing-utils';
 import type { VercelConfig } from './dev/types';
 import {
-  functionsSchema,
+  getFunctionsSchema,
   buildsSchema,
+  getMaxDurationLimit,
   getMaxDurationSchema,
   NowBuildError,
   getPrettyError,
@@ -252,7 +253,7 @@ const envVarNamesSchema = {
   maxLength: 256,
 };
 
-const experimentalServicesCommonProperties = {
+const getExperimentalServicesCommonProperties = () => ({
   entrypoint: {
     type: 'string',
     minLength: 1,
@@ -322,7 +323,7 @@ const experimentalServicesCommonProperties = {
       },
     ],
   },
-};
+});
 
 const experimentalServicesRoutableProperties = {
   mount: experimentalServicesMountSchema,
@@ -338,13 +339,13 @@ const experimentalServicesRoutableProperties = {
   },
 };
 
-const experimentalServicesServiceConfigSchema = {
+const getExperimentalServicesServiceConfigSchema = () => ({
   oneOf: [
     {
       type: 'object',
       additionalProperties: false,
       properties: {
-        ...experimentalServicesCommonProperties,
+        ...getExperimentalServicesCommonProperties(),
         ...experimentalServicesRoutableProperties,
         type: {
           enum: ['web'],
@@ -356,7 +357,7 @@ const experimentalServicesServiceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'trigger', 'schedule'],
       properties: {
-        ...experimentalServicesCommonProperties,
+        ...getExperimentalServicesCommonProperties(),
         type: {
           const: 'job',
         },
@@ -371,7 +372,7 @@ const experimentalServicesServiceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'trigger', 'topics'],
       properties: {
-        ...experimentalServicesCommonProperties,
+        ...getExperimentalServicesCommonProperties(),
         type: {
           const: 'job',
         },
@@ -391,7 +392,7 @@ const experimentalServicesServiceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'trigger', 'entrypoint'],
       properties: {
-        ...experimentalServicesCommonProperties,
+        ...getExperimentalServicesCommonProperties(),
         type: {
           const: 'job',
         },
@@ -405,7 +406,7 @@ const experimentalServicesServiceConfigSchema = {
       additionalProperties: false,
       required: ['type'],
       properties: {
-        ...experimentalServicesCommonProperties,
+        ...getExperimentalServicesCommonProperties(),
         type: {
           const: 'worker',
         },
@@ -430,7 +431,7 @@ const experimentalServicesServiceConfigSchema = {
       additionalProperties: false,
       required: ['type', 'schedule'],
       properties: {
-        ...experimentalServicesCommonProperties,
+        ...getExperimentalServicesCommonProperties(),
         type: {
           const: 'cron',
         },
@@ -438,21 +439,21 @@ const experimentalServicesServiceConfigSchema = {
       },
     },
   ],
-};
+});
 
 /**
  * Schema for experimental services configuration.
  * Map of service name to service configuration.
  * @experimental This feature is experimental and may change.
  */
-const experimentalServicesSchema = {
+const getExperimentalServicesSchema = () => ({
   type: 'object',
   propertyNames: {
     pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
     maxLength: 64,
   },
-  additionalProperties: experimentalServicesServiceConfigSchema,
-};
+  additionalProperties: getExperimentalServicesServiceConfigSchema(),
+});
 
 /**
  * Schema for experimental service groups configuration.
@@ -514,7 +515,7 @@ const experimentalServicesV2BindingsSchema = {
   items: experimentalServicesV2BindingSchema,
 };
 
-const experimentalServicesV2ServiceConfigSchema = {
+const getExperimentalServicesV2ServiceConfigSchema = () => ({
   type: 'object',
   additionalProperties: false,
   required: ['root'],
@@ -537,7 +538,7 @@ const experimentalServicesV2ServiceConfigSchema = {
     ignoreCommand: experimentalServicesV2CommandSchema,
     outputDirectory: experimentalServicesV2PathSchema,
     bindings: experimentalServicesV2BindingsSchema,
-    functions: functionsSchema,
+    functions: getFunctionsSchema(),
     headers: headersSchema,
     redirects: redirectsSchema,
     rewrites: rewritesSchema,
@@ -545,44 +546,74 @@ const experimentalServicesV2ServiceConfigSchema = {
     cleanUrls: cleanUrlsSchema,
     trailingSlash: trailingSlashSchema,
   },
-};
+});
 
-const experimentalServicesV2Schema = {
+const getExperimentalServicesV2Schema = () => ({
   type: 'object',
   propertyNames: {
     pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
     maxLength: 64,
   },
-  additionalProperties: experimentalServicesV2ServiceConfigSchema,
-};
+  additionalProperties: getExperimentalServicesV2ServiceConfigSchema(),
+});
 
-const vercelConfigSchema = {
-  type: 'object',
-  // These are not all possibilities because `vc dev`
-  // doesn't need to know about `regions`, `public`, etc.
-  additionalProperties: true,
-  properties: {
-    builds: buildsSchema,
-    routes: routesSchema,
-    cleanUrls: cleanUrlsSchema,
-    headers: headersSchema,
-    redirects: redirectsSchema,
-    rewrites: rewritesSchema,
-    trailingSlash: trailingSlashSchema,
-    functions: functionsSchema,
-    images: imagesSchema,
-    crons: cronsSchema,
-    bunVersion: { type: 'string' },
-    experimentalServices: experimentalServicesSchema,
-    experimentalServiceGroups: experimentalServiceGroupsSchema,
-    experimentalServicesV2: experimentalServicesV2Schema,
-  },
-};
+function buildVercelConfigSchema() {
+  return {
+    type: 'object',
+    // These are not all possibilities because `vc dev`
+    // doesn't need to know about `regions`, `public`, etc.
+    additionalProperties: true,
+    properties: {
+      builds: buildsSchema,
+      routes: routesSchema,
+      cleanUrls: cleanUrlsSchema,
+      headers: headersSchema,
+      redirects: redirectsSchema,
+      rewrites: rewritesSchema,
+      trailingSlash: trailingSlashSchema,
+      functions: getFunctionsSchema(),
+      images: imagesSchema,
+      crons: cronsSchema,
+      bunVersion: { type: 'string' },
+      experimentalServices: getExperimentalServicesSchema(),
+      experimentalServiceGroups: experimentalServiceGroupsSchema,
+      experimentalServicesV2: getExperimentalServicesV2Schema(),
+    },
+  };
+}
 
 const ajv = new Ajv();
-const validate = ajv.compile(vercelConfigSchema);
+
+/**
+ * The `maxDuration` upper bound is gated behind
+ * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` (see `getMaxDurationSchema`), which may be
+ * set after this module is imported. Compiling the validator once at module load
+ * would bake in whatever limit was active at import time and ignore the variable,
+ * so instead we build and compile lazily, caching one validator per resolved
+ * limit (bounded vs. skipped).
+ *
+ * TODO: This machinery exists only to honor the runtime
+ * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` toggle. Once the flag is fully rolled out
+ * and the client-side bound is dropped (see `max-duration.ts` in
+ * `@vercel/build-utils`), revert to a single statically compiled validator.
+ */
+const validatorCacheByLimit = new Map<
+  number | 'skipped',
+  ReturnType<typeof ajv.compile>
+>();
+
+function getConfigValidator() {
+  const cacheKey = getMaxDurationLimit() ?? 'skipped';
+  let validate = validatorCacheByLimit.get(cacheKey);
+  if (!validate) {
+    validate = ajv.compile(buildVercelConfigSchema());
+    validatorCacheByLimit.set(cacheKey, validate);
+  }
+  return validate;
+}
 
 export function validateConfig(config: VercelConfig): NowBuildError | null {
+  const validate = getConfigValidator();
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];

@@ -46,8 +46,10 @@ import type {
 } from '../token.js';
 import {
   ConnectorInstallationRequiredError,
+  deleteTokenCacheEntry,
   getTokenResponse,
   NoValidTokenError,
+  revokeToken,
   UserAuthorizationRequiredError,
 } from '../token.js';
 
@@ -129,6 +131,26 @@ export interface EveAuthorizationOptions {
   readonly connectOptions?: ConnectOptions;
 
   /**
+   * Re-validate the grant against Vercel Connect on every `getToken`
+   * instead of trusting the in-process token cache.
+   *
+   * By default `getToken` returns a cached token as long as it has not
+   * expired, so a grant the user revoked server-side keeps reaching the
+   * tool until the bearer's natural expiry. With `validate: true` each
+   * `getToken` bypasses the local cache and re-checks Connect; a revoked
+   * grant comes back as `no_token` / `user_authorization_required`, which
+   * the adapter maps to {@link ConnectionAuthorizationRequiredError} so
+   * Eve re-runs the consent flow rather than calling the tool with a dead
+   * token.
+   *
+   * This trades a Connect round trip per call for freshness — leave it
+   * off for high-frequency tools where a short revocation window is
+   * acceptable, and turn it on for sensitive actions (payments, deletes,
+   * privileged writes) that must never run on a revoked grant.
+   */
+  readonly validate?: boolean;
+
+  /**
    * Custom call-to-action rendered on the
    * `connection.authorization_required` event. When omitted, Eve
    * fills in `Authorize <ConnectionName> in your browser to continue.`
@@ -189,6 +211,34 @@ export type EveConnectAuthorizationDefinition<
     | NonInteractiveAuthorizationDefinition,
 > = TAuthorization & {
   readonly vercelConnect: VercelConnectMetadata;
+
+  /**
+   * Drops the in-process Vercel Connect token cache entry for
+   * `principal` so the next `getToken` re-fetches instead of re-serving a
+   * rejected bearer. Eve's runtime calls this from its shared eviction
+   * path when a resolved token is rejected (a downstream `401` mapped to
+   * `requireAuth()`, or an MCP server rejecting the bearer), cascading
+   * invalidation from Eve's per-step cache down into this adapter's cache.
+   *
+   * By default this is a local-cache-only operation: it preserves the
+   * underlying Connect grant (and its refresh token), so the next
+   * `getToken` can refresh a merely-expired access token without forcing
+   * a new consent flow. That is the right default for the automatic
+   * `401` cascade, where the rejected bearer is usually just stale.
+   *
+   * Pass `revoke: true` only when the grant itself is known to be dead
+   * and you want it torn down at Vercel Connect (refresh token included)
+   * so the next `getToken` surfaces `user_authorization_required` and
+   * re-runs consent — e.g. a user-initiated "disconnect this
+   * integration" action. Revocation is destructive and best-effort: a
+   * failed or duplicate revoke is swallowed so it never masks the error
+   * that triggered eviction, and the local cache entry is dropped either
+   * way.
+   */
+  readonly evict: (opts: {
+    readonly principal: ConnectionPrincipal;
+    readonly revoke?: boolean;
+  }) => Promise<void>;
 };
 
 /**
@@ -229,10 +279,53 @@ export function connect(
 > {
   const options = normalizeAuthorizationOptions(input);
   const vercelConnect: VercelConnectMetadata = { connector: options.connector };
+  const evict = makeEvict(options);
   if (options.principalType === 'app') {
-    return { ...buildNonInteractiveDefinition(options), vercelConnect };
+    return { ...buildNonInteractiveDefinition(options), vercelConnect, evict };
   }
-  return { ...buildInteractiveDefinition(options), vercelConnect };
+  return { ...buildInteractiveDefinition(options), vercelConnect, evict };
+}
+
+/**
+ * Builds the {@link EveConnectAuthorizationDefinition.evict} callback for
+ * a connector. Resolves the same token params {@link getToken} uses for
+ * `principal`, then drops exactly that cache entry — leaving every other
+ * principal's cached token intact.
+ *
+ * When called with `revoke: true` it instead tears the grant down at
+ * Vercel Connect via {@link revokeToken} (best-effort, falling back to a
+ * local cache drop if the revoke request fails).
+ */
+function makeEvict(
+  options: EveAuthorizationOptions
+): (opts: {
+  readonly principal: ConnectionPrincipal;
+  readonly revoke?: boolean;
+}) => Promise<void> {
+  return async ({ principal, revoke }) => {
+    const params = await buildTokenParams(options, principal);
+    if (revoke) {
+      try {
+        // Destructive: tears down the grant at Vercel Connect (refresh
+        // token included) and clears the in-process cache. Best-effort —
+        // a failed or duplicate revoke must not mask the auth error that
+        // triggered eviction.
+        await revokeToken(
+          options.connector,
+          {
+            subject: params.subject,
+            installationId: params.installationId,
+          },
+          options.connectOptions
+        );
+        return;
+      } catch {
+        // Fall through to the local cache drop so the rejected bearer is
+        // gone even when the server-side revoke failed.
+      }
+    }
+    deleteTokenCacheEntry(options.connector, params);
+  };
 }
 
 function normalizeAuthorizationOptions(
@@ -255,7 +348,7 @@ function buildInteractiveDefinition(
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal),
-          options.connectOptions
+          getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -345,7 +438,7 @@ function buildNonInteractiveDefinition(
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal),
-          options.connectOptions
+          getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -353,6 +446,21 @@ function buildNonInteractiveDefinition(
       }
     },
   };
+}
+
+/**
+ * Connect SDK options for `getToken` calls. When {@link
+ * EveAuthorizationOptions.validate} is set, forces a cache-bypassing
+ * re-fetch so a revoked-but-unexpired grant is caught instead of served
+ * from the in-process token cache.
+ */
+function getTokenConnectOptions(
+  options: EveAuthorizationOptions
+): ConnectOptions | undefined {
+  if (!options.validate) {
+    return options.connectOptions;
+  }
+  return { ...options.connectOptions, forceRefresh: true };
 }
 
 async function buildTokenParams(
