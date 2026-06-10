@@ -12,6 +12,14 @@ const mitigateSchema = {
   },
 } as const;
 
+const serviceNameSchema = {
+  description: 'A service name identifier.',
+  type: 'string',
+  minLength: 1,
+  maxLength: 64,
+  pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+} as const;
+
 const serviceDestinationSchema = {
   description:
     'A service-targeted destination that delegates routing into a named service from `services`.',
@@ -24,11 +32,7 @@ const serviceDestinationSchema = {
       type: 'string',
       enum: ['service'],
     },
-    service: {
-      description: 'Target service name from `services`.',
-      type: 'string',
-      maxLength: 256,
-    },
+    service: serviceNameSchema,
     path: {
       description:
         'Routing-only path used to select a route inside the target service. It does not mutate the URL observed by user code.',

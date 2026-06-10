@@ -156,6 +156,37 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
+  test('validates service `destination` names like service config names', () => {
+    const validate = ajv.compile(routesSchema);
+
+    for (const service of ['web', 'my_backend', 'my-backend', 'a1']) {
+      assert.equal(
+        validate([
+          { src: '^/(.*)$', destination: { type: 'service', service } },
+        ]),
+        true
+      );
+    }
+
+    for (const service of [
+      '',
+      ' my-backend',
+      'my backend',
+      'my/backend',
+      '1backend',
+      'backend-',
+      'backend_',
+      'a'.repeat(65),
+    ]) {
+      assert.equal(
+        validate([
+          { src: '^/(.*)$', destination: { type: 'service', service } },
+        ]),
+        false
+      );
+    }
+  });
+
   test('still folds a string `destination` alias into `dest`', () => {
     const input: RouteInput[] = [{ src: '^/a$', destination: '/b' }];
 
