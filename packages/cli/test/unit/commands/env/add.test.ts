@@ -1379,6 +1379,65 @@ describe('env add', () => {
         exitSpy.mockRestore();
         logSpy.mockRestore();
       });
+
+      it.each([
+        'ENV_ALREADY_EXISTS',
+        'ENV_CONFLICT',
+        'EXISTING_KEY_AND_TARGET',
+      ])('outputs env_already_exists with --force suggestion when the variable already exists (%s)', async code => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        vi.spyOn(addEnvRecordModule, 'default').mockRejectedValue(
+          Object.assign(
+            new Error(
+              'A variable with the name `MY_VAR` already exists for the target production on branch undefined (400)'
+            ),
+            {
+              status: 400,
+              code,
+              serverMessage:
+                'A variable with the name `MY_VAR` already exists for the target production on branch undefined',
+            }
+          )
+        );
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'MY_VAR',
+          'production',
+          '--value',
+          'secret',
+          '--yes',
+          '--non-interactive'
+        );
+        client.cwd = setupUnitFixture('vercel-env-pull');
+
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'env_already_exists',
+          message: expect.stringContaining('--force'),
+        });
+        expect(payload.message).not.toContain('undefined');
+        expect(payload.next[0].command).toContain('--force');
+
+        vi.restoreAllMocks();
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
     });
   });
 });
