@@ -122,6 +122,7 @@ describe('env add', () => {
 
         client.stdin.write('n\n');
         await expect(client.stderr).toOutput('Value?');
+        // Regression guard: the input cursor must land after the prompt gap.
         expect(client.stderr.getFullOutput()).toMatch(
           /Value\?\x1b\[[0-9;]*m\x1b\[10G/
         );
@@ -898,12 +899,12 @@ describe('env add', () => {
           await expect(client.stderr).toOutput(
             '✓ Added           REDIS_CONNECTION_STRING'
           );
-          await expect(client.stderr).toOutput('Project         ');
-          await expect(client.stderr).toOutput('Environments    Preview');
-          await expect(client.stderr).toOutput('Branch          branchName');
           await expect(client.stderr).toOutput('Type            Non-sensitive');
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "env"').toEqual(0);
+          expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+            /\n✓ Added\s+REDIS_CONNECTION_STRING\n\s{0,2}Project\s+\S+\/vercel-env-pull\n\s{0,2}Environments\s+Preview\n\s{0,2}Branch\s+branchName\n\s{0,2}Type\s+Non-sensitive\n/
+          );
         });
 
         it('tracks telemetry events', async () => {
