@@ -86,7 +86,7 @@ export default defineMcpClientConnection({
 import { genericOAuth } from 'better-auth/plugins';
 import { connect } from '@vercel/connect/betterauth';
 
-genericOAuth({ config: [connect({ connector: 'linear' })] });
+genericOAuth({ config: [connect({ connectorId: 'linear' })] });
 ```
 
 ### Auth.js
@@ -94,7 +94,7 @@ genericOAuth({ config: [connect({ connector: 'linear' })] });
 ```ts
 import { connect } from '@vercel/connect/authjs';
 
-const providers = [connect({ connector: 'linear' })];
+const providers = [connect({ connectorId: 'linear' })];
 ```
 
 See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).

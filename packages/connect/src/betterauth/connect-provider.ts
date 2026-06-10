@@ -19,7 +19,7 @@
  *       config: [
  *         connect({
  *           providerId: "slack",
- *           connector: process.env.CONNECTOR_SLACK!,
+ *           connectorId: process.env.CONNECTOR_SLACK!,
  *         }),
  *       ],
  *     }),
@@ -51,7 +51,7 @@ export interface BetterAuthConnectOptions {
    * opaque service connector key (`scl_...`) or the human-readable
    * UID (`oauth/mcp-linear-app`).
    */
-  readonly connector: string;
+  readonly connectorId: string;
 
   /**
    * Scopes to request. `offline_access` is added automatically so the
@@ -79,7 +79,7 @@ export function connect(options: BetterAuthConnectOptions): GenericOAuthConfig {
 
   return {
     providerId: options.providerId,
-    clientId: options.connector,
+    clientId: options.connectorId,
     // Best-effort: scope the Vercel Connect consent UI to the
     // deployment's Vercel team when we can read it from the OIDC
     // token. Falls back to the unqualified URL when the token isn't
@@ -94,7 +94,7 @@ export function connect(options: BetterAuthConnectOptions): GenericOAuthConfig {
     getToken: async ({ code, redirectURI, codeVerifier, deviceId }) => {
       const vercelToken = await fetchVercelToken();
       const credentials = `${encodeURIComponent(
-        options.connector
+        options.connectorId
       )}:${encodeURIComponent(vercelToken)}`;
       const basicAuth = btoa(credentials);
 

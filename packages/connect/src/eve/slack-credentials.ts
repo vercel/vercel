@@ -52,13 +52,13 @@ export type ConnectSlackCredentialsParams = Omit<ConnectTokenParams, 'subject'>;
  * ```
  */
 export function connectSlackCredentials(
-  connector: string,
+  connectorId: string,
   params: ConnectSlackCredentialsParams = {},
   options?: ConnectOptions
 ): SlackChannelCredentials {
   return {
     botToken: () =>
-      getToken(connector, { ...params, subject: { type: 'app' } }, options),
+      getToken(connectorId, { ...params, subject: { type: 'app' } }, options),
     webhookVerifier: vercelOidc(),
   };
 }

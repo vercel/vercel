@@ -27,7 +27,7 @@ export default defineMcpClientConnection({
   url: 'https://mcp.linear.app/sse',
   description: 'Linear workspace — issues, projects, cycles, and comments.',
   authorization: connect({
-    connector: process.env.CONNECTOR_LINEAR!,
+    connectorId: process.env.CONNECTOR_LINEAR!,
   }),
 });
 ```
@@ -128,7 +128,7 @@ export interface EveAuthorizationOptions {
    * in the Vercel Connect dashboard (e.g. `oauth/mcp-linear-app`)
    * or the opaque SCL form (e.g. `scl_V66vvAu5OJUsQll1LPOOQ`).
    */
-  readonly connector: string;
+  readonly connectorId: string;
 
   /**
    * Defaults to `"user"`.
@@ -257,7 +257,7 @@ export default defineMcpClientConnection({
   url: 'https://status.internal.example.com/mcp',
   description: 'Internal status API (agent-owned credential).',
   authorization: connect({
-    connector: process.env.CONNECTOR_STATUS!,
+    connectorId: process.env.CONNECTOR_STATUS!,
     principalType: 'app',
   }),
 });
@@ -269,7 +269,7 @@ TypeScript narrows the return type: `startAuthorization` and `completeAuthorizat
 
 ```ts
 authorization: connect({
-  connector: process.env.CONNECTOR_NOTION!,
+  connectorId: process.env.CONNECTOR_NOTION!,
   // Default would be "Authorize Notion in your browser to continue."
   instructions:
     "Notion needs one-time consent to read pages and databases. " +
@@ -283,7 +283,7 @@ All fields on `ConnectTokenParams` except `subject` (which the helper derives fr
 
 ```ts
 authorization: connect({
-  connector: process.env.CONNECTOR_LINEAR!,
+  connectorId: process.env.CONNECTOR_LINEAR!,
   tokenParams: {
     scopes: ["read:issues", "write:comments"],
     audience: ["https://api.linear.app"],
@@ -304,7 +304,7 @@ a different subject shape:
 
 ```ts
 authorization: connect({
-  connector: process.env.CONNECTOR_OAUTH!,
+  connectorId: process.env.CONNECTOR_OAUTH!,
   principalToSubject: principal => ({
     type: "jwt-bearer",
     sub: principal.attributes.email,
@@ -321,7 +321,7 @@ import { connect } from "@vercel/connect/eve";
 import { ConnectionAuthorizationFailedError } from "eve/connections";
 
 authorization: connect({
-  connector: process.env.CONNECTOR_GITHUB!,
+  connectorId: process.env.CONNECTOR_GITHUB!,
   onError(error, phase) {
     // GitHub returns org-SSO-required as a specific message shape.
     // Surface it as a non-retryable failure with actionable copy.
@@ -350,7 +350,7 @@ For unit tests that stub the Vercel API, pass `connectOptions.vercelToken` so th
 
 ```ts
 authorization: connect({
-  connector: "oauth/test-client",
+  connectorId: "oauth/test-client",
   connectOptions: { vercelToken: "stub-oidc-token" },
 }),
 ```
@@ -396,7 +396,10 @@ packages/connect/src/
 {
   "exports": {
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./eve": { "types": "./dist/eve/index.d.ts", "default": "./dist/eve/index.js" },
+    "./eve": {
+      "types": "./dist/eve/index.d.ts",
+      "default": "./dist/eve/index.js",
+    },
   },
   "peerDependencies": {
     "eve": ">=0.6.0-beta.1",

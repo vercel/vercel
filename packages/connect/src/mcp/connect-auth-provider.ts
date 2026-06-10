@@ -65,7 +65,7 @@ export interface ConnectAuthProviderOptions {
  * the consent URL.
  */
 export interface ConsentChallenge {
-  readonly connector: string;
+  readonly connectorId: string;
   readonly subject: ConnectTokenParams['subject'];
   /** Consent URL to redirect the user to. */
   readonly url: string;
@@ -90,7 +90,7 @@ export interface ConsentChallenge {
  */
 export class ConsentRequiredError extends Error {
   readonly name = 'ConsentRequiredError';
-  readonly connector: string;
+  readonly connectorId: string;
   readonly subject: ConnectTokenParams['subject'];
   readonly url: string;
   readonly request: string;
@@ -100,9 +100,9 @@ export class ConsentRequiredError extends Error {
 
   constructor(challenge: ConsentChallenge) {
     super(
-      `Vercel Connect: user authorization required for connector "${challenge.connector}". Redirect the user to challenge.url to grant access.`
+      `Vercel Connect: user authorization required for connector "${challenge.connectorId}". Redirect the user to challenge.url to grant access.`
     );
-    this.connector = challenge.connector;
+    this.connectorId = challenge.connectorId;
     this.subject = challenge.subject;
     this.url = challenge.url;
     this.request = challenge.request;
@@ -124,7 +124,7 @@ const EMPTY_CLIENT_METADATA: OAuthClientMetadata = {
  * state, and the callback handshake server-side, so most of the
  * `OAuthClientProvider` surface is intentionally a no-op.
  *
- * @param connector Vercel Connect connector UID (e.g. `oauth/linear`)
+ * @param connectorId Vercel Connect connector UID (e.g. `oauth/linear`)
  *   or opaque connector id.
  * @param params Token request parameters — always specify a
  *   `subject`; the three subject types
@@ -133,7 +133,7 @@ const EMPTY_CLIENT_METADATA: OAuthClientMetadata = {
  * @param options Optional adapter behavior overrides.
  */
 export function connectAuthProvider(
-  connector: string,
+  connectorId: string,
   params: ConnectTokenParams,
   options?: ConnectAuthProviderOptions
 ): OAuthClientProvider {
@@ -152,7 +152,7 @@ export function connectAuthProvider(
       try {
         const vercelToken = await resolveVercelToken();
         const response = await getTokenResponse(
-          connector,
+          connectorId,
           params,
           vercelToken !== undefined ? { vercelToken } : undefined
         );
@@ -186,7 +186,7 @@ export function connectAuthProvider(
       // endpoint. We ignore it — Connect has its own consent URL
       // backed by the connector's registered OAuth client.
       const vercelToken = await resolveVercelToken();
-      const response = await startAuthorization(connector, params, {
+      const response = await startAuthorization(connectorId, params, {
         ...(vercelToken !== undefined && { vercelToken }),
         // Forward the post-consent return URL so the user lands back
         // in the app. Falsy (the default empty string) => Connect uses
@@ -195,7 +195,7 @@ export function connectAuthProvider(
         ...(options?.deviceCode && { deviceCode: true }),
       });
       const challenge: ConsentChallenge = {
-        connector,
+        connectorId,
         subject: params.subject,
         url: response.url,
         request: response.request,
@@ -249,7 +249,7 @@ export function connectAuthProvider(
       // MCP transport uses this for cache keys and debug output;
       // tying it to the Connect identifier is more useful than
       // returning a synthetic value.
-      return { client_id: connector };
+      return { client_id: connectorId };
     },
   };
 }
