@@ -104,7 +104,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      1 Project under ${user.username}`
+        `Linked          1 Project under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -176,7 +176,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      1 Project under ${user.username}`
+        `Linked          1 Project under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -267,7 +267,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      2 Projects under ${user.username}`
+        `Linked          2 Projects under ${user.username}`
       );
 
       const exitCode = await exitCodePromise;
@@ -484,7 +484,7 @@ describe('link', () => {
       );
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Added       1 Project under');
+      await expect(client.stderr).toOutput('Added           1 Project under');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -667,7 +667,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       const exitCode = await exitCodePromise;
@@ -733,7 +733,7 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Searching for existing projects');
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       const exitCode = await exitCodePromise;
@@ -855,7 +855,7 @@ describe('link', () => {
     client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
-      `Linked      ${team.slug}/${project.name}`
+      `Linked          ${team.slug}/${project.name}`
     );
 
     await expect(client.stderr).toOutput(
@@ -907,7 +907,7 @@ describe('link', () => {
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
-      `Linked      ${user.username}/awesome-app`
+      `Linked          ${user.username}/awesome-app`
     );
 
     const exitCode = await exitCodePromise;
@@ -1553,7 +1553,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1593,7 +1593,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1631,7 +1631,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1669,7 +1669,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1714,7 +1714,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1756,7 +1756,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1796,7 +1796,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1836,7 +1836,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1899,7 +1899,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1949,7 +1949,7 @@ describe('link', () => {
       client.stdin.write(`${basename(cwd)}\n`);
 
       await expect(client.stderr).toOutput(
-        `Linked      ${team.slug}/${project.name}`
+        `Linked          ${team.slug}/${project.name}`
       );
 
       await expect(client.stderr).toOutput(
@@ -1995,7 +1995,7 @@ describe('link', () => {
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput('Linked      ');
+      await expect(client.stderr).toOutput('Linked          ');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
@@ -2208,7 +2208,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${teamA.slug}/${projectA.name}`
+        `Linked          ${teamA.slug}/${projectA.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2344,7 +2344,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${teamA.slug}/${expectedProject.name}`
+        `Linked          ${teamA.slug}/${expectedProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2414,7 +2414,7 @@ describe('link', () => {
       client.stdin.write('\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${teamA.slug}/${repoProject.name}`
+        `Linked          ${teamA.slug}/${repoProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2464,7 +2464,7 @@ describe('link', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Linked      ${limitedTeam.slug}/${limitedProject.name}`
+        `Linked          ${limitedTeam.slug}/${limitedProject.name}`
       );
       await expect(client.stderr).toOutput(
         'Would you like to pull environment variables now?'
@@ -2611,7 +2611,7 @@ describe('link', () => {
         // Select first option
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked      ');
+        await expect(client.stderr).toOutput('Linked          ');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'
@@ -2665,7 +2665,7 @@ describe('link', () => {
         );
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Linked      ');
+        await expect(client.stderr).toOutput('Linked          ');
 
         await expect(client.stderr).toOutput(
           'Would you like to pull environment variables now?'
