@@ -644,6 +644,83 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
   });
 });
 
+describe('[vercel dev] Multi-service with experimentalServicesV2', () => {
+  test('[vercel dev] service routing', async () => {
+    const dir = fixture('services-v2-frontend-backend');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // /api/:path + headers rule
+      const noPath = await nodeFetch(
+        `http://localhost:${port}/api/echo?foo=bar`
+      );
+      validateResponseHeaders(noPath);
+      expect(noPath.status).toBe(200);
+      expect(noPath.headers.get('x-backend-service')).toBe('backend');
+      const noPathJson = await noPath.json();
+      expect(noPathJson).toMatchObject({
+        service: 'backend',
+        received_path: '/api/echo',
+        received_query: 'foo=bar',
+      });
+
+      // /svc/:path top-level + header rule because of per-service /api/(.*)
+      const withPath = await nodeFetch(`http://localhost:${port}/svc/echo`);
+      validateResponseHeaders(withPath);
+      expect(withPath.headers.get('x-backend-service')).toBe('backend');
+      const withPathJson = await withPath.json();
+      expect(withPathJson).toHaveProperty('received_path', '/svc/echo');
+
+      // top-level + per-service rewrites redirect
+      const redirect = await nodeFetch(`http://localhost:${port}/api/old`, {
+        redirect: 'manual',
+      });
+      expect(redirect.status).toBe(308);
+      expect(redirect.headers.get('location')).toBe(
+        `http://localhost:${port}/api/new`
+      );
+
+      // top-level + per-service routes redirect
+      const routeRedirect = await nodeFetch(
+        `http://localhost:${port}/api/legacy`,
+        { redirect: 'manual' }
+      );
+      expect(routeRedirect.status).toBe(308);
+      expect(routeRedirect.headers.get('location')).toBe(
+        `http://localhost:${port}/api/new`
+      );
+
+      // top-level rule for /svc + per-service rewrites redirect for /api/
+      const pathRedirect = await nodeFetch(`http://localhost:${port}/svc/old`, {
+        redirect: 'manual',
+      });
+      expect(pathRedirect.status).toBe(308);
+      expect(pathRedirect.headers.get('location')).toBe(
+        `http://localhost:${port}/api/new`
+      );
+
+      // frontend handler
+      const frontend = await nodeFetch(`http://localhost:${port}/`);
+      validateResponseHeaders(frontend);
+      const frontendHtml = await frontend.text();
+      expect(frontendHtml).toContain('Frontend in frontend/ directory');
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Multi-service auto-detection', () => {
   test('[vercel dev] auto-detect: frontend at root + backend/', async () => {
     const dir = fixture('services-zc-root-backend');
