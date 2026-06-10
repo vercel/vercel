@@ -16,7 +16,7 @@ import type {
 import { VercelConfig } from '@vercel/client';
 import type { HandleValue, Route } from '@vercel/routing-utils';
 import type { ProjectSettings } from '@vercel-internals/types';
-import type { ExperimentalService } from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 import type { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
@@ -25,7 +25,7 @@ export interface DevServerOptions {
   projectSettings?: ProjectSettings;
   envValues?: Record<string, string>;
   repoRoot?: string;
-  services?: ExperimentalService[];
+  services?: Service[];
   useImplicitServicesEnvInjection?: boolean;
   projectId?: string;
   orgId?: string;

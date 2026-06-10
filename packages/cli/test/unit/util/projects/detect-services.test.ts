@@ -380,6 +380,27 @@ mount = "/api"`
       expect(result?.services).toHaveLength(2);
     });
 
+    it('should return services when vercel.json has experimentalServicesV2', async () => {
+      await mkdir(join(tempDir, 'backend'), { recursive: true });
+      await writeFile(
+        join(tempDir, 'vercel.json'),
+        JSON.stringify({
+          experimentalServicesV2: {
+            backend: { root: 'backend', entrypoint: 'index.py' },
+          },
+        })
+      );
+      await writeFile(
+        join(tempDir, 'backend/index.py'),
+        'def app():\n  return None\n'
+      );
+
+      const result = await tryDetectServices(tempDir);
+      expect(result).not.toBeNull();
+      expect(result?.services).toHaveLength(1);
+      expect(result?.services[0].schema).toBe('experimentalServicesV2');
+    });
+
     it('should return null when vercel.json has no services', async () => {
       await writeFile(
         join(tempDir, 'vercel.json'),
@@ -440,6 +461,19 @@ mount = "/api"`
             frontend: { framework: 'nextjs', mount: '/' },
           },
         };`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
+
+    it('should return true when vercel.json has experimentalServicesV2', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.json'),
+        JSON.stringify({
+          experimentalServicesV2: {
+            frontend: { root: 'frontend', framework: 'nextjs' },
+          },
+        })
       );
 
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
