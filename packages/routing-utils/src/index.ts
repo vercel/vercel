@@ -18,6 +18,7 @@ import {
   RouteInput,
   RouteWithHandle,
   RouteWithSrc,
+  ServiceDestination,
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
@@ -49,6 +50,13 @@ export function isValidHandleValue(handle: string): handle is HandleValue {
   return validHandleValues.has(handle);
 }
 
+/**
+ * Folds input-only aliases into their canonical fields: `source` -> `src` and
+ * `statusCode` -> `status`. `destination` is an alias for `dest` ONLY when it is a
+ * string; a service-targeted `destination` object (`{ type: 'service', ... }`)
+ * has no `dest` equivalent and is intentionally left in place. A route may not
+ * set both a canonical field and its alias.
+ */
 function convertRouteAliases(route: RouteWithSrc, index: number): void {
   if (route.source !== undefined) {
     if (route.src !== undefined) {
@@ -66,8 +74,11 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
         `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
       );
     }
-    route.dest = route.destination;
-    delete route.destination;
+    // `destination` aliases `dest` only in its string form
+    if (typeof route.destination === 'string') {
+      route.dest = route.destination;
+      delete route.destination;
+    }
   }
 
   if (route.statusCode !== undefined) {
@@ -141,6 +152,18 @@ export function normalizeRoutes(
       const regError = checkRegexSyntax('Route', i, route.src);
       if (regError) {
         errors.push(regError);
+      }
+
+      // A service-targeted `destination` is a terminal handoff into the target
+      // service's route table; routing does not continue in the current table.
+      if (
+        route.destination &&
+        typeof route.destination === 'object' &&
+        route.continue
+      ) {
+        errors.push(
+          `Route at index ${i} cannot define \`continue: true\` with a service \`destination\`. The service handoff is terminal.`
+        );
       }
 
       // The last seen handling is the current handler
@@ -217,7 +240,7 @@ function checkPatternSyntax(
   }: {
     source: string;
     has?: HasField;
-    destination?: string;
+    destination?: string | ServiceDestination;
   }
 ): { message: string; link: string } | null {
   let sourceSegments = new Set<string>();
@@ -231,9 +254,17 @@ function checkPatternSyntax(
     };
   }
 
-  if (destination) {
+  // For a service destination, validate `path` the same way as a plain string destination.
+  const destinationString =
+    typeof destination === 'string'
+      ? destination
+      : typeof destination?.path === 'string'
+        ? destination.path
+        : undefined;
+
+  if (destinationString !== undefined) {
     try {
-      const { hostname, pathname, query } = parseUrl(destination, true);
+      const { hostname, pathname, query } = parseUrl(destinationString, true);
       sourceToRegex(hostname || '').segments.forEach(name =>
         destinationSegments.add(name)
       );

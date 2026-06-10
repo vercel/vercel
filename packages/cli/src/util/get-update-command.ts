@@ -102,6 +102,21 @@ export default async function getUpdateCommand(): Promise<string> {
 
   const pkgAndVersion = `${getUpdatePackageName()}@latest`;
 
+  if (nativeInstall) {
+    // The native binary's process.argv[1] points into its virtual filesystem
+    // snapshot, so detect the package manager from the real install location.
+    const segments = process.execPath.split(sep);
+    let cliType: 'npm' | 'pnpm' | 'yarn' = 'npm';
+    if (segments.includes('pnpm') || segments.includes('.pnpm')) {
+      cliType = 'pnpm';
+    } else if (segments.includes('yarn') || segments.includes('.yarn')) {
+      cliType = 'yarn';
+    }
+    const install = cliType === 'yarn' ? 'global add' : 'i -g';
+    const force = cliType === 'npm' ? ' --force' : '';
+    return `${cliType} ${install} ${pkgAndVersion}${force}`;
+  }
+
   const entrypoint = await realpath(process.argv[1]);
   let { cliType, lockfilePath } = await scanParentDirs(
     dirname(dirname(entrypoint))

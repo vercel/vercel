@@ -129,6 +129,26 @@ export interface EveAuthorizationOptions {
   readonly connectOptions?: ConnectOptions;
 
   /**
+   * Re-validate the grant against Vercel Connect on every `getToken`
+   * instead of trusting the in-process token cache.
+   *
+   * By default `getToken` returns a cached token as long as it has not
+   * expired, so a grant the user revoked server-side keeps reaching the
+   * tool until the bearer's natural expiry. With `validate: true` each
+   * `getToken` bypasses the local cache and re-checks Connect; a revoked
+   * grant comes back as `no_token` / `user_authorization_required`, which
+   * the adapter maps to {@link ConnectionAuthorizationRequiredError} so
+   * Eve re-runs the consent flow rather than calling the tool with a dead
+   * token.
+   *
+   * This trades a Connect round trip per call for freshness — leave it
+   * off for high-frequency tools where a short revocation window is
+   * acceptable, and turn it on for sensitive actions (payments, deletes,
+   * privileged writes) that must never run on a revoked grant.
+   */
+  readonly validate?: boolean;
+
+  /**
    * Custom call-to-action rendered on the
    * `connection.authorization_required` event. When omitted, Eve
    * fills in `Authorize <ConnectionName> in your browser to continue.`
@@ -255,7 +275,7 @@ function buildInteractiveDefinition(
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal),
-          options.connectOptions
+          getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -345,7 +365,7 @@ function buildNonInteractiveDefinition(
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal),
-          options.connectOptions
+          getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -353,6 +373,21 @@ function buildNonInteractiveDefinition(
       }
     },
   };
+}
+
+/**
+ * Connect SDK options for `getToken` calls. When {@link
+ * EveAuthorizationOptions.validate} is set, forces a cache-bypassing
+ * re-fetch so a revoked-but-unexpired grant is caught instead of served
+ * from the in-process token cache.
+ */
+function getTokenConnectOptions(
+  options: EveAuthorizationOptions
+): ConnectOptions | undefined {
+  if (!options.validate) {
+    return options.connectOptions;
+  }
+  return { ...options.connectOptions, forceRefresh: true };
 }
 
 async function buildTokenParams(
