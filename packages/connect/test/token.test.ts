@@ -2,6 +2,7 @@ import { getVercelOidcToken } from '@vercel/oidc';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ConnectError,
+  deleteTokenCacheEntry,
   getTokenResponse,
   revokeToken,
   UserAuthorizationRequiredError,
@@ -129,6 +130,29 @@ describe('getTokenResponse cache', () => {
     expect(first.token).toBe('tok_a');
     expect(second.token).toBe('tok_a');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('deleteTokenCacheEntry drops only the matching entry, forcing a re-fetch', async () => {
+    fetchMock
+      .mockResolvedValueOnce(tokenResponse('tok_evicted_old'))
+      .mockResolvedValueOnce(tokenResponse('tok_other'))
+      .mockResolvedValueOnce(tokenResponse('tok_evicted_new'));
+    const evicted = { subject: { type: 'user' as const, id: 'evicted' } };
+    const other = { subject: { type: 'user' as const, id: 'other' } };
+
+    await getTokenResponse('oauth/linear', evicted);
+    await getTokenResponse('oauth/linear', other);
+
+    deleteTokenCacheEntry('oauth/linear', evicted);
+
+    // The evicted principal re-fetches a fresh token; the untouched
+    // principal still serves from cache (no third fetch for it).
+    const refetched = await getTokenResponse('oauth/linear', evicted);
+    const stillCached = await getTokenResponse('oauth/linear', other);
+
+    expect(refetched.token).toBe('tok_evicted_new');
+    expect(stillCached.token).toBe('tok_other');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('forceRefresh bypasses the cache and re-fetches', async () => {
