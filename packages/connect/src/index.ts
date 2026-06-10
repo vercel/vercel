@@ -1,4 +1,5 @@
 export {
+  deleteTokenCacheEntry,
   getToken,
   getTokenResponse,
   revokeToken,
