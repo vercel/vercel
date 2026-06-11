@@ -827,7 +827,8 @@ exports[`help command > connex help output snapshots > connex create subcommand 
        --background-color <HEX>  Background color for the connector icon (e.g. #1A2B3C)                                      
        --connector-type <TYPE>   Connector type for non-managed creation. By default, the type is resolved from the service. 
        --data <JSON>             JSON object for non-managed connector creation. When set, posts directly to the connector   
-                                 create API.                                                                                 
+                                 create API. Pass \`@<path>\` to read from a file or \`@-\` to read from stdin — recommended for 
+                                 secrets (e.g. client secrets), which leak into shell history when passed inline.            
   -F,  --format <FORMAT>         Specify the output format (json)                                                            
        --icon <PATH>             Path to a PNG or JPEG image to use as the connector icon (uploaded to Vercel)               
   -n,  --name <NAME>             Name of the connector                                                                       
@@ -870,9 +871,13 @@ exports[`help command > connex help output snapshots > connex create subcommand 
 
     $ vercel connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'
 
-  - Create a non-managed connector with an explicit connector type
+  - Create a non-managed connector, reading credentials from a file (keeps secrets out of shell history)
 
-    $ vercel connect create slack --name my-bot --connector-type slack --data '{"appId":"A123","appName":"my-bot","clientId":"abc","clientSecret":"secret"}'
+    $ vercel connect create slack --name my-bot --connector-type slack --data @slack-app.json
+
+  - Create a non-managed connector, reading credentials from stdin
+
+    $ cat slack-app.json | vercel connect create slack --name my-bot --connector-type slack --data @-
 
   - Output as JSON
 

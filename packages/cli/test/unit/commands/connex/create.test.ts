@@ -202,6 +202,175 @@ describe('connex create', () => {
     );
   });
 
+  it('should read non-managed --data from a file with @<path>', async () => {
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ types: [{ type: 'api-key' }] });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(
+        fakeConnexClient({ id: 'scl_file1', uid: 'uid_file1', type: 'api-key' })
+      );
+    });
+
+    const dataPath = await writeTmpFile(
+      'creds.json',
+      Buffer.from('{"clientId":"abc123","clientSecret":"shh"}')
+    );
+
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.linear.app',
+      '--name',
+      'linear',
+      '--data',
+      `@${dataPath}`
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postBody.data).toEqual({ clientId: 'abc123', clientSecret: 'shh' });
+    // A file source must not trigger the inline-secret warning.
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'leak into shell history'
+    );
+  });
+
+  it('should read non-managed --data from stdin with @-', async () => {
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ types: [{ type: 'api-key' }] });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(
+        fakeConnexClient({
+          id: 'scl_stdin1',
+          uid: 'uid_stdin1',
+          type: 'api-key',
+        })
+      );
+    });
+
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.linear.app',
+      '--name',
+      'linear',
+      '--data',
+      '@-'
+    );
+
+    const exitCodePromise = connect(client);
+    // resolveDataFlag reads stdin to EOF, so deliver the payload and end the
+    // stream.
+    client.stdin.end('{"clientId":"fromstdin"}');
+    const exitCode = await exitCodePromise;
+
+    expect(exitCode).toBe(0);
+    expect(postBody.data).toEqual({ clientId: 'fromstdin' });
+  });
+
+  it('should read multi-chunk and delayed stdin from @- without truncating or timing out', async () => {
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ types: [{ type: 'api-key' }] });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(
+        fakeConnexClient({
+          id: 'scl_stdin2',
+          uid: 'uid_stdin2',
+          type: 'api-key',
+        })
+      );
+    });
+
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.linear.app',
+      '--name',
+      'linear',
+      '--data',
+      '@-'
+    );
+
+    const exitCodePromise = connect(client);
+    // Split the payload across chunks and start writing only after the old
+    // 500ms readStandardInput cap would have fired — proves the full read
+    // waits for EOF rather than resolving early or dropping later chunks.
+    const full =
+      '{"clientId":"abc","clientSecret":"shh-this-is-a-long-secret"}';
+    const mid = Math.floor(full.length / 2);
+    setTimeout(() => {
+      client.stdin.write(full.slice(0, mid));
+      client.stdin.end(full.slice(mid));
+    }, 600);
+    const exitCode = await exitCodePromise;
+
+    expect(exitCode).toBe(0);
+    expect(postBody.data).toEqual({
+      clientId: 'abc',
+      clientSecret: 'shh-this-is-a-long-secret',
+    });
+  });
+
+  it('should warn when inline --data appears to contain a secret', async () => {
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ types: [{ type: 'api-key' }] });
+    });
+    client.scenario.post('/v1/connect/connectors', (_req, res) => {
+      res.json(
+        fakeConnexClient({ id: 'scl_warn1', uid: 'uid_warn1', type: 'api-key' })
+      );
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.linear.app',
+      '--name',
+      'linear',
+      '--data',
+      '{"clientId":"abc","clientSecret":"shh"}'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('appears to contain a credential');
+    expect(stderr).toContain('clientSecret');
+    expect(stderr).toContain('leak into shell history');
+  });
+
+  it('should error when --data @<path> file cannot be read', async () => {
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.linear.app',
+      '--name',
+      'linear',
+      '--data',
+      '@/does/not/exist-xyz.json'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Could not read --data file'
+    );
+  });
+
   it('should default non-managed connector type to oauth when service discovery returns 404', async () => {
     let discoveryHit = false;
     let postBody: any;
