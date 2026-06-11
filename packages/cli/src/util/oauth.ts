@@ -5,6 +5,8 @@ import { hostname } from 'os';
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
 export const userAgent = `${hostname()} @ ${ua}`;
+const OAUTH_ACCESS_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:access_token';
+const OAUTH_ID_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:id_token';
 
 interface AuthorizationServerMetadata {
   issuer: URL;
@@ -257,6 +259,11 @@ interface TokenSet {
   scope?: string;
 }
 
+interface TokenExchangeTokenSet extends TokenSet {
+  /** The type of token issued by the token exchange. */
+  issued_token_type?: typeof OAUTH_ACCESS_TOKEN_TYPE;
+}
+
 /**
  * Process the Token request Response
  *
@@ -271,23 +278,30 @@ export async function processTokenResponse(
     return [new OAuthError('Device access token request failed', json)];
   }
 
+  const validationError = validateTokenSet(json);
+  if (validationError) return [validationError];
+
+  return [null, json as TokenSet];
+}
+
+function validateTokenSet(json: unknown): TypeError | null {
   if (typeof json !== 'object' || json === null)
-    return [new TypeError('Expected response to be an object')];
+    return new TypeError('Expected response to be an object');
   if (!('access_token' in json) || typeof json.access_token !== 'string')
-    return [new TypeError('Expected `access_token` to be a string')];
+    return new TypeError('Expected `access_token` to be a string');
   if (!('token_type' in json) || json.token_type !== 'Bearer')
-    return [new TypeError('Expected `token_type` to be "Bearer"')];
+    return new TypeError('Expected `token_type` to be "Bearer"');
   if (!('expires_in' in json) || typeof json.expires_in !== 'number')
-    return [new TypeError('Expected `expires_in` to be a number')];
+    return new TypeError('Expected `expires_in` to be a number');
   if (
     'refresh_token' in json &&
     (typeof json.refresh_token !== 'string' || !json.refresh_token)
   )
-    return [new TypeError('Expected `refresh_token` to be a string')];
+    return new TypeError('Expected `refresh_token` to be a string');
   if ('scope' in json && typeof json.scope !== 'string')
-    return [new TypeError('Expected `scope` to be a string')];
+    return new TypeError('Expected `scope` to be a string');
 
-  return [null, json];
+  return null;
 }
 
 /**
@@ -342,6 +356,64 @@ export async function refreshTokenRequest(options: {
       ...options,
     }),
   });
+}
+
+/**
+ * Perform the Token Exchange Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc8693#section-2.1
+ */
+export async function tokenExchangeRequest(options: {
+  subject_token: string;
+  team_id: string;
+}): Promise<Response> {
+  // The subject token is the credential being exchanged, so it belongs in the
+  // form body. This request intentionally does not send an Authorization header.
+  return await nodeFetch((await as()).token_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': userAgent,
+    },
+    body: new URLSearchParams({
+      client_id: VERCEL_CLI_CLIENT_ID,
+      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+      requested_token_type: OAUTH_ACCESS_TOKEN_TYPE,
+      subject_token_type: OAUTH_ID_TOKEN_TYPE,
+      ...options,
+    }),
+  });
+}
+
+/**
+ * Process a Token Exchange response.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc8693#section-2.2.1
+ */
+export async function processTokenExchangeResponse(
+  response: Response
+): Promise<[OAuthError | TypeError] | [null, TokenExchangeTokenSet]> {
+  const json = await response.json();
+
+  if (!response.ok) {
+    return [new OAuthError('OIDC token exchange request failed', json)];
+  }
+
+  const validationError = validateTokenSet(json);
+  if (validationError) return [validationError];
+
+  if (
+    'issued_token_type' in json &&
+    json.issued_token_type !== OAUTH_ACCESS_TOKEN_TYPE
+  ) {
+    return [
+      new TypeError(
+        `Expected \`issued_token_type\` to be "${OAUTH_ACCESS_TOKEN_TYPE}"`
+      ),
+    ];
+  }
+
+  return [null, json as TokenExchangeTokenSet];
 }
 
 type OAuthErrorCode =
