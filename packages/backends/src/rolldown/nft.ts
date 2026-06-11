@@ -151,10 +151,17 @@ export const nft = async (
             ? await stat(absolutePath)
             : stats;
           if (targetStats.isFile()) {
-            // Use FileBlob so introspection can include these files
-            const content = await readFile(absolutePath, 'utf-8');
+            // Use FileBlob so introspection can include these files.
+            // Read as a Buffer and only decode to UTF-8 for known text
+            // extensions. Reading binary files (e.g. native `.node` addons,
+            // `.wasm`) as UTF-8 corrupts the bytes, which later surfaces at
+            // runtime as errors such as
+            // "ELF file's phentsize not the expected size".
+            const buffer = await readFile(absolutePath);
             args.files[outputPath] = new FileBlob({
-              data: content,
+              data: isTextExtension(outputPath)
+                ? buffer.toString('utf-8')
+                : buffer,
               mode: stats.mode,
             });
           }
@@ -188,6 +195,27 @@ const isJsLikeExtension = (path: string) => {
   const dot = path.lastIndexOf('.');
   if (dot === -1) return false;
   return JS_LIKE_EXTENSIONS.has(path.slice(dot).toLowerCase());
+};
+
+// Extensions that are safe to store as UTF-8 strings. Anything not listed
+// here (notably native `.node` addons and `.wasm`) is kept as a Buffer so
+// that binary content is preserved byte-for-byte.
+const TEXT_EXTENSIONS = new Set([
+  '.js',
+  '.cjs',
+  '.mjs',
+  '.ts',
+  '.cts',
+  '.mts',
+  '.tsx',
+  '.jsx',
+  '.json',
+]);
+
+const isTextExtension = (path: string) => {
+  const dot = path.lastIndexOf('.');
+  if (dot === -1) return false;
+  return TEXT_EXTENSIONS.has(path.slice(dot).toLowerCase());
 };
 
 const createVirtualFileStat = (data: string | Buffer) => {
