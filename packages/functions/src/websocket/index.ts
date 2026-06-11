@@ -34,15 +34,10 @@ export async function experimental_upgradeWebSocket(
 
   const { req, socket, head } = ctx.upgradeWebSocket();
 
-  const serverOptions: { noServer: true; maxPayload?: number } = {
+  const wss = new WebSocketServer({
     noServer: true,
-  };
-
-  if (options.maxPayload !== undefined) {
-    serverOptions.maxPayload = options.maxPayload;
-  }
-
-  const wss = new WebSocketServer(serverOptions);
+    ...(options.maxPayload !== undefined && { maxPayload: options.maxPayload }),
+  });
 
   const ws = await new Promise<WebSocket>((resolve, reject) => {
     const cleanup = () => {

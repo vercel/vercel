@@ -110,6 +110,19 @@ describe('experimental_upgradeWebSocket', () => {
       socket.destroy();
     });
 
+    test('does not pass maxPayload to the WebSocket server when undefined', async () => {
+      const { socket } = createUpgradeContext();
+
+      const response = await experimental_upgradeWebSocket(() => {}, {
+        maxPayload: undefined,
+      });
+
+      expect(response.status).toBe(204);
+      expect(webSocketServerOptions).toEqual([{ noServer: true }]);
+
+      socket.destroy();
+    });
+
     test('closes the WebSocket when the handler throws', async () => {
       const { socket } = createUpgradeContext();
       const error = new Error('boom');
