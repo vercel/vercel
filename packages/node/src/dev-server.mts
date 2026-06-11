@@ -11,6 +11,7 @@ import type { VercelProxyResponse } from './types.js';
 import { Config, getLambdaOptionsFromFunction } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
+import type { Socket } from 'net';
 import {
   createServerlessEventHandler,
   HTTP_METHODS,
@@ -32,6 +33,11 @@ async function createEventHandler(
   options: { shouldAddHelpers: boolean }
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+  upgradeHandler?: (
+    request: IncomingMessage,
+    socket: Socket,
+    head: Buffer
+  ) => Promise<void>;
   onExit: (() => Promise<void>) | undefined;
 }> {
   const entrypointPath = join(process.cwd(), entrypoint!);
@@ -96,6 +102,9 @@ async function hasWebHandlers(getExports: () => Promise<string[]>) {
 }
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+let handleUpgrade:
+  | ((request: IncomingMessage, socket: Socket, head: Buffer) => Promise<void>)
+  | undefined;
 let handlerEventError: Error;
 let onExit: (() => Promise<void>) | undefined;
 
@@ -111,6 +120,7 @@ async function main() {
   );
 
   const proxyServer = createServer(onDevRequest);
+  proxyServer.on('upgrade', onDevUpgrade);
   await listen(proxyServer, { host: '127.0.0.1', port: 0 });
 
   try {
@@ -118,6 +128,7 @@ async function main() {
       shouldAddHelpers,
     });
     handleEvent = result.handler;
+    handleUpgrade = result.upgradeHandler;
     onExit = result.onExit;
   } catch (error: any) {
     logError(error);
@@ -129,6 +140,28 @@ async function main() {
     process.send(address);
   } else {
     console.log('Dev server listening:', address);
+  }
+}
+
+async function onDevUpgrade(
+  req: IncomingMessage,
+  socket: Socket,
+  head: Buffer
+): Promise<void> {
+  if (handlerEventError) {
+    socket.destroy(handlerEventError);
+    return;
+  }
+
+  if (!handleUpgrade) {
+    socket.destroy(new Error('Bridge does not support WebSocket upgrades'));
+    return;
+  }
+
+  try {
+    await handleUpgrade(req, socket, head);
+  } catch (error: any) {
+    socket.destroy(error);
   }
 }
 

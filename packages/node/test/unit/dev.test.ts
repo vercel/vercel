@@ -2,6 +2,8 @@ import { afterAll, describe, expect, test, vi } from 'vitest';
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import { createServer, request } from 'http';
+import { createConnection } from 'net';
+import { randomBytes } from 'crypto';
 import { listen } from 'async-listen';
 import { once } from 'node:events';
 import { promisify } from 'util';
@@ -91,8 +93,76 @@ async function withDevServer(
   }
 }
 
+function readWebSocketMessage(buffer: Buffer) {
+  const length = buffer[1] & 0x7f;
+  return buffer.subarray(2, 2 + length).toString('utf8');
+}
+
+async function websocketRequest(url: string, pathname: string) {
+  const { hostname, port } = new URL(url);
+  const socket = createConnection({ host: hostname, port: Number(port) });
+  const key = randomBytes(16).toString('base64');
+
+  await once(socket, 'connect');
+  socket.write(
+    [
+      `GET ${pathname} HTTP/1.1`,
+      `Host: ${hostname}:${port}`,
+      'Upgrade: websocket',
+      'Connection: Upgrade',
+      `Sec-WebSocket-Key: ${key}`,
+      'Sec-WebSocket-Version: 13',
+      '',
+      '',
+    ].join('\r\n')
+  );
+
+  return new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    socket.on('data', chunk => {
+      chunks.push(chunk);
+      const response = Buffer.concat(chunks);
+      const separator = response.indexOf('\r\n\r\n');
+      if (separator === -1) return;
+
+      const frame = response.subarray(separator + 4);
+      if (frame.length < 2) return;
+
+      const length = frame[1] & 0x7f;
+      if (frame.length >= 2 + length) {
+        socket.destroy();
+        resolve(response);
+      }
+    });
+    socket.on('error', reject);
+  });
+}
+
 describe('web handlers', () => {
   describe.each(['node', 'bun'] as const)('for %s runtime', runtime => {
+    (runtime === 'bun' ? test.skip : test)(
+      'with `upgradeWebSocket` from context',
+      () =>
+        withDevServer(
+          './upgrade-websocket-node.js',
+          async (url: string) => {
+            const response = await websocketRequest(
+              url,
+              '/api/upgrade-websocket-node'
+            );
+            const separator = response.indexOf('\r\n\r\n');
+
+            expect(response.subarray(0, separator).toString()).toContain(
+              'HTTP/1.1 101 Switching Protocols'
+            );
+            expect(readWebSocketMessage(response.subarray(separator + 4))).toBe(
+              'ok'
+            );
+          },
+          { runtime }
+        )
+    );
+
     test('with `waitUntil` from import', () =>
       withDevServer(
         './wait-until-node.js',

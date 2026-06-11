@@ -1108,6 +1108,16 @@ export default class DevServer {
         return;
       }
 
+      if (
+        await this.tryProxyUpgradeToBuilderDevServer(
+          req,
+          socket as http.IncomingMessage['socket'],
+          head
+        )
+      ) {
+        return;
+      }
+
       if (!this.devProcessOrigin) {
         output.debug(
           `Detected "upgrade" event, but closing socket because no frontend dev server is running`
@@ -1203,6 +1213,110 @@ export default class DevServer {
     } catch (err) {
       debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
     }
+  }
+
+  async tryProxyUpgradeToBuilderDevServer(
+    req: http.IncomingMessage,
+    socket: http.IncomingMessage['socket'],
+    head: Buffer
+  ): Promise<boolean> {
+    const { debug } = output;
+    const vercelConfig = await this.getVercelConfig();
+
+    await this.updateBuildMatches(vercelConfig);
+
+    if (this.blockingBuildsPromise) {
+      debug('Waiting for builds to complete before handling upgrade');
+      await this.blockingBuildsPromise;
+    }
+
+    const parsed = url.parse(req.url || '/');
+    const requestPath = parsed.pathname || '/';
+    const match = await findBuildMatch(
+      this.buildMatches,
+      this.files,
+      requestPath,
+      this,
+      vercelConfig,
+      true
+    );
+
+    if (!match) {
+      debug(`No builder match found for upgrade ${requestPath}`);
+      return false;
+    }
+
+    const { builder, pkg: builderPkg } = match.builderWithPkg;
+    if (
+      !(builder.version === 3 || builder.version === -1) ||
+      typeof builder.startDevServer !== 'function'
+    ) {
+      debug(
+        `Builder match for upgrade ${requestPath} does not support startDevServer()`
+      );
+      return false;
+    }
+
+    let devServerResult: StartDevServerResult = null;
+    try {
+      const { envConfigs, files, devCacheDir, cwd: workPath } = this;
+      devServerResult = await builder.startDevServer({
+        files,
+        entrypoint: match.entrypoint,
+        workPath,
+        config: match.config || {},
+        repoRootPath: this.repoRoot,
+        meta: {
+          isDev: true,
+          requestPath: requestPath.replace(/^\//, ''),
+          devCacheDir,
+          env: {
+            ...envConfigs.runEnv,
+            VERCEL_DEBUG_PREFIX: output.debugEnabled ? '[builder]' : undefined,
+          },
+          buildEnv: { ...envConfigs.buildEnv },
+        },
+      });
+    } catch (err: unknown) {
+      if (isSpawnError(err) && err.code === 'ENOENT') {
+        err.message = `Command not found: ${chalk.cyan(
+          err.path,
+          ...err.spawnargs
+        )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
+        (err as any).link = 'https://vercel.link/command-not-found';
+      }
+
+      output.prettyError(err);
+      socket.destroy();
+      return true;
+    }
+
+    if (!devServerResult) {
+      debug(`Skipping startDevServer() for upgrade ${match.entrypoint}`);
+      return false;
+    }
+
+    const requestId = generateRequestId(this.podId, true);
+    const { port, pid, shutdown } = devServerResult;
+    this.shutdownCallbacks.set(pid, shutdown);
+
+    socket.once('close', () => {
+      this.killBuilderDevServer(pid);
+    });
+
+    debug(
+      `Proxying upgrade to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
+    );
+
+    const headers = this.getProxyHeaders(req, requestId, false);
+    for (const [name, value] of Object.entries(headers)) {
+      req.headers[name] = value;
+    }
+
+    this.proxy.ws(req, socket, head, {
+      target: `http://127.0.0.1:${port}`,
+    });
+    return true;
   }
 
   async send404(
