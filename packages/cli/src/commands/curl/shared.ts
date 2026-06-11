@@ -19,6 +19,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { help } from '../help';
 import { getCommandName } from '../../util/pkg-name';
+import {
+  GLOBAL_CLI_FLAG_NAMES,
+  globalCliFlagTakesValue,
+} from '../../util/arg-common';
 import type { Command } from '../help';
 import type arg from 'arg';
 
@@ -79,6 +83,33 @@ function flagValue(args: string[], index: number): string | undefined {
   return next && !next.startsWith('-') ? next : undefined;
 }
 
+function getCommandArgs(rawArgs: string[], commandName: string): string[] {
+  if (rawArgs[0] === commandName) {
+    return rawArgs.slice(1);
+  }
+
+  let argsStart = 0;
+  for (let i = 0; i < rawArgs.length; i++) {
+    const arg = rawArgs[i];
+    const name = flagName(arg);
+
+    if (arg === commandName) {
+      return rawArgs.slice(i + 1);
+    }
+
+    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
+      break;
+    }
+
+    if (!arg.includes('=') && globalCliFlagTakesValue(name)) {
+      i++;
+    }
+    argsStart = i + 1;
+  }
+
+  return rawArgs.slice(argsStart);
+}
+
 export function parseCurlLikeArgs(
   rawArgs: string[],
   commandName: string
@@ -102,7 +133,7 @@ export function parseCurlLikeArgs(
     json: false,
     toolFlags: [] as string[],
   };
-  const args = rawArgs[0] === commandName ? rawArgs.slice(1) : [...rawArgs];
+  const args = getCommandArgs(rawArgs, commandName);
   const separatorIndex = args.indexOf('--');
   const beforeSeparator =
     separatorIndex === -1 ? args : args.slice(0, separatorIndex);
