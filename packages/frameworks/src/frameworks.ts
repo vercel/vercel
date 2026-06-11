@@ -4473,11 +4473,6 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/backends' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      every: [
-        {
-          path: 'package.json',
-        },
-      ],
       some: [
         {
           path: 'server.cjs',
