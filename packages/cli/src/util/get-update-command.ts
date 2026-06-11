@@ -193,18 +193,16 @@ export async function getUpdateCommandInfo(): Promise<{
   global: boolean;
 }> {
   const nativeInstall = isNativeBinaryInstall();
-
-  if (
-    nativeInstall &&
-    process.platform !== 'win32' &&
-    getNativeInstallMethod() === 'standalone'
-  ) {
-    return { command: `${packageName} upgrade`, global: true };
-  }
-
   const pkgAndVersion = `${getUpdatePackageName()}@latest`;
 
   if (nativeInstall) {
+    if (
+      process.platform !== 'win32' &&
+      getNativeInstallMethod() === 'standalone'
+    ) {
+      return { command: `${packageName} upgrade`, global: true };
+    }
+
     // The native binary's process.argv[1] points into its virtual filesystem
     // snapshot, so detect the package manager from the real install location.
     const segments = process.execPath.split(sep);
