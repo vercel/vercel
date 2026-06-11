@@ -184,6 +184,18 @@ test(
 );
 
 test(
+  '[vercel dev] Should support Go standalone server mode',
+  testFixtureStdio('go-standalone', async (testPath: any) => {
+    await testPath(200, `/`, 'Standalone Go: /');
+    await testPath(
+      200,
+      `/some/nested/path`,
+      'Standalone Go: /some/nested/path'
+    );
+  })
+);
+
+test(
   '[vercel dev] Should support `*.go` API serverless functions with external modules',
   testFixtureStdio('go-external-module', async (testPath: any) => {
     await testPath(200, `/api`, 'hello from go!');
