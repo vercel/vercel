@@ -8,6 +8,7 @@ import {
   rmSync,
 } from 'node:fs';
 import { compileDevTemplates } from './compile-templates.mjs';
+import { generateOpenApiCommandDslTypes } from './generate-openapi-command-dsl-types.mjs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { esbuild, getDependencies } from '../../../utils/build.mjs';
@@ -42,6 +43,7 @@ function envToString(key) {
 // Read the secrets from GitHub Actions and generate a file.
 // During local development, these secrets will be empty.
 createConstants();
+await generateOpenApiCommandDslTypes();
 
 // Validate that index.ts doesn't use require() for command loading.
 // Commands must use `await import('./commands-bulk.js')` for code splitting.
@@ -53,6 +55,18 @@ createConstants();
       `\nError: src/index.ts uses require() to load commands (${badRequires.length} occurrence(s)).` +
         `\nCommands must be loaded via: (await import('./commands-bulk.js')).<name>` +
         `\nWe use this pattern for more efficient code splitting and minimizing the startup time of the CLI.\n`
+    );
+    process.exit(1);
+  }
+
+  const staticInferImports = indexSrc.match(
+    /from ['"]\.\/util\/openapi\/(?:infer-commands|inferred-commands-config)['"]/g
+  );
+  if (staticInferImports) {
+    console.error(
+      `\nError: src/index.ts statically imports inferred OpenAPI command modules (${staticInferImports.length} occurrence(s)).` +
+        `\nLoad them via: await import('./infer-commands-bundle.js')` +
+        `\nwhen --infer is provided.\n`
     );
     process.exit(1);
   }
@@ -95,11 +109,13 @@ const jsoncParserPlugin = {
 // - src/index.ts (main entry)
 // - src/help.ts (standalone help for fast --help)
 // - src/commands-bulk.ts (non-priority commands bundle)
+// - src/infer-commands-bundle.ts (--infer OpenAPI DSL commands)
 // - src/commands/[priority]/index.ts (priority command entry points)
 const entryPoints = [
   join(cwd, 'src/index.ts'),
   join(cwd, 'src/help.ts'),
   join(cwd, 'src/commands-bulk.ts'),
+  join(cwd, 'src/infer-commands-bundle.ts'),
   ...PRIORITY_COMMANDS.map(cmd => join(cwd, `src/commands/${cmd}/index.ts`)),
 ];
 

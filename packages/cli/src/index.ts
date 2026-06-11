@@ -177,11 +177,56 @@ class InMemoryReporter implements Reporter {
   }
 }
 
+type InferCommandsBundle = typeof import('./infer-commands-bundle.js');
+
+let inferCommandsBundlePromise: Promise<InferCommandsBundle> | undefined;
+
+function loadInferCommandsBundle(): Promise<InferCommandsBundle> {
+  if (!inferCommandsBundlePromise) {
+    inferCommandsBundlePromise = import('./infer-commands-bundle.js');
+  }
+  return inferCommandsBundlePromise;
+}
+
+async function runInferredCommandWhenEnabled(
+  inferEnabled: boolean,
+  inferHelpRequested: boolean,
+  rawCliArgs: string[],
+  options: {
+    execute: boolean;
+    client?: Client;
+    columns: number;
+  }
+): Promise<number | null> {
+  if (!inferEnabled) {
+    return null;
+  }
+
+  const { runInferredCommand, inferredOpenApiCommands } =
+    await loadInferCommandsBundle();
+
+  return runInferredCommand(inferredOpenApiCommands, rawCliArgs, {
+    execute: options.execute,
+    client: options.client,
+    help: inferHelpRequested,
+    columns: options.columns,
+  });
+}
+
 const main = async () => {
   const traceReporter = new InMemoryReporter();
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
   const isTelemetryFlushCommand =
     process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
+  const originalCliArgs = process.argv.slice(2);
+  const inferEnabled = originalCliArgs.includes('--infer');
+  const inferHelpRequested = originalCliArgs.includes('--infer-help');
+  const rawCliArgs = originalCliArgs.filter(
+    arg => arg !== '--infer' && arg !== '--infer-help'
+  );
+  const argvForParsing = inferEnabled
+    ? [process.argv[0], process.argv[1], ...rawCliArgs]
+    : process.argv;
 
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -191,7 +236,7 @@ const main = async () => {
 
   const parseInitialArgs = () =>
     parseArguments(
-      process.argv,
+      argvForParsing,
       {
         '--version': Boolean,
         '-v': '--version',
@@ -262,6 +307,21 @@ const main = async () => {
     // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.log(pkg.version);
     return 0;
+  }
+
+  if (inferEnabled) {
+    const inferredCommandExitCode = await runInferredCommandWhenEnabled(
+      inferEnabled,
+      inferHelpRequested,
+      rawCliArgs,
+      {
+        execute: false,
+        columns: process.stderr.columns ?? 80,
+      }
+    );
+    if (inferredCommandExitCode !== null) {
+      return inferredCommandExitCode;
+    }
   }
 
   // Handle bare `-h` directly
@@ -547,7 +607,7 @@ const main = async () => {
     authConfig,
     localConfig,
     localConfigPath,
-    argv: process.argv,
+    argv: argvForParsing,
     telemetryEventStore,
     isAgent,
     agentName: detectedAgent?.name,
@@ -858,6 +918,23 @@ const main = async () => {
       }
 
       client.config.currentTeam = related.id;
+    }
+  }
+
+  if (inferEnabled) {
+    const inferredCommandExecutionExitCode =
+      await runInferredCommandWhenEnabled(
+        inferEnabled,
+        inferHelpRequested,
+        rawCliArgs,
+        {
+          execute: true,
+          client,
+          columns: process.stderr.columns ?? 80,
+        }
+      );
+    if (inferredCommandExecutionExitCode !== null) {
+      return finishWithExitCode(inferredCommandExecutionExitCode);
     }
   }
 

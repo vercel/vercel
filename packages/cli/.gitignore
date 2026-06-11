@@ -2,3 +2,6 @@
 !test/dev/fixtures/**/.now
 !test/dev/fixtures/**/.vercel
 .env*.local
+
+# Generated at build time by scripts/generate-openapi-command-dsl-types.mjs
+src/util/openapi/generated-command-dsl-types.d.ts
