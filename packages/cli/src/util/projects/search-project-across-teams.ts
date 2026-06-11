@@ -1,6 +1,7 @@
 import type Client from '../client';
 import type { Project, Org, Team } from '@vercel-internals/types';
 import getTeams from '../teams/get-teams';
+import getUser from '../get-user';
 import getProjectByIdOrName from './get-project-by-id-or-name';
 import { ProjectNotFound } from '../errors-ts';
 import slugify from '@sindresorhus/slugify';
@@ -28,6 +29,19 @@ export interface CrossTeamSearchResult {
   searchedTeamSlugs: string[];
   skippedLimitedTeamSlugs: string[];
   skippedLimitedTeams: Team[];
+  currentTeamId?: string;
+  currentTeamSlug?: string;
+  otherTeamSearch?: Promise<{
+    matches: CrossTeamMatch[];
+    searchedTeamSlugs: string[];
+  }>;
+}
+
+type SearchPhase = 'current-team' | 'other-teams' | 'all-teams';
+
+interface RepoSearchContext {
+  remote: ResolvedGitRemote;
+  relativePath: string;
 }
 
 export default async function searchProjectAcrossTeams(
@@ -40,25 +54,34 @@ export default async function searchProjectAcrossTeams(
     teams,
     skipLimited,
     gitProjectName,
+    onSearchPhase,
   }: {
     autoConfirm?: boolean;
     nonInteractive?: boolean;
     teams?: Team[];
     skipLimited?: boolean;
     gitProjectName?: string;
+    onSearchPhase?: (phase: SearchPhase) => void;
   } = {}
 ): Promise<CrossTeamSearchResult> {
-  const teamsToSearch = teams ?? (await getTeams(client));
+  const [teamsToSearch, user] = await Promise.all([
+    teams ? Promise.resolve(teams) : getTeams(client),
+    teams ? Promise.resolve(null) : getUser(client),
+  ]);
+  const currentTeamId = client.config.currentTeam || user?.defaultTeamId;
   const shouldSkipLimited = skipLimited ?? true;
 
   // Skip "limited" (SAML-enforced) teams here to avoid forcing re-auth
   // during auto-detect. If nothing matches, `setupAndLink` falls through to
   // `selectOrg`, where picking a limited team triggers re-auth deliberately.
+  // The active team is still searched first: it is the user's current scope, so
+  // preferring it avoids linking to a project in another team just because that
+  // slower search happened to finish later.
   const accessibleTeams: typeof teamsToSearch = [];
   const skippedTeams: Team[] = [];
   const skippedSlugs: string[] = [];
   for (const t of teamsToSearch) {
-    if (shouldSkipLimited && t.limited) {
+    if (shouldSkipLimited && t.limited && t.id !== currentTeamId) {
       skippedTeams.push(t);
       skippedSlugs.push(t.slug);
     } else {
@@ -72,20 +95,109 @@ export default async function searchProjectAcrossTeams(
     );
   }
 
-  const searchedTeamSlugs = accessibleTeams.map(team => team.slug);
   const orgs: Org[] = accessibleTeams.map(t => ({
     type: 'team' as const,
     id: t.id,
     slug: t.slug,
   }));
+  const currentTeam = currentTeamId
+    ? accessibleTeams.find(team => team.id === currentTeamId)
+    : undefined;
+  const currentTeamOrg = currentTeam
+    ? orgs.find(org => org.id === currentTeam.id)
+    : undefined;
+  const otherOrgs = currentTeamOrg
+    ? orgs.filter(org => org.id !== currentTeamOrg.id)
+    : orgs;
+
+  const repoSearchContextPromise = getRepoSearchContext({
+    client,
+    cwd,
+    autoConfirm,
+    nonInteractive,
+  });
+
+  const otherMatchesPromise = searchProjectsForOrgs({
+    client,
+    projectName,
+    gitProjectName,
+    orgs: otherOrgs,
+    repoSearchContextPromise,
+  }).catch(error => {
+    output.debug(`Failed to search projects outside current team: ${error}`);
+    return [];
+  });
+  const otherTeamSearch = otherMatchesPromise.then(matches => ({
+    matches,
+    searchedTeamSlugs: otherOrgs.map(org => org.slug),
+  }));
+
+  const searchedTeamSlugs: string[] = [];
+  if (currentTeamOrg) {
+    onSearchPhase?.('current-team');
+    const currentTeamMatches = await searchProjectsForOrgs({
+      client,
+      projectName,
+      gitProjectName,
+      orgs: [currentTeamOrg],
+      repoSearchContextPromise,
+    });
+    searchedTeamSlugs.push(currentTeamOrg.slug);
+
+    if (currentTeamMatches.length > 0) {
+      // Keep the other-team search running but make this result deterministic.
+      void otherMatchesPromise;
+      return {
+        matches: currentTeamMatches,
+        searchedTeamSlugs,
+        skippedLimitedTeamSlugs: skippedSlugs,
+        skippedLimitedTeams: skippedTeams,
+        currentTeamId,
+        currentTeamSlug: currentTeamOrg.slug,
+        otherTeamSearch,
+      };
+    }
+
+    onSearchPhase?.('other-teams');
+  } else {
+    onSearchPhase?.('all-teams');
+  }
+
+  const otherTeamResult = await otherTeamSearch;
+  searchedTeamSlugs.push(...otherTeamResult.searchedTeamSlugs);
+
+  return {
+    matches: otherTeamResult.matches,
+    searchedTeamSlugs,
+    skippedLimitedTeamSlugs: skippedSlugs,
+    skippedLimitedTeams: skippedTeams,
+    currentTeamId,
+    currentTeamSlug: currentTeamOrg?.slug,
+  };
+}
+
+async function searchProjectsForOrgs({
+  client,
+  projectName,
+  gitProjectName,
+  orgs,
+  repoSearchContextPromise,
+}: {
+  client: Client;
+  projectName: string;
+  gitProjectName?: string;
+  orgs: Org[];
+  repoSearchContextPromise: Promise<RepoSearchContext | null>;
+}): Promise<CrossTeamMatch[]> {
+  if (orgs.length === 0) {
+    return [];
+  }
 
   const repoMatchesPromise = searchProjectsByRepoRoot({
     client,
-    cwd,
     gitProjectName,
     orgs,
-    autoConfirm,
-    nonInteractive,
+    repoSearchContextPromise,
   });
 
   const slugifiedName = slugify(projectName);
@@ -122,32 +234,23 @@ export default async function searchProjectAcrossTeams(
     }
   }
 
-  return {
-    matches,
-    searchedTeamSlugs,
-    skippedLimitedTeamSlugs: skippedSlugs,
-    skippedLimitedTeams: skippedTeams,
-  };
+  return matches;
 }
 
-async function searchProjectsByRepoRoot({
+async function getRepoSearchContext({
   client,
   cwd,
-  gitProjectName,
-  orgs,
   autoConfirm,
   nonInteractive,
 }: {
   client: Client;
   cwd: string;
-  gitProjectName?: string;
-  orgs: Org[];
   autoConfirm: boolean;
   nonInteractive: boolean;
-}): Promise<CrossTeamMatch[]> {
+}): Promise<RepoSearchContext | null> {
   const rootPath = await findRepoRoot(cwd);
   if (!rootPath) {
-    return [];
+    return null;
   }
 
   let remote: ResolvedGitRemote | undefined;
@@ -159,14 +262,33 @@ async function searchProjectsByRepoRoot({
     output.debug(
       `Failed to resolve Git remote for cross-team search: ${error}`
     );
-    return [];
+    return null;
   }
 
   if (!remote) {
+    return null;
+  }
+
+  return { remote, relativePath: relative(rootPath, cwd) };
+}
+
+async function searchProjectsByRepoRoot({
+  client,
+  gitProjectName,
+  orgs,
+  repoSearchContextPromise,
+}: {
+  client: Client;
+  gitProjectName?: string;
+  orgs: Org[];
+  repoSearchContextPromise: Promise<RepoSearchContext | null>;
+}): Promise<CrossTeamMatch[]> {
+  const repoSearchContext = await repoSearchContextPromise;
+  if (!repoSearchContext) {
     return [];
   }
 
-  const relativePath = relative(rootPath, cwd);
+  const { remote, relativePath } = repoSearchContext;
   const results = await Promise.all(
     orgs.map(async org => {
       try {
