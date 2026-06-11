@@ -152,10 +152,12 @@ export default async function redeploy(client: Client): Promise<number> {
 
     printAlignedLabel('Inspect', chalk.cyan(deployment.inspectorUrl));
 
+    // The ▲ gutter belongs on the Aliased row, which only prints when we
+    // wait for alias assignment — with --no-wait it falls back to Production.
     printAlignedLabel(
       isProdDeployment ? 'Production' : 'Preview',
       chalk.cyan(previewUrl),
-      isProdDeployment ? { gutter: '▲' } : {}
+      isProdDeployment && noWait ? { gutter: '▲' } : {}
     );
 
     if (!client.stdout.isTTY) {

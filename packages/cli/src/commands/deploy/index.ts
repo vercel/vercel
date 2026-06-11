@@ -2166,10 +2166,12 @@ async function handleContinueDeployment({
 
         const isProdDeployment = finalDeployment.target === 'production';
         const previewUrl = `https://${finalDeployment.url}`;
+        // The ▲ gutter belongs on the Aliased row, which only prints when we
+        // wait for alias assignment — with noWait it falls back to Production.
         printAlignedLabel(
           isProdDeployment ? 'Production' : 'Preview',
           chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          isProdDeployment && noWait ? { gutter: '▲' } : {}
         );
 
         if (noWait) {
