@@ -1,10 +1,13 @@
 import { frameworkList } from '@vercel/frameworks';
 import type {
   ExperimentalService,
+  ExperimentalServiceV2,
+  Service,
   ServiceDetectionError,
 } from '@vercel/fs-detectors';
 import {
   getServiceQueueTopics,
+  isExperimentalServiceV2,
   isQueueTriggeredService,
   isScheduleTriggeredService,
   isWorkflowTriggeredService,
@@ -102,9 +105,16 @@ function getServiceDescriptionInfo(
     return { label: typeLabel, colorFn: typeColorFn };
   }
 
+  return getFrameworkRuntimeBuilderInfo(service);
+}
+
+function getFrameworkRuntimeBuilderInfo(service: {
+  framework?: string;
+  runtime?: string;
+  builder?: { use?: string };
+}): ServiceDescriptionInfo {
   const frameworkName = getFrameworkName(service.framework);
 
-  // Show the most detailed info: framework > runtime > builder
   if (frameworkName && service.framework) {
     const colorFn = frameworkColors[service.framework] || chalk.cyan;
     return { label: frameworkName, colorFn };
@@ -138,16 +148,33 @@ function getServiceTarget(service: ExperimentalService): string {
 }
 
 /**
- * Output format:
+ * Output format (`experimentalServices`):
  * Detected services:
  *   frontend          [Next.js]   →  /
  *   api               [python]    →  /api/*
  *   cleanup           [node]      →  schedule: 0 0 * * *
  *   processor         [node]      →  topics: jobs
+ *
+ * Output format (`experimentalServicesV2`): services are internal route/output
+ * targets reachable via top-level service rewrites (not a public route prefix),
+ * so only the name and framework/runtime are shown.
+ * Detected services:
+ *   my_frontend       [Next.js]
+ *   my_backend        [python]
  */
-export function displayDetectedServices(services: ExperimentalService[]): void {
+export function displayDetectedServices(services: Service[]): void {
   output.print(`Detected services:\n`);
 
+  // `experimentalServices` and `experimentalServicesV2` are mutually exclusive
+  const rows: string[][] = services.some(isExperimentalServiceV2)
+    ? buildServiceRowsV2(services.filter(isExperimentalServiceV2))
+    : buildServiceRowsV1(services as ExperimentalService[]);
+
+  const tableOutput = table(rows, { align: ['l', 'l', 'l', 'l'], hsep: 2 });
+  output.print(`${tableOutput}\n`);
+}
+
+function buildServiceRowsV1(services: ExperimentalService[]): string[][] {
   const outputOrder: Record<string, number> = {
     web: 0,
     cron: 1,
@@ -158,7 +185,7 @@ export function displayDetectedServices(services: ExperimentalService[]): void {
     (a, b) => (outputOrder[a.type] ?? 3) - (outputOrder[b.type] ?? 3)
   );
 
-  const rows: string[][] = sorted.map(service => {
+  return sorted.map(service => {
     const descInfo = getServiceDescriptionInfo(service);
     const target = getServiceTarget(service);
 
@@ -169,9 +196,14 @@ export function displayDetectedServices(services: ExperimentalService[]): void {
       target,
     ];
   });
+}
 
-  const tableOutput = table(rows, { align: ['l', 'l', 'l', 'l'], hsep: 2 });
-  output.print(`${tableOutput}\n`);
+function buildServiceRowsV2(services: ExperimentalServiceV2[]): string[][] {
+  return services.map(service => {
+    const descInfo = getFrameworkRuntimeBuilderInfo(service);
+
+    return [`• ${service.name}`, descInfo.colorFn(`[${descInfo.label}]`)];
+  });
 }
 
 export function displayServicesConfigNote(

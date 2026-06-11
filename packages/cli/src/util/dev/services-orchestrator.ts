@@ -8,12 +8,16 @@ import {
   getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceWorkerPathPrefix,
+  isExperimentalServiceV2,
   type ExperimentalService,
+  type ExperimentalServiceV2,
+  type Service,
 } from '@vercel/fs-detectors';
 import type { Cron } from '@vercel/build-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import { getNextCronDelay } from './cron';
 import {
+  isExperimentalService,
   isQueueBackedService,
   isQueueTriggeredService,
   isScheduleTriggeredService,
@@ -29,6 +33,7 @@ import {
   type BuilderV3,
   type BuilderVX,
   type Config,
+  type StartDevServerOptions,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
 import { importBuilders } from '../build/import-builders';
@@ -161,8 +166,42 @@ function getServiceRoutePrefixes(service: ExperimentalService): string[] {
   return [];
 }
 
+interface ServiceStartSpec {
+  rootPath: string;
+  rootLabel: string;
+  framework: Framework | undefined;
+  builderSpec: string | undefined;
+  entrypoint: string;
+  builderConfig: Config | undefined;
+  frameworkForDev: string;
+  servicePayload: NonNullable<StartDevServerOptions['service']>;
+  routePrefixes: string[];
+  env: NodeJS.ProcessEnv;
+  explicitDevCommand?: string;
+}
+
+// Use the resolved builder.src which includes framework defaults,
+// or fall back to explicit entrypoint.
+// Strip the root prefix since it is already in the service workspace.
+// e.g., builder.src="frontend/package.json" + workspace="frontend"
+//   → entrypoint="package.json" (relative to workspacePath)
+function getEntrypointForService(
+  builderSrc: string | undefined,
+  entrypoint: string | undefined,
+  dir: string
+): string {
+  let resolved = builderSrc || entrypoint || '';
+  if (dir && dir !== '.') {
+    const prefix = dir.endsWith('/') ? dir : `${dir}/`;
+    if (resolved.startsWith(prefix)) {
+      resolved = resolved.slice(prefix.length);
+    }
+  }
+  return resolved;
+}
+
 interface ServicesOrchestratorOptions {
-  services: ExperimentalService[];
+  services: Service[];
   cwd: string;
   repoRoot: string;
   env: NodeJS.ProcessEnv;
@@ -253,7 +292,7 @@ export class ServicesOrchestrator {
   private stopping = false;
   private exitBackstop: (() => void) | undefined;
 
-  private services: ExperimentalService[];
+  private services: Service[];
   private cwd: string;
   private repoRoot: string;
   private envFilesValues: NodeJS.ProcessEnv;
@@ -274,7 +313,9 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
-    this.hasQueueServices = options.services.some(isQueueBackedService);
+    this.hasQueueServices = options.services
+      .filter(isExperimentalService)
+      .some(isQueueBackedService);
   }
 
   // Synchronously SIGKILL every tracked process group. Used from
@@ -505,25 +546,52 @@ export class ServicesOrchestrator {
   }
 
   private async startService(
-    service: ExperimentalService,
+    service: Service,
     colorIndex: number
   ): Promise<ServiceDevProcess> {
-    const workspacePath = path.join(this.cwd, service.workspace || '.');
-    const framework = frameworkList.find(f => f.slug === service.framework);
     const logger = createServiceLogger(
       service.name,
       colorIndex,
       this.maxNameLength
     );
+    const spec = isExperimentalServiceV2(service)
+      ? this.getV2StartSpec(service)
+      : this.getV1StartSpec(service);
 
+    if (spec.builderSpec) {
+      const result = await this.tryStartWithBuilder(service.name, spec, logger);
+      if (result) {
+        return result;
+      }
+    }
+
+    const devCommand =
+      spec.explicitDevCommand || spec.framework?.settings?.devCommand?.value;
+    if (!devCommand) {
+      throw new Error(
+        `No dev server available for service "${service.name}" (framework: ${service.framework ?? 'none'}).`
+      );
+    }
+
+    return this.spawnDevCommandProcess({
+      name: service.name,
+      devCommand,
+      workspacePath: spec.rootPath,
+      env: spec.env,
+      logger,
+      builderConfig: spec.builderConfig,
+      routePrefixes: spec.routePrefixes,
+      workspaceLabel: spec.rootLabel,
+    });
+  }
+
+  private getV1StartSpec(service: ExperimentalService): ServiceStartSpec {
+    const framework = frameworkList.find(f => f.slug === service.framework);
     const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
 
     let perServiceEnv: Record<string, string> = {};
+    // other services URLs injection (`experimentalServices` only feature)
     if (this.useImplicitEnvInjection) {
-      // Legacy behavior for experimentalServices / auto-detected: synthesize
-      // `{NAME}_URL` and `{PREFIX}{NAME}_URL` env vars for every web service.
-      // Pass only the consumer's framework so its prefix wins for client-side
-      // (relative) names; absolute `{NAME}_URL` is always emitted.
       perServiceEnv = getExperimentalServiceUrlEnvVars({
         services: this.services,
         frameworkList: framework ? [framework] : [],
@@ -578,43 +646,80 @@ export class ServicesOrchestrator {
       env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
     }
 
-    // Try to use builder's startDevServer if available
-    // Prefer framework's useRuntime, but fall back to resolved builder from service config
-    const builderSpec = framework?.useRuntime?.use || service.builder?.use;
-    if (builderSpec) {
-      const result = await this.tryStartWithBuilder(
-        service,
-        builderSpec,
-        workspacePath,
-        env,
-        logger
-      );
-      if (result) {
-        return result;
-      }
-    }
-
-    // Fallback to framework's devCommand
-    return this.startServiceWithDevCommand(
-      service,
+    const workspace = service.workspace || '.';
+    return {
+      rootPath: path.join(this.cwd, workspace),
+      rootLabel: workspace,
       framework,
-      workspacePath,
+      // Prefer the framework's useRuntime, falling back to the resolved builder.
+      builderSpec: framework?.useRuntime?.use || service.builder?.use,
+      entrypoint: getEntrypointForService(
+        service.builder?.src,
+        service.entrypoint,
+        workspace
+      ),
+      builderConfig: service.builder?.config,
+      frameworkForDev: service.framework || 'services',
+      servicePayload: {
+        name: service.name,
+        type: service.type,
+        trigger: service.trigger,
+        routePrefix: service.routePrefix,
+        subdomain: service.subdomain,
+        workspace: service.workspace,
+        schedule: service.schedule,
+      },
+      routePrefixes: getServiceRoutePrefixes(service),
       env,
-      logger
-    );
+    };
   }
 
+  private getV2StartSpec(service: ExperimentalServiceV2): ServiceStartSpec {
+    const framework = frameworkList.find(f => f.slug === service.framework);
+    const env = cloneEnv(
+      {
+        FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
+        BROWSER: 'none',
+      },
+      cloneEnv(this.envFilesValues, process.env)
+    );
+
+    const root = service.root || '.';
+    return {
+      rootPath: path.join(this.cwd, root),
+      rootLabel: root,
+      framework,
+      builderSpec: framework?.useRuntime?.use || service.builder?.use,
+      entrypoint: getEntrypointForService(
+        service.builder?.src,
+        service.entrypoint,
+        root
+      ),
+      builderConfig: service.builder?.config,
+      frameworkForDev: service.framework || 'services',
+      servicePayload: { name: service.name, workspace: root },
+      routePrefixes: [],
+      env,
+      explicitDevCommand: service.devCommand,
+    };
+  }
+
+  // Start a service via its builder's `startDevServer`, if it exposes one.
+  // Returns null to fall back to a dev command
   private async tryStartWithBuilder(
-    service: ExperimentalService,
-    builderSpec: string,
-    workspacePath: string,
-    env: NodeJS.ProcessEnv,
+    name: string,
+    spec: ServiceStartSpec,
     logger: ServiceLogger
   ): Promise<ServiceDevProcess | null> {
+    if (!spec.builderSpec) {
+      return null;
+    }
     try {
-      const builders = await importBuilders(new Set([builderSpec]), this.cwd);
-      const builderWithPkg = builders.get(builderSpec);
-      const builder = builderWithPkg?.builder as
+      const builders = await importBuilders(
+        new Set([spec.builderSpec]),
+        this.cwd
+      );
+      const builder = builders.get(spec.builderSpec)?.builder as
         | BuilderV2
         | BuilderV3
         | BuilderVX
@@ -625,51 +730,26 @@ export class ServicesOrchestrator {
       }
 
       output.debug(
-        `Starting ${chalk.bold(service.name)} using ${chalk.cyan.bold(builderSpec)}`
+        `Starting ${chalk.bold(name)} using ${chalk.cyan.bold(spec.builderSpec)}`
       );
 
-      // Use the resolved builder.src which includes framework defaults,
-      // or fall back to explicit entrypoint.
-      // Strip the workspace prefix since workPath is already the service workspace.
-      // e.g., builder.src="frontend/package.json" + workspace="frontend"
-      //   → entrypoint="package.json" (relative to workspacePath)
-      let entrypoint = service.builder?.src || service.entrypoint || '';
-      const workspace = service.workspace || '.';
-      if (workspace !== '.') {
-        const wsPrefix = workspace + '/';
-        if (entrypoint.startsWith(wsPrefix)) {
-          entrypoint = entrypoint.slice(wsPrefix.length);
-        }
-      }
-      // Mirror services build behavior in dev: when a service doesn't declare
-      // an explicit framework (runtime-only services), builders should still
-      // receive the project framework context of "services".
-      const frameworkForDev = service.framework || 'services';
       const result = await builder.startDevServer({
-        entrypoint,
-        workPath: workspacePath,
+        entrypoint: spec.entrypoint,
+        workPath: spec.rootPath,
         repoRootPath: this.repoRoot,
         config: {
-          ...(service.builder?.config || {}),
-          framework: frameworkForDev,
+          ...(spec.builderConfig || {}),
+          framework: spec.frameworkForDev,
         },
         meta: {
           isDev: true,
-          env,
+          env: spec.env,
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
-          serviceName: service.name,
+          serviceName: name,
         },
-        service: {
-          name: service.name,
-          type: service.type,
-          trigger: service.trigger,
-          routePrefix: service.routePrefix,
-          subdomain: service.subdomain,
-          workspace: service.workspace,
-          schedule: service.schedule,
-        },
+        service: spec.servicePayload,
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
         onStderr: (data: Buffer) => logger.stderr.write(data),
@@ -680,21 +760,21 @@ export class ServicesOrchestrator {
       }
 
       const host = await checkForPort(result.port, STARTUP_TIMEOUT);
-      output.debug(`Service ${service.name} started on ${host}:${result.port}`);
+      output.debug(`Service ${name} started on ${host}:${result.port}`);
 
       return {
-        name: service.name,
+        name,
         host,
         port: result.port,
         pid: result.pid,
         shutdown: result.shutdown,
-        routePrefixes: getServiceRoutePrefixes(service),
-        workspace: service.workspace || '.',
+        routePrefixes: spec.routePrefixes,
+        workspace: spec.rootLabel,
         logger,
         crons: result.crons,
       };
     } catch (err) {
-      output.debug(`Failed to use startDevServer for ${service.name}: ${err}`);
+      output.debug(`Failed to use startDevServer for ${name}: ${err}`);
       // Re-throw NowBuildError so user-facing errors are displayed properly
       if (err instanceof NowBuildError) {
         throw err;
@@ -703,22 +783,28 @@ export class ServicesOrchestrator {
     }
   }
 
-  // Adapted from DevServer
-  private async startServiceWithDevCommand(
-    service: ExperimentalService,
-    framework: Framework | undefined,
-    workspacePath: string,
-    env: NodeJS.ProcessEnv,
-    logger: ServiceLogger
-  ): Promise<ServiceDevProcess> {
-    const devCommand = framework?.settings?.devCommand?.value;
-    if (!devCommand) {
-      throw new Error(
-        `No dev server available for service "${service.name}" (framework: ${service.framework})`
-      );
-    }
+  private async spawnDevCommandProcess(params: {
+    name: string;
+    devCommand: string;
+    workspacePath: string;
+    env: NodeJS.ProcessEnv;
+    logger: ServiceLogger;
+    builderConfig: Config | undefined;
+    routePrefixes: string[];
+    workspaceLabel: string;
+  }): Promise<ServiceDevProcess> {
+    const {
+      name,
+      devCommand,
+      workspacePath,
+      env,
+      logger,
+      builderConfig,
+      routePrefixes,
+      workspaceLabel,
+    } = params;
 
-    await this.syncDependencies(service.builder?.config, workspacePath, logger);
+    await this.syncDependencies(builderConfig, workspacePath, logger);
 
     const port = await getPort();
     env.PORT = `${port}`;
@@ -732,7 +818,7 @@ export class ServicesOrchestrator {
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     output.debug(
-      `Starting ${chalk.bold(service.name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
+      `Starting ${chalk.bold(name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
     );
 
     // Pass terminal width so child frameworks can format output correctly.
@@ -748,17 +834,15 @@ export class ServicesOrchestrator {
     });
 
     if (!child.pid) {
-      throw new Error(
-        `Failed to start service "${service.name}": no PID returned`
-      );
+      throw new Error(`Failed to start service "${name}": no PID returned`);
     } else if (!child.stdout || !child.stderr) {
       throw new Error(
-        `Failed to start service "${service.name}": expected child process to have stdout and stderr`
+        `Failed to start service "${name}": expected child process to have stdout and stderr`
       );
     }
 
     // Track process immediately so we can kill it if startup fails
-    this.managedProcesses.set(service.name, child);
+    this.managedProcesses.set(name, child);
 
     child.stdout?.on('data', (chunk: Buffer) => {
       logger.stdout.write(chunk);
@@ -769,22 +853,22 @@ export class ServicesOrchestrator {
 
     let host: string;
     try {
-      host = await this.waitForPort(child, service.name, port);
+      host = await this.waitForPort(child, name, port);
     } catch (error) {
-      this.managedProcesses.delete(service.name);
+      this.managedProcesses.delete(name);
       throw error;
     }
 
-    output.debug(`Service ${service.name} listening on ${host}:${port}`);
+    output.debug(`Service ${name} listening on ${host}:${port}`);
 
     return {
-      name: service.name,
+      name,
       host,
       port,
       pid: child.pid,
       process: child,
-      routePrefixes: getServiceRoutePrefixes(service),
-      workspace: service.workspace || '.',
+      routePrefixes,
+      workspace: workspaceLabel,
       logger,
     };
   }
@@ -928,7 +1012,10 @@ export class ServicesOrchestrator {
       const crons =
         managed.crons && managed.crons.length > 0
           ? managed.crons
-          : service && isScheduleTriggeredService(service) && service.schedule
+          : service &&
+              isExperimentalService(service) &&
+              isScheduleTriggeredService(service) &&
+              service.schedule
             ? getStaticServiceSchedules(service.schedule).map(schedule => ({
                 path: getInternalServiceCronPath(
                   name,

@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
-import getUpdateCommand from './get-update-command';
+import { tmpdir } from 'os';
+import { getUpdateCommandInfo } from './get-update-command';
 import {
   getNativeInstallMethod,
   isNativeBinaryInstall,
@@ -20,17 +21,20 @@ export async function executeUpgrade(): Promise<number> {
     return executeStandaloneUpgrade();
   }
 
-  const updateCommand = await getUpdateCommand();
+  const { command: updateCommand, global } = await getUpdateCommandInfo();
   const [command, ...args] = updateCommand.split(' ');
 
+  const cwd = global ? tmpdir() : process.cwd();
+
   output.log(`Upgrading Vercel CLI...`);
-  output.debug(`Executing: ${updateCommand}`);
+  output.debug(`Executing: ${updateCommand} (cwd: ${cwd})`);
 
   return new Promise<number>(resolve => {
     const stdout: Uint8Array[] = [];
     const stderr: Uint8Array[] = [];
 
     const upgradeProcess = spawn(command, args, {
+      cwd,
       stdio: ['inherit', 'pipe', 'pipe'],
       shell: false,
     });
