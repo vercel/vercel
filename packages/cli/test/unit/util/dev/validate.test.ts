@@ -246,7 +246,7 @@ describe('validateConfig', () => {
       >[0];
 
     it('rejects maxDuration above the default 1800s bound when unset', () => {
-      const error = validateConfig(configWith(1800));
+      const error = validateConfig(configWith(1900));
       expect(error).not.toBeNull();
       expect(error?.message).toMatch(/1800/);
     });
