@@ -2,11 +2,6 @@ import type { WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
 export interface UpgradeWebSocketOptions {
-  /**
-   * Maximum allowed message size in bytes.
-   *
-   * This is forwarded to ws's WebSocketServer `maxPayload` option.
-   */
   maxPayload?: number;
 }
 
