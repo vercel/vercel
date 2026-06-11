@@ -1,5 +1,14 @@
 # vercel
 
+## 54.12.2
+
+### Patch Changes
+
+- Updated dependencies [4421ad9]
+  - @vercel/backends@0.8.13
+  - @vercel/static-build@2.10.3
+  - @vercel/express@0.1.104
+
 ## 54.12.1
 
 ### Patch Changes
