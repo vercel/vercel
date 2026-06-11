@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.29.1
+
+### Patch Changes
+
+- 32a730e: Elevate maximum maxDuration to 1800s
+
 ## 13.29.0
 
 ### Minor Changes

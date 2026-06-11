@@ -77,6 +77,15 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliOptionSpecUrl(specUrl: string | undefined) {
+    if (specUrl) {
+      this.trackCliOption({
+        option: 'spec-url',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagPaginate(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('paginate');
