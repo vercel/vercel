@@ -579,6 +579,314 @@ export const enableSubcommand = {
   ],
 } as const;
 
+export const segmentsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all feature flag segments for the current project',
+  arguments: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all segments',
+      value: `${packageName} flags segments ls`,
+    },
+    {
+      name: 'List segments as JSON',
+      value: `${packageName} flags segments ls --json`,
+    },
+  ],
+} as const;
+
+export const segmentsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Display information about a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show details of a segment',
+      value: `${packageName} flags segments inspect beta-users`,
+    },
+    {
+      name: 'Show segment data as JSON',
+      value: `${packageName} flags segments inspect beta-users --json`,
+    },
+  ],
+} as const;
+
+export const segmentsCreateSubcommand = {
+  name: 'create',
+  aliases: ['add'],
+  description: 'Create a feature flag segment',
+  arguments: [
+    {
+      name: 'slug',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'Human-readable label for the segment',
+      argument: 'LABEL',
+    },
+    {
+      name: 'description',
+      shorthand: 'd',
+      type: String,
+      deprecated: false,
+      description: 'Description of the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'hint',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Natural language hint describing who belongs in the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Full segment data JSON with rules, include, and exclude fields',
+      argument: 'JSON',
+    },
+    {
+      name: 'rule',
+      shorthand: 'r',
+      type: [String],
+      deprecated: false,
+      description:
+        'Rule as ENTITY.ATTRIBUTE:OPERATOR:VALUE or full rule JSON; repeat to OR rules',
+      argument: 'RULE',
+    },
+    {
+      name: 'include',
+      shorthand: 'i',
+      type: [String],
+      deprecated: false,
+      description:
+        'Include a value as ENTITY.ATTRIBUTE=VALUE or ENTITY.ATTRIBUTE=VALUE|NOTE; repeatable',
+      argument: 'VALUE',
+    },
+    {
+      name: 'exclude',
+      shorthand: 'x',
+      type: [String],
+      deprecated: false,
+      description:
+        'Exclude a value as ENTITY.ATTRIBUTE=VALUE or ENTITY.ATTRIBUTE=VALUE|NOTE; repeatable',
+      argument: 'VALUE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the created segment as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a segment with included users',
+      value: `${packageName} flags segments create beta-users --label "Beta users" --include user.id=user_123 --include user.id=user_456`,
+    },
+    {
+      name: 'Create a segment from rules',
+      value: `${packageName} flags segments create enterprise-users --label "Enterprise users" --rule user.plan:eq:enterprise`,
+    },
+    {
+      name: 'Create a segment from full JSON data',
+      value: `${packageName} flags segments create staff --label Staff --data '{"rules":[],"include":{"user":{"email":[{"value":"me@company.com"}]}},"exclude":{}}'`,
+    },
+  ],
+} as const;
+
+export const segmentsUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'New human-readable label for the segment',
+      argument: 'LABEL',
+    },
+    {
+      name: 'description',
+      shorthand: 'd',
+      type: String,
+      deprecated: false,
+      description: 'New description for the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'hint',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'New natural language hint for the segment',
+      argument: 'TEXT',
+    },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Replace the full segment data JSON with rules, include, and exclude fields',
+      argument: 'JSON',
+    },
+    {
+      name: 'rule',
+      shorthand: 'r',
+      type: [String],
+      deprecated: false,
+      description:
+        'Add a rule as ENTITY.ATTRIBUTE:OPERATOR:VALUE or full rule JSON; repeatable',
+      argument: 'RULE',
+    },
+    {
+      name: 'include',
+      shorthand: 'i',
+      type: [String],
+      deprecated: false,
+      description: 'Add an included value as ENTITY.ATTRIBUTE=VALUE',
+      argument: 'VALUE',
+    },
+    {
+      name: 'exclude',
+      shorthand: 'x',
+      type: [String],
+      deprecated: false,
+      description: 'Add an excluded value as ENTITY.ATTRIBUTE=VALUE',
+      argument: 'VALUE',
+    },
+    {
+      name: 'add',
+      shorthand: 'a',
+      type: [String],
+      deprecated: false,
+      description:
+        'Add include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, or rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE; repeatable',
+      argument: 'TARGET',
+    },
+    {
+      name: 'remove',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Remove include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE, or rule:RULE_ID; repeatable',
+      argument: 'TARGET',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the updated segment as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Rename a segment',
+      value: `${packageName} flags segments update beta-users --label "Early access users"`,
+    },
+    {
+      name: 'Add and remove included users',
+      value: `${packageName} flags segments update beta-users --add include:user.id=user_789 --remove include:user.id=user_123`,
+    },
+    {
+      name: 'Add and remove rules',
+      value: `${packageName} flags segments update enterprise-users --add rule:user.email:ends-with:@company.com --remove rule:user.plan:eq:pro`,
+    },
+  ],
+} as const;
+
+export const segmentsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Delete a feature flag segment',
+  arguments: [
+    {
+      name: 'segment',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting a segment',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete a segment',
+      value: `${packageName} flags segments rm beta-users`,
+    },
+    {
+      name: 'Delete without confirmation',
+      value: `${packageName} flags segments rm beta-users --yes`,
+    },
+  ],
+} as const;
+
+export const segmentsSubcommand = {
+  name: 'segments',
+  aliases: [],
+  description: 'Manage feature flag segments',
+  arguments: [],
+  subcommands: [
+    segmentsListSubcommand,
+    segmentsInspectSubcommand,
+    segmentsCreateSubcommand,
+    segmentsUpdateSubcommand,
+    segmentsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 // SDK Keys subcommands
 export const sdkKeysListSubcommand = {
   name: 'list',
@@ -767,6 +1075,7 @@ export const flagsCommand = {
     archiveSubcommand,
     disableSubcommand,
     enableSubcommand,
+    segmentsSubcommand,
     sdkKeysSubcommand,
     prepareSubcommand,
     overrideSubcommand,
