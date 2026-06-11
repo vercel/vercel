@@ -36,12 +36,18 @@ vi.mock('../src/install', async () => {
 describe('dependency externalizer support', () => {
   describe('shouldEnableRuntimeInstall', () => {
     const originalEnv = process.env.VERCEL_PYTHON_ON_HIVE;
+    const originalFunctionsBeta = process.env.VERCEL_FUNCTIONS_BETA;
 
     afterEach(() => {
       if (originalEnv === undefined) {
         delete process.env.VERCEL_PYTHON_ON_HIVE;
       } else {
         process.env.VERCEL_PYTHON_ON_HIVE = originalEnv;
+      }
+      if (originalFunctionsBeta === undefined) {
+        delete process.env.VERCEL_FUNCTIONS_BETA;
+      } else {
+        process.env.VERCEL_FUNCTIONS_BETA = originalFunctionsBeta;
       }
     });
 
@@ -51,6 +57,7 @@ describe('dependency externalizer support', () => {
     function createExternalizer({
       uvLockPath = '/path/to/uv.lock' as string | null,
       hasCustomCommand = false,
+      sharedDepsOffload = false,
       totalBundleSize = 0,
     } = {}) {
       const ext = new PythonDependencyExternalizer({
@@ -64,6 +71,7 @@ describe('dependency externalizer support', () => {
         pythonMinor: 12,
         pythonPath: '/usr/bin/python3',
         hasCustomCommand,
+        sharedDepsOffload,
       });
       // Set the private totalBundleSize field for testing
       (ext as any).totalBundleSize = totalBundleSize;
@@ -80,6 +88,65 @@ describe('dependency externalizer support', () => {
       process.env.VERCEL_PYTHON_ON_HIVE = '1';
       const ext = createExternalizer({ totalBundleSize: oversized });
       expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('enables default SDD offload over the Lambda size threshold', async () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = '1';
+      process.env.VERCEL_FUNCTIONS_BETA = 'large-function-opt-2026-06';
+
+      const tempDir = path.join(tmpdir(), `dep-ext-sdd-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      fs.ftruncateSync(fd, LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024);
+      fs.closeSync(fd);
+
+      const ext = createExternalizer({
+        sharedDepsOffload: true,
+      });
+
+      try {
+        await expect(
+          ext.analyze({
+            'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+          })
+        ).resolves.toMatchObject({
+          sharedDepsOffloadEnabled: true,
+          runtimeInstallEnabled: false,
+        });
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
+    it('does not enable default SDD offload under the Lambda size threshold', async () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = '1';
+      process.env.VERCEL_FUNCTIONS_BETA = 'large-function-opt-2026-06';
+
+      const ext = createExternalizer({
+        sharedDepsOffload: true,
+        totalBundleSize: undersized,
+      });
+
+      await expect(ext.analyze({})).resolves.toMatchObject({
+        sharedDepsOffloadEnabled: false,
+        runtimeInstallEnabled: false,
+      });
+    });
+
+    it('enables forced SDD offload under the Lambda size threshold', async () => {
+      process.env.VERCEL_PYTHON_ON_HIVE = '1';
+      process.env.VERCEL_FUNCTIONS_BETA = 'force-large-function-opt-2026-06';
+
+      const ext = createExternalizer({
+        sharedDepsOffload: true,
+        totalBundleSize: undersized,
+      });
+
+      await expect(ext.analyze({})).resolves.toMatchObject({
+        sharedDepsOffloadEnabled: true,
+        runtimeInstallEnabled: false,
+      });
     });
 
     it('returns false when VERCEL_PYTHON_ON_HIVE is "true"', () => {

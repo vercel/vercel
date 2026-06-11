@@ -200,6 +200,12 @@ world python-analysis {
         os-minor: u16,
     ) -> result<bool, string>;
 
+    /// Derive the offload index prefix (`<abi>-<arch>` or `none-any`) from a
+    /// wheel filename after validating that it parses as a wheel.
+    export wheel-index-prefix: func(
+        wheel-filename: string,
+    ) -> result<string, string>;
+
     // =========================================================================
     // PEP 508 environment marker evaluation
     // =========================================================================

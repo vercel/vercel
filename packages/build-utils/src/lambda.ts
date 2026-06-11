@@ -57,6 +57,15 @@ export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
+export interface SharedDeps {
+  version: 1;
+  mounts: Array<{
+    drive: string;
+    mountPathEnv: string;
+    storagePointInTimeId: string;
+  }>;
+}
+
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
@@ -103,6 +112,9 @@ export interface LambdaOptionsBase {
    * When true, the Function runtime will not automatically instrument fetch calls.
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
+
+  /** Platform-private shared dependency requirements for this Lambda. */
+  sharedDeps?: SharedDeps;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -201,6 +213,8 @@ export class Lambda {
    * When true, the Function runtime will not automatically instrument fetch calls.
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
+  /** Platform-private shared dependency requirements for this Lambda. */
+  sharedDeps?: SharedDeps;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -223,6 +237,7 @@ export class Lambda {
       experimentalTriggers,
       supportsCancellation,
       shouldDisableAutomaticFetchInstrumentation,
+      sharedDeps,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -445,6 +460,7 @@ export class Lambda {
     this.supportsCancellation = supportsCancellation;
     this.shouldDisableAutomaticFetchInstrumentation =
       shouldDisableAutomaticFetchInstrumentation;
+    this.sharedDeps = sharedDeps;
   }
 
   async createZip(): Promise<Buffer> {

@@ -131,6 +131,7 @@ export class UvRunner {
     noBuild?: boolean;
     noInstallProject?: boolean;
     pythonPlatform?: string;
+    env?: NodeJS.ProcessEnv;
   }): Promise<void> {
     const {
       venvPath,
@@ -140,6 +141,7 @@ export class UvRunner {
       noBuild,
       noInstallProject,
       pythonPlatform,
+      env,
     } = options;
     const args = ['sync', '--active', '--no-dev', '--link-mode', 'hardlink'];
     if (frozen) {
@@ -157,7 +159,7 @@ export class UvRunner {
       args.push('--python-platform', pythonPlatform);
     }
     args.push('--no-editable');
-    await this.runUvCmd(args, projectDir, venvPath);
+    await this.runUvCmd(args, projectDir, venvPath, env);
   }
 
   async lock(options: {
@@ -165,8 +167,9 @@ export class UvRunner {
     venvPath: string;
     noBuild?: boolean;
     upgrade?: boolean;
+    env?: NodeJS.ProcessEnv;
   }): Promise<void> {
-    const { projectDir, venvPath, noBuild, upgrade } = options;
+    const { projectDir, venvPath, noBuild, upgrade, env } = options;
     const args = ['lock', '--python', getVenvPythonBin(venvPath)];
     if (noBuild) {
       args.push('--no-build');
@@ -174,7 +177,7 @@ export class UvRunner {
     if (upgrade) {
       args.push('--upgrade');
     }
-    await this.runUvCmd(args, projectDir, venvPath);
+    await this.runUvCmd(args, projectDir, venvPath, env);
   }
 
   async addDependencies(options: {
@@ -238,7 +241,8 @@ export class UvRunner {
   private async runUvCmd(
     args: string[],
     cwd: string,
-    venvPath: string
+    venvPath: string,
+    env?: NodeJS.ProcessEnv
   ): Promise<void> {
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}"...`);
@@ -246,7 +250,8 @@ export class UvRunner {
     try {
       await execa(this.uvPath, args, {
         cwd,
-        env: this.getVenvEnv(venvPath),
+        env: { ...this.getVenvEnv(venvPath), ...env },
+        stdio: 'inherit',
       });
     } catch (err) {
       const error: Error & { code?: unknown } = new Error(

@@ -11,6 +11,7 @@ import http
 import json
 import logging
 import os
+import platform
 import socket
 import sys
 import time
@@ -127,6 +128,88 @@ def _must_getenv(varname: str) -> str:
     if not value:
         _fatal(f"{varname} is not set")
     return value
+
+
+_SHARED_DEPS_INDEX_FILE = os.environ.get(
+    "SHARED_DEPS_INDEX", "/var/task/.shared_deps_index.json"
+)
+_SHARED_DEPS_DEFAULT_ROOT = "/tmp/shared_deps"
+_SHARED_DEPS_ROOT_ENV = "VERCEL_PYTHON_SDD_MOUNT_PATH"
+
+
+def _current_abi_tag() -> str:
+    """Return the ABI tag for the running interpreter.
+
+    Accounts for free-threaded builds (``cp314t``) via ``sys.abiflags``.
+    """
+    vi = sys.version_info
+    tag = f"cp{vi.major}{vi.minor}"
+    # Free-threaded builds (PEP 703) have "t" in sys.abiflags.
+    abi_flags = getattr(sys, "abiflags", "")
+    if "t" in abi_flags:
+        tag += "t"
+    return tag
+
+
+def _setup_shared_deps() -> None:
+    """Add Shared Dependency Drive packages to Python import paths.
+
+    If a pre-built index file exists (produced by the builder), construct
+    ``PYTHONPATH`` entries from the package list. Hive/FoH chooses the actual
+    mount path and exposes it through ``VERCEL_PYTHON_SDD_MOUNT_PATH``.
+
+    The index ``packages`` entries carry the full ``<abi>-<arch>`` prefix
+    so that PYTHONPATH is architecture- and ABI-aware (x86_64 vs aarch64,
+    free-threaded vs default GIL builds).  Format::
+
+        {"pkg": "numpy==2.0.1", "prefix": "cp312-x86_64"}
+
+    For backwards compat, bare ``"numpy==2.0.1"`` strings are also
+    accepted; the prefix is then derived from the current runtime.
+
+    Must run *before* any IPC connection to the functions runtime.
+    """
+    log_level = os.environ.get("VERCEL_RUNTIME_PYTHON_LOG", "").lower()
+    verbose = log_level in ("debug", "trace", "info")
+
+    if not os.path.exists(_SHARED_DEPS_INDEX_FILE):
+        return
+
+    with open(_SHARED_DEPS_INDEX_FILE) as f:
+        index = json.load(f)
+
+    arch = platform.machine()  # x86_64 or aarch64
+    abi = _current_abi_tag()  # cp312, cp314t, etc.
+    default_prefix = f"{abi}-{arch}"
+    shared_deps_root = (
+        os.environ.get(_SHARED_DEPS_ROOT_ENV) or _SHARED_DEPS_DEFAULT_ROOT
+    )
+
+    paths: list[str] = []
+    for entry in index["packages"]:
+        if isinstance(entry, dict):
+            name, _, version = entry["pkg"].partition("==")
+            pfx = entry["prefix"]
+        else:
+            name, _, version = entry.partition("==")
+            pfx = default_prefix
+        paths.append(f"{shared_deps_root}/{pfx}/{name}/{version}/lib")
+
+    # Prepend to sys.path directly because os.environ["PYTHONPATH"]
+    # is only read at interpreter startup -- by this point Python has
+    # already initialized sys.path from the original PYTHONPATH.
+    os.environ["PYTHONPATH"] = ":".join(paths)
+    os.environ["SHARED_DEPS_INDEX"] = _SHARED_DEPS_INDEX_FILE
+    os.environ["SHARED_DEPS_ROOT"] = shared_deps_root
+    for p in reversed(paths):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+
+    if verbose:
+        _stderr(f"[shared-deps] configured: {len(index['packages'])} packages")
+
+
+_setup_shared_deps()
 
 
 _here = os.path.dirname(__file__)

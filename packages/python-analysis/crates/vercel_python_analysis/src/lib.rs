@@ -143,6 +143,34 @@ impl crate::bindings::Guest for PythonAnalyzer {
         Ok(wheel.is_compatible(&tags))
     }
 
+    fn wheel_index_prefix(wheel_filename: String) -> Result<String, String> {
+        let _wheel = WheelFilename::from_str(&wheel_filename)
+            .map_err(|e| format!("invalid wheel filename: {e}"))?;
+
+        let stem = wheel_filename
+            .strip_suffix(".whl")
+            .ok_or_else(|| "invalid wheel filename: missing .whl suffix".to_string())?;
+
+        let mut parts = stem.rsplitn(4, '-');
+        let platform_tag = parts
+            .next()
+            .ok_or_else(|| "invalid wheel filename: missing platform tag".to_string())?;
+        let abi_tag = parts
+            .next()
+            .ok_or_else(|| "invalid wheel filename: missing abi tag".to_string())?;
+
+        if platform_tag == "any" {
+            return Ok("none-any".to_string());
+        }
+
+        let arch = platform_tag
+            .rsplit('_')
+            .next()
+            .ok_or_else(|| format!("invalid platform tag '{platform_tag}'"))?;
+
+        Ok(format!("{abi_tag}-{arch}"))
+    }
+
     fn evaluate_marker(
         marker: String,
         python_major: u8,

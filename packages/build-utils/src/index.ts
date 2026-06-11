@@ -69,6 +69,7 @@ import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
 
 export type { NodejsLambdaOptions };
+export type { SharedDeps } from './lambda';
 
 export {
   FileBlob,
@@ -181,6 +182,7 @@ export {
 } from './framework-helpers';
 
 export * from './python';
+export * from './functions-beta';
 export * from './node-entrypoint';
 export * from './service-path-utils';
 

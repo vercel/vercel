@@ -89,6 +89,7 @@ export {
 export {
   evaluateMarker,
   isWheelCompatible,
+  wheelIndexPrefix,
 } from './manifest/wheel-compat';
 
 // =============================================================================

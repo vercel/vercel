@@ -10,6 +10,7 @@ import {
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
+import http, { type IncomingMessage, type ServerResponse } from 'http';
 
 const tmpPythonDir = path.join(
   tmpdir(),
@@ -62,7 +63,11 @@ import {
   getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build, prepareCache } from '../src/index';
+import {
+  build,
+  prepareCache,
+  resolvePythonDependencyProxyUrl,
+} from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import {
@@ -78,6 +83,7 @@ import { FileBlob, Span, download } from '@vercel/build-utils';
 import { getServiceCrons } from '../src/crons';
 import { entrypointToModule, detectPythonEntrypoint } from '../src/entrypoint';
 import execa from 'execa';
+import { startPyPiSddCollector } from '../src/sdd-collector';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(2);
@@ -348,6 +354,198 @@ describe('build cache trace tags', () => {
       runtime: 'python',
       'python.cache.restored': 'both',
     });
+  });
+});
+
+describe('dependency proxy region gating', () => {
+  it('preserves an explicit dependency proxy endpoint', () => {
+    expect(
+      resolvePythonDependencyProxyUrl({
+        VERCEL_FUNCTIONS_BETA: 'large-function-opt-2026-06',
+        VERCEL_PYTHON_ON_HIVE: '1',
+        VERCEL_REGION: 'sfo1',
+        VERCEL_PYTHON_INDEX_ENDPOINT:
+          'http://proxy.internal/v1/packages/pypi/simple',
+      })
+    ).toBe('http://proxy.internal/v1/packages/pypi/simple');
+  });
+
+  it('auto-targets api-pypi-proxy for Python SDD offload in supported regions', () => {
+    expect(
+      resolvePythonDependencyProxyUrl({
+        VERCEL_FUNCTIONS_BETA: 'large-function-opt-2026-06',
+        VERCEL_PYTHON_ON_HIVE: 'true',
+        VERCEL_REGION: 'sfo1',
+      })
+    ).toBe(
+      'http://api-packages-pypi.default.svc.cluster.local/v1/packages/pypi/simple'
+    );
+  });
+
+  it('does not auto-target api-pypi-proxy without Python SDD offload', () => {
+    expect(
+      resolvePythonDependencyProxyUrl({
+        VERCEL_PYTHON_ON_HIVE: '1',
+        VERCEL_REGION: 'sfo1',
+      })
+    ).toBeUndefined();
+  });
+
+  it('supports comma-separated Functions Beta opt-ins', () => {
+    expect(
+      resolvePythonDependencyProxyUrl({
+        VERCEL_FUNCTIONS_BETA: 'some-other-beta, large-function-opt-2026-06',
+        VERCEL_PYTHON_ON_HIVE: '1',
+        VERCEL_REGION: 'iad1',
+      })
+    ).toBe(
+      'http://api-packages-pypi.default.svc.cluster.local/v1/packages/pypi/simple'
+    );
+  });
+
+  it('supports forced Python shared deps offload opt-in', () => {
+    expect(
+      resolvePythonDependencyProxyUrl({
+        VERCEL_FUNCTIONS_BETA: 'force-large-function-opt-2026-06',
+        VERCEL_PYTHON_ON_HIVE: '1',
+        VERCEL_REGION: 'iad1',
+      })
+    ).toBe(
+      'http://api-packages-pypi.default.svc.cluster.local/v1/packages/pypi/simple'
+    );
+  });
+
+  it('requires Functions Beta for Python SDD offload', () => {
+    expect(() =>
+      resolvePythonDependencyProxyUrl({
+        VERCEL_FUNCTIONS_BETA: 'large-function-opt-2026-06',
+        VERCEL_REGION: 'sfo1',
+      })
+    ).toThrow('Python SDD offload requires Functions Beta');
+  });
+
+  it('rejects Python SDD offload outside supported regions', () => {
+    expect(() =>
+      resolvePythonDependencyProxyUrl({
+        VERCEL_FUNCTIONS_BETA: 'large-function-opt-2026-06',
+        VERCEL_PYTHON_ON_HIVE: '1',
+        VERCEL_REGION: 'gru1',
+      })
+    ).toThrow('Python SDD offload is not supported in region gru1');
+  });
+});
+
+describe('local PyPI SDD collector', () => {
+  async function startUpstream(
+    handler: (req: IncomingMessage, res: ServerResponse) => void
+  ) {
+    const server = http.createServer(handler);
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', () => {
+        server.off('error', reject);
+        resolve();
+      });
+    });
+    const address = server.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('expected upstream server address');
+    }
+    return {
+      url: `http://127.0.0.1:${address.port}/v1/packages/pypi/simple`,
+      close: () =>
+        new Promise<void>((resolve, reject) => {
+          server.close(error => (error ? reject(error) : resolve()));
+        }),
+    };
+  }
+
+  it('rewrites simple index artifact URLs through the local collector', async () => {
+    const upstream = await startUpstream((req, res) => {
+      expect(req.url).toBe('/v1/packages/pypi/simple/demo');
+      res.setHeader('content-type', 'application/vnd.pypi.simple.v1+json');
+      res.end(
+        JSON.stringify({
+          files: [
+            {
+              url: '/v1/packages/pypi/packages/ab/cd/demo-1.0.0-py3-none-any.whl',
+            },
+            {
+              url: 'https://files.pythonhosted.org/packages/ef/demo.tar.gz',
+            },
+          ],
+        })
+      );
+    });
+    const collector = await startPyPiSddCollector(upstream.url);
+    try {
+      const response = await fetch(`${collector.url}/demo`);
+      const body = await response.text();
+      expect(body).toContain(`${collector.packageUrlBase}/packages/ab/cd/`);
+      expect(body).toContain(
+        `${collector.packageUrlBase}/packages/ef/demo.tar.gz`
+      );
+    } finally {
+      await collector.close();
+      await upstream.close();
+    }
+  });
+
+  it('tracks ready-wheel point-in-time id headers for the local region', async () => {
+    const pointInTimeIds = {
+      iad1: '01JZ6Z4V7KGQZA5V91EVN6K7F3',
+      sfo1: '01JZ6Z5QPBA68QXKECZJGS75CY',
+    };
+    const upstream = await startUpstream((_req, res) => {
+      res.statusCode = 302;
+      res.setHeader(
+        'location',
+        'https://files.pythonhosted.org/packages/demo.whl'
+      );
+      res.setHeader(
+        'x-vercel-sdd-point-in-time-id',
+        JSON.stringify(pointInTimeIds)
+      );
+      res.end();
+    });
+    const collector = await startPyPiSddCollector(upstream.url, 'iad1');
+    try {
+      await fetch(`${collector.packageUrlBase}/packages/demo.whl`, {
+        redirect: 'manual',
+      });
+      expect(collector.getStoragePointInTimeId()).toBe(pointInTimeIds.iad1);
+    } finally {
+      await collector.close();
+      await upstream.close();
+    }
+  });
+
+  it('tracks streamed wheel misses through HEAD metadata lookup', async () => {
+    const pointInTimeIds = {
+      iad1: '01JZ6Z4V7KGQZA5V91EVN6K7F3',
+      sfo1: '01JZ6Z5QPBA68QXKECZJGS75CY',
+    };
+    const upstream = await startUpstream((req, res) => {
+      if (req.method === 'HEAD') {
+        expect(req.url).toBe('/v1/packages/pypi/packages/demo.whl');
+        res.setHeader(
+          'x-vercel-sdd-point-in-time-id',
+          JSON.stringify(pointInTimeIds)
+        );
+        res.end();
+        return;
+      }
+      res.end('wheel-bytes');
+    });
+    const collector = await startPyPiSddCollector(upstream.url, 'iad1');
+    try {
+      await fetch(`${collector.packageUrlBase}/packages/demo.whl`);
+      await collector.waitForMetadata();
+      expect(collector.getStoragePointInTimeId()).toBe(pointInTimeIds.iad1);
+    } finally {
+      await collector.close();
+      await upstream.close();
+    }
   });
 });
 
