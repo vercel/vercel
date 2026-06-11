@@ -1,6 +1,6 @@
 import { getInternalServiceFunctionPath } from '@vercel/build-utils';
 import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -393,25 +393,265 @@ async function ensureDockerReady(span?: Span): Promise<void> {
     span?.setAttributes({ 'docker.server_version': stdout.trim() });
   } catch (err) {
     const message = (err as Error).message;
+    const onVercel = isBuildContainer();
 
     if (/Command not found/i.test(message)) {
       throw new Error(
-        'Docker CLI was not found on your PATH. Install Docker and make sure ' +
-          'the `docker` command is available so the container image can be built.'
+        onVercel
+          ? 'The `docker` CLI is not available in this build container. The ' +
+              'container runtime requires Docker to be installed in the build image.'
+          : 'Docker CLI was not found on your PATH. Install Docker and make sure ' +
+              'the `docker` command is available so the container image can be built.'
       );
     }
 
     throw new Error(
-      [
-        'Cannot connect to the Docker daemon — is Docker running?',
-        '',
-        'Start Docker (Docker Desktop, Colima, or OrbStack) and verify it with',
-        '`docker info`, then re-run the build. If you use a non-default socket,',
-        'set DOCKER_HOST or select the right context with `docker context use`.',
-        '',
-        `Underlying error: ${message}`,
-      ].join('\n')
+      (onVercel
+        ? [
+            'The Docker daemon is not available in this build container.',
+            '',
+            'Container builds start and manage their own dockerd; not being able',
+            'to reach it points at a missing Docker install or insufficient kernel',
+            'capabilities in the build image rather than anything in your project.',
+          ]
+        : [
+            'Cannot connect to the Docker daemon — is Docker running?',
+            '',
+            'Start Docker (Docker Desktop, Colima, or OrbStack) and verify it with',
+            '`docker info`, then re-run the build. If you use a non-default socket,',
+            'set DOCKER_HOST or select the right context with `docker context use`.',
+          ]
+      )
+        .concat(['', `Underlying error: ${message}`])
+        .join('\n')
     );
+  }
+}
+
+/** Whether the Docker daemon currently answers `docker version`. */
+async function isDockerDaemonReachable(): Promise<boolean> {
+  try {
+    await run('docker', ['version', '--format', '{{.Server.Version}}'], {
+      quiet: true,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether `name` resolves on the PATH (used to detect dockerd/fuse-overlayfs). */
+async function hasBinary(name: string): Promise<boolean> {
+  try {
+    await run('which', [name], { quiet: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether we're running inside a Vercel build container (an ephemeral Hive
+ * cell) rather than a local `vercel build`. `VERCEL_BUILD_IMAGE` is set only on
+ * Vercel's build image — `VERCEL`/`NOW_BUILDER` are set for local builds too, so
+ * they can't be used here. This drives environment-appropriate error messages
+ * and daemon teardown behavior.
+ */
+function isBuildContainer(): boolean {
+  return Boolean(readString(process.env.VERCEL_BUILD_IMAGE));
+}
+
+/**
+ * Choose the dockerd storage driver. `VERCEL_VCR_DOCKER_STORAGE_DRIVER`
+ * overrides everything. Otherwise prefer `fuse-overlayfs` when it's actually
+ * usable (binary on PATH + `/dev/fuse` present) and fall back to `vfs`, which
+ * works on any filesystem — including the overlay rootfs of a build cell, where
+ * docker's default `overlay2` cannot stack. `vfs` is slower and copies layers,
+ * but it's the dependency-free baseline; fuse-overlayfs is the optimization.
+ */
+async function selectStorageDriver(): Promise<string> {
+  const override = readString(process.env.VERCEL_VCR_DOCKER_STORAGE_DRIVER);
+  if (override) {
+    return override;
+  }
+  if ((await hasBinary('fuse-overlayfs')) && existsSync('/dev/fuse')) {
+    return 'fuse-overlayfs';
+  }
+  return 'vfs';
+}
+
+interface ManagedDaemon {
+  child: ChildProcess;
+  logTail: () => string;
+}
+
+/** Last `n` lines of captured daemon output, for surfacing in errors. */
+function tail(text: string, n = 12): string {
+  return text.trim().split('\n').slice(-n).join('\n');
+}
+
+/**
+ * Start a `dockerd` we own (build cells have no daemon running). Polls until the
+ * socket answers, then returns a handle so we can stop it afterwards. Throws
+ * with the tail of the daemon log if it exits early or never becomes ready.
+ */
+async function startDockerDaemon(span?: Span): Promise<ManagedDaemon> {
+  const driver = await selectStorageDriver();
+  const args = ['--storage-driver', driver];
+  const extra = readString(process.env.VERCEL_VCR_DOCKERD_ARGS);
+  if (extra) {
+    args.push(...extra.split(' ').filter(Boolean));
+  }
+
+  span?.setAttributes({ 'docker.storage_driver': driver });
+  step(`Starting Docker daemon (storage-driver=${driver})`);
+  debug(`exec: dockerd ${args.join(' ')}`);
+
+  const child = spawn('dockerd', args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let log = '';
+  const capture = (chunk: Buffer) => {
+    const text = chunk.toString();
+    log += text;
+    if (DEBUG) {
+      process.stderr.write(text);
+    }
+  };
+  child.stdout?.on('data', capture);
+  child.stderr?.on('data', capture);
+
+  let exitInfo: string | undefined;
+  child.on('exit', (code, signal) => {
+    exitInfo = `code=${code ?? 'null'} signal=${signal ?? 'null'}`;
+  });
+
+  const timeoutMs = Number(process.env.VERCEL_VCR_DOCKERD_TIMEOUT_MS) || 30_000;
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (exitInfo !== undefined) {
+      throw new Error(
+        [
+          `The Docker daemon exited before becoming ready (${exitInfo}).`,
+          'In a build container this usually means the cell is missing the',
+          `kernel capabilities dockerd needs, or the "${driver}" storage driver`,
+          'is unavailable. Override it with VERCEL_VCR_DOCKER_STORAGE_DRIVER.',
+          '',
+          tail(log),
+        ].join('\n')
+      );
+    }
+    if (await isDockerDaemonReachable()) {
+      done('Docker daemon ready');
+      return { child, logTail: () => log };
+    }
+    if (Date.now() >= deadline) {
+      child.kill('SIGKILL');
+      throw new Error(
+        [
+          `The Docker daemon did not become ready within ${Math.round(
+            timeoutMs / 1000
+          )}s.`,
+          'In a build container this usually means the cell is missing the',
+          `kernel capabilities dockerd needs, or the "${driver}" storage driver`,
+          'is unavailable. Override it with VERCEL_VCR_DOCKER_STORAGE_DRIVER.',
+          '',
+          tail(log),
+        ].join('\n')
+      );
+    }
+    await delay(500);
+  }
+}
+
+/** Stop a daemon we started: SIGTERM, then SIGKILL if it doesn't exit. */
+async function stopDockerDaemon(
+  daemon: ManagedDaemon,
+  span?: Span
+): Promise<void> {
+  const { child } = daemon;
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+  step('Stopping Docker daemon');
+  const stopTimeoutMs =
+    Number(process.env.VERCEL_VCR_DOCKERD_STOP_TIMEOUT_MS) || 10_000;
+  await new Promise<void>(resolve => {
+    let settled = false;
+    const finish = () => {
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
+    };
+    child.once('exit', finish);
+    child.kill('SIGTERM');
+    setTimeout(() => {
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        // already gone
+      }
+      finish();
+    }, stopTimeoutMs).unref?.();
+  });
+  span?.setAttributes({ 'docker.daemon_stopped': 'true' });
+  done('Docker daemon stopped');
+}
+
+/**
+ * Detach from a daemon we started without stopping it. Used in the build
+ * container, which is ephemeral and torn down wholesale after the build — so
+ * there's no value in a graceful shutdown. We still drop our listeners and
+ * `unref` the child + its pipes so the leftover dockerd can't keep our process
+ * alive (a piped, ref'd child would otherwise block exit).
+ */
+function detachDaemon(daemon: ManagedDaemon): void {
+  const { child } = daemon;
+  child.stdout?.removeAllListeners('data');
+  child.stderr?.removeAllListeners('data');
+  // Closing the pipes releases their hold on the event loop; unref'ing the
+  // child lets our process exit while the (soon-to-be-destroyed) cell keeps
+  // dockerd running.
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  child.unref();
+}
+
+/**
+ * Run `fn` with a Docker daemon available. If one is already reachable (e.g. a
+ * developer's local Docker Desktop/OrbStack), use it untouched. Otherwise, when
+ * a `dockerd` binary is present (build cell), start one we own and stop it in a
+ * `finally` so it's always torn down. When neither is true, run `fn` anyway and
+ * let `ensureDockerReady` surface the actionable "install/start Docker" error.
+ */
+async function withManagedDaemon<T>(
+  span: Span | undefined,
+  fn: () => Promise<T>
+): Promise<T> {
+  if (await isDockerDaemonReachable()) {
+    return fn();
+  }
+  if (!(await hasBinary('dockerd'))) {
+    return fn();
+  }
+  const daemon = await withSpan(span, 'container.start_daemon', undefined, s =>
+    startDockerDaemon(s)
+  );
+  try {
+    return await fn();
+  } finally {
+    // Only ever touch a daemon we started ourselves. In the build container the
+    // cell is ephemeral, so we just detach (no graceful shutdown). Locally we
+    // stop it so a `vercel build` never leaves a stray dockerd behind.
+    if (isBuildContainer()) {
+      detachDaemon(daemon);
+    } else {
+      await withSpan(span, 'container.stop_daemon', undefined, s =>
+        stopDockerDaemon(daemon, s)
+      );
+    }
   }
 }
 
@@ -601,166 +841,175 @@ async function buildAndPushImage(params: {
         s => ensureRepository(repository, createToken, claims, s)
       );
 
-      await withSpan(buildSpan, 'container.ensure_docker_ready', undefined, s =>
-        ensureDockerReady(s)
-      );
+      // Build/login/push/readiness all need a Docker daemon. In a build cell
+      // there's none running, so start one we own (and tear it down after);
+      // locally we reuse the developer's existing daemon untouched.
+      return withManagedDaemon(buildSpan, async () => {
+        await withSpan(
+          buildSpan,
+          'container.ensure_docker_ready',
+          undefined,
+          s => ensureDockerReady(s)
+        );
 
-      info(`Building image ${imageRef}`);
-      debug(`dockerfile: ${dockerfilePath}`);
-      debug(`context:    ${contextDir}`);
-      debug(`platform:   ${TARGET_PLATFORM}`);
-      debug(`registry:   ${VCR_REGISTRY}`);
-      debug(`username:   ${username}`);
-      debug(`repository: ${fullRepository}`);
+        info(`Building image ${imageRef}`);
+        debug(`dockerfile: ${dockerfilePath}`);
+        debug(`context:    ${contextDir}`);
+        debug(`platform:   ${TARGET_PLATFORM}`);
+        debug(`registry:   ${VCR_REGISTRY}`);
+        debug(`username:   ${username}`);
+        debug(`repository: ${fullRepository}`);
 
-      const buildStart = Date.now();
-      step(`docker build (${TARGET_PLATFORM})`);
-      await withSpan(
-        buildSpan,
-        'container.docker_build',
-        { 'image.ref': imageRef, 'image.platform': TARGET_PLATFORM },
-        () =>
-          run('docker', [
-            'build',
-            '--platform',
-            TARGET_PLATFORM,
-            '-t',
-            imageRef,
-            '-f',
-            dockerfilePath,
-            contextDir,
-          ])
-      );
-      done(`built in ${elapsed(buildStart)}`);
+        const buildStart = Date.now();
+        step(`docker build (${TARGET_PLATFORM})`);
+        await withSpan(
+          buildSpan,
+          'container.docker_build',
+          { 'image.ref': imageRef, 'image.platform': TARGET_PLATFORM },
+          () =>
+            run('docker', [
+              'build',
+              '--platform',
+              TARGET_PLATFORM,
+              '-t',
+              imageRef,
+              '-f',
+              dockerfilePath,
+              contextDir,
+            ])
+        );
+        done(`built in ${elapsed(buildStart)}`);
 
-      // Authenticate to VCR: password is the token (passed via stdin, never
-      // argv); username is `oidc` for an OIDC token, otherwise the team id.
-      step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
-      debug(
-        `exec: docker login ${VCR_REGISTRY} --username ${username} --password-stdin ` +
-          `(password from ${tokenSource} on stdin, ${tokenFingerprint(token)})`
-      );
-      await withSpan(
-        buildSpan,
-        'container.registry_login',
-        {
-          'container.registry': VCR_REGISTRY,
-          'registry.username': username,
-        },
-        async () => {
-          try {
-            await run(
-              'docker',
-              [
-                'login',
-                VCR_REGISTRY,
-                '--username',
-                username,
-                '--password-stdin',
-              ],
-              { input: token, quiet: !DEBUG }
-            );
-          } catch (err) {
-            const message = (err as Error).message;
-            if (/denied|forbidden|unauthorized|401|403/i.test(message)) {
-              const teamId =
-                claims.owner_id ?? readString(process.env.VERCEL_VCR_USERNAME);
-              throw new Error(
+        // Authenticate to VCR: password is the token (passed via stdin, never
+        // argv); username is `oidc` for an OIDC token, otherwise the team id.
+        step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
+        debug(
+          `exec: docker login ${VCR_REGISTRY} --username ${username} --password-stdin ` +
+            `(password from ${tokenSource} on stdin, ${tokenFingerprint(token)})`
+        );
+        await withSpan(
+          buildSpan,
+          'container.registry_login',
+          {
+            'container.registry': VCR_REGISTRY,
+            'registry.username': username,
+          },
+          async () => {
+            try {
+              await run(
+                'docker',
                 [
-                  `Authentication to ${VCR_REGISTRY} as "${username}" was rejected.`,
-                  '',
-                  `Make sure your team (${teamId ? `"${teamId}"` : ''}) is enrolled in`,
-                  'the `vercel-enable-vcr` flag, and that the token is valid for it.',
-                  'Override credentials with VERCEL_VCR_USERNAME (`oidc` for an OIDC',
-                  'token, or the team id for a VERCEL_VCR_TOKEN access token).',
-                  '',
-                  `Underlying error: ${message}`,
-                ].join('\n')
+                  'login',
+                  VCR_REGISTRY,
+                  '--username',
+                  username,
+                  '--password-stdin',
+                ],
+                { input: token, quiet: !DEBUG }
               );
+            } catch (err) {
+              const message = (err as Error).message;
+              if (/denied|forbidden|unauthorized|401|403/i.test(message)) {
+                const teamId =
+                  claims.owner_id ??
+                  readString(process.env.VERCEL_VCR_USERNAME);
+                throw new Error(
+                  [
+                    `Authentication to ${VCR_REGISTRY} as "${username}" was rejected.`,
+                    '',
+                    `Make sure your team (${teamId ? `"${teamId}"` : ''}) is enrolled in`,
+                    'the `vercel-enable-vcr` flag, and that the token is valid for it.',
+                    'Override credentials with VERCEL_VCR_USERNAME (`oidc` for an OIDC',
+                    'token, or the team id for a VERCEL_VCR_TOKEN access token).',
+                    '',
+                    `Underlying error: ${message}`,
+                  ].join('\n')
+                );
+              }
+              throw err;
             }
-            throw err;
           }
-        }
-      );
-      done('authenticated');
+        );
+        done('authenticated');
 
-      const pushStart = Date.now();
-      step(`Pushing ${imageRef}`);
-      const digest = await withSpan(
-        buildSpan,
-        'container.push',
-        { 'image.ref': imageRef },
-        async pushSpan => {
-          let stdout: string;
-          try {
-            ({ stdout } = await run('docker', ['push', imageRef]));
-          } catch (err) {
-            const message = (err as Error).message;
-            if (
-              /denied|forbidden|unauthorized|not found|401|403|404/i.test(
-                message
-              )
-            ) {
-              throw new Error(
-                [
-                  `Pushing ${imageRef} was denied.`,
-                  '',
-                  `The build tried to ensure the "${repository}" repository exists, but`,
-                  'the push was still rejected. This usually means the token lacks access',
-                  'to the project, or your team is not enrolled in the `vercel-enable-vcr`',
-                  "flag. Verify access (or create the repository under your project's",
-                  'Sandboxes → Container Registry tab), then re-run the build.',
-                  '',
-                  `Underlying error: ${message}`,
-                ].join('\n')
+        const pushStart = Date.now();
+        step(`Pushing ${imageRef}`);
+        const digest = await withSpan(
+          buildSpan,
+          'container.push',
+          { 'image.ref': imageRef },
+          async pushSpan => {
+            let stdout: string;
+            try {
+              ({ stdout } = await run('docker', ['push', imageRef]));
+            } catch (err) {
+              const message = (err as Error).message;
+              if (
+                /denied|forbidden|unauthorized|not found|401|403|404/i.test(
+                  message
+                )
+              ) {
+                throw new Error(
+                  [
+                    `Pushing ${imageRef} was denied.`,
+                    '',
+                    `The build tried to ensure the "${repository}" repository exists, but`,
+                    'the push was still rejected. This usually means the token lacks access',
+                    'to the project, or your team is not enrolled in the `vercel-enable-vcr`',
+                    "flag. Verify access (or create the repository under your project's",
+                    'Sandboxes → Container Registry tab), then re-run the build.',
+                    '',
+                    `Underlying error: ${message}`,
+                  ].join('\n')
+                );
+              }
+              throw err;
+            }
+
+            // Prefer the immutable digest so api-builds resolves a stable image.
+            let resolvedDigest = stdout.match(DIGEST_RE)?.[0];
+            if (!resolvedDigest) {
+              debug('digest not found in push output — inspecting RepoDigests');
+              const inspect = await run(
+                'docker',
+                ['inspect', '--format', '{{index .RepoDigests 0}}', imageRef],
+                { quiet: true }
               );
+              resolvedDigest = inspect.stdout.match(DIGEST_RE)?.[0];
             }
-            throw err;
+            pushSpan?.setAttributes({ 'image.digest': resolvedDigest });
+            return resolvedDigest;
           }
+        );
+        done(
+          digest
+            ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
+            : `pushed in ${elapsed(pushStart)}`
+        );
 
-          // Prefer the immutable digest so api-builds resolves a stable image.
-          let resolvedDigest = stdout.match(DIGEST_RE)?.[0];
-          if (!resolvedDigest) {
-            debug('digest not found in push output — inspecting RepoDigests');
-            const inspect = await run(
-              'docker',
-              ['inspect', '--format', '{{index .RepoDigests 0}}', imageRef],
-              { quiet: true }
-            );
-            resolvedDigest = inspect.stdout.match(DIGEST_RE)?.[0];
-          }
-          pushSpan?.setAttributes({ 'image.digest': resolvedDigest });
-          return resolvedDigest;
-        }
-      );
-      done(
-        digest
-          ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
-          : `pushed in ${elapsed(pushStart)}`
-      );
+        const resolvedRef = digest
+          ? `${VCR_REGISTRY}/${fullRepository}@${digest}`
+          : imageRef;
+        buildSpan?.setAttributes({
+          'image.digest': digest,
+          'image.resolved_ref': resolvedRef,
+        });
 
-      const resolvedRef = digest
-        ? `${VCR_REGISTRY}/${fullRepository}@${digest}`
-        : imageRef;
-      buildSpan?.setAttributes({
-        'image.digest': digest,
-        'image.resolved_ref': resolvedRef,
+        // Block until the OCI->VHS conversion has completed so downstream routing
+        // can boot the image immediately.
+        const readyStart = Date.now();
+        step('Waiting for image to be ready (OCI → VHS conversion)');
+        await withSpan(
+          buildSpan,
+          'container.wait_for_ready',
+          { 'image.ref': resolvedRef },
+          s => waitForImageReady(resolvedRef, s)
+        );
+        done(`ready in ${elapsed(readyStart)}`);
+
+        info(`Image reference ${resolvedRef}`);
+        return resolvedRef;
       });
-
-      // Block until the OCI->VHS conversion has completed so downstream routing
-      // can boot the image immediately.
-      const readyStart = Date.now();
-      step('Waiting for image to be ready (OCI → VHS conversion)');
-      await withSpan(
-        buildSpan,
-        'container.wait_for_ready',
-        { 'image.ref': resolvedRef },
-        s => waitForImageReady(resolvedRef, s)
-      );
-      done(`ready in ${elapsed(readyStart)}`);
-
-      info(`Image reference ${resolvedRef}`);
-      return resolvedRef;
     }
   );
 }
