@@ -232,6 +232,7 @@ describe('frameworks', () => {
     'vuepress', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
     'hydrogen',
     'storybook',
+    'eve', // examples/fixtures live in github.com/vercel/ash
   ];
 
   it('ensure there is an example for every framework', async () => {

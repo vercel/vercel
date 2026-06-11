@@ -2348,7 +2348,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.output',
-    experimental: true,
   },
   {
     name: 'Sanity',
