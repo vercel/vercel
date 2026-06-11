@@ -330,7 +330,13 @@ describe('detectFramework()', () => {
       [entrypoint]: '// server entrypoint',
     });
 
-    expect(await detectFramework({ fs, frameworkList })).toBe('bun');
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('bun');
   });
 
   it('Bun is not detected without a server entrypoint', async () => {
@@ -339,7 +345,13 @@ describe('detectFramework()', () => {
       'bun.lock': '',
     });
 
-    expect(await detectFramework({ fs, frameworkList })).toBeNull();
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBeNull();
   });
 
   it('Detect Nuxt.js', async () => {
