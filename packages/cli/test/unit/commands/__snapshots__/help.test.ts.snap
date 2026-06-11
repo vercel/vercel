@@ -4672,12 +4672,18 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
   Commands:
 
-  add    Add additional Vercel  
-         Projects to an existing
-         repository link.       
-         Requires an existing   
-         repo.json (created by  
-         \`link --repo\`).        
+  add        Add additional     
+             Vercel Projects to 
+             an existing        
+             repository link.   
+             Requires an        
+             existing repo.json 
+             (created by \`link  
+             --repo\`).          
+  inspect    Inspect whether the
+             current directory  
+             is linked to a     
+             Vercel Project.    
 
 
   Options:
@@ -4789,6 +4795,10 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
     $ vercel link add
 
+  - Inspect the current directory link
+
+    $ vercel link inspect
+
 "
 `;
 
@@ -4800,8 +4810,11 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
   Commands:
 
-  add    Add additional Vercel Projects to an existing repository link. 
-         Requires an existing repo.json (created by \`link --repo\`).     
+  add        Add additional Vercel Projects to an existing repository   
+             link. Requires an existing repo.json (created by \`link     
+             --repo\`).                                                  
+  inspect    Inspect whether the current directory is linked to a Vercel
+             Project.                                                   
 
 
   Options:
@@ -4858,6 +4871,10 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
     $ vercel link add
 
+  - Inspect the current directory link
+
+    $ vercel link inspect
+
 "
 `;
 
@@ -4869,8 +4886,9 @@ exports[`help command > link help output snapshots > link help column width 120 
 
   Commands:
 
-  add    Add additional Vercel Projects to an existing repository link. Requires an existing repo.json (created 
-         by \`link --repo\`).                                                                                     
+  add        Add additional Vercel Projects to an existing repository link. Requires an existing repo.json      
+             (created by \`link --repo\`).                                                                        
+  inspect    Inspect whether the current directory is linked to a Vercel Project.                               
 
 
   Options:
@@ -4920,6 +4938,10 @@ exports[`help command > link help output snapshots > link help column width 120 
   - Add additional projects to an existing repository link
 
     $ vercel link add
+
+  - Inspect the current directory link
+
+    $ vercel link inspect
 
 "
 `;
