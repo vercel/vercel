@@ -9,6 +9,7 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { ProjectNotFound } from '../../util/errors-ts';
 import { envTargetChoices, isValidEnvTarget } from '../../util/env/env-target';
 import { normalizeRepeatableStringFilters } from '../../util/command-validation';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { packageName } from '../../util/pkg-name';
 import {
   MAX_TRIGGER_DESTINATIONS,
@@ -123,7 +124,7 @@ export async function attach(
     }
 
     projectId = resolvedProject.id;
-    projectName = resolvedProject.name;
+    projectName = sanitizeForTerminal(resolvedProject.name);
   } else {
     const linked = await getLinkedProject(client);
     if (linked.status === 'error') {
@@ -141,7 +142,7 @@ export async function attach(
       client.config.currentTeam = undefined;
     }
     projectId = linked.project.id;
-    projectName = linked.project.name;
+    projectName = sanitizeForTerminal(linked.project.name);
   }
 
   // Resolve client identity → canonical id + display name. The base GET
@@ -165,7 +166,9 @@ export async function attach(
   }
   output.stopSpinner();
 
-  const displayName = target.uid || target.name || target.id;
+  const displayName = sanitizeForTerminal(
+    target.uid || target.name || target.id
+  );
 
   // Pre-flight: trigger-destination planning.
   let desiredDestination: ConnexTriggerDestination | undefined;
