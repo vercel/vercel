@@ -164,10 +164,14 @@ export const nft = async (
             ? await stat(absolutePath)
             : stats;
           if (targetStats.isFile()) {
-            // Use FileBlob so introspection can include these files
-            const content = await readFile(absolutePath, 'utf-8');
+            // Use FileBlob so introspection can include these files. Read as
+            // a Buffer (no encoding) so the bytes are preserved verbatim,
+            // mirroring the `@vercel/node` builder. Decoding to UTF-8 here
+            // corrupts binary files (e.g. native `.node` addons, `.wasm`),
+            // which later surfaces at runtime as errors such as
+            // "ELF file's phentsize not the expected size".
             args.files[outputPath] = new FileBlob({
-              data: content,
+              data: await readFile(absolutePath),
               mode: stats.mode,
             });
           }
