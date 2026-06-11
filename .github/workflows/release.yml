@@ -10,11 +10,227 @@ env:
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+# Serialize release runs on the same ref. cancel-in-progress is intentionally
+# false: the validate -> promote pipeline can take a long time (e2e deploys
+# real projects and polls for tarballs), and we never want a newer push to
+# main to cancel a release that has already been validated. Concurrent merges
+# queue behind the in-flight release instead of interleaving with it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Detect intent.
+  #
+  # The Release workflow runs on every push to main, but only some of those
+  # pushes are actual releases. When changesets remain in .changeset/, this
+  # push should (re)open the "Version Packages" PR -- no release happens.
+  # When the Version Packages PR merges, the changesets are consumed and this
+  # push is the one that publishes.
+  #
+  # We compute `shouldRelease` up front so the expensive snapshot-validation
+  # only runs on real release pushes. Everything downstream pins to this exact
+  # commit SHA so a concurrent merge to main cannot change what we publish.
+  # ---------------------------------------------------------------------------
+  detect:
+    name: Detect Release Intent
+    runs-on: ubuntu-latest
+    outputs:
+      shouldRelease: ${{ steps.detect.outputs.shouldRelease }}
+      sha: ${{ github.sha }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Detect pending changesets
+        id: detect
+        run: |
+          set -euo pipefail
+          # Count changeset markdown files (excluding README and config).
+          pending=$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')
+          echo "Pending changesets: $pending"
+          if [ "$pending" -eq "0" ]; then
+            # No pending changesets => the Version Packages PR just merged and
+            # package.json versions are bumped. This push is a real release.
+            echo "shouldRelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "shouldRelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 2. Snapshot release (pinned to the validated SHA).
+  #
+  # Publishes a snapshot of every publishable package under the `canary` dist
+  # tag with a 0.0.0-canary-<hash> version. Crucially, snapshot versions bump
+  # ALL packages together and resolve workspace:* deps to those snapshot
+  # versions at pack time, so the CLI snapshot depends on the snapshot of its
+  # workspace deps -- exactly the dependency edge that broke last time.
+  # ---------------------------------------------------------------------------
+  snapshot:
+    name: Publish Snapshot
+    needs: detect
+    if: ${{ needs.detect.outputs.shouldRelease == 'true' }}
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      cliVersion: ${{ steps.snapshot.outputs.cliVersion }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          # Pin to the exact commit we will eventually promote. Never HEAD.
+          ref: ${{ needs.detect.outputs.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        with:
+          targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - name: install npm@11
+        run: npm i -g npm@11
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create Canary Snapshot Versions
+        run: pnpm ci:version:canary
+
+      - name: Build Packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Capture snapshot CLI version
+        id: snapshot
+        run: |
+          set -euo pipefail
+          # After ci:version:canary, package.json holds the snapshot version.
+          cliVersion=$(node -p "require('./packages/cli/package.json').version")
+          echo "Snapshot CLI version: $cliVersion"
+          echo "cliVersion=$cliVersion" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Canary Snapshots to npm
+        run: pnpm ci:publish:canary
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+
+  # ---------------------------------------------------------------------------
+  # 3. Validate the snapshot.
+  #
+  # Run unit + e2e suites against the just-published snapshot instead of the
+  # per-PR Vercel preview tarball. e2e deploys point VERCEL_CLI_VERSION at the
+  # published npm spec so the build container installs the snapshot CLI *and*
+  # its snapshot workspace deps from npm -- catching missing dependency bumps.
+  #
+  # NOTE (draft): this currently runs the full suite inline. We likely want to
+  # reuse the chunking/matrix from test.yml (utils/chunk-tests.js) instead.
+  # Left as a single job for the draft to keep the control flow readable.
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Validate Snapshot
+    needs: [detect, snapshot]
+    if: ${{ needs.detect.outputs.shouldRelease == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Point e2e at the published snapshot spec rather than a tarball URL.
+      # The build container installs `vercel@<snapshot>` (and its snapshot
+      # workspace deps) from the `canary` tag on npm.
+      VERCEL_CLI_VERSION: vercel@${{ needs.snapshot.outputs.cliVersion }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.detect.outputs.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.10.11'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for snapshot to be installable
+        run: |
+          set -euo pipefail
+          # npm publish is not instantly consistent across the registry CDN.
+          # Poll until the exact snapshot version is resolvable before we run
+          # deploys that depend on it.
+          for attempt in {1..30}; do
+            if npm view "vercel@${{ needs.snapshot.outputs.cliVersion }}" version >/dev/null 2>&1; then
+              echo "Snapshot is available on npm."
+              exit 0
+            fi
+            echo "Snapshot not yet available (attempt $attempt/30)."
+            sleep 10
+          done
+          echo "Timed out waiting for snapshot to appear on npm."
+          exit 1
+
+      - name: Unit tests
+        run: pnpm test-unit
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          FORCE_COLOR: '1'
+
+      - name: E2E tests
+        run: pnpm test-e2e
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          FORCE_COLOR: '1'
+
+  # ---------------------------------------------------------------------------
+  # 4. Promote to the real release.
+  #
+  # Only reached if snapshot validation passed. Builds from the SAME pinned SHA
+  # and runs the normal changesets publish. Because we pin to needs.detect SHA
+  # (not HEAD), a merge to main during validation cannot change what ships:
+  # those merges queue behind us via the concurrency group and validate
+  # themselves on their own run.
+  # ---------------------------------------------------------------------------
   release:
     name: Release
+    needs: [detect, validate]
+    # Run the real publish either when validation passed (release push) OR when
+    # there were pending changesets (open/update the Version Packages PR). The
+    # latter path skips snapshot/validate entirely.
+    if: ${{ always() && needs.detect.result == 'success' && (needs.detect.outputs.shouldRelease != 'true' || needs.validate.result == 'success') }}
     runs-on: ubuntu-latest
     environment: release # Must be kept for trusted publishing on PyPI
     permissions:
@@ -27,12 +243,60 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
+          # Pin to the validated SHA. Necessary for the publish step to work
+          # since it uses HEAD^ to determine if the version has changed.
+          ref: ${{ needs.detect.outputs.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Necessary for the publish step to work since it uses HEAD^ to determine if the version has changed
           fetch-depth: 2
 
       - name: Fetch git tags
         run: git fetch origin 'refs/tags/*:refs/tags/*'
+
+      # Staleness guard: refuse to publish if a newer release already shipped.
+      #
+      # Scenario this prevents: run for commit A fails on a retryable step;
+      # later commit B runs to completion and publishes; someone then clicks
+      # "re-run failed jobs" on A. Without this check, A would re-validate,
+      # pass, and re-publish its now-stale versions -- potentially moving the
+      # `latest` dist-tag backward over B's release.
+      #
+      # The concurrency group does NOT cover this: a manual re-run happens
+      # after B has finished, so nothing is queued to serialize against.
+      #
+      # We compare the version THIS run intends to publish against whatever is
+      # currently on the `latest` dist-tag. This is a release-vs-release check,
+      # not a git-position check: an unrelated feature merge landing on main
+      # during validation does not move `latest`, so it does not false-abort.
+      # We abort only when latest is already >= our target, i.e. an
+      # equal-or-newer release has already happened.
+      #
+      # The target version is read from the checked-out commit: this is a
+      # post-merge release commit, so the Version Packages PR has already
+      # bumped packages/cli/package.json to the version ci:version will land
+      # on.
+      - name: Abort if a newer release already shipped
+        run: |
+          set -euo pipefail
+          target=$(node -p "require('./packages/cli/package.json').version")
+          # `latest` may not exist on a first-ever publish; treat missing as 0.0.0.
+          current=$(npm view vercel@latest version 2>/dev/null || echo "0.0.0")
+          echo "Target version (this run): $target"
+          echo "Current latest on npm:     $current"
+
+          if [ "$target" = "$current" ]; then
+            echo "::error::latest ($current) already equals target ($target); this release has already shipped. Refusing to re-publish a stale release."
+            exit 1
+          fi
+
+          # Use version sort (sort -V) to order the two versions. If `current`
+          # sorts at-or-after `target`, a newer release already shipped.
+          # No semver dependency required (deps aren't installed at this step).
+          highest=$(printf '%s\n%s\n' "$target" "$current" | sort -V | tail -n1)
+          if [ "$highest" != "$target" ]; then
+            echo "::error::latest ($current) is newer than target ($target); a newer release has shipped. Refusing to publish a stale release."
+            exit 1
+          fi
+          echo "Target $target is newer than latest $current; proceeding with release."
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -74,7 +338,7 @@ jobs:
         with:
           version: pnpm ci:version
           publish: pnpm ci:publish # npm publish
-          commitMode: "github-api" # allows release commits and tags to be signed using $GITHUB_TOKEN
+          commitMode: 'github-api' # allows release commits and tags to be signed using $GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
