@@ -1,5 +1,35 @@
 # vercel
 
+## 54.12.1
+
+### Patch Changes
+
+- 800286e: `vercel connect create --data` now accepts `@<path>` to read the JSON from a file and `@-` to read it from stdin, so non-managed connector credentials (e.g. client secrets) no longer have to be passed inline where they leak into shell history and process listings. Inline `--data` still works but now warns when it looks like it contains a secret.
+- 800286e: Strip ANSI escape sequences from team-controlled connector names, UIDs, and project names in all `vercel connect` command output (`attach`, `detach`, `remove`, `revoke-tokens`, and the `list` table's type/projects cells), not just the `list` UID/name cells. Prevents terminal escape injection from maliciously-named connectors visible across a team.
+- 1e64d1f: Added `vc api --spec-url <url>` for loading endpoints from a custom OpenAPI spec instead of the default public Vercel spec. Custom specs are fetched fresh, can use the current CLI token to pass Vercel deployment protection via the SSO handshake, and replace the public spec entirely for listing, interactive selection, and tag/operation resolution.
+- Updated dependencies [52f005f]
+- Updated dependencies [2d2aad9]
+- Updated dependencies [01e18e8]
+  - @vercel/backends@0.8.12
+  - @vercel/build-utils@13.30.0
+  - @vercel/next@4.19.0
+  - @vercel/elysia@0.1.93
+  - @vercel/express@0.1.103
+  - @vercel/fastify@0.1.96
+  - @vercel/go@3.9.0
+  - @vercel/h3@0.1.102
+  - @vercel/hono@0.2.96
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.76
+  - @vercel/nestjs@0.2.97
+  - @vercel/node@5.8.17
+  - @vercel/python@6.44.1
+  - @vercel/redwood@2.5.0
+  - @vercel/remix-builder@5.9.1
+  - @vercel/ruby@2.4.0
+  - @vercel/rust@1.3.0
+  - @vercel/static-build@2.10.3
+
 ## 54.12.0
 
 ### Minor Changes
