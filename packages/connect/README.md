@@ -68,6 +68,56 @@ SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
 
+### Vercel AI SDK + direct tools (no MCP server)
+
+When a tool calls a provider's REST/GraphQL API directly (no MCP server),
+use `withConnect` so Connect resolves the token before `execute` runs.
+Attach it as `Authorization: Bearer <token>` for HTTP calls, or pass it
+to a vendor SDK:
+
+```ts
+import { withConnect } from '@vercel/connect/ai-sdk';
+import { streamText, stepCountIs } from 'ai';
+import { z } from 'zod';
+
+const subject = { type: 'user', id: userId } as const;
+
+const linearWhoami = withConnect(
+  { connectorId: 'oauth/linear', scopes: ['read'], subject },
+  {
+    description: 'Return the authenticated Linear user.',
+    inputSchema: z.object({}),
+    execute: async (_input, { token }) => {
+      const res = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ query: '{ viewer { id name email } }' }),
+      });
+      return (await res.json()).data.viewer;
+    },
+  }
+);
+
+const slackPost = withConnect(
+  { connectorId: 'oauth/slack', scopes: ['chat:write'], subject },
+  {
+    description: 'Post a Slack message.',
+    inputSchema: z.object({ channel: z.string(), text: z.string() }),
+    execute: async ({ channel, text }, { token }) => {
+      const client = new WebClient(token);
+      return client.chat.postMessage({ channel, text });
+    },
+  }
+);
+```
+
+If the user has not authorized the connector yet, the tool resolves to a
+structured `{ status: 'connect_required', connectorId, url }` output (render
+`url` as a Connect button in your UI) instead of throwing.
+
 ### Eve
 
 ```ts
