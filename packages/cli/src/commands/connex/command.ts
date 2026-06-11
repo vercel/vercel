@@ -34,7 +34,7 @@ export const createSubcommand = {
       argument: 'JSON',
       deprecated: false,
       description:
-        'JSON object for non-managed connector creation. When set, posts directly to the connector create API.',
+        'JSON object for non-managed connector creation. When set, posts directly to the connector create API. Pass `@<path>` to read from a file or `@-` to read from stdin — recommended for secrets (e.g. client secrets), which leak into shell history when passed inline.',
     },
     {
       name: 'connector-type',
@@ -94,8 +94,12 @@ export const createSubcommand = {
       value: `${packageName} connect create mcp.linear.app --name linear --data '{"clientId":"abc123"}'`,
     },
     {
-      name: 'Create a non-managed connector with an explicit connector type',
-      value: `${packageName} connect create slack --name my-bot --connector-type slack --data '{"appId":"A123","appName":"my-bot","clientId":"abc","clientSecret":"secret"}'`,
+      name: 'Create a non-managed connector, reading credentials from a file (keeps secrets out of shell history)',
+      value: `${packageName} connect create slack --name my-bot --connector-type slack --data @slack-app.json`,
+    },
+    {
+      name: 'Create a non-managed connector, reading credentials from stdin',
+      value: `cat slack-app.json | ${packageName} connect create slack --name my-bot --connector-type slack --data @-`,
     },
     {
       name: 'Output as JSON',
