@@ -7,7 +7,6 @@ import { validateJsonOutput } from '../../util/output-format';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import { categoriesSubcommand } from './command';
-import { IntegrationCategoriesTelemetryClient } from '../../util/telemetry/commands/integration/categories';
 import {
   fetchIntegrationCategories,
   type IntegrationCategory,
@@ -26,12 +25,6 @@ export async function categories(client: Client, args: string[]) {
     return 1;
   }
 
-  const telemetry = new IntegrationCategoriesTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
-
   if (parsedArguments.args.length > 0) {
     output.error(
       'Invalid number of arguments. Usage: `vercel integration categories`'
@@ -45,7 +38,6 @@ export async function categories(client: Client, args: string[]) {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
-  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
 
   output.spinner('Fetching integration categories...', 500);
 

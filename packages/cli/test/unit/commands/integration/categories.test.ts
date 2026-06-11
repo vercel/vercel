@@ -25,7 +25,7 @@ describe('integration', () => {
 
     it('returns formatted json output (slug + title only, no id)', async () => {
       useIntegrationCategories();
-      client.setArgv('integration', 'categories', '--json');
+      client.setArgv('integration', 'categories', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -56,7 +56,7 @@ describe('integration', () => {
 
     it('errors when the categories endpoint fails', async () => {
       useIntegrationCategories({ status: 500 });
-      client.setArgv('integration', 'categories', '--json');
+      client.setArgv('integration', 'categories', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
 
@@ -77,9 +77,9 @@ describe('integration', () => {
       );
     });
 
-    it('tracks telemetry for subcommand and --json', async () => {
+    it('tracks telemetry for subcommand', async () => {
       useIntegrationCategories();
-      client.setArgv('integration', 'categories', '--json');
+      client.setArgv('integration', 'categories', '--format=json');
       const exitCode = await integrationCommand(client);
       expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
@@ -87,10 +87,6 @@ describe('integration', () => {
         {
           key: 'subcommand:categories',
           value: 'categories',
-        },
-        {
-          key: 'flag:json',
-          value: 'TRUE',
         },
       ]);
     });

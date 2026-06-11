@@ -1,4 +1,4 @@
-import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 import {
   claimSubcommand,
@@ -375,10 +375,9 @@ export const discoverSubcommand = {
       deprecated: false,
       argument: 'CATEGORY',
       description:
-        'Filter integrations by category (can be repeated; e.g., -c storage -c ai). Run `vercel integration categories` for valid slugs.',
+        'Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run `vercel integration categories` for valid slugs.',
     },
     formatOption,
-    jsonOption,
   ],
   examples: [
     {
@@ -396,14 +395,14 @@ export const discoverSubcommand = {
       name: 'Filter integrations by category',
       value: [
         `${packageName} integration discover --category storage`,
-        `${packageName} integration discover -c ai`,
+        `${packageName} integration discover -c authentication`,
       ],
     },
     {
       name: 'Filter by multiple categories at once (repeat the flag)',
       value: [
-        `${packageName} integration discover --category storage --category ai`,
-        `${packageName} integration discover -c commerce -c payments -c auth`,
+        `${packageName} integration discover --category storage --category authentication`,
+        `${packageName} integration discover -c commerce -c payments -c authentication`,
       ],
     },
     {
@@ -423,7 +422,7 @@ export const categoriesSubcommand = {
   description:
     'List marketplace integration categories (slugs valid for `integration discover --category`)',
   arguments: [],
-  options: [formatOption, jsonOption],
+  options: [formatOption],
   examples: [
     {
       name: 'List marketplace categories',

@@ -90,7 +90,6 @@ export async function discover(client: Client, args: string[]) {
     return 1;
   }
   const asJson = formatResult.jsonOutput;
-  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
 
   output.spinner('Fetching marketplace integrations...', 500);
 

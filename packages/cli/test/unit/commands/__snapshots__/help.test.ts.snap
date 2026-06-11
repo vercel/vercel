@@ -3667,8 +3667,8 @@ exports[`help command > integration help output snapshots > integration discover
 
   Options:
 
-  -c,  --category <CATEGORY>  Filter integrations by category (can be repeated; e.g., -c storage -c ai). Run \`vercel    
-                              integration categories\` for valid slugs.                                                  
+  -c,  --category <CATEGORY>  Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run
+                              \`vercel integration categories\` for valid slugs.                                          
   -F,  --format <FORMAT>      Specify the output format (json)                                                          
 
 
@@ -3700,12 +3700,12 @@ exports[`help command > integration help output snapshots > integration discover
   - Filter integrations by category
 
     $ vercel integration discover --category storage
-    $ vercel integration discover -c ai
+    $ vercel integration discover -c authentication
 
   - Filter by multiple categories at once (repeat the flag)
 
-    $ vercel integration discover --category storage --category ai
-    $ vercel integration discover -c commerce -c payments -c auth
+    $ vercel integration discover --category storage --category authentication
+    $ vercel integration discover -c commerce -c payments -c authentication
 
   - List available category slugs to use with --category
 
