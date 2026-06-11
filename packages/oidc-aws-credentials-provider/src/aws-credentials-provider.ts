@@ -1,12 +1,14 @@
 import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import type { FromWebTokenInit } from '@aws-sdk/credential-provider-web-identity';
 import { fromWebToken } from '@aws-sdk/credential-provider-web-identity';
-import { getVercelOidcTokenSync } from '@vercel/oidc';
+import { getVercelOidcToken } from '@vercel/oidc';
 
 /**
  * The init object for the `awsCredentialsProvider` function.
  *
  * @typedef {Object} AwsCredentialsProviderInit
+ * @property {string} audience - Optional audience to set on the exchanged token.
+ * @property {string} jti - Optional JTI to set on the exchanged token.
  * @property {string} roleArn - ARN of the role that the caller is assuming.
  * @property {Object} [clientConfig] - Custom STS client configurations overriding the default ones.
  * @property {Array} [clientPlugins] - Custom STS client middleware plugin to modify the client default behavior.
@@ -17,15 +19,27 @@ import { getVercelOidcTokenSync } from '@vercel/oidc';
  * @property {string} [policy] - An IAM policy in JSON format that you want to use as an inline session policy.
  * @property {number} [durationSeconds=3600] - The duration, in seconds, of the role session. Defaults to 3600 seconds.
  */
-
 export interface AwsCredentialsProviderInit
-  extends Omit<FromWebTokenInit, 'webIdentityToken'> {}
+  extends Omit<FromWebTokenInit, 'webIdentityToken'> {
+  /**
+   * Optional audience to set on the exchanged token.
+   * @default undefined
+   */
+  audience?: string;
+  /**
+   * Optional JTI to set on the exchanged token.
+   * @default undefined
+   */
+  jti?: string;
+}
 
 /**
  * Obtains the Vercel OIDC token and creates an AWS credential provider function
  * that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
  *
  * @param {AwsCredentialsProviderInit} init - The initialization object.
+ * @param {string} init.audience - Optional audience to set on the exchanged token.
+ * @param {string} init.jti - Optional JTI to set on the exchanged token.
  * @param {string} init.roleArn - ARN of the role that the caller is assuming.
  * @param {Object} [init.clientConfig] - Custom STS client configurations overriding the default ones.
  * @param {Array} [init.clientPlugins] - Custom STS client middleware plugin to modify the client default behavior.
@@ -45,6 +59,8 @@ export interface AwsCredentialsProviderInit
  *
  * const s3Client = new s3.S3Client({
  *   credentials: awsCredentialsProvider({
+ *     audience: 'https://sts.amazonaws.com',
+ *     jti: secureRandomString(),
  *     roleArn: "arn:aws:iam::1234567890:role/RoleA",
  *     clientConfig: { region: "us-west-2" },
  *     clientPlugins: [addFooHeadersPlugin],
@@ -61,10 +77,11 @@ export interface AwsCredentialsProviderInit
 export function awsCredentialsProvider(
   init: AwsCredentialsProviderInit
 ): AwsCredentialIdentityProvider {
+  const { audience, jti, ...initOptions } = init;
   return async () => {
     return fromWebToken({
-      ...init,
-      webIdentityToken: getVercelOidcTokenSync(),
+      ...initOptions,
+      webIdentityToken: await getVercelOidcToken({ audience, jti }),
     })();
   };
 }

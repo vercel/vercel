@@ -9,4 +9,5 @@ export {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
 } from './auth-errors';
+export { exchangeVercelOidcToken } from './exchange-vercel-oidc-token';
 export { getVercelToken } from './token-util';

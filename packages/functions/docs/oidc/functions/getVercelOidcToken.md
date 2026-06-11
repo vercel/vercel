@@ -6,7 +6,7 @@
 
 > **getVercelOidcToken**(`options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`string`\>
 
-Defined in: packages/oidc/dist/get-vercel-oidc-token-with-refresh.d.ts:60
+Defined in: packages/oidc/dist/get-vercel-oidc-token-with-refresh.d.ts:61
 
 Gets the current OIDC token from the request context or the environment variable.
 
