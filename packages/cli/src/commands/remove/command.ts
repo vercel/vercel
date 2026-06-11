@@ -4,7 +4,8 @@ import { yesOption } from '../../util/arg-common';
 export const removeCommand = {
   name: 'remove',
   aliases: ['rm'],
-  description: 'Remove deployment(s) by project name or deployment ID.',
+  description:
+    'Remove deployment(s) by deployment ID, or remove project(s) by project name or project ID.',
   arguments: [
     {
       name: 'name|deploymentId',
@@ -32,7 +33,7 @@ export const removeCommand = {
       value: `${packageName} remove dpl_abcdef123456890`,
     },
     {
-      name: 'Remove all deployments with Project name `my-app`',
+      name: 'Remove project `my-app` (including all deployments and aliases)',
       value: `${packageName} remove my-app`,
     },
     {
