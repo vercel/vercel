@@ -1,5 +1,40 @@
 # vercel
 
+## 54.12.0
+
+### Minor Changes
+
+- 5757bca: [services] add support to `vc dev` for `experimentalServicesV2`.
+
+### Patch Changes
+
+- 663307f: Fix CLI self-upgrade failing with `EUNSUPPORTEDPROTOCOL` inside pnpm/yarn workspaces
+- 32a730e: Elevate maximum maxDuration to 1800s
+- Updated dependencies [4637f0a]
+- Updated dependencies [32a730e]
+- Updated dependencies [c5d53d7]
+- Updated dependencies [a5034c1]
+- Updated dependencies [0c4ea01]
+  - @vercel/python@6.44.1
+  - @vercel/build-utils@13.29.1
+  - @vercel/remix-builder@5.9.1
+  - @vercel/go@3.9.0
+  - @vercel/node@5.8.16
+  - @vercel/static-build@2.10.2
+  - @vercel/backends@0.8.11
+  - @vercel/elysia@0.1.92
+  - @vercel/express@0.1.102
+  - @vercel/fastify@0.1.95
+  - @vercel/h3@0.1.101
+  - @vercel/hono@0.2.95
+  - @vercel/hydrogen@1.4.0
+  - @vercel/koa@0.1.75
+  - @vercel/nestjs@0.2.96
+  - @vercel/next@4.18.0
+  - @vercel/redwood@2.5.0
+  - @vercel/ruby@2.4.0
+  - @vercel/rust@1.3.0
+
 ## 54.11.1
 
 ### Patch Changes

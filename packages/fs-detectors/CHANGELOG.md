@@ -1,5 +1,13 @@
 # @vercel/fs-detectors
 
+## 6.8.3
+
+### Patch Changes
+
+- 32a730e: Elevate maximum maxDuration to 1800s
+- Updated dependencies [32a730e]
+  - @vercel/build-utils@13.29.1
+
 ## 6.8.2
 
 ### Patch Changes
