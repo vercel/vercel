@@ -36,6 +36,7 @@ import { ConnectError, createConnectErrorFromResponse } from '../token.js';
 const CONNECT_AUTHORIZATION_URL = 'https://connect.vercel.com/oauth/authorize';
 const CONNECT_TOKEN_URL = 'https://connect.vercel.com/oauth/token';
 const CONNECT_USERINFO_URL = 'https://connect.vercel.com/oauth/userinfo';
+const DEFAULT_SCOPES = ['openid', 'profile', 'email'] as const;
 
 /** Options accepted by {@link connect}. */
 export interface BetterAuthConnectOptions {
@@ -55,7 +56,8 @@ export interface BetterAuthConnectOptions {
 
   /**
    * Scopes to request. `offline_access` is added automatically so the
-   * Vercel Connect side can mint refresh tokens. Defaults to `["openid"]`.
+   * Vercel Connect side can mint refresh tokens. Defaults to
+   * `["openid", "profile", "email"]`.
    */
   readonly scopes?: readonly string[];
 
@@ -74,7 +76,7 @@ export interface BetterAuthConnectOptions {
 export function connect(options: BetterAuthConnectOptions): GenericOAuthConfig {
   const fetchVercelToken = options.getVercelOidcToken ?? getVercelOidcToken;
   const scopes = Array.from(
-    new Set([...(options.scopes ?? ['openid']), 'offline_access'])
+    new Set([...(options.scopes ?? DEFAULT_SCOPES), 'offline_access'])
   );
 
   return {
