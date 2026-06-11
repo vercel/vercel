@@ -1,0 +1,46 @@
+{
+  "name": "@vercel/passport",
+  "description": "Runtime Passport identity helpers intended for use with Vercel Functions",
+  "homepage": "https://vercel.com",
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "version": "0.0.0",
+  "repository": {
+    "directory": "packages/passport",
+    "type": "git",
+    "url": "git+https://github.com/vercel/vercel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vercel/vercel/issues"
+  },
+  "dependencies": {
+    "jose": "5.9.6"
+  },
+  "devDependencies": {
+    "vitest": "2.0.1"
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "test": "vitest run --config ../../vitest.config.mts",
+    "type-check": "tsc --noEmit",
+    "vitest-unit": "pnpm test"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
