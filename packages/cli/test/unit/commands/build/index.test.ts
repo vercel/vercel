@@ -1663,7 +1663,12 @@ createServer((_req, res) => {
 
       const files = await fs.readdir(output);
       // we should NOT see `functions` because that means `middleware.ts` was processed
-      expect(files.sort()).toEqual(['builds.json', 'config.json', 'static']);
+      expect(files.sort()).toEqual([
+        'builds.json',
+        'config.json',
+        'diagnostics',
+        'static',
+      ]);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }
@@ -1910,7 +1915,7 @@ createServer((_req, res) => {
         join(definitionsDir, 'index.js'),
         'utf8'
       );
-      expect(indexJs).toContain('export function get(hashedSdkKey)');
+      expect(indexJs).toContain('export function get(key)');
 
       fs.removeSync(definitionsDir);
     });
@@ -1974,8 +1979,7 @@ createServer((_req, res) => {
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
-    // biome-ignore lint/suspicious/noSkippedTests:  until we upgraded the flags script to support oidc
-    it.skip('should emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
+    it('should emit flags-definitions module with OIDC when VERCEL_FLAGS_EMBED_DEFINITIONS=force-on', async () => {
       vi.stubEnv(
         'VERCEL_OIDC_TOKEN',
         'faketoken.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm9qZWN0X2lkIjoicHJvamVjdF9pZCJ9.signature'
@@ -2013,8 +2017,7 @@ createServer((_req, res) => {
       expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
     });
 
-    // biome-ignore lint/suspicious/noSkippedTests:  until we upgraded the flags script to support oidc
-    it.skip('should emit flags-definitions module with OIDC and flags dependencies', async () => {
+    it('should emit flags-definitions module with OIDC and flags dependencies', async () => {
       vi.stubEnv('FLAGS', undefined);
       vi.stubEnv(
         'VERCEL_OIDC_TOKEN',

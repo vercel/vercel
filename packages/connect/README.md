@@ -7,7 +7,7 @@ Six entrypoints, all ESM:
 - `@vercel/connect` — core token / authorization SDK
 - `@vercel/connect/ai-sdk` — [Vercel AI SDK](https://ai-sdk.dev) glue: re-exports `connectAuthProvider` for MCP transports (optional peers: `ai`, `@ai-sdk/mcp`)
 - `@vercel/connect/mcp` — canonical MCP-spec `OAuthClientProvider` for any MCP client (optional peer: `@ai-sdk/mcp`)
-- `@vercel/connect/ash` — adapter helpers for [Ash](https://github.com/vercel/ash) connections (optional peer: `experimental-ash`)
+- `@vercel/connect/eve` — adapter helpers for [Eve](https://github.com/vercel/eve) connections (optional peer: `eve`)
 - `@vercel/connect/betterauth` — [Better Auth](https://www.better-auth.com/) `genericOAuth` provider (optional peer: `better-auth`)
 - `@vercel/connect/authjs` — [Auth.js](https://authjs.dev/) `OAuth2Config` provider (optional peer: `@auth/core`)
 
@@ -68,11 +68,61 @@ SDK's `toolApproval` option or `wrapMcpTools` from `@ai-sdk/policy-opa`.
 Non-AI-SDK MCP clients (the official MCP TypeScript SDK, Mastra, etc.)
 can import the same `connectAuthProvider` from `@vercel/connect/mcp`.
 
-### Ash
+### Vercel AI SDK + direct tools (no MCP server)
+
+When a tool calls a provider's REST/GraphQL API directly (no MCP server),
+use `withConnect` so Connect resolves the token before `execute` runs.
+Attach it as `Authorization: Bearer <token>` for HTTP calls, or pass it
+to a vendor SDK:
 
 ```ts
-import { defineMcpClientConnection } from 'experimental-ash/connections';
-import { connect } from '@vercel/connect/ash';
+import { withConnect } from '@vercel/connect/ai-sdk';
+import { streamText, stepCountIs } from 'ai';
+import { z } from 'zod';
+
+const subject = { type: 'user', id: userId } as const;
+
+const linearWhoami = withConnect(
+  { connectorId: 'oauth/linear', scopes: ['read'], subject },
+  {
+    description: 'Return the authenticated Linear user.',
+    inputSchema: z.object({}),
+    execute: async (_input, { token }) => {
+      const res = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ query: '{ viewer { id name email } }' }),
+      });
+      return (await res.json()).data.viewer;
+    },
+  }
+);
+
+const slackPost = withConnect(
+  { connectorId: 'oauth/slack', scopes: ['chat:write'], subject },
+  {
+    description: 'Post a Slack message.',
+    inputSchema: z.object({ channel: z.string(), text: z.string() }),
+    execute: async ({ channel, text }, { token }) => {
+      const client = new WebClient(token);
+      return client.chat.postMessage({ channel, text });
+    },
+  }
+);
+```
+
+If the user has not authorized the connector yet, the tool resolves to a
+structured `{ status: 'connect_required', connectorId, url }` output (render
+`url` as a Connect button in your UI) instead of throwing.
+
+### Eve
+
+```ts
+import { defineMcpClientConnection } from 'eve/connections';
+import { connect } from '@vercel/connect/eve';
 
 export default defineMcpClientConnection({
   url: 'https://mcp.linear.app/sse',
@@ -97,4 +147,4 @@ import { connect } from '@vercel/connect/authjs';
 const providers = [connect({ connector: 'linear' })];
 ```
 
-See the source under `src/` for the full API (additional helpers like `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).
+See the source under `src/` for the full API (additional helpers like `revokeToken`, `getTokenResponse`, `startAuthorization`, typed error classes, and per-adapter options).

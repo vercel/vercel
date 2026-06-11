@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.6.1
+
+### Patch Changes
+
+- 01cf6c2: Add `verifyVercelOidcToken` for verifying Vercel OIDC tokens against Vercel's remote JWKS.
+
 ## 3.6.0
 
 ### Minor Changes

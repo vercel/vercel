@@ -25,6 +25,7 @@ import fetch, {
   type RequestInit,
   type Response,
 } from 'node-fetch';
+import pkg from './pkg';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
@@ -53,6 +54,8 @@ import type { z } from 'zod';
 import output from '../output-manager';
 import { parseArguments } from './get-args';
 import { processTokenResponse, refreshTokenRequest } from './oauth';
+
+const DOMAINS_API_PATH = /^\/v\d+\/(?:domains|registrar)(?:\/|$)/;
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -468,6 +471,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+    if (DOMAINS_API_PATH.test(url.pathname)) {
+      headers.set('x-vercel-cli-version', pkg.version);
+    }
     if (this.agentName) {
       headers.set('x-ai-agent', this.agentName);
     }

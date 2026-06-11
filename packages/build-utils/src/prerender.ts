@@ -19,6 +19,7 @@ interface PrerenderOptions {
   chain?: Chain;
   exposeErrBody?: boolean;
   partialFallback?: boolean;
+  hasPostponed?: boolean;
 }
 
 export class Prerender {
@@ -49,6 +50,13 @@ export class Prerender {
   public chain?: Chain;
   public exposeErrBody?: boolean;
   public partialFallback?: boolean;
+  /**
+   * Set to `true` when the route's `.meta` postponed state is present (React
+   * suspended during build prerender). `false` when the framework prerendered
+   * a Prerender route without postponing. `undefined` when the framework did
+   * not provide the signal.
+   */
+  public hasPostponed?: boolean;
 
   constructor({
     expiration,
@@ -68,11 +76,22 @@ export class Prerender {
     chain,
     exposeErrBody,
     partialFallback,
+    hasPostponed,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
+    // Assigned unconditionally (like `staleExpiration`) so the tri-state
+    // (`true` | `false` | `undefined`) round-trips intact. Do not adopt the
+    // `partialFallback`/`exposeErrBody` idiom below, which collapses `false`
+    // into `undefined`.
+    if (hasPostponed !== undefined && typeof hasPostponed !== 'boolean') {
+      throw new Error(
+        'The `hasPostponed` argument for `Prerender` must be a boolean or undefined.'
+      );
+    }
+    this.hasPostponed = hasPostponed;
 
     this.lambda = lambda;
     if (this.lambda) {

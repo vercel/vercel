@@ -142,6 +142,12 @@ export { getOsRelease, getProvidedRuntime } from './os';
 
 export * from './should-serve';
 export * from './schemas';
+export {
+  DEFAULT_MAX_DURATION_LIMIT,
+  SKIP_MAX_DURATION_LIMIT_ENV,
+  getMaxDurationLimit,
+  getMaxDurationSchema,
+} from './max-duration';
 export * from './package-manifest';
 export { generateProjectManifest } from './node-diagnostics';
 export * from './types';

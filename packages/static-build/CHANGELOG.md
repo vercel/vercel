@@ -1,5 +1,23 @@
 # @vercel/static-build
 
+## 2.10.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 2.9.39
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.16
+
+## 2.9.38
+
+### Patch Changes
+
+- @vercel/gatsby-plugin-vercel-builder@2.2.15
+
 ## 2.9.37
 
 ### Patch Changes

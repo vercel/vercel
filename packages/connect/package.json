@@ -1,6 +1,6 @@
 {
   "name": "@vercel/connect",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "type": "module",
   "repository": {
@@ -13,9 +13,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./ash": {
-      "types": "./dist/ash/index.d.ts",
-      "default": "./dist/ash/index.js"
+    "./eve": {
+      "types": "./dist/eve/index.d.ts",
+      "default": "./dist/eve/index.js"
     },
     "./betterauth": {
       "types": "./dist/betterauth/index.d.ts",
@@ -53,7 +53,7 @@
     "@auth/core": ">=0.37.0",
     "ai": "^6 || ^7",
     "better-auth": ">=1.5.0",
-    "experimental-ash": ">=0.8.2"
+    "eve": ">=0.8.2"
   },
   "peerDependenciesMeta": {
     "@ai-sdk/mcp": {
@@ -68,7 +68,7 @@
     "better-auth": {
       "optional": true
     },
-    "experimental-ash": {
+    "eve": {
       "optional": true
     }
   },
@@ -77,7 +77,7 @@
     "@auth/core": "0.37.4",
     "ai": "7.0.0-beta.116",
     "better-auth": "1.5.5",
-    "experimental-ash": "0.31.0",
+    "eve": "file:./fixtures/eve",
     "typescript": "^5"
   },
   "private": false,

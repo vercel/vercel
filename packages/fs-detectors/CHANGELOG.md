@@ -1,5 +1,29 @@
 # @vercel/fs-detectors
 
+## 6.8.1
+
+### Patch Changes
+
+- Updated dependencies [4e849dd]
+  - @vercel/build-utils@13.28.0
+
+## 6.8.0
+
+### Minor Changes
+
+- 1a9558b: Add warning when api/ dir is ignored by experimental services.
+
+### Patch Changes
+
+- c5eeb30: Gate the client-side 900-second `maxDuration` upper bound behind the `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` environment variable. The limit is now owned by a single helper in `@vercel/build-utils` instead of being hardcoded in multiple validators. When the variable is set to `1`, the client-side maximum is skipped and validation defers to the server. Default behavior is unchanged — the maximum, the lower bound, and the integer check are all still enforced when the variable is unset.
+- 9f9eed3: Nest Build Output API files for `experimentalServicesV2` under `.vercel/output/services/<name>`.
+- Updated dependencies [4bd58f2]
+- Updated dependencies [c5eeb30]
+- Updated dependencies [b98053e]
+- Updated dependencies [09c39af]
+  - @vercel/frameworks@3.28.0
+  - @vercel/build-utils@13.27.2
+
 ## 6.7.8
 
 ### Patch Changes

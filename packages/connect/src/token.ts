@@ -112,6 +112,19 @@ export class ConnectorInstallationRequiredError extends ConnectError {
 
 export interface ConnectOptions {
   vercelToken?: string;
+
+  /**
+   * Bypass the in-process token cache and re-fetch from Vercel Connect.
+   *
+   * The cache normally serves any token that is not within
+   * {@link ConnectTokenParams.validityBufferMs} of expiry. That means a
+   * grant the user revoked server-side keeps being handed back from the
+   * local cache until it expires. Set `forceRefresh` when the caller
+   * needs Connect to re-validate the grant on this call — a revoked grant
+   * then surfaces as `no_token` / `user_authorization_required` instead of
+   * a stale bearer.
+   */
+  forceRefresh?: boolean;
 }
 
 export async function getToken(
@@ -131,14 +144,18 @@ export async function getTokenResponse(
   const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
   const cacheKey = JSON.stringify({ connector, ...params });
 
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    const now = Date.now();
-    if (cached.response.expiresAt - now > bufferMs) {
-      cached.lastUsed = now;
-      return cached.response;
-    }
+  if (options?.forceRefresh) {
     cache.delete(cacheKey);
+  } else {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      const now = Date.now();
+      if (cached.response.expiresAt - now > bufferMs) {
+        cached.lastUsed = now;
+        return cached.response;
+      }
+      cache.delete(cacheKey);
+    }
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
@@ -167,6 +184,37 @@ export async function getTokenResponse(
   cache.set(cacheKey, { response: data, lastUsed: Date.now() });
 
   return data;
+}
+
+export async function revokeToken(
+  connector: string,
+  params: {
+    subject: ConnectTokenSubject;
+    installationId?: string;
+  },
+  options?: ConnectOptions
+): Promise<void> {
+  const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
+  const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
+
+  const response = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${vercelToken}`,
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to revoke token'
+    );
+  }
+
+  cache.clear();
 }
 
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;

@@ -7,8 +7,8 @@ import type { ConnectTokenParams } from './token.js';
  * Shared by both Connect → AI SDK integration paths:
  * - the MCP adapter ({@link connectAuthProvider}) raises it from
  *   `redirectToAuthorization`, and
- * - the direct-tool helpers (`connectFetch` / `connectTool`) raise it
- *   when token acquisition reports the user has not authorized yet.
+ * - {@link withConnect} returns a structured authorization-required
+ *   output when token acquisition reports the user has not authorized yet.
  */
 export interface ConsentChallenge {
   readonly connector: string;

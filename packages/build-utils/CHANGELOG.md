@@ -1,5 +1,22 @@
 # @vercel/build-utils
 
+## 13.28.0
+
+### Minor Changes
+
+- 4e849dd: Add a per-route `hasPostponed` signal to `Prerender`.
+
+  `@vercel/build-utils` exposes a new optional `hasPostponed?: boolean` field on `Prerender` / `PrerenderOptions`. It is a tri-state: `true` when the route's `.meta` postponed state is present (React suspended during the build-time prerender), `false` when the framework prerendered a Prerender route without postponing, and `undefined` when the framework did not provide the signal.
+
+  `@vercel/next` populates it for app-router PPR routes (computed from the route's postponed state) and leaves it `undefined` for pages-router and other non-app-router prerenders. This is an additive, finer-grained signal — it does not change the existing `chain` / `experimentalStreamingLambdaPath` behavior — so downstream consumers can distinguish a route that actually postponed from one that has PPR machinery but fully prerendered (e.g. under `cacheComponents: true`).
+
+## 13.27.2
+
+### Patch Changes
+
+- c5eeb30: Gate the client-side 900-second `maxDuration` upper bound behind the `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` environment variable. The limit is now owned by a single helper in `@vercel/build-utils` instead of being hardcoded in multiple validators. When the variable is set to `1`, the client-side maximum is skipped and validation defers to the server. Default behavior is unchanged — the maximum, the lower bound, and the integer check are all still enforced when the variable is unset.
+- 09c39af: Fix Node.js API entrypoint detection dropping functions whose source contains comment-like sequences (`/*`, `//`, `*/`) inside string, template, or regex literals — for example an `Accept: */*` header. Handler exports are now identified with the ES/CJS module lexers instead of stripping comments with regexes, so the contents of literals are never mistaken for comments.
+
 ## 13.27.1
 
 ### Patch Changes

@@ -19,13 +19,12 @@ We are adding two optional subpath exports to `@vercel/connect`, covering the
   Connect, with no hand-rolled OAuth. **Use this when the provider has an MCP
   server.**
 - **`@vercel/connect/ai-sdk`** — re-exports `connectAuthProvider` (and its
-  consent types) so AI SDK users have a single import, **plus** the direct-tool
-  helpers `connect.tool` / `connectTool` and `connect.fetch` / `connectFetch`.
-  **Use these when you're calling a plain REST/GraphQL API from a tool** (no MCP
-  server), so you don't hand-roll `getToken` + `try/catch` + `startAuthorization`.
-  See [§7](#7-direct-tools-no-mcp-server-connecttool).
+  consent types) so AI SDK users have a single import, **plus**
+  {@link withConnect} for tools that call a plain REST/GraphQL API directly
+  (no MCP server), so you don't hand-roll `getToken` + `try/catch` +
+  `startAuthorization`. See [§7](#7-direct-tools-no-mcp-server-withconnect).
 
-The two adapters (`connectAuthProvider` for MCP, `connect.tool` for direct
+The two adapters (`connectAuthProvider` for MCP, `withConnect` for direct
 tools) are the real deliverables — they are the pieces that contain
 Connect-specific logic and that cannot live anywhere else. Tool-call approval
 (Human-in-the-Loop) is deliberately **out of scope**: it has no Connect
@@ -259,7 +258,7 @@ PR #16527).
 
 ---
 
-## 7. Direct tools (no MCP server): `connect.tool`
+## 7. Direct tools (no MCP server): `withConnect`
 
 The MCP path ([§4](#4-how-the-ai-sdk-mcp-oauth-flow-actually-works)–[§5](#5-what-connectauthprovider-does))
 only applies when the provider runs an MCP server. Plenty of providers don't —
@@ -267,7 +266,7 @@ you just want to call their REST/GraphQL API from a tool. Without a helper, the
 tool author has to hand-roll the whole Connect dance:
 
 ```ts
-// The boilerplate connect.tool removes.
+// The boilerplate withConnect removes.
 const linearWhoami = tool({
   description: 'Return the authenticated Linear user.',
   inputSchema: z.object({}),
@@ -282,7 +281,7 @@ const linearWhoami = tool({
           { subject, scopes: ['read'] },
           { callbackUrl: `${origin}/api/connect/linear/callback` }
         );
-        return { status: 'connect_required', connector: 'oauth/linear', url };
+        return { status: 'connect_required', connectorId: 'oauth/linear', url };
       }
       throw err;
     }
@@ -301,32 +300,49 @@ const linearWhoami = tool({
 
 Every direct tool repeats the same four moves: get a token, catch
 "not authorized yet", mint a consent URL, return a structured "connect" result.
-`connect.tool` encapsulates all of it and hands the author a token-injecting
-`fetch`, so they only write the happy path:
+`withConnect` encapsulates all of it and passes the resolved `token` to
+`execute`, so authors only write the happy path:
 
 ```ts
-import { connect } from '@vercel/connect/ai-sdk';
+import { withConnect } from '@vercel/connect/ai-sdk';
 import { z } from 'zod';
 
-const linearWhoami = connect.tool({
-  connector: 'oauth/linear',
-  scopes: ['read'],
-  subject: { type: 'user', id: userId },
-  description: 'Return the authenticated Linear user.',
-  inputSchema: z.object({}),
-  execute: async (_input, { fetch }) => {
-    const res = await fetch('https://api.linear.app/graphql', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: '{ viewer { id name email } }' }),
-    });
-    return (await res.json()).data.viewer;
-  },
-});
+const subject = { type: 'user', id: userId } as const;
+
+const linearWhoami = withConnect(
+  { connectorId: 'oauth/linear', scopes: ['read'], subject },
+  {
+    description: 'Return the authenticated Linear user.',
+    inputSchema: z.object({}),
+    execute: async (_input, { token }) => {
+      const res = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ query: '{ viewer { id name email } }' }),
+      });
+      return (await res.json()).data.viewer;
+    },
+  }
+);
+
+const slackPost = withConnect(
+  { connectorId: 'oauth/slack', scopes: ['chat:write'], subject },
+  {
+    description: 'Post a Slack message.',
+    inputSchema: z.object({ channel: z.string(), text: z.string() }),
+    execute: async ({ channel, text }, { token }) => {
+      const client = new WebClient(token);
+      return client.chat.postMessage({ channel, text });
+    },
+  }
+);
 
 const result = streamText({
   model: 'openai/gpt-5.4',
-  tools: { linear_whoami: linearWhoami },
+  tools: { linear_whoami: linearWhoami, slack_post: slackPost },
   stopWhen: stepCountIs(8),
   prompt,
 });
@@ -334,40 +350,22 @@ const result = streamText({
 
 ### What it does
 
-- **Token injection.** The `fetch` handed to `execute` calls Connect's
-  `getToken` for `connector`/`subject` and attaches
-  `Authorization: Bearer <token>` to every request (an explicit `Authorization`
-  header you set yourself is preserved).
+- **Token resolution before `execute`.** Connect's `getToken` runs for
+  `connectorId`/`subject` before your tool body is invoked.
+- **Resolved `token`.** The access token is on the options bag as `token`.
+  Attach it as `Authorization: Bearer <token>` for HTTP calls, or pass it to a
+  vendor SDK or GraphQL client.
 - **Missing grant → structured output.** If the subject hasn't authorized the
-  connector yet, `fetch` throws internally and `connect.tool` returns a
-  `ConnectRequiredOutput`:
+  connector yet, `execute` is skipped and the tool resolves to a
+  `ConnectAuthorizationRequired` output:
 
   ```ts
-  { status: 'connect_required', connector, url, message, deviceCode?, expiresAt? }
+  { status: 'connect_required', connectorId, url }
   ```
 
-  The model sees it (and can explain that authorization is needed) and your UI
-  renders `url` as a "Connect" button. Override the shape with
-  `onConsentRequired` if you want something different.
-
-- **Subject resolution.** `subject` may be a static value, a function
-  `(options) => subject`, or omitted — in which case it's read from the AI SDK
-  execution context (`options.context.connectSubject`), which you set per
-  request via `streamText`'s `toolsContext`. That keeps the current user out of
-  the tool definition:
-
-  ```ts
-  streamText({
-    tools: { linear_whoami: linearWhoami },
-    toolsContext: { connectSubject: { type: 'user', id: userId } },
-  });
-  ```
-
-- **Lower-level escape hatch.** If you'd rather build the `tool()` yourself,
-  `connect.fetch(connector, subject, options)` returns just the
-  token-injecting `fetch` (it throws `ConsentRequiredError` on a missing grant —
-  you catch and shape it). `connect.tool` is `connect.fetch` + the `tool()`
-  wrapper + the default consent-to-output mapping.
+  Your UI renders `url` as a "Connect" button. `toModelOutput` tells the model
+  to stop and ask the user to authorize (the consent URL is **not** leaked to
+  the model).
 
 ### The consent + resume flow (mirrors MCP)
 
@@ -379,24 +377,21 @@ token now resolves, and the happy path proceeds. No long-lived server
 connection, no function-timeout exposure. (The starter app re-runs the last
 turn automatically on return from consent via `useChat`'s `regenerate()`.)
 
-### Alternatives considered
+### Why `withConnect` (not `connectTool`)
 
-The same capability could be packaged several ways. We ship **all three of the
-first group** (they're the same code under different ergonomics) and rejected the
-rest:
+We ship a single helper named **`withConnect(config, definition)`** rather than
+`connect.tool` / `connectTool`:
 
-| Option                                                  | Shape                                                               | Verdict                                                                                                                                   |
-| ------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **`connect.tool({...})`** (shipped)                     | Namespaced call style matching the requested ergonomics.            | ✅ Primary, most discoverable.                                                                                                            |
-| **`connectTool({...})`** (shipped)                      | Named export, identical function.                                   | ✅ For tree-shake-friendly / explicit imports.                                                                                            |
-| **`connectFetch(connector, subject, opts)`** (shipped)  | Just the token-injecting `fetch`; author writes their own `tool()`. | ✅ Escape hatch for full control over the tool shape.                                                                                     |
-| `withConnect(tool({...}), { connector })`               | Higher-order wrapper over an existing tool.                         | ❌ Re-typing `execute` to inject `fetch` after the fact fights the AI SDK's `Tool` generics; you lose input inference.                    |
-| `getToken` + manual `try/catch` (status quo)            | No helper.                                                          | ❌ Correct but repeated in every tool; easy to forget the `UserAuthorizationRequiredError` branch and ship an unauthenticated request.    |
-| A `connectAuthProvider`-style provider for direct fetch | Provider object the author wires up.                                | ❌ Over-engineered for a single bearer header; the provider abstraction only earns its keep against MCP's `OAuthClientProvider` contract. |
+| Option | Shape | Verdict |
+| ------ | ----- | ------- |
+| **`withConnect(config, definition)`** (shipped) | Plain tool definition; `execute` receives `{ token, … }` with full typing. | ✅ Primary. Leaves room for future Connect-owned tool factories (`connect.tool`, …) without naming collisions. |
+| `connectTool({ connector, … })` | Config + tool fields merged into one object. | ❌ Superseded — same capability, less flexible execute typing. |
+| `getToken` + manual `try/catch` (status quo) | No helper. | ❌ Correct but repeated in every tool; easy to forget the `UserAuthorizationRequiredError` branch. |
+| Higher-order wrapper over `tool({…})` | Wrap an existing AI SDK tool after the fact. | ❌ Re-typing `execute` to inject `fetch`/`token` fights the SDK's `Tool` generics. |
 
-Naming note: `connect.tool` reads naturally next to `streamText`'s other tool
-factories, and keeping `connectTool`/`connectFetch` as named exports means the
-namespace object is purely additive sugar (`connect.tool === connectTool`).
+`withConnect` takes a **plain definition object**, not a pre-wrapped
+`tool({…})`, so `execute` can receive the augmented options bag (`token`)
+with correct inference.
 
 ---
 
@@ -498,7 +493,7 @@ Remaining open items:
 | Connect consent / authorization start                               | `src/authorization.ts`                                      |
 | Shared consent types (`ConsentChallenge`, `ConsentRequiredError`)   | `src/consent.ts`                                            |
 | MCP `OAuthClientProvider` adapter                                   | `src/mcp/connect-auth-provider.ts`                          |
-| Direct-tool helpers (`connect.tool`, `connectTool`, `connectFetch`) | `src/ai-sdk/connect-tool.ts`                                |
+| Direct-tool helper (`withConnect`)                                  | `src/ai-sdk/with-connect.ts`                                |
 | `/mcp` public surface                                               | `src/mcp/index.ts`                                          |
 | `/ai-sdk` public surface                                            | `src/ai-sdk/index.ts`                                       |
 | AI SDK `OAuthClientProvider` + `auth()` orchestrator                | `vercel/ai` → `packages/mcp/src/tool/oauth.ts`              |

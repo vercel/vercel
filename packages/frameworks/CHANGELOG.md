@@ -1,5 +1,15 @@
 # @vercel/frameworks
 
+## 3.28.0
+
+### Minor Changes
+
+- 4bd58f2: Add Eve as an experimental framework declaration alongside Ash.
+
+### Patch Changes
+
+- b98053e: Change label for Sanity v2
+
 ## 3.27.0
 
 ### Minor Changes

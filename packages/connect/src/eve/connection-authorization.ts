@@ -1,8 +1,8 @@
 /**
- * Ash adapter helper for `@vercel/connect`.
+ * Eve adapter helper for `@vercel/connect`.
  *
  * {@link connect} turns a Vercel Connect OAuth connector id plus a
- * principal type into a ready-made Ash
+ * principal type into a ready-made Eve
  * {@link AuthorizationDefinition} that the connection runtime
  * consumes directly. The helper collapses the ~100 lines of
  * `getToken` / `startAuthorization` / `completeAuthorization`
@@ -10,8 +10,8 @@
  * to a single call:
  *
  * ```ts
- * import { defineMcpClientConnection } from "experimental-ash/connections";
- * import { connect } from "@vercel/connect/ash";
+ * import { defineMcpClientConnection } from "eve/connections";
+ * import { connect } from "@vercel/connect/eve";
  *
  * export default defineMcpClientConnection({
  *   url: "https://mcp.linear.app/sse",
@@ -22,10 +22,10 @@
  *
  * # Module layout
  *
- * This entrypoint is exposed at the `@vercel/connect/ash` subpath so
- * consumers that don't use Ash never load it. `experimental-ash` is
+ * This entrypoint is exposed at the `@vercel/connect/eve` subpath so
+ * consumers that don't use Eve never load it. `eve` is
  * declared as an optional peer dependency: importing
- * `@vercel/connect/ash` requires Ash to be installed in the consumer
+ * `@vercel/connect/eve` requires Eve to be installed in the consumer
  * project, but the rest of `@vercel/connect` works without it.
  */
 import {
@@ -34,10 +34,9 @@ import {
   type ConnectionAuthorizationChallenge,
   type ConnectionPrincipal,
   type InteractiveAuthorizationDefinition,
-  type JsonValue,
   type NonInteractiveAuthorizationDefinition,
   type TokenResult,
-} from 'experimental-ash/connections';
+} from 'eve/connections';
 
 import { startAuthorization } from '../authorization.js';
 import type {
@@ -53,27 +52,13 @@ import {
 } from '../token.js';
 
 /**
- * Authorization phase passed to {@link AshAuthorizationOptions.onError}
+ * Authorization phase passed to {@link EveAuthorizationOptions.onError}
  * so consumers can branch their error translation per callback.
  */
 export type ConnectAuthorizationPhase =
   | 'getToken'
   | 'startAuthorization'
   | 'completeAuthorization';
-
-/**
- * State journaled by Ash between
- * {@link InteractiveAuthorizationDefinition.startAuthorization} and
- * {@link InteractiveAuthorizationDefinition.completeAuthorization}.
- *
- * Currently just the PKCE verifier. The index signature exists to
- * satisfy Ash's `State extends JsonValue` constraint; in practice
- * the only key the helper produces or reads is `verifier`.
- */
-export type ConnectAuthorizationState = {
-  readonly verifier: string;
-  readonly [key: string]: JsonValue;
-};
 
 interface GetTokenOptions {
   readonly principal: ConnectionPrincipal;
@@ -90,7 +75,7 @@ interface CompleteAuthorizationOptions {
 }
 
 /** Options accepted by {@link connect}. */
-export interface AshAuthorizationOptions {
+export interface EveAuthorizationOptions {
   /**
    * Vercel Connect OAuth connector identifier. Accepts either the
    * opaque service connector key (`scl_...`) or the human-readable
@@ -106,9 +91,9 @@ export interface AshAuthorizationOptions {
    * on this choice:
    *
    * - `"user"` → full interactive OAuth definition with `getToken`,
-   *   `startAuthorization`, and `completeAuthorization`. Ash will
+   *   `startAuthorization`, and `completeAuthorization`. Eve will
    *   drive a consent flow through its framework-owned webhook.
-   * - `"app"` → non-interactive definition with `getToken` only. Ash
+   * - `"app"` → non-interactive definition with `getToken` only. Eve
    *   never runs a consent flow for app-scoped connectors; a failure
    *   to fetch the token surfaces as a terminal authorization
    *   failure so the channel can prompt an operator to install the
@@ -127,7 +112,7 @@ export interface AshAuthorizationOptions {
   readonly tokenParams?: Omit<ConnectTokenParams, 'subject'>;
 
   /**
-   * Override how Ash's framework-resolved principal is mapped to a
+   * Override how Eve's framework-resolved principal is mapped to a
    * Vercel Connect token subject. When omitted, app principals map to
    * `{ type: "app" }` and user principals map to
    * `{ type: "user", id, issuer }`.
@@ -144,8 +129,28 @@ export interface AshAuthorizationOptions {
   readonly connectOptions?: ConnectOptions;
 
   /**
+   * Re-validate the grant against Vercel Connect on every `getToken`
+   * instead of trusting the in-process token cache.
+   *
+   * By default `getToken` returns a cached token as long as it has not
+   * expired, so a grant the user revoked server-side keeps reaching the
+   * tool until the bearer's natural expiry. With `validate: true` each
+   * `getToken` bypasses the local cache and re-checks Connect; a revoked
+   * grant comes back as `no_token` / `user_authorization_required`, which
+   * the adapter maps to {@link ConnectionAuthorizationRequiredError} so
+   * Eve re-runs the consent flow rather than calling the tool with a dead
+   * token.
+   *
+   * This trades a Connect round trip per call for freshness — leave it
+   * off for high-frequency tools where a short revocation window is
+   * acceptable, and turn it on for sensitive actions (payments, deletes,
+   * privileged writes) that must never run on a revoked grant.
+   */
+  readonly validate?: boolean;
+
+  /**
    * Custom call-to-action rendered on the
-   * `connection.authorization_required` event. When omitted, Ash
+   * `connection.authorization_required` event. When omitted, Eve
    * fills in `Authorize <ConnectionName> in your browser to continue.`
    * from the connection's filename.
    */
@@ -153,7 +158,7 @@ export interface AshAuthorizationOptions {
 
   /**
    * Escape hatch for turning an unexpected Vercel Connect / network
-   * error into an Ash-recognizable error. Called once per failure
+   * error into an Eve-recognizable error. Called once per failure
    * with the raw error and the phase that produced it.
    *
    * Return a new `Error` to replace the helper's default translation,
@@ -168,7 +173,7 @@ export interface AshAuthorizationOptions {
 }
 
 /** Input accepted by {@link connect}. */
-export type AshAuthorizationInput = string | AshAuthorizationOptions;
+export type EveAuthorizationInput = string | EveAuthorizationOptions;
 
 /**
  * Structurally-readable marker exposed on every {@link connect} return
@@ -194,59 +199,53 @@ export interface VercelConnectMetadata {
 }
 
 /**
- * Augments the standard Ash authorization shape with the
+ * Augments the standard Eve authorization shape with the
  * {@link VercelConnectMetadata} marker, narrowed to whichever flavour
  * `connect()` produces.
  */
-export type AshConnectAuthorizationDefinition<
+export type EveConnectAuthorizationDefinition<
   TAuthorization extends
-    | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
+    | InteractiveAuthorizationDefinition
     | NonInteractiveAuthorizationDefinition,
 > = TAuthorization & {
   readonly vercelConnect: VercelConnectMetadata;
 };
 
 /**
- * Builds an Ash {@link AuthorizationDefinition} backed by Vercel
+ * Builds an Eve {@link AuthorizationDefinition} backed by Vercel
  * Connect. The return type narrows based on
- * {@link AshAuthorizationOptions.principalType}:
+ * {@link EveAuthorizationOptions.principalType}:
  *
  * - omitted or `principalType: "user"` returns an
- *   {@link InteractiveAuthorizationDefinition}; Ash drives a consent
+ *   {@link InteractiveAuthorizationDefinition}; Eve drives a consent
  *   flow through its framework-owned webhook.
  * - `principalType: "app"` returns a
- *   {@link NonInteractiveAuthorizationDefinition}; Ash never runs a
+ *   {@link NonInteractiveAuthorizationDefinition}; Eve never runs a
  *   consent flow for app-scoped connectors.
  *
  * Every returned definition also carries a {@link VercelConnectMetadata}
- * marker on its `vercelConnect` field so downstream tooling (Ash
+ * marker on its `vercelConnect` field so downstream tooling (Eve
  * compiler, dashboards) can detect Vercel Connect-backed connections
  * without inspecting closure state.
  */
 export function connect(
   connector: string
-): AshConnectAuthorizationDefinition<
-  InteractiveAuthorizationDefinition<ConnectAuthorizationState>
+): EveConnectAuthorizationDefinition<InteractiveAuthorizationDefinition>;
+export function connect(
+  options: EveAuthorizationOptions & { readonly principalType?: 'user' }
+): EveConnectAuthorizationDefinition<InteractiveAuthorizationDefinition>;
+export function connect(
+  options: EveAuthorizationOptions & { readonly principalType: 'app' }
+): EveConnectAuthorizationDefinition<NonInteractiveAuthorizationDefinition>;
+export function connect(
+  options: EveAuthorizationInput
+): EveConnectAuthorizationDefinition<
+  InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 >;
 export function connect(
-  options: AshAuthorizationOptions & { readonly principalType?: 'user' }
-): AshConnectAuthorizationDefinition<
-  InteractiveAuthorizationDefinition<ConnectAuthorizationState>
->;
-export function connect(
-  options: AshAuthorizationOptions & { readonly principalType: 'app' }
-): AshConnectAuthorizationDefinition<NonInteractiveAuthorizationDefinition>;
-export function connect(
-  options: AshAuthorizationInput
-): AshConnectAuthorizationDefinition<
-  | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
-  | NonInteractiveAuthorizationDefinition
->;
-export function connect(
-  input: AshAuthorizationInput
-): AshConnectAuthorizationDefinition<
-  | InteractiveAuthorizationDefinition<ConnectAuthorizationState>
-  | NonInteractiveAuthorizationDefinition
+  input: EveAuthorizationInput
+): EveConnectAuthorizationDefinition<
+  InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 > {
   const options = normalizeAuthorizationOptions(input);
   const vercelConnect: VercelConnectMetadata = { connector: options.connector };
@@ -257,8 +256,8 @@ export function connect(
 }
 
 function normalizeAuthorizationOptions(
-  input: AshAuthorizationInput
-): AshAuthorizationOptions {
+  input: EveAuthorizationInput
+): EveAuthorizationOptions {
   if (typeof input === 'string') {
     return { connector: input };
   }
@@ -266,8 +265,8 @@ function normalizeAuthorizationOptions(
 }
 
 function buildInteractiveDefinition(
-  options: AshAuthorizationOptions
-): InteractiveAuthorizationDefinition<ConnectAuthorizationState> {
+  options: EveAuthorizationOptions
+): InteractiveAuthorizationDefinition {
   return {
     principalType: 'user',
 
@@ -276,7 +275,7 @@ function buildInteractiveDefinition(
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal),
-          options.connectOptions
+          getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -290,10 +289,9 @@ function buildInteractiveDefinition(
       webhook,
     }: StartAuthorizationOptions): Promise<{
       challenge: ConnectionAuthorizationChallenge;
-      state: ConnectAuthorizationState;
     }> {
       try {
-        // Ash's `webhook` parameter is semantically a browser-redirect
+        // Eve's `webhook` parameter is semantically a browser-redirect
         // target — the orchestrator mints it via `createWebhook({
         // respondWith: buildAuthorizationCompletePage() })` so the
         // user lands on a friendly "you can close this tab" page after
@@ -308,9 +306,9 @@ function buildInteractiveDefinition(
         // `webhook:` (server-POST) field, even though it would
         // survive the user closing the consent tab right after IdP
         // callback. That mode shows the user Vercel Connect's
-        // generic "close this window" page instead of Ash's branded
+        // generic "close this window" page instead of Eve's branded
         // landing page, and the helper would need to grow
-        // protocol-aware logic that diverges from the simple "Ash
+        // protocol-aware logic that diverges from the simple "Eve
         // mints one URL, Vercel Connect redirects there" mental
         // model. Revisit if tab-close timeouts become a real problem
         // in production.
@@ -334,7 +332,6 @@ function buildInteractiveDefinition(
               ? { instructions: options.instructions }
               : null),
           } satisfies ConnectionAuthorizationChallenge,
-          state: { verifier: response.verifier },
         };
       } catch (error) {
         throw translate(error, 'startAuthorization', options);
@@ -359,7 +356,7 @@ function buildInteractiveDefinition(
 }
 
 function buildNonInteractiveDefinition(
-  options: AshAuthorizationOptions
+  options: EveAuthorizationOptions
 ): NonInteractiveAuthorizationDefinition {
   return {
     principalType: 'app',
@@ -368,7 +365,7 @@ function buildNonInteractiveDefinition(
         const response = await getTokenResponse(
           options.connector,
           await buildTokenParams(options, principal),
-          options.connectOptions
+          getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -378,8 +375,23 @@ function buildNonInteractiveDefinition(
   };
 }
 
+/**
+ * Connect SDK options for `getToken` calls. When {@link
+ * EveAuthorizationOptions.validate} is set, forces a cache-bypassing
+ * re-fetch so a revoked-but-unexpired grant is caught instead of served
+ * from the in-process token cache.
+ */
+function getTokenConnectOptions(
+  options: EveAuthorizationOptions
+): ConnectOptions | undefined {
+  if (!options.validate) {
+    return options.connectOptions;
+  }
+  return { ...options.connectOptions, forceRefresh: true };
+}
+
 async function buildTokenParams(
-  options: AshAuthorizationOptions,
+  options: EveAuthorizationOptions,
   principal: ConnectionPrincipal
 ): Promise<ConnectTokenParams> {
   const toSubject = options.principalToSubject ?? principalToSubject;
@@ -399,17 +411,17 @@ function principalToSubject(
 }
 
 /**
- * Translates raw Vercel Connect errors into Ash's public
+ * Translates raw Vercel Connect errors into Eve's public
  * {@link ConnectionAuthorizationRequiredError} /
- * {@link ConnectionAuthorizationFailedError} classes. Ash discriminates
+ * {@link ConnectionAuthorizationFailedError} classes. Eve discriminates
  * on `err.name` (not `instanceof`), so even if the consumer's bundle
- * loads a different copy of `experimental-ash` than this helper, the
+ * loads a different copy of `eve` than this helper, the
  * runtime still recognizes the throw.
  */
 function translate(
   error: unknown,
   phase: ConnectAuthorizationPhase,
-  options: AshAuthorizationOptions
+  options: EveAuthorizationOptions
 ): Error {
   const override = options.onError?.(error, phase);
   if (override !== undefined) return override;
@@ -417,7 +429,7 @@ function translate(
   // `UserAuthorizationRequiredError` and `NoValidTokenError` both
   // mean "Vercel Connect has no valid credential for this principal
   // yet". For interactive (user) connectors that's recoverable via
-  // a consent flow; Ash will see the `Required` throw and drive
+  // a consent flow; Eve will see the `Required` throw and drive
   // `startAuthorization`. For app connectors it's terminal — there
   // is nobody to consent — so we surface `Failed` with
   // `retryable: false`.
@@ -433,7 +445,7 @@ function translate(
       });
     }
     if (phase === 'completeAuthorization') {
-      // The consent leg reported success (Ash would not call us
+      // The consent leg reported success (Eve would not call us
       // otherwise) but Vercel Connect still says the user is
       // unauthorized. Default to retryable so the model can
       // re-prompt; most cases (network blip, replay) resolve on
@@ -459,7 +471,7 @@ function translate(
     });
   }
 
-  // Every other error is re-thrown verbatim. Ash treats an unknown
+  // Every other error is re-thrown verbatim. Eve treats an unknown
   // throw from `completeAuthorization` as a retryable failure, so the
   // default behavior stays intuitive.
   return error instanceof Error ? error : new Error(String(error));
