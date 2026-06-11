@@ -1,6 +1,15 @@
 import type { WebSocket } from 'ws';
 import { getContext } from '../get-context';
 
+export interface UpgradeWebSocketOptions {
+  /**
+   * Maximum allowed message size in bytes.
+   *
+   * This is forwarded to ws's WebSocketServer `maxPayload` option.
+   */
+  maxPayload?: number;
+}
+
 async function loadWebSocketServer() {
   try {
     const ws = await import('ws');
@@ -14,7 +23,8 @@ async function loadWebSocketServer() {
 }
 
 export async function experimental_upgradeWebSocket(
-  handler: (ws: WebSocket) => void | Promise<void>
+  handler: (ws: WebSocket) => void | Promise<void>,
+  options: UpgradeWebSocketOptions = {}
 ): Promise<Response> {
   const ctx = getContext();
 
@@ -29,7 +39,15 @@ export async function experimental_upgradeWebSocket(
 
   const { req, socket, head } = ctx.upgradeWebSocket();
 
-  const wss = new WebSocketServer({ noServer: true });
+  const serverOptions: { noServer: true; maxPayload?: number } = {
+    noServer: true,
+  };
+
+  if (options.maxPayload !== undefined) {
+    serverOptions.maxPayload = options.maxPayload;
+  }
+
+  const wss = new WebSocketServer(serverOptions);
 
   const ws = await new Promise<WebSocket>((resolve, reject) => {
     const cleanup = () => {
