@@ -35,9 +35,14 @@ import {
 } from '../../util/integration/parse-metadata';
 import {
   isServerHandledRegion,
+  isHiddenOnCreate,
   getVisibleOptions,
   mergeMetadataSchemas,
 } from '../../util/integration/format-schema-help';
+import {
+  promptForMetadataFields,
+  resolvePromptableFields,
+} from '../../util/integration/prompt-for-metadata';
 import type { Metadata } from '../../util/integration/types';
 
 interface AddAutoProvisionOptions extends PostProvisionOptions {
@@ -306,39 +311,99 @@ export async function addAutoProvision(
       : 'server_default',
   });
 
-  // Provision resource
+  // Provision resource. Reads the current `metadata`/`installationMetadata`
+  // each call so it can be retried after prompting for fields the server
+  // couldn't resolve. Returns 1 (and reports) on a thrown error.
+  const provision = async (): Promise<AutoProvisionResult | 1> => {
+    output.spinner('Provisioning resource...');
+    try {
+      const res = await autoProvisionResource(
+        client,
+        integration.slug,
+        product.slug,
+        resourceName,
+        metadata,
+        acceptedPolicies,
+        options.billingPlanId,
+        browserInstallationId ?? options.installationId,
+        installationMetadata
+      );
+      output.stopSpinner();
+      return res;
+    } catch (error) {
+      output.stopSpinner();
+      telemetry.trackMarketplaceEvent(
+        'marketplace_checkout_provisioning_failed',
+        {
+          ...baseProps,
+          error_message: errorToString(error),
+        }
+      );
+      output.error(errorToString(error));
+      return 1;
+    }
+  };
+
   telemetry.trackMarketplaceEvent(
     'marketplace_checkout_provisioning_started',
     baseProps
   );
-  output.spinner('Provisioning resource...');
-  let result: AutoProvisionResult;
-  try {
-    result = await autoProvisionResource(
-      client,
-      integration.slug,
-      product.slug,
-      resourceName,
-      metadata,
-      acceptedPolicies,
-      options.billingPlanId,
-      browserInstallationId ?? options.installationId,
-      installationMetadata
-    );
-  } catch (error) {
-    output.stopSpinner();
-    telemetry.trackMarketplaceEvent(
-      'marketplace_checkout_provisioning_failed',
-      {
-        ...baseProps,
-        error_message: errorToString(error),
-      }
-    );
-    output.error(errorToString(error));
+  let result = await provision();
+  if (result === 1) {
     return 1;
   }
-  output.stopSpinner();
   output.debug(`Auto-provision result: ${JSON.stringify(result, null, 2)}`);
+
+  // The server returns a `metadata` step when a required field couldn't be
+  // resolved on its own (e.g. an AWS `vercel-region` it can't infer from the
+  // team's function regions). When interactive, collect those fields in the
+  // terminal and retry once — so an already-installed integration can be
+  // provisioned fully via the CLI instead of bouncing to the browser.
+  const metadataStep =
+    result.kind === 'metadata' ? (result as AutoProvisionFallback) : undefined;
+  if (metadataStep?.fields?.length && client.stdin.isTTY && !client.isAgent) {
+    const provided = { ...metadata, ...installationMetadata };
+    const fieldsToPrompt = resolvePromptableFields(
+      mergedParsingSchema,
+      provided,
+      metadataStep.fields
+    );
+    if (fieldsToPrompt.length > 0) {
+      output.log('Additional configuration required:');
+      const collected = await promptForMetadataFields(
+        client,
+        mergedParsingSchema,
+        fieldsToPrompt,
+        provided
+      );
+      // Route collected values into product vs installation buckets, matching
+      // how `-m` flags are split above.
+      for (const [key, value] of Object.entries(collected)) {
+        if (value === undefined) continue;
+        if (key in productSchemaProps) {
+          metadata[key] = value;
+        } else if (key in integrationSchemaProps) {
+          installationMetadata[key] = value;
+        } else {
+          metadata[key] = value;
+        }
+      }
+      telemetry.trackMarketplaceEvent(
+        'marketplace_checkout_metadata_prompted',
+        {
+          ...baseProps,
+          prompted_field_count: fieldsToPrompt.length,
+        }
+      );
+      result = await provision();
+      if (result === 1) {
+        return 1;
+      }
+      output.debug(
+        `Auto-provision result (after metadata prompt): ${JSON.stringify(result, null, 2)}`
+      );
+    }
+  }
 
   // Handle multiple installations
   if (
@@ -401,11 +466,23 @@ export async function addAutoProvision(
       return projectLink.exitCode;
     }
 
-    // Check for missing required metadata to give an actionable message
-    const missingRequired = (mergedParsingSchema.required ?? []).filter(key => {
+    // Check for missing required metadata to give an actionable message.
+    // Prefer the fields the server flagged as unresolved (which may include
+    // otherwise server-handled region fields it couldn't infer) so we can guide
+    // the user to the right `-m` flags instead of silently opening the browser.
+    const fallbackFieldKeys = fallback.fields?.map(f => f.key);
+    const missingRequired = (
+      fallbackFieldKeys ??
+      mergedParsingSchema.required ??
+      []
+    ).filter(key => {
       if (key in metadata || key in installationMetadata) return false;
       const prop = mergedParsingSchema.properties[key];
-      return prop && !isServerHandledRegion(prop);
+      if (!prop || isHiddenOnCreate(prop)) return false;
+      // When the server explicitly lists a field, it needs input even if it's a
+      // normally server-handled region.
+      if (fallbackFieldKeys) return true;
+      return !isServerHandledRegion(prop);
     });
 
     if (missingRequired.length > 0) {

@@ -1173,6 +1173,64 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
+  describe('interactive metadata prompting (server-provided fields)', () => {
+    it('prompts for an unresolved required field and retries instead of opening the browser', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'metadata_requires_region',
+      });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional configuration required:'
+      );
+      await expect(client.stderr).toOutput('Primary Region');
+      client.stdin.write('\n'); // select first option (us-west-1)
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(openMock).not.toHaveBeenCalled();
+
+      // Two attempts: the first without region, the retry with the prompted value.
+      expect(requestBodies.length).toEqual(2);
+      expect(
+        (requestBodies[1] as { metadata?: unknown }).metadata
+      ).toMatchObject({
+        region: 'us-west-1',
+      });
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_metadata_prompted',
+            value: expect.stringContaining('"prompted_field_count":1'),
+          }),
+        ])
+      );
+    });
+
+    it('does not prompt in non-interactive mode; errors with -m guidance and no browser', async () => {
+      useAutoProvision({ responseKey: 'metadata_requires_region' });
+      client.stdin.isTTY = false;
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Missing required metadata: region.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('--name flag', () => {
     beforeEach(() => {
       useAutoProvision({ responseKey: 'provisioned' });
