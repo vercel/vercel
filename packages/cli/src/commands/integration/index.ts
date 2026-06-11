@@ -19,6 +19,7 @@ import {
   integrationCommand,
   listSubcommand,
   openSubcommand,
+  provisioningSubcommand,
   removeSubcommand,
   resourceSubcommand,
   updateSubcommand,
@@ -32,6 +33,7 @@ import { discover } from './discover';
 import { guide } from './guide';
 import { printAddDynamicHelp } from './add-help';
 import installationsList from './installations-list';
+import provisioning from './provisioning';
 import acceptTerms from './accept-terms';
 import {
   buildCommandWithGlobalFlags,
@@ -46,6 +48,7 @@ const COMMAND_CONFIG = {
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
   installations: getCommandAliases(installationsSubcommand),
+  provisioning: getCommandAliases(provisioningSubcommand),
   discover: getCommandAliases(discoverSubcommand),
   guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
@@ -156,6 +159,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandInstallations(subcommandOriginal);
       return installationsList(client, subArgs);
+    }
+    case 'provisioning': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(provisioningSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandProvisioning(subcommandOriginal);
+      return provisioning(client, subArgs);
     }
     case 'discover': {
       if (needHelp) {

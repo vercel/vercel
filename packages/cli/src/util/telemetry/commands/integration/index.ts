@@ -34,6 +34,13 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandProvisioning(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'provisioning',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandDiscover(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'discover',
