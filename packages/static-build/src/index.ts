@@ -832,6 +832,23 @@ export const build: BuildV2 = async ({
         return await BuildOutputV2.createBuildOutput(workPath);
       }
 
+      // At this point neither the Build Output v3 nor v2 API produced output.
+      // If the project depends on `@lovable.dev/vite-tanstack-config`, this
+      // most likely means an outdated version that doesn't emit Build Output
+      // API artifacts is installed, so warn the user to upgrade.
+      if (pkg) {
+        const allDependencies = Object.assign(
+          {},
+          pkg.dependencies,
+          pkg.devDependencies
+        );
+        if (allDependencies['@lovable.dev/vite-tanstack-config']) {
+          console.warn(
+            'WARN: Upgrade @lovable.dev/vite-tanstack-config to ^2.3.2 and nitro to 3.0.260603-beta (or newer)'
+          );
+        }
+      }
+
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
         workPath,
         nodeVersion,
