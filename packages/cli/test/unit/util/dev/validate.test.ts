@@ -264,9 +264,9 @@ describe('validateConfig', () => {
 
     it('re-applies the 1800s bound once the variable is unset again', () => {
       process.env[ENV] = '1';
-      expect(validateConfig(configWith(1800))).toBeNull();
+      expect(validateConfig(configWith(2000))).toBeNull();
       delete process.env[ENV];
-      expect(validateConfig(configWith(1800))).not.toBeNull();
+      expect(validateConfig(configWith(2000))).not.toBeNull();
     });
   });
 
