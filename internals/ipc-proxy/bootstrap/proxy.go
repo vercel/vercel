@@ -102,6 +102,21 @@ func fatal(exitCode int, msg string) {
 	os.Exit(exitCode)
 }
 
+// childExitCode derives the exit code to report from a cmd.Wait() error.
+// A clean exit (nil) or a signal-terminated child (ExitCode() == -1) is
+// still fatal for the instance, so anything non-positive is reported as 1.
+func childExitCode(waitErr error) int {
+	exitCode := 1
+	var exitErr *exec.ExitError
+	if errors.As(waitErr, &exitErr) {
+		exitCode = exitErr.ExitCode()
+	}
+	if exitCode <= 0 {
+		exitCode = 1
+	}
+	return exitCode
+}
+
 func connectIPC() error {
 	ipcPath := os.Getenv("VERCEL_IPC_PATH")
 	if ipcPath == "" {
@@ -161,18 +176,26 @@ func main() {
 	select {
 	case waitErr := <-childDone:
 		// Child exited before the server became ready.
-		exitCode := 1
-		var exitErr *exec.ExitError
-		if errors.As(waitErr, &exitErr) {
-			exitCode = exitErr.ExitCode()
-		}
-		fatal(exitCode, "User server exited during startup")
+		fatal(childExitCode(waitErr), "User server exited during startup")
 	case err := <-serverReady:
 		if err != nil {
 			cmd.Process.Kill()
 			fatal(1, fmt.Sprintf("User server failed to start: %v", err))
 		}
 	}
+
+	// Supervise the user server for the lifetime of the instance. If it
+	// exits after startup, report an unrecoverable error so the platform
+	// recycles this instance instead of leaving the proxy serving 502s
+	// while the health check still reports OK.
+	go func() {
+		waitErr := <-childDone
+		msg := "User server exited unexpectedly"
+		if waitErr != nil {
+			msg = fmt.Sprintf("%s: %v", msg, waitErr)
+		}
+		fatal(childExitCode(waitErr), msg)
+	}()
 
 	// Create reverse proxy to user's server
 	targetURL, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", userPort))
