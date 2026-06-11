@@ -7,11 +7,11 @@
 ## Interfaces
 
 - [DangerouslyDeleteOptions](interfaces/DangerouslyDeleteOptions.md)
-- [UpgradeWebSocketOptions](interfaces/UpgradeWebSocketOptions.md)
 - [Geo](interfaces/Geo.md)
 - [PurgeApi](interfaces/PurgeApi.md)
 - [Request](interfaces/Request.md)
 - [RuntimeCache](interfaces/RuntimeCache.md)
+- [UpgradeWebSocketOptions](interfaces/UpgradeWebSocketOptions.md)
 - [WebSocket](interfaces/WebSocket.md)
 
 ## Type Aliases

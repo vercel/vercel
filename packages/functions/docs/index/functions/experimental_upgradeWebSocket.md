@@ -4,9 +4,9 @@
 
 # Function: experimental\_upgradeWebSocket()
 
-> **experimental\_upgradeWebSocket**(`handler`, `options`?): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
+> **experimental\_upgradeWebSocket**(`handler`, `options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
 
-Defined in: [packages/functions/src/websocket/index.ts:25](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L25)
+Defined in: [packages/functions/src/websocket/index.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L20)
 
 ## Parameters
 
@@ -16,7 +16,7 @@ Defined in: [packages/functions/src/websocket/index.ts:25](https://github.com/ve
 
 ### options?
 
-[`UpgradeWebSocketOptions`](../interfaces/UpgradeWebSocketOptions.md)
+[`UpgradeWebSocketOptions`](../interfaces/UpgradeWebSocketOptions.md) = `{}`
 
 ## Returns
 
