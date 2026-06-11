@@ -1,5 +1,5 @@
 import { getInternalServiceFunctionPath } from '@vercel/build-utils';
-import type { BuildOptions, BuildResultV2 } from '@vercel/build-utils';
+import type { BuildOptions, BuildResultV2, Span } from '@vercel/build-utils';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
@@ -63,6 +63,30 @@ function shortDigest(digest: string): string {
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Run `fn` inside a child span of `parent` so the container build flow is
+ * traceable in the build container. When tracing is disabled (no parent span,
+ * e.g. some local invocations) `fn` runs directly. The span is always stopped —
+ * even when `fn` throws — so failed phases still surface in the trace, and `fn`
+ * receives the span so it can attach attributes discovered while it runs.
+ */
+async function withSpan<T>(
+  parent: Span | undefined,
+  name: string,
+  attrs: { [key: string]: string | undefined } | undefined,
+  fn: (span?: Span) => T | Promise<T>
+): Promise<T> {
+  if (!parent) {
+    return fn(undefined);
+  }
+  return parent.child(name, attrs).trace(span => fn(span));
+}
+
+/** Stringify a value for use as a span tag (tags must be strings). */
+function toTag(value: unknown): string {
+  return String(value);
 }
 
 function normalizeCommand(command: unknown): string[] | undefined {
@@ -284,8 +308,9 @@ function run(
  * resolves in the registry. This is a temporary gate — readiness will likely
  * move into api-builds once the flow is wired end to end.
  */
-async function waitForImageReady(imageRef: string): Promise<void> {
+async function waitForImageReady(imageRef: string, span?: Span): Promise<void> {
   if (process.env.VERCEL_VCR_SKIP_READY_CHECK === '1') {
+    span?.setAttributes({ 'readiness.mode': 'skipped' });
     return;
   }
 
@@ -294,6 +319,11 @@ async function waitForImageReady(imageRef: string): Promise<void> {
   const readyUrl = readString(process.env.VERCEL_VCR_READY_URL);
   const token = readString(process.env.VERCEL_OIDC_TOKEN);
   const deadline = Date.now() + timeoutMs;
+
+  span?.setAttributes({
+    'readiness.mode': readyUrl ? 'ready_url' : 'manifest_inspect',
+    'readiness.timeout_ms': toTag(timeoutMs),
+  });
 
   debug(
     readyUrl
@@ -316,12 +346,14 @@ async function waitForImageReady(imageRef: string): Promise<void> {
             vhs?: unknown;
           };
           if (body.ready === true || Boolean(body.vhs)) {
+            span?.setAttributes({ 'readiness.attempts': toTag(attempt) });
             return;
           }
         }
       } else {
         await run('docker', ['manifest', 'inspect', imageRef], { quiet: true });
         debug(`readiness attempt ${attempt}: manifest resolved`);
+        span?.setAttributes({ 'readiness.attempts': toTag(attempt) });
         return;
       }
     } catch (err) {
@@ -332,6 +364,10 @@ async function waitForImageReady(imageRef: string): Promise<void> {
     }
 
     if (Date.now() >= deadline) {
+      span?.setAttributes({
+        'readiness.attempts': toTag(attempt),
+        'readiness.timed_out': 'true',
+      });
       throw new Error(
         `Timed out after ${Math.round(
           timeoutMs / 1000
@@ -347,11 +383,14 @@ async function waitForImageReady(imageRef: string): Promise<void> {
  * to build, so failures point at the real problem (missing CLI / stopped
  * daemon) instead of a generic non-zero exit code.
  */
-async function ensureDockerReady(): Promise<void> {
+async function ensureDockerReady(span?: Span): Promise<void> {
   try {
-    await run('docker', ['version', '--format', '{{.Server.Version}}'], {
-      quiet: true,
-    });
+    const { stdout } = await run(
+      'docker',
+      ['version', '--format', '{{.Server.Version}}'],
+      { quiet: true }
+    );
+    span?.setAttributes({ 'docker.server_version': stdout.trim() });
   } catch (err) {
     const message = (err as Error).message;
 
@@ -386,12 +425,14 @@ async function ensureDockerReady(): Promise<void> {
 async function ensureRepository(
   repository: string,
   token: string,
-  claims: OidcClaims
+  claims: OidcClaims,
+  span?: Span
 ): Promise<void> {
   // Only auto-create bare repo names. A slash means the caller fully qualified
   // the path and we can't reliably infer the owning project.
   if (repository.includes('/')) {
     debug(`skipping repository auto-create (fully-qualified "${repository}")`);
+    span?.setAttributes({ 'repository.create_result': 'skipped_qualified' });
     return;
   }
 
@@ -404,8 +445,13 @@ async function ensureRepository(
         !teamId ? 'team id' : 'project id'
       })`
     );
+    span?.setAttributes({
+      'repository.create_result': 'skipped_missing_ids',
+    });
     return;
   }
+
+  span?.setAttributes({ 'team.id': teamId, 'project.id': projectId });
 
   const apiUrl = (
     readString(process.env.VERCEL_API_URL) ?? 'https://api.vercel.com'
@@ -428,21 +474,26 @@ async function ensureRepository(
       },
       body,
     });
+    span?.setAttributes({ 'repository.create_status': toTag(res.status) });
     if (res.ok) {
       debug(`repository create returned ${res.status}`);
+      span?.setAttributes({ 'repository.create_result': 'created' });
       done(`created repository "${repository}"`);
     } else if (res.status === 409) {
       debug(`repository create returned 409 (already exists)`);
+      span?.setAttributes({ 'repository.create_result': 'already_exists' });
       done(`repository "${repository}" already exists`);
     } else {
       const text = await res.text().catch(() => '');
       debug(
         `repository auto-create returned ${res.status}: ${text.slice(0, 500)}`
       );
+      span?.setAttributes({ 'repository.create_result': 'unexpected_status' });
       done('continuing — push will validate the repository');
     }
   } catch (err) {
     debug(`repository auto-create failed: ${(err as Error).message}`);
+    span?.setAttributes({ 'repository.create_result': 'error' });
     done('continuing — push will validate the repository');
   }
 }
@@ -452,8 +503,9 @@ async function buildAndPushImage(params: {
   dockerfilePath: string;
   repository: string;
   tag: string;
+  parentSpan?: Span;
 }): Promise<string> {
-  const { contextDir, dockerfilePath, repository, tag } = params;
+  const { contextDir, dockerfilePath, repository, tag, parentSpan } = params;
 
   // The registry password is a Vercel token. Prefer an explicit access token,
   // otherwise use the project's OIDC token (auto-pulled by `vercel build`).
@@ -528,123 +580,189 @@ async function buildAndPushImage(params: {
   // The control-plane create endpoint accepts the project's OIDC token, so
   // prefer it for repository creation regardless of the registry push token.
   const createToken = readString(process.env.VERCEL_OIDC_TOKEN) ?? token;
-  await ensureRepository(repository, createToken, claims);
 
-  await ensureDockerReady();
-
-  info(`Building image ${imageRef}`);
-  debug(`dockerfile: ${dockerfilePath}`);
-  debug(`context:    ${contextDir}`);
-  debug(`platform:   ${TARGET_PLATFORM}`);
-  debug(`registry:   ${VCR_REGISTRY}`);
-  debug(`username:   ${username}`);
-  debug(`repository: ${fullRepository}`);
-
-  const buildStart = Date.now();
-  step(`docker build (${TARGET_PLATFORM})`);
-  await run('docker', [
-    'build',
-    '--platform',
-    TARGET_PLATFORM,
-    '-t',
-    imageRef,
-    '-f',
-    dockerfilePath,
-    contextDir,
-  ]);
-  done(`built in ${elapsed(buildStart)}`);
-
-  // Authenticate to VCR: password is the token (passed via stdin, never argv);
-  // username is `oidc` for an OIDC token, otherwise the team id.
-  step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
-  debug(
-    `exec: docker login ${VCR_REGISTRY} --username ${username} --password-stdin ` +
-      `(password from ${tokenSource} on stdin, ${tokenFingerprint(token)})`
-  );
-  try {
-    await run(
-      'docker',
-      ['login', VCR_REGISTRY, '--username', username, '--password-stdin'],
-      { input: token, quiet: !DEBUG }
-    );
-  } catch (err) {
-    const message = (err as Error).message;
-    if (/denied|forbidden|unauthorized|401|403/i.test(message)) {
-      const teamId =
-        claims.owner_id ?? readString(process.env.VERCEL_VCR_USERNAME);
-      throw new Error(
-        [
-          `Authentication to ${VCR_REGISTRY} as "${username}" was rejected.`,
-          '',
-          `Make sure your team (${teamId ? `"${teamId}"` : ''}) is enrolled in`,
-          'the `vercel-enable-vcr` flag, and that the token is valid for it.',
-          'Override credentials with VERCEL_VCR_USERNAME (`oidc` for an OIDC',
-          'token, or the team id for a VERCEL_VCR_TOKEN access token).',
-          '',
-          `Underlying error: ${message}`,
-        ].join('\n')
+  return withSpan(
+    parentSpan,
+    'container.build_and_push',
+    {
+      'container.registry': VCR_REGISTRY,
+      'container.repository': fullRepository,
+      'image.tag': tag,
+      'image.ref': imageRef,
+      'token.source': tokenSource,
+      'token.is_oidc': toTag(usingOidcToken),
+      'registry.username': username,
+    },
+    async buildSpan => {
+      await withSpan(
+        buildSpan,
+        'container.ensure_repository',
+        { 'container.repository': repository },
+        s => ensureRepository(repository, createToken, claims, s)
       );
-    }
-    throw err;
-  }
-  done('authenticated');
 
-  const pushStart = Date.now();
-  step(`Pushing ${imageRef}`);
-  let stdout: string;
-  try {
-    ({ stdout } = await run('docker', ['push', imageRef]));
-  } catch (err) {
-    const message = (err as Error).message;
-    if (/denied|forbidden|unauthorized|not found|401|403|404/i.test(message)) {
-      throw new Error(
-        [
-          `Pushing ${imageRef} was denied.`,
-          '',
-          `The build tried to ensure the "${repository}" repository exists, but`,
-          'the push was still rejected. This usually means the token lacks access',
-          'to the project, or your team is not enrolled in the `vercel-enable-vcr`',
-          "flag. Verify access (or create the repository under your project's",
-          'Sandboxes → Container Registry tab), then re-run the build.',
-          '',
-          `Underlying error: ${message}`,
-        ].join('\n')
+      await withSpan(buildSpan, 'container.ensure_docker_ready', undefined, s =>
+        ensureDockerReady(s)
       );
+
+      info(`Building image ${imageRef}`);
+      debug(`dockerfile: ${dockerfilePath}`);
+      debug(`context:    ${contextDir}`);
+      debug(`platform:   ${TARGET_PLATFORM}`);
+      debug(`registry:   ${VCR_REGISTRY}`);
+      debug(`username:   ${username}`);
+      debug(`repository: ${fullRepository}`);
+
+      const buildStart = Date.now();
+      step(`docker build (${TARGET_PLATFORM})`);
+      await withSpan(
+        buildSpan,
+        'container.docker_build',
+        { 'image.ref': imageRef, 'image.platform': TARGET_PLATFORM },
+        () =>
+          run('docker', [
+            'build',
+            '--platform',
+            TARGET_PLATFORM,
+            '-t',
+            imageRef,
+            '-f',
+            dockerfilePath,
+            contextDir,
+          ])
+      );
+      done(`built in ${elapsed(buildStart)}`);
+
+      // Authenticate to VCR: password is the token (passed via stdin, never
+      // argv); username is `oidc` for an OIDC token, otherwise the team id.
+      step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
+      debug(
+        `exec: docker login ${VCR_REGISTRY} --username ${username} --password-stdin ` +
+          `(password from ${tokenSource} on stdin, ${tokenFingerprint(token)})`
+      );
+      await withSpan(
+        buildSpan,
+        'container.registry_login',
+        {
+          'container.registry': VCR_REGISTRY,
+          'registry.username': username,
+        },
+        async () => {
+          try {
+            await run(
+              'docker',
+              [
+                'login',
+                VCR_REGISTRY,
+                '--username',
+                username,
+                '--password-stdin',
+              ],
+              { input: token, quiet: !DEBUG }
+            );
+          } catch (err) {
+            const message = (err as Error).message;
+            if (/denied|forbidden|unauthorized|401|403/i.test(message)) {
+              const teamId =
+                claims.owner_id ?? readString(process.env.VERCEL_VCR_USERNAME);
+              throw new Error(
+                [
+                  `Authentication to ${VCR_REGISTRY} as "${username}" was rejected.`,
+                  '',
+                  `Make sure your team (${teamId ? `"${teamId}"` : ''}) is enrolled in`,
+                  'the `vercel-enable-vcr` flag, and that the token is valid for it.',
+                  'Override credentials with VERCEL_VCR_USERNAME (`oidc` for an OIDC',
+                  'token, or the team id for a VERCEL_VCR_TOKEN access token).',
+                  '',
+                  `Underlying error: ${message}`,
+                ].join('\n')
+              );
+            }
+            throw err;
+          }
+        }
+      );
+      done('authenticated');
+
+      const pushStart = Date.now();
+      step(`Pushing ${imageRef}`);
+      const digest = await withSpan(
+        buildSpan,
+        'container.push',
+        { 'image.ref': imageRef },
+        async pushSpan => {
+          let stdout: string;
+          try {
+            ({ stdout } = await run('docker', ['push', imageRef]));
+          } catch (err) {
+            const message = (err as Error).message;
+            if (
+              /denied|forbidden|unauthorized|not found|401|403|404/i.test(
+                message
+              )
+            ) {
+              throw new Error(
+                [
+                  `Pushing ${imageRef} was denied.`,
+                  '',
+                  `The build tried to ensure the "${repository}" repository exists, but`,
+                  'the push was still rejected. This usually means the token lacks access',
+                  'to the project, or your team is not enrolled in the `vercel-enable-vcr`',
+                  "flag. Verify access (or create the repository under your project's",
+                  'Sandboxes → Container Registry tab), then re-run the build.',
+                  '',
+                  `Underlying error: ${message}`,
+                ].join('\n')
+              );
+            }
+            throw err;
+          }
+
+          // Prefer the immutable digest so api-builds resolves a stable image.
+          let resolvedDigest = stdout.match(DIGEST_RE)?.[0];
+          if (!resolvedDigest) {
+            debug('digest not found in push output — inspecting RepoDigests');
+            const inspect = await run(
+              'docker',
+              ['inspect', '--format', '{{index .RepoDigests 0}}', imageRef],
+              { quiet: true }
+            );
+            resolvedDigest = inspect.stdout.match(DIGEST_RE)?.[0];
+          }
+          pushSpan?.setAttributes({ 'image.digest': resolvedDigest });
+          return resolvedDigest;
+        }
+      );
+      done(
+        digest
+          ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
+          : `pushed in ${elapsed(pushStart)}`
+      );
+
+      const resolvedRef = digest
+        ? `${VCR_REGISTRY}/${fullRepository}@${digest}`
+        : imageRef;
+      buildSpan?.setAttributes({
+        'image.digest': digest,
+        'image.resolved_ref': resolvedRef,
+      });
+
+      // Block until the OCI->VHS conversion has completed so downstream routing
+      // can boot the image immediately.
+      const readyStart = Date.now();
+      step('Waiting for image to be ready (OCI → VHS conversion)');
+      await withSpan(
+        buildSpan,
+        'container.wait_for_ready',
+        { 'image.ref': resolvedRef },
+        s => waitForImageReady(resolvedRef, s)
+      );
+      done(`ready in ${elapsed(readyStart)}`);
+
+      info(`Image reference ${resolvedRef}`);
+      return resolvedRef;
     }
-    throw err;
-  }
-
-  // Prefer the immutable digest so api-builds resolves a stable image.
-  let digest = stdout.match(DIGEST_RE)?.[0];
-  if (!digest) {
-    debug('digest not found in push output — inspecting RepoDigests');
-    const inspect = await run(
-      'docker',
-      ['inspect', '--format', '{{index .RepoDigests 0}}', imageRef],
-      { quiet: true }
-    );
-    digest = inspect.stdout.match(DIGEST_RE)?.[0];
-  }
-  done(
-    digest
-      ? `pushed ${shortDigest(digest)} in ${elapsed(pushStart)}`
-      : `pushed in ${elapsed(pushStart)}`
   );
-
-  const resolvedRef = digest
-    ? `${VCR_REGISTRY}/${fullRepository}@${digest}`
-    : imageRef;
-
-  // Block until the OCI->VHS conversion has completed so downstream routing can
-  // boot the image immediately.
-  const readyStart = Date.now();
-  step('Waiting for image to be ready (OCI → VHS conversion)');
-  await waitForImageReady(resolvedRef);
-  done(`ready in ${elapsed(readyStart)}`);
-
-  info(`Image reference ${resolvedRef}`);
-
-  return resolvedRef;
 }
 
 /**
@@ -652,7 +770,10 @@ async function buildAndPushImage(params: {
  *  - build a Dockerfile and push it to VCR, returning the pushed digest, or
  *  - pass through a prebuilt image reference from the service config/entrypoint.
  */
-async function resolveImageHandler(options: BuildOptions): Promise<string> {
+async function resolveImageHandler(
+  options: BuildOptions,
+  span?: Span
+): Promise<string> {
   const { config, workPath, entrypoint, meta } = options;
 
   const entrypointRef = readString(entrypoint);
@@ -681,12 +802,18 @@ async function resolveImageHandler(options: BuildOptions): Promise<string> {
   debug(`prebuilt:    ${prebuiltImage ?? '<none>'}`);
   debug(`isDev:       ${Boolean(meta?.isDev)}`);
 
+  span?.setAttributes({
+    'container.has_dockerfile': toTag(hasDockerfile),
+    'container.is_dev': toTag(Boolean(meta?.isDev)),
+  });
+
   if (!hasDockerfile) {
     if (!prebuiltImage) {
       throw new Error(
         'Container service must specify a prebuilt image (via "image"/entrypoint) or a "dockerfile" to build.'
       );
     }
+    span?.setAttributes({ 'container.mode': 'prebuilt' });
     info(`Using prebuilt image ${prebuiltImage}`);
     return prebuiltImage;
   }
@@ -694,6 +821,7 @@ async function resolveImageHandler(options: BuildOptions): Promise<string> {
   // `vercel dev` can't build & push images; fall back to a prebuilt reference.
   if (meta?.isDev) {
     if (prebuiltImage) {
+      span?.setAttributes({ 'container.mode': 'prebuilt_dev' });
       info(`vercel dev: using prebuilt image ${prebuiltImage}`);
       return prebuiltImage;
     }
@@ -725,11 +853,30 @@ async function resolveImageHandler(options: BuildOptions): Promise<string> {
     ? path.join(workPath, config.context as string)
     : path.dirname(dockerfilePath);
 
-  return buildAndPushImage({ contextDir, dockerfilePath, repository, tag });
+  span?.setAttributes({
+    'container.mode': 'build_and_push',
+    'container.repository': repository,
+    'image.tag': tag,
+  });
+  return buildAndPushImage({
+    contextDir,
+    dockerfilePath,
+    repository,
+    tag,
+    parentSpan: span,
+  });
 }
 
 export async function build(options: BuildOptions): Promise<BuildResultV2> {
-  const handler = await resolveImageHandler(options);
+  // Root the container build flow under the builder span the CLI provides, so
+  // every phase (repo create, docker build, login, push, readiness) is
+  // traceable in the build container.
+  const handler = await withSpan(
+    options.span,
+    'container.resolve_image',
+    { 'service.name': options.service?.name },
+    span => resolveImageHandler(options, span)
+  );
 
   const command = normalizeCommand(options.config.command);
 
