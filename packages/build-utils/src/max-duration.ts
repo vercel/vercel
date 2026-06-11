@@ -8,7 +8,7 @@
  * this client-side bound is intentionally coarse — it exists only to give fast
  * local feedback on obviously-invalid values.
  */
-export const DEFAULT_MAX_DURATION_LIMIT = 900;
+export const DEFAULT_MAX_DURATION_LIMIT = 1800;
 
 /**
  * Internal env var used to skip the client-side `maxDuration` upper-bound check.
