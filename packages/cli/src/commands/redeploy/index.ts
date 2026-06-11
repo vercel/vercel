@@ -182,6 +182,19 @@ export default async function redeploy(client: Client): Promise<number> {
         !rollingRelease
       ) {
         output.spinner('Completing…', 0);
+
+        // The status polling loop is skipped, so render the Aliased row
+        // (and its ▲ gutter) here instead of in the alias-assigned handler.
+        if (
+          deployment.target === 'production' &&
+          deployment.alias &&
+          deployment.alias.length > 0
+        ) {
+          output.stopSpinner();
+          const primaryDomain = deployment.alias[0];
+          const prodUrl = `https://${primaryDomain}`;
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+        }
       } else {
         try {
           const clientOptions: VercelClientOptions = {
