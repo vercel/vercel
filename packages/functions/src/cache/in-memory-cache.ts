@@ -10,7 +10,7 @@ interface CacheEntry {
 export class InMemoryCache implements RuntimeCache {
   private cache: Record<string, CacheEntry> = {};
 
-  async get(key: string): Promise<unknown | null> {
+  async get(key: string, options?: { name?: string }): Promise<unknown | null> {
     const entry = this.cache[key];
     if (entry) {
       if (entry.ttl && entry.lastModified + entry.ttl * 1000 < Date.now()) {

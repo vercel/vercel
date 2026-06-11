@@ -38,7 +38,7 @@ describe('getCache', () => {
     expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
       name: 'key',
     });
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32', { name: 'key' });
   });
 
   test('should return the same cache instance for multiple calls to getCache when no context cache is available', async () => {
@@ -89,7 +89,7 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32', { name: 'key' });
   });
 
   test('should use the provided namespace and separator', async () => {
@@ -103,7 +103,9 @@ describe('getCache', () => {
     expect(mockCache.set).toHaveBeenCalledWith('test:b876d32', 'value', {
       name: 'key',
     });
-    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32', {
+      name: 'key',
+    });
   });
 
   test('should use the default namespace separator if none is provided', async () => {
@@ -119,10 +121,9 @@ describe('getCache', () => {
         name: 'key',
       }
     );
-    expect(mockCache.get).toHaveBeenCalledWith(
-      `${namespace}$b876d32`,
-      undefined
-    );
+    expect(mockCache.get).toHaveBeenCalledWith(`${namespace}$b876d32`, {
+      name: 'key',
+    });
   });
 
   test('should default options.name to the original key when not provided', async () => {
@@ -152,6 +153,30 @@ describe('getCache', () => {
       name: 'explicit-name',
       tags: ['t1'],
       ttl: 60,
+    });
+  });
+
+  test('should default get options.name to the original key when not provided', async () => {
+    const cache = getCache();
+    await cache.get('my-key');
+    expect(mockCache.get).toHaveBeenCalledWith('57f938ab', {
+      name: 'my-key',
+    });
+  });
+
+  test('should preserve an explicit empty string options.name on get as a suppression sentinel', async () => {
+    const cache = getCache();
+    await cache.get('my-key', { name: '' });
+    expect(mockCache.get).toHaveBeenCalledWith('57f938ab', {
+      name: '',
+    });
+  });
+
+  test('should preserve explicit options.name on get when provided', async () => {
+    const cache = getCache();
+    await cache.get('my-key', { name: 'explicit-name' });
+    expect(mockCache.get).toHaveBeenCalledWith('57f938ab', {
+      name: 'explicit-name',
     });
   });
 });
