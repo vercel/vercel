@@ -338,6 +338,40 @@ function getTargetPlatform(isDev: boolean): TargetPlatform {
   return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
 }
 
+/**
+ * Install a Vercel-owned Python package into the build venv, resolving the
+ * source in this order: env override → in-repo source (if present) → pinned
+ * PyPI version. The in-repo branch lets monorepo `vercel build` runs (e.g. CI
+ * on a Version Packages PR) avoid PyPI for a version that does not exist yet.
+ */
+async function installInjectedPackage({
+  name,
+  pinned,
+  envOverride,
+  uv,
+  venvPath,
+  projectDir,
+  pipPlatformArgs,
+}: {
+  name: 'vercel-runtime' | 'vercel-workers';
+  pinned: string;
+  envOverride: string | undefined;
+  uv: UvRunner;
+  venvPath: string;
+  projectDir: string;
+  pipPlatformArgs: string[];
+}): Promise<void> {
+  const localDir = join(__dirname, '..', '..', '..', 'python', name);
+  const isLocalDev = fs.existsSync(join(localDir, 'pyproject.toml'));
+  const dep = envOverride || (isLocalDev ? localDir : pinned);
+  debug(`Installing ${dep}`);
+  await uv.pip({
+    venvPath,
+    projectDir,
+    args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, dep],
+  });
+}
+
 export const build: BuildVX = async ({
   workPath,
   repoRootPath,
@@ -703,39 +737,32 @@ export const build: BuildVX = async ({
   const djangoStatic: DjangoCollectStaticResult | null =
     (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
 
-  // Ensure correct version of vercel-runtime is installed.
-  //
-  // We intentionally do not inject vercel-runtime into the manifest
-  // as that would result in surprising modifications in working
-  // directories when running `vercel build` locally.
-  //
-  // Note: running sync removes any package that is not in the lockfile or
-  // manifest, which means that it is NOT SAFE to re-run `uv sync` at any
-  // point after as that would effectively remove vercel-runtime from the
-  // bundle rendering the function inoperable.
-  const runtimeDep =
-    baseEnv.VERCEL_RUNTIME_PYTHON ||
-    `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
-  debug(`Installing ${runtimeDep}`);
   const pipPlatformArgs = target.uvPlatform
     ? ['--python-platform', target.uvPlatform]
     : [];
-  await uv.pip({
+
+  // We intentionally do not inject vercel-runtime / vercel-workers into the
+  // manifest — that would surprise users running `vercel build` locally —
+  // and we cannot re-run `uv sync` after this, since sync would remove them.
+  await installInjectedPackage({
+    name: 'vercel-runtime',
+    pinned: `vercel-runtime==${VERCEL_RUNTIME_VERSION}`,
+    envOverride: baseEnv.VERCEL_RUNTIME_PYTHON,
+    uv,
     venvPath,
     projectDir: join(workPath, entryDirectory),
-    args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, runtimeDep],
+    pipPlatformArgs,
   });
 
   if (shouldInstallVercelWorkers) {
-    // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
-    const workersDep =
-      baseEnv.VERCEL_WORKERS_PYTHON ||
-      `vercel-workers==${VERCEL_WORKERS_VERSION}`;
-    debug(`Installing ${workersDep}`);
-    await uv.pip({
+    await installInjectedPackage({
+      name: 'vercel-workers',
+      pinned: `vercel-workers==${VERCEL_WORKERS_VERSION}`,
+      envOverride: baseEnv.VERCEL_WORKERS_PYTHON,
+      uv,
       venvPath,
       projectDir: join(workPath, entryDirectory),
-      args: ['install', '--link-mode', 'copy', ...pipPlatformArgs, workersDep],
+      pipPlatformArgs,
     });
   }
 
