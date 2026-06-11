@@ -95,6 +95,7 @@ export default async function link(client: Client) {
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
+  telemetry.trackCliFlagNoGitignore(parsedArgs.flags['--no-gitignore']);
 
   if ('--confirm' in parsedArgs.flags) {
     telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
@@ -103,6 +104,7 @@ export default async function link(client: Client) {
   }
 
   const yes = !!parsedArgs.flags['--yes'];
+  const noGitignore = !!parsedArgs.flags['--no-gitignore'];
 
   let cwd = parsedArgs.args[1];
   if (cwd) {
@@ -119,7 +121,7 @@ export default async function link(client: Client) {
   if (parsedArgs.flags['--repo']) {
     output.warn(`The ${cmd('--repo')} flag is in alpha, please report issues`);
     try {
-      await ensureRepoLink(client, cwd, { yes, overwrite: true });
+      await ensureRepoLink(client, cwd, { yes, overwrite: true, noGitignore });
     } catch (err) {
       output.prettyError(err);
       return 1;
@@ -141,6 +143,7 @@ export default async function link(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
       searchAcrossTeams: !explicitScopeProvided,
+      noGitignore,
     });
 
     if (typeof link === 'number') {

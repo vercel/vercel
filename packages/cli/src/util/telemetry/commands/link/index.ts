@@ -55,4 +55,10 @@ export class LinkTelemetryClient
       value: actual,
     });
   }
+
+  trackCliFlagNoGitignore(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-gitignore');
+    }
+  }
 }

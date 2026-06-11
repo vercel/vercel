@@ -58,6 +58,7 @@ export interface ResolvedGitRemote {
 export interface EnsureRepoLinkOptions {
   yes: boolean;
   overwrite: boolean;
+  noGitignore?: boolean;
 }
 
 interface NewProject {
@@ -173,12 +174,14 @@ export async function linkRepoProject(
     orgSlug,
     remoteName,
     successEmoji = 'link',
+    noGitignore = false,
   }: {
     project: Project;
     orgId: string;
     orgSlug: string;
     remoteName: string;
     successEmoji?: EmojiLabel;
+    noGitignore?: boolean;
   }
 ): Promise<RepoLink> {
   const repoLink = await getRepoLink(client, cwd);
@@ -204,7 +207,9 @@ export async function linkRepoProject(
 
   await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
   await writeReadme(repoLink.rootPath);
-  await addToGitIgnore(repoLink.rootPath);
+  if (!noGitignore) {
+    await addToGitIgnore(repoLink.rootPath);
+  }
 
   printAlignedLabel('Linked', `${orgSlug}/${project.name}`);
 
@@ -448,7 +453,7 @@ async function discoverRepoProjects(
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
-  { yes, overwrite }: EnsureRepoLinkOptions
+  { yes, overwrite, noGitignore = false }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
@@ -472,7 +477,9 @@ export async function ensureRepoLink(
 
     await writeReadme(rootPath);
 
-    await addToGitIgnore(rootPath);
+    if (!noGitignore) {
+      await addToGitIgnore(rootPath);
+    }
 
     printAlignedLabel(
       'Linked',

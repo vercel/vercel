@@ -446,7 +446,8 @@ export async function linkFolderToProject(
   orgSlug: string,
   successEmoji: EmojiLabel = 'link',
   autoConfirm: boolean = false,
-  pullEnv: boolean = true
+  pullEnv: boolean = true,
+  noGitignore: boolean = false
 ) {
   // if the project is already linked, we skip linking
   if (await hasProjectLink(client, projectLink, path)) {
@@ -475,7 +476,9 @@ export async function linkFolderToProject(
   await writeReadme(path);
 
   // update .gitignore (silent — git status surfaces the change on demand)
-  await addToGitIgnore(path);
+  if (!noGitignore) {
+    await addToGitIgnore(path);
+  }
 
   printAlignedLabel('Linked', `${orgSlug}/${projectName}`);
 

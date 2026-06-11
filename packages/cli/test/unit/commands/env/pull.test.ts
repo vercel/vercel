@@ -834,4 +834,56 @@ describe('env pull', () => {
       ]);
     });
   });
+
+  describe('--no-gitignore', () => {
+    it('should skip writing to .gitignore when --no-gitignore is passed', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--yes', '--no-gitignore');
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for'
+      );
+      // Should NOT mention gitignore in the output
+      await expect(client.stderr).toOutput('Created .env.local file');
+      await expect(client.stderr).not.toOutput('and added it to .gitignore');
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "env pull --no-gitignore"').toEqual(0);
+
+      // .env.local should exist
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+      const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+      expect(devFileHasDevEnv).toBeTruthy();
+
+      // .gitignore should NOT have been updated
+      const gitignore = await fs.readFile(path.join(cwd, '.gitignore'), 'utf8');
+      expect(gitignore).not.toContain('.env*');
+    });
+
+    it('should track --no-gitignore telemetry flag', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--yes', '--no-gitignore');
+      await env(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:pull', value: 'pull' },
+        { key: 'flag:yes', value: 'TRUE' },
+        { key: 'flag:no-gitignore', value: 'TRUE' },
+      ]);
+    });
+  });
 });
