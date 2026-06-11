@@ -78,37 +78,8 @@ export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
 // bundled directly into the Lambda instead of using runtime installation.
 export const HIVE_LAMBDA_SIZE_BYTES = 1 * 1024 * 1024 * 1024;
 
-// Error messages are hard-wrapped with explicit newlines so the Vercel
-// build log renders them as multi-line paragraphs instead of one long
-// unbroken sentence.
-const FUNCTIONS_BETA_CTA =
-  'Run `vercel deploy --functions-beta` to use extended function limits ' +
-  '(up to 1 GB), or reduce your dependency footprint.';
-
 const BUNDLING_DOCS_LINK =
   'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled';
-const FUNCTIONS_BETA_DOCS_LINK =
-  'https://vercel.com/docs/functions/runtimes/python#extended-size-limits-with-functions-beta';
-
-// Shown when the user is already on Functions Beta (Hive) but their bundle
-// still exceeds the extended 1 GB limit. In that case we cannot suggest
-// opting into Functions Beta -- they are already using it -- so we tell
-// them the only remaining path is to reduce the bundle below 1 GB.
-const FUNCTIONS_BETA_EXCEEDED_CTA =
-  'Your deployment is already using extended function limits (`--functions-beta`).\n' +
-  'Reduce your dependency footprint to under 1 GB or split your application\n' +
-  'into smaller functions.';
-
-/**
- * Returns true when the build environment opts in to showing the
- * `--functions-beta` suggestion in size-limit error messages.
- * Gated behind `VERCEL_FUNCTIONS_BETA_HINT` so it can be rolled out
- * independently of the feature itself.
- */
-export function shouldShowFunctionsBetaHint(): boolean {
-  const v = process.env.VERCEL_FUNCTIONS_BETA_HINT;
-  return v === '1' || v === 'true';
-}
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
@@ -230,19 +201,15 @@ export class PythonDependencyExternalizer {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-            FUNCTIONS_BETA_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-            `When using a custom install command, Vercel cannot automatically\n` +
-            `optimize dependency bundling. To reduce the size of your\n` +
-            `dependencies, you can:\n` +
-            `  1. Remove unused dependencies from your project.\n` +
-            `  2. Remove the custom install command to allow Vercel to manage\n` +
-            `     and optimize dependencies automatically.`,
-        link: shouldShowFunctionsBetaHint()
-          ? FUNCTIONS_BETA_DOCS_LINK
-          : BUNDLING_DOCS_LINK,
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
+          `When using a custom install command, Vercel cannot automatically\n` +
+          `optimize dependency bundling. To reduce the size of your\n` +
+          `dependencies, you can:\n` +
+          `  1. Remove unused dependencies from your project.\n` +
+          `  2. Remove the custom install command to allow Vercel to manage\n` +
+          `     and optimize dependencies automatically.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -254,13 +221,11 @@ export class PythonDependencyExternalizer {
       const limitMB = (HIVE_LAMBDA_SIZE_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
-            FUNCTIONS_BETA_EXCEEDED_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
-            `Consider removing unused dependencies or splitting your\n` +
-            `application into smaller functions.`,
-        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the extended function size limit (${limitMB} MB).\n\n` +
+          `Consider removing unused dependencies or splitting your\n` +
+          `application into smaller functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -307,17 +272,13 @@ export class PythonDependencyExternalizer {
       ).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${totalBundleSizeMB} MB) exceeds the ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
-            FUNCTIONS_BETA_CTA
-          : `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
-            `Even with runtime dependency installation, all packages must fit\n` +
-            `within the ${ephemeralLimitMB} MB ephemeral storage available to Lambda\n` +
-            `functions. Consider removing unused dependencies or splitting\n` +
-            `your application into smaller functions.`,
-        link: shouldShowFunctionsBetaHint()
-          ? FUNCTIONS_BETA_DOCS_LINK
-          : BUNDLING_DOCS_LINK,
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage limit (${ephemeralLimitMB} MB).\n\n` +
+          `Even with runtime dependency installation, all packages must fit\n` +
+          `within the ${ephemeralLimitMB} MB ephemeral storage available to Lambda\n` +
+          `functions. Consider removing unused dependencies or splitting\n` +
+          `your application into smaller functions.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
@@ -592,17 +553,13 @@ export class PythonDependencyExternalizer {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
-        message: shouldShowFunctionsBetaHint()
-          ? `Total bundle size (${finalSizeMB} MB) exceeds the size limit (${limitMB} MB).\n\n` +
-            FUNCTIONS_BETA_CTA
-          : `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after\n` +
-            `deferring public packages to runtime installation.\n\n` +
-            `This usually means your private packages or source code are too\n` +
-            `large. Consider reducing the size of private dependencies or\n` +
-            `splitting your application.`,
-        link: shouldShowFunctionsBetaHint()
-          ? FUNCTIONS_BETA_DOCS_LINK
-          : BUNDLING_DOCS_LINK,
+        message:
+          `Total bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after\n` +
+          `deferring public packages to runtime installation.\n\n` +
+          `This usually means your private packages or source code are too\n` +
+          `large. Consider reducing the size of private dependencies or\n` +
+          `splitting your application.`,
+        link: BUNDLING_DOCS_LINK,
         action: 'Learn More',
       });
     }
