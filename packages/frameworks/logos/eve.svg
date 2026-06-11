@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Eve">
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" role="img" aria-label="Eve">
   <title>Eve</title>
-  <rect width="48" height="48" rx="8" fill="#000"/>
-  <text x="24" y="24" fill="#fff"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
-        font-size="14" font-weight="700" letter-spacing="1"
-        text-anchor="middle" dominant-baseline="central">EVE</text>
+  <path fill="#000" d="M12 2 2 19.5h20L12 2Zm0 4.7 6.1 10.6H5.9L12 6.7Z"/>
 </svg>
