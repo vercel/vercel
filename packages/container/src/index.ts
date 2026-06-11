@@ -1,6 +1,7 @@
 import { getInternalServiceFunctionPath } from '@vercel/build-utils';
 import type { BuildOptions, BuildResultV2 } from '@vercel/build-utils';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
@@ -79,6 +80,60 @@ function normalizeCommand(command: unknown): string[] | undefined {
 
 function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+/**
+ * Describe a secret token for debug logs without leaking it: reports presence,
+ * length, and a short non-reversible sha256 prefix so the same token can be
+ * correlated across systems without exposing its value.
+ */
+function tokenFingerprint(token: string | undefined): string {
+  if (!token) return 'absent';
+  const sha = createHash('sha256').update(token).digest('hex').slice(0, 8);
+  return `present(len=${token.length}, sha256=${sha})`;
+}
+
+/**
+ * Log the non-secret claims of a Vercel OIDC JWT (issuer, audience, owner,
+ * project, expiry, etc.) to help debug registry authorization. Only the
+ * signature is sensitive; the claims themselves identify the scope of the
+ * token, which is exactly what's useful when a registry rejects it.
+ */
+function debugTokenClaims(label: string, token: string | undefined): void {
+  if (!DEBUG) return;
+  if (!token) {
+    debug(`${label}: <absent>`);
+    return;
+  }
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) {
+      debug(`${label}: <not a JWT>`);
+      return;
+    }
+    const claims = JSON.parse(
+      Buffer.from(payload, 'base64url').toString('utf8')
+    ) as Record<string, unknown>;
+    const safe = {
+      iss: claims.iss,
+      aud: claims.aud,
+      sub: claims.sub,
+      scope: claims.scope,
+      owner: claims.owner,
+      owner_id: claims.owner_id,
+      project: claims.project,
+      project_id: claims.project_id,
+      exp:
+        typeof claims.exp === 'number'
+          ? `${new Date(claims.exp * 1000).toISOString()} (in ${Math.round(
+              (claims.exp * 1000 - Date.now()) / 1000
+            )}s)`
+          : claims.exp,
+    };
+    debug(`${label}: ${JSON.stringify(safe)}`);
+  } catch (err) {
+    debug(`${label}: <unparseable claims> (${(err as Error).message})`);
+  }
 }
 
 interface OidcClaims {
@@ -356,8 +411,14 @@ async function ensureRepository(
     readString(process.env.VERCEL_API_URL) ?? 'https://api.vercel.com'
   ).replace(/\/+$/, '');
   const url = `${apiUrl}/v1/vcr/repository?teamId=${encodeURIComponent(teamId)}`;
+  const body = JSON.stringify({ name: repository, projectId });
 
   step(`Ensuring registry repository "${repository}"`);
+  debug(`repository create: POST ${url}`);
+  debug(`repository create body: ${body}`);
+  debug(
+    `repository create auth: Bearer ${tokenFingerprint(token)} (teamId=${teamId}, projectId=${projectId})`
+  );
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -365,16 +426,18 @@ async function ensureRepository(
         authorization: `Bearer ${token}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ name: repository, projectId }),
+      body,
     });
     if (res.ok) {
+      debug(`repository create returned ${res.status}`);
       done(`created repository "${repository}"`);
     } else if (res.status === 409) {
+      debug(`repository create returned 409 (already exists)`);
       done(`repository "${repository}" already exists`);
     } else {
-      const body = await res.text().catch(() => '');
+      const text = await res.text().catch(() => '');
       debug(
-        `repository auto-create returned ${res.status}: ${body.slice(0, 200)}`
+        `repository auto-create returned ${res.status}: ${text.slice(0, 500)}`
       );
       done('continuing — push will validate the repository');
     }
@@ -394,27 +457,58 @@ async function buildAndPushImage(params: {
 
   // The registry password is a Vercel token. Prefer an explicit access token,
   // otherwise use the project's OIDC token (auto-pulled by `vercel build`).
-  const token =
+  // VCR pairs each token type with a specific login username: an OIDC token
+  // authenticates as the literal user `oidc`, while a Vercel access token
+  // authenticates as the team id.
+  const accessToken =
     readString(process.env.VERCEL_VCR_TOKEN) ??
-    readString(process.env.VERCEL_TOKEN) ??
-    readString(process.env.VERCEL_OIDC_TOKEN);
+    readString(process.env.VERCEL_TOKEN);
+  const oidcToken = readString(process.env.VERCEL_OIDC_TOKEN);
+  const token = accessToken ?? oidcToken;
   if (!token) {
     throw new Error(
       'Missing a Vercel token for the container registry. Set VERCEL_OIDC_TOKEN ' +
         '(auto-pulled by `vercel build`) or VERCEL_VCR_TOKEN/VERCEL_TOKEN.'
     );
   }
+  const usingOidcToken = !accessToken;
 
-  // The registry login username is the Vercel team id, and repositories are
-  // namespaced as `<team_slug>/<repo>`. Derive both from the OIDC token claims,
-  // allowing env overrides.
+  // Token diagnostics (never logs the token itself — only presence/fingerprint
+  // and the non-secret OIDC claims). Useful for debugging VCR auth rejections.
+  const tokenSource = readString(process.env.VERCEL_VCR_TOKEN)
+    ? 'VERCEL_VCR_TOKEN'
+    : readString(process.env.VERCEL_TOKEN)
+      ? 'VERCEL_TOKEN'
+      : 'VERCEL_OIDC_TOKEN';
+  debug(
+    `token env presence: VERCEL_VCR_TOKEN=${!!readString(
+      process.env.VERCEL_VCR_TOKEN
+    )}, VERCEL_TOKEN=${!!readString(
+      process.env.VERCEL_TOKEN
+    )}, VERCEL_OIDC_TOKEN=${!!readString(process.env.VERCEL_OIDC_TOKEN)}`
+  );
+  debug(
+    `registry token: source=${tokenSource}, usingOidcToken=${usingOidcToken}, ${tokenFingerprint(
+      token
+    )}`
+  );
+  debugTokenClaims(
+    'OIDC token claims',
+    readString(process.env.VERCEL_OIDC_TOKEN)
+  );
+
+  // Repositories are namespaced as `<team_slug>/<project_slug>/<repo>`. Derive
+  // the slugs from the OIDC token claims, allowing env overrides. The login
+  // username depends on the token type: `oidc` for an OIDC token, otherwise the
+  // team id for an access token.
   const claims = decodeOidcClaims(readString(process.env.VERCEL_OIDC_TOKEN));
   const username =
-    readString(process.env.VERCEL_VCR_USERNAME) ?? claims.owner_id;
+    readString(process.env.VERCEL_VCR_USERNAME) ??
+    (usingOidcToken ? 'oidc' : claims.owner_id);
   if (!username) {
     throw new Error(
-      'Could not determine the Vercel team id for container registry login. ' +
-        'Set VERCEL_VCR_USERNAME to your team id (e.g. team_xxxxxxxx).'
+      'Could not determine the container registry login username. Set ' +
+        'VERCEL_VCR_USERNAME (team id for an access token, or `oidc`).'
     );
   }
 
@@ -460,9 +554,13 @@ async function buildAndPushImage(params: {
   ]);
   done(`built in ${elapsed(buildStart)}`);
 
-  // Authenticate to VCR: username is the team id, password is the token (passed
-  // via stdin, never argv).
+  // Authenticate to VCR: password is the token (passed via stdin, never argv);
+  // username is `oidc` for an OIDC token, otherwise the team id.
   step(`Authenticating to ${VCR_REGISTRY} as ${username}`);
+  debug(
+    `exec: docker login ${VCR_REGISTRY} --username ${username} --password-stdin ` +
+      `(password from ${tokenSource} on stdin, ${tokenFingerprint(token)})`
+  );
   try {
     await run(
       'docker',
@@ -472,14 +570,16 @@ async function buildAndPushImage(params: {
   } catch (err) {
     const message = (err as Error).message;
     if (/denied|forbidden|unauthorized|401|403/i.test(message)) {
+      const teamId =
+        claims.owner_id ?? readString(process.env.VERCEL_VCR_USERNAME);
       throw new Error(
         [
-          `Authentication to ${VCR_REGISTRY} was rejected.`,
+          `Authentication to ${VCR_REGISTRY} as "${username}" was rejected.`,
           '',
-          `Make sure your team ("${username}") is enrolled in the`,
-          '`vercel-enable-vcr` flag, and that the token is valid for it.',
-          'Override credentials with VERCEL_VCR_USERNAME (team id) and',
-          'VERCEL_VCR_TOKEN (a Vercel access token scoped to the project).',
+          `Make sure your team (${teamId ? `"${teamId}"` : ''}) is enrolled in`,
+          'the `vercel-enable-vcr` flag, and that the token is valid for it.',
+          'Override credentials with VERCEL_VCR_USERNAME (`oidc` for an OIDC',
+          'token, or the team id for a VERCEL_VCR_TOKEN access token).',
           '',
           `Underlying error: ${message}`,
         ].join('\n')

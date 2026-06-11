@@ -521,17 +521,23 @@ export default async function main(client: Client): Promise<number> {
     // valid token to authenticate to the Vercel Container Registry, so pull a
     // fresh one when it's missing or expired.
     const existingOidcToken = process.env.VERCEL_OIDC_TOKEN;
+    const existingOidcTokenExpired =
+      !!existingOidcToken && isOidcTokenExpired(existingOidcToken);
     const needsOidcToken =
-      !deploymentId &&
-      link &&
-      (!existingOidcToken || isOidcTokenExpired(existingOidcToken));
+      !deploymentId && link && (!existingOidcToken || existingOidcTokenExpired);
     if (needsOidcToken) {
+      // The token loaded from `.vercel/.env.*.local` is a static snapshot
+      // minted at pull time and expires after ~12h, so on most builds it is
+      // already stale. Mint a fresh one directly (rather than pulling and
+      // decrypting the whole env just to extract one value) using the same
+      // endpoint as `vercel project token` and the `@vercel/oidc` refresh path.
+      const oidcProjectId = link?.projectId ?? project?.projectId;
       try {
-        // Mint a fresh OIDC token directly rather than pulling (and decrypting)
-        // the entire env just to extract one value. This is the same endpoint
-        // used by `vercel project token` and the `@vercel/oidc` refresh path.
+        if (!oidcProjectId) {
+          throw new Error('no linked project id available');
+        }
         const { token: oidcToken } = await client.fetch<{ token: string }>(
-          `/projects/${project.id}/token`,
+          `/projects/${oidcProjectId}/token`,
           {
             method: 'POST',
             accountId: link?.orgId,
@@ -550,6 +556,20 @@ export default async function main(client: Client): Promise<number> {
         }
       } catch (err) {
         output.debug(`Failed to mint VERCEL_OIDC_TOKEN: ${err}`);
+      }
+
+      // Never hand a known-expired token to builders: a stale token produces
+      // confusing downstream failures (e.g. a misleading 403 from the Vercel
+      // Container Registry) instead of a clear "missing credentials" error. If
+      // we couldn't refresh it, drop it and warn so the failure is actionable.
+      const resolvedOidcToken = process.env.VERCEL_OIDC_TOKEN;
+      if (resolvedOidcToken && isOidcTokenExpired(resolvedOidcToken)) {
+        delete process.env.VERCEL_OIDC_TOKEN;
+        output.warn(
+          'Unable to obtain a fresh VERCEL_OIDC_TOKEN; the cached token is expired. ' +
+            'Builders that require Vercel OIDC (such as Vercel Container Registry ' +
+            'authentication) will fail. Run `vercel pull` to refresh credentials.'
+        );
       }
     }
 
