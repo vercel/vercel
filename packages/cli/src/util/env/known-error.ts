@@ -29,8 +29,20 @@ const knownErrorsCodes = new Set([
   'VALUE_INVALID_TYPE',
 ]);
 
+const duplicateEnvErrorCodes = new Set([
+  'ENV_ALREADY_EXISTS',
+  'ENV_CONFLICT',
+  'EXISTING_KEY_AND_TARGET',
+]);
+
 export function isKnownError(error: unknown) {
   const code = isErrnoException(error) ? error.code : null;
   if (!code) return false;
   return knownErrorsCodes.has(code.toUpperCase());
+}
+
+export function isDuplicateEnvError(error: unknown) {
+  const code = isErrnoException(error) ? error.code : null;
+  if (!code) return false;
+  return duplicateEnvErrorCodes.has(code.toUpperCase());
 }

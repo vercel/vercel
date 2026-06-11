@@ -10,7 +10,7 @@ import {
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
+import { isKnownError, isDuplicateEnvError } from '../../util/env/known-error';
 import {
   getEnvKeyWarnings,
   normalizeStdinEnvValue,
@@ -885,6 +885,30 @@ export default async function add(client: Client, argv: string[]) {
       envGitBranch
     );
   } catch (err: unknown) {
+    if (isDuplicateEnvError(err)) {
+      const message = `A variable with the name \`${envName}\` already exists for the target ${envTargets.join(
+        ', '
+      )}${envGitBranch ? ` on branch ${envGitBranch}` : ''}. Use --force to overwrite it.`;
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'env_already_exists',
+            message,
+            next: [
+              {
+                command: buildCommandWithYes([...client.argv, '--force']),
+                when: 'Overwriting the existing value is intended (destructive: confirm with the user first)',
+              },
+            ],
+          },
+          1
+        );
+      }
+      output.error(message);
+      return 1;
+    }
     if (client.nonInteractive && isAPIError(err)) {
       const reason =
         (err as { slug?: string }).slug ||
