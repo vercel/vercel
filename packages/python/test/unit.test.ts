@@ -3782,8 +3782,19 @@ describe('worker services dependency installation', () => {
 
   it('installs vercel-workers when worker services are enabled', async () => {
     const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
-    const workersDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
-    expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
+    const pinnedDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+    // In the monorepo, the build defaults to installing from the in-repo
+    // source directory (path ending in /python/vercel-workers) rather than
+    // from PyPI. Accept either form here.
+    expect(
+      pipCalls.some(args =>
+        args.some(
+          arg =>
+            arg === pinnedDep ||
+            arg.endsWith(`${path.sep}python${path.sep}vercel-workers`)
+        )
+      )
+    ).toBe(true);
   });
 
   it('uses copy link mode for injected pip installs', async () => {
