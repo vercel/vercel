@@ -40,6 +40,53 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const staleSubcommand = {
+  name: 'stale',
+  aliases: [],
+  description: 'List stale feature flags for the current project (Beta)',
+  arguments: [],
+  options: [
+    {
+      name: 'older-than',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Minimum age since the last update before a flag is stale (default: 90d)',
+      argument: 'TIME',
+    },
+    {
+      name: 'state',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+      description: 'Filter flags by state (active or archived)',
+      argument: 'STATE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+  ],
+  examples: [
+    {
+      name: 'List active flags not updated in about three months',
+      value: `${packageName} flags stale`,
+    },
+    {
+      name: 'List active flags not updated in six months',
+      value: `${packageName} flags stale --older-than 180d`,
+    },
+    {
+      name: 'List archived stale flags as JSON',
+      value: `${packageName} flags stale --state archived --json`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -756,6 +803,7 @@ export const flagsCommand = {
   arguments: [],
   subcommands: [
     listSubcommand,
+    staleSubcommand,
     inspectSubcommand,
     createSubcommand,
     openSubcommand,
