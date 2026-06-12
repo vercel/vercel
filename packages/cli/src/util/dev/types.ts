@@ -4,6 +4,7 @@ import type { Lambda as FunLambda } from '@vercel/fun';
 import type {
   Builder as BuildConfig,
   BuildOptions,
+  Cron,
   PrepareCacheOptions,
   ShouldServeOptions,
   StartDevServerOptions,
@@ -110,6 +111,7 @@ export interface BuildResult {
   routes: Route[];
   watch: string[];
   distPath?: string;
+  crons?: Cron[];
 }
 
 export interface BuildResultV3 {

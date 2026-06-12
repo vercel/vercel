@@ -31,6 +31,14 @@ import {
   detectInstallSource,
   type ManifestType,
 } from './install';
+import {
+  hasPyprojectServices,
+  readPyprojectServices,
+  type PyprojectCron,
+  type PyprojectEntrypoint,
+  type PyprojectServices,
+  type PyprojectSubscriber,
+} from './pyproject-services';
 import { stringifyManifest } from '@vercel/python-analysis';
 import {
   VERCEL_RUNTIME_VERSION,
@@ -38,6 +46,27 @@ import {
 } from './package-versions';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
+
+type PyprojectDevService =
+  | {
+      service: {
+        name: string;
+        type: 'job';
+        trigger: 'queue';
+      };
+      entrypoint: PyprojectEntrypoint;
+      subscriber: PyprojectSubscriber;
+    }
+  | {
+      service: {
+        name: string;
+        type: 'job';
+        trigger: 'schedule';
+        schedule: string | string[];
+      };
+      entrypoint: PyprojectEntrypoint;
+      cron: PyprojectCron;
+    };
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -77,6 +106,48 @@ const DEV_SHIM_MODULE = 'vc_init_dev';
 function hasWorkerServicesEnabled(env: NodeJS.ProcessEnv): boolean {
   const value = env.VERCEL_HAS_WORKER_SERVICES || '';
   return ['1', 'true'].includes(value.trim().toLowerCase());
+}
+
+function getPyprojectServiceForRequest(
+  requestPath: unknown,
+  services: PyprojectServices
+): PyprojectDevService | null {
+  if (typeof requestPath !== 'string') return null;
+  const normalized = requestPath.replace(/^\/+/, '');
+  const match = /^_svc\/([^/]+)(?:\/|$)/.exec(normalized);
+  const serviceName = match?.[1];
+  if (!serviceName) return null;
+
+  const subscriber = services.subscribers.find(
+    candidate => candidate.name === serviceName
+  );
+  if (subscriber) {
+    return {
+      service: {
+        name: subscriber.name,
+        type: 'job',
+        trigger: 'queue',
+      },
+      entrypoint: subscriber.entrypoint,
+      subscriber,
+    };
+  }
+
+  const cron = services.crons.find(candidate => candidate.name === serviceName);
+  if (cron) {
+    return {
+      service: {
+        name: cron.name,
+        type: 'job',
+        trigger: 'schedule',
+        schedule: cron.schedule,
+      },
+      entrypoint: cron.entrypoint,
+      cron,
+    };
+  }
+
+  return null;
 }
 
 function createLogListener(
@@ -731,11 +802,36 @@ export const startDevServer: StartDevServer = async opts => {
   } = opts;
 
   const framework = config?.framework;
+  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
+  const pyprojectServices =
+    service?.name === undefined
+      ? await readPyprojectServices(workPath)
+      : { subscribers: [], crons: [] };
+  const pyprojectService = getPyprojectServiceForRequest(
+    meta.requestPath,
+    pyprojectServices
+  );
+  const effectiveService = pyprojectService?.service ?? service;
+  const entrypoint =
+    pyprojectService?.entrypoint.filePath ??
+    (rawEntrypoint === '<detect>' ? undefined : rawEntrypoint);
+  const rawEntrypointForCrons =
+    pyprojectService?.entrypoint.raw ?? rawEntrypoint;
+  const handlerFunction =
+    pyprojectService?.entrypoint.handlerFunction ??
+    (typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined);
+
+  if (pyprojectService) {
+    env.VERCEL_SERVICE_TYPE = pyprojectService.service.type;
+    env.VERCEL_SERVICE_TRIGGER = pyprojectService.service.trigger;
+  }
 
   // Check for an existing persistent server.
   // Include serviceName so that services sharing a workspace get separate servers.
   const serviceName =
-    service?.name ??
+    effectiveService?.name ??
     (typeof meta.serviceName === 'string' ? meta.serviceName : undefined);
   const serverKey = serviceName
     ? `${workPath}::${framework}::${serviceName}`
@@ -775,16 +871,21 @@ export const startDevServer: StartDevServer = async opts => {
   // Silence Node warnings and install cleanup handlers once
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
-  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
+  if (hasPyprojectServices(pyprojectServices)) {
+    if (pyprojectServices.subscribers.length > 0) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+      const proxyOrigin =
+        typeof meta.proxyOrigin === 'string' ? meta.proxyOrigin : undefined;
+      if (proxyOrigin) {
+        env.VERCEL_QUEUE_BASE_URL = `${proxyOrigin}/_svc/_queues`;
+        env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+      }
+    }
+  }
 
   // For schedule-triggered job and worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let resolved: PythonEntrypoint | undefined;
-  const handlerFunction =
-    typeof config?.handlerFunction === 'string'
-      ? config.handlerFunction
-      : undefined;
 
   const detected = await detectPythonEntrypoint(
     framework as PythonFramework,
@@ -795,12 +896,12 @@ export const startDevServer: StartDevServer = async opts => {
           // Schedule-triggered services create their own "app" wrapper dynamically.
           // Other services use handlerFunction as the entrypoint variable name.
           varName:
-            service && isScheduleTriggeredService(service)
+            effectiveService && isScheduleTriggeredService(effectiveService)
               ? undefined
               : handlerFunction,
         }
       : undefined,
-    service
+    effectiveService
   );
   if (detected?.entrypoint) {
     resolved = detected.entrypoint;
@@ -853,6 +954,7 @@ export const startDevServer: StartDevServer = async opts => {
     const serviceCount = (meta.serviceCount as number | undefined) ?? 0;
     const pythonServiceCount =
       (meta.pythonServiceCount as number | undefined) ?? 1;
+    const hasRootPyprojectServices = hasPyprojectServices(pyprojectServices);
 
     if (venv && pythonServiceCount > 1) {
       const yellow = '\x1b[33m';
@@ -870,7 +972,7 @@ export const startDevServer: StartDevServer = async opts => {
     let spawnCommand = systemPython;
     let spawnArgsPrefix: string[] = [];
 
-    if (serviceCount > 0) {
+    if (serviceCount > 0 || hasRootPyprojectServices) {
       const runner = await getMultiServicePythonRunner(
         workPath,
         env,
@@ -912,7 +1014,7 @@ export const startDevServer: StartDevServer = async opts => {
       }
     }
 
-    if (meta.syncDependencies) {
+    if (meta.syncDependencies || hasRootPyprojectServices) {
       const gray = '\x1b[90m';
       const reset = '\x1b[0m';
       const syncMessage = `${gray}Synchronizing dependencies...${reset}\n`;
@@ -956,9 +1058,9 @@ export const startDevServer: StartDevServer = async opts => {
     // For "<dynamic>" schedules, the entrypoint "module:object" must have
     // a get_crons() method returning (module:function, schedule) pairs.
     const crons = await getServiceCrons({
-      service,
+      service: effectiveService,
       entrypoint,
-      rawEntrypoint,
+      rawEntrypoint: rawEntrypointForCrons,
       handlerFunction,
       pythonBin: spawnCommand,
       env,

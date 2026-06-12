@@ -1141,6 +1141,7 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.10,<3.12"\n',
       }),
     } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
 
     const result = await build({
       workPath: mockWorkPath,
@@ -2669,6 +2670,182 @@ describe('non-web services should not generate catch-all routes', () => {
     const v2result = getBuildOutputV2(result);
     expect(v2result.output['_svc/my-api/index']).toBeDefined();
     expect(v2result.routes).toBeUndefined();
+  });
+});
+
+describe('pyproject background services', () => {
+  let mockWorkPath: string;
+  const mockedExeca = vi.mocked(execa);
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-pyproject-services-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    mockedExeca.mockReset();
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('emits queue-triggered lambdas from tool.vercel.subscribers', async () => {
+    const files = {
+      'worker/run.py': new FileBlob({
+        data: [
+          'from vercel.workers import subscribe',
+          '',
+          '@subscribe(topic="orders")',
+          'def process_order(payload):',
+          '    return None',
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "pyproject-worker"',
+          'version = "0.0.1"',
+          '',
+          '[tool.vercel.subscribers.orders]',
+          'entrypoint = "worker.run"',
+          'topics = [',
+          '  { topic = "orders", retry_after_seconds = 30, initial_delay_seconds = 5 },',
+          ']',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: false },
+      config: { framework: 'fastapi' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const v2result = getBuildOutputV2(result) as any;
+    expect(v2result.output.index).toBeUndefined();
+    const lambda = v2result.output['_svc/orders/index'] as any;
+    expect(lambda).toBeDefined();
+    expect(lambda.environment.VERCEL_SERVICE_TYPE).toBe('job');
+    expect(lambda.environment.VERCEL_SERVICE_TRIGGER).toBe('queue');
+    expect(lambda.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(lambda.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: '_S__svc_Sorders_Sindex',
+        retryAfterSeconds: 30,
+        initialDelaySeconds: 5,
+      },
+    ]);
+  });
+
+  it('emits scheduled lambdas and routes from tool.vercel.crons', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def run():\n    return None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "pyproject-cron"',
+          'version = "0.0.1"',
+          '',
+          '[tool.vercel.crons.cleanup]',
+          'entrypoint = "jobs.cleanup:run"',
+          'schedule = "0 0 * * *"',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: false },
+      config: { framework: 'fastapi' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const v2result = getBuildOutputV2(result) as any;
+    expect(v2result.output['_svc/cleanup/index']).toBeDefined();
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/run',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:run',
+      },
+    ]);
+    expect(v2result.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/.*$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
+  });
+
+  it('treats omitted cron schedule as dynamic discovery', async () => {
+    mockedExeca.mockResolvedValue({
+      stdout: JSON.stringify({
+        entries: [
+          {
+            module_function: 'jobs.reports:daily',
+            schedule: '0 6 * * *',
+          },
+        ],
+      }),
+    } as any);
+
+    const files = {
+      'jobs/reports.py': new FileBlob({
+        data: [
+          'class Scheduler:',
+          '    def get_crons(self):',
+          '        return [("jobs.reports:daily", "0 6 * * *")]',
+          'scheduler = Scheduler()',
+          'def daily():',
+          '    return None',
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "pyproject-dynamic-cron"',
+          'version = "0.0.1"',
+          '',
+          '[tool.vercel.crons.reports]',
+          'entrypoint = "jobs.reports:scheduler"',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: false },
+      config: { framework: 'fastapi' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const v2result = getBuildOutputV2(result) as any;
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/reports/crons/jobs/reports/daily',
+        schedule: '0 6 * * *',
+        resolvedHandler: 'jobs.reports:daily',
+      },
+    ]);
+    expect(mockedExeca).toHaveBeenCalledWith(
+      expect.any(String),
+      ['-c', expect.any(String), 'jobs.reports', 'scheduler'],
+      expect.objectContaining({ cwd: mockWorkPath })
+    );
   });
 });
 

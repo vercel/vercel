@@ -38,6 +38,7 @@ import {
   type Builder,
   cloneEnv,
   type Env,
+  getServiceQueueTopicConfigs,
   getNodeBinPaths,
   isQueueBackedService,
   type StartDevServerResult,
@@ -96,9 +97,10 @@ import type {
 import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
 import { ServicesOrchestrator } from './services-orchestrator';
-import { QueueBroker } from './queue-broker';
+import { QueueBroker, type QueueConsumerRegistration } from './queue-broker';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
+import { getNextCronDelay } from './cron';
 import {
   errorToString,
   isErrnoException,
@@ -189,6 +191,8 @@ export default class DevServer {
   private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
   private queueBroker?: QueueBroker;
+  private cronTimers: Map<string, ReturnType<typeof setTimeout>>;
+  private cronTimerOwners: Map<string, Set<string>>;
   private serviceRoutesTable?: Map<string, Route[]>;
 
   private vercelConfigWarning: boolean;
@@ -221,6 +225,8 @@ export default class DevServer {
     this.services = options.services;
     this.useImplicitServicesEnvInjection =
       options.useImplicitServicesEnvInjection ?? true;
+    this.cronTimers = new Map();
+    this.cronTimerOwners = new Map();
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -998,8 +1004,15 @@ export default class DevServer {
         .filter(isExperimentalService)
         .filter(isQueueBackedService);
       if (queueServices.length > 0) {
-        this.queueBroker = new QueueBroker(queueServices, name =>
-          this.orchestrator!.getServiceOrigin(name)
+        this.ensureQueueBroker().addConsumers(
+          queueServices.map(service => ({
+            name: service.name,
+            topics: getServiceQueueTopicConfigs(service),
+            callbackUrl: () => {
+              const origin = this.orchestrator!.getServiceOrigin(service.name);
+              return origin ? `${origin}/` : null;
+            },
+          }))
         );
       }
 
@@ -1160,6 +1173,12 @@ export default class DevServer {
       this.queueBroker.stop();
     }
 
+    for (const timer of this.cronTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.cronTimers.clear();
+    this.cronTimerOwners.clear();
+
     ops.push(close(this.server));
 
     if (this.watcher) {
@@ -1203,6 +1222,93 @@ export default class DevServer {
     } catch (err) {
       debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
     }
+  }
+
+  registerQueueConsumers(registrations: QueueConsumerRegistration[]): void {
+    if (registrations.length === 0) return;
+    this.ensureQueueBroker().addConsumers(registrations);
+  }
+
+  replaceQueueConsumers(
+    owner: string,
+    registrations: QueueConsumerRegistration[]
+  ): void {
+    this.ensureQueueBroker().replaceConsumers(owner, registrations);
+  }
+
+  replaceCrons(
+    owner: string,
+    crons: { path: string; schedule: string }[]
+  ): void {
+    const existing = this.cronTimerOwners.get(owner);
+    if (existing) {
+      for (const key of existing) {
+        const timer = this.cronTimers.get(key);
+        if (timer) clearTimeout(timer);
+        this.cronTimers.delete(key);
+      }
+      this.cronTimerOwners.delete(owner);
+    }
+
+    const keys = new Set<string>();
+    for (const cron of crons) {
+      const key = `${cron.path}:${cron.schedule}`;
+      if (this.cronTimers.has(key)) continue;
+      keys.add(key);
+      this.scheduleCronTrigger(key, cron.path, cron.schedule);
+    }
+    if (keys.size > 0) {
+      this.cronTimerOwners.set(owner, keys);
+    }
+  }
+
+  private ensureQueueBroker(): QueueBroker {
+    if (!this.queueBroker) {
+      this.queueBroker = new QueueBroker();
+    }
+    return this.queueBroker;
+  }
+
+  private scheduleCronTrigger(
+    key: string,
+    cronPath: string,
+    schedule: string
+  ): void {
+    const delayMs = getNextCronDelay(schedule);
+    if (delayMs === null) {
+      output.warn(
+        `Could not parse cron schedule "${schedule}" for "${cronPath}", skipping auto-trigger`
+      );
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      this.cronTimers.delete(key);
+      if (this.stopping) return;
+
+      output.debug(
+        `Triggering scheduled job ${chalk.cyan(cronPath)} (schedule: ${chalk.cyan(schedule)})`
+      );
+
+      try {
+        const res = await nodeFetch(`${this.address.origin}${cronPath}`, {
+          method: 'POST',
+        });
+        output.debug(
+          `Cron trigger for "${cronPath}" responded with status ${res.status}`
+        );
+      } catch (err) {
+        output.error(
+          `Cron trigger for "${cronPath}" failed: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      }
+
+      this.scheduleCronTrigger(key, cronPath, schedule);
+    }, delayMs);
+    timer.unref();
+    this.cronTimers.set(key, timer);
   }
 
   async send404(
@@ -1628,11 +1734,7 @@ export default class DevServer {
     res: http.ServerResponse,
     pathname: string
   ) => {
-    if (!this.queueBroker) {
-      res.writeHead(503);
-      res.end('Queues broker not initialized');
-      return;
-    }
+    const queueBroker = this.ensureQueueBroker();
 
     // `/_svc/_queues` is an internal dev queues broker path,
     // `/api/v3/topic` is the base path for all Queues V3 routes
@@ -1669,12 +1771,10 @@ export default class DevServer {
           ? parseInt(delayHeader, 10)
           : undefined;
 
-      const { messageId } = this.queueBroker.enqueue(
-        topic,
-        payload,
-        contentType,
-        { retentionSeconds, delaySeconds }
-      );
+      const { messageId } = queueBroker.enqueue(topic, payload, contentType, {
+        retentionSeconds,
+        delaySeconds,
+      });
 
       res.writeHead(201, {
         'Content-Type': 'application/json',
@@ -1690,7 +1790,7 @@ export default class DevServer {
     );
     if (req.method === 'POST' && receiveByIdMatch) {
       const [, , consumer, messageId] = receiveByIdMatch;
-      const result = this.queueBroker.receiveById(messageId, consumer);
+      const result = queueBroker.receiveById(messageId, consumer);
 
       if (!result) {
         res.writeHead(404);
@@ -1740,7 +1840,7 @@ export default class DevServer {
           ? parseInt(limitHeader, 10)
           : undefined;
 
-      const messages = this.queueBroker.receiveMessages(queueName, consumer, {
+      const messages = queueBroker.receiveMessages(queueName, consumer, {
         limit,
         visibilityTimeoutSeconds,
       });
@@ -1790,7 +1890,7 @@ export default class DevServer {
     );
     if (leaseMatch && (req.method === 'DELETE' || req.method === 'PATCH')) {
       const [, , consumer, receiptHandle] = leaseMatch;
-      const messageId = this.queueBroker.findMessageIdByReceiptHandle(
+      const messageId = queueBroker.findMessageIdByReceiptHandle(
         consumer,
         receiptHandle
       );
@@ -1803,7 +1903,7 @@ export default class DevServer {
 
       // acknowledge the message
       if (req.method === 'DELETE') {
-        this.queueBroker.acknowledge(messageId, consumer, receiptHandle);
+        queueBroker.acknowledge(messageId, consumer, receiptHandle);
         res.writeHead(204);
         res.end();
         return;
@@ -1824,7 +1924,7 @@ export default class DevServer {
         output.debug(`queues: failed to parse visibility timeout body: ${err}`);
       }
 
-      this.queueBroker.changeVisibility(
+      queueBroker.changeVisibility(
         messageId,
         consumer,
         receiptHandle,
@@ -1873,7 +1973,7 @@ export default class DevServer {
     }
 
     // Handle /_svc/_queues/* routes for the dev queue proxy
-    if (callLevel === 0 && this.orchestrator) {
+    if (callLevel === 0) {
       const pathname = parsed.pathname || '/';
       if (pathname.startsWith('/_svc/_queues/')) {
         await this.handleQueuesRoute(req, res, pathname);
@@ -2422,6 +2522,7 @@ export default class DevServer {
                 : undefined,
             },
             buildEnv: { ...envConfigs.buildEnv },
+            proxyOrigin: this.address.origin,
           },
         });
       } catch (err: unknown) {
@@ -3166,6 +3267,9 @@ function fileRemoved(
 }
 
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
+  if (buildMatch.config?.pyprojectBackgroundServices === true) {
+    return true;
+  }
   const { builder } = buildMatch.builderWithPkg;
   return typeof builder.shouldServe !== 'function';
 }
