@@ -494,6 +494,9 @@ importers:
       '@vercel/cli-config':
         specifier: workspace:*
         version: link:../cli-config
+      '@vercel/container':
+        specifier: workspace:*
+        version: link:../container
       '@vercel/detect-agent':
         specifier: workspace:*
         version: link:../detect-agent
@@ -1155,6 +1158,18 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/container:
+    devDependencies:
+      '@types/node':
+        specifier: 20.11.0
+        version: 20.11.0
+      '@vercel/build-utils':
+        specifier: workspace:*
+        version: link:../build-utils
+      vitest:
+        specifier: 2.0.3
+        version: 2.0.3(@edge-runtime/vm@3.2.0)(@types/node@20.11.0)(terser@5.48.0)
 
   packages/detect-agent:
     devDependencies:

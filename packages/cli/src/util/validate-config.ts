@@ -299,6 +299,16 @@ const getExperimentalServicesCommonProperties = () => ({
     minLength: 1,
     maxLength: 2048,
   },
+  command: {
+    oneOf: [
+      { type: 'string', minLength: 1, maxLength: 2048 },
+      {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'string', minLength: 1, maxLength: 2048 },
+      },
+    ],
+  },
   memory: {
     type: 'integer',
     minimum: 128,

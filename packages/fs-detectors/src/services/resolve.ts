@@ -65,6 +65,14 @@ const ENTRYPOINT_REQUIRED_RUNTIMES = new Set<ServiceRuntime>([
   'go',
 ]);
 
+function isContainerRuntime(config: ConfiguredServiceConfig): boolean {
+  return config.runtime === 'container';
+}
+
+function normalizeContainerCommand(command: string | string[]): string[] {
+  return Array.isArray(command) ? command : [command];
+}
+
 type ConfiguredServiceConfig = ExperimentalServiceConfig;
 
 interface ResolvedEntrypointPath {
@@ -208,6 +216,20 @@ interface ResolveConfiguredServiceOptions {
 
 interface ResolveAllConfiguredServicesOptions {
   requireFileEntrypointForBackendRuntimes?: boolean;
+}
+
+/**
+ * A container service whose entrypoint points at a Dockerfile/Containerfile is
+ * built and pushed at build time, rather than treated as a prebuilt image
+ * reference. Matches `Dockerfile`, `Containerfile`, and `*.Dockerfile`.
+ */
+function isDockerfileEntrypoint(entrypoint: string): boolean {
+  const base = posixPath.basename(entrypoint).toLowerCase();
+  return (
+    base === 'dockerfile' ||
+    base === 'containerfile' ||
+    base.endsWith('.dockerfile')
+  );
 }
 
 function toWorkspaceRelativeEntrypoint(
@@ -679,6 +701,13 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if (config.command !== undefined && !isContainerRuntime(config)) {
+    return {
+      code: 'INVALID_COMMAND',
+      message: `Service "${name}" can only specify "command" when using runtime "container".`,
+      serviceName: name,
+    };
+  }
   return null;
 }
 
@@ -746,8 +775,26 @@ export async function resolveConfiguredService(
   const routePrefixWasConfigured =
     routingResult.routing?.routePrefixConfigured ?? false;
 
+  const containerEntrypoint =
+    isContainerRuntime(config) && typeof rawEntrypoint === 'string'
+      ? rawEntrypoint
+      : undefined;
+  // A container entrypoint is either a Dockerfile path to build & push, or a
+  // prebuilt image reference to pass through unchanged.
+  const containerDockerfile =
+    containerEntrypoint && isDockerfileEntrypoint(containerEntrypoint)
+      ? posixPath.normalize(containerEntrypoint)
+      : undefined;
+  const containerImage =
+    containerEntrypoint && !containerDockerfile
+      ? containerEntrypoint
+      : undefined;
   let resolvedEntrypointPath = resolvedEntrypoint;
-  if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+  if (
+    !containerEntrypoint &&
+    !resolvedEntrypointPath &&
+    typeof rawEntrypoint === 'string'
+  ) {
     const entrypointToResolve = moduleAttrParsed
       ? moduleAttrParsed.filePath
       : rawEntrypoint;
@@ -758,7 +805,11 @@ export async function resolveConfiguredService(
     });
     resolvedEntrypointPath = resolved.entrypoint;
   }
-  if (typeof rawEntrypoint === 'string' && !resolvedEntrypointPath) {
+  if (
+    !containerEntrypoint &&
+    typeof rawEntrypoint === 'string' &&
+    !resolvedEntrypointPath
+  ) {
     throw new Error(
       `Failed to resolve entrypoint "${rawEntrypoint}" for service "${name}".`
     );
@@ -859,7 +910,10 @@ export async function resolveConfiguredService(
     } else {
       builderUse = getBuilderForRuntime(inferredRuntime);
     }
-    builderSrc = resolvedEntrypointFile!;
+    builderSrc =
+      inferredRuntime === 'container' && typeof containerEntrypoint === 'string'
+        ? containerEntrypoint
+        : resolvedEntrypointFile!;
   }
 
   const normalizedSubdomain =
@@ -920,6 +974,12 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (containerImage) {
+    builderConfig.handler = containerImage;
+  }
+  if (config.command !== undefined) {
+    builderConfig.command = normalizeContainerCommand(config.command);
+  }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
   }
@@ -931,7 +991,7 @@ export async function resolveConfiguredService(
     trigger,
     group,
     workspace,
-    entrypoint: resolvedEntrypointFile,
+    entrypoint: containerImage ?? containerDockerfile ?? resolvedEntrypointFile,
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
     subdomain: normalizedSubdomain,
@@ -988,7 +1048,10 @@ export async function resolveAllConfiguredServices(
     const serviceFs = serviceFsResult.fs;
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    if (typeof serviceConfig.entrypoint === 'string') {
+    if (
+      typeof serviceConfig.entrypoint === 'string' &&
+      !isContainerRuntime(serviceConfig)
+    ) {
       const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
       const entrypointToResolve =
         moduleAttr?.filePath ?? serviceConfig.entrypoint;

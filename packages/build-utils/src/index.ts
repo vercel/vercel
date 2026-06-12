@@ -136,6 +136,8 @@ export {
 };
 
 export { EdgeFunction } from './edge-function';
+export { ContainerImage } from './container-image';
+export type { ContainerImageConfig } from './container-image';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 export { getOsRelease, getProvidedRuntime } from './os';
