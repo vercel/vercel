@@ -20,3 +20,4 @@ export { addCacheTag } from './addcachetag';
 export type { AddCacheTagApi } from './addcachetag/types';
 export { experimental_upgradeWebSocket } from './websocket';
 export type { WebSocket, RawData as WebSocketData } from 'ws';
+export { createSpan } from './trace';
