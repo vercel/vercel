@@ -4,9 +4,16 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { scanParentDirs } from '@vercel/build-utils';
 import { packageName } from './pkg-name';
-import { isNativeBinaryInstall } from './native-install';
+import {
+  getNativeInstallMethod,
+  isNativeBinaryInstall,
+} from './native-install';
 
 const nativePackageName = '@vercel/vc-native';
+
+export function getUpdatePackageName(): string {
+  return isNativeBinaryInstall() ? nativePackageName : packageName;
+}
 
 const execFileAsync = promisify(execFile);
 
@@ -186,9 +193,16 @@ export async function getUpdateCommandInfo(): Promise<{
   global: boolean;
 }> {
   const nativeInstall = isNativeBinaryInstall();
-  const pkgAndVersion = `${nativeInstall ? nativePackageName : packageName}@latest`;
+  const pkgAndVersion = `${getUpdatePackageName()}@latest`;
 
   if (nativeInstall) {
+    if (
+      process.platform !== 'win32' &&
+      getNativeInstallMethod() === 'standalone'
+    ) {
+      return { command: `${packageName} upgrade`, global: true };
+    }
+
     // The native binary's process.argv[1] points into its virtual filesystem
     // snapshot, so detect the package manager from the real install location.
     const segments = process.execPath.split(sep);

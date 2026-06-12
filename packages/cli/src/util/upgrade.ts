@@ -1,6 +1,11 @@
 import { spawn } from 'child_process';
 import { tmpdir } from 'os';
 import { getUpdateCommandInfo } from './get-update-command';
+import {
+  getNativeInstallMethod,
+  isNativeBinaryInstall,
+} from './native-install';
+import { executeStandaloneUpgrade } from './native-upgrade';
 import output from '../output-manager';
 
 /**
@@ -8,6 +13,14 @@ import output from '../output-manager';
  * Returns the exit code from the upgrade process.
  */
 export async function executeUpgrade(): Promise<number> {
+  if (
+    isNativeBinaryInstall() &&
+    process.platform !== 'win32' &&
+    getNativeInstallMethod() === 'standalone'
+  ) {
+    return executeStandaloneUpgrade();
+  }
+
   const { command: updateCommand, global } = await getUpdateCommandInfo();
   const [command, ...args] = updateCommand.split(' ');
 

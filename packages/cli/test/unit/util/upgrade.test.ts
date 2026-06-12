@@ -1,10 +1,20 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+  beforeEach,
+  afterEach,
+  type MockInstance,
+} from 'vitest';
 import { EventEmitter } from 'events';
 import { tmpdir } from 'os';
 import { spawn } from 'child_process';
 import output from '../../../src/output-manager';
 import { executeUpgrade } from '../../../src/util/upgrade';
 import { getUpdateCommandInfo } from '../../../src/util/get-update-command';
+import * as nativeInstall from '../../../src/util/native-install';
+import * as nativeUpgrade from '../../../src/util/native-upgrade';
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -34,11 +44,34 @@ const outputMock = vi.mocked(output);
 const getUpdateCommandInfoMock = vi.mocked(getUpdateCommandInfo);
 
 describe('executeUpgrade', () => {
+  const spies: Array<{ mockRestore: () => void }> = [];
+  const originalPlatform = process.platform;
+  let isNativeSpy: MockInstance<() => boolean>;
+  let standaloneSpy: MockInstance<(version?: string) => Promise<number>>;
+
+  function setPlatform(platform: NodeJS.Platform) {
+    Object.defineProperty(process, 'platform', {
+      value: platform,
+      configurable: true,
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
+    isNativeSpy = vi
+      .spyOn(nativeInstall, 'isNativeBinaryInstall')
+      .mockReturnValue(false);
+    standaloneSpy = vi
+      .spyOn(nativeUpgrade, 'executeStandaloneUpgrade')
+      .mockResolvedValue(0);
+    spies.push(isNativeSpy, standaloneSpy);
   });
 
   afterEach(() => {
+    while (spies.length) {
+      spies.pop()?.mockRestore();
+    }
+    setPlatform(originalPlatform);
     vi.clearAllMocks();
   });
 
@@ -267,5 +300,38 @@ describe('executeUpgrade', () => {
     expect(outputMock.debug).toHaveBeenCalledWith(
       `Executing: npm i -g vercel@latest (cwd: ${tmpdir()})`
     );
+  });
+
+  it('should use the in-process updater for standalone native installs on unix', async () => {
+    setPlatform('linux');
+    isNativeSpy.mockReturnValue(true);
+    spies.push(
+      vi
+        .spyOn(nativeInstall, 'getNativeInstallMethod')
+        .mockReturnValue('standalone')
+    );
+
+    const exitCode = await executeUpgrade();
+
+    expect(exitCode).toBe(0);
+    expect(standaloneSpy).toHaveBeenCalledTimes(1);
+    expect(spawnMock).not.toHaveBeenCalled();
+  });
+
+  it('should use the package manager for npm native installs', async () => {
+    isNativeSpy.mockReturnValue(true);
+    spies.push(
+      vi.spyOn(nativeInstall, 'getNativeInstallMethod').mockReturnValue('npm')
+    );
+    const mockProcess = createMockProcess();
+    spawnMock.mockReturnValue(mockProcess as any);
+
+    const exitCodePromise = executeUpgrade();
+    await tick();
+    mockProcess.emit('close', 0);
+    await exitCodePromise;
+
+    expect(standaloneSpy).not.toHaveBeenCalled();
+    expect(spawnMock).toHaveBeenCalledTimes(1);
   });
 });
