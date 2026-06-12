@@ -58,6 +58,18 @@ export async function connectGitProvider(
           repo
         )} to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
       );
+    } else if (apiError && err.code === 'repo_links_exceeded_limit') {
+      // The error meta carries a plan-appropriate call to action (newer
+      // `ctaLabel`/`ctaUrl`, older `action`/`link`) — surface it instead of
+      // dropping it.
+      const ctaLabel =
+        typeof err.ctaLabel === 'string' ? err.ctaLabel : err.action;
+      const ctaUrl = typeof err.ctaUrl === 'string' ? err.ctaUrl : err.link;
+      let message = err.message;
+      if (typeof ctaLabel === 'string' && typeof ctaUrl === 'string') {
+        message += `\n${ctaLabel}: ${link(ctaUrl)}`;
+      }
+      output.error(message);
     } else if (apiError && err.action === 'Add a Login Connection') {
       output.error(
         err.message.replace(repo, chalk.cyan(repo)) +
