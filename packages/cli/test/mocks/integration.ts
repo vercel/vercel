@@ -1126,6 +1126,18 @@ export function useAutoProvision(opts?: {
     }
   );
 
+  // Owned integration endpoint (post-provision skill suggestion lookup).
+  // Default to 404 so tests that don't care about the skill flow stay silent;
+  // tests that exercise the suggestion can override this route after calling
+  // useAutoProvision().
+  client.scenario.get(
+    '/v2/integrations/integration/:slug/owned',
+    (_req, res) => {
+      res.status(404);
+      res.end();
+    }
+  );
+
   // Installations endpoint (needed for upfront install check)
   client.scenario.get('/:version/integrations/configurations', (req, res) => {
     const { installationType, integrationIdOrSlug } = req.query;
