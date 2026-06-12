@@ -1,5 +1,14 @@
 # vercel
 
+## 54.13.1
+
+### Patch Changes
+
+- Updated dependencies [d712d41]
+- Updated dependencies [dbb31fc]
+- Updated dependencies [f7f0003]
+  - @vercel/python@6.45.0
+
 ## 54.13.0
 
 ### Minor Changes
