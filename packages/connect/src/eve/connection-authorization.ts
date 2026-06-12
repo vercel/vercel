@@ -62,18 +62,41 @@ export type ConnectAuthorizationPhase =
   | 'startAuthorization'
   | 'completeAuthorization';
 
+/**
+ * Eve's per-connection authorization context — the `connection` argument
+ * Eve's runtime hands to every `getToken` / `startAuthorization` /
+ * `completeAuthorization` callback alongside the resolved principal.
+ * Currently carries the connection's declared server `url`; Eve documents
+ * the shape as strictly additive, so destructuring only the fields you
+ * need stays forward-compatible.
+ *
+ * eve 0.6.0-beta.1 declares this type as
+ * `ConnectionAuthorizationContext` but does not re-export it from
+ * `eve/connections` (or any other public subpath), so it is derived
+ * structurally here from the exported authorization definition — this is
+ * exactly the type Eve passes at runtime. Once eve exports the type
+ * directly, this alias can switch to a plain re-export without a
+ * breaking change.
+ */
+export type EveConnectionAuthorizationContext = Parameters<
+  NonInteractiveAuthorizationDefinition['getToken']
+>[0]['connection'];
+
 interface GetTokenOptions {
   readonly principal: ConnectionPrincipal;
+  readonly connection: EveConnectionAuthorizationContext;
 }
 
 interface StartAuthorizationOptions {
   readonly principal: ConnectionPrincipal;
+  readonly connection: EveConnectionAuthorizationContext;
   readonly callbackUrl?: string;
   readonly webhook?: string;
 }
 
 interface CompleteAuthorizationOptions {
   readonly principal: ConnectionPrincipal;
+  readonly connection: EveConnectionAuthorizationContext;
 }
 
 /** Options accepted by {@link connect}. */
@@ -114,10 +137,30 @@ export interface EveAuthorizationOptions {
   readonly tokenParams?: Omit<ConnectTokenParams, 'subject'>;
 
   /**
+   * Builds the Vercel Connect token subject from the framework-resolved
+   * principal plus the connection's authorization context (Eve's
+   * per-connection metadata — currently the declared server `url`).
+   *
+   * Needed by jwt-bearer-style connectors whose subject/assertion
+   * depends on more than the principal: custom claims, the connection
+   * URL, or an audience derived from it. Takes precedence over the
+   * deprecated {@link principalToSubject}. When neither is set, the
+   * default mapping applies — app principals map to `{ type: "app" }`
+   * and user principals map to `{ type: "user", id, issuer }`.
+   */
+  readonly createSubject?: (
+    principal: ConnectionPrincipal,
+    ctx: EveConnectionAuthorizationContext
+  ) => ConnectTokenSubject | Promise<ConnectTokenSubject>;
+
+  /**
    * Override how Eve's framework-resolved principal is mapped to a
    * Vercel Connect token subject. When omitted, app principals map to
    * `{ type: "app" }` and user principals map to
    * `{ type: "user", id, issuer }`.
+   *
+   * @deprecated Use {@link createSubject}, which also receives the
+   * connection authorization context.
    */
   readonly principalToSubject?: (
     principal: ConnectionPrincipal
@@ -234,9 +277,17 @@ export type EveConnectAuthorizationDefinition<
    * failed or duplicate revoke is swallowed so it never masks the error
    * that triggered eviction, and the local cache entry is dropped either
    * way.
+   *
+   * Pass `connection` (Eve's per-connection authorization context) when
+   * the connection uses {@link EveAuthorizationOptions.createSubject}:
+   * the cache entry is keyed by the resolved subject, and a
+   * context-dependent subject can only be reproduced with the context in
+   * hand. Without it, eviction falls back to the legacy
+   * principal-only mapping and may miss the entry.
    */
   readonly evict: (opts: {
     readonly principal: ConnectionPrincipal;
+    readonly connection?: EveConnectionAuthorizationContext;
     readonly revoke?: boolean;
   }) => Promise<void>;
 };
@@ -300,10 +351,11 @@ function makeEvict(
   options: EveAuthorizationOptions
 ): (opts: {
   readonly principal: ConnectionPrincipal;
+  readonly connection?: EveConnectionAuthorizationContext;
   readonly revoke?: boolean;
 }) => Promise<void> {
-  return async ({ principal, revoke }) => {
-    const params = await buildTokenParams(options, principal);
+  return async ({ principal, connection, revoke }) => {
+    const params = await buildTokenParams(options, principal, connection);
     if (revoke) {
       try {
         // Destructive: tears down the grant at Vercel Connect (refresh
@@ -343,11 +395,14 @@ function buildInteractiveDefinition(
   return {
     principalType: 'user',
 
-    async getToken({ principal }: GetTokenOptions): Promise<TokenResult> {
+    async getToken({
+      principal,
+      connection,
+    }: GetTokenOptions): Promise<TokenResult> {
       try {
         const response = await getTokenResponse(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -358,6 +413,7 @@ function buildInteractiveDefinition(
 
     async startAuthorization({
       principal,
+      connection,
       callbackUrl,
       webhook,
     }: StartAuthorizationOptions): Promise<{
@@ -387,7 +443,7 @@ function buildInteractiveDefinition(
         // in production.
         const response = await startAuthorization(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           {
             ...options.connectOptions,
             callbackUrl: callbackUrl ?? webhook,
@@ -413,11 +469,12 @@ function buildInteractiveDefinition(
 
     async completeAuthorization({
       principal,
+      connection,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
         const response = await getTokenResponse(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           options.connectOptions
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -433,11 +490,14 @@ function buildNonInteractiveDefinition(
 ): NonInteractiveAuthorizationDefinition {
   return {
     principalType: 'app',
-    async getToken({ principal }: GetTokenOptions): Promise<TokenResult> {
+    async getToken({
+      principal,
+      connection,
+    }: GetTokenOptions): Promise<TokenResult> {
       try {
         const response = await getTokenResponse(
           options.connector,
-          await buildTokenParams(options, principal),
+          await buildTokenParams(options, principal, connection),
           getTokenConnectOptions(options)
         );
         return { token: response.token, expiresAt: response.expiresAt };
@@ -465,13 +525,41 @@ function getTokenConnectOptions(
 
 async function buildTokenParams(
   options: EveAuthorizationOptions,
-  principal: ConnectionPrincipal
+  principal: ConnectionPrincipal,
+  connection: EveConnectionAuthorizationContext | undefined
 ): Promise<ConnectTokenParams> {
-  const toSubject = options.principalToSubject ?? principalToSubject;
   return {
     ...options.tokenParams,
-    subject: await toSubject(principal),
+    subject: await resolveSubject(options, principal, connection),
   };
+}
+
+/**
+ * Resolves the Vercel Connect token subject for `principal`, applying
+ * the documented precedence: {@link EveAuthorizationOptions.createSubject}
+ * (when the connection context is in hand), then the deprecated
+ * {@link EveAuthorizationOptions.principalToSubject}, then the default
+ * principal mapping.
+ *
+ * Eve's runtime passes `connection` to every authorization callback, so
+ * on the `getToken` / `startAuthorization` / `completeAuthorization`
+ * paths `createSubject` always receives it. Only the adapter's own
+ * `evict` entry point may run without a context (its callers predate the
+ * context plumbing); in that case the resolution falls back past
+ * `createSubject` so eviction stays best-effort instead of throwing.
+ */
+function resolveSubject(
+  options: EveAuthorizationOptions,
+  principal: ConnectionPrincipal,
+  connection: EveConnectionAuthorizationContext | undefined
+): ConnectTokenSubject | Promise<ConnectTokenSubject> {
+  if (options.createSubject !== undefined && connection !== undefined) {
+    return options.createSubject(principal, connection);
+  }
+  if (options.principalToSubject !== undefined) {
+    return options.principalToSubject(principal);
+  }
+  return principalToSubject(principal);
 }
 
 function principalToSubject(
