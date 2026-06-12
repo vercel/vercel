@@ -3,6 +3,7 @@ import { checkDeploymentStatus } from '@vercel/client';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import { getDeploymentTargetUrl } from '../../util/deploy/get-deployment-target-url';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
 import getScope from '../../util/get-scope';
@@ -143,20 +144,13 @@ export default async function redeploy(client: Client): Promise<number> {
 
     output.stopSpinner();
 
-    const previewUrl = `https://${deployment.url}`;
-    let isProdDeployment: boolean = target === 'production';
-
-    if (customEnvironmentSlugOrId && customEnvironment) {
-      isProdDeployment = customEnvironment.type === 'production';
-    }
-
     printAlignedLabel('Inspect', chalk.cyan(deployment.inspectorUrl));
 
-    printAlignedLabel(
-      isProdDeployment ? 'Production' : 'Preview',
-      chalk.cyan(previewUrl),
-      isProdDeployment ? { gutter: '▲' } : {}
-    );
+    // Only the commit-specific deployment URL is known at this point; the
+    // project's production/preview URL isn't assigned until later.
+    printAlignedLabel('Visit', chalk.cyan(`https://${deployment.url}`), {
+      gutter: '▲',
+    });
 
     if (!client.stdout.isTTY) {
       client.stdout.write(`https://${deployment.url}`);
@@ -220,16 +214,19 @@ export default async function redeploy(client: Client): Promise<number> {
 
               if (
                 event.type === 'alias-assigned' &&
-                !Array.isArray(event.payload) &&
-                event.payload.target === 'production' &&
-                event.payload.alias &&
-                event.payload.alias.length > 0
+                !Array.isArray(event.payload)
               ) {
-                const primaryDomain = event.payload.alias[0];
-                const prodUrl = `https://${primaryDomain}`;
-                printAlignedLabel('Aliased', chalk.cyan(prodUrl), {
-                  gutter: '▲',
-                });
+                // Show the publicly accessible production/preview URL (the
+                // project domain), not the auto-generated alias which may be
+                // protected.
+                const targetUrl = getDeploymentTargetUrl(event.payload);
+                if (targetUrl) {
+                  printAlignedLabel(
+                    targetUrl.label,
+                    chalk.cyan(`https://${targetUrl.url}`),
+                    { gutter: '▲' }
+                  );
+                }
               }
 
               deployment = event.payload;

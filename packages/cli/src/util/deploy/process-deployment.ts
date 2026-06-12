@@ -24,6 +24,7 @@ import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
 import { printAlignedLabel } from '../output/print-aligned-label';
+import { getDeploymentTargetUrl } from './get-deployment-target-url';
 
 function printInspectUrl(inspectorUrl: string | null | undefined) {
   if (!inspectorUrl) {
@@ -201,14 +202,11 @@ export default async function processDeployment({
 
         printInspectUrl(deployment.inspectorUrl);
 
-        const isProdDeployment = deployment.target === 'production';
-        const previewUrl = `https://${deployment.url}`;
-
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
-        );
+        // Only the commit-specific deployment URL is known at this point; the
+        // project's production/preview URL isn't assigned until later.
+        printAlignedLabel('Visit', chalk.cyan(`https://${deployment.url}`), {
+          gutter: '▲',
+        });
 
         if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
           process.stdout.write(`https://${event.payload.url}`);
@@ -288,13 +286,9 @@ export default async function processDeployment({
 
         stopSpinner();
         process.stderr.write(eraseLines(2));
-        const isProdDeployment = event.payload.target === 'production';
-        const previewUrl = `https://${event.payload.url}`;
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
-        );
+        printAlignedLabel('Visit', chalk.cyan(`https://${event.payload.url}`), {
+          gutter: '▲',
+        });
 
         if (v1ChecksPending || v2ChecksPending) {
           output.spinner('Running Checks…', 0);
@@ -359,14 +353,15 @@ export default async function processDeployment({
       if (event.type === 'alias-assigned') {
         stopSpinner();
 
-        if (
-          event.payload.target === 'production' &&
-          event.payload.alias &&
-          event.payload.alias.length > 0
-        ) {
-          const primaryDomain = event.payload.alias[0];
-          const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+        // Show the publicly accessible production/preview URL (the project
+        // domain), not the auto-generated alias which may be protected.
+        const targetUrl = getDeploymentTargetUrl(event.payload);
+        if (targetUrl) {
+          printAlignedLabel(
+            targetUrl.label,
+            chalk.cyan(`https://${targetUrl.url}`),
+            { gutter: '▲' }
+          );
         }
 
         event.payload.indications = indications;

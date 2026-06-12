@@ -64,6 +64,7 @@ import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
+import { getDeploymentTargetUrl } from '../../util/deploy/get-deployment-target-url';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
@@ -2164,12 +2165,12 @@ async function handleContinueDeployment({
           );
         }
 
-        const isProdDeployment = finalDeployment.target === 'production';
-        const previewUrl = `https://${finalDeployment.url}`;
+        // Only the commit-specific deployment URL is known at this point; the
+        // project's production/preview URL isn't assigned until later.
         printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment ? { gutter: '▲' } : {}
+          'Visit',
+          chalk.cyan(`https://${finalDeployment.url}`),
+          { gutter: '▲' }
         );
 
         if (noWait) {
@@ -2198,14 +2199,15 @@ async function handleContinueDeployment({
         finalDeployment = event.payload;
         output.stopSpinner();
 
-        if (
-          finalDeployment.target === 'production' &&
-          finalDeployment.alias &&
-          finalDeployment.alias.length > 0
-        ) {
-          const primaryDomain = finalDeployment.alias[0];
-          const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+        // Show the publicly accessible production/preview URL (the project
+        // domain), not the auto-generated alias which may be protected.
+        const targetUrl = getDeploymentTargetUrl(finalDeployment);
+        if (targetUrl) {
+          printAlignedLabel(
+            targetUrl.label,
+            chalk.cyan(`https://${targetUrl.url}`),
+            { gutter: '▲' }
+          );
         }
       }
 
